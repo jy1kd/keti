@@ -82,7 +82,8 @@ src/
 │   │   └── store.ts
 │   ├── order/            # 报单模块
 │   │   ├── OrderPanel.tsx
-│   │   ├── OrderForm.tsx (支持限价/市价/止损/FOK/FAK/GFD)
+│   │   ├── OrderForm.tsx (支持限价/市价、止损单提交)
+│   │   ├── StopOrderForm.tsx (止损单表单)
 │   │   └── store.ts
 │   └── query/            # 查询模块
 │       ├── QueryPanel.tsx
@@ -91,6 +92,7 @@ src/
 │       ├── Position.tsx       # 持仓查询
 │       ├── QuoteQuery.tsx     # 报价查询
 │       ├── ContractQuery.tsx  # 合约查询
+│       ├── StopOrderList.tsx  # 止损单列表
 │       └── store.ts
 ├── services/             # API服务层
 │   ├── api.ts            # REST API封装
@@ -112,7 +114,7 @@ src/
 server/
 ├── api/                  # API路由
 │   ├── market.py         # 行情相关接口（订阅、退订、快照、报价查询）
-│   ├── order.py          # 报单相关接口（限价/市价/止损/FOK/FAK/GFD、撤单、批量撤单）
+│   ├── order.py          # 报单相关接口（限价/市价、撤单、批量撤单）
 │   ├── query.py          # 查询相关接口（报单、成交、持仓、资金、合约）
 │   └── connection.py     # 连接管理接口（登录、登出、状态）
 ├── ctp/                  # CTP封装层
@@ -120,12 +122,15 @@ server/
 │   ├── trader_api.py     # 交易API封装
 │   ├── callback.py       # 回调处理
 │   └── types.py          # CTP数据类型
+├── services/             # 业务服务层
+│   ├── stop_order.py     # 止损单监控服务（后端监控行情，自动触发报单）
+│   └── order_manager.py  # 报单管理（处理GFD/FOK/FAK有效期逻辑）
 ├── ws/                   # WebSocket管理
 │   ├── manager.py        # 连接管理
 │   └── handlers.py       # 消息处理
 ├── models/               # 数据模型
 │   ├── market.py         # 行情数据模型（含报价深度）
-│   ├── order.py          # 报单数据模型（含GFD）
+│   ├── order.py          # 报单数据模型（含GFD/FOK/FAK）
 │   ├── account.py        # 账户数据模型
 │   └── contract.py       # 合约数据模型
 ├── config.py             # 配置管理
@@ -187,23 +192,23 @@ server/
      └─────────────────────────┴←────────────────────────────┘
 ```
 
-**止损单流程**（前端实现）：
+**止损单流程**（后端实现）：
 ```
-┌──────────┐   轮询行情    ┌──────────┐   HTTP POST   ┌──────────┐
-│ React    │ ───────────→ │ 前端监控 │ ────────────→ │ Python   │
-│ 前端     │              │ 价格变化 │              │ 中间层   │
+┌──────────┐   HTTP POST   ┌──────────┐   订阅行情    ┌──────────┐
+│ React    │ ────────────→ │ Python   │ ←──────────── │ simnow   │
+│ 前端     │  提交止损单   │ 中间层   │  监控价格变化  │ 行情柜台  │
 └──────────┘              └──────────┘              └──────────┘
-     │                         │                         │
-     │    价格达到止损价       │                         │
-     │←────────────────────────┤                         │
-     │                         │                         │
-     │                    调用报单接口                    │
-     │                         ├────────────────────────→│
-     │                         │                         │
-     │                         │                    ┌────┴────┐
-     │                         │                    │ simnow  │
-     │                         │                    │  柜台   │
-     │                         │                    └─────────┘
+                              │                         │
+                              │    价格达到止损价       │
+                              │←────────────────────────┤
+                              │                         │
+                              │    自动触发报单         │
+                              ├────────────────────────→│
+                              │                         │
+                              │                    ┌────┴────┐
+                              │                    │ simnow  │
+                              │                    │  交易柜台 │
+                              │                    └─────────┘
 ```
 
 **报单请求格式**：
@@ -214,8 +219,9 @@ server/
   "offset": "open",             // open/close/close_today
   "price": 480.50,
   "volume": 1,
-  "order_type": "limit",        // limit/market/stop/fok/fak
-  "stop_price": null            // 止损价（止损单时必填）
+  "order_type": "limit",        // limit/market（价格类型）
+  "time_condition": "gfd",      // gfd/fok/fak（有效期/成交方式）
+  "stop_price": null            // 止损价（止损单时必填，由后端监控触发）
 }
 ```
 
@@ -247,6 +253,33 @@ server/
      ↑                         │                            │
      │         HTTP Response   │       CTP Response        │
      └─────────────────────────┴←───────────────────────────┘
+```
+
+### 3.4 止损单监控服务（后端实现）
+
+**服务职责**：
+1. 接收前端提交的止损单请求（含止损价）
+2. 订阅相关合约的实时行情
+3. 监控价格变化，判断是否触发止损条件
+4. 触发时自动调用CTP报单接口
+5. 通过WebSocket通知前端止损单状态变化
+
+**触发逻辑**：
+- 多头止损：当最新价 ≤ 止损价时触发卖出
+- 空头止损：当最新价 ≥ 止损价时触发买入
+
+**数据结构**：
+```python
+class StopOrder:
+    order_ref: str           # 止损单引用
+    instrument_id: str       # 合约代码
+    direction: str           # buy/sell
+    offset: str              # open/close/close_today
+    price: float             # 报单价格（触发后的报单价格）
+    volume: int              # 报单数量
+    stop_price: float        # 止损价
+    status: str              # pending/triggered/canceled
+    created_at: datetime     # 创建时间
 ```
 
 ---
@@ -282,6 +315,9 @@ server/
 | POST | `/api/order/cancel` | 撤单 | `{order_ref}` | `{success, message}` |
 | POST | `/api/order/cancel_all` | 批量撤单 | - | `{cancelled_count, success}` |
 | GET | `/api/order/status/{order_ref}` | 查询单个报单状态 | - | `OrderStatus` |
+| POST | `/api/order/stop` | 提交止损单 | `StopOrderRequest` | `{stop_order_ref, success, message}` |
+| POST | `/api/order/stop/cancel` | 取消止损单 | `{stop_order_ref}` | `{success, message}` |
+| GET | `/api/order/stop/list` | 查询止损单列表 | - | `[StopOrder]` |
 
 ### 4.4 查询接口
 
@@ -304,8 +340,9 @@ interface OrderRequest {
   offset: 'open' | 'close' | 'close_today'; // 开平标志
   price: number;              // 报单价格
   volume: number;             // 报单数量
-  order_type: 'limit' | 'market' | 'stop' | 'fok' | 'fak' | 'gfd';
-  stop_price?: number;        // 止损价（止损单时必填）
+  order_type: 'limit' | 'market';  // 价格类型（限价/市价）
+  time_condition: 'gfd' | 'fok' | 'fak';  // 有效期/成交方式
+  stop_price?: number;        // 止损价（止损单时必填，由后端监控触发）
 }
 ```
 
@@ -341,6 +378,35 @@ interface OrderRecord {
   order_status: 'submitted' | 'partial' | 'all_traded' | 'canceled' | 'rejected';
   status_msg: string;
   insert_time: string;
+}
+```
+
+**StopOrderRequest**（止损单请求）：
+```typescript
+interface StopOrderRequest {
+  instrument_id: string;      // 合约代码
+  direction: 'buy' | 'sell';  // 买卖方向
+  offset: 'open' | 'close' | 'close_today'; // 开平标志
+  price: number;              // 报单价格（触发后的报单价格）
+  volume: number;             // 报单数量
+  stop_price: number;         // 止损价（必填）
+}
+```
+
+**StopOrder**（止损单状态）：
+```typescript
+interface StopOrder {
+  stop_order_ref: string;     // 止损单引用
+  instrument_id: string;      // 合约代码
+  direction: 'buy' | 'sell';  // 买卖方向
+  offset: 'open' | 'close' | 'close_today'; // 开平标志
+  price: number;              // 报单价格
+  volume: number;             // 报单数量
+  stop_price: number;         // 止损价
+  status: 'pending' | 'triggered' | 'canceled'; // 状态
+  triggered_order_ref?: string; // 触发后的报单引用
+  created_at: string;         // 创建时间
+  triggered_at?: string;      // 触发时间
 }
 ```
 
@@ -441,12 +507,15 @@ interface ContractInfo {
 | UT-06 | 参数校验-价格为负 | {price:-1} | 返回错误"价格必须大于0" | P0 |
 | UT-07 | 参数校验-数量为0 | {volume:0} | 返回错误"数量必须大于0" | P0 |
 | UT-08 | 合约搜索 | 搜索"au" | 返回匹配合约列表 | P1 |
-| UT-09 | GFD报单 | {order_type:"gfd"} | 返回order_ref | P1 |
-| UT-10 | FOK报单 | {order_type:"fok"} | 返回order_ref | P1 |
-| UT-11 | FAK报单 | {order_type:"fak"} | 返回order_ref | P1 |
+| UT-09 | GFD报单 | {order_type:"limit", time_condition:"gfd"} | 返回order_ref | P1 |
+| UT-10 | FOK报单 | {order_type:"limit", time_condition:"fok"} | 返回order_ref | P1 |
+| UT-11 | FAK报单 | {order_type:"limit", time_condition:"fak"} | 返回order_ref | P1 |
 | UT-12 | 批量撤单 | {cancel_all: true} | 返回撤单数量 | P1 |
 | UT-13 | 报价查询 | 查询au2406报价 | 返回QuoteDepth | P1 |
 | UT-14 | 合约查询 | 查询au2406合约信息 | 返回ContractInfo | P1 |
+| UT-15 | 止损单提交 | {instrument_id:"au2406", direction:"sell", stop_price:480.00} | 返回stop_order_ref | P1 |
+| UT-16 | 止损单取消 | {stop_order_ref:"SO123"} | 返回success=true | P1 |
+| UT-17 | 止损单查询 | 查询止损单列表 | 返回止损单列表 | P1 |
 
 ### 6.2 集成测试
 
@@ -456,7 +525,7 @@ interface ContractInfo {
 | IT-02 | 行情推送 | 1.订阅au2406 2.等待WebSocket推送 | 收到market_data消息 | P0 |
 | IT-03 | 完整报单流程 | 1.报单 2.查询报单流水 3.查询成交流水 | 报单记录和成交记录正确 | P0 |
 | IT-04 | 报单撤单流程 | 1.报单 2.撤单 3.查询状态 | order_status=canceled | P0 |
-| IT-05 | 止损单触发 | 1.设置止损单 2.等待价格触发 | 自动触发报单 | P1 |
+| IT-05 | 止损单触发 | 1.提交止损单（止损价480.00）2.等待价格达到止损价 3.检查止损单状态 | 止损单状态变为triggered，自动生成报单 | P1 |
 | IT-06 | 点价报单流程 | 1.单击买一价格 2.自动以该价格报单 | 报单成功，价格正确 | P0 |
 | IT-07 | 双击填充流程 | 1.双击行情表格某行 2.检查报单面板 | 合约自动填充 | P1 |
 | IT-08 | 报价深度查询 | 1.订阅行情 2.查询报价 | 返回买一卖一深度 | P1 |
@@ -471,6 +540,7 @@ interface ContractInfo {
 | E2E-03 | 异常恢复 | 1.断开网络 2.恢复网络 3.验证重连 | 自动重连成功 | P2 |
 | E2E-04 | 点价报单E2E | 1.订阅行情 2.单击买一价格 3.查询成交 | 报单成功并成交 | P0 |
 | E2E-05 | 大数据量压力测试 | 1.订阅1000+合约 2.观察FPS和内存 | FPS≥60，内存稳定 | P1 |
+| E2E-06 | 止损单E2E | 1.登录 2.订阅行情 3.提交止损单 4.等待触发 5.查询成交 | 止损单触发并成交 | P1 |
 
 ---
 
@@ -538,12 +608,13 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 | 2026-07-07 | v0.1 | 架构设计、接口设计、数据模型 | ✅ 完成 |
 | 2026-07-07 | v0.2 | 根据PRD更新：新增GFD、点价报单、报价查询、合约查询、大数据调优 | ✅ 完成 |
 | 2026-07-07 | v0.3 | 文档检查修正：删除多平台对接、明确止损单实现、补充批量撤单接口 | ✅ 完成 |
-| - | v0.3 | Python中间层开发（含多平台适配层） | ⏳ 待开始 |
-| - | v0.4 | 前端行情模块开发（vtable高性能渲染、点价报单） | ⏳ 待开始 |
-| - | v0.5 | 前端报单模块开发（GFD/FOK/FAK、快捷键、批量撤单） | ⏳ 待开始 |
-| - | v0.6 | 前端查询模块开发（报价查询、合约查询） | ⏳ 待开始 |
-| - | v0.7 | 大数据调优（虚拟滚动、批量更新、增量渲染） | ⏳ 待开始 |
-| - | v0.8 | 联调测试 + Bug修复 | ⏳ 待开始 |
+| 2026-07-07 | v0.4 | 严重问题修正：止损单改为后端实现、GFD/FOK/FAK分离为time_condition、明确Web应用定位 | ✅ 完成 |
+| - | v0.5 | Python中间层开发（含止损单监控服务） | ⏳ 待开始 |
+| - | v0.6 | 前端行情模块开发（vtable高性能渲染、点价报单） | ⏳ 待开始 |
+| - | v0.7 | 前端报单模块开发（快捷键、批量撤单） | ⏳ 待开始 |
+| - | v0.8 | 前端查询模块开发（报价查询、合约查询） | ⏳ 待开始 |
+| - | v0.9 | 大数据调优（虚拟滚动、批量更新、增量渲染） | ⏳ 待开始 |
+| - | v1.0 | 联调测试 + Bug修复 | ⏳ 待开始 |
 
 ---
 
