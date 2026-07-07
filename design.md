@@ -5,44 +5,47 @@
 ### 1.1 系统架构图
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         用户浏览器                               │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
-│  │  行情面板    │  │  报单面板    │  │  查询面板    │             │
-│  │  (vtable)   │  │  (表单)      │  │  (表格)      │             │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘             │
-│         │                │                │                     │
-│         └────────────────┼────────────────┘                     │
-│                          │                                      │
-│                    ┌─────┴─────┐                                │
-│                    │ React App │                                │
-│                    │ + TypeScript│                              │
-│                    └─────┬─────┘                                │
-└──────────────────────────┼──────────────────────────────────────┘
-                           │
-              HTTP REST    │    WebSocket
-            ┌──────────────┼──────────────┐
-            │              │              │
-┌───────────┴──────────────┴──────────────┴───────────┐
-│                   Python 中间层                       │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
-│  │  FastAPI     │  │  WebSocket  │  │  CTP 封装层  │ │
-│  │  (REST API)  │  │  Manager    │  │  (ctypes)   │ │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘ │
-│         │                │                │         │
-│         └────────────────┼────────────────┘         │
-│                          │                          │
-│                    ┌─────┴─────┐                    │
-│                    │ CTP Connection│                │
-│                    └─────┬─────┘                    │
-└──────────────────────────┼──────────────────────────┘
-                           │
-              ┌────────────┼────────────┐
-              │            │            │
-     ┌────────┴───┐  ┌────┴────┐  ┌───┴─────┐
-     │  mduserapi  │  │traderapi│  │  simnow │
-     │  (行情API)   │  │(交易API) │  │  柜台    │
-     └─────────────┘  └─────────┘  └─────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            用户浏览器（桌面端）                                │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
+│  │  行情面板    │  │  报单面板    │  │  查询面板    │  │ 快捷键管理  │       │
+│  │  (vtable)   │  │  (点价/表单) │  │  (多Tab)     │  │             │       │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘       │
+│         │                │                │                │               │
+│         └────────────────┴────────────────┴────────────────┘               │
+│                                    │                                       │
+│                    ┌───────────────┴───────────────┐                       │
+│                    │         React App             │                       │
+│                    │       + TypeScript            │                       │
+│                    │  + vtable(高性能) + Zustand   │                       │
+│                    └───────────────┬───────────────┘                       │
+└────────────────────────────────────┼───────────────────────────────────────┘
+                                     │
+                    HTTP REST        │        WebSocket
+            ┌────────────────────────┼────────────────────────┐
+            │                        │                        │
+┌───────────┴────────────────────────┴────────────────────────┴───────────┐
+│                              Python 中间层                               │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
+│  │  FastAPI     │  │  WebSocket  │  │  CTP 封装层  │  │ 平台适配层  │   │
+│  │  (REST API)  │  │  Manager    │  │  (ctypes)   │  │ (多平台)    │   │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘   │
+│         │                │                │                │           │
+│         └────────────────┴────────────────┴────────────────┘           │
+│                                    │                                   │
+│                    ┌───────────────┴───────────────┐                   │
+│                    │      平台连接管理器           │                   │
+│                    └───────────────┬───────────────┘                   │
+└────────────────────────────────────┼───────────────────────────────────┘
+                                     │
+                    ┌────────────────┼────────────────┐
+                    │                │                │
+           ┌────────┴───┐    ┌──────┴──────┐  ┌─────┴─────┐
+           │  simnow    │    │ 互联网测试  │  │  上游系统 │
+           │  模拟柜台   │    │   平台      │  │  (扩展)   │
+           └────────────┘    └─────────────┘  └───────────┘
+           mduserapi          兼容CTP接口      外部数据源
+           traderapi
 ```
 
 ### 1.2 技术栈
@@ -52,7 +55,7 @@
 | 前端框架 | React | 18.x | UI框架 |
 | 前端语言 | TypeScript | 5.x | 类型安全 |
 | 构建工具 | Vite | 5.x | 开发和构建 |
-| 表格组件 | @visactor/vtable | latest | 高性能表格 |
+| 表格组件 | @visactor/vtable | latest | 高性能表格（虚拟滚动、增量渲染） |
 | 状态管理 | Zustand | latest | 轻量级状态管理 |
 | HTTP客户端 | Axios | latest | REST API调用 |
 | 后端框架 | FastAPI | 0.100+ | REST API服务 |
@@ -71,26 +74,33 @@ src/
 ├── components/           # 通用组件
 │   ├── ConnectionStatus/ # 连接状态指示器
 │   ├── ContractSearch/   # 合约搜索框
-│   └── OrderForm/        # 报单表单
+│   ├── OrderForm/        # 报单表单（支持点价、快捷键）
+│   ├── QuickKeys/        # 快捷键管理组件
+│   └── BatchCancel/      # 批量撤单组件
 ├── modules/              # 业务模块
 │   ├── market/           # 行情模块
 │   │   ├── MarketPanel.tsx
-│   │   ├── MarketTable.tsx (vtable)
+│   │   ├── MarketTable.tsx (vtable，支持单击/双击点价)
 │   │   └── store.ts
 │   ├── order/            # 报单模块
 │   │   ├── OrderPanel.tsx
-│   │   ├── OrderForm.tsx
+│   │   ├── OrderForm.tsx (支持限价/市价/止损/FOK/FAK/GFD)
 │   │   └── store.ts
 │   └── query/            # 查询模块
 │       ├── QueryPanel.tsx
-│       ├── OrderFlow.tsx
-│       ├── TradeFlow.tsx
-│       ├── Position.tsx
+│       ├── OrderFlow.tsx      # 报单流水
+│       ├── TradeFlow.tsx      # 成交流水
+│       ├── Position.tsx       # 持仓查询
+│       ├── QuoteQuery.tsx     # 报价查询
+│       ├── ContractQuery.tsx  # 合约查询
 │       └── store.ts
 ├── services/             # API服务层
 │   ├── api.ts            # REST API封装
 │   ├── ws.ts             # WebSocket管理
 │   └── types.ts          # 类型定义
+├── hooks/                # 自定义Hook
+│   ├── useHotKeys.ts     # 快捷键Hook
+│   └── usePointOrder.ts  # 点价报单Hook
 ├── stores/               # 全局状态
 │   ├── connection.ts     # 连接状态
 │   └── contracts.ts      # 合约列表
@@ -103,22 +113,27 @@ src/
 ```
 server/
 ├── api/                  # API路由
-│   ├── market.py         # 行情相关接口
-│   ├── order.py          # 报单相关接口
-│   ├── query.py          # 查询相关接口
-│   └── connection.py     # 连接管理接口
+│   ├── market.py         # 行情相关接口（订阅、退订、快照、报价查询）
+│   ├── order.py          # 报单相关接口（限价/市价/止损/FOK/FAK/GFD、撤单、批量撤单）
+│   ├── query.py          # 查询相关接口（报单、成交、持仓、资金、合约）
+│   └── connection.py     # 连接管理接口（登录、登出、状态）
 ├── ctp/                  # CTP封装层
 │   ├── md_user_api.py    # 行情API封装
 │   ├── trader_api.py     # 交易API封装
 │   ├── callback.py       # 回调处理
 │   └── types.py          # CTP数据类型
+├── platforms/            # 多平台适配层
+│   ├── base.py           # 平台基类
+│   ├── simnow.py         # simnow平台适配
+│   └── test_platform.py  # 互联网测试平台适配
 ├── ws/                   # WebSocket管理
 │   ├── manager.py        # 连接管理
 │   └── handlers.py       # 消息处理
 ├── models/               # 数据模型
-│   ├── market.py         # 行情数据模型
-│   ├── order.py          # 报单数据模型
-│   └── account.py        # 账户数据模型
+│   ├── market.py         # 行情数据模型（含报价深度）
+│   ├── order.py          # 报单数据模型（含GFD）
+│   ├── account.py        # 账户数据模型
+│   └── contract.py       # 合约数据模型
 ├── config.py             # 配置管理
 ├── main.py               # 应用入口
 └── requirements.txt      # Python依赖
@@ -261,6 +276,8 @@ server/
 | GET | `/api/query/trades` | 查询成交流水 | - | `[TradeRecord]` |
 | GET | `/api/query/positions` | 查询持仓 | - | `[PositionRecord]` |
 | GET | `/api/query/account` | 查询账户资金 | - | `AccountInfo` |
+| GET | `/api/query/quotes` | 查询报价深度 | `?instruments=au2406,rb2406` | `{[instrument_id]: QuoteDepth}` |
+| GET | `/api/query/contracts` | 查询合约信息 | `?instruments=au2406` | `{[instrument_id]: ContractInfo}` |
 
 ### 4.5 数据模型
 
@@ -272,7 +289,7 @@ interface OrderRequest {
   offset: 'open' | 'close' | 'close_today'; // 开平标志
   price: number;              // 报单价格
   volume: number;             // 报单数量
-  order_type: 'limit' | 'market' | 'stop' | 'fok' | 'fak';
+  order_type: 'limit' | 'market' | 'stop' | 'fok' | 'fak' | 'gfd';
   stop_price?: number;        // 止损价（止损单时必填）
 }
 ```
@@ -309,6 +326,32 @@ interface OrderRecord {
   order_status: 'submitted' | 'partial' | 'all_traded' | 'canceled' | 'rejected';
   status_msg: string;
   insert_time: string;
+}
+```
+
+**QuoteDepth**（报价深度）：
+```typescript
+interface QuoteDepth {
+  instrument_id: string;
+  bid_prices: number[];    // 买一到买五价格
+  bid_volumes: number[];   // 买一到买五数量
+  ask_prices: number[];    // 卖一到卖五价格
+  ask_volumes: number[];   // 卖一到卖五数量
+  update_time: string;
+}
+```
+
+**ContractInfo**（合约信息）：
+```typescript
+interface ContractInfo {
+  instrument_id: string;
+  instrument_name: string;
+  exchange_id: string;
+  product_id: string;
+  volume_multiple: number;   // 合约乘数
+  price_tick: number;        // 最小变动价位
+  expire_date: string;       // 到期日
+  is_trading: boolean;       // 是否可交易
 }
 ```
 
@@ -383,6 +426,12 @@ interface OrderRecord {
 | UT-06 | 参数校验-价格为负 | {price:-1} | 返回错误"价格必须大于0" | P0 |
 | UT-07 | 参数校验-数量为0 | {volume:0} | 返回错误"数量必须大于0" | P0 |
 | UT-08 | 合约搜索 | 搜索"au" | 返回匹配合约列表 | P1 |
+| UT-09 | GFD报单 | {order_type:"gfd"} | 返回order_ref | P1 |
+| UT-10 | FOK报单 | {order_type:"fok"} | 返回order_ref | P1 |
+| UT-11 | FAK报单 | {order_type:"fak"} | 返回order_ref | P1 |
+| UT-12 | 批量撤单 | {cancel_all: true} | 返回撤单数量 | P1 |
+| UT-13 | 报价查询 | 查询au2406报价 | 返回QuoteDepth | P1 |
+| UT-14 | 合约查询 | 查询au2406合约信息 | 返回ContractInfo | P1 |
 
 ### 6.2 集成测试
 
@@ -393,6 +442,10 @@ interface OrderRecord {
 | IT-03 | 完整报单流程 | 1.报单 2.查询报单流水 3.查询成交流水 | 报单记录和成交记录正确 | P0 |
 | IT-04 | 报单撤单流程 | 1.报单 2.撤单 3.查询状态 | order_status=canceled | P0 |
 | IT-05 | 止损单触发 | 1.设置止损单 2.等待价格触发 | 自动触发报单 | P1 |
+| IT-06 | 点价报单流程 | 1.单击买一价格 2.自动以该价格报单 | 报单成功，价格正确 | P0 |
+| IT-07 | 双击填充流程 | 1.双击行情表格某行 2.检查报单面板 | 合约自动填充 | P1 |
+| IT-08 | 报价深度查询 | 1.订阅行情 2.查询报价 | 返回买一卖一深度 | P1 |
+| IT-09 | 合约信息查询 | 1.查询合约信息 | 返回合约乘数、最小变动价位 | P1 |
 
 ### 6.3 E2E测试
 
@@ -401,6 +454,8 @@ interface OrderRecord {
 | E2E-01 | 完整交易流程 | 1.登录 2.订阅行情 3.报单 4.查询 | 全流程正常 | P0 |
 | E2E-02 | 多合约行情 | 1.订阅10个合约 2.观察表格 | 表格流畅更新 | P1 |
 | E2E-03 | 异常恢复 | 1.断开网络 2.恢复网络 3.验证重连 | 自动重连成功 | P2 |
+| E2E-04 | 点价报单E2E | 1.订阅行情 2.单击买一价格 3.查询成交 | 报单成功并成交 | P0 |
+| E2E-05 | 大数据量压力测试 | 1.订阅5000+合约 2.观察FPS和内存 | FPS≥60，内存稳定 | P1 |
 
 ---
 
@@ -466,11 +521,13 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 | 日期 | 版本 | 内容 | 状态 |
 |------|------|------|------|
 | 2026-07-07 | v0.1 | 架构设计、接口设计、数据模型 | ✅ 完成 |
-| - | v0.2 | Python中间层开发 | ⏳ 待开始 |
-| - | v0.3 | 前端行情模块开发 | ⏳ 待开始 |
-| - | v0.4 | 前端报单模块开发 | ⏳ 待开始 |
-| - | v0.5 | 前端查询模块开发 | ⏳ 待开始 |
-| - | v0.6 | 联调测试 | ⏳ 待开始 |
+| 2026-07-07 | v0.2 | 根据PRD更新：新增GFD、点价报单、报价查询、合约查询、多平台对接、大数据调优 | ✅ 完成 |
+| - | v0.3 | Python中间层开发（含多平台适配层） | ⏳ 待开始 |
+| - | v0.4 | 前端行情模块开发（vtable高性能渲染、点价报单） | ⏳ 待开始 |
+| - | v0.5 | 前端报单模块开发（GFD/FOK/FAK、快捷键、批量撤单） | ⏳ 待开始 |
+| - | v0.6 | 前端查询模块开发（报价查询、合约查询） | ⏳ 待开始 |
+| - | v0.7 | 大数据调优（虚拟滚动、批量更新、增量渲染） | ⏳ 待开始 |
+| - | v0.8 | 联调测试 + Bug修复 | ⏳ 待开始 |
 
 ---
 
