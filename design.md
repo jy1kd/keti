@@ -118,11 +118,11 @@ server/
 │   ├── order.py          # 报单相关接口（限价/市价、撤单、批量撤单）
 │   ├── query.py          # 查询相关接口（报单、成交、持仓、资金、合约）
 │   └── connection.py     # 连接管理接口（登录、登出、状态）
-├── ctp/                  # CTP封装层
-│   ├── md_user_api.py    # 行情API封装
-│   ├── trader_api.py     # 交易API封装
+├── ctp/                  # CTP封装层（使用ctypes调用trader目录中的DLL）
+│   ├── md_user_api.py    # 行情API封装（加载thostmduserapi_se.dll）
+│   ├── trader_api.py     # 交易API封装（加载thosttraderapi_se.dll）
 │   ├── callback.py       # 回调处理
-│   └── types.py          # CTP数据类型
+│   └── types.py          # CTP数据类型（基于ThostFtdcUserApiStruct.h）
 ├── services/             # 业务服务层
 │   ├── stop_order.py     # 止损单监控服务（后端监控行情，自动触发报单）
 │   └── order_manager.py  # 报单管理（处理GFD/FOK/FAK有效期逻辑）
@@ -584,10 +584,25 @@ uvicorn main:app --reload --port 8000
 ### 7.3 simnow环境
 
 1. 注册simnow账户：https://www.simnow.com.cn
-2. 下载API：https://www.simnow.com.cn/static/apiDownload.action
-3. 将DLL文件放到项目目录：
-   - `thostmduserapi_se.dll`（行情API）
-   - `thosttraderapi_se.dll`（交易API）
+2. 下载API：https://www.simnow.com.cn/static/apiDownload.action（当前使用v6.7.13版本）
+3. API文件位置（已下载到trader目录）：
+   - 行情API DLL：`trader/mduserapi/v6.7.13_20260225_winApi/mduserapi/20260225_mduserapi64_se_windows/thostmduserapi_se.dll`
+   - 交易API DLL：`trader/traderapi/v6.7.13_20260225_winApi/traderapi/20260225_traderapi64_se_windows/thosttraderapi_se.dll`
+   - 头文件（参考用）：`ThostFtdcMdApi.h`、`ThostFtdcTraderApi.h`、`ThostFtdcUserApiStruct.h`、`ThostFtdcUserApiDataType.h`
+4. Python ctypes加载DLL示例：
+   ```python
+   import ctypes
+   import os
+   
+   # 获取DLL完整路径
+   base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+   md_dll_path = os.path.join(base_dir, "trader/mduserapi/v6.7.13_20260225_winApi/mduserapi/20260225_mduserapi64_se_windows/thostmduserapi_se.dll")
+   td_dll_path = os.path.join(base_dir, "trader/traderapi/v6.7.13_20260225_winApi/traderapi/20260225_traderapi64_se_windows/thosttraderapi_se.dll")
+   
+   # 加载DLL
+   md_api = ctypes.CDLL(md_dll_path)
+   td_api = ctypes.CDLL(td_dll_path)
+   ```
 
 ### 7.4 环境变量配置
 
@@ -612,12 +627,13 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 | 2026-07-07 | v0.4 | 严重问题修正：止损单改为后端实现、GFD/FOK/FAK分离为time_condition、明确Web应用定位 | ✅ 完成 |
 | 2026-07-07 | v0.5 | 中等问题修正：快捷键冲突解决、自选合约持久化明确、报价查询区分五档深度、统一FastAPI | ✅ 完成 |
 | 2026-07-07 | v0.6 | 建议优化：删除Web Worker（收益存疑）、明确市价单需调研simnow支持 | ✅ 完成 |
-| - | v0.7 | Python中间层开发（含止损单监控服务） | ⏳ 待开始 |
-| - | v0.8 | 前端行情模块开发（vtable高性能渲染、点价报单） | ⏳ 待开始 |
-| - | v0.9 | 前端报单模块开发（快捷键、批量撤单） | ⏳ 待开始 |
-| - | v1.0 | 前端查询模块开发（报价查询、合约查询） | ⏳ 待开始 |
-| - | v1.1 | 大数据调优（虚拟滚动、批量更新、增量渲染） | ⏳ 待开始 |
-| - | v1.2 | 联调测试 + Bug修复 | ⏳ 待开始 |
+| 2026-07-07 | v0.7 | trader目录检查：明确API文件位置、补充ctypes加载DLL示例 | ✅ 完成 |
+| - | v0.8 | Python中间层开发（含止损单监控服务） | ⏳ 待开始 |
+| - | v0.9 | 前端行情模块开发（vtable高性能渲染、点价报单） | ⏳ 待开始 |
+| - | v1.0 | 前端报单模块开发（快捷键、批量撤单） | ⏳ 待开始 |
+| - | v1.1 | 前端查询模块开发（报价查询、合约查询） | ⏳ 待开始 |
+| - | v1.2 | 大数据调优（虚拟滚动、批量更新、增量渲染） | ⏳ 待开始 |
+| - | v1.3 | 联调测试 + Bug修复 | ⏳ 待开始 |
 
 ---
 
