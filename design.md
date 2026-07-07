@@ -99,11 +99,12 @@ src/
 │   ├── ws.ts             # WebSocket管理
 │   └── types.ts          # 类型定义
 ├── hooks/                # 自定义Hook
-│   ├── useHotKeys.ts     # 快捷键Hook
+│   ├── useHotKeys.ts     # 快捷键Hook（仅报单面板焦点时生效）
 │   └── usePointOrder.ts  # 点价报单Hook
 ├── stores/               # 全局状态
 │   ├── connection.ts     # 连接状态
-│   └── contracts.ts      # 合约列表
+│   ├── contracts.ts      # 合约列表
+│   └── userPrefs.ts      # 用户偏好（自选合约、快捷键配置，localStorage持久化）
 ├── App.tsx               # 主应用
 └── main.tsx              # 入口
 ```
@@ -327,7 +328,7 @@ class StopOrder:
 | GET | `/api/query/trades` | 查询成交流水 | - | `[TradeRecord]` |
 | GET | `/api/query/positions` | 查询持仓 | - | `[PositionRecord]` |
 | GET | `/api/query/account` | 查询账户资金 | - | `AccountInfo` |
-| GET | `/api/query/quotes` | 查询报价深度 | `?instruments=au2406,rb2406` | `{[instrument_id]: QuoteDepth}` |
+| GET | `/api/query/quotes` | 查询五档行情深度 | `?instruments=au2406,rb2406` | `{[instrument_id]: QuoteDepth}` |
 | GET | `/api/query/contracts` | 查询合约信息 | `?instruments=au2406` | `{[instrument_id]: ContractInfo}` |
 
 ### 4.5 数据模型
@@ -609,12 +610,13 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 | 2026-07-07 | v0.2 | 根据PRD更新：新增GFD、点价报单、报价查询、合约查询、大数据调优 | ✅ 完成 |
 | 2026-07-07 | v0.3 | 文档检查修正：删除多平台对接、明确止损单实现、补充批量撤单接口 | ✅ 完成 |
 | 2026-07-07 | v0.4 | 严重问题修正：止损单改为后端实现、GFD/FOK/FAK分离为time_condition、明确Web应用定位 | ✅ 完成 |
-| - | v0.5 | Python中间层开发（含止损单监控服务） | ⏳ 待开始 |
-| - | v0.6 | 前端行情模块开发（vtable高性能渲染、点价报单） | ⏳ 待开始 |
-| - | v0.7 | 前端报单模块开发（快捷键、批量撤单） | ⏳ 待开始 |
-| - | v0.8 | 前端查询模块开发（报价查询、合约查询） | ⏳ 待开始 |
-| - | v0.9 | 大数据调优（虚拟滚动、批量更新、增量渲染） | ⏳ 待开始 |
-| - | v1.0 | 联调测试 + Bug修复 | ⏳ 待开始 |
+| 2026-07-07 | v0.5 | 中等问题修正：快捷键冲突解决、自选合约持久化明确、报价查询区分五档深度、统一FastAPI | ✅ 完成 |
+| - | v0.6 | Python中间层开发（含止损单监控服务） | ⏳ 待开始 |
+| - | v0.7 | 前端行情模块开发（vtable高性能渲染、点价报单） | ⏳ 待开始 |
+| - | v0.8 | 前端报单模块开发（快捷键、批量撤单） | ⏳ 待开始 |
+| - | v0.9 | 前端查询模块开发（报价查询、合约查询） | ⏳ 待开始 |
+| - | v1.0 | 大数据调优（虚拟滚动、批量更新、增量渲染） | ⏳ 待开始 |
+| - | v1.1 | 联调测试 + Bug修复 | ⏳ 待开始 |
 
 ---
 
