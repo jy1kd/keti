@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="trader">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/trader/v6.7.13_20260225_mduserapi.zip!/" />
+      <root url="jar://$PROJECT_DIR$/trader/v6.7.13_20260225_traderapi.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
