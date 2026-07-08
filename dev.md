@@ -514,19 +514,31 @@ class CallbackHandler:
         """行情回调"""
         # 1. 更新内存缓存
         # 2. 通过WebSocket推送给前端
-        ws_manager.broadcast("market_data", data)
+        ws_manager.broadcast("market", "market_data", data)
 
     def on_order(self, data: OrderRecord):
         """报单回报"""
-        ws_manager.broadcast("order_return", data)
+        ws_manager.broadcast("order", "order_return", data)
 
     def on_trade(self, data: TradeRecord):
         """成交回报"""
-        ws_manager.broadcast("trade_return", data)
+        ws_manager.broadcast("order", "trade_return", data)
 
     def on_position(self, data: PositionRecord):
         """持仓更新"""
-        ws_manager.broadcast("position_update", data)
+        ws_manager.broadcast("position", "position_update", data)
+
+    def on_stop_order(self, data: StopOrder):
+        """止损单状态更新"""
+        ws_manager.broadcast("stop", "stop_order_update", data)
+
+    def on_connection_status(self, data: dict):
+        """连接状态变化"""
+        ws_manager.broadcast("system", "connection_status", data)
+
+    def on_error(self, data: dict):
+        """错误消息"""
+        ws_manager.broadcast("system", "error", data)
 ```
 
 ### 4.3 WebSocket管理
