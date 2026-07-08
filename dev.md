@@ -743,8 +743,8 @@ interface ErrorMessage {
 axios.interceptors.response.use(
   response => response,
   error => {
-    const errorCode = error.response?.data?.error_code || 10;
-    const errorMsg = error.response?.data?.error_msg || '网络异常';
+    const errorCode = error.response?.data?.error?.code || 'INTERNAL_ERROR';
+    const errorMsg = error.response?.data?.error?.message || '网络异常';
     // 显示错误提示
     showErrorToast(errorMsg);
     return Promise.reject(error);
@@ -762,7 +762,13 @@ from fastapi import HTTPException
 async def global_exception_handler(request, exc):
     return JSONResponse(
         status_code=500,
-        content={"error_code": 99, "error_msg": "系统异常"}
+        content={
+            "success": False,
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": "系统异常"
+            }
+        }
     )
 ```
 
