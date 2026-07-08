@@ -596,9 +596,13 @@ function handleNewData(newRecord) {
 - **缓存策略**：合约列表在后端内存中缓存，登录成功后自动预加载，后续查询从缓存中过滤
 - **缓存刷新**：每次重新登录时刷新合约列表缓存，运行期间不自动刷新
 
-**WebSocket推送**：`ws://localhost:8000/ws/market`
+**WebSocket推送**：分端点设计
+- `ws://localhost:8000/ws/market` - 行情推送（market_data）
+- `ws://localhost:8000/ws/order` - 报单回报（order_return, trade_return）
+- `ws://localhost:8000/ws/position` - 持仓更新（position_update）
+- `ws://localhost:8000/ws/stop` - 止损单状态更新（stop_order_update）
+- `ws://localhost:8000/ws/system` - 系统消息（connection_status, error）
 - 连接后自动推送已订阅合约的行情更新
-- 消息格式：`{type: "market_data", data: MarketSnapshot}`
 - **安全说明**：仅监听localhost地址，无外部网络暴露风险，WebSocket连接无需额外认证
 
 ### 4.3 报单接口
