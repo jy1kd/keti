@@ -72,29 +72,33 @@ src/
 ├── components/           # 通用组件
 │   ├── ConnectionStatus/ # 连接状态指示器
 │   ├── ContractSearch/   # 合约搜索框
-│   ├── OrderForm/        # 报单表单（支持点价、快捷键）
+│   ├── OrderForm/        # 报单表单（支持点价、快捷键、价格步进）
 │   ├── QuickKeys/        # 快捷键管理组件（含配置面板）
 │   ├── BatchCancel/      # 批量撤单组件
+│   ├── SpreadDisplay/    # 价差显示组件
 │   └── PerfMonitor/      # 渲染性能监控（FPS、渲染耗时，P2）
 ├── modules/              # 业务模块
 │   ├── market/           # 行情模块
 │   │   ├── MarketPanel.tsx
 │   │   ├── MarketTable.tsx (vtable，支持单击/双击点价)
+│   │   ├── DepthQuote.tsx    # 五档行情展示组件
+│   │   ├── KLineChart.tsx    # K线图组件（多周期、技术指标）
 │   │   └── store.ts
 │   ├── order/            # 报单模块
 │   │   ├── OrderPanel.tsx
-│   │   ├── OrderForm.tsx (支持限价/市价、止损单提交)
+│   │   ├── OrderForm.tsx (支持限价/市价、止损单提交、价格步进)
 │   │   ├── StopOrderForm.tsx (止损单表单)
+│   │   ├── QuickActions.tsx  # 快捷操作（一键反向、一键锁仓）
 │   │   └── store.ts
 │   ├── options/            # 期权模块
 │   │   ├── OptionPanel.tsx    # 期权面板
-│   │   ├── TQuoteTable.tsx    # T型报价表格
+│   │   ├── TQuoteTable.tsx    # T型报价表格（含波动率）
 │   │   └── store.ts
 │   └── query/            # 查询模块
 │       ├── QueryPanel.tsx
 │       ├── OrderFlow.tsx      # 报单流水
 │       ├── TradeFlow.tsx      # 成交流水
-│       ├── Position.tsx       # 持仓查询
+│       ├── Position.tsx       # 持仓查询（支持点击平仓）
 │       ├── QuoteQuery.tsx     # 报价查询（五档深度）
 │       ├── ContractQuery.tsx  # 合约查询
 │       ├── StopOrderList.tsx  # 止损单列表
@@ -106,6 +110,7 @@ src/
 ├── hooks/                # 自定义Hook
 │   ├── useHotKeys.ts     # 快捷键Hook（仅报单面板焦点时生效）
 │   ├── usePointOrder.ts  # 点价报单Hook
+│   ├── usePriceStep.ts   # 价格步进Hook（自动对齐最小变动价位）
 │   └── useReconnect.ts   # 断线重连Hook（指数退避重试，最多5次）
 ├── stores/               # 全局状态
 │   ├── connection.ts     # 连接状态（含重连状态）
@@ -339,10 +344,20 @@ class StopOrder:
 | POST | `/api/order/insert` | 报单 | `OrderRequest` | `{order_ref, success, message}` |
 | POST | `/api/order/cancel` | 撤单 | `{order_ref}` | `{success, message}` |
 | POST | `/api/order/cancel_all` | 批量撤单 | - | `{cancelled_count, success}` |
+| POST | `/api/order/reverse` | 一键反向 | `{order_ref}` | `{new_order_ref, success}` |
+| POST | `/api/order/lock` | 一键锁仓 | `{instrument_id, volume}` | `{buy_order_ref, sell_order_ref, success}` |
 | GET | `/api/order/status/{order_ref}` | 查询单个报单状态 | - | `OrderStatus` |
 | POST | `/api/order/stop` | 提交止损单 | `StopOrderRequest` | `{stop_order_ref, success, message}` |
 | POST | `/api/order/stop/cancel` | 取消止损单 | `{stop_order_ref}` | `{success, message}` |
 | GET | `/api/order/stop/list` | 查询止损单列表 | - | `[StopOrder]` |
+
+### 4.4 行情扩展接口
+
+| 方法 | 路径 | 描述 | 请求体 | 响应 |
+|------|------|------|--------|------|
+| GET | `/api/market/kline` | 获取K线数据 | `?instrument=au2406&period=1m&count=100` | `[KLineData]` |
+| GET | `/api/market/depth` | 获取五档行情深度 | `?instrument=au2406` | `DepthData` |
+| GET | `/api/market/volatility` | 获取波动率数据 | `?instrument=au2406` | `VolatilityData` |
 
 ### 4.4 查询接口
 
@@ -376,16 +391,36 @@ interface OrderRequest {
 interface MarketSnapshot {
   instrument_id: string;
   last_price: number;
+  // 五档行情
   bid_price1: number;
   bid_volume1: number;
+  bid_price2: number;
+  bid_volume2: number;
+  bid_price3: number;
+  bid_volume3: number;
+  bid_price4: number;
+  bid_volume4: number;
+  bid_price5: number;
+  bid_volume5: number;
   ask_price1: number;
   ask_volume1: number;
+  ask_price2: number;
+  ask_volume2: number;
+  ask_price3: number;
+  ask_volume3: number;
+  ask_price4: number;
+  ask_volume4: number;
+  ask_price5: number;
+  ask_volume5: number;
+  // 基础信息
   volume: number;
   open_interest: number;
   open_price: number;
   high_price: number;
   low_price: number;
   pre_close_price: number;
+  // 价差
+  spread: number;             // 买卖价差（ask1 - bid1）
   update_time: string;
 }
 ```
@@ -458,6 +493,39 @@ interface ContractInfo {
   price_tick: number;        // 最小变动价位
   expire_date: string;       // 到期日
   is_trading: boolean;       // 是否可交易
+}
+```
+
+**KLineData**（K线数据）：
+```typescript
+interface KLineData {
+  timestamp: number;         // 时间戳
+  open: number;              // 开盘价
+  high: number;              // 最高价
+  low: number;               // 最低价
+  close: number;             // 收盘价
+  volume: number;            // 成交量
+  open_interest: number;     // 持仓量
+}
+```
+
+**DepthData**（五档行情深度）：
+```typescript
+interface DepthData {
+  instrument_id: string;
+  bids: Array<{price: number, volume: number}>;  // 买一到买五
+  asks: Array<{price: number, volume: number}>;  // 卖一到卖五
+  update_time: string;
+}
+```
+
+**VolatilityData**（波动率数据）：
+```typescript
+interface VolatilityData {
+  instrument_id: string;
+  implied_volatility: number;  // 隐含波动率
+  historical_volatility: number; // 历史波动率
+  update_time: string;
 }
 ```
 
@@ -566,6 +634,10 @@ interface ContractInfo {
 | E2E-04 | 点价报单E2E | 1.订阅行情 2.单击买一价格 3.查询成交 | 报单成功并成交 | P0 |
 | E2E-05 | 大数据量压力测试 | 1.订阅1000+合约 2.观察FPS和内存 | FPS≥60，内存稳定 | P1 |
 | E2E-06 | 止损单E2E | 1.登录 2.订阅行情 3.提交止损单 4.等待触发 5.查询成交 | 止损单触发并成交 | P1 |
+| E2E-07 | K线图展示 | 1.订阅行情 2.切换周期 3.观察K线图 | K线图正常显示，技术指标正确 | P1 |
+| E2E-08 | 一键反向E2E | 1.报单 2.点击一键反向 3.查询新报单 | 方向反转，价格数量保留 | P1 |
+| E2E-09 | 一键锁仓E2E | 1.点击一键锁仓 2.查询持仓 | 同时开多空相同数量 | P2 |
+| E2E-10 | 点击持仓平仓E2E | 1.开仓 2.点击持仓 3.查询报单 | 自动填充平仓报单 | P1 |
 
 ---
 
@@ -704,7 +776,8 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 | 2026-07-07 | v0.6 | 建议优化：删除Web Worker（收益存疑）、明确市价单需调研simnow支持 | ✅ 完成 |
 | 2026-07-07 | v0.7 | trader目录检查：明确API文件位置、补充ctypes加载DLL示例 | ✅ 完成 |
 | 2026-07-07 | v0.8 | PRD对齐检查：补充期权模块、断线重连、内存优化、性能监控、界面设计 | ✅ 完成 |
-| - | v0.9 | Python中间层开发（含止损单监控服务） | ⏳ 待开始 |
+| 2026-07-07 | v0.9 | PRD功能补充：五档行情、K线图、波动率、价格步进、价差显示、一键反向/锁仓、点击持仓平仓 | ✅ 完成 |
+| - | v1.0 | Python中间层开发（含止损单监控服务） | ⏳ 待开始 |
 | - | v1.0 | 前端行情模块开发（vtable高性能渲染、点价报单、期权T型报价） | ⏳ 待开始 |
 | - | v1.1 | 前端报单模块开发（快捷键、批量撤单） | ⏳ 待开始 |
 | - | v1.2 | 前端查询模块开发（报价查询、合约查询） | ⏳ 待开始 |
