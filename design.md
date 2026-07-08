@@ -126,9 +126,9 @@ src/
 ```
 server/
 ├── api/                  # API路由
-│   ├── market.py         # 行情相关接口（订阅、退订、快照、报价查询）
-│   ├── order.py          # 报单相关接口（限价/市价、撤单、批量撤单）
-│   ├── query.py          # 查询相关接口（报单、成交、持仓、资金、合约）
+│   ├── market.py         # 行情相关接口（订阅、退订、快照、K线、深度、波动率、期权）
+│   ├── order.py          # 报单相关接口（限价/市价、撤单、批量撤单、止损单）
+│   ├── query.py          # 查询相关接口（报单、成交、持仓、资金、合约、报价）
 │   └── connection.py     # 连接管理接口（登录、登出、状态）
 ├── ctp/                  # CTP封装层（使用openctp-ctp库）
 │   ├── md_user_api.py    # 行情API封装（基于openctp-ctp）
@@ -147,6 +147,8 @@ server/
 │   ├── order.py          # 报单数据模型（含GFD/FOK/FAK）
 │   ├── account.py        # 账户数据模型
 │   └── contract.py       # 合约数据模型
+├── data/                 # 数据持久化目录
+│   └── stop_orders.json  # 止损单持久化文件
 ├── config.py             # 配置管理
 ├── main.py               # 应用入口
 └── requirements.txt      # Python依赖
