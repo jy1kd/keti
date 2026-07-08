@@ -872,3 +872,8 @@ feature/pr-3-market-ui
 |------|------|------|------|
 | 2026-07-08 | v1.0 | 初始化dev.md：代码目录结构、前端设计、后端设计、技术规范 | ✅ 完成 |
 | 2026-07-08 | v1.1 | CTP绑定改为openctp-ctp、错误码与design.md统一、WebSocket分端点设计、补充data目录和options.py | ✅ 完成 |
+| 2026-07-08 | v1.2 | 后端目录CTP封装层描述更新为openctp-ctp | ✅ 完成 |
+| 2026-07-08 | v1.3 | 补充QuoteQuery、ContractQuery、StopOrderList组件职责说明 | ✅ 完成 |
+| 2026-07-08 | v1.4 | 回调处理代码更新为WebSocket分端点调用 | ✅ 完成 |
+| 2026-07-08 | v1.5 | 补充stop_order_update、connection_status、error消息契约定义 | ✅ 完成 |
+| 2026-07-08 | v1.6 | 错误处理代码更新为与错误码定义一致的字段名 | ✅ 完成 |
