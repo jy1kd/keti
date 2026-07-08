@@ -827,6 +827,87 @@ interface VolatilityData {
 }
 ```
 
+**TradeRecord**（成交记录）：
+```typescript
+interface TradeRecord {
+  trade_id: string;           // 成交编号
+  order_ref: string;          // 报单引用
+  instrument_id: string;      // 合约代码
+  direction: 'buy' | 'sell';  // 买卖方向
+  offset: 'open' | 'close' | 'close_today'; // 开平标志
+  price: number;              // 成交价格
+  volume: number;             // 成交数量
+  trade_time: string;         // 成交时间
+}
+```
+
+**PositionRecord**（持仓记录）：
+```typescript
+interface PositionRecord {
+  instrument_id: string;      // 合约代码
+  direction: 'long' | 'short'; // 持仓方向
+  position: number;           // 持仓数量
+  position_cost: number;      // 持仓成本
+  position_profit: number;    // 持仓盈亏
+  today_position: number;     // 今仓数量
+  yd_position: number;        // 昨仓数量
+  update_time: string;
+}
+```
+
+**OrderStatus**（报单状态）：
+```typescript
+interface OrderStatus {
+  order_ref: string;          // 报单引用
+  instrument_id: string;      // 合约代码
+  direction: 'buy' | 'sell';  // 买卖方向
+  offset: 'open' | 'close' | 'close_today'; // 开平标志
+  price: number;              // 报单价格
+  volume: number;             // 报单数量
+  volume_traded: number;      // 已成交数量
+  order_status: 'submitted' | 'partial' | 'all_traded' | 'canceled' | 'rejected'; // 报单状态
+  status_msg: string;         // 状态信息
+  insert_time: string;        // 报单时间
+}
+```
+
+**OptionContract**（期权合约）：
+```typescript
+interface OptionContract {
+  instrument_id: string;      // 合约代码
+  instrument_name: string;    // 合约名称
+  underlying: string;         // 标的合约
+  option_type: 'call' | 'put'; // 期权类型（看涨/看跌）
+  strike_price: number;       // 行权价
+  expire_date: string;        // 到期日
+  volume_multiple: number;    // 合约乘数
+  price_tick: number;         // 最小变动价位
+  is_trading: boolean;        // 是否可交易
+}
+```
+
+**OptionChain**（期权T型报价）：
+```typescript
+interface OptionChain {
+  underlying: string;         // 标的合约
+  expire_date: string;        // 到期日
+  calls: OptionQuote[];       // 看涨期权列表（按行权价排序）
+  puts: OptionQuote[];        // 看跌期权列表（按行权价排序）
+  update_time: string;
+}
+
+interface OptionQuote {
+  instrument_id: string;      // 合约代码
+  strike_price: number;       // 行权价
+  last_price: number;         // 最新价
+  bid_price: number;          // 买一价
+  ask_price: number;          // 卖一价
+  volume: number;             // 成交量
+  open_interest: number;      // 持仓量
+  implied_volatility: number; // 隐含波动率
+}
+```
+
 ### 4.7 错误码定义
 
 所有接口错误响应统一格式：
