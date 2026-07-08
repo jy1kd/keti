@@ -672,6 +672,32 @@ interface PositionUpdateMessage {
   type: 'position_update';
   data: PositionRecord;
 }
+
+// 止损单状态更新
+interface StopOrderUpdateMessage {
+  type: 'stop_order_update';
+  data: StopOrder;
+}
+
+// 连接状态变化
+interface ConnectionStatusMessage {
+  type: 'connection_status';
+  data: {
+    md_connected: boolean;
+    td_connected: boolean;
+    message: string;
+  };
+}
+
+// 错误消息
+interface ErrorMessage {
+  type: 'error';
+  data: {
+    code: string;
+    message: string;
+    related_ref?: string;
+  };
+}
 ```
 
 ---
