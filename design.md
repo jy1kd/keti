@@ -59,7 +59,7 @@
 | HTTP客户端 | Axios | latest | REST API调用 |
 | 后端框架 | FastAPI | 0.100+ | REST API服务 |
 | WebSocket | websockets | 11.x | 实时推送 |
-| CTP绑定 | ctypes | 内置 | 调用C++ DLL |
+| CTP绑定 | SWIG | - | 自动生成C++ DLL的Python绑定 |
 | 包管理 | pnpm (前端) + pip (后端) | - | 依赖管理 |
 
 ---
@@ -130,9 +130,11 @@ server/
 │   ├── order.py          # 报单相关接口（限价/市价、撤单、批量撤单）
 │   ├── query.py          # 查询相关接口（报单、成交、持仓、资金、合约）
 │   └── connection.py     # 连接管理接口（登录、登出、状态）
-├── ctp/                  # CTP封装层（使用ctypes调用trader目录中的DLL）
-│   ├── md_user_api.py    # 行情API封装（加载thostmduserapi_se.dll）
-│   ├── trader_api.py     # 交易API封装（加载thosttraderapi_se.dll）
+├── ctp/                  # CTP封装层（使用SWIG自动生成Python绑定）
+│   ├── md_user_api.i     # 行情API SWIG接口文件
+│   ├── trader_api.i      # 交易API SWIG接口文件
+│   ├── md_user_api.py    # 行情API封装（SWIG生成）
+│   ├── trader_api.py     # 交易API封装（SWIG生成）
 │   ├── callback.py       # 回调处理
 │   └── types.py          # CTP数据类型（基于ThostFtdcUserApiStruct.h）
 ├── services/             # 业务服务层
@@ -186,6 +188,7 @@ type WSMessageType =
   | 'market_data'        // 行情推送
   | 'order_return'       // 报单回报
   | 'trade_return'       // 成交回报
+  | 'position_update'    // 持仓更新
   | 'stop_order_update'  // 止损单状态更新
   | 'connection_status'  // 连接状态变化
   | 'error';             // 错误消息
@@ -241,6 +244,23 @@ type WSMessageType =
     "price": 480.50,
     "volume": 1,
     "trade_time": "14:30:11"
+  }
+}
+```
+
+`position_update` - 持仓更新：
+```json
+{
+  "type": "position_update",
+  "data": {
+    "instrument_id": "au2406",
+    "direction": "long",
+    "position": 5,
+    "position_cost": 480.00,
+    "position_profit": 2500.00,
+    "today_position": 2,
+    "yd_position": 3,
+    "update_time": "14:30:05"
   }
 }
 ```
@@ -383,6 +403,13 @@ type WSMessageType =
 - 多头止损：当最新价 ≤ 止损价时触发卖出
 - 空头止损：当最新价 ≥ 止损价时触发买入
 
+**边界条件处理**：
+- **价格跳空**：当最新价直接跳过止损价（如从480.50跳至479.00，止损价480.00），仍触发止损，使用实际到达价格报单
+- **触发后报单被拒**：止损单状态变为`trigger_failed`，通过WebSocket通知前端，用户需手动处理。不自动重试，避免重复报单风险
+- **部分数量持仓**：止损单独立于持仓数量校验。触发时报单数量以止损单设定的数量为准，CTP柜台一侧做可用持仓校验
+- **止损单修改**：不支持修改已提交的止损单。需先取消原止损单再重新提交
+- **止损单有效期**：止损单默认为当日有效（GFD），收盘后自动失效
+
 **并发处理**：
 - 多个止损单监控同一合约时，在同一行情回调中按顺序检查所有止损单
 - 触发顺序按止损单创建时间（FIFO）
@@ -423,7 +450,7 @@ class StopOrder:
     price: float             # 报单价格（触发后的报单价格）
     volume: int              # 报单数量
     stop_price: float        # 止损价
-    status: str              # pending/triggered/canceled
+    status: str              # pending/triggered/trigger_failed/canceled
     created_at: datetime     # 创建时间
     triggered_at: datetime   # 触发时间（触发后填写）
     triggered_order_ref: str # 触发后的报单引用（触发后填写）
@@ -540,10 +567,14 @@ function handleNewData(newRecord) {
 - `search`参数支持模糊匹配合约代码和合约名称
 - `exchange`参数可选，用于按交易所筛选（SHFE/DCE/CZCE/CFFEX/INE）
 - 不传参数时返回全部合约列表
+- **实现说明**：CTP的ReqQryInstrument不支持服务端搜索，需在登录后一次性拉取全量合约列表
+- **缓存策略**：合约列表在后端内存中缓存，登录成功后自动预加载，后续查询从缓存中过滤
+- **缓存刷新**：每次重新登录时刷新合约列表缓存，运行期间不自动刷新
 
 **WebSocket推送**：`ws://localhost:8000/ws/market`
 - 连接后自动推送已订阅合约的行情更新
 - 消息格式：`{type: "market_data", data: MarketSnapshot}`
+- **安全说明**：仅监听localhost地址，无外部网络暴露风险，WebSocket连接无需额外认证
 
 ### 4.3 报单接口
 
@@ -559,26 +590,26 @@ function handleNewData(newRecord) {
 | POST | `/api/order/stop/cancel` | 取消止损单 | `{stop_order_ref}` | `{success, message}` |
 | GET | `/api/order/stop/list` | 查询止损单列表 | - | `[StopOrder]` |
 
-**一键反向实现**：
+**一键反向实现**（⚠️ 非原子操作，存在中间状态风险）：
 1. 根据原报单引用查询持仓方向和数量
 2. 先平仓原持仓（close/close_today）
 3. 再开反方向仓（open）
 4. 两步操作异步执行，返回新的报单引用
 5. 如果平仓失败，不开新仓
+6. 注意：两步之间市场价格可能大幅波动，无法保证最终成交价
 
-**一键锁仓实现**：
-1. 根据合约代码查询当前持仓
-2. 如果无持仓，同时开多空相同数量（buy open + sell open）
-3. 如果有持仓，在反方向开仓相同数量（如持多1手，则sell open 1手）
-4. 返回双向报单引用
+**一键锁仓实现**（区分两种场景）：
+- **场景A：双开锁仓**（当前无持仓）：同时开多空相同数量（buy open + sell open），返回双向报单引用
+- **场景B：反手锁仓**（已有单边持仓）：在反方向开仓相同数量（如持多1手 → sell open 1手），锁定当前盈亏
+- 注意：双开锁仓的两次报单并非原子操作，可能出现部分成交的情况
 
 ### 4.4 行情扩展接口
 
 | 方法 | 路径 | 描述 | 请求体 | 响应 |
 |------|------|------|--------|------|
-| GET | `/api/market/kline` | 获取K线数据 | `?instrument=au2406&period=1m&count=100` | `[KLineData]` |
+| GET | `/api/market/kline` | 获取K线数据（当前会话内实时聚合，不依赖历史数据） | `?instrument=au2406&period=1m&count=100` | `[KLineData]` |
 | GET | `/api/market/depth` | 获取五档行情深度 | `?instrument=au2406` | `DepthData` |
-| GET | `/api/market/volatility` | 获取波动率数据 | `?instrument=au2406` | `VolatilityData` |
+| GET | `/api/market/volatility` | 获取隐含波动率（Black-Scholes模型计算） | `?instrument=au2406` | `VolatilityData` |
 
 ### 4.5 查询接口
 
@@ -601,7 +632,7 @@ interface OrderRequest {
   offset: 'open' | 'close' | 'close_today'; // 开平标志
   price: number;              // 报单价格
   volume: number;             // 报单数量
-  order_type: 'limit' | 'market';  // 价格类型（限价/市价）
+  order_type: 'limit' | 'market';  // 价格类型（限价/市价）。市价单需设置CTP的OrderPriceType字段，开发前需验证simnow市价单支持情况。不支持时降级为对手价+滑点模拟
   time_condition: 'gfd' | 'fok' | 'fak';  // 有效期/成交方式
   stop_price?: number;        // 止损价（止损单时必填，由后端监控触发）
 }
@@ -684,7 +715,7 @@ interface StopOrder {
   price: number;              // 报单价格
   volume: number;             // 报单数量
   stop_price: number;         // 止损价
-  status: 'pending' | 'triggered' | 'canceled'; // 状态
+  status: 'pending' | 'triggered' | 'trigger_failed' | 'canceled'; // 状态
   triggered_order_ref?: string; // 触发后的报单引用
   created_at: string;         // 创建时间
   triggered_at?: string;      // 触发时间
@@ -760,8 +791,8 @@ interface DepthData {
 ```typescript
 interface VolatilityData {
   instrument_id: string;
-  implied_volatility: number;  // 隐含波动率
-  historical_volatility: number; // 历史波动率
+  implied_volatility: number;  // 隐含波动率（基于Black-Scholes模型计算）
+  // historical_volatility: number; // 历史波动率（P2，需额外数据源，暂不实现）
   update_time: string;
 }
 ```
@@ -774,10 +805,13 @@ interface VolatilityData {
   "success": false,
   "error": {
     "code": "错误码",
-    "message": "错误描述"
+    "message": "错误描述",
+    "ctp_error_id": 0,
+    "ctp_error_msg": ""
   }
 }
 ```
+> `ctp_error_id`和`ctp_error_msg`仅在`code`为`CTP_ERROR`时存在，透传CTP原生错误码（ErrorID）和错误消息（ErrorMsg）。
 
 **错误码列表**：
 
@@ -794,7 +828,7 @@ interface VolatilityData {
 | `POSITION_NOT_FOUND` | 持仓不存在 | 平仓时无对应持仓 |
 | `SUBSCRIBE_LIMIT` | 订阅超限 | 订阅合约数超过500 |
 | `INTERNAL_ERROR` | 内部错误 | 未预期的系统错误 |
-| `CTP_ERROR` | CTP错误 | simnow返回的业务错误 |
+| `CTP_ERROR` | CTP错误 | simnow返回的业务错误。CTP原生错误码（ErrorID）和错误消息（ErrorMsg）通过`ctp_error_id`和`ctp_error_msg`字段透传，不做映射 |
 
 ---
 
@@ -940,6 +974,10 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 # 安装依赖
 pip install fastapi uvicorn websockets pydantic
 
+# SWIG绑定生成（需先安装SWIG系统工具）
+# swig -python -c++ -o ctp/md_user_api_wrap.cpp ctp/md_user_api.i
+# 编译_wrap.pyd（Windows需Visual Studio Build Tools）
+
 # 启动服务
 uvicorn main:app --reload --port 8000
 ```
@@ -952,20 +990,24 @@ uvicorn main:app --reload --port 8000
    - 行情API DLL：`trader/mduserapi/v6.7.13_20260225_winApi/mduserapi/20260225_mduserapi64_se_windows/thostmduserapi_se.dll`
    - 交易API DLL：`trader/traderapi/v6.7.13_20260225_winApi/traderapi/20260225_traderapi64_se_windows/thosttraderapi_se.dll`
    - 头文件（参考用）：`ThostFtdcMdApi.h`、`ThostFtdcTraderApi.h`、`ThostFtdcUserApiStruct.h`、`ThostFtdcUserApiDataType.h`
-4. Python ctypes加载DLL示例：
-   ```python
-   import ctypes
-   import os
-   
-   # 获取DLL完整路径
-   base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-   md_dll_path = os.path.join(base_dir, "trader/mduserapi/v6.7.13_20260225_winApi/mduserapi/20260225_mduserapi64_se_windows/thostmduserapi_se.dll")
-   td_dll_path = os.path.join(base_dir, "trader/traderapi/v6.7.13_20260225_winApi/traderapi/20260225_traderapi64_se_windows/thosttraderapi_se.dll")
-   
-   # 加载DLL
-   md_api = ctypes.CDLL(md_dll_path)
-   td_api = ctypes.CDLL(td_dll_path)
-   ```
+4. SWIG绑定方案（推荐）：
+   - 使用SWIG自动生成Python绑定，将C++类接口暴露为Python可调用模块
+   - SWIG接口文件（.i）定义需要导出的C++类和虚函数回调
+   - 编译生成`_wrap.pyd`（Windows）或`_wrap.so`（Linux）和对应的Python模块
+   - **开发前必须完成技术Spike验证**：
+     ① 能否通过SWIG成功加载DLL并创建API实例
+     ② 能否成功连接到simnow模拟柜台并登录
+     ③ 能否收到行情回调（OnRtnDepthMarketData）
+     ④ 能否成功提交一笔报单并收到回报（OnRtnOrder）
+   - 环境准备：
+     ```bash
+     # Windows: 安装SWIG
+     # 下载 swigwin 并添加到PATH
+     
+     # 生成绑定
+     swig -python -c++ -o md_user_api_wrap.cpp md_user_api.i
+     # 编译为.pyd（需要Visual Studio Build Tools）
+     ```
 
 ### 7.4 环境变量配置
 
@@ -1046,12 +1088,13 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 | 2026-07-07 | v0.9 | PRD功能补充：五档行情、K线图、波动率、价格步进、价差显示、一键反向/锁仓、点击持仓平仓 | ✅ 完成 |
 | 2026-07-08 | v1.0 | 文档完善：WebSocket消息协议、断线重连、止损单持久化、错误码定义、可行性验证闭环、数据模型补充、接口搜索功能 | ✅ 完成 |
 | 2026-07-08 | v1.1 | 实时数据展示方案：行情批量更新(50ms)、查询数据增量更新、新数据高亮、自动滚动、暂停更新、时间倒序 | ✅ 完成 |
-| - | v1.2 | Python中间层开发（含止损单监控服务、断线重连、止损单持久化、错误处理） | ⏳ 待开始 |
-| - | v1.2 | 前端行情模块开发（vtable高性能渲染、点价报单、期权T型报价、K线图、WebSocket消息处理） | ⏳ 待开始 |
-| - | v1.3 | 前端报单模块开发（快捷键、批量撤单、一键反向/锁仓、止损单提交） | ⏳ 待开始 |
-| - | v1.4 | 前端查询模块开发（报价查询、合约查询、止损单列表、账户资金） | ⏳ 待开始 |
-| - | v1.5 | 大数据调优（虚拟滚动、批量更新、增量渲染、内存优化、性能监控、断线重连） | ⏳ 待开始 |
-| - | v1.6 | 联调测试 + Bug修复 + 性能测试 + 错误处理验证 | ⏳ 待开始 |
+| - | v1.2 | 技术Spike：SWIG绑定验证（DLL加载、登录、行情回调、报单回调） | ⏳ 待开始 |
+| - | v1.3 | Python中间层开发（含止损单监控服务、断线重连、止损单持久化、错误处理） | ⏳ 待开始 |
+| - | v1.4 | 前端行情模块开发（vtable高性能渲染、点价报单、期权T型报价、K线图、WebSocket消息处理） | ⏳ 待开始 |
+| - | v1.5 | 前端报单模块开发（快捷键、批量撤单、一键反向/锁仓、止损单提交） | ⏳ 待开始 |
+| - | v1.6 | 前端查询模块开发（报价查询、合约查询、止损单列表、账户资金） | ⏳ 待开始 |
+| - | v1.7 | 大数据调优（虚拟滚动、批量更新、增量渲染、内存优化、性能监控、断线重连） | ⏳ 待开始 |
+| - | v1.8 | 联调测试 + Bug修复 + 性能测试 + 错误处理验证 | ⏳ 待开始 |
 
 ---
 
