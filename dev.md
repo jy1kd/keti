@@ -17,7 +17,7 @@
 | 图表库 | ECharts | latest | K线图、技术指标 |
 | 后端框架 | FastAPI | 0.100+ | REST API服务 |
 | WebSocket | websockets | 11.x | 实时推送 |
-| CTP绑定 | ctypes | 内置 | 调用C++ DLL |
+| CTP绑定 | openctp-ctp | latest | Python CTP封装库（开箱即用） |
 
 ### 1.3 角色分工
 | 角色 | 职责 | 负责模块 |
@@ -106,7 +106,7 @@ frontend/
 │   │       └── store.ts           # 查询状态管理（Zustand）
 │   ├── services/              # API服务层
 │   │   ├── api.ts             # REST API封装（Axios）
-│   │   ├── ws.ts              # WebSocket管理（连接、重连、消息分发）
+│   │   ├── ws.ts              # WebSocket管理（分端点连接、重连、消息分发）
 │   │   └── types.ts           # TypeScript类型定义
 │   ├── stores/                # 全局状态
 │   │   ├── connection.ts      # 连接状态（md_connected、td_connected）
@@ -154,7 +154,10 @@ server/
 │   ├── market.py              # 行情数据模型（MarketSnapshot、KLineData、DepthData）
 │   ├── order.py               # 报单数据模型（OrderRequest、OrderRecord、StopOrder）
 │   ├── account.py             # 账户数据模型（AccountInfo、PositionRecord）
-│   └── contract.py            # 合约数据模型（ContractInfo）
+│   ├── contract.py            # 合约数据模型（ContractInfo）
+│   └── options.py             # 期权数据模型（OptionContract、OptionChain）
+├── data/                      # 数据持久化目录
+│   └── stop_orders.json       # 止损单持久化文件
 ├── config.py                  # 配置管理（环境变量读取）
 ├── main.py                    # 应用入口（FastAPI应用）
 ├── requirements.txt           # Python依赖
@@ -268,10 +271,19 @@ interface QueryStore {
   orders: OrderRecord[];
   trades: TradeRecord[];
   positions: PositionRecord[];
+  account: AccountInfo | null;
+  quotes: Map<string, QuoteDepth>;
+  contracts: Map<string, ContractInfo>;
+  stopOrders: StopOrder[];
   isPaused: boolean;  // 暂停更新
   setPaused: (paused: boolean) => void;
   addOrder: (order: OrderRecord) => void;  // 增量更新
   addTrade: (trade: TradeRecord) => void;  // 增量更新
+  updatePosition: (position: PositionRecord) => void;
+  updateAccount: (account: AccountInfo) => void;
+  updateQuote: (quote: QuoteDepth) => void;
+  updateContract: (contract: ContractInfo) => void;
+  addStopOrder: (stopOrder: StopOrder) => void;
 }
 ```
 
@@ -343,32 +355,53 @@ app.include_router(query.router, prefix="/api/query", tags=["query"])
 
 ```python
 # server/ctp/md_user_api.py
-import ctypes
-from ctypes import cdll
+from openctp_ctp import mdapi
 
 class MdUserApi:
-    def __init__(self, dll_path: str):
-        self.dll = cdll.LoadLibrary(dll_path)
-        self._init_api()
-
-    def _init_api(self):
-        """初始化行情API"""
-        pass
+    def __init__(self):
+        self.api = None
+        self.spi = None
 
     def connect(self, front_addr: str) -> bool:
         """连接行情前置"""
-        pass
+        self.api = mdapi.CThostFtdcMdApi.CreateFtdcMdApi()
+        self.spi = MdSpi(self)
+        self.api.RegisterSpi(self.spi)
+        self.api.RegisterFront(front_addr)
+        self.api.Init()
+        return True
 
     def login(self, broker_id: str, user_id: str, password: str) -> bool:
         """登录"""
-        pass
+        req = mdapi.CThostFtdcReqUserLoginField()
+        req.BrokerID = broker_id
+        req.UserID = user_id
+        req.Password = password
+        return self.api.ReqUserLogin(req, 0) == 0
 
     def subscribe(self, instruments: list[str]) -> bool:
         """订阅行情"""
-        pass
+        return self.api.SubscribeMarketData(instruments, len(instruments)) == 0
 
     def unsubscribe(self, instruments: list[str]) -> bool:
         """退订行情"""
+        return self.api.UnSubscribeMarketData(instruments, len(instruments)) == 0
+
+class MdSpi(mdapi.CThostFtdcMdSpi):
+    def __init__(self, api: MdUserApi):
+        super().__init__()
+        self.api = api
+
+    def OnFrontConnected(self):
+        """连接成功回调"""
+        pass
+
+    def OnRspUserLogin(self, pRspUserLogin, pRspInfo, nRequestID, bIsLast):
+        """登录响应"""
+        pass
+
+    def OnRtnDepthMarketData(self, pDepthMarketData):
+        """行情数据回调"""
         pass
 ```
 
@@ -376,48 +409,94 @@ class MdUserApi:
 
 ```python
 # server/ctp/trader_api.py
-import ctypes
-from ctypes import cdll
+from openctp_ctp import traderapi
 
 class TraderApi:
-    def __init__(self, dll_path: str):
-        self.dll = cdll.LoadLibrary(dll_path)
-        self._init_api()
-
-    def _init_api(self):
-        """初始化交易API"""
-        pass
+    def __init__(self):
+        self.api = None
+        self.spi = None
 
     def connect(self, front_addr: str) -> bool:
         """连接交易前置"""
-        pass
+        self.api = traderapi.CThostFtdcTraderApi.CreateFtdcTraderApi()
+        self.spi = TraderSpi(self)
+        self.api.RegisterSpi(self.spi)
+        self.api.RegisterFront(front_addr)
+        self.api.SubscribePublicTopic(traderapi.THOST_TERT_QUICK)
+        self.api.SubscribePrivateTopic(traderapi.THOST_TERT_QUICK)
+        self.api.Init()
+        return True
 
     def login(self, broker_id: str, user_id: str, password: str) -> bool:
         """登录"""
-        pass
+        req = traderapi.CThostFtdcReqUserLoginField()
+        req.BrokerID = broker_id
+        req.UserID = user_id
+        req.Password = password
+        return self.api.ReqUserLogin(req, 0) == 0
 
     def insert_order(self, order: OrderRequest) -> str:
         """报单"""
-        pass
+        req = traderapi.CThostFtdcInputOrderField()
+        req.InstrumentID = order.instrument_id
+        req.Direction = order.direction
+        req.CombOffsetFlag = order.offset
+        req.LimitPrice = order.price
+        req.VolumeTotalOriginal = order.volume
+        req.OrderPriceType = order.order_type
+        req.TimeCondition = order.time_condition
+        self.api.ReqOrderInsert(req, 0)
+        return req.OrderRef
 
     def cancel_order(self, order_ref: str) -> bool:
         """撤单"""
-        pass
+        req = traderapi.CThostFtdcInputOrderActionField()
+        req.OrderRef = order_ref
+        return self.api.ReqOrderAction(req, 0) == 0
 
     def query_orders(self) -> list[OrderRecord]:
         """查询报单流水"""
-        pass
+        req = traderapi.CThostFtdcQryOrderField()
+        self.api.ReqQryOrder(req, 0)
+        return []
 
     def query_trades(self) -> list[TradeRecord]:
         """查询成交流水"""
-        pass
+        req = traderapi.CThostFtdcQryTradeField()
+        self.api.ReqQryTrade(req, 0)
+        return []
 
     def query_positions(self) -> list[PositionRecord]:
         """查询持仓"""
-        pass
+        req = traderapi.CThostFtdcQryInvestorPositionField()
+        self.api.ReqQryInvestorPosition(req, 0)
+        return []
 
     def query_account(self) -> AccountInfo:
         """查询账户资金"""
+        req = traderapi.CThostFtdcQryTradingAccountField()
+        self.api.ReqQryTradingAccount(req, 0)
+        return None
+
+class TraderSpi(traderapi.CThostFtdcTraderSpi):
+    def __init__(self, api: TraderApi):
+        super().__init__()
+        self.api = api
+
+    def OnFrontConnected(self):
+        """连接成功回调"""
+        pass
+
+    def OnRspUserLogin(self, pRspUserLogin, pRspInfo, nRequestID, bIsLast):
+        """登录响应"""
+        pass
+
+    def OnRtnOrder(self, pOrder):
+        """报单回报"""
+        pass
+
+    def OnRtnTrade(self, pTrade):
+        """成交回报"""
         pass
 ```
 
@@ -451,6 +530,16 @@ class CallbackHandler:
 
 #### 4.3.1 连接管理器
 
+与design.md一致，采用分端点设计：
+
+| 端点 | 消息类型 | 说明 |
+|------|----------|------|
+| `ws://localhost:8000/ws/market` | market_data | 行情推送 |
+| `ws://localhost:8000/ws/order` | order_return, trade_return | 报单回报、成交回报 |
+| `ws://localhost:8000/ws/position` | position_update | 持仓更新 |
+| `ws://localhost:8000/ws/stop` | stop_order_update | 止损单状态更新 |
+| `ws://localhost:8000/ws/system` | connection_status, error | 系统消息 |
+
 ```python
 # server/ws/manager.py
 from fastapi import WebSocket
@@ -458,25 +547,35 @@ from typing import Dict, List
 
 class WebSocketManager:
     def __init__(self):
-        self.connections: List[WebSocket] = []
+        # 按端点分组存储连接
+        self.connections: Dict[str, List[WebSocket]] = {
+            "market": [],
+            "order": [],
+            "position": [],
+            "stop": [],
+            "system": [],
+        }
 
-    async def connect(self, websocket: WebSocket):
+    async def connect(self, endpoint: str, websocket: WebSocket):
         """接受WebSocket连接"""
         await websocket.accept()
-        self.connections.append(websocket)
+        if endpoint in self.connections:
+            self.connections[endpoint].append(websocket)
 
-    def disconnect(self, websocket: WebSocket):
+    def disconnect(self, endpoint: str, websocket: WebSocket):
         """断开连接"""
-        self.connections.remove(websocket)
+        if endpoint in self.connections:
+            self.connections[endpoint].remove(websocket)
 
-    async def broadcast(self, msg_type: str, data: dict):
-        """广播消息给所有连接"""
+    async def broadcast(self, endpoint: str, msg_type: str, data: dict):
+        """广播消息给指定端点的所有连接"""
         message = {"type": msg_type, "data": data}
-        for connection in self.connections:
-            try:
-                await connection.send_json(message)
-            except:
-                self.connections.remove(connection)
+        if endpoint in self.connections:
+            for connection in self.connections[endpoint]:
+                try:
+                    await connection.send_json(message)
+                except:
+                    self.connections[endpoint].remove(connection)
 
 # 全局实例
 ws_manager = WebSocketManager()
@@ -566,20 +665,35 @@ interface PositionUpdateMessage {
 
 ### 7.1 错误码定义
 
-| 错误码 | 含义 | 说明 |
-|--------|------|------|
-| 0 | 成功 | 操作成功 |
-| 1 | 参数错误 | 请求参数校验失败 |
-| 2 | 未登录 | 未连接simnow柜台 |
-| 3 | 连接失败 | 无法连接simnow前置 |
-| 4 | 登录失败 | 用户名或密码错误 |
-| 5 | 报单失败 | 报单被拒绝 |
-| 6 | 撤单失败 | 撤单失败 |
-| 7 | 合约不存在 | 订阅的合约不存在 |
-| 8 | 余额不足 | 账户余额不足 |
-| 9 | 持仓不足 | 平仓数量超过持仓 |
-| 10 | 网络异常 | 网络连接异常 |
-| 99 | 未知错误 | 系统异常 |
+与design.md保持一致，使用字符串错误码：
+
+| 错误码 | 描述 | 触发场景 |
+|--------|------|----------|
+| `PARAM_INVALID` | 参数无效 | 必填字段缺失、类型错误 |
+| `PRICE_INVALID` | 价格不合法 | 价格≤0、不符合最小变动价位 |
+| `VOLUME_INVALID` | 数量不合法 | 数量≤0、超过最大限制 |
+| `INSTRUMENT_NOT_FOUND` | 合约不存在 | 合约代码错误或已退市 |
+| `NOT_CONNECTED` | 未连接 | 未登录或连接已断开 |
+| `ORDER_REJECTED` | 报单被拒 | simnow返回的报单拒绝 |
+| `ORDER_NOT_FOUND` | 报单不存在 | 撤单时order_ref无效 |
+| `STOP_ORDER_NOT_FOUND` | 止损单不存在 | 取消止损单时ref无效 |
+| `POSITION_NOT_FOUND` | 持仓不存在 | 平仓时无对应持仓 |
+| `SUBSCRIBE_LIMIT` | 订阅超限 | 订阅合约数超过500 |
+| `INTERNAL_ERROR` | 内部错误 | 未预期的系统错误 |
+| `CTP_ERROR` | CTP错误 | simnow返回的业务错误 |
+
+错误响应格式：
+```json
+{
+  "success": false,
+  "error": {
+    "code": "错误码",
+    "message": "错误描述",
+    "ctp_error_id": 0,
+    "ctp_error_msg": ""
+  }
+}
+```
 
 ### 7.2 前端错误处理
 
@@ -710,3 +824,4 @@ feature/pr-3-market-ui
 | 日期 | 版本 | 内容 | 状态 |
 |------|------|------|------|
 | 2026-07-08 | v1.0 | 初始化dev.md：代码目录结构、前端设计、后端设计、技术规范 | ✅ 完成 |
+| 2026-07-08 | v1.1 | CTP绑定改为openctp-ctp、错误码与design.md统一、WebSocket分端点设计、补充data目录和options.py | ✅ 完成 |
