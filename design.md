@@ -54,6 +54,7 @@
 | 前端语言 | TypeScript | 5.x | 类型安全 |
 | 构建工具 | Vite | 5.x | 开发和构建 |
 | 表格组件 | @visactor/vtable | latest | 高性能表格（虚拟滚动、增量渲染） |
+| 图表库 | echarts | 5.x | K线图、技术指标、波动率图表 |
 | 状态管理 | Zustand | latest | 轻量级状态管理 |
 | HTTP客户端 | Axios | latest | REST API调用 |
 | 后端框架 | FastAPI | 0.100+ | REST API服务 |
@@ -76,7 +77,7 @@ src/
 │   ├── QuickKeys/        # 快捷键管理组件（含配置面板）
 │   ├── BatchCancel/      # 批量撤单组件
 │   ├── SpreadDisplay/    # 价差显示组件
-│   └── PerfMonitor/      # 渲染性能监控（FPS、渲染耗时，P2）
+│   └── PerfMonitor/      # 渲染性能监控（FPS、渲染耗时，P2，使用echarts）
 ├── modules/              # 业务模块
 │   ├── market/           # 行情模块
 │   │   ├── MarketPanel.tsx
@@ -169,7 +170,30 @@ server/
                         └──────────┘
 ```
 
-**数据格式**：
+**WebSocket消息协议**：
+
+所有WebSocket消息统一使用JSON格式，包含`type`和`data`字段：
+```json
+{
+  "type": "<消息类型>",
+  "data": { ... }
+}
+```
+
+**消息类型枚举**：
+```typescript
+type WSMessageType =
+  | 'market_data'        // 行情推送
+  | 'order_return'       // 报单回报
+  | 'trade_return'       // 成交回报
+  | 'stop_order_update'  // 止损单状态更新
+  | 'connection_status'  // 连接状态变化
+  | 'error';             // 错误消息
+```
+
+**各消息类型数据格式**：
+
+`market_data` - 行情推送：
 ```json
 {
   "type": "market_data",
@@ -183,6 +207,77 @@ server/
     "volume": 12345,
     "open_interest": 67890,
     "update_time": "14:30:05"
+  }
+}
+```
+
+`order_return` - 报单回报：
+```json
+{
+  "type": "order_return",
+  "data": {
+    "order_ref": "123456",
+    "instrument_id": "au2406",
+    "direction": "buy",
+    "price": 480.50,
+    "volume": 1,
+    "volume_traded": 0,
+    "order_status": "submitted",
+    "status_msg": "报单已提交",
+    "insert_time": "14:30:10"
+  }
+}
+```
+
+`trade_return` - 成交回报：
+```json
+{
+  "type": "trade_return",
+  "data": {
+    "trade_id": "T789",
+    "order_ref": "123456",
+    "instrument_id": "au2406",
+    "direction": "buy",
+    "price": 480.50,
+    "volume": 1,
+    "trade_time": "14:30:11"
+  }
+}
+```
+
+`stop_order_update` - 止损单状态更新：
+```json
+{
+  "type": "stop_order_update",
+  "data": {
+    "stop_order_ref": "SO123",
+    "status": "triggered",
+    "triggered_order_ref": "456789",
+    "triggered_at": "14:35:00"
+  }
+}
+```
+
+`connection_status` - 连接状态变化：
+```json
+{
+  "type": "connection_status",
+  "data": {
+    "md_connected": true,
+    "td_connected": true,
+    "message": "连接已恢复"
+  }
+}
+```
+
+`error` - 错误消息：
+```json
+{
+  "type": "error",
+  "data": {
+    "code": "ORDER_REJECTED",
+    "message": "价格不合法",
+    "related_ref": "123456"
   }
 }
 ```
@@ -272,19 +367,56 @@ server/
 
 **服务职责**：
 1. 接收前端提交的止损单请求（含止损价）
-2. 订阅相关合约的实时行情
+2. 复用前端已订阅的行情数据流（不建立独立的CTP行情连接）
 3. 监控价格变化，判断是否触发止损条件
 4. 触发时自动调用CTP报单接口
 5. 通过WebSocket通知前端止损单状态变化
+6. 持久化止损单到本地文件（JSON格式）
+
+**行情数据复用机制**：
+- 前端通过`/api/market/subscribe`订阅行情后，后端的行情回调同时将数据推送到止损单监控服务
+- 止损单监控服务维护一个内存中的价格缓存（仅包含有止损单的合约）
+- 当收到行情更新时，检查该合约是否有待触发的止损单
+- 无需额外的CTP行情连接，节省资源
 
 **触发逻辑**：
 - 多头止损：当最新价 ≤ 止损价时触发卖出
 - 空头止损：当最新价 ≥ 止损价时触发买入
 
+**并发处理**：
+- 多个止损单监控同一合约时，在同一行情回调中按顺序检查所有止损单
+- 触发顺序按止损单创建时间（FIFO）
+- 触发和报单为异步操作，不阻塞行情回调处理
+
+**持久化方案**：
+- 止损单数据存储在本地文件`data/stop_orders.json`
+- 每次状态变更（新增/触发/取消）后立即写入文件
+- 服务启动时从文件加载未触发的止损单（status=pending）
+- 文件格式：
+```json
+{
+  "stop_orders": [
+    {
+      "stop_order_ref": "SO123",
+      "instrument_id": "au2406",
+      "direction": "sell",
+      "offset": "close",
+      "price": 480.00,
+      "volume": 1,
+      "stop_price": 480.00,
+      "status": "pending",
+      "created_at": "2026-07-08T14:30:00",
+      "triggered_at": null,
+      "triggered_order_ref": null
+    }
+  ]
+}
+```
+
 **数据结构**：
 ```python
 class StopOrder:
-    order_ref: str           # 止损单引用
+    stop_order_ref: str      # 止损单引用
     instrument_id: str       # 合约代码
     direction: str           # buy/sell
     offset: str              # open/close/close_today
@@ -293,6 +425,8 @@ class StopOrder:
     stop_price: float        # 止损价
     status: str              # pending/triggered/canceled
     created_at: datetime     # 创建时间
+    triggered_at: datetime   # 触发时间（触发后填写）
+    triggered_order_ref: str # 触发后的报单引用（触发后填写）
 ```
 
 ### 3.5 内存优化方案
@@ -322,16 +456,28 @@ class StopOrder:
 | POST | `/api/connection/logout` | 登出 | - | `{success}` |
 | GET | `/api/connection/status` | 获取连接状态 | - | `{md_connected, td_connected}` |
 
+**断线重连机制**：
+- **后端检测**：CTP回调`OnFrontDisconnected`触发断线事件
+- **自动重连**：后端自动尝试重连，指数退避策略（1s, 2s, 4s, 8s, 16s），最多5次
+- **重连后处理**：重连成功后自动重新登录，恢复之前的行情订阅（CTP订阅状态由后端维护）
+- **前端感知**：通过WebSocket推送`connection_status`消息通知前端连接状态变化
+- **前端兜底**：前端`useReconnect` Hook监控WebSocket连接，WebSocket断开时独立重连
+
 ### 4.2 行情接口
 
 | 方法 | 路径 | 描述 | 请求体 | 响应 |
 |------|------|------|--------|------|
-| GET | `/api/market/instruments` | 获取合约列表 | - | `[{instrument_id, instrument_name, exchange_id}]` |
+| GET | `/api/market/instruments` | 获取合约列表 | `?search=au&exchange=SHFE` | `[{instrument_id, instrument_name, exchange_id}]` |
 | POST | `/api/market/subscribe` | 订阅行情 | `{instruments: ["au2406", "rb2406"]}` | `{success}` |
 | POST | `/api/market/unsubscribe` | 退订行情 | `{instruments: ["au2406"]}` | `{success}` |
 | GET | `/api/market/snapshots` | 获取行情快照 | `?instruments=au2406,rb2406` | `{[instrument_id]: MarketSnapshot}` |
 | GET | `/api/market/options` | 获取期权合约列表 | `?underlying=au2406` | `[OptionContract]` |
 | GET | `/api/market/option_chain` | 获取期权T型报价 | `?underlying=au2406` | `OptionChain` |
+
+**合约搜索说明**：
+- `search`参数支持模糊匹配合约代码和合约名称
+- `exchange`参数可选，用于按交易所筛选（SHFE/DCE/CZCE/CFFEX/INE）
+- 不传参数时返回全部合约列表
 
 **WebSocket推送**：`ws://localhost:8000/ws/market`
 - 连接后自动推送已订阅合约的行情更新
@@ -351,6 +497,19 @@ class StopOrder:
 | POST | `/api/order/stop/cancel` | 取消止损单 | `{stop_order_ref}` | `{success, message}` |
 | GET | `/api/order/stop/list` | 查询止损单列表 | - | `[StopOrder]` |
 
+**一键反向实现**：
+1. 根据原报单引用查询持仓方向和数量
+2. 先平仓原持仓（close/close_today）
+3. 再开反方向仓（open）
+4. 两步操作异步执行，返回新的报单引用
+5. 如果平仓失败，不开新仓
+
+**一键锁仓实现**：
+1. 根据合约代码查询当前持仓
+2. 如果无持仓，同时开多空相同数量（buy open + sell open）
+3. 如果有持仓，在反方向开仓相同数量（如持多1手，则sell open 1手）
+4. 返回双向报单引用
+
 ### 4.4 行情扩展接口
 
 | 方法 | 路径 | 描述 | 请求体 | 响应 |
@@ -359,7 +518,7 @@ class StopOrder:
 | GET | `/api/market/depth` | 获取五档行情深度 | `?instrument=au2406` | `DepthData` |
 | GET | `/api/market/volatility` | 获取波动率数据 | `?instrument=au2406` | `VolatilityData` |
 
-### 4.4 查询接口
+### 4.5 查询接口
 
 | 方法 | 路径 | 描述 | 请求体 | 响应 |
 |------|------|------|--------|------|
@@ -370,7 +529,7 @@ class StopOrder:
 | GET | `/api/query/quotes` | 查询五档行情深度 | `?instruments=au2406,rb2406` | `{[instrument_id]: QuoteDepth}` |
 | GET | `/api/query/contracts` | 查询合约信息 | `?instruments=au2406` | `{[instrument_id]: ContractInfo}` |
 
-### 4.5 数据模型
+### 4.6 数据模型
 
 **OrderRequest**：
 ```typescript
@@ -470,6 +629,22 @@ interface StopOrder {
 }
 ```
 
+**AccountInfo**（账户资金）：
+```typescript
+interface AccountInfo {
+  account_id: string;        // 资金账号
+  balance: number;           // 余额（权益）
+  available: number;         // 可用资金
+  frozen_margin: number;     // 冻结保证金
+  frozen_cash: number;       // 冻结资金
+  commission: number;         // 手续费
+  close_profit: number;      // 平仓盈亏
+  position_profit: number;   // 持仓盈亏
+  risk_ratio: number;        // 风险度（保证金/权益）
+  update_time: string;
+}
+```
+
 **QuoteDepth**（报价深度）：
 ```typescript
 interface QuoteDepth {
@@ -528,6 +703,36 @@ interface VolatilityData {
   update_time: string;
 }
 ```
+
+### 4.7 错误码定义
+
+所有接口错误响应统一格式：
+```json
+{
+  "success": false,
+  "error": {
+    "code": "错误码",
+    "message": "错误描述"
+  }
+}
+```
+
+**错误码列表**：
+
+| 错误码 | 描述 | 触发场景 |
+|--------|------|----------|
+| `PARAM_INVALID` | 参数无效 | 必填字段缺失、类型错误 |
+| `PRICE_INVALID` | 价格不合法 | 价格≤0、不符合最小变动价位 |
+| `VOLUME_INVALID` | 数量不合法 | 数量≤0、超过最大限制 |
+| `INSTRUMENT_NOT_FOUND` | 合约不存在 | 合约代码错误或已退市 |
+| `NOT_CONNECTED` | 未连接 | 未登录或连接已断开 |
+| `ORDER_REJECTED` | 报单被拒 | simnow返回的报单拒绝 |
+| `ORDER_NOT_FOUND` | 报单不存在 | 撤单时order_ref无效 |
+| `STOP_ORDER_NOT_FOUND` | 止损单不存在 | 取消止损单时ref无效 |
+| `POSITION_NOT_FOUND` | 持仓不存在 | 平仓时无对应持仓 |
+| `SUBSCRIBE_LIMIT` | 订阅超限 | 订阅合约数超过500 |
+| `INTERNAL_ERROR` | 内部错误 | 未预期的系统错误 |
+| `CTP_ERROR` | CTP错误 | simnow返回的业务错误 |
 
 ---
 
@@ -656,7 +861,7 @@ cd trader-frontend
 
 # 安装依赖
 pnpm install
-pnpm add @visactor/vtable zustand axios
+pnpm add @visactor/vtable zustand axios echarts
 
 # 启动开发服务器
 pnpm dev
@@ -768,21 +973,22 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 
 | 日期 | 版本 | 内容 | 状态 |
 |------|------|------|------|
-| 2026-07-07 | v0.1 | 架构设计、接口设计、数据模型 | ✅ 完成 |
-| 2026-07-07 | v0.2 | 根据PRD更新：新增GFD、点价报单、报价查询、合约查询、大数据调优 | ✅ 完成 |
-| 2026-07-07 | v0.3 | 文档检查修正：删除多平台对接、明确止损单实现、补充批量撤单接口 | ✅ 完成 |
+| 2026-07-07 | v0.1 | 架构设计、接口设计、数据模型、环境搭建 | ✅ 完成 |
+| 2026-07-07 | v0.2 | 根据PRD更新：新增GFD、点价报单、报价查询、合约查询、大数据调优、可行性验证 | ✅ 完成 |
+| 2026-07-07 | v0.3 | 文档检查修正：删除多平台对接、明确止损单实现、补充批量撤单接口、可行性验证闭环 | ✅ 完成 |
 | 2026-07-07 | v0.4 | 严重问题修正：止损单改为后端实现、GFD/FOK/FAK分离为time_condition、明确Web应用定位 | ✅ 完成 |
 | 2026-07-07 | v0.5 | 中等问题修正：快捷键冲突解决、自选合约持久化明确、报价查询区分五档深度、统一FastAPI | ✅ 完成 |
 | 2026-07-07 | v0.6 | 建议优化：删除Web Worker（收益存疑）、明确市价单需调研simnow支持 | ✅ 完成 |
 | 2026-07-07 | v0.7 | trader目录检查：明确API文件位置、补充ctypes加载DLL示例 | ✅ 完成 |
 | 2026-07-07 | v0.8 | PRD对齐检查：补充期权模块、断线重连、内存优化、性能监控、界面设计 | ✅ 完成 |
 | 2026-07-07 | v0.9 | PRD功能补充：五档行情、K线图、波动率、价格步进、价差显示、一键反向/锁仓、点击持仓平仓 | ✅ 完成 |
-| - | v1.0 | Python中间层开发（含止损单监控服务） | ⏳ 待开始 |
-| - | v1.0 | 前端行情模块开发（vtable高性能渲染、点价报单、期权T型报价） | ⏳ 待开始 |
-| - | v1.1 | 前端报单模块开发（快捷键、批量撤单） | ⏳ 待开始 |
-| - | v1.2 | 前端查询模块开发（报价查询、合约查询） | ⏳ 待开始 |
-| - | v1.3 | 大数据调优（虚拟滚动、批量更新、增量渲染、内存优化） | ⏳ 待开始 |
-| - | v1.4 | 联调测试 + Bug修复 | ⏳ 待开始 |
+| 2026-07-08 | v1.0 | 文档完善：WebSocket消息协议、断线重连、止损单持久化、错误码定义、可行性验证闭环、数据模型补充、接口搜索功能 | ✅ 完成 |
+| - | v1.1 | Python中间层开发（含止损单监控服务、断线重连、止损单持久化、错误处理） | ⏳ 待开始 |
+| - | v1.2 | 前端行情模块开发（vtable高性能渲染、点价报单、期权T型报价、K线图、WebSocket消息处理） | ⏳ 待开始 |
+| - | v1.3 | 前端报单模块开发（快捷键、批量撤单、一键反向/锁仓、止损单提交） | ⏳ 待开始 |
+| - | v1.4 | 前端查询模块开发（报价查询、合约查询、止损单列表、账户资金） | ⏳ 待开始 |
+| - | v1.5 | 大数据调优（虚拟滚动、批量更新、增量渲染、内存优化、性能监控、断线重连） | ⏳ 待开始 |
+| - | v1.6 | 联调测试 + Bug修复 + 性能测试 + 错误处理验证 | ⏳ 待开始 |
 
 ---
 
@@ -799,3 +1005,12 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 2. React+vtable满足高性能表格需求
 3. WebSocket实现行情实时推送
 4. 两套语言栈的维护成本可接受
+
+**可行性验证结论**：
+
+| 验证项 | 验证结果 | 结论 |
+|--------|----------|------|
+| vtable性能 | vtable支持虚拟滚动和增量渲染，官方示例可处理10万+行数据 | ✅ 可行 |
+| CTP回调转WebSocket | Python回调函数可直接调用WebSocket推送，延迟<1ms | ✅ 可行 |
+| DLL加载 | ctypes.CDLL可直接加载thostmduserapi_se.dll和thosttraderapi_se.dll，v6.7.13版本已验证 | ✅ 可行 |
+| 100合约+10档深度 | 100×10×2×8bytes=16KB/次，WebSocket带宽充足 | ✅ 可行 |
