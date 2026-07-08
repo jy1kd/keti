@@ -952,11 +952,10 @@ frontend/src/
 3. 实现期权Store
    - optionChain: OptionChain
    - updateOptionChain: 更新期权链
-4. 实现期权API接口
-   - GET /api/market/options（期权合约列表）
-   - GET /api/market/option_chain（期权T型报价）
-   - GET /api/market/volatility（隐含波动率）
-5. 实现波动率计算（Black-Scholes模型）
+4. 调用期权API接口（已在PR-5后端实现）
+   - GET /api/market/options（获取期权合约列表）
+   - GET /api/market/option_chain（获取期权T型报价数据）
+   - GET /api/market/volatility（获取隐含波动率，由后端Black-Scholes模型计算）
 
 **验证方法**：
 1. 期权面板正常显示
@@ -1327,3 +1326,4 @@ PR-6 (行情表格) ────────────────────
 |------|------|------|------|
 | 2026-07-08 | v1.0 | 初始化task.md：17个PR任务拆分 | ✅ 完成 |
 | 2026-07-08 | v1.1 | 修复任务分工问题：期权API、资金查询、依赖关系、职责边界等 | ✅ 完成 |
+| 2026-07-08 | v1.2 | 修复PR-14 API描述混淆，明确后端API职责 | ✅ 完成 |
