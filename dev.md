@@ -212,6 +212,9 @@ App.tsx
 | **OrderFlow** | 报单流水 | 增量更新、新数据高亮、时间倒序 |
 | **TradeFlow** | 成交流水 | 增量更新、新数据高亮、时间倒序 |
 | **Position** | 持仓查询 | 点击持仓直接平仓 |
+| **QuoteQuery** | 报价查询 | 五档行情深度展示 |
+| **ContractQuery** | 合约查询 | 合约详细信息展示 |
+| **StopOrderList** | 止损单列表 | 止损单状态展示、取消操作 |
 | **PerfMonitor** | 性能监控 | FPS监控、渲染耗时统计 |
 
 ### 3.2 状态管理
