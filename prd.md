@@ -288,6 +288,6 @@ simnow柜台 → Python中间层(回调) → WebSocket推送 → 前端(vtable�
 | 风险 | 影响 | 缓解措施 |
 |------|------|----------|
 | simnow接口文档不全 | 开发受阻 | 参考无限易demo代码 |
-| C++ DLL Python绑定困难 | 中间层开发延期 | 使用SWIG自动生成绑定，开发前完成技术Spike验证 |
+| C++ DLL Python绑定困难 | 中间层开发延期 | 使用openctp-ctp封装库，开发前完成技术Spike验证 |
 | vtable性能不达标 | 行情卡顿 | 减少同时展示合约数量 |
 | simnow环境不稳定 | 测试受阻 | 实现断线重连机制 |

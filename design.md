@@ -59,7 +59,7 @@
 | HTTP客户端 | Axios | latest | REST API调用 |
 | 后端框架 | FastAPI | 0.100+ | REST API服务 |
 | WebSocket | websockets | 11.x | 实时推送 |
-| CTP绑定 | SWIG | - | 自动生成C++ DLL的Python绑定 |
+| CTP绑定 | openctp-ctp | latest | Python CTP封装库（已处理SWIG绑定，开箱即用） |
 | 包管理 | pnpm (前端) + pip (后端) | - | 依赖管理 |
 
 ---
@@ -130,11 +130,9 @@ server/
 │   ├── order.py          # 报单相关接口（限价/市价、撤单、批量撤单）
 │   ├── query.py          # 查询相关接口（报单、成交、持仓、资金、合约）
 │   └── connection.py     # 连接管理接口（登录、登出、状态）
-├── ctp/                  # CTP封装层（使用SWIG自动生成Python绑定）
-│   ├── md_user_api.i     # 行情API SWIG接口文件
-│   ├── trader_api.i      # 交易API SWIG接口文件
-│   ├── md_user_api.py    # 行情API封装（SWIG生成）
-│   ├── trader_api.py     # 交易API封装（SWIG生成）
+├── ctp/                  # CTP封装层（使用openctp-ctp库）
+│   ├── md_user_api.py    # 行情API封装（基于openctp-ctp）
+│   ├── trader_api.py     # 交易API封装（基于openctp-ctp）
 │   ├── callback.py       # 回调处理
 │   └── types.py          # CTP数据类型（基于ThostFtdcUserApiStruct.h）
 ├── services/             # 业务服务层
@@ -972,11 +970,7 @@ python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # 安装依赖
-pip install fastapi uvicorn websockets pydantic
-
-# SWIG绑定生成（需先安装SWIG系统工具）
-# swig -python -c++ -o ctp/md_user_api_wrap.cpp ctp/md_user_api.i
-# 编译_wrap.pyd（Windows需Visual Studio Build Tools）
+pip install fastapi uvicorn websockets pydantic openctp-ctp
 
 # 启动服务
 uvicorn main:app --reload --port 8000
@@ -990,24 +984,15 @@ uvicorn main:app --reload --port 8000
    - 行情API DLL：`trader/mduserapi/v6.7.13_20260225_winApi/mduserapi/20260225_mduserapi64_se_windows/thostmduserapi_se.dll`
    - 交易API DLL：`trader/traderapi/v6.7.13_20260225_winApi/traderapi/20260225_traderapi64_se_windows/thosttraderapi_se.dll`
    - 头文件（参考用）：`ThostFtdcMdApi.h`、`ThostFtdcTraderApi.h`、`ThostFtdcUserApiStruct.h`、`ThostFtdcUserApiDataType.h`
-4. SWIG绑定方案（推荐）：
-   - 使用SWIG自动生成Python绑定，将C++类接口暴露为Python可调用模块
-   - SWIG接口文件（.i）定义需要导出的C++类和虚函数回调
-   - 编译生成`_wrap.pyd`（Windows）或`_wrap.so`（Linux）和对应的Python模块
+4. Python CTP封装库（openctp-ctp）：
+   - 使用`openctp-ctp`库，已处理SWIG绑定，开箱即用
+   - 安装：`pip install openctp-ctp`
+   - GitHub：https://github.com/openctp/openctp-ctp
    - **开发前必须完成技术Spike验证**：
-     ① 能否通过SWIG成功加载DLL并创建API实例
+     ① 能否通过openctp-ctp成功加载DLL并创建API实例
      ② 能否成功连接到simnow模拟柜台并登录
      ③ 能否收到行情回调（OnRtnDepthMarketData）
      ④ 能否成功提交一笔报单并收到回报（OnRtnOrder）
-   - 环境准备：
-     ```bash
-     # Windows: 安装SWIG
-     # 下载 swigwin 并添加到PATH
-     
-     # 生成绑定
-     swig -python -c++ -o md_user_api_wrap.cpp md_user_api.i
-     # 编译为.pyd（需要Visual Studio Build Tools）
-     ```
 
 ### 7.4 环境变量配置
 
@@ -1088,13 +1073,14 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 | 2026-07-07 | v0.9 | PRD功能补充：五档行情、K线图、波动率、价格步进、价差显示、一键反向/锁仓、点击持仓平仓 | ✅ 完成 |
 | 2026-07-08 | v1.0 | 文档完善：WebSocket消息协议、断线重连、止损单持久化、错误码定义、可行性验证闭环、数据模型补充、接口搜索功能 | ✅ 完成 |
 | 2026-07-08 | v1.1 | 实时数据展示方案：行情批量更新(50ms)、查询数据增量更新、新数据高亮、自动滚动、暂停更新、时间倒序 | ✅ 完成 |
-| - | v1.2 | 技术Spike：SWIG绑定验证（DLL加载、登录、行情回调、报单回调） | ⏳ 待开始 |
-| - | v1.3 | Python中间层开发（含止损单监控服务、断线重连、止损单持久化、错误处理） | ⏳ 待开始 |
-| - | v1.4 | 前端行情模块开发（vtable高性能渲染、点价报单、期权T型报价、K线图、WebSocket消息处理） | ⏳ 待开始 |
-| - | v1.5 | 前端报单模块开发（快捷键、批量撤单、一键反向/锁仓、止损单提交） | ⏳ 待开始 |
-| - | v1.6 | 前端查询模块开发（报价查询、合约查询、止损单列表、账户资金） | ⏳ 待开始 |
-| - | v1.7 | 大数据调优（虚拟滚动、批量更新、增量渲染、内存优化、性能监控、断线重连） | ⏳ 待开始 |
-| - | v1.8 | 联调测试 + Bug修复 + 性能测试 + 错误处理验证 | ⏳ 待开始 |
+| 2026-07-08 | v1.2 | CTP绑定方案：从SWIG改为openctp-ctp封装库（开箱即用，无需编译） | ✅ 完成 |
+| - | v1.3 | 技术Spike：openctp-ctp验证（DLL加载、登录、行情回调、报单回调） | ⏳ 待开始 |
+| - | v1.4 | Python中间层开发（含止损单监控服务、断线重连、止损单持久化、错误处理） | ⏳ 待开始 |
+| - | v1.5 | 前端行情模块开发（vtable高性能渲染、点价报单、期权T型报价、K线图、WebSocket消息处理） | ⏳ 待开始 |
+| - | v1.6 | 前端报单模块开发（快捷键、批量撤单、一键反向/锁仓、止损单提交） | ⏳ 待开始 |
+| - | v1.7 | 前端查询模块开发（报价查询、合约查询、止损单列表、账户资金） | ⏳ 待开始 |
+| - | v1.8 | 大数据调优（虚拟滚动、批量更新、增量渲染、内存优化、性能监控、断线重连） | ⏳ 待开始 |
+| - | v1.9 | 联调测试 + Bug修复 + 性能测试 + 错误处理验证 | ⏳ 待开始 |
 
 ---
 
@@ -1118,5 +1104,5 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 |--------|----------|------|
 | vtable性能 | vtable支持虚拟滚动和增量渲染，官方示例可处理10万+行数据 | ✅ 可行 |
 | CTP回调转WebSocket | Python回调函数可直接调用WebSocket推送，延迟<1ms | ✅ 可行 |
-| DLL加载 | ctypes.CDLL可直接加载thostmduserapi_se.dll和thosttraderapi_se.dll，v6.7.13版本已验证 | ✅ 可行 |
+| DLL加载 | openctp-ctp库已封装CTP API，支持v6.7.13版本，开箱即用 | ✅ 可行 |
 | 100合约+10档深度 | 100×10×2×8bytes=16KB/次，WebSocket带宽充足 | ✅ 可行 |
