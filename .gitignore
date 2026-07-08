@@ -9,6 +9,7 @@ templates/
 ai-log.md
 mis.md
 任务.md
+CLAUDE.md
 
 # Trader API files
 trader/
