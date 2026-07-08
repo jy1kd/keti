@@ -1095,7 +1095,7 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 | **C** | **Python+React** | **DLL对接简单、前端体验好** | **两套语言栈** | **✅ 选择** |
 
 **选择方案C的理由**：
-1. Python的ctypes调用C++ DLL是最成熟稳定的方案
+1. Python的openctp-ctp封装库是成熟的CTP对接方案，开箱即用
 2. React+vtable满足高性能表格需求
 3. WebSocket实现行情实时推送
 4. 两套语言栈的维护成本可接受
