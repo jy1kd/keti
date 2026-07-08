@@ -135,12 +135,12 @@ server/
 │   ├── order.py               # 报单接口（限价/市价、止损单、撤单、批量撤单、一键反向/锁仓）
 │   ├── query.py               # 查询接口（报单、成交、持仓、资金、合约、报价）
 │   └── connection.py          # 连接接口（登录、登出、状态）
-├── ctp/                       # CTP封装层
+├── ctp/                       # CTP封装层（使用openctp-ctp库）
 │   ├── __init__.py
-│   ├── md_user_api.py         # 行情API封装（ctypes调用thostmduserapi_se.dll）
-│   ├── trader_api.py          # 交易API封装（ctypes调用thosttraderapi_se.dll）
+│   ├── md_user_api.py         # 行情API封装（基于openctp-ctp）
+│   ├── trader_api.py          # 交易API封装（基于openctp-ctp）
 │   ├── callback.py            # 回调处理（OnRtnOrder、OnRtnTrade等）
-│   └── types.py               # CTP数据类型定义（与C++头文件对应）
+│   └── types.py               # CTP数据类型定义
 ├── services/                  # 业务服务层
 │   ├── __init__.py
 │   ├── stop_order.py          # 止损单监控服务（后端监控价格，触发后自动报单）
