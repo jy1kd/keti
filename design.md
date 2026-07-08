@@ -196,7 +196,7 @@ type WSMessageType =
 
 **各消息类型数据格式**：
 
-`market_data` - 行情推送：
+`market_data` - 行情推送（与MarketSnapshot结构一致）：
 ```json
 {
   "type": "market_data",
@@ -205,10 +205,31 @@ type WSMessageType =
     "last_price": 480.50,
     "bid_price1": 480.40,
     "bid_volume1": 10,
+    "bid_price2": 480.38,
+    "bid_volume2": 15,
+    "bid_price3": 480.36,
+    "bid_volume3": 20,
+    "bid_price4": 480.34,
+    "bid_volume4": 25,
+    "bid_price5": 480.32,
+    "bid_volume5": 30,
     "ask_price1": 480.60,
     "ask_volume1": 8,
+    "ask_price2": 480.62,
+    "ask_volume2": 12,
+    "ask_price3": 480.64,
+    "ask_volume3": 18,
+    "ask_price4": 480.66,
+    "ask_volume4": 22,
+    "ask_price5": 480.68,
+    "ask_volume5": 28,
     "volume": 12345,
     "open_interest": 67890,
+    "open_price": 480.00,
+    "high_price": 481.00,
+    "low_price": 479.50,
+    "pre_close_price": 480.20,
+    "spread": 0.20,
     "update_time": "14:30:05"
   }
 }
