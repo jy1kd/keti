@@ -700,6 +700,7 @@ interface StopOrderRequest {
   price: number;              // 报单价格（触发后的报单价格）
   volume: number;             // 报单数量
   stop_price: number;         // 止损价（必填）
+  time_condition: 'gfd' | 'fok' | 'fak';  // 有效期/成交方式（默认gfd）
 }
 ```
 
@@ -877,7 +878,7 @@ interface VolatilityData {
     │                     │←─ WebSocket断开 ──┤                    │
     │←─ 显示断线提示 ───┤                    │                    │
     │   "行情连接已断开"  │                    │                    │
-    │                     │                    ├─→ 自动重连(3次) ──→│
+    │                     │                    ├─→ 自动重连(5次) ──→│
     │                     │                    │←─ 重连成功 ────────┤
     │                     │←─ WebSocket恢复 ──┤                    │
     │←─ 显示已恢复 ─────┤                    │                    │
@@ -993,6 +994,7 @@ uvicorn main:app --reload --port 8000
      ② 能否成功连接到simnow模拟柜台并登录
      ③ 能否收到行情回调（OnRtnDepthMarketData）
      ④ 能否成功提交一笔报单并收到回报（OnRtnOrder）
+     ⑤ 验证simnow是否支持市价单（OrderPriceType=ANYPRICE），不支持时需实现降级方案
 
 ### 7.4 环境变量配置
 
