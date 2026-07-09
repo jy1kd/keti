@@ -6,10 +6,9 @@
 templates/
 
 # Project docs (not for version control)
-ai-log.md
-mis.md
-任务.md
-CLAUDE.md
+# Ignore all markdown files in root except README.md
+/*.md
+!README.md
 
 # Trader API files
 trader/
