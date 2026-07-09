@@ -62,6 +62,53 @@
 | CTP绑定 | openctp-ctp | latest | Python CTP封装库（已处理SWIG绑定，开箱即用） |
 | 包管理 | pnpm (前端) + pip (后端) | - | 依赖管理 |
 
+### 1.3 CTP API说明
+
+**API版本**：v6.7.13（2026年2月25日发布）
+
+**Python封装库**：openctp-ctp（原ctp-python）
+- 安装命令：`pip install openctp-ctp`
+- 支持Python版本：3.7 ~ 3.13
+- 支持平台：Windows amd64、Linux amd64、macOS arm64/amd64
+
+**SimNow连接配置**：
+
+| 配置项 | 说明 | 示例值 |
+|--------|------|--------|
+| BrokerID | 经纪商代码 | `9999` |
+| AppID | 产品名称 | `simnow_client_test` |
+| AuthCode | 授权编码 | `0000000000000000`（16个0） |
+
+**SimNow服务器地址**：
+
+| 环境 | 类型 | 地址 | 说明 |
+|------|------|------|------|
+| 第一套 | 交易前置 | `tcp://180.168.146.187:10130` | 仅交易时段可用 |
+| 第一套 | 行情前置 | `tcp://180.168.146.187:10131` | 仅交易时段可用 |
+| 第二套 | 交易前置 | `tcp://182.254.243.31:40001` | 7x24测试环境 |
+| 第二套 | 行情前置 | `tcp://182.254.243.31:40011` | 7x24测试环境 |
+
+**穿透式认证流程**（交易接口必须）：
+1. 连接成功后，先调用`ReqAuthenticate`进行客户端认证
+2. 认证成功后，再调用`ReqUserLogin`进行用户登录
+3. 登录成功后，调用`ReqSettlementInfoConfirm`确认结算信息
+
+**关键回调说明**：
+
+| 回调方法 | 触发时机 | 用途 |
+|----------|----------|------|
+| `OnFrontConnected` | 连接成功 | 发起认证/登录 |
+| `OnFrontDisconnected` | 连接断开 | 触发重连机制 |
+| `OnRspAuthenticate` | 认证响应 | 判断是否可登录 |
+| `OnRspUserLogin` | 登录响应 | 获取交易日、会话信息 |
+| `OnRtnDepthMarketData` | 行情推送 | 实时行情数据 |
+| `OnRtnOrder` | 报单回报 | 报单状态变化 |
+| `OnRtnTrade` | 成交回报 | 成交确认 |
+| `OnRspQryInvestorPosition` | 持仓查询响应 | 持仓数据 |
+| `OnRspQryTradingAccount` | 资金查询响应 | 账户资金数据 |
+
+**数据编码**：CTP-Python库已自动将GBK编码转换为UTF-8，无需手动处理。
+
 ---
 
 ## 2. 模块划分

@@ -358,177 +358,593 @@ app.include_router(query.router, prefix="/api/query", tags=["query"])
 
 ```python
 # server/ctp/md_user_api.py
+import logging
+from typing import Callable, Optional
 from openctp_ctp import mdapi
 
+logger = logging.getLogger(__name__)
+
 class MdUserApi:
-    def __init__(self):
-        self.api = None
-        self.spi = None
+    """行情API封装"""
+
+    def __init__(self, on_market_data: Optional[Callable] = None):
+        self.api: Optional[mdapi.CThostFtdcMdApi] = None
+        self.spi: Optional['MdSpi'] = None
+        self.request_id: int = 0
+        self.on_market_data = on_market_data  # 行情数据回调
 
     def connect(self, front_addr: str) -> bool:
         """连接行情前置"""
-        self.api = mdapi.CThostFtdcMdApi.CreateFtdcMdApi()
-        self.spi = MdSpi(self)
-        self.api.RegisterSpi(self.spi)
-        self.api.RegisterFront(front_addr)
-        self.api.Init()
-        return True
+        try:
+            # 创建API实例（flow_path为流文件目录，空字符串表示当前目录）
+            self.api = mdapi.CThostFtdcMdApi.CreateFtdcMdApi()
+            self.spi = MdSpi(self)
+            self.api.RegisterSpi(self.spi)
+            self.api.RegisterFront(front_addr)
+            self.api.Init()
+            logger.info(f"行情API初始化完成，前置地址: {front_addr}")
+            return True
+        except Exception as e:
+            logger.error(f"行情API连接失败: {e}")
+            return False
 
     def login(self, broker_id: str, user_id: str, password: str) -> bool:
-        """登录"""
-        req = mdapi.CThostFtdcReqUserLoginField()
-        req.BrokerID = broker_id
-        req.UserID = user_id
-        req.Password = password
-        return self.api.ReqUserLogin(req, 0) == 0
+        """登录行情服务器"""
+        try:
+            req = mdapi.CThostFtdcReqUserLoginField()
+            req.BrokerID = broker_id
+            req.UserID = user_id
+            req.Password = password
+            self.request_id += 1
+            ret = self.api.ReqUserLogin(req, self.request_id)
+            if ret == 0:
+                logger.info(f"行情登录请求已发送，用户: {user_id}")
+                return True
+            else:
+                logger.error(f"行情登录请求失败，返回值: {ret}")
+                return False
+        except Exception as e:
+            logger.error(f"行情登录异常: {e}")
+            return False
 
     def subscribe(self, instruments: list[str]) -> bool:
         """订阅行情"""
-        return self.api.SubscribeMarketData(instruments, len(instruments)) == 0
+        try:
+            # 注意：合约代码需要转换为字节串
+            ret = self.api.SubscribeMarketData(
+                [i.encode('utf-8') for i in instruments],
+                len(instruments)
+            )
+            if ret == 0:
+                logger.info(f"行情订阅成功: {instruments}")
+                return True
+            else:
+                logger.error(f"行情订阅失败，返回值: {ret}")
+                return False
+        except Exception as e:
+            logger.error(f"行情订阅异常: {e}")
+            return False
 
     def unsubscribe(self, instruments: list[str]) -> bool:
         """退订行情"""
-        return self.api.UnSubscribeMarketData(instruments, len(instruments)) == 0
+        try:
+            ret = self.api.UnSubscribeMarketData(
+                [i.encode('utf-8') for i in instruments],
+                len(instruments)
+            )
+            if ret == 0:
+                logger.info(f"行情退订成功: {instruments}")
+                return True
+            else:
+                logger.error(f"行情退订失败，返回值: {ret}")
+                return False
+        except Exception as e:
+            logger.error(f"行情退订异常: {e}")
+            return False
+
+    def release(self):
+        """释放API资源"""
+        if self.api:
+            self.api.Release()
+            logger.info("行情API资源已释放")
+
 
 class MdSpi(mdapi.CThostFtdcMdSpi):
+    """行情SPI回调处理"""
+
     def __init__(self, api: MdUserApi):
         super().__init__()
         self.api = api
 
     def OnFrontConnected(self):
-        """连接成功回调"""
-        pass
+        """连接成功回调 - 触发登录"""
+        logger.info("行情前置机连接成功")
+        # 由上层调用login方法
+
+    def OnFrontDisconnected(self, nReason: int):
+        """连接断开回调"""
+        logger.warning(f"行情前置机连接断开，原因: {nReason}")
+        # 触发重连机制
 
     def OnRspUserLogin(self, pRspUserLogin, pRspInfo, nRequestID, bIsLast):
         """登录响应"""
-        pass
+        if pRspInfo and pRspInfo.ErrorID != 0:
+            logger.error(f"行情登录失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
+            return
+        logger.info(f"行情登录成功，交易日: {pRspUserLogin.TradingDay}")
+
+    def OnRspUserLogout(self, pUserLogout, pRspInfo, nRequestID, bIsLast):
+        """登出响应"""
+        if pRspInfo and pRspInfo.ErrorID != 0:
+            logger.error(f"行情登出失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
+            return
+        logger.info("行情登出成功")
+
+    def OnRspSubMarketData(self, pSpecificInstrument, pRspInfo, nRequestID, bIsLast):
+        """订阅行情响应"""
+        if pRspInfo and pRspInfo.ErrorID != 0:
+            logger.error(f"订阅行情失败: {pRspInfo.ErrorMsg}")
+            return
+        logger.info(f"订阅行情成功: {pSpecificInstrument.InstrumentID}")
+
+    def OnRspUnSubMarketData(self, pSpecificInstrument, pRspInfo, nRequestID, bIsLast):
+        """退订行情响应"""
+        if pRspInfo and pRspInfo.ErrorID != 0:
+            logger.error(f"退订行情失败: {pRspInfo.ErrorMsg}")
+            return
+        logger.info(f"退订行情成功: {pSpecificInstrument.InstrumentID}")
 
     def OnRtnDepthMarketData(self, pDepthMarketData):
-        """行情数据回调"""
-        pass
+        """行情数据推送回调 - 核心回调"""
+        if self.api.on_market_data:
+            # 转换为统一格式并回调
+            data = {
+                'instrument_id': pDepthMarketData.InstrumentID,
+                'last_price': pDepthMarketData.LastPrice,
+                'bid_price1': pDepthMarketData.BidPrice1,
+                'bid_volume1': pDepthMarketData.BidVolume1,
+                'ask_price1': pDepthMarketData.AskPrice1,
+                'ask_volume1': pDepthMarketData.AskVolume1,
+                'volume': pDepthMarketData.Volume,
+                'open_interest': pDepthMarketData.OpenInterest,
+                'update_time': pDepthMarketData.UpdateTime,
+            }
+            self.api.on_market_data(data)
+
+    def OnRspError(self, pRspInfo, nRequestID, bIsLast):
+        """错误响应"""
+        if pRspInfo:
+            logger.error(f"行情API错误: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
 ```
 
 #### 4.2.2 交易API封装
 
 ```python
 # server/ctp/trader_api.py
+import logging
+from typing import Callable, Optional
 from openctp_ctp import traderapi
 
-class TraderApi:
-    def __init__(self):
-        self.api = None
-        self.spi = None
+logger = logging.getLogger(__name__)
 
-    def connect(self, front_addr: str) -> bool:
-        """连接交易前置"""
-        self.api = traderapi.CThostFtdcTraderApi.CreateFtdcTraderApi()
-        self.spi = TraderSpi(self)
-        self.api.RegisterSpi(self.spi)
-        self.api.RegisterFront(front_addr)
-        self.api.SubscribePublicTopic(traderapi.THOST_TERT_QUICK)
-        self.api.SubscribePrivateTopic(traderapi.THOST_TERT_QUICK)
-        self.api.Init()
-        return True
+class TraderApi:
+    """交易API封装 - 包含穿透式认证流程"""
+
+    def __init__(self, callbacks: Optional[dict] = None):
+        self.api: Optional[traderapi.CThostFtdcTraderApi] = None
+        self.spi: Optional['TraderSpi'] = None
+        self.request_id: int = 0
+        self.broker_id: str = ""
+        self.user_id: str = ""
+        self.password: str = ""
+        self.app_id: str = ""
+        self.auth_code: str = ""
+        self.callbacks = callbacks or {}
+
+    def connect(self, front_addr: str, app_id: str, auth_code: str) -> bool:
+        """连接交易前置（穿透式认证）"""
+        try:
+            self.app_id = app_id
+            self.auth_code = auth_code
+            # 创建API实例
+            self.api = traderapi.CThostFtdcTraderApi.CreateFtdcTraderApi()
+            self.spi = TraderSpi(self)
+            self.api.RegisterSpi(self.spi)
+            self.api.RegisterFront(front_addr)
+            # 订阅私有流和公有流（QUICK模式：只传送登录后产生的数据）
+            self.api.SubscribePublicTopic(traderapi.THOST_TERT_QUICK)
+            self.api.SubscribePrivateTopic(traderapi.THOST_TERT_QUICK)
+            self.api.Init()
+            logger.info(f"交易API初始化完成，前置地址: {front_addr}")
+            return True
+        except Exception as e:
+            logger.error(f"交易API连接失败: {e}")
+            return False
+
+    def authenticate(self) -> bool:
+        """客户端认证（穿透式监管）"""
+        try:
+            req = traderapi.CThostFtdcReqAuthenticateField()
+            req.BrokerID = self.broker_id
+            req.UserID = self.user_id
+            req.AppID = self.app_id
+            req.AuthCode = self.auth_code
+            self.request_id += 1
+            ret = self.api.ReqAuthenticate(req, self.request_id)
+            if ret == 0:
+                logger.info("客户端认证请求已发送")
+                return True
+            else:
+                logger.error(f"客户端认证请求失败，返回值: {ret}")
+                return False
+        except Exception as e:
+            logger.error(f"客户端认证异常: {e}")
+            return False
 
     def login(self, broker_id: str, user_id: str, password: str) -> bool:
-        """登录"""
-        req = traderapi.CThostFtdcReqUserLoginField()
-        req.BrokerID = broker_id
-        req.UserID = user_id
-        req.Password = password
-        return self.api.ReqUserLogin(req, 0) == 0
+        """登录交易服务器"""
+        try:
+            self.broker_id = broker_id
+            self.user_id = user_id
+            self.password = password
+            req = traderapi.CThostFtdcReqUserLoginField()
+            req.BrokerID = broker_id
+            req.UserID = user_id
+            req.Password = password
+            self.request_id += 1
+            ret = self.api.ReqUserLogin(req, self.request_id)
+            if ret == 0:
+                logger.info(f"交易登录请求已发送，用户: {user_id}")
+                return True
+            else:
+                logger.error(f"交易登录请求失败，返回值: {ret}")
+                return False
+        except Exception as e:
+            logger.error(f"交易登录异常: {e}")
+            return False
+
+    def confirm_settlement(self) -> bool:
+        """确认结算信息"""
+        try:
+            req = traderapi.CThostFtdcSettlementInfoConfirmField()
+            req.BrokerID = self.broker_id
+            req.InvestorID = self.user_id
+            self.request_id += 1
+            ret = self.api.ReqSettlementInfoConfirm(req, self.request_id)
+            if ret == 0:
+                logger.info("结算信息确认请求已发送")
+                return True
+            else:
+                logger.error(f"结算信息确认失败，返回值: {ret}")
+                return False
+        except Exception as e:
+            logger.error(f"结算信息确认异常: {e}")
+            return False
 
     def insert_order(self, order: OrderRequest) -> str:
         """报单"""
-        req = traderapi.CThostFtdcInputOrderField()
-        req.InstrumentID = order.instrument_id
-        req.Direction = order.direction
-        req.CombOffsetFlag = order.offset
-        req.LimitPrice = order.price
-        req.VolumeTotalOriginal = order.volume
-        req.OrderPriceType = order.order_type
-        req.TimeCondition = order.time_condition
-        self.api.ReqOrderInsert(req, 0)
-        return req.OrderRef
+        try:
+            req = traderapi.CThostFtdcInputOrderField()
+            req.BrokerID = self.broker_id
+            req.InvestorID = self.user_id
+            req.InstrumentID = order.instrument_id
+            req.Direction = order.direction  # '0'=买, '1'=卖
+            req.CombOffsetFlag = order.offset  # '0'=开仓, '1'=平仓, '3'=平今
+            req.LimitPrice = order.price
+            req.VolumeTotalOriginal = order.volume
+            req.OrderPriceType = order.order_type  # '1'=市价, '2'=限价
+            req.TimeCondition = order.time_condition  # '1'=IOC, '3'=GFD
+            req.VolumeCondition = '1'  # '1'=任何数量, '2'=最小数量, '3'=全部数量
+            req.ContingentCondition = '1'  # '1'=立即
+            req.ForceCloseReason = '0'  # '0'=非强平
+            req.IsAutoSuspend = 0
+            req.UserForceClose = 0
+            self.request_id += 1
+            ret = self.api.ReqOrderInsert(req, self.request_id)
+            if ret == 0:
+                logger.info(f"报单请求已发送: {order.instrument_id} {order.direction} {order.volume}@{order.price}")
+                return req.OrderRef
+            else:
+                logger.error(f"报单请求失败，返回值: {ret}")
+                return ""
+        except Exception as e:
+            logger.error(f"报单异常: {e}")
+            return ""
 
-    def cancel_order(self, order_ref: str) -> bool:
+    def cancel_order(self, order_ref: str, instrument_id: str, exchange_id: str) -> bool:
         """撤单"""
-        req = traderapi.CThostFtdcInputOrderActionField()
-        req.OrderRef = order_ref
-        return self.api.ReqOrderAction(req, 0) == 0
+        try:
+            req = traderapi.CThostFtdcInputOrderActionField()
+            req.BrokerID = self.broker_id
+            req.InvestorID = self.user_id
+            req.OrderRef = order_ref
+            req.InstrumentID = instrument_id
+            req.ExchangeID = exchange_id
+            req.ActionFlag = '0'  # '0'=删除
+            self.request_id += 1
+            ret = self.api.ReqOrderAction(req, self.request_id)
+            if ret == 0:
+                logger.info(f"撤单请求已发送: {order_ref}")
+                return True
+            else:
+                logger.error(f"撤单请求失败，返回值: {ret}")
+                return False
+        except Exception as e:
+            logger.error(f"撤单异常: {e}")
+            return False
 
-    def query_orders(self) -> list[OrderRecord]:
+    def query_instruments(self) -> bool:
+        """查询合约列表"""
+        try:
+            req = traderapi.CThostFtdcQryInstrumentField()
+            # 空请求表示查询所有合约
+            self.request_id += 1
+            ret = self.api.ReqQryInstrument(req, self.request_id)
+            return ret == 0
+        except Exception as e:
+            logger.error(f"查询合约异常: {e}")
+            return False
+
+    def query_orders(self) -> bool:
         """查询报单流水"""
-        req = traderapi.CThostFtdcQryOrderField()
-        self.api.ReqQryOrder(req, 0)
-        return []
+        try:
+            req = traderapi.CThostFtdcQryOrderField()
+            req.BrokerID = self.broker_id
+            req.InvestorID = self.user_id
+            self.request_id += 1
+            ret = self.api.ReqQryOrder(req, self.request_id)
+            return ret == 0
+        except Exception as e:
+            logger.error(f"查询报单异常: {e}")
+            return False
 
-    def query_trades(self) -> list[TradeRecord]:
+    def query_trades(self) -> bool:
         """查询成交流水"""
-        req = traderapi.CThostFtdcQryTradeField()
-        self.api.ReqQryTrade(req, 0)
-        return []
+        try:
+            req = traderapi.CThostFtdcQryTradeField()
+            req.BrokerID = self.broker_id
+            req.InvestorID = self.user_id
+            self.request_id += 1
+            ret = self.api.ReqQryTrade(req, self.request_id)
+            return ret == 0
+        except Exception as e:
+            logger.error(f"查询成交异常: {e}")
+            return False
 
-    def query_positions(self) -> list[PositionRecord]:
+    def query_positions(self) -> bool:
         """查询持仓"""
-        req = traderapi.CThostFtdcQryInvestorPositionField()
-        self.api.ReqQryInvestorPosition(req, 0)
-        return []
+        try:
+            req = traderapi.CThostFtdcQryInvestorPositionField()
+            req.BrokerID = self.broker_id
+            req.InvestorID = self.user_id
+            self.request_id += 1
+            ret = self.api.ReqQryInvestorPosition(req, self.request_id)
+            return ret == 0
+        except Exception as e:
+            logger.error(f"查询持仓异常: {e}")
+            return False
 
-    def query_account(self) -> AccountInfo:
+    def query_account(self) -> bool:
         """查询账户资金"""
-        req = traderapi.CThostFtdcQryTradingAccountField()
-        self.api.ReqQryTradingAccount(req, 0)
-        return None
+        try:
+            req = traderapi.CThostFtdcQryTradingAccountField()
+            req.BrokerID = self.broker_id
+            req.InvestorID = self.user_id
+            self.request_id += 1
+            ret = self.api.ReqQryTradingAccount(req, self.request_id)
+            return ret == 0
+        except Exception as e:
+            logger.error(f"查询资金异常: {e}")
+            return False
+
+    def release(self):
+        """释放API资源"""
+        if self.api:
+            self.api.Release()
+            logger.info("交易API资源已释放")
+
 
 class TraderSpi(traderapi.CThostFtdcTraderSpi):
+    """交易SPI回调处理"""
+
     def __init__(self, api: TraderApi):
         super().__init__()
         self.api = api
 
     def OnFrontConnected(self):
-        """连接成功回调"""
-        pass
+        """连接成功回调 - 触发认证"""
+        logger.info("交易前置机连接成功，开始客户端认证")
+        # 穿透式认证流程：连接成功后先认证
+        self.api.authenticate()
+
+    def OnFrontDisconnected(self, nReason: int):
+        """连接断开回调"""
+        logger.warning(f"交易前置机连接断开，原因: {nReason}")
+        # 触发重连机制
+
+    def OnRspAuthenticate(self, pRspAuthenticateField, pRspInfo, nRequestID, bIsLast):
+        """认证响应"""
+        if pRspInfo and pRspInfo.ErrorID != 0:
+            logger.error(f"客户端认证失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
+            return
+        logger.info("客户端认证成功，开始登录")
+        # 认证成功后登录
+        self.api.login(self.api.broker_id, self.api.user_id, self.api.password)
 
     def OnRspUserLogin(self, pRspUserLogin, pRspInfo, nRequestID, bIsLast):
         """登录响应"""
-        pass
+        if pRspInfo and pRspInfo.ErrorID != 0:
+            logger.error(f"交易登录失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
+            return
+        logger.info(f"交易登录成功，交易日: {pRspUserLogin.TradingDay}")
+        # 登录成功后确认结算信息
+        self.api.confirm_settlement()
+
+    def OnRspSettlementInfoConfirm(self, pSettlementInfoConfirm, pRspInfo, nRequestID, bIsLast):
+        """结算信息确认响应"""
+        if pRspInfo and pRspInfo.ErrorID != 0:
+            logger.error(f"结算信息确认失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
+            return
+        logger.info("结算信息确认成功")
+        # 触发登录完成回调
+        if 'on_login' in self.api.callbacks:
+            self.api.callbacks['on_login']()
 
     def OnRtnOrder(self, pOrder):
         """报单回报"""
-        pass
+        if pOrder:
+            data = {
+                'order_ref': pOrder.OrderRef,
+                'instrument_id': pOrder.InstrumentID,
+                'direction': pOrder.Direction,
+                'offset': pCombOffsetFlag,
+                'price': pOrder.LimitPrice,
+                'volume': pOrder.VolumeTotalOriginal,
+                'volume_traded': pOrder.VolumeTraded,
+                'order_status': pOrder.OrderStatus,
+                'status_msg': pOrder.StatusMsg,
+                'insert_time': pOrder.InsertTime,
+            }
+            logger.info(f"报单回报: {data}")
+            if 'on_order' in self.api.callbacks:
+                self.api.callbacks['on_order'](data)
 
     def OnRtnTrade(self, pTrade):
         """成交回报"""
-        pass
+        if pTrade:
+            data = {
+                'trade_id': pTrade.TradeID,
+                'order_ref': pTrade.OrderRef,
+                'instrument_id': pTrade.InstrumentID,
+                'direction': pTrade.Direction,
+                'offset': pTrade.OffsetFlag,
+                'price': pTrade.Price,
+                'volume': pTrade.Volume,
+                'trade_time': pTrade.TradeTime,
+            }
+            logger.info(f"成交回报: {data}")
+            if 'on_trade' in self.api.callbacks:
+                self.api.callbacks['on_trade'](data)
+
+    def OnRspQryInstrument(self, pInstrument, pRspInfo, nRequestID, bIsLast):
+        """合约查询响应"""
+        if pRspInfo and pRspInfo.ErrorID != 0:
+            logger.error(f"查询合约失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
+            return
+        if pInstrument:
+            data = {
+                'instrument_id': pInstrument.InstrumentID,
+                'instrument_name': pInstrument.InstrumentName,
+                'exchange_id': pInstrument.ExchangeID,
+                'product_id': pInstrument.ProductID,
+                'volume_multiple': pInstrument.VolumeMultiple,
+                'price_tick': pInstrument.PriceTick,
+                'expire_date': pInstrument.ExpireDate,
+                'is_trading': pInstrument.IsTrading,
+            }
+            if 'on_instrument' in self.api.callbacks:
+                self.api.callbacks['on_instrument'](data, bIsLast)
+
+    def OnRspQryInvestorPosition(self, pInvestorPosition, pRspInfo, nRequestID, bIsLast):
+        """持仓查询响应"""
+        if pRspInfo and pRspInfo.ErrorID != 0:
+            logger.error(f"查询持仓失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
+            return
+        if pInvestorPosition:
+            data = {
+                'instrument_id': pInvestorPosition.InstrumentID,
+                'direction': pInvestorPosition.PosiDirection,
+                'position': pInvestorPosition.Position,
+                'today_position': pInvestorPosition.TodayPosition,
+                'yd_position': pInvestorPosition.YdPosition,
+                'position_cost': pInvestorPosition.PositionCost,
+            }
+            if 'on_position' in self.api.callbacks:
+                self.api.callbacks['on_position'](data, bIsLast)
+
+    def OnRspQryTradingAccount(self, pTradingAccount, pRspInfo, nRequestID, bIsLast):
+        """资金查询响应"""
+        if pRspInfo and pRspInfo.ErrorID != 0:
+            logger.error(f"查询资金失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
+            return
+        if pTradingAccount:
+            data = {
+                'account_id': pTradingAccount.AccountID,
+                'balance': pTradingAccount.Balance,
+                'available': pTradingAccount.Available,
+                'frozen_margin': pTradingAccount.FrozenMargin,
+                'commission': pTradingAccount.Commission,
+                'close_profit': pTradingAccount.CloseProfit,
+                'position_profit': pTradingAccount.PositionProfit,
+            }
+            if 'on_account' in self.api.callbacks:
+                self.api.callbacks['on_account'](data)
+
+    def OnRspError(self, pRspInfo, nRequestID, bIsLast):
+        """错误响应"""
+        if pRspInfo:
+            logger.error(f"交易API错误: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
+
+    def OnErrRtnOrderInsert(self, pInputOrder, pRspInfo):
+        """报单错误回报"""
+        if pRspInfo:
+            logger.error(f"报单错误: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
+            if 'on_error' in self.api.callbacks:
+                self.api.callbacks['on_error']({
+                    'code': pRspInfo.ErrorID,
+                    'message': pRspInfo.ErrorMsg,
+                })
 ```
 
 #### 4.2.3 回调处理
 
 ```python
 # server/ctp/callback.py
+import logging
 from ws.manager import ws_manager
+from services.market_service import MarketService
+from services.order_manager import OrderManager
+
+logger = logging.getLogger(__name__)
 
 class CallbackHandler:
-    def on_tick(self, data: MarketSnapshot):
+    """CTP回调处理 - 将CTP回调转换为WebSocket消息"""
+
+    def __init__(self, market_service: MarketService, order_manager: OrderManager):
+        self.market_service = market_service
+        self.order_manager = order_manager
+
+    def on_market_data(self, data: dict):
         """行情回调"""
+        instrument_id = data['instrument_id']
         # 1. 更新内存缓存
+        self.market_service.update_snapshot(instrument_id, data)
         # 2. 通过WebSocket推送给前端
         ws_manager.broadcast("market", "market_data", data)
 
-    def on_order(self, data: OrderRecord):
+    def on_order(self, data: dict):
         """报单回报"""
+        # 1. 更新报单管理器状态
+        self.order_manager.update_order(data)
+        # 2. 通过WebSocket推送给前端
         ws_manager.broadcast("order", "order_return", data)
 
-    def on_trade(self, data: TradeRecord):
+    def on_trade(self, data: dict):
         """成交回报"""
+        # 1. 更新报单管理器
+        self.order_manager.update_trade(data)
+        # 2. 通过WebSocket推送给前端
         ws_manager.broadcast("order", "trade_return", data)
 
-    def on_position(self, data: PositionRecord):
+    def on_position(self, data: dict):
         """持仓更新"""
         ws_manager.broadcast("position", "position_update", data)
 
-    def on_stop_order(self, data: StopOrder):
+    def on_account(self, data: dict):
+        """账户资金更新"""
+        ws_manager.broadcast("position", "account_update", data)
+
+    def on_stop_order(self, data: dict):
         """止损单状态更新"""
         ws_manager.broadcast("stop", "stop_order_update", data)
 
@@ -539,6 +955,17 @@ class CallbackHandler:
     def on_error(self, data: dict):
         """错误消息"""
         ws_manager.broadcast("system", "error", data)
+
+    def on_login(self):
+        """登录成功回调"""
+        logger.info("交易登录成功，开始加载合约列表")
+        # 触发合约列表加载
+        self.market_service.load_instruments()
+        # 通知前端连接状态
+        self.on_connection_status({
+            'td_connected': True,
+            'message': '交易登录成功'
+        })
 ```
 
 ### 4.3 WebSocket管理
