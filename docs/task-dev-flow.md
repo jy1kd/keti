@@ -354,7 +354,7 @@ git branch -d feature/pr-<编号>-<描述>
 
 | PR | 任务 | 依赖 | 状态 | 分支名 |
 |----|------|------|------|--------|
-| PR-2 | 前端项目初始化 | 无 | ⏳ 待开始 | `feature/pr-2-frontend-init` |
+| PR-2 | 前端项目初始化 | 无 | ✅ 已完成 | `feature/pr-2-frontend-init` |
 | PR-4 | 前端多面板布局框架 | PR-2 | ⏳ 待开始 | `feature/pr-4-layout-framework` |
 
 ### 阶段2：行情模块

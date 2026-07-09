@@ -10,7 +10,7 @@
 
 | PR | 标题 | 状态 | 完成时间 | 提交记录 |
 |----|------|------|----------|----------|
-| PR-2 | 前端项目初始化 | ⏳ 待开始 | - | - |
+| PR-2 | 前端项目初始化 | ✅ 已完成 | 2026-07-09 | 978c62e, ec6e566, f729f80 |
 | PR-4 | 前端多面板布局框架 | ⏳ 待开始 | - | - |
 | PR-6 | 前端行情表格（vtable） | ⏳ 待开始 | - | - |
 | PR-8 | 前端五档行情展示 | ⏳ 待开始 | - | - |
@@ -29,7 +29,7 @@
 
 ### PR-2: 前端项目初始化
 
-**状态**：⏳ 待开始
+**状态**：✅ 已完成
 
 **PR信息**：
 - PR分支名：`feature/pr-2-frontend-init`
@@ -37,16 +37,38 @@
 - 工作量：2小时
 
 **完成内容**：
-- 待开发
+- Vite + React + TypeScript 项目结构
+- 依赖安装：@visactor/vtable, zustand, axios, echarts, vitest
+- Vite 配置（API代理、路径别名）
+- TypeScript 严格模式配置
+- ESLint 配置
+- Vitest 测试配置
+- 类型定义 services/types.ts（与 design.md 一致）
+- Axios REST API 封装 services/api.ts
+- WebSocket 分端点管理 services/ws.ts
+- 连接状态 Store stores/connection.ts
+- 合约列表 Store stores/contracts.ts
+- 用户偏好 Store stores/userPrefs.ts（localStorage 持久化）
+- 格式化工具 utils/format.ts
+- 表单校验工具 utils/validators.ts
+- 全局样式 assets/styles/global.css（暗色主题）
+- 入口文件 main.tsx、App.tsx
 
 **验证结果**：
-- 待验证
+- ✅ 57个单元测试全部通过
+- ✅ TypeScript 编译无错误
+- ✅ ESLint 检查通过
+- ✅ Vite 构建成功
 
 **提交记录**：
-- 待提交
+- `978c62e` feat(task-2): 前端项目初始化 — 基础框架、stores、utils、services
+- `ec6e566` feat(task-2): 补充 ESLint 配置，更新进度快照
+- `f729f80` docs(task-2): 更新开发记录状态为已完成
+- `f9587e2` docs(task-2): 自验证通过，进度状态更新为待审查
+- `b42205a` docs(task-2): 添加 PR-2 代码审查反馈
 
 **交接说明**：
-- 待交接
+- 前端项目基础框架已完成，可直接进入 PR-4（布局框架）或 PR-6（行情表格）
 
 ---
 
