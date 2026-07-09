@@ -1,9 +1,93 @@
-# md_demo.py
+# md_demo.py - CTP API 字段结构探测程序
+# 通过Python运行时自省获取真实字段，不依赖头文件
 import ctp
 import time
+import json
 
 
-# 1. 创建自定义的SPI类，用于处理服务器回调
+def inspect_object(obj, name="对象"):
+    """打印CTP对象的所有字段、类型、值"""
+    import warnings
+    print(f"\n{'='*60}")
+    print(f"[探测] {name}")
+    print(f"{'='*60}")
+
+    fields = []
+    for attr in dir(obj):
+        if attr.startswith('_'):
+            continue
+        try:
+            # 抑制编码警告
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                value = getattr(obj, attr)
+            if callable(value):
+                continue
+            field_type = type(value).__name__
+            fields.append((attr, field_type, value))
+            print(f"  {attr:30s} | {field_type:10s} | {value}")
+        except UnicodeDecodeError:
+            # GBK编码字段，尝试手动解码
+            try:
+                raw = object.__getattribute__(obj, attr)
+                if isinstance(raw, bytes):
+                    value = raw.decode('gbk', errors='replace')
+                else:
+                    value = str(raw)
+                field_type = "str(gbk)"
+                fields.append((attr, field_type, value))
+                print(f"  {attr:30s} | {field_type:10s} | {value}")
+            except:
+                fields.append((attr, "bytes", "[GBK编码，无法显示]"))
+                print(f"  {attr:30s} | bytes      | [GBK编码，无法显示]")
+        except Exception as e:
+            print(f"  {attr:30s} | [读取失败: {e}]")
+
+    print(f"{'='*60}")
+    print(f"[统计] 共 {len(fields)} 个字段")
+    return fields
+
+
+def pascal_to_camel(name):
+    """PascalCase转camelCase"""
+    if not name:
+        return name
+    return name[0].lower() + name[1:]
+
+
+def fields_to_typescript(fields, interface_name="MarketSnapshot"):
+    """将CTP字段转换为TypeScript接口定义"""
+    ts_map = {
+        'str': 'string',
+        'str(gbk)': 'string',
+        'int': 'number',
+        'float': 'number',
+    }
+
+    lines = [f"interface {interface_name} {{"]
+    for name, py_type, value in fields:
+        camel = pascal_to_camel(name)
+        ts_type = ts_map.get(py_type, 'any')
+        lines.append(f"  {camel}: {ts_type};  // {value}")
+    lines.append("}")
+    return "\n".join(lines)
+
+
+def fields_to_mock(fields, interface_name="MarketSnapshot"):
+    """生成mock数据"""
+    lines = [f"const mock{interface_name} = {{"]
+    for name, py_type, value in fields:
+        camel = pascal_to_camel(name)
+        if py_type in ('str', 'str(gbk)'):
+            # 转义字符串中的引号
+            safe_value = str(value).replace('"', '\\"')
+            lines.append(f'  {camel}: "{safe_value}",')
+        else:
+            lines.append(f"  {camel}: {value},")
+    lines.append("};")
+    return "\n".join(lines)
+
+
 class MyMdSpi(ctp.CThostFtdcMdSpi):
     def __init__(self, api):
         super().__init__()
@@ -13,103 +97,205 @@ class MyMdSpi(ctp.CThostFtdcMdSpi):
         self.logged_in = False
 
     def OnFrontConnected(self):
-        """成功连接到行情前置机时触发"""
-        self.connected = True
-        print("[回调] 行情前置机连接成功，开始登录...")
-        # 构造登录请求字段
-        login_field = ctp.CThostFtdcReqUserLoginField()
-        login_field.BrokerID = "9999"  # 你的经纪商代码
-        login_field.UserID = "268326"  # 替换为你的用户ID
-        login_field.Password = "703495jy!!!"  # 替换为你的密码
-        # 发送登录请求
-        ret = self.api.ReqUserLogin(login_field, self.request_id)
-        print(f"[请求] 登录请求已发送，返回值: {ret}")
-        self.request_id += 1
+        try:
+            self.connected = True
+            print("\n[回调] 连接成功，开始登录...")
+            login_field = ctp.CThostFtdcReqUserLoginField()
+
+            # 探测登录请求对象
+            inspect_object(login_field, "CThostFtdcReqUserLoginField (登录请求)")
+
+            login_field.BrokerID = "9999"
+            login_field.UserID = "268326"
+            login_field.Password = "703495jy!!!"
+            ret = self.api.ReqUserLogin(login_field, self.request_id)
+            print(f"[请求] 登录返回值: {ret}")
+            self.request_id += 1
+        except Exception as e:
+            print(f"[异常] OnFrontConnected: {e}")
 
     def OnFrontDisconnected(self, nReason):
-        """断开连接时触发"""
-        print(f"[回调] 行情前置机断开连接，原因码: {nReason}")
+        print(f"[回调] 断开连接，原因码: {nReason}")
 
     def OnRspUserLogin(self, pRspUserLogin, pRspInfo, nRequestID, bIsLast):
-        """登录请求的响应"""
-        if pRspInfo is not None and pRspInfo.ErrorID != 0:
-            print(f"[错误] 行情登录失败，错误代码: {pRspInfo.ErrorID}, 错误信息: {pRspInfo.ErrorMsg}")
-            return
-        self.logged_in = True
-        print("[回调] 行情服务器登录成功！")
-        # 登录成功后，订阅合约行情
-        instruments = ["rb2410", "IF2412"]  # 订阅的合约列表，例如螺纹钢和沪深300股指期货
-        # 注意：合约代码需要转换为字节串
-        print(f"[请求] 订阅合约: {instruments}")
-        ret = self.api.SubscribeMarketData([i.encode('utf-8') for i in instruments])
-        print(f"[请求] 订阅请求已发送，返回值: {ret}")
+        try:
+            if pRspInfo is not None and pRspInfo.ErrorID != 0:
+                print(f"[错误] 登录失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
+                return
+            self.logged_in = True
+            print("\n[回调] 登录成功！")
+
+            # 探测登录响应对象
+            if pRspUserLogin is not None:
+                inspect_object(pRspUserLogin, "CThostFtdcRspUserLoginField (登录响应)")
+
+            # 探测错误信息对象
+            if pRspInfo is not None:
+                inspect_object(pRspInfo, "CThostFtdcRspInfoField (响应信息)")
+
+            # 订阅行情
+            instruments = ["au2506", "ag2506", "rb2510"]
+            print(f"\n[请求] 订阅: {instruments}")
+            ret = self.api.SubscribeMarketData(instruments)
+            print(f"[请求] 订阅返回值: {ret}")
+        except Exception as e:
+            print(f"[异常] OnRspUserLogin: {e}")
+            import traceback
+            traceback.print_exc()
 
     def OnRspSubMarketData(self, pSpecificInstrument, pRspInfo, nRequestID, bIsLast):
-        """订阅行情数据的响应"""
-        if pRspInfo is not None and pRspInfo.ErrorID != 0:
-            print(f"[错误] 订阅失败，合约: {pSpecificInstrument.InstrumentID}, 错误: {pRspInfo.ErrorMsg}")
-        else:
-            print(f"[回调] 订阅成功，合约: {pSpecificInstrument.InstrumentID}")
+        try:
+            if pRspInfo is not None and pRspInfo.ErrorID != 0:
+                print(f"[错误] 订阅失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
+            else:
+                print(f"[回调] 订阅成功: {pSpecificInstrument.InstrumentID}")
+
+            # 探测订阅响应对象
+            if pSpecificInstrument is not None:
+                inspect_object(pSpecificInstrument, "CThostFtdcSpecificInstrumentField (订阅响应)")
+        except Exception as e:
+            print(f"[异常] OnRspSubMarketData: {e}")
 
     def OnRtnDepthMarketData(self, pDepthMarketData):
-        """接收到深度行情数据推送"""
-        # CTP-Python已自动将GBK编码的字符串转换为UTF-8
-        print(f"[行情] 合约: {pDepthMarketData.InstrumentID}, "
-              f"最新价: {pDepthMarketData.LastPrice}, "
-              f"成交量: {pDepthMarketData.Volume}")
+        import warnings
+        try:
+            # 抑制编码警告
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+
+                # 第一条数据：完整探测
+                if not hasattr(self, '_market_data_inspected'):
+                    self._market_data_inspected = True
+
+                    fields = inspect_object(pDepthMarketData, "CThostFtdcDepthMarketDataField (行情数据)")
+
+                    # 生成TypeScript接口
+                    ts_code = fields_to_typescript(fields, "MarketSnapshot")
+                    print(f"\n[生成] TypeScript接口:\n")
+                    print(ts_code)
+
+                    # 生成mock数据
+                    mock_code = fields_to_mock(fields, "MarketSnapshot")
+                    print(f"\n[生成] Mock数据:\n")
+                    print(mock_code)
+
+                    print("\n" + "="*60)
+                    print("[提示] 已输出TypeScript接口和Mock数据")
+                    print("[提示] 后续行情精简显示，Ctrl+C退出")
+                    print("="*60 + "\n")
+                else:
+                    # 后续数据精简显示
+                    print(f"[行情] {pDepthMarketData.InstrumentID} | "
+                          f"最新: {pDepthMarketData.LastPrice} | "
+                          f"买一: {pDepthMarketData.BidPrice1}x{pDepthMarketData.BidVolume1} | "
+                          f"卖一: {pDepthMarketData.AskPrice1}x{pDepthMarketData.AskVolume1} | "
+                          f"量: {pDepthMarketData.Volume}")
+        except Exception as e:
+            print(f"[异常] OnRtnDepthMarketData: {e}")
+            import traceback
+            traceback.print_exc()
 
 
-# 2. 主程序流程
+def inspect_ctp_class(cls_name):
+    """直接探测CTP类的字段结构（不需要连接）"""
+    import warnings
+    cls = getattr(ctp, cls_name, None)
+    if cls is None:
+        print(f"[错误] 类 {cls_name} 不存在")
+        return []
+
+    print(f"\n{'='*60}")
+    print(f"[探测] {cls_name}")
+    print(f"{'='*60}")
+
+    # 创建空实例
+    try:
+        obj = cls()
+    except Exception as e:
+        print(f"[错误] 无法创建实例: {e}")
+        return []
+
+    fields = []
+    for attr in dir(obj):
+        if attr.startswith('_'):
+            continue
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                value = getattr(obj, attr)
+            if callable(value):
+                continue
+            field_type = type(value).__name__
+            # 获取默认值
+            default = repr(value) if value is not None else "null"
+            fields.append((attr, field_type, value))
+            print(f"  {attr:30s} | {field_type:10s} | {default}")
+        except UnicodeDecodeError:
+            fields.append((attr, "str(gbk)", "[GBK编码]"))
+            print(f"  {attr:30s} | str(gbk)   | [GBK编码]")
+        except Exception as e:
+            print(f"  {attr:30s} | [读取失败: {e}]")
+
+    print(f"{'='*60}")
+    print(f"[统计] 共 {len(fields)} 个字段")
+    return fields
+
+
 if __name__ == "__main__":
     print("=" * 50)
-    print("CTP 行情API验证程序")
+    print("CTP API 字段结构探测程序")
     print("=" * 50)
 
-    # 创建行情API实例
-    md_api = ctp.CThostFtdcMdApi.CreateFtdcMdApi()
-    print("[初始化] API实例创建成功")
+    # 探测API版本信息
+    print("\n[探测] ctp模块信息:")
+    print(f"  ctp版本: {getattr(ctp, '__version__', '未知')}")
+    print(f"  ctp路径: {ctp.__file__}")
 
-    # 创建我们的SPI实例并注册
-    md_spi = MyMdSpi(md_api)
-    md_api.RegisterSpi(md_spi)
-    print("[初始化] SPI回调注册成功")
+    # 列出所有CTP类
+    print("\n[探测] ctp中可用的类:")
+    ctp_classes = [x for x in dir(ctp) if x.startswith('CThostFtdc')]
+    print(f"  共 {len(ctp_classes)} 个类")
 
-    # 注册行情前置机地址（使用SimNow第二套7x24环境）
-    front_address = "tcp://182.254.243.31:40011"
-    md_api.RegisterFront(front_address)
-    print(f"[初始化] 前置机地址: {front_address}")
+    # 探测关键数据结构（不需要连接）
+    key_classes = [
+        # 行情相关
+        "CThostFtdcDepthMarketDataField",       # 行情数据
+        "CThostFtdcReqUserLoginField",           # 登录请求
+        "CThostFtdcRspUserLoginField",           # 登录响应
+        "CThostFtdcSpecificInstrumentField",     # 订阅响应
+        # 交易相关
+        "CThostFtdcInputOrderField",             # 报单请求
+        "CThostFtdcOrderField",                  # 报单回报
+        "CThostFtdcTradeField",                  # 成交回报
+        "CThostFtdcInputOrderActionField",       # 撤单请求
+        # 查询相关
+        "CThostFtdcQryInvestorPositionField",    # 持仓查询请求
+        "CThostFtdcInvestorPositionField",       # 持仓查询响应
+        "CThostFtdcQryTradingAccountField",      # 资金查询请求
+        "CThostFtdcTradingAccountField",         # 资金查询响应
+    ]
 
-    # 初始化API，开始连接
-    md_api.Init()
-    print("[初始化] API初始化完成，等待连接事件...")
-    print("-" * 50)
+    print(f"\n[探测] 关键数据结构（共{len(key_classes)}个）:")
+    for cls_name in key_classes:
+        inspect_ctp_class(cls_name)
 
-    # 保持程序运行，等待回调事件
-    start_time = time.time()
-    timeout = 120  # 30秒超时
-    try:
-        while True:
-            time.sleep(1)
-            elapsed = time.time() - start_time
+    # 生成完整的TypeScript接口
+    print("\n" + "="*60)
+    print("[生成] TypeScript接口")
+    print("="*60)
 
-            # 超时检测
-            if elapsed > timeout and not md_spi.connected:
-                print(f"\n[超时] {timeout}秒内未收到连接回调，可能原因：")
-                print("  1. 网络无法访问前置机地址")
-                print("  2. 防火墙阻止了TCP连接")
-                print("  3. 前置机地址不可用")
-                print("\n建议：")
-                print("  - 检查网络: ping 182.254.243.31")
-                print("  - 检查端口: telnet 182.254.243.31 40011")
-                print("  - 尝试第一套地址（仅交易时段）: tcp://180.168.146.187:10131")
-                break
+    # 行情数据接口
+    fields = inspect_ctp_class("CThostFtdcDepthMarketDataField")
+    if fields:
+        print("\n// MarketSnapshot - 行情快照")
+        print(fields_to_typescript(fields, "MarketSnapshot"))
 
-            # 连接成功后每10秒打印一次状态
-            if md_spi.connected and md_spi.logged_in and int(elapsed) % 10 == 0:
-                print(f"[状态] 已连接 {int(elapsed)} 秒，等待行情数据...")
+    # 报单请求接口
+    fields = inspect_ctp_class("CThostFtdcInputOrderField")
+    if fields:
+        print("\n// OrderRequest - 报单请求")
+        print(fields_to_typescript(fields, "OrderRequest"))
 
-    except KeyboardInterrupt:
-        print("\n[退出] 用户中断，释放API资源...")
-    finally:
-        md_api.Release()
-        print("[退出] API资源已释放")
+    print("\n" + "="*60)
+    print("[完成] 所有字段结构已输出")
+    print("="*60)
