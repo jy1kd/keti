@@ -42,13 +42,13 @@
 cd server
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+pip install ctp-python fastapi uvicorn websockets
 uvicorn main:app --reload --port 8000
 
 # 前端
 cd frontend
-pnpm install
-pnpm dev
+npm install
+npm run dev
 ```
 
 ### simnow环境配置

@@ -69,10 +69,10 @@ uvicorn main:app --reload --port 8000
 
 ```bash
 cd frontend
-pnpm install
-pnpm dev          # 开发服务器
-pnpm build        # 构建
-pnpm lint         # ESLint检查
+npm install       # 安装依赖
+npm run dev       # 开发服务器
+npm run build     # 构建
+npm run lint      # ESLint检查
 ```
 
 ## 角色分工
