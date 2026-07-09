@@ -1317,3 +1317,4 @@ feature/pr-3-market-ui
 | 2026-07-08 | v1.4 | 回调处理代码更新为WebSocket分端点调用 | ✅ 完成 |
 | 2026-07-08 | v1.5 | 补充stop_order_update、connection_status、error消息契约定义 | ✅ 完成 |
 | 2026-07-08 | v1.6 | 错误处理代码更新为与错误码定义一致的字段名 | ✅ 完成 |
+| 2026-07-09 | v1.7 | 根据py-ctp.md和trader文件夹更新CTP API文档，补充详细实现代码 | ✅ 完成 |
