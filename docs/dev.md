@@ -135,10 +135,10 @@ server/
 │   ├── order.py               # 报单接口（限价/市价、止损单、撤单、批量撤单、一键反向/锁仓）
 │   ├── query.py               # 查询接口（报单、成交、持仓、资金、合约、报价）
 │   └── connection.py          # 连接接口（登录、登出、状态）
-├── ctp/                       # CTP封装层（使用openctp-ctp库）
+├── ctp/                       # CTP封装层（使用ctp-python库）
 │   ├── __init__.py
-│   ├── md_user_api.py         # 行情API封装（基于openctp-ctp）
-│   ├── trader_api.py          # 交易API封装（基于openctp-ctp）
+│   ├── md_user_api.py         # 行情API封装（基于ctp-python）
+│   ├── trader_api.py          # 交易API封装（基于ctp-python）
 │   ├── callback.py            # 回调处理（OnRtnOrder、OnRtnTrade等）
 │   └── types.py               # CTP数据类型定义
 ├── services/                  # 业务服务层
@@ -359,16 +359,17 @@ app.include_router(query.router, prefix="/api/query", tags=["query"])
 ```python
 # server/ctp/md_user_api.py
 import logging
+import time
 from typing import Callable, Optional
-from openctp_ctp import mdapi
+import ctp
 
 logger = logging.getLogger(__name__)
 
 class MdUserApi:
-    """行情API封装"""
+    """行情API封装 - 使用ctp-python库"""
 
     def __init__(self, on_market_data: Optional[Callable] = None):
-        self.api: Optional[mdapi.CThostFtdcMdApi] = None
+        self.api: Optional[ctp.CThostFtdcMdApi] = None
         self.spi: Optional['MdSpi'] = None
         self.request_id: int = 0
         self.on_market_data = on_market_data  # 行情数据回调
@@ -376,8 +377,8 @@ class MdUserApi:
     def connect(self, front_addr: str) -> bool:
         """连接行情前置"""
         try:
-            # 创建API实例（flow_path为流文件目录，空字符串表示当前目录）
-            self.api = mdapi.CThostFtdcMdApi.CreateFtdcMdApi()
+            # 创建API实例
+            self.api = ctp.CThostFtdcMdApi.CreateFtdcMdApi()
             self.spi = MdSpi(self)
             self.api.RegisterSpi(self.spi)
             self.api.RegisterFront(front_addr)
@@ -391,7 +392,7 @@ class MdUserApi:
     def login(self, broker_id: str, user_id: str, password: str) -> bool:
         """登录行情服务器"""
         try:
-            req = mdapi.CThostFtdcReqUserLoginField()
+            req = ctp.CThostFtdcReqUserLoginField()
             req.BrokerID = broker_id
             req.UserID = user_id
             req.Password = password
@@ -449,7 +450,7 @@ class MdUserApi:
             logger.info("行情API资源已释放")
 
 
-class MdSpi(mdapi.CThostFtdcMdSpi):
+class MdSpi(ctp.CThostFtdcMdSpi):
     """行情SPI回调处理"""
 
     def __init__(self, api: MdUserApi):
@@ -468,28 +469,28 @@ class MdSpi(mdapi.CThostFtdcMdSpi):
 
     def OnRspUserLogin(self, pRspUserLogin, pRspInfo, nRequestID, bIsLast):
         """登录响应"""
-        if pRspInfo and pRspInfo.ErrorID != 0:
+        if pRspInfo is not None and pRspInfo.ErrorID != 0:
             logger.error(f"行情登录失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
             return
         logger.info(f"行情登录成功，交易日: {pRspUserLogin.TradingDay}")
 
     def OnRspUserLogout(self, pUserLogout, pRspInfo, nRequestID, bIsLast):
         """登出响应"""
-        if pRspInfo and pRspInfo.ErrorID != 0:
+        if pRspInfo is not None and pRspInfo.ErrorID != 0:
             logger.error(f"行情登出失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
             return
         logger.info("行情登出成功")
 
     def OnRspSubMarketData(self, pSpecificInstrument, pRspInfo, nRequestID, bIsLast):
         """订阅行情响应"""
-        if pRspInfo and pRspInfo.ErrorID != 0:
+        if pRspInfo is not None and pRspInfo.ErrorID != 0:
             logger.error(f"订阅行情失败: {pRspInfo.ErrorMsg}")
             return
         logger.info(f"订阅行情成功: {pSpecificInstrument.InstrumentID}")
 
     def OnRspUnSubMarketData(self, pSpecificInstrument, pRspInfo, nRequestID, bIsLast):
         """退订行情响应"""
-        if pRspInfo and pRspInfo.ErrorID != 0:
+        if pRspInfo is not None and pRspInfo.ErrorID != 0:
             logger.error(f"退订行情失败: {pRspInfo.ErrorMsg}")
             return
         logger.info(f"退订行情成功: {pSpecificInstrument.InstrumentID}")
@@ -513,7 +514,7 @@ class MdSpi(mdapi.CThostFtdcMdSpi):
 
     def OnRspError(self, pRspInfo, nRequestID, bIsLast):
         """错误响应"""
-        if pRspInfo:
+        if pRspInfo is not None:
             logger.error(f"行情API错误: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
 ```
 
@@ -522,16 +523,17 @@ class MdSpi(mdapi.CThostFtdcMdSpi):
 ```python
 # server/ctp/trader_api.py
 import logging
+import time
 from typing import Callable, Optional
-from openctp_ctp import traderapi
+import ctp
 
 logger = logging.getLogger(__name__)
 
 class TraderApi:
-    """交易API封装 - 包含穿透式认证流程"""
+    """交易API封装 - 使用ctp-python库，包含穿透式认证流程"""
 
     def __init__(self, callbacks: Optional[dict] = None):
-        self.api: Optional[traderapi.CThostFtdcTraderApi] = None
+        self.api: Optional[ctp.CThostFtdcTraderApi] = None
         self.spi: Optional['TraderSpi'] = None
         self.request_id: int = 0
         self.broker_id: str = ""
@@ -547,13 +549,13 @@ class TraderApi:
             self.app_id = app_id
             self.auth_code = auth_code
             # 创建API实例
-            self.api = traderapi.CThostFtdcTraderApi.CreateFtdcTraderApi()
+            self.api = ctp.CThostFtdcTraderApi.CreateFtdcTraderApi()
             self.spi = TraderSpi(self)
             self.api.RegisterSpi(self.spi)
             self.api.RegisterFront(front_addr)
             # 订阅私有流和公有流（QUICK模式：只传送登录后产生的数据）
-            self.api.SubscribePublicTopic(traderapi.THOST_TERT_QUICK)
-            self.api.SubscribePrivateTopic(traderapi.THOST_TERT_QUICK)
+            self.api.SubscribePublicTopic(ctp.THOST_TERT_QUICK)
+            self.api.SubscribePrivateTopic(ctp.THOST_TERT_QUICK)
             self.api.Init()
             logger.info(f"交易API初始化完成，前置地址: {front_addr}")
             return True
@@ -564,7 +566,7 @@ class TraderApi:
     def authenticate(self) -> bool:
         """客户端认证（穿透式监管）"""
         try:
-            req = traderapi.CThostFtdcReqAuthenticateField()
+            req = ctp.CThostFtdcReqAuthenticateField()
             req.BrokerID = self.broker_id
             req.UserID = self.user_id
             req.AppID = self.app_id
@@ -587,7 +589,7 @@ class TraderApi:
             self.broker_id = broker_id
             self.user_id = user_id
             self.password = password
-            req = traderapi.CThostFtdcReqUserLoginField()
+            req = ctp.CThostFtdcReqUserLoginField()
             req.BrokerID = broker_id
             req.UserID = user_id
             req.Password = password
@@ -606,7 +608,7 @@ class TraderApi:
     def confirm_settlement(self) -> bool:
         """确认结算信息"""
         try:
-            req = traderapi.CThostFtdcSettlementInfoConfirmField()
+            req = ctp.CThostFtdcSettlementInfoConfirmField()
             req.BrokerID = self.broker_id
             req.InvestorID = self.user_id
             self.request_id += 1
@@ -624,7 +626,7 @@ class TraderApi:
     def insert_order(self, order: OrderRequest) -> str:
         """报单"""
         try:
-            req = traderapi.CThostFtdcInputOrderField()
+            req = ctp.CThostFtdcInputOrderField()
             req.BrokerID = self.broker_id
             req.InvestorID = self.user_id
             req.InstrumentID = order.instrument_id
@@ -654,7 +656,7 @@ class TraderApi:
     def cancel_order(self, order_ref: str, instrument_id: str, exchange_id: str) -> bool:
         """撤单"""
         try:
-            req = traderapi.CThostFtdcInputOrderActionField()
+            req = ctp.CThostFtdcInputOrderActionField()
             req.BrokerID = self.broker_id
             req.InvestorID = self.user_id
             req.OrderRef = order_ref
@@ -676,7 +678,7 @@ class TraderApi:
     def query_instruments(self) -> bool:
         """查询合约列表"""
         try:
-            req = traderapi.CThostFtdcQryInstrumentField()
+            req = ctp.CThostFtdcQryInstrumentField()
             # 空请求表示查询所有合约
             self.request_id += 1
             ret = self.api.ReqQryInstrument(req, self.request_id)
@@ -688,7 +690,7 @@ class TraderApi:
     def query_orders(self) -> bool:
         """查询报单流水"""
         try:
-            req = traderapi.CThostFtdcQryOrderField()
+            req = ctp.CThostFtdcQryOrderField()
             req.BrokerID = self.broker_id
             req.InvestorID = self.user_id
             self.request_id += 1
@@ -701,7 +703,7 @@ class TraderApi:
     def query_trades(self) -> bool:
         """查询成交流水"""
         try:
-            req = traderapi.CThostFtdcQryTradeField()
+            req = ctp.CThostFtdcQryTradeField()
             req.BrokerID = self.broker_id
             req.InvestorID = self.user_id
             self.request_id += 1
@@ -714,7 +716,7 @@ class TraderApi:
     def query_positions(self) -> bool:
         """查询持仓"""
         try:
-            req = traderapi.CThostFtdcQryInvestorPositionField()
+            req = ctp.CThostFtdcQryInvestorPositionField()
             req.BrokerID = self.broker_id
             req.InvestorID = self.user_id
             self.request_id += 1
@@ -727,7 +729,7 @@ class TraderApi:
     def query_account(self) -> bool:
         """查询账户资金"""
         try:
-            req = traderapi.CThostFtdcQryTradingAccountField()
+            req = ctp.CThostFtdcQryTradingAccountField()
             req.BrokerID = self.broker_id
             req.InvestorID = self.user_id
             self.request_id += 1
@@ -744,7 +746,7 @@ class TraderApi:
             logger.info("交易API资源已释放")
 
 
-class TraderSpi(traderapi.CThostFtdcTraderSpi):
+class TraderSpi(ctp.CThostFtdcTraderSpi):
     """交易SPI回调处理"""
 
     def __init__(self, api: TraderApi):
@@ -764,7 +766,7 @@ class TraderSpi(traderapi.CThostFtdcTraderSpi):
 
     def OnRspAuthenticate(self, pRspAuthenticateField, pRspInfo, nRequestID, bIsLast):
         """认证响应"""
-        if pRspInfo and pRspInfo.ErrorID != 0:
+        if pRspInfo is not None and pRspInfo.ErrorID != 0:
             logger.error(f"客户端认证失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
             return
         logger.info("客户端认证成功，开始登录")
@@ -773,7 +775,7 @@ class TraderSpi(traderapi.CThostFtdcTraderSpi):
 
     def OnRspUserLogin(self, pRspUserLogin, pRspInfo, nRequestID, bIsLast):
         """登录响应"""
-        if pRspInfo and pRspInfo.ErrorID != 0:
+        if pRspInfo is not None and pRspInfo.ErrorID != 0:
             logger.error(f"交易登录失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
             return
         logger.info(f"交易登录成功，交易日: {pRspUserLogin.TradingDay}")
@@ -782,7 +784,7 @@ class TraderSpi(traderapi.CThostFtdcTraderSpi):
 
     def OnRspSettlementInfoConfirm(self, pSettlementInfoConfirm, pRspInfo, nRequestID, bIsLast):
         """结算信息确认响应"""
-        if pRspInfo and pRspInfo.ErrorID != 0:
+        if pRspInfo is not None and pRspInfo.ErrorID != 0:
             logger.error(f"结算信息确认失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
             return
         logger.info("结算信息确认成功")
@@ -797,7 +799,7 @@ class TraderSpi(traderapi.CThostFtdcTraderSpi):
                 'order_ref': pOrder.OrderRef,
                 'instrument_id': pOrder.InstrumentID,
                 'direction': pOrder.Direction,
-                'offset': pCombOffsetFlag,
+                'offset': pOrder.CombOffsetFlag,
                 'price': pOrder.LimitPrice,
                 'volume': pOrder.VolumeTotalOriginal,
                 'volume_traded': pOrder.VolumeTraded,
@@ -828,7 +830,7 @@ class TraderSpi(traderapi.CThostFtdcTraderSpi):
 
     def OnRspQryInstrument(self, pInstrument, pRspInfo, nRequestID, bIsLast):
         """合约查询响应"""
-        if pRspInfo and pRspInfo.ErrorID != 0:
+        if pRspInfo is not None and pRspInfo.ErrorID != 0:
             logger.error(f"查询合约失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
             return
         if pInstrument:
@@ -847,7 +849,7 @@ class TraderSpi(traderapi.CThostFtdcTraderSpi):
 
     def OnRspQryInvestorPosition(self, pInvestorPosition, pRspInfo, nRequestID, bIsLast):
         """持仓查询响应"""
-        if pRspInfo and pRspInfo.ErrorID != 0:
+        if pRspInfo is not None and pRspInfo.ErrorID != 0:
             logger.error(f"查询持仓失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
             return
         if pInvestorPosition:
@@ -864,7 +866,7 @@ class TraderSpi(traderapi.CThostFtdcTraderSpi):
 
     def OnRspQryTradingAccount(self, pTradingAccount, pRspInfo, nRequestID, bIsLast):
         """资金查询响应"""
-        if pRspInfo and pRspInfo.ErrorID != 0:
+        if pRspInfo is not None and pRspInfo.ErrorID != 0:
             logger.error(f"查询资金失败: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
             return
         if pTradingAccount:
@@ -882,12 +884,12 @@ class TraderSpi(traderapi.CThostFtdcTraderSpi):
 
     def OnRspError(self, pRspInfo, nRequestID, bIsLast):
         """错误响应"""
-        if pRspInfo:
+        if pRspInfo is not None:
             logger.error(f"交易API错误: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
 
     def OnErrRtnOrderInsert(self, pInputOrder, pRspInfo):
         """报单错误回报"""
-        if pRspInfo:
+        if pRspInfo is not None:
             logger.error(f"报单错误: {pRspInfo.ErrorID} - {pRspInfo.ErrorMsg}")
             if 'on_error' in self.api.callbacks:
                 self.api.callbacks['on_error']({

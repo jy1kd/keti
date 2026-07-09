@@ -48,10 +48,10 @@ server/
 ```
 
 **PR描述**：
-验证openctp-ctp库的可行性，完成CTP连接、登录、行情订阅、报单提交的基础流程验证。
+验证ctp-python库的可行性，完成CTP连接、登录、行情订阅、报单提交的基础流程验证。
 
 **实现方式**：
-1. 安装openctp-ctp库：`pip install openctp-ctp`
+1. 安装ctp-python库：`pip install ctp-python`
 2. 封装行情API（MdUserApi）：连接、登录、订阅行情
 3. 封装交易API（TraderApi）：连接、登录、报单、撤单
 4. 实现回调处理（MdSpi、TraderSpi）
@@ -66,7 +66,7 @@ server/
 5. 验证simnow市价单支持情况
 
 **验收标准**：
-- [ ] 能通过openctp-ctp成功加载并创建API实例
+- [ ] 能通过ctp-python成功加载并创建API实例（`import ctp`）
 - [ ] 能成功连接到simnow模拟柜台并登录
 - [ ] 能收到行情回调（OnRtnDepthMarketData）
 - [ ] 能成功提交一笔报单并收到回报（OnRtnOrder）
@@ -1311,7 +1311,7 @@ PR-6 (行情表格) ────────────────────
 
 | 里程碑 | PR范围 | 说明 |
 |--------|--------|------|
-| **M0** | PR-1 | 技术Spike：openctp-ctp验证 |
+| **M0** | PR-1 | 技术Spike：ctp-python验证 |
 | **M1** | PR-3, PR-5, PR-7, PR-9, PR-11, PR-13 | Python中间层开发 |
 | **M2** | PR-4, PR-6, PR-8, PR-12, PR-14 | 前端行情模块开发 |
 | **M3** | PR-10, PR-15 | 前端报单模块开发 |

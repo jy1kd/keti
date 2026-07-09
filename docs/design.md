@@ -59,17 +59,18 @@
 | HTTP客户端 | Axios | latest | REST API调用 |
 | 后端框架 | FastAPI | 0.100+ | REST API服务 |
 | WebSocket | websockets | 11.x | 实时推送 |
-| CTP绑定 | openctp-ctp | latest | Python CTP封装库（已处理SWIG绑定，开箱即用） |
+| CTP绑定 | ctp-python | latest | Python CTP封装库（SWIG封装，开箱即用） |
 | 包管理 | pnpm (前端) + pip (后端) | - | 依赖管理 |
 
 ### 1.3 CTP API说明
 
 **API版本**：v6.7.13（2026年2月25日发布）
 
-**Python封装库**：openctp-ctp（原ctp-python）
-- 安装命令：`pip install openctp-ctp`
+**Python封装库**：ctp-python
+- 安装命令：`pip install ctp-python`
 - 支持Python版本：3.7 ~ 3.13
 - 支持平台：Windows amd64、Linux amd64、macOS arm64/amd64
+- 导入方式：`import ctp`
 
 **SimNow连接配置**：
 
@@ -177,9 +178,9 @@ server/
 │   ├── order.py          # 报单相关接口（限价/市价、撤单、批量撤单、止损单）
 │   ├── query.py          # 查询相关接口（报单、成交、持仓、资金、合约、报价）
 │   └── connection.py     # 连接管理接口（登录、登出、状态）
-├── ctp/                  # CTP封装层（使用openctp-ctp库）
-│   ├── md_user_api.py    # 行情API封装（基于openctp-ctp）
-│   ├── trader_api.py     # 交易API封装（基于openctp-ctp）
+├── ctp/                  # CTP封装层（使用ctp-python库）
+│   ├── md_user_api.py    # 行情API封装（基于ctp-python）
+│   ├── trader_api.py     # 交易API封装（基于ctp-python）
 │   ├── callback.py       # 回调处理
 │   └── types.py          # CTP数据类型（基于ThostFtdcUserApiStruct.h）
 ├── services/             # 业务服务层
