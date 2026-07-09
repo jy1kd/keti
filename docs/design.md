@@ -72,6 +72,18 @@
 - 支持平台：Windows amd64、Linux amd64、macOS arm64/amd64
 - 导入方式：`import ctp`
 
+**⚠️ 已知问题：SubscribeMarketData参数格式**
+
+```python
+# ❌ 错误：传bytes列表会导致堆损坏崩溃(0xC0000374)
+api.SubscribeMarketData([b"au2506"])
+
+# ✅ 正确：必须传字符串列表
+api.SubscribeMarketData(["au2506"])
+```
+
+原因：ctp-python的SWIG绑定处理bytes时内存越界。所有Subscribe/Unsubscribe方法都受影响。
+
 **SimNow连接配置**：
 
 | 配置项 | 说明 | 示例值 |

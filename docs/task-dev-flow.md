@@ -515,3 +515,57 @@ Week 3:
 | 2026-07-08 | v1.0 | 初始化task-dev-flow.md：开发流程指南 | ✅ 完成 |
 | 2026-07-08 | v1.1 | 修复依赖关系、关键路径、角色A空闲期任务 | ✅ 完成 |
 | 2026-07-08 | v1.2 | 修复Section编号重复、Week 3时间线与对照表不一致 | ✅ 完成 |
+| 2026-07-09 | v1.3 | CTP连接验证完成，记录关键发现 | ✅ 完成 |
+
+---
+
+## 13. CTP连接验证记录
+
+**验证时间**：2026-07-09
+**验证环境**：SimNow 7x24测试环境（tcp://182.254.243.31:40011）
+**验证结果**：✅ 通过
+
+### 13.1 验证通过的功能
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| ctp-python库安装 | ✅ | `pip install ctp-python` 正常 |
+| API实例创建 | ✅ | `ctp.CThostFtdcMdApi.CreateFtdcMdApi()` 正常 |
+| SPI注册 | ✅ | `RegisterSpi()` 正常 |
+| 前置机连接 | ✅ | `RegisterFront()` + `Init()` 正常 |
+| 用户登录 | ✅ | `ReqUserLogin()` 正常，返回值0 |
+| 行情订阅 | ✅ | `SubscribeMarketData()` 正常（必须传字符串列表） |
+| 程序稳定性 | ✅ | 连续运行255秒无崩溃 |
+
+### 13.2 关键发现
+
+**SubscribeMarketData参数格式问题**：
+
+```python
+# ❌ 错误：bytes列表导致堆损坏崩溃(0xC0000374)
+api.SubscribeMarketData([b"au2506"])
+
+# ✅ 正确：必须传字符串列表
+api.SubscribeMarketData(["au2506"])
+```
+
+原因：ctp-python的SWIG绑定处理bytes时内存越界。
+
+**影响范围**：所有Subscribe/Unsubscribe方法都受影响，包括：
+- `SubscribeMarketData`
+- `UnSubscribeMarketData`
+- `SubscribeForQuoteRsp`
+- `UnSubscribeForQuoteRsp`
+
+### 13.3 参考实现
+
+已验证的完整连接流程见项目根目录 `md_demo.py`。
+
+### 13.4 待验证功能
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 行情数据接收 | ⏳ | 需在交易时段验证（09:00-15:00或21:00-02:30） |
+| 交易API连接 | ⏳ | 待PR-1后续开发 |
+| 报单提交 | ⏳ | 待PR-1后续开发 |
+| 市价单支持 | ⏳ | 待PR-1后续开发 |

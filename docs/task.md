@@ -58,16 +58,62 @@ server/
 5. 配置管理（读取.env环境变量）
 6. 编写验证脚本，测试完整流程
 
+**已验证的CTP连接流程**（参考 `md_demo.py`）：
+
+```python
+import ctp
+
+# 1. 创建API实例
+md_api = ctp.CThostFtdcMdApi.CreateFtdcMdApi()
+
+# 2. 注册SPI回调
+md_spi = MyMdSpi(md_api)
+md_api.RegisterSpi(md_spi)
+
+# 3. 注册前置机地址
+md_api.RegisterFront("tcp://182.254.243.31:40011")  # 7x24环境
+
+# 4. 初始化（触发OnFrontConnected回调）
+md_api.Init()
+
+# 5. 在OnFrontConnected回调中登录
+login_field = ctp.CThostFtdcReqUserLoginField()
+login_field.BrokerID = "9999"
+login_field.UserID = "your_user_id"
+login_field.Password = "your_password"
+md_api.ReqUserLogin(login_field, request_id)
+
+# 6. 在OnRspUserLogin回调中订阅（⚠️ 必须传字符串列表！）
+md_api.SubscribeMarketData(["au2506", "ag2506"])  # ✅ 正确
+# md_api.SubscribeMarketData([b"au2506"])          # ❌ 崩溃！
+```
+
+**⚠️ 关键发现：SubscribeMarketData参数必须传字符串列表**
+
+```
+❌ md_api.SubscribeMarketData([b"au2506"])   # bytes导致堆损坏崩溃(0xC0000374)
+✅ md_api.SubscribeMarketData(["au2506"])    # 字符串正常工作
+```
+
+这是ctp-python库的SWIG绑定bug，bytes参数会导致内存越界。
+
+**SimNow 7x24测试环境**：
+- 行情前置：`tcp://182.254.243.31:40011`
+- 交易前置：`tcp://182.254.243.31:40001`
+- BrokerID：`9999`
+- 注意：非交易时段可能无行情推送，但连接/登录/订阅均正常
+
 **验证方法**：
-1. 运行验证脚本，成功连接simnow行情前置
+1. 运行 `md_demo.py`，成功连接simnow行情前置
 2. 成功登录simnow账户
-3. 成功订阅1个合约行情，收到OnRtnDepthMarketData回调
-4. 成功提交1笔报单，收到OnRtnOrder回调
-5. 验证simnow市价单支持情况
+3. 成功订阅合约行情，收到OnRspSubMarketData回调
+4. 交易时段收到OnRtnDepthMarketData行情推送
+5. 成功提交1笔报单，收到OnRtnOrder回调
 
 **验收标准**：
 - [ ] 能通过ctp-python成功加载并创建API实例（`import ctp`）
 - [ ] 能成功连接到simnow模拟柜台并登录
+- [ ] 能成功订阅合约（使用字符串列表，非bytes）
 - [ ] 能收到行情回调（OnRtnDepthMarketData）
 - [ ] 能成功提交一笔报单并收到回报（OnRtnOrder）
 - [ ] 验证simnow是否支持市价单（OrderPriceType=ANYPRICE）
