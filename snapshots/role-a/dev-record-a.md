@@ -9,7 +9,7 @@
 
 **分支**：`feature/pr-1-ctp-verify`
 **依赖**：无
-**状态**：🔄 开发完成，待自验证
+**状态**：✅ 开发完成，待审查
 
 ### 测试用例列表
 
@@ -41,7 +41,7 @@
 - ✅ `.env` — 实际配置文件（gitignore，不提交）
 - ✅ `.env.sample` — 配置模板（提交）
 - ✅ 测试文件：`test_md_user_api.py`, `test_trader_api.py`
-- 📦 待提交
+- 📦 Commit: `282ecaf`
 
 ### 关键设计决策
 
@@ -60,4 +60,5 @@
 | Commit | 内容 |
 |--------|------|
 | `ce44db8` | feat(task-01): 配置管理、CTP类型定义、回调框架 — 66 tests pass |
-| 待提交 | md_user_api, trader_api, main.py, .env.sample, 测试文件 — 26 tests
+| `282ecaf` | feat(task-01): CTP行情/交易API封装、验证入口、配置模板 — 92 tests pass |
+| `fa0a872` | docs(task-01): 更新progress.md — 开发完成，待审查 |
