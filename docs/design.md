@@ -261,36 +261,52 @@ type WSMessageType =
 {
   "type": "market_data",
   "data": {
-    "instrument_id": "au2406",
-    "last_price": 480.50,
-    "bid_price1": 480.40,
-    "bid_volume1": 10,
-    "bid_price2": 480.38,
-    "bid_volume2": 15,
-    "bid_price3": 480.36,
-    "bid_volume3": 20,
-    "bid_price4": 480.34,
-    "bid_volume4": 25,
-    "bid_price5": 480.32,
-    "bid_volume5": 30,
-    "ask_price1": 480.60,
-    "ask_volume1": 8,
-    "ask_price2": 480.62,
-    "ask_volume2": 12,
-    "ask_price3": 480.64,
-    "ask_volume3": 18,
-    "ask_price4": 480.66,
-    "ask_volume4": 22,
-    "ask_price5": 480.68,
-    "ask_volume5": 28,
+    "tradingDay": "20260710",
+    "instrumentID": "au2406",
+    "exchangeID": "SHFE",
+    "exchangeInstID": "au2406",
+    "lastPrice": 480.50,
+    "preSettlementPrice": 480.00,
+    "preClosePrice": 480.20,
+    "preOpenInterest": 67890.0,
+    "openPrice": 480.00,
+    "highestPrice": 481.00,
+    "lowestPrice": 479.50,
     "volume": 12345,
-    "open_interest": 67890,
-    "open_price": 480.00,
-    "high_price": 481.00,
-    "low_price": 479.50,
-    "pre_close_price": 480.20,
-    "spread": 0.20,
-    "update_time": "14:30:05"
+    "turnover": 5928345.00,
+    "openInterest": 67890.0,
+    "closePrice": 0.0,
+    "settlementPrice": 0.0,
+    "upperLimitPrice": 528.00,
+    "lowerLimitPrice": 432.00,
+    "bidPrice1": 480.40,
+    "bidVolume1": 10,
+    "askPrice1": 480.60,
+    "askVolume1": 8,
+    "bidPrice2": 480.38,
+    "bidVolume2": 15,
+    "askPrice2": 480.62,
+    "askVolume2": 12,
+    "bidPrice3": 480.36,
+    "bidVolume3": 20,
+    "askPrice3": 480.64,
+    "askVolume3": 18,
+    "bidPrice4": 480.34,
+    "bidVolume4": 25,
+    "askPrice4": 480.66,
+    "askVolume4": 22,
+    "bidPrice5": 480.32,
+    "bidVolume5": 30,
+    "askPrice5": 480.68,
+    "askVolume5": 28,
+    "averagePrice": 480.50,
+    "actionDay": "20260710",
+    "updateMillisec": 500,
+    "updateTime": "14:30:05",
+    "bandingUpperPrice": 0.0,
+    "bandingLowerPrice": 0.0,
+    "currDelta": 0.0,
+    "preDelta": 0.0
   }
 }
 ```
@@ -300,15 +316,16 @@ type WSMessageType =
 {
   "type": "order_return",
   "data": {
-    "order_ref": "123456",
-    "instrument_id": "au2406",
-    "direction": "buy",
-    "price": 480.50,
-    "volume": 1,
-    "volume_traded": 0,
-    "order_status": "submitted",
-    "status_msg": "报单已提交",
-    "insert_time": "14:30:10"
+    "orderRef": "123456",
+    "instrumentID": "au2406",
+    "direction": "0",
+    "combOffsetFlag": "0",
+    "limitPrice": 480.50,
+    "volumeTotalOriginal": 1,
+    "volumeTraded": 0,
+    "orderStatus": "0",
+    "statusMsg": "报单已提交",
+    "insertTime": "14:30:10"
   }
 }
 ```
@@ -318,13 +335,14 @@ type WSMessageType =
 {
   "type": "trade_return",
   "data": {
-    "trade_id": "T789",
-    "order_ref": "123456",
-    "instrument_id": "au2406",
-    "direction": "buy",
+    "tradeID": "T789",
+    "orderRef": "123456",
+    "instrumentID": "au2406",
+    "direction": "0",
+    "offsetFlag": "0",
     "price": 480.50,
     "volume": 1,
-    "trade_time": "14:30:11"
+    "tradeTime": "14:30:11"
   }
 }
 ```
@@ -334,14 +352,16 @@ type WSMessageType =
 {
   "type": "position_update",
   "data": {
-    "instrument_id": "au2406",
-    "direction": "long",
+    "instrumentID": "au2406",
+    "posiDirection": "2",
     "position": 5,
-    "position_cost": 480.00,
-    "position_profit": 2500.00,
-    "today_position": 2,
-    "yd_position": 3,
-    "update_time": "14:30:05"
+    "positionCost": 240000.00,
+    "positionProfit": 2500.00,
+    "todayPosition": 2,
+    "ydPosition": 3,
+    "openCost": 240000.00,
+    "useMargin": 24000.00,
+    "tradingDay": "20260710"
   }
 }
 ```
@@ -351,10 +371,10 @@ type WSMessageType =
 {
   "type": "stop_order_update",
   "data": {
-    "stop_order_ref": "SO123",
+    "stopOrderRef": "SO123",
     "status": "triggered",
-    "triggered_order_ref": "456789",
-    "triggered_at": "14:35:00"
+    "triggeredOrderRef": "456789",
+    "triggeredAt": "14:35:00"
   }
 }
 ```
@@ -364,8 +384,8 @@ type WSMessageType =
 {
   "type": "connection_status",
   "data": {
-    "md_connected": true,
-    "td_connected": true,
+    "mdConnected": true,
+    "tdConnected": true,
     "message": "连接已恢复"
   }
 }
@@ -378,7 +398,7 @@ type WSMessageType =
   "data": {
     "code": "ORDER_REJECTED",
     "message": "价格不合法",
-    "related_ref": "123456"
+    "relatedRef": "123456"
   }
 }
 ```
