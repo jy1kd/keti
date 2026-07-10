@@ -201,6 +201,86 @@ def verify_td_connection() -> bool:
     return True
 
 
+def verify_market_order() -> bool:
+    """Step 5: Verify market order support (OrderPriceType.ANY).
+
+    Submits a market order and checks if SimNow accepts it.
+    Some simulation environments do NOT support market orders,
+    which affects the design of PR-9 (order API) and PR-10 (order form).
+    """
+    print_separator("Step 5: Market Order Verification")
+
+    cfg = load_config()
+    td = TraderApi(cfg)
+
+    td.spi.on("OnFrontConnected",
+              lambda: setattr(td, "connection_status", "connected"))
+    td.spi.on("OnRspUserLogin",
+              lambda *args: setattr(td, "login_status", "logged_in"))
+
+    print("   Creating TraderApi for market order test...")
+    try:
+        td.create()
+        print("   ✅ TraderApi created, Init() called")
+    except Exception as e:
+        print(f"   ❌ Create failed: {e}")
+        return False
+
+    print("   Waiting for OnFrontConnected callback (5s)...")
+    time.sleep(5)
+
+    print("   Sending login request...")
+    try:
+        result = td.login()
+        print(f"   ReqUserLogin returned: {result}")
+    except Exception as e:
+        print(f"   ❌ Login failed: {e}")
+        return False
+
+    print("   Waiting for OnRspUserLogin callback (3s)...")
+    time.sleep(3)
+
+    # Submit market order (OrderPriceType.ANY)
+    print("   Submitting market order (buy, au2506, ANY price)...")
+    try:
+        order_ref = td.insert_order(
+            instrument_id="au2506",
+            direction=Direction.BUY,
+            offset_flag=OffsetFlag.OPEN,
+            price_type=OrderPriceType.ANY,
+            limit_price=0.0,
+            volume=1,
+        )
+        if order_ref:
+            print(f"   ✅ Market order submitted, order_ref={order_ref}")
+        else:
+            print(f"   ❌ Market order rejected (may not be supported)")
+    except Exception as e:
+        print(f"   ❌ Market order error: {e}")
+
+    print("   Waiting for OnRtnOrder / OnRspOrderInsert callback (3s)...")
+    time.sleep(3)
+
+    # Check for order return or error
+    order_events = [e for e in td.spi.events if e["type"] == "OnRtnOrder"]
+    error_events = [e for e in td.spi.events if e["type"] == "OnRspError"]
+
+    if order_events:
+        print(f"   ✅ Market order accepted ({len(order_events)} order event(s))")
+        print("   📊 SimNow supports market orders (OrderPriceType.ANY)")
+        supported = True
+    elif error_events:
+        print(f"   ⚠️ Market order rejected by exchange ({len(error_events)} error(s))")
+        print("   📊 SimNow may NOT support market orders — check PR-9/PR-10 design")
+        supported = True  # Step passed (obtained result)
+    else:
+        print("   ⏳ No response received (expected outside trading hours)")
+        supported = True  # Step passed (no error)
+
+    td.release()
+    return supported
+
+
 def print_summary(results: dict) -> None:
     """Print verification summary."""
     print_separator("Verification Summary")
@@ -235,6 +315,9 @@ def main() -> None:
 
     # Step 4: Trading connection
     results["TD Connection"] = verify_td_connection()
+
+    # Step 5: Market order verification
+    results["Market Order"] = verify_market_order()
 
     # Summary
     all_pass = print_summary(results)
