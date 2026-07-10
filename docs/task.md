@@ -173,7 +173,7 @@ frontend/
 1. 使用Vite创建React+TypeScript项目
 2. 安装依赖：`@visactor/vtable`, `zustand`, `axios`, `echarts`
 3. 配置ESLint + Prettier
-4. 实现TypeScript类型定义（与design.md数据模型一致）
+4. 实现TypeScript类型定义（与CTP字段名完全对齐，camelCase）
 5. 封装Axios HTTP客户端（拦截器、错误处理）
 6. 实现WebSocket管理器（基础框架，支持分端点连接）
 7. 实现全局状态Store（连接状态、合约列表、用户偏好）
