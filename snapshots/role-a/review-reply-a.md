@@ -46,3 +46,17 @@
 ```
 
 全部测试通过，无回归。
+
+---
+
+## 二次审查修复记录（2026-07-10）
+
+| # | 问题 | 等级 | 处理 |
+|---|------|------|------|
+| 1 | main.py 缺少 `import os` | 🔴 | 添加 `import os`，修复运行时崩溃 |
+| 2 | `wait_for_event()` 死代码 | 🟡 | 在 `verify_md_connection`/`verify_td_connection`/`verify_market_order` 三个函数中集成替换所有 `time.sleep` |
+| 3 | dev-record-a.md 测试数未更新 | 🟡 | 更新为 108 tests，各文件测试数同步 |
+| 4 | `au2506` 硬编码遗漏 | 🟡 | print 信息中的硬编码 `au2506` 也改为 `_TEST_INSTRUMENT` |
+
+**Commit**: `b081b50`
+**测试**: 108 passed
