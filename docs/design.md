@@ -443,14 +443,14 @@ type WSMessageType =
 **报单请求格式**：
 ```json
 {
-  "instrument_id": "au2406",
-  "direction": "buy",           // buy/sell
-  "offset": "open",             // open/close/close_today
-  "price": 480.50,
-  "volume": 1,
-  "order_type": "limit",        // limit/market（价格类型）
-  "time_condition": "gfd",      // gfd/fok/fak（有效期/成交方式）
-  "stop_price": null            // 止损价（止损单时必填，由后端监控触发）
+  "instrumentID": "au2406",
+  "direction": "0",
+  "combOffsetFlag": "0",
+  "limitPrice": 480.50,
+  "volumeTotalOriginal": 1,
+  "orderPriceType": "2",
+  "timeCondition": "3",
+  "stopPrice": 0
 }
 ```
 
@@ -459,15 +459,16 @@ type WSMessageType =
 {
   "type": "order_return",
   "data": {
-    "order_ref": "123456",
-    "instrument_id": "au2406",
-    "direction": "buy",
-    "price": 480.50,
-    "volume": 1,
-    "volume_traded": 0,
-    "order_status": "submitted",  // submitted/partial/all_traded/canceled/rejected
-    "status_msg": "报单已提交",
-    "insert_time": "14:30:10"
+    "orderRef": "123456",
+    "instrumentID": "au2406",
+    "direction": "0",
+    "combOffsetFlag": "0",
+    "limitPrice": 480.50,
+    "volumeTotalOriginal": 1,
+    "volumeTraded": 0,
+    "orderStatus": "0",
+    "statusMsg": "报单已提交",
+    "insertTime": "14:30:10"
   }
 }
 ```
