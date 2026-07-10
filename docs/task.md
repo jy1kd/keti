@@ -173,12 +173,47 @@ frontend/
 1. 使用Vite创建React+TypeScript项目
 2. 安装依赖：`@visactor/vtable`, `zustand`, `axios`, `echarts`
 3. 配置ESLint + Prettier
-4. 实现TypeScript类型定义（与CTP字段名完全对齐，camelCase）
+4. 实现TypeScript类型定义（基于 `ctp-api-structure.txt` 真实CTP字段，camelCase）
+   - `LoginRequest/LoginResponse`：登录请求/响应
+   - `MarketSnapshot`：行情快照（含5档深度 bidPrice1-5, askPrice1-5）
+   - `OrderRequest/OrderReturn`：报单请求/回报
+   - `TradeReturn`：成交回报
+   - `PositionInfo`：持仓信息
+   - `AccountInfo`：账户资金
+   - `InstrumentInfo`：合约信息（含期权字段 optionsType, strikePrice）
+   - `OptionChain/OptionQuote/VolatilityData`：自定义业务接口
 5. 封装Axios HTTP客户端（拦截器、错误处理）
 6. 实现WebSocket管理器（基础框架，支持分端点连接）
 7. 实现全局状态Store（连接状态、合约列表、用户偏好）
 8. 实现工具函数（格式化、校验）
 9. 配置环境变量（API地址）
+
+**真实API字段参考**：
+- 字段来源：`docs/ctp-api-structure.txt`
+- 字段命名：camelCase（如 `instrumentID`, `lastPrice`, `bidPrice1`）
+- 关键类型：
+  ```typescript
+  // 行情快照（50+字段）
+  interface MarketSnapshot {
+    instrumentID: string;
+    lastPrice: number;
+    bidPrice1: number; bidPrice2: number; bidPrice3: number; bidPrice4: number; bidPrice5: number;
+    askPrice1: number; askPrice2: number; askPrice3: number; askPrice4: number; askPrice5: number;
+    bidVolume1: number; askVolume1: number;
+    volume: number; openInterest: number;
+    openPrice: number; closePrice: number; highestPrice: number; lowestPrice: number;
+    upperLimitPrice: number; lowerLimitPrice: number;
+    preSettlementPrice: number; settlementPrice: number;
+    updateTime: string; updateMillisec: number;
+    // ... 更多字段见 ctp-api-structure.txt
+  }
+  // 报单请求（30+字段）
+  interface OrderRequest {
+    instrumentID: string; direction: string; offsetFlag: string;
+    priceType: string; limitPrice: number; volumeTotalOriginal: number;
+    // ... 更多字段见 ctp-api-structure.txt
+  }
+  ```
 
 **验证方法**：
 1. 运行`pnpm dev`，项目正常启动
@@ -366,9 +401,10 @@ server/
 1. 完善行情API封装（MdUserApi）
    - 连接、登录、订阅、退订
    - 行情回调处理（OnRtnDepthMarketData）
+   - 字段映射：CTP对象 → camelCase字典（见 `ctp-api-structure.txt` MarketSnapshot）
 2. 实现行情服务层（MarketService）
-   - 合约列表缓存（登录后预加载）
-   - 行情数据缓存（内存）
+   - 合约列表缓存（登录后预加载，使用 ReqQryInstrument）
+   - 行情数据缓存（内存，Map<string, MarketSnapshot>）
    - 订阅状态管理
 3. 实现行情API接口
    - GET /api/market/instruments（合约列表查询，支持搜索）
@@ -377,12 +413,18 @@ server/
    - GET /api/market/snapshots（行情快照）
    - GET /api/market/kline（K线数据，支持多周期）
    - GET /api/market/depth（五档行情深度）
-   - GET /api/market/options（期权合约列表）
-   - GET /api/market/option_chain（期权T型报价数据）
-   - GET /api/market/volatility（隐含波动率，Black-Scholes模型）
+   - GET /api/market/options（期权合约列表，基于 productClass='1' 筛选）
+   - GET /api/market/option_chain（期权T型报价，聚合 InstrumentInfo + MarketSnapshot）
+   - GET /api/market/volatility（隐含波动率，Black-Scholes模型，需 strikePrice/underlyingInstrID）
 4. 实现WebSocket行情推送
    - 行情回调 → WebSocket广播（market_data）
+   - 消息格式：`{ type: 'market_data', data: MarketSnapshot }`
 5. 实现订阅限制（最大500个合约）
+
+**真实API字段参考**：
+- 行情回调字段：`ctp-api-structure.txt` → MarketSnapshot（50+字段）
+- 合约信息字段：`ctp-api-structure.txt` → InstrumentInfo（含 optionsType, strikePrice, underlyingInstrID）
+- 自定义接口：`ctp-api-structure.txt` → OptionChain, OptionQuote, VolatilityData
 
 **验证方法**：
 1. 调用登录接口，成功登录
@@ -647,26 +689,38 @@ server/
    - 连接、登录、报单、撤单
    - 报单回调处理（OnRtnOrder）
    - 成交回调处理（OnRtnTrade）
+   - 字段映射：CTP对象 → camelCase字典（见 `ctp-api-structure.txt`）
 2. 实现报单管理服务（OrderManager）
-   - 报单状态跟踪（维护活动报单表）
+   - 报单状态跟踪（维护活动报单表，基于 orderRef + orderSysID）
    - GFD有效期处理（当日有效，依赖simnow柜台自动撤销）
-   - FOK成交方式处理（全部成交或全部撤销）
-   - FAK成交方式处理（部分成交，剩余撤销）
-   - 报单引用管理（order_ref映射）
+   - FOK成交方式处理（全部成交或全部撤销，VolumeCondition=ALL）
+   - FAK成交方式处理（部分成交，剩余撤销，VolumeCondition=ANY）
+   - 报单引用管理（orderRef映射，sessionID + frontID）
 3. 实现报单API接口
-   - POST /api/order/insert（报单）
-   - POST /api/order/cancel（撤单）
+   - POST /api/order/insert（报单，使用 CThostFtdcInputOrderField）
+   - POST /api/order/cancel（撤单，使用 CThostFtdcInputOrderActionField）
    - POST /api/order/cancel_all（批量撤单）
    - POST /api/order/reverse（一键反向）
    - POST /api/order/lock（一键锁仓）
    - GET /api/order/status/{order_ref}（查询报单状态）
 4. 实现报单参数校验
-   - 价格校验（>0，符合最小变动价位）
-   - 数量校验（>0，不超过最大限制）
-   - 合约校验（存在且可交易）
+   - 价格校验（>0，符合最小变动价位 priceTick）
+   - 数量校验（>0，不超过 maxLimitOrderVolume/maxMarketOrderVolume）
+   - 合约校验（存在且可交易 isTrading=1）
 5. 实现WebSocket报单推送
    - 报单回报 → WebSocket推送（order_return）
    - 成交回报 → WebSocket推送（trade_return）
+   - 消息格式：`{ type: 'order_return', data: OrderReturn }`
+
+**真实API字段参考**：
+- 报单请求字段：`ctp-api-structure.txt` → OrderRequest（30+字段）
+  - 关键字段：instrumentID, direction, offsetFlag, priceType, limitPrice, volumeTotalOriginal
+  - 条件字段：contingentCondition, timeCondition, volumeCondition
+- 报单回报字段：`ctp-api-structure.txt` → OrderReturn（50+字段）
+  - 关键字段：orderRef, orderSysID, orderStatus, volumeTraded, volumeTotal
+  - 状态字段：orderSubmitStatus, statusMsg
+- 成交回报字段：`ctp-api-structure.txt` → TradeReturn（30+字段）
+  - 关键字段：tradeID, price, volume, tradeTime, offsetFlag
 
 **验证方法**：
 1. 调用报单接口，成功提交报单
@@ -796,22 +850,33 @@ server/
 
 **实现方式**：
 1. 完善交易API封装（查询功能）
-   - query_orders: 查询报单流水
-   - query_trades: 查询成交流水
-   - query_positions: 查询持仓
-   - query_account: 查询账户资金
-   - query_contracts: 查询合约信息
+   - query_orders: 查询报单流水（ReqQryOrder → OnRspQryOrder）
+   - query_trades: 查询成交流水（ReqQryTrade → OnRspQryTrade）
+   - query_positions: 查询持仓（ReqQryInvestorPosition → OnRspQryInvestorPosition）
+   - query_account: 查询账户资金（ReqQryTradingAccount → OnRspQryTradingAccount）
+   - query_contracts: 查询合约信息（ReqQryInstrument → OnRspQryInstrument）
 2. 实现查询API接口
-   - GET /api/query/orders（报单流水）
-   - GET /api/query/trades（成交流水）
-   - GET /api/query/positions（持仓）
-   - GET /api/query/account（账户资金）
-   - GET /api/query/contracts（合约信息）
+   - GET /api/query/orders（报单流水，返回 OrderReturn[]）
+   - GET /api/query/trades（成交流水，返回 TradeReturn[]）
+   - GET /api/query/positions（持仓，返回 PositionInfo[]）
+   - GET /api/query/account（账户资金，返回 AccountInfo）
+   - GET /api/query/contracts（合约信息，返回 InstrumentInfo[]）
 3. 实现查询结果缓存
-   - 合约信息缓存（登录后预加载）
+   - 合约信息缓存（登录后预加载，Map<string, InstrumentInfo>）
    - 其他数据实时查询
 4. 实现WebSocket持仓推送
    - 持仓变化 → WebSocket推送（position_update）
+   - 消息格式：`{ type: 'position_update', data: PositionInfo }`
+
+**真实API字段参考**：
+- 持仓信息字段：`ctp-api-structure.txt` → PositionInfo（40+字段）
+  - 关键字段：instrumentID, position, openCost, positionProfit, posiDirection, positionDate
+  - 今仓/昨仓：todayPosition, ydPosition
+- 账户资金字段：`ctp-api-structure.txt` → AccountInfo（40+字段）
+  - 关键字段：balance, available, frozenMargin, currMargin, closeProfit, positionProfit
+- 合约信息字段：`ctp-api-structure.txt` → InstrumentInfo（30+字段）
+  - 关键字段：instrumentID, instrumentName, productClass, volumeMultiple, priceTick
+  - 期权字段：optionsType, strikePrice, underlyingInstrID, underlyingMultiple
 
 **验证方法**：
 1. 调用报单流水接口，返回报单记录
@@ -1003,9 +1068,16 @@ frontend/src/
    - optionChain: OptionChain
    - updateOptionChain: 更新期权链
 4. 调用期权API接口（已在PR-5后端实现）
-   - GET /api/market/options（获取期权合约列表）
-   - GET /api/market/option_chain（获取期权T型报价数据）
-   - GET /api/market/volatility（获取隐含波动率，由后端Black-Scholes模型计算）
+   - GET /api/market/options（获取期权合约列表，返回 InstrumentInfo[]）
+   - GET /api/market/option_chain（获取期权T型报价数据，返回 OptionChain）
+   - GET /api/market/volatility（获取隐含波动率，返回 VolatilityData）
+
+**真实API字段参考**：
+- 自定义接口来源：`ctp-api-structure.txt` → 自定义业务接口部分
+- OptionChain：`{ underlying, expireDate, calls: OptionQuote[], puts: OptionQuote[], updateTime }`
+- OptionQuote：`{ instrumentID, strikePrice, lastPrice, bidPrice, askPrice, volume, openInterest, impliedVolatility }`
+- VolatilityData：`{ instrumentID, impliedVolatility, underlyingPrice, strikePrice, timeToExpiry, riskFreeRate, optionType, updateTime }`
+- 合约筛选：基于 InstrumentInfo.productClass='1'（期权）+ InstrumentInfo.optionsType（看涨/看跌）
 
 **验证方法**：
 1. 期权面板正常显示
@@ -1138,37 +1210,47 @@ frontend/src/
    - 暂停更新按钮
    - 手动刷新按钮
 2. 实现OrderFlow组件
-   - 报单流水表格
+   - 报单流水表格（字段：OrderReturn）
    - 增量更新（新数据插入顶部）
    - 新数据高亮（2秒）
    - 时间倒序
 3. 实现TradeFlow组件
-   - 成交流水表格
+   - 成交流水表格（字段：TradeReturn）
    - 增量更新
    - 新数据高亮
    - 时间倒序
 4. 实现Position组件
-   - 持仓表格
+   - 持仓表格（字段：PositionInfo）
    - 点击持仓直接平仓
-   - 持仓盈亏显示
+   - 持仓盈亏显示（positionProfit）
 5. 实现AccountQuery组件
-   - 账户资金信息展示
-   - 可用余额、冻结资金、持仓盈亏
+   - 账户资金信息展示（字段：AccountInfo）
+   - 可用余额（available）、冻结资金（frozenMargin）、持仓盈亏（positionProfit）
    - 实时更新
 6. 实现QuoteQuery组件
-   - 五档行情深度展示
+   - 五档行情深度展示（字段：MarketSnapshot bidPrice1-5, askPrice1-5）
    - 支持多合约切换
 7. 实现ContractQuery组件
-   - 合约详细信息展示
-   - 合约乘数、最小变动价位
+   - 合约详细信息展示（字段：InstrumentInfo）
+   - 合约乘数（volumeMultiple）、最小变动价位（priceTick）
 8. 实现StopOrderList组件
    - 止损单列表
    - 止损单状态显示（pending/triggered/canceled/trigger_failed）
    - 取消止损单操作
 9. 实现查询Store完善
-   - orders, trades, positions, account, quotes, contracts, stopOrders
+   - orders: OrderReturn[], trades: TradeReturn[], positions: PositionInfo[]
+   - account: AccountInfo, quotes: Map<string, MarketSnapshot>
+   - contracts: Map<string, InstrumentInfo>, stopOrders: StopOrder[]
    - isPaused: 暂停更新
    - 增量更新方法
+
+**真实API字段参考**：
+- 所有类型定义见 `ctp-api-structure.txt`
+- 报单回报：OrderReturn（50+字段，关键：orderRef, orderStatus, instrumentID, direction, volumeTraded）
+- 成交回报：TradeReturn（30+字段，关键：tradeID, price, volume, tradeTime）
+- 持仓信息：PositionInfo（40+字段，关键：instrumentID, position, openCost, positionProfit）
+- 账户资金：AccountInfo（40+字段，关键：balance, available, frozenMargin, currMargin）
+- 合约信息：InstrumentInfo（30+字段，关键：instrumentID, volumeMultiple, priceTick, productClass）
 
 **验证方法**：
 1. 查询面板Tab切换正常
@@ -1377,3 +1459,4 @@ PR-6 (行情表格) ────────────────────
 | 2026-07-08 | v1.1 | 修复任务分工问题：期权API、资金查询、依赖关系、职责边界等 | ✅ 完成 |
 | 2026-07-08 | v1.2 | 修复PR-14 API描述混淆，明确后端API职责 | ✅ 完成 |
 | 2026-07-10 | v1.3 | 里程碑与task-dev-flow.md对齐，openctp-ctp改为ctp-python | ✅ 完成 |
+| 2026-07-10 | v1.4 | 基于ctp-api-structure.txt真实API字段更新PR-2/5/9/11/14/16 | ✅ 完成 |
