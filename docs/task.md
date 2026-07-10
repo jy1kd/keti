@@ -122,6 +122,11 @@ md_api.SubscribeMarketData(["au2506", "ag2506"])  # ✅ 正确
 - [ ] 能成功提交一笔报单并收到回报（OnRtnOrder）
 - [ ] 验证simnow是否支持市价单（OrderPriceType=ANYPRICE）
 
+**用户手动验证**：
+1. 运行字段探测：`C:\Users\pc\.conda\envs\pytorch\python.exe md_demo.py`
+2. 运行实时行情（交易时段）：`C:\Users\pc\.conda\envs\pytorch\python.exe ctp_realtime_demo.py`
+3. 检查输出文件：`docs/ctp-api-structure.txt` 已生成
+
 ---
 
 #### PR-2: 前端项目初始化
@@ -230,6 +235,12 @@ frontend/
 - [ ] Zustand Store正常工作
 - [ ] localStorage持久化正常
 
+**用户手动验证**：
+1. 进入前端目录：`cd frontend`
+2. 启动开发服务器：`npm run dev`
+3. 浏览器访问 http://localhost:5173 确认页面正常
+4. TypeScript编译检查：`npm run build`
+
 ---
 
 #### PR-3: 后端FastAPI框架
@@ -300,6 +311,12 @@ server/
 - [ ] 数据模型定义完整
 - [ ] CORS配置正确
 
+**用户手动验证**：
+1. 进入后端目录：`cd server`
+2. 启动服务：`C:\Users\pc\.conda\envs\pytorch\python.exe -m uvicorn main:app --reload --port 8000`
+3. 浏览器访问 http://localhost:8000/docs 查看API文档
+4. 测试连接接口：浏览器访问 http://localhost:8000/api/connection/status
+
 ---
 
 #### PR-4: 前端布局框架
@@ -361,6 +378,12 @@ frontend/src/
 - [ ] Tab切换正常工作
 - [ ] 响应式布局适配
 - [ ] 组件间通信正常
+
+**用户手动验证**：
+1. 启动前端：`cd frontend && npm run dev`
+2. 浏览器访问 http://localhost:5173
+3. 确认三栏布局显示（行情70%、报单30%、查询底部）
+4. 确认连接状态指示器显示
 
 ---
 
@@ -450,6 +473,12 @@ server/
 - [ ] 订阅限制生效（500个）
 - [ ] 合约列表缓存正常
 
+**用户手动验证**：
+1. 启动后端：`cd server && C:\Users\pc\.conda\envs\pytorch\python.exe -m uvicorn main:app --reload --port 8000`
+2. 测试合约列表：浏览器访问 http://localhost:8000/api/market/instruments
+3. 测试行情订阅：`curl -X POST http://localhost:8000/api/market/subscribe -H "Content-Type: application/json" -d "{\"instruments\":[\"au2508\"]}"`
+4. 测试行情快照：浏览器访问 http://localhost:8000/api/market/snapshots?instruments=au2508
+
 ---
 
 #### PR-6: 前端行情表格
@@ -520,6 +549,12 @@ frontend/src/
 - [ ] 双击填充功能正常
 - [ ] 合约搜索功能正常
 
+**用户手动验证**：
+1. 启动前端：`cd frontend && npm run dev`
+2. 浏览器访问 http://localhost:5173
+3. 确认行情表格正常渲染
+4. 确认合约搜索框可用
+
 ---
 
 #### PR-7: 后端WebSocket管理
@@ -588,6 +623,12 @@ server/
 - [ ] 回调处理正常（行情、报单、成交）
 - [ ] 连接状态推送正常
 
+**用户手动验证**：
+1. 启动后端
+2. 浏览器打开开发者工具 → Console
+3. 输入 `new WebSocket('ws://localhost:8000/ws/market').onmessage = e => console.log(JSON.parse(e.data))`
+4. 确认WebSocket连接成功
+
 ---
 
 #### PR-8: 前端五档行情
@@ -647,6 +688,11 @@ frontend/src/
 - [ ] 价差计算正确
 - [ ] 数据实时更新
 - [ ] 样式美观，易于阅读
+
+**用户手动验证**：
+1. 启动前端，访问行情面板
+2. 点击任意合约，确认五档行情显示
+3. 确认买一到买五、卖一到卖五价格和数量正确
 
 ---
 
@@ -740,6 +786,12 @@ server/
 - [ ] 参数校验正常
 - [ ] WebSocket推送正常
 
+**用户手动验证**：
+1. 启动后端
+2. 测试报单接口：`curl -X POST http://localhost:8000/api/order/insert -H "Content-Type: application/json" -d "{\"instrumentID\":\"au2508\",\"direction\":\"0\",\"combOffsetFlag\":\"0\",\"limitPrice\":480.0,\"volumeTotalOriginal\":1}"`
+3. 确认返回orderRef
+4. 测试撤单接口
+
 ---
 
 #### PR-10: 前端报单表单
@@ -819,6 +871,12 @@ frontend/src/
 - [ ] 提交报单功能正常
 - [ ] 表单校验正常
 
+**用户手动验证**：
+1. 启动前端，定位到报单面板
+2. 确认限价/市价切换正常
+3. 确认价格步进按钮（+/-）正常
+4. 按B键确认快速买入
+
 ---
 
 #### PR-11: 后端查询API
@@ -894,6 +952,12 @@ server/
 - [ ] 合约信息查询正常
 - [ ] WebSocket持仓推送正常
 
+**用户手动验证**：
+1. 启动后端
+2. 测试持仓查询：浏览器访问 http://localhost:8000/api/query/positions
+3. 测试资金查询：浏览器访问 http://localhost:8000/api/query/account
+4. 测试合约查询：浏览器访问 http://localhost:8000/api/query/contracts?instruments=au2508
+
 ---
 
 #### PR-12: 前端K线图
@@ -951,6 +1015,11 @@ frontend/src/
 - [ ] 技术指标显示正常
 - [ ] 实时更新正常
 - [ ] 交互操作正常（缩放、拖拽）
+
+**用户手动验证**：
+1. 启动前端，点击行情表格中的合约
+2. 确认K线图正常显示
+3. 切换周期（1m/5m/15m），确认图表更新
 
 ---
 
@@ -1026,6 +1095,12 @@ server/
 - [ ] WebSocket推送正常
 - [ ] 持久化正常
 
+**用户手动验证**：
+1. 启动后端
+2. 提交止损单：`curl -X POST http://localhost:8000/api/order/stop -H "Content-Type: application/json" -d "{\"instrumentID\":\"au2508\",\"direction\":\"1\",\"combOffsetFlag\":\"1\",\"limitPrice\":480.0,\"volumeTotalOriginal\":1,\"stopPrice\":479.0}"`
+3. 查询止损单列表：浏览器访问 http://localhost:8000/api/order/stop/list
+4. 取消止损单
+
 ---
 
 #### PR-14: 前端期权T型报价
@@ -1092,6 +1167,12 @@ frontend/src/
 - [ ] 看涨/看跌期权正确显示
 - [ ] 隐含波动率计算正确
 - [ ] 交互操作正常
+
+**用户手动验证**：
+1. 启动前端，切换到期权面板
+2. 选择标的合约（如cu2508）
+3. 确认T型报价表格正常显示
+4. 确认看涨/看跌期权正确展示
 
 ---
 
@@ -1168,6 +1249,12 @@ frontend/src/
 - [ ] 快捷键配置正常
 - [ ] 快捷键操作正常
 - [ ] localStorage持久化正常
+
+**用户手动验证**：
+1. 启动前端，定位到报单面板
+2. 点击"一键反向"按钮
+3. 点击"批量撤单"按钮
+4. 打开快捷键配置面板，修改快捷键映射
 
 ---
 
@@ -1278,6 +1365,12 @@ frontend/src/
 - [ ] 新数据高亮正常
 - [ ] 暂停更新功能正常
 
+**用户手动验证**：
+1. 启动前端，定位到查询面板
+2. 切换Tab：报单流水、成交流水、持仓、资金
+3. 确认数据正常显示
+4. 点击暂停更新，确认数据停止刷新
+
 ---
 
 ### 阶段5：联调优化
@@ -1376,6 +1469,12 @@ server/                       # 后端Bug修复
 - [ ] 错误处理完善（12个错误码）
 - [ ] 文档完善
 
+**用户手动验证**：
+1. 同时启动前端和后端
+2. 完整流程：登录 → 订阅行情 → 报单 → 查询
+3. 确认WebSocket推送正常
+4. 测试断网重连
+
 ---
 
 ## 3. PR依赖关系图
@@ -1460,3 +1559,4 @@ PR-6 (行情表格) ────────────────────
 | 2026-07-08 | v1.2 | 修复PR-14 API描述混淆，明确后端API职责 | ✅ 完成 |
 | 2026-07-10 | v1.3 | 里程碑与task-dev-flow.md对齐，openctp-ctp改为ctp-python | ✅ 完成 |
 | 2026-07-10 | v1.4 | 基于ctp-api-structure.txt真实API字段更新PR-2/5/9/11/14/16 | ✅ 完成 |
+| 2026-07-10 | v1.5 | 每个PR增加用户手动验证提示 | ✅ 完成 |
