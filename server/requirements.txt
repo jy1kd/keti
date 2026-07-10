@@ -1,0 +1,3 @@
+# Python dependencies for CTP connection and backend server
+ctp-python>=6.6.15
+python-dotenv>=0.19.0
