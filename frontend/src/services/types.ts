@@ -1,40 +1,51 @@
 // ============================================================
 // 数据模型定义 — 与 design.md 第4.6节一致
+// 字段命名统一使用 camelCase，与 CTP 回调数据一致
 // ============================================================
 
 // --- 行情 ---
 
 export interface MarketSnapshot {
-  instrument_id: string
-  last_price: number
-  bid_price1: number
-  bid_volume1: number
-  bid_price2: number
-  bid_volume2: number
-  bid_price3: number
-  bid_volume3: number
-  bid_price4: number
-  bid_volume4: number
-  bid_price5: number
-  bid_volume5: number
-  ask_price1: number
-  ask_volume1: number
-  ask_price2: number
-  ask_volume2: number
-  ask_price3: number
-  ask_volume3: number
-  ask_price4: number
-  ask_volume4: number
-  ask_price5: number
-  ask_volume5: number
+  instrumentID: string
+  lastPrice: number
+  bidPrice1: number
+  bidVolume1: number
+  bidPrice2: number
+  bidVolume2: number
+  bidPrice3: number
+  bidVolume3: number
+  bidPrice4: number
+  bidVolume4: number
+  bidPrice5: number
+  bidVolume5: number
+  askPrice1: number
+  askVolume1: number
+  askPrice2: number
+  askVolume2: number
+  askPrice3: number
+  askVolume3: number
+  askPrice4: number
+  askVolume4: number
+  askPrice5: number
+  askVolume5: number
   volume: number
-  open_interest: number
-  open_price: number
-  high_price: number
-  low_price: number
-  pre_close_price: number
-  spread: number
-  update_time: string
+  openInterest: number
+  openPrice: number
+  highestPrice: number
+  lowestPrice: number
+  closePrice: number
+  settlementPrice: number
+  preClosePrice: number
+  preSettlementPrice: number
+  upperLimitPrice: number
+  lowerLimitPrice: number
+  turnover: number
+  averagePrice: number
+  exchangeID: string
+  tradingDay: string
+  actionDay: string
+  updateTime: string
+  updateMillisec: number
 }
 
 export interface KLineData {
@@ -44,175 +55,184 @@ export interface KLineData {
   low: number
   close: number
   volume: number
-  open_interest: number
+  openInterest: number
 }
 
 export interface DepthData {
-  instrument_id: string
+  instrumentID: string
   bids: Array<{ price: number; volume: number }>
   asks: Array<{ price: number; volume: number }>
-  update_time: string
+  updateTime: string
 }
 
 export interface VolatilityData {
-  instrument_id: string
-  implied_volatility: number
-  update_time: string
+  instrumentID: string
+  underlyingPrice: number
+  strikePrice: number
+  impliedVolatility: number
+  timeToExpiry: number
+  riskFreeRate: number
+  optionType: 'call' | 'put'
+  updateTime: string
 }
 
 // --- 报单 ---
 
 export interface OrderRequest {
-  instrument_id: string
+  instrumentID: string
   direction: 'buy' | 'sell'
-  offset: 'open' | 'close' | 'close_today'
-  price: number
-  volume: number
-  order_type: 'limit' | 'market'
-  time_condition: 'gfd' | 'fok' | 'fak'
-  stop_price?: number
+  combOffsetFlag: 'open' | 'close' | 'close_today'
+  limitPrice: number
+  volumeTotalOriginal: number
+  orderPriceType: 'limit' | 'market'
+  timeCondition: 'gfd' | 'fok' | 'fak'
+  stopPrice?: number
 }
 
 export interface OrderRecord {
-  order_ref: string
-  instrument_id: string
+  orderRef: string
+  instrumentID: string
   direction: 'buy' | 'sell'
-  offset: 'open' | 'close' | 'close_today'
-  price: number
-  volume: number
-  volume_traded: number
-  order_status: 'submitted' | 'partial' | 'all_traded' | 'canceled' | 'rejected'
-  status_msg: string
-  insert_time: string
+  combOffsetFlag: 'open' | 'close' | 'close_today'
+  limitPrice: number
+  volumeTotalOriginal: number
+  volumeTraded: number
+  orderStatus: 'submitted' | 'partial' | 'all_traded' | 'canceled' | 'rejected'
+  statusMsg: string
+  insertTime: string
 }
 
 export interface OrderStatus {
-  order_ref: string
-  instrument_id: string
+  orderRef: string
+  instrumentID: string
   direction: 'buy' | 'sell'
-  offset: 'open' | 'close' | 'close_today'
-  price: number
-  volume: number
-  volume_traded: number
-  order_status: 'submitted' | 'partial' | 'all_traded' | 'canceled' | 'rejected'
-  status_msg: string
-  insert_time: string
+  combOffsetFlag: 'open' | 'close' | 'close_today'
+  limitPrice: number
+  volumeTotalOriginal: number
+  volumeTraded: number
+  orderStatus: 'submitted' | 'partial' | 'all_traded' | 'canceled' | 'rejected'
+  statusMsg: string
+  insertTime: string
 }
 
 export interface StopOrderRequest {
-  instrument_id: string
+  instrumentID: string
   direction: 'buy' | 'sell'
-  offset: 'open' | 'close' | 'close_today'
-  price: number
-  volume: number
-  stop_price: number
-  time_condition: 'gfd' | 'fok' | 'fak'
+  combOffsetFlag: 'open' | 'close' | 'close_today'
+  limitPrice: number
+  volumeTotalOriginal: number
+  stopPrice: number
+  timeCondition: 'gfd' | 'fok' | 'fak'
 }
 
 export interface StopOrder {
-  stop_order_ref: string
-  instrument_id: string
+  stopOrderRef: string
+  instrumentID: string
   direction: 'buy' | 'sell'
-  offset: 'open' | 'close' | 'close_today'
-  price: number
-  volume: number
-  stop_price: number
+  combOffsetFlag: 'open' | 'close' | 'close_today'
+  limitPrice: number
+  volumeTotalOriginal: number
+  stopPrice: number
   status: 'pending' | 'triggered' | 'trigger_failed' | 'canceled'
-  triggered_order_ref?: string
-  created_at: string
-  triggered_at?: string
+  triggeredOrderRef?: string
+  createdAt: string
+  triggeredAt?: string
 }
 
 // --- 成交/持仓/账户 ---
 
 export interface TradeRecord {
-  trade_id: string
-  order_ref: string
-  instrument_id: string
+  tradeID: string
+  orderRef: string
+  instrumentID: string
   direction: 'buy' | 'sell'
-  offset: 'open' | 'close' | 'close_today'
+  offsetFlag: 'open' | 'close' | 'close_today'
   price: number
   volume: number
-  trade_time: string
+  tradeTime: string
 }
 
 export interface PositionRecord {
-  instrument_id: string
-  direction: 'long' | 'short'
+  instrumentID: string
+  posiDirection: 'long' | 'short'
   position: number
-  position_cost: number
-  position_profit: number
-  today_position: number
-  yd_position: number
-  update_time: string
+  positionCost: number
+  positionProfit: number
+  openCost: number
+  useMargin: number
+  todayPosition: number
+  ydPosition: number
+  tradingDay: string
 }
 
 export interface AccountInfo {
-  account_id: string
+  accountID: string
   balance: number
   available: number
-  frozen_margin: number
-  frozen_cash: number
+  frozenMargin: number
+  currMargin: number
   commission: number
-  close_profit: number
-  position_profit: number
-  risk_ratio: number
-  update_time: string
+  closeProfit: number
+  positionProfit: number
+  deposit: number
+  withdraw: number
+  preBalance: number
+  tradingDay: string
 }
 
 // --- 合约/报价 ---
 
 export interface ContractInfo {
-  instrument_id: string
-  instrument_name: string
-  exchange_id: string
-  product_id: string
-  volume_multiple: number
-  price_tick: number
-  expire_date: string
-  is_trading: boolean
+  instrumentID: string
+  instrumentName: string
+  exchangeID: string
+  productID: string
+  volumeMultiple: number
+  priceTick: number
+  expireDate: string
+  isTrading: boolean
 }
 
 export interface QuoteDepth {
-  instrument_id: string
-  bid_prices: number[]
-  bid_volumes: number[]
-  ask_prices: number[]
-  ask_volumes: number[]
-  update_time: string
+  instrumentID: string
+  bidPrices: number[]
+  bidVolumes: number[]
+  askPrices: number[]
+  askVolumes: number[]
+  updateTime: string
 }
 
 // --- 期权 ---
 
 export interface OptionContract {
-  instrument_id: string
-  instrument_name: string
+  instrumentID: string
+  instrumentName: string
   underlying: string
-  option_type: 'call' | 'put'
-  strike_price: number
-  expire_date: string
-  volume_multiple: number
-  price_tick: number
-  is_trading: boolean
+  optionsType: 'call' | 'put'
+  strikePrice: number
+  expireDate: string
+  volumeMultiple: number
+  priceTick: number
+  isTrading: boolean
 }
 
 export interface OptionQuote {
-  instrument_id: string
-  strike_price: number
-  last_price: number
-  bid_price: number
-  ask_price: number
+  instrumentID: string
+  strikePrice: number
+  lastPrice: number
+  bidPrice: number
+  askPrice: number
   volume: number
-  open_interest: number
-  implied_volatility: number
+  openInterest: number
+  impliedVolatility: number
 }
 
 export interface OptionChain {
   underlying: string
-  expire_date: string
+  expireDate: string
   calls: OptionQuote[]
   puts: OptionQuote[]
-  update_time: string
+  updateTime: string
 }
 
 // --- WebSocket 消息 ---
@@ -232,15 +252,15 @@ export interface WSMessage<T = unknown> {
 }
 
 export interface ConnectionStatusData {
-  md_connected: boolean
-  td_connected: boolean
+  mdConnected: boolean
+  tdConnected: boolean
   message: string
 }
 
 export interface ErrorData {
   code: string
   message: string
-  related_ref?: string
+  relatedRef?: string
 }
 
 // --- API 响应 ---
@@ -251,8 +271,8 @@ export interface ApiResponse<T = unknown> {
   error?: {
     code: string
     message: string
-    ctp_error_id?: number
-    ctp_error_msg?: string
+    ctpErrorID?: number
+    ctpErrorMsg?: string
   }
 }
 

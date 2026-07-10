@@ -56,3 +56,31 @@
 | `create-vite@9.x` 安装失败 | Node.js v20.0.0 版本过低，需要 ^20.19.0 | 手动创建项目结构和 package.json |
 | ws.test.ts 1个测试失败 | MockWebSocket 未定义静态常量 OPEN/CLOSED | 添加 static CONNECTING/OPEN/CLOSING/CLOSED |
 | TypeScript 编译报错 | ws.ts 导入了未使用的 WSMessageType | 删除未使用的导入 |
+
+---
+
+### PR-2 改进：字段命名统一为 camelCase
+
+**时间**：2026-07-10
+**原因**：docs 文档基于真实 API 更新后，发现 types.ts 使用 snake_case 与 CTP 回调数据的 camelCase 不一致
+
+**变更内容**：
+
+| 变更项 | 说明 |
+|--------|------|
+| types.ts 全部接口 | snake_case → camelCase，与 CTP 回调字段名一致 |
+| MarketSnapshot | 补充 20 个 CTP 标准字段（closePrice, settlementPrice, upperLimitPrice 等） |
+| OrderRequest | 字段重命名（offset→combOffsetFlag, price→limitPrice, volume→volumeTotalOriginal），补充 orderPriceType |
+| OrderRecord/OrderStatus | 字段重命名对齐 CTP |
+| StopOrderRequest/StopOrder | 字段重命名对齐 CTP |
+| TradeRecord | offset→offsetField, trade_time→tradeTime |
+| PositionRecord | 补充 openCost, useMargin, tradingDay；direction→posiDirection |
+| AccountInfo | 补充 currMargin, deposit, withdraw, preBalance, tradingDay；移除 frozen_cash, risk_ratio |
+| ContractInfo | 字段重命名对齐 CTP（volumeMultiple, priceTick, isTrading） |
+| VolatilityData | 补充 underlyingPrice, strikePrice, timeToExpiry, riskFreeRate, optionType |
+| ConnectionStatusData | md_connected→mdConnected, td_connected→tdConnected |
+| ApiResponse.error | ctp_error_id→ctpErrorID, ctp_error_msg→ctpErrorMsg |
+| connection.ts store | md_connected→mdConnected, td_connected→tdConnected |
+| 测试文件 | 同步更新字段名（connection, contracts, ws） |
+
+**验证**：57 个测试全部通过，TypeScript 编译无错误
