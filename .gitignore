@@ -6,9 +6,10 @@
 templates/
 
 # Project docs (not for version control)
-# Ignore all markdown files in root except README.md
+# Ignore all markdown files in root except README.md and CLAUDE.md
 /*.md
 !README.md
+!CLAUDE.md
 
 # Trader API files
 trader/
@@ -46,4 +47,4 @@ Thumbs.db
 docs/superpowers/
 
 # Claude config
-CLAUDE.md
+# CLAUDE.md is now tracked (needed for AI guidance)
