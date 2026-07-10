@@ -142,6 +142,45 @@ QUERY_CLASSES = [
 ALL_CLASSES = AUTH_CLASSES + LOGIN_CLASSES + SETTLEMENT_CLASSES + MARKET_CLASSES + ORDER_CLASSES + CANCEL_CLASSES + QUERY_CLASSES
 
 
+# ============ 自定义业务接口（CTP无原生接口，由后端实现） ============
+CUSTOM_INTERFACES = """
+// ============ 自定义业务接口 ============
+// 以下接口CTP无原生API，由后端自行实现
+
+// 期权T型报价（后端从合约列表 + 行情数据聚合）
+export interface OptionChain {
+  underlying: string;           // 标的合约
+  expireDate: string;           // 到期日
+  calls: OptionQuote[];         // 看涨期权列表（按行权价排序）
+  puts: OptionQuote[];          // 看跌期权列表（按行权价排序）
+  updateTime: string;           // 更新时间
+}
+
+export interface OptionQuote {
+  instrumentID: string;         // 合约代码
+  strikePrice: number;          // 行权价
+  lastPrice: number;            // 最新价
+  bidPrice: number;             // 买一价
+  askPrice: number;             // 卖一价
+  volume: number;               // 成交量
+  openInterest: number;         // 持仓量
+  impliedVolatility: number;    // 隐含波动率（Black-Scholes模型计算）
+}
+
+// 隐含波动率（后端Black-Scholes模型计算）
+export interface VolatilityData {
+  instrumentID: string;         // 合约代码
+  impliedVolatility: number;    // 隐含波动率
+  underlyingPrice: number;      // 标的资产价格
+  strikePrice: number;          // 行权价
+  timeToExpiry: number;         // 到期时间（年）
+  riskFreeRate: number;         // 无风险利率
+  optionType: string;           // 期权类型（'call'/'put'）
+  updateTime: string;           // 更新时间
+}
+"""
+
+
 def run_and_save():
     """运行探测并保存到文件"""
     import sys
@@ -235,6 +274,12 @@ def run_and_save():
                 ts_name = ts_map.get(cls_name, cls_name)
                 print_tee(f"\n// {cls_name}")
                 print_tee(fields_to_mock(all_fields[cls_name], ts_name))
+
+        # 输出自定义业务接口
+        print_tee("\n\n" + "=" * 60)
+        print_tee("[生成] 自定义业务接口（CTP无原生接口）")
+        print_tee("=" * 60)
+        print_tee(CUSTOM_INTERFACES)
 
         print_tee("\n\n" + "=" * 60)
         print_tee("[完成] 所有字段结构已输出")
