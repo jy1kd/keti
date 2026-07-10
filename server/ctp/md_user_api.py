@@ -87,7 +87,10 @@ class MdUserApi:
         if not instruments:
             return -1
         # Ensure all items are strings (not bytes)
-        str_instruments = [str(i) for i in instruments]
+        # str(b"xxx") → "b'xxx'" in Python 3, so decode bytes explicitly
+        str_instruments = [
+            i.decode() if isinstance(i, bytes) else str(i) for i in instruments
+        ]
         result = self._api.SubscribeMarketData(str_instruments)
         if result == 0:
             for inst in str_instruments:
@@ -106,7 +109,9 @@ class MdUserApi:
         """
         if not instruments:
             return -1
-        str_instruments = [str(i) for i in instruments]
+        str_instruments = [
+            i.decode() if isinstance(i, bytes) else str(i) for i in instruments
+        ]
         result = self._api.UnSubscribeMarketData(str_instruments)
         if result == 0:
             for inst in str_instruments:

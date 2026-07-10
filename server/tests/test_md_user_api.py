@@ -2,133 +2,154 @@
 
 import sys
 import os
-import pytest
+from unittest.mock import Mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-# ctp-python may not be installed or lack DLL; detect usable CTP
-_has_ctp = False
-try:
-    import ctp
-    # Verify the module actually has the CTP classes (DLL loaded)
-    if hasattr(ctp, "CThostFtdcMdApi"):
-        _has_ctp = True
-except (ImportError, SystemError):
-    pass
-
-
-@pytest.fixture
-def mock_ctp():
-    """Mock the ctp module for testing without CTP DLL."""
-    import types
-    ctp_mock = types.ModuleType("ctp")
-    ctp_mock.CThostFtdcMdApi = type("CThostFtdcMdApi", (), {
-        "CreateFtdcMdApi": classmethod(lambda cls, path="": object()),
-    })
-    ctp_mock.CThostFtdcReqUserLoginField = type("CThostFtdcReqUserLoginField", (), {})
-    return ctp_mock
+from config import Config
+from ctp.md_user_api import MdUserApi
 
 
 class TestMdUserApiConstruction:
-    """Test MdUserApi instantiation."""
+    """Test MdUserApi instantiation and defaults."""
 
     def test_import_md_user_api(self):
-        """MdUserApi should be importable."""
-        from ctp.md_user_api import MdUserApi
         assert MdUserApi is not None
 
     def test_instantiation_stores_config(self):
-        """MdUserApi should store config and spi reference."""
-        from ctp.md_user_api import MdUserApi
-        from config import Config
         cfg = Config()
         api = MdUserApi(cfg)
         assert api.config is cfg
 
     def test_instantiation_creates_spi(self):
-        """MdUserApi should create an MdSpi instance."""
-        from ctp.md_user_api import MdUserApi
-        from config import Config
         api = MdUserApi(Config())
         assert api.spi is not None
 
     def test_connection_status_defaults(self):
-        """Default connection_status should be disconnected."""
-        from ctp.md_user_api import MdUserApi
-        from config import Config
         api = MdUserApi(Config())
         assert api.connection_status == "disconnected"
 
     def test_login_status_defaults(self):
-        """Default login_status should be not_logged_in."""
-        from ctp.md_user_api import MdUserApi
-        from config import Config
         api = MdUserApi(Config())
         assert api.login_status == "not_logged_in"
 
     def test_subscribed_instruments_defaults(self):
-        """Default subscribed list should be empty."""
-        from ctp.md_user_api import MdUserApi
-        from config import Config
         api = MdUserApi(Config())
         assert api.subscribed_instruments == []
 
     def test_callback_event_recording(self):
-        """Callbacks should record events through MdSpi."""
-        from ctp.md_user_api import MdUserApi
-        from config import Config
         api = MdUserApi(Config())
         api.spi.OnFrontConnected()
         assert len(api.spi.events) > 0
         assert api.spi.events[-1]["type"] == "OnFrontConnected"
 
-    def test_create_connects_front(self):
-        """create() should register front address."""
-        from ctp.md_user_api import MdUserApi
-        from config import Config
-        api = MdUserApi(Config())
-        # create() should set up the API instance
-        if _has_ctp:
-            api.create()
-            assert api.connection_status == "connecting"
 
-    def test_login_calls_ctp(self):
-        """login() should call ReqUserLogin."""
-        from ctp.md_user_api import MdUserApi
-        from config import Config
-        cfg = Config()
-        cfg.user_id = "test_user"
-        cfg.password = "test_pass"
-        cfg.broker_id = "8888"
-        api = MdUserApi(cfg)
-        # Without actual CTP connection, login should handle gracefully
-        # The key is that the login_field is constructed correctly
-        if not _has_ctp:
-            # In test environment without CTP, we verify the method exists
-            assert hasattr(api, "login")
-            assert callable(api.login)
+class TestMdUserApiSubscribe:
+    """Test subscribe/unsubscribe state management with mocked CTP API."""
 
-    def test_subscribe_validates_strings(self):
-        """subscribe() should accept string list."""
-        from ctp.md_user_api import MdUserApi
-        from config import Config
+    @staticmethod
+    def _make_api(md_return=0):
+        """Create MdUserApi with a mocked CTP API."""
         api = MdUserApi(Config())
-        # Method should exist and accept string list
-        assert hasattr(api, "subscribe")
-        assert callable(api.subscribe)
+        api._api = Mock()
+        api._api.SubscribeMarketData.return_value = md_return
+        api._api.UnSubscribeMarketData.return_value = md_return
+        return api
 
-    def test_unsubscribe_method_exists(self):
-        """unsubscribe() method should exist."""
-        from ctp.md_user_api import MdUserApi
-        from config import Config
-        api = MdUserApi(Config())
-        assert hasattr(api, "unsubscribe")
-        assert callable(api.unsubscribe)
+    def test_subscribe_adds_to_list_on_success(self):
+        api = self._make_api(md_return=0)
+        result = api.subscribe(["au2506"])
+        assert result == 0
+        assert "au2506" in api.subscribed_instruments
 
-    def test_release_method_exists(self):
-        """release() method should exist for cleanup."""
-        from ctp.md_user_api import MdUserApi
-        from config import Config
+    def test_subscribe_does_not_add_duplicates(self):
+        api = self._make_api(md_return=0)
+        api.subscribe(["au2506"])
+        api.subscribe(["au2506"])
+        assert api.subscribed_instruments == ["au2506"]
+
+    def test_subscribe_does_not_add_on_failure(self):
+        api = self._make_api(md_return=-1)
+        result = api.subscribe(["au2506"])
+        assert result == -1
+        assert "au2506" not in api.subscribed_instruments
+
+    def test_subscribe_empty_list_returns_minus_one(self):
+        api = self._make_api()
+        result = api.subscribe([])
+        assert result == -1
+
+    def test_subscribe_forces_str_conversion(self):
+        """Bytes must be decoded to str (SWIG heap corruption bug)."""
+        api = self._make_api(md_return=0)
+        api.subscribe([b"au2506"])
+        # Verify the call was made with a string, not bytes
+        call_list = api._api.SubscribeMarketData.call_args[0][0]
+        assert isinstance(call_list[0], str)
+        assert call_list[0] == "au2506"
+
+    def test_subscribe_forces_str_from_int(self):
+        """int instrument IDs should also be converted to str."""
+        api = self._make_api(md_return=0)
+        api.subscribe([123456])
+        call_list = api._api.SubscribeMarketData.call_args[0][0]
+        assert call_list[0] == "123456"
+
+    def test_subscribe_multiple_instruments(self):
+        api = self._make_api(md_return=0)
+        api.subscribe(["au2506", "ag2506", "cu2506"])
+        assert api.subscribed_instruments == ["au2506", "ag2506", "cu2506"]
+
+    def test_unsubscribe_removes_from_list(self):
+        api = self._make_api(md_return=0)
+        api.subscribe(["au2506", "ag2506"])
+        result = api.unsubscribe(["au2506"])
+        assert result == 0
+        assert api.subscribed_instruments == ["ag2506"]
+
+    def test_unsubscribe_does_not_error_on_missing(self):
+        api = self._make_api(md_return=0)
+        api.unsubscribe(["nonexistent"])
+        assert api.subscribed_instruments == []
+
+    def test_unsubscribe_empty_list_returns_minus_one(self):
+        api = self._make_api()
+        result = api.unsubscribe([])
+        assert result == -1
+
+
+class TestMdUserApiRelease:
+    """Test release() cleanup."""
+
+    def test_release_clears_connection_status(self):
         api = MdUserApi(Config())
-        assert hasattr(api, "release")
-        assert callable(api.release)
+        api._api = Mock()
+        api.connection_status = "connected"
+        api.release()
+        assert api.connection_status == "disconnected"
+
+    def test_release_clears_login_status(self):
+        api = MdUserApi(Config())
+        api._api = Mock()
+        api.login_status = "logged_in"
+        api.release()
+        assert api.login_status == "not_logged_in"
+
+    def test_release_clears_subscribed_instruments(self):
+        api = MdUserApi(Config())
+        api._api = Mock()
+        api.subscribed_instruments = ["au2506", "ag2506"]
+        api.release()
+        assert api.subscribed_instruments == []
+
+    def test_release_calls_api_release(self):
+        api = MdUserApi(Config())
+        mock_api = Mock()
+        api._api = mock_api
+        api.release()
+        mock_api.Release.assert_called_once()
+
+    def test_release_handles_none_api(self):
+        api = MdUserApi(Config())
+        api._api = None
+        api.release()  # Should not raise
