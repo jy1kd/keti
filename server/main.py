@@ -13,6 +13,7 @@ NOTE: Run during trading hours (09:00-15:00 or 21:00-02:30 CST)
       to receive actual market data and order callbacks.
 """
 
+import os
 import time
 import sys
 
@@ -103,9 +104,7 @@ def verify_md_connection() -> bool:
         return False
 
     print("   Waiting for OnFrontConnected callback (5s)...")
-    time.sleep(5)
-
-    if md.connection_status == "connected":
+    if wait_for_event(md.spi, "OnFrontConnected", timeout=5.0):
         print("   ✅ Front connected")
     else:
         print("   ⏳ Connection status not confirmed (may still succeed)")
@@ -118,12 +117,9 @@ def verify_md_connection() -> bool:
         print(f"   ❌ Login failed: {e}")
         return False
 
-    print("   Waiting for OnRspUserLogin callback (3s)...")
-    time.sleep(3)
-
-    events = [e for e in md.spi.events if e["type"] == "OnRspUserLogin"]
-    if events:
-        print(f"   ✅ Login callback received ({len(events)} event(s))")
+    print("   Waiting for OnRspUserLogin callback (5s)...")
+    if wait_for_event(md.spi, "OnRspUserLogin", timeout=5.0):
+        print("   ✅ Login callback received")
     else:
         print("   ⏳ No login callback received (may need trading hours)")
 
@@ -138,13 +134,13 @@ def verify_md_connection() -> bool:
         print(f"   ❌ Subscribe failed: {e}")
 
     print("   Waiting for OnRspSubMarketData / OnRtnDepthMarketData (5s)...")
-    time.sleep(5)
-
+    print("   Waiting for OnRspSubMarketData / OnRtnDepthMarketData (5s)...")
+    received = wait_for_event(md.spi, "OnRtnDepthMarketData", timeout=5.0)
     md_events = [
         e for e in md.spi.events
         if e["type"] in ("OnRspSubMarketData", "OnRtnDepthMarketData")
     ]
-    if md_events:
+    if received and md_events:
         print(f"   ✅ Market data events received: {len(md_events)}")
     else:
         print("   ⏳ No market data received (expected outside trading hours)")
@@ -174,7 +170,7 @@ def verify_td_connection() -> bool:
         return False
 
     print("   Waiting for OnFrontConnected callback (5s)...")
-    time.sleep(5)
+    wait_for_event(td.spi, "OnFrontConnected", timeout=5.0)
 
     print("   Sending login request...")
     try:
@@ -184,11 +180,11 @@ def verify_td_connection() -> bool:
         print(f"   ❌ Login failed: {e}")
         return False
 
-    print("   Waiting for OnRspUserLogin callback (3s)...")
-    time.sleep(3)
+    print("   Waiting for OnRspUserLogin callback (5s)...")
+    wait_for_event(td.spi, "OnRspUserLogin", timeout=5.0)
 
     # Try submitting a test order
-    print("   Submitting test order (limit buy, au2506)...")
+    print(f"   Submitting test order (limit buy, {_TEST_INSTRUMENT})...")
     try:
         order_ref = td.insert_order(
             instrument_id=_TEST_INSTRUMENT,
@@ -205,12 +201,9 @@ def verify_td_connection() -> bool:
     except Exception as e:
         print(f"   ❌ Order submit error: {e}")
 
-    print("   Waiting for OnRtnOrder callback (3s)...")
-    time.sleep(3)
-
-    order_events = [e for e in td.spi.events if e["type"] == "OnRtnOrder"]
-    if order_events:
-        print(f"   ✅ Order return events: {len(order_events)}")
+    print("   Waiting for OnRtnOrder callback (5s)...")
+    if wait_for_event(td.spi, "OnRtnOrder", timeout=5.0):
+        print("   ✅ Order return received")
     else:
         print("   ⏳ No order return (expected outside trading hours)")
 
@@ -244,7 +237,7 @@ def verify_market_order() -> bool:
         return False
 
     print("   Waiting for OnFrontConnected callback (5s)...")
-    time.sleep(5)
+    wait_for_event(td.spi, "OnFrontConnected", timeout=5.0)
 
     print("   Sending login request...")
     try:
@@ -254,11 +247,11 @@ def verify_market_order() -> bool:
         print(f"   ❌ Login failed: {e}")
         return False
 
-    print("   Waiting for OnRspUserLogin callback (3s)...")
-    time.sleep(3)
+    print("   Waiting for OnRspUserLogin callback (5s)...")
+    wait_for_event(td.spi, "OnRspUserLogin", timeout=5.0)
 
     # Submit market order (OrderPriceType.ANY)
-    print("   Submitting market order (buy, au2506, ANY price)...")
+    print(f"   Submitting market order (buy, {_TEST_INSTRUMENT}, ANY price)...")
     try:
         order_ref = td.insert_order(
             instrument_id=_TEST_INSTRUMENT,
@@ -275,8 +268,8 @@ def verify_market_order() -> bool:
     except Exception as e:
         print(f"   ❌ Market order error: {e}")
 
-    print("   Waiting for OnRtnOrder / OnRspOrderInsert callback (3s)...")
-    time.sleep(3)
+    print("   Waiting for OnRtnOrder / OnRspOrderInsert callback (5s)...")
+    wait_for_event(td.spi, "OnRtnOrder", timeout=5.0)
 
     # Check for order return or error
     order_events = [e for e in td.spi.events if e["type"] == "OnRtnOrder"]

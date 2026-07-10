@@ -18,9 +18,9 @@
 | `tests/test_config.py` | 11 | Config 默认值、环境变量读取、load_config 工厂函数 |
 | `tests/test_types.py` | 24 | 8 个枚举类（Direction, OffsetFlag, OrderPriceType, TimeCondition, VolumeCondition, OrderStatus, PosiDirection, ProductClass） |
 | `tests/test_callback.py` | 31 | MdSpi/TraderSpi 实例化、回调方法存在性、事件日志 |
-| `tests/test_md_user_api.py` | 12 | MdUserApi 构造、create/login/subscribe/unsubscribe/release |
-| `tests/test_trader_api.py` | 14 | TraderApi 构造、create/login/insert_order/cancel_order/release |
-| **合计** | **92** | |
+| `tests/test_md_user_api.py` | 22 | MdUserApi 构造 + subscribe/unsubscribe/release 状态管理 |
+| `tests/test_trader_api.py` | 20 | TraderApi 构造 + insert_order/cancel_order/release 状态管理 |
+| **合计** | **108** | |
 
 ### 实现进度
 
