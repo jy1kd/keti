@@ -28,7 +28,7 @@
 │                              Python 中间层                               │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                     │
 │  │  FastAPI     │  │  WebSocket  │  │  CTP 封装层  │                     │
-│  │  (REST API)  │  │  Manager    │  │(openctp-ctp)│                     │
+│  │  (REST API)  │  │  Manager    │  │(ctp-python) │                     │
 │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘                     │
 │         │                │                │                             │
 │         └────────────────┴────────────────┘                             │
@@ -60,7 +60,7 @@
 | 后端框架 | FastAPI | 0.100+ | REST API服务 |
 | WebSocket | websockets | 11.x | 实时推送 |
 | CTP绑定 | ctp-python | latest | Python CTP封装库（SWIG封装，开箱即用） |
-| 包管理 | pnpm (前端) + pip (后端) | - | 依赖管理 |
+| 包管理 | npm (前端) + pip (后端) | - | 依赖管理 |
 
 ### 1.3 CTP API说明
 
@@ -1419,7 +1419,7 @@ python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # 安装依赖
-pip install fastapi uvicorn websockets pydantic openctp-ctp
+pip install fastapi uvicorn websockets ctp-python
 
 # 启动服务
 uvicorn main:app --reload --port 8000
@@ -1433,12 +1433,11 @@ uvicorn main:app --reload --port 8000
    - 行情API DLL：`trader/mduserapi/v6.7.13_20260225_winApi/mduserapi/20260225_mduserapi64_se_windows/thostmduserapi_se.dll`
    - 交易API DLL：`trader/traderapi/v6.7.13_20260225_winApi/traderapi/20260225_traderapi64_se_windows/thosttraderapi_se.dll`
    - 头文件（参考用）：`ThostFtdcMdApi.h`、`ThostFtdcTraderApi.h`、`ThostFtdcUserApiStruct.h`、`ThostFtdcUserApiDataType.h`
-4. Python CTP封装库（openctp-ctp）：
-   - 使用`openctp-ctp`库，已处理SWIG绑定，开箱即用
-   - 安装：`pip install openctp-ctp`
-   - GitHub：https://github.com/openctp/openctp-ctp
+4. Python CTP封装库（ctp-python）：
+   - 使用`ctp-python`库，SWIG封装，开箱即用
+   - 安装：`pip install ctp-python`
    - **开发前必须完成技术Spike验证**：
-     ① 能否通过openctp-ctp成功加载DLL并创建API实例
+     ① 能否通过ctp-python成功加载DLL并创建API实例
      ② 能否成功连接到simnow模拟柜台并登录
      ③ 能否收到行情回调（OnRtnDepthMarketData）
      ④ 能否成功提交一笔报单并收到回报（OnRtnOrder）
@@ -1523,8 +1522,8 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 | 2026-07-07 | v0.9 | PRD功能补充：五档行情、K线图、波动率、价格步进、价差显示、一键反向/锁仓、点击持仓平仓 | ✅ 完成 |
 | 2026-07-08 | v1.0 | 文档完善：WebSocket消息协议、断线重连、止损单持久化、错误码定义、可行性验证闭环、数据模型补充、接口搜索功能 | ✅ 完成 |
 | 2026-07-08 | v1.1 | 实时数据展示方案：行情批量更新(50ms)、查询数据增量更新、新数据高亮、自动滚动、暂停更新、时间倒序 | ✅ 完成 |
-| 2026-07-08 | v1.2 | CTP绑定方案：从SWIG改为openctp-ctp封装库（开箱即用，无需编译） | ✅ 完成 |
-| - | v1.3 | 技术Spike：openctp-ctp验证（DLL加载、登录、行情回调、报单回调）【对应里程碑M0】 | ⏳ 待开始 |
+| 2026-07-08 | v1.2 | CTP绑定方案：从SWIG改为ctp-python封装库（开箱即用，无需编译） | ✅ 完成 |
+| - | v1.3 | 技术Spike：ctp-python验证（DLL加载、登录、行情回调、报单回调）【对应里程碑M0】 | ⏳ 待开始 |
 | - | v1.4 | Python中间层开发（含止损单监控服务、断线重连、止损单持久化、错误处理）【对应里程碑M1】 | ⏳ 待开始 |
 | - | v1.5 | 前端行情模块开发（vtable高性能渲染、点价报单、期权T型报价、K线图、WebSocket消息处理）【对应里程碑M2】 | ⏳ 待开始 |
 | - | v1.6 | 前端报单模块开发（快捷键、批量撤单、一键反向/锁仓、止损单提交）【对应里程碑M3】 | ⏳ 待开始 |
@@ -1544,7 +1543,7 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 | **C** | **Python+React** | **DLL对接简单、前端体验好** | **两套语言栈** | **✅ 选择** |
 
 **选择方案C的理由**：
-1. Python的openctp-ctp封装库是成熟的CTP对接方案，开箱即用
+1. Python的ctp-python封装库是成熟的CTP对接方案，开箱即用
 2. React+vtable满足高性能表格需求
 3. WebSocket实现行情实时推送
 4. 两套语言栈的维护成本可接受
@@ -1555,5 +1554,5 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 |--------|----------|------|
 | vtable性能 | vtable支持虚拟滚动和增量渲染，官方示例可处理10万+行数据 | ✅ 可行 |
 | CTP回调转WebSocket | Python回调函数可直接调用WebSocket推送，延迟<1ms | ✅ 可行 |
-| DLL加载 | openctp-ctp库已封装CTP API，支持v6.7.13版本，开箱即用 | ✅ 可行 |
+| DLL加载 | ctp-python库已封装CTP API，支持v6.7.13版本，开箱即用 | ✅ 可行 |
 | 100合约+10档深度 | 100×10×2×8bytes=16KB/次，WebSocket带宽充足 | ✅ 可行 |
