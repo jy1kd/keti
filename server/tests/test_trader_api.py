@@ -7,8 +7,8 @@ from unittest.mock import Mock, MagicMock
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from config import Config
-from ctp.trader_api import TraderApi
-from ctp.types import Direction, OffsetFlag, OrderPriceType
+from ctp_wrapper.trader_api import TraderApi
+from ctp_wrapper.types import Direction, OffsetFlag, OrderPriceType
 
 
 # ── Mock ctp module helpers ────────────────────────────────────────────

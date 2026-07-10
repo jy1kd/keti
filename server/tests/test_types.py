@@ -5,7 +5,7 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from ctp.types import (
+from ctp_wrapper.types import (
     Direction,
     OffsetFlag,
     OrderPriceType,

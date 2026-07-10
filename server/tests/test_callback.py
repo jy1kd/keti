@@ -6,7 +6,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from ctp.callback import MdSpi, TraderSpi
+from ctp_wrapper.callback import MdSpi, TraderSpi
 
 
 class TestMdSpi:

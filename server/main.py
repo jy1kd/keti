@@ -18,9 +18,9 @@ import time
 import sys
 
 from config import load_config
-from ctp.md_user_api import MdUserApi
-from ctp.trader_api import TraderApi
-from ctp.types import Direction, OffsetFlag, OrderPriceType
+from ctp_wrapper.md_user_api import MdUserApi
+from ctp_wrapper.trader_api import TraderApi
+from ctp_wrapper.types import Direction, OffsetFlag, OrderPriceType
 
 
 # Default test instrument — override via CTP_TEST_INSTRUMENT env var

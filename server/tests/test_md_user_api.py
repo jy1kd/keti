@@ -7,7 +7,7 @@ from unittest.mock import Mock
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from config import Config
-from ctp.md_user_api import MdUserApi
+from ctp_wrapper.md_user_api import MdUserApi
 
 
 class TestMdUserApiConstruction:
