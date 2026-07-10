@@ -411,11 +411,8 @@ class MdUserApi:
     def subscribe(self, instruments: list[str]) -> bool:
         """订阅行情"""
         try:
-            # 注意：合约代码需要转换为字节串
-            ret = self.api.SubscribeMarketData(
-                [i.encode('utf-8') for i in instruments],
-                len(instruments)
-            )
+            # ⚠️ 必须传字符串列表，不能传bytes列表！
+            ret = self.api.SubscribeMarketData(instruments)
             if ret == 0:
                 logger.info(f"行情订阅成功: {instruments}")
                 return True
@@ -498,17 +495,47 @@ class MdSpi(ctp.CThostFtdcMdSpi):
     def OnRtnDepthMarketData(self, pDepthMarketData):
         """行情数据推送回调 - 核心回调"""
         if self.api.on_market_data:
-            # 转换为统一格式并回调
             data = {
-                'instrument_id': pDepthMarketData.InstrumentID,
-                'last_price': pDepthMarketData.LastPrice,
-                'bid_price1': pDepthMarketData.BidPrice1,
-                'bid_volume1': pDepthMarketData.BidVolume1,
-                'ask_price1': pDepthMarketData.AskPrice1,
-                'ask_volume1': pDepthMarketData.AskVolume1,
+                'tradingDay': pDepthMarketData.TradingDay,
+                'instrumentID': pDepthMarketData.InstrumentID,
+                'exchangeID': pDepthMarketData.ExchangeID,
+                'lastPrice': pDepthMarketData.LastPrice,
+                'preSettlementPrice': pDepthMarketData.PreSettlementPrice,
+                'preClosePrice': pDepthMarketData.PreClosePrice,
+                'openPrice': pDepthMarketData.OpenPrice,
+                'highestPrice': pDepthMarketData.HighestPrice,
+                'lowestPrice': pDepthMarketData.LowestPrice,
                 'volume': pDepthMarketData.Volume,
-                'open_interest': pDepthMarketData.OpenInterest,
-                'update_time': pDepthMarketData.UpdateTime,
+                'turnover': pDepthMarketData.Turnover,
+                'openInterest': pDepthMarketData.OpenInterest,
+                'closePrice': pDepthMarketData.ClosePrice,
+                'settlementPrice': pDepthMarketData.SettlementPrice,
+                'upperLimitPrice': pDepthMarketData.UpperLimitPrice,
+                'lowerLimitPrice': pDepthMarketData.LowerLimitPrice,
+                'bidPrice1': pDepthMarketData.BidPrice1,
+                'bidVolume1': pDepthMarketData.BidVolume1,
+                'askPrice1': pDepthMarketData.AskPrice1,
+                'askVolume1': pDepthMarketData.AskVolume1,
+                'bidPrice2': pDepthMarketData.BidPrice2,
+                'bidVolume2': pDepthMarketData.BidVolume2,
+                'askPrice2': pDepthMarketData.AskPrice2,
+                'askVolume2': pDepthMarketData.AskVolume2,
+                'bidPrice3': pDepthMarketData.BidPrice3,
+                'bidVolume3': pDepthMarketData.BidVolume3,
+                'askPrice3': pDepthMarketData.AskPrice3,
+                'askVolume3': pDepthMarketData.AskVolume3,
+                'bidPrice4': pDepthMarketData.BidPrice4,
+                'bidVolume4': pDepthMarketData.BidVolume4,
+                'askPrice4': pDepthMarketData.AskPrice4,
+                'askVolume4': pDepthMarketData.AskVolume4,
+                'bidPrice5': pDepthMarketData.BidPrice5,
+                'bidVolume5': pDepthMarketData.BidVolume5,
+                'askPrice5': pDepthMarketData.AskPrice5,
+                'askVolume5': pDepthMarketData.AskVolume5,
+                'averagePrice': pDepthMarketData.AveragePrice,
+                'actionDay': pDepthMarketData.ActionDay,
+                'updateMillisec': pDepthMarketData.UpdateMillisec,
+                'updateTime': pDepthMarketData.UpdateTime,
             }
             self.api.on_market_data(data)
 
@@ -796,16 +823,27 @@ class TraderSpi(ctp.CThostFtdcTraderSpi):
         """报单回报"""
         if pOrder:
             data = {
-                'order_ref': pOrder.OrderRef,
-                'instrument_id': pOrder.InstrumentID,
+                'brokerID': pOrder.BrokerID,
+                'investorID': pOrder.InvestorID,
+                'instrumentID': pOrder.InstrumentID,
+                'orderRef': pOrder.OrderRef,
                 'direction': pOrder.Direction,
-                'offset': pOrder.CombOffsetFlag,
-                'price': pOrder.LimitPrice,
-                'volume': pOrder.VolumeTotalOriginal,
-                'volume_traded': pOrder.VolumeTraded,
-                'order_status': pOrder.OrderStatus,
-                'status_msg': pOrder.StatusMsg,
-                'insert_time': pOrder.InsertTime,
+                'combOffsetFlag': pOrder.CombOffsetFlag,
+                'limitPrice': pOrder.LimitPrice,
+                'volumeTotalOriginal': pOrder.VolumeTotalOriginal,
+                'volumeTraded': pOrder.VolumeTraded,
+                'volumeTotal': pOrder.VolumeTotal,
+                'orderStatus': pOrder.OrderStatus,
+                'orderPriceType': pOrder.OrderPriceType,
+                'timeCondition': pOrder.TimeCondition,
+                'statusMsg': pOrder.StatusMsg,
+                'insertDate': pOrder.InsertDate,
+                'insertTime': pOrder.InsertTime,
+                'exchangeID': pOrder.ExchangeID,
+                'orderSysID': pOrder.OrderSysID,
+                'frontID': pOrder.FrontID,
+                'sessionID': pOrder.SessionID,
+                'tradingDay': pOrder.TradingDay,
             }
             logger.info(f"报单回报: {data}")
             if 'on_order' in self.api.callbacks:
@@ -815,14 +853,22 @@ class TraderSpi(ctp.CThostFtdcTraderSpi):
         """成交回报"""
         if pTrade:
             data = {
-                'trade_id': pTrade.TradeID,
-                'order_ref': pTrade.OrderRef,
-                'instrument_id': pTrade.InstrumentID,
+                'brokerID': pTrade.BrokerID,
+                'investorID': pTrade.InvestorID,
+                'instrumentID': pTrade.InstrumentID,
+                'orderRef': pTrade.OrderRef,
+                'tradeID': pTrade.TradeID,
                 'direction': pTrade.Direction,
-                'offset': pTrade.OffsetFlag,
+                'offsetFlag': pTrade.OffsetFlag,
+                'hedgeFlag': pTrade.HedgeFlag,
                 'price': pTrade.Price,
                 'volume': pTrade.Volume,
-                'trade_time': pTrade.TradeTime,
+                'tradeDate': pTrade.TradeDate,
+                'tradeTime': pTrade.TradeTime,
+                'tradingDay': pTrade.TradingDay,
+                'exchangeID': pTrade.ExchangeID,
+                'orderSysID': pTrade.OrderSysID,
+                'settlementID': pTrade.SettlementID,
             }
             logger.info(f"成交回报: {data}")
             if 'on_trade' in self.api.callbacks:
@@ -835,14 +881,21 @@ class TraderSpi(ctp.CThostFtdcTraderSpi):
             return
         if pInstrument:
             data = {
-                'instrument_id': pInstrument.InstrumentID,
-                'instrument_name': pInstrument.InstrumentName,
-                'exchange_id': pInstrument.ExchangeID,
-                'product_id': pInstrument.ProductID,
-                'volume_multiple': pInstrument.VolumeMultiple,
-                'price_tick': pInstrument.PriceTick,
-                'expire_date': pInstrument.ExpireDate,
-                'is_trading': pInstrument.IsTrading,
+                'instrumentID': pInstrument.InstrumentID,
+                'instrumentName': pInstrument.InstrumentName,
+                'exchangeID': pInstrument.ExchangeID,
+                'productID': pInstrument.ProductID,
+                'productClass': pInstrument.ProductClass,
+                'volumeMultiple': pInstrument.VolumeMultiple,
+                'priceTick': pInstrument.PriceTick,
+                'expireDate': pInstrument.ExpireDate,
+                'openDate': pInstrument.OpenDate,
+                'isTrading': pInstrument.IsTrading,
+                'longMarginRatio': pInstrument.LongMarginRatio,
+                'shortMarginRatio': pInstrument.ShortMarginRatio,
+                'underlyingInstrID': pInstrument.UnderlyingInstrID,
+                'strikePrice': pInstrument.StrikePrice,
+                'optionsType': pInstrument.OptionsType,
             }
             if 'on_instrument' in self.api.callbacks:
                 self.api.callbacks['on_instrument'](data, bIsLast)
@@ -854,12 +907,22 @@ class TraderSpi(ctp.CThostFtdcTraderSpi):
             return
         if pInvestorPosition:
             data = {
-                'instrument_id': pInvestorPosition.InstrumentID,
-                'direction': pInvestorPosition.PosiDirection,
+                'instrumentID': pInvestorPosition.InstrumentID,
+                'brokerID': pInvestorPosition.BrokerID,
+                'investorID': pInvestorPosition.InvestorID,
+                'posiDirection': pInvestorPosition.PosiDirection,
+                'hedgeFlag': pInvestorPosition.HedgeFlag,
+                'positionDate': pInvestorPosition.PositionDate,
                 'position': pInvestorPosition.Position,
-                'today_position': pInvestorPosition.TodayPosition,
-                'yd_position': pInvestorPosition.YdPosition,
-                'position_cost': pInvestorPosition.PositionCost,
+                'ydPosition': pInvestorPosition.YdPosition,
+                'todayPosition': pInvestorPosition.TodayPosition,
+                'openCost': pInvestorPosition.OpenCost,
+                'positionCost': pInvestorPosition.PositionCost,
+                'positionProfit': pInvestorPosition.PositionProfit,
+                'closeProfit': pInvestorPosition.CloseProfit,
+                'useMargin': pInvestorPosition.UseMargin,
+                'exchangeMargin': pInvestorPosition.ExchangeMargin,
+                'tradingDay': pInvestorPosition.TradingDay,
             }
             if 'on_position' in self.api.callbacks:
                 self.api.callbacks['on_position'](data, bIsLast)
@@ -871,13 +934,19 @@ class TraderSpi(ctp.CThostFtdcTraderSpi):
             return
         if pTradingAccount:
             data = {
-                'account_id': pTradingAccount.AccountID,
+                'accountID': pTradingAccount.AccountID,
+                'brokerID': pTradingAccount.BrokerID,
                 'balance': pTradingAccount.Balance,
                 'available': pTradingAccount.Available,
-                'frozen_margin': pTradingAccount.FrozenMargin,
+                'frozenMargin': pTradingAccount.FrozenMargin,
+                'currMargin': pTradingAccount.CurrMargin,
                 'commission': pTradingAccount.Commission,
-                'close_profit': pTradingAccount.CloseProfit,
-                'position_profit': pTradingAccount.PositionProfit,
+                'closeProfit': pTradingAccount.CloseProfit,
+                'positionProfit': pTradingAccount.PositionProfit,
+                'deposit': pTradingAccount.Deposit,
+                'withdraw': pTradingAccount.Withdraw,
+                'preBalance': pTradingAccount.PreBalance,
+                'tradingDay': pTradingAccount.TradingDay,
             }
             if 'on_account' in self.api.callbacks:
                 self.api.callbacks['on_account'](data)
@@ -1320,3 +1389,4 @@ feature/pr-3-market-ui
 | 2026-07-08 | v1.5 | 补充stop_order_update、connection_status、error消息契约定义 | ✅ 完成 |
 | 2026-07-08 | v1.6 | 错误处理代码更新为与错误码定义一致的字段名 | ✅ 完成 |
 | 2026-07-09 | v1.7 | 根据py-ctp.md和trader文件夹更新CTP API文档，补充详细实现代码 | ✅ 完成 |
+| 2026-07-10 | v1.8 | 更新Section 4.2 CTP封装代码为camelCase字段名，补全五档行情/报单/成交/持仓/资金/合约全部字段 | ✅ 完成 |
