@@ -1156,19 +1156,19 @@ interface MarketDataMessage {
 // 报单回报
 interface OrderReturnMessage {
   type: 'order_return';
-  data: OrderRecord;
+  data: OrderReturn;
 }
 
 // 成交回报
 interface TradeReturnMessage {
   type: 'trade_return';
-  data: TradeRecord;
+  data: TradeReturn;
 }
 
 // 持仓更新
 interface PositionUpdateMessage {
   type: 'position_update';
-  data: PositionRecord;
+  data: PositionInfo;
 }
 
 // 止损单状态更新
@@ -1181,8 +1181,8 @@ interface StopOrderUpdateMessage {
 interface ConnectionStatusMessage {
   type: 'connection_status';
   data: {
-    md_connected: boolean;
-    td_connected: boolean;
+    mdConnected: boolean;
+    tdConnected: boolean;
     message: string;
   };
 }
@@ -1193,7 +1193,7 @@ interface ErrorMessage {
   data: {
     code: string;
     message: string;
-    related_ref?: string;
+    relatedRef?: string;
   };
 }
 ```
