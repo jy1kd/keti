@@ -142,80 +142,108 @@ QUERY_CLASSES = [
 ALL_CLASSES = AUTH_CLASSES + LOGIN_CLASSES + SETTLEMENT_CLASSES + MARKET_CLASSES + ORDER_CLASSES + CANCEL_CLASSES + QUERY_CLASSES
 
 
-if __name__ == "__main__":
-    print("=" * 60)
-    print("CTP API 字段结构探测程序")
-    print("=" * 60)
-    print(f"ctp路径: {ctp.__file__}")
-    print(f"待探测类: {len(ALL_CLASSES)} 个")
-    print("=" * 60)
+def run_and_save():
+    """运行探测并保存到文件"""
+    import sys
+    import os
+    from datetime import datetime
 
-    # 探测所有类
-    all_fields = {}
-    for cls_name in ALL_CLASSES:
-        fields = inspect_ctp_class(cls_name)
-        if fields:
-            all_fields[cls_name] = fields
+    # 输出文件路径
+    output_file = os.path.join(os.path.dirname(__file__), "docs", "ctp-api-structure.txt")
 
-    # 生成TypeScript接口
-    print("\n\n" + "=" * 60)
-    print("[生成] TypeScript接口")
-    print("=" * 60)
+    # 同时输出到控制台和文件
+    class Tee:
+        def __init__(self, *files):
+            self.files = files
+        def write(self, obj):
+            for f in self.files:
+                f.write(obj)
+                f.flush()
+        def flush(self):
+            for f in self.files:
+                f.flush()
 
-    ts_map = {
-        # 认证
-        "CThostFtdcReqAuthenticateField": "AuthenticateRequest",
-        "CThostFtdcRspAuthenticateField": "AuthenticateResponse",
-        # 登录
-        "CThostFtdcReqUserLoginField": "LoginRequest",
-        "CThostFtdcRspUserLoginField": "LoginResponse",
-        # 结算
-        "CThostFtdcReqSettlementInfoConfirmField": "SettlementConfirmRequest",
-        "CThostFtdcRspSettlementInfoConfirmField": "SettlementConfirmResponse",
-        # 行情
-        "CThostFtdcDepthMarketDataField": "MarketSnapshot",
-        "CThostFtdcSpecificInstrumentField": "SubscribeResponse",
-        # 报单
-        "CThostFtdcInputOrderField": "OrderRequest",
-        "CThostFtdcOrderField": "OrderReturn",
-        "CThostFtdcTradeField": "TradeReturn",
-        # 撤单
-        "CThostFtdcInputOrderActionField": "CancelOrderRequest",
-        "CThostFtdcOrderActionField": "CancelOrderReturn",
-        # 查询
-        "CThostFtdcQryInstrumentField": "QueryInstrumentRequest",
-        "CThostFtdcInstrumentField": "InstrumentInfo",
-        "CThostFtdcQryInvestorPositionField": "QueryPositionRequest",
-        "CThostFtdcInvestorPositionField": "PositionInfo",
-        "CThostFtdcQryTradingAccountField": "QueryAccountRequest",
-        "CThostFtdcTradingAccountField": "AccountInfo",
-    }
+    with open(output_file, 'w', encoding='utf-8') as f:
+        tee = Tee(sys.stdout, f)
 
-    for cls_name, fields in all_fields.items():
-        ts_name = ts_map.get(cls_name, cls_name)
-        print(f"\n// {cls_name}")
-        print(fields_to_typescript(fields, ts_name))
+        def print_tee(*args, **kwargs):
+            print(*args, **kwargs, file=tee)
 
-    # 生成mock数据（仅核心类）
-    print("\n\n" + "=" * 60)
-    print("[生成] Mock数据（核心类）")
-    print("=" * 60)
+        print_tee("=" * 60)
+        print_tee("CTP API 字段结构探测程序")
+        print_tee(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print_tee("=" * 60)
+        print_tee(f"ctp路径: {ctp.__file__}")
+        print_tee(f"待探测类: {len(ALL_CLASSES)} 个")
+        print_tee("=" * 60)
 
-    mock_classes = [
-        "CThostFtdcDepthMarketDataField",  # MarketSnapshot
-        "CThostFtdcInputOrderField",       # OrderRequest
-        "CThostFtdcOrderField",            # OrderReturn
-        "CThostFtdcTradeField",            # TradeReturn
-        "CThostFtdcInvestorPositionField", # PositionInfo
-        "CThostFtdcTradingAccountField",   # AccountInfo
-    ]
+        # 探测所有类
+        all_fields = {}
+        for cls_name in ALL_CLASSES:
+            fields = inspect_ctp_class(cls_name)
+            if fields:
+                all_fields[cls_name] = fields
 
-    for cls_name in mock_classes:
-        if cls_name in all_fields:
+        # 生成TypeScript接口
+        print_tee("\n\n" + "=" * 60)
+        print_tee("[生成] TypeScript接口")
+        print_tee("=" * 60)
+
+        ts_map = {
+            "CThostFtdcReqAuthenticateField": "AuthenticateRequest",
+            "CThostFtdcRspAuthenticateField": "AuthenticateResponse",
+            "CThostFtdcReqUserLoginField": "LoginRequest",
+            "CThostFtdcRspUserLoginField": "LoginResponse",
+            "CThostFtdcReqSettlementInfoConfirmField": "SettlementConfirmRequest",
+            "CThostFtdcRspSettlementInfoConfirmField": "SettlementConfirmResponse",
+            "CThostFtdcDepthMarketDataField": "MarketSnapshot",
+            "CThostFtdcSpecificInstrumentField": "SubscribeResponse",
+            "CThostFtdcInputOrderField": "OrderRequest",
+            "CThostFtdcOrderField": "OrderReturn",
+            "CThostFtdcTradeField": "TradeReturn",
+            "CThostFtdcInputOrderActionField": "CancelOrderRequest",
+            "CThostFtdcOrderActionField": "CancelOrderReturn",
+            "CThostFtdcQryInstrumentField": "QueryInstrumentRequest",
+            "CThostFtdcInstrumentField": "InstrumentInfo",
+            "CThostFtdcQryInvestorPositionField": "QueryPositionRequest",
+            "CThostFtdcInvestorPositionField": "PositionInfo",
+            "CThostFtdcQryTradingAccountField": "QueryAccountRequest",
+            "CThostFtdcTradingAccountField": "AccountInfo",
+        }
+
+        for cls_name, fields in all_fields.items():
             ts_name = ts_map.get(cls_name, cls_name)
-            print(f"\n// {cls_name}")
-            print(fields_to_mock(all_fields[cls_name], ts_name))
+            print_tee(f"\n// {cls_name}")
+            print_tee(fields_to_typescript(fields, ts_name))
 
-    print("\n\n" + "=" * 60)
-    print("[完成] 所有字段结构已输出")
-    print("=" * 60)
+        # 生成mock数据（仅核心类）
+        print_tee("\n\n" + "=" * 60)
+        print_tee("[生成] Mock数据（核心类）")
+        print_tee("=" * 60)
+
+        mock_classes = [
+            "CThostFtdcDepthMarketDataField",
+            "CThostFtdcInputOrderField",
+            "CThostFtdcOrderField",
+            "CThostFtdcTradeField",
+            "CThostFtdcInvestorPositionField",
+            "CThostFtdcTradingAccountField",
+        ]
+
+        for cls_name in mock_classes:
+            if cls_name in all_fields:
+                ts_name = ts_map.get(cls_name, cls_name)
+                print_tee(f"\n// {cls_name}")
+                print_tee(fields_to_mock(all_fields[cls_name], ts_name))
+
+        print_tee("\n\n" + "=" * 60)
+        print_tee("[完成] 所有字段结构已输出")
+        print_tee(f"[保存] 文件已保存到: {output_file}")
+        print_tee("=" * 60)
+
+    return output_file
+
+
+if __name__ == "__main__":
+    output = run_and_save()
+    print(f"\n✅ 输出已保存到: {output}")
