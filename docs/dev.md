@@ -131,7 +131,7 @@ frontend/
 server/
 ├── api/                       # API路由
 │   ├── __init__.py
-│   ├── market.py              # 行情接口（订阅、退订、快照、K线、五档深度）
+│   ├── market.py              # 行情接口（订阅、退订、快照、K线、五档深度、期权链、波动率）
 │   ├── order.py               # 报单接口（限价/市价、止损单、撤单、批量撤单、一键反向/锁仓）
 │   ├── query.py               # 查询接口（报单、成交、持仓、资金、合约、报价）
 │   └── connection.py          # 连接接口（登录、登出、状态）
@@ -151,7 +151,7 @@ server/
 │   └── handlers.py            # 消息处理（行情推送、报单回报、成交回报）
 ├── models/                    # 数据模型
 │   ├── __init__.py
-│   ├── market.py              # 行情数据模型（MarketSnapshot、KLineData、DepthData）
+│   ├── market.py              # 行情数据模型（MarketSnapshot、KLineData、DepthData、OptionChain、VolatilityData）
 │   ├── order.py               # 报单数据模型（OrderRequest、OrderRecord、StopOrder）
 │   ├── account.py             # 账户数据模型（AccountInfo、PositionRecord）
 │   ├── contract.py            # 合约数据模型（ContractInfo）
@@ -348,7 +348,7 @@ app.include_router(query.router, prefix="/api/query", tags=["query"])
 | 模块 | 文件 | 路由前缀 | 职责 |
 |------|------|----------|------|
 | connection | connection.py | /api/connection | 登录、登出、状态查询 |
-| market | market.py | /api/market | 合约列表、行情订阅、K线、五档深度 |
+| market | market.py | /api/market | 合约列表、行情订阅、K线、五档深度、期权链、波动率 |
 | order | order.py | /api/order | 报单、撤单、止损单、一键反向/锁仓 |
 | query | query.py | /api/query | 报单流水、成交、持仓、资金、合约 |
 
@@ -1108,6 +1108,44 @@ type WSMessageType =
   | 'error';            // 错误消息
 ```
 
+### 6.3 自定义业务接口
+
+CTP无原生接口，由后端从合约列表+行情数据聚合实现：
+
+```typescript
+// 期权T型报价（后端聚合）
+interface OptionChain {
+  underlying: string;           // 标的合约
+  expireDate: string;           // 到期日
+  calls: OptionQuote[];         // 看涨期权列表（按行权价排序）
+  puts: OptionQuote[];          // 看跌期权列表（按行权价排序）
+  updateTime: string;           // 更新时间
+}
+
+interface OptionQuote {
+  instrumentID: string;         // 合约代码
+  strikePrice: number;          // 行权价
+  lastPrice: number;            // 最新价
+  bidPrice: number;             // 买一价
+  askPrice: number;             // 卖一价
+  volume: number;               // 成交量
+  openInterest: number;         // 持仓量
+  impliedVolatility: number;    // 隐含波动率（Black-Scholes模型计算）
+}
+
+// 隐含波动率（后端Black-Scholes模型计算）
+interface VolatilityData {
+  instrumentID: string;         // 合约代码
+  impliedVolatility: number;    // 隐含波动率
+  underlyingPrice: number;      // 标的资产价格
+  strikePrice: number;          // 行权价
+  timeToExpiry: number;         // 到期时间（年）
+  riskFreeRate: number;         // 无风险利率
+  optionType: string;           // 期权类型（'call'/'put'）
+  updateTime: string;           // 更新时间
+}
+```
+
 ---
 
 ## 5. 数据流设计
@@ -1390,4 +1428,5 @@ feature/pr-3-market-ui
 | 2026-07-08 | v1.6 | 错误处理代码更新为与错误码定义一致的字段名 | ✅ 完成 |
 | 2026-07-09 | v1.7 | 根据py-ctp.md和trader文件夹更新CTP API文档，补充详细实现代码 | ✅ 完成 |
 | 2026-07-10 | v1.8 | openctp-ctp改为ctp-python，与CLAUDE.md统一 | ✅ 完成 |
+| 2026-07-10 | v1.9 | 补充自定义业务接口（OptionChain、OptionQuote、VolatilityData），更新API路由职责 | ✅ 完成 |
 | 2026-07-10 | v1.8 | 更新Section 4.2 CTP封装代码为camelCase字段名，补全五档行情/报单/成交/持仓/资金/合约全部字段 | ✅ 完成 |
