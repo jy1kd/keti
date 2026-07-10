@@ -40,3 +40,7 @@ pnpm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Superpowers process files
+.superpowers/
+docs/superpowers/
