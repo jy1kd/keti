@@ -1,0 +1,172 @@
+"""Tests for ctp/callback.py — callback handling framework."""
+
+import sys
+import os
+import pytest
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+from ctp_wrapper.callback import MdSpi, TraderSpi
+
+
+class TestMdSpi:
+    """Market data SPI callback tests."""
+
+    def test_instantiation(self):
+        """MdSpi should be instantiable with an api reference."""
+        spi = MdSpi(api=None)
+        assert spi is not None
+
+    def test_stores_api_reference(self):
+        mock_api = object()
+        spi = MdSpi(api=mock_api)
+        assert spi.api is mock_api
+
+    def test_on_front_connected_exists(self):
+        """OnFrontConnected should be a callable method."""
+        spi = MdSpi(api=None)
+        assert hasattr(spi, "OnFrontConnected")
+        assert callable(spi.OnFrontConnected)
+
+    def test_on_front_disconnected_exists(self):
+        """OnFrontDisconnected should exist."""
+        spi = MdSpi(api=None)
+        assert hasattr(spi, "OnFrontDisconnected")
+        assert callable(spi.OnFrontDisconnected)
+
+    def test_on_rsp_user_login_exists(self):
+        """OnRspUserLogin should exist."""
+        spi = MdSpi(api=None)
+        assert hasattr(spi, "OnRspUserLogin")
+        assert callable(spi.OnRspUserLogin)
+
+    def test_on_rsp_sub_market_data_exists(self):
+        """OnRspSubMarketData should exist."""
+        spi = MdSpi(api=None)
+        assert hasattr(spi, "OnRspSubMarketData")
+        assert callable(spi.OnRspSubMarketData)
+
+    def test_on_rtn_depth_market_data_exists(self):
+        """OnRtnDepthMarketData should exist."""
+        spi = MdSpi(api=None)
+        assert hasattr(spi, "OnRtnDepthMarketData")
+        assert callable(spi.OnRtnDepthMarketData)
+
+    def test_on_rsp_error_exists(self):
+        """OnRspError should exist."""
+        spi = MdSpi(api=None)
+        assert hasattr(spi, "OnRspError")
+        assert callable(spi.OnRspError)
+
+    def test_on_front_connected_default_behavior(self):
+        """Default OnFrontConnected should be safe to call (no crash)."""
+        spi = MdSpi(api=None)
+        # Should not raise when called with no arguments
+        try:
+            spi.OnFrontConnected()
+            called = True
+        except Exception:
+            called = False
+        assert called, "OnFrontConnected() should not raise"
+
+
+class TestTraderSpi:
+    """Trading SPI callback tests."""
+
+    def test_instantiation(self):
+        spi = TraderSpi(api=None)
+        assert spi is not None
+
+    def test_stores_api_reference(self):
+        mock_api = object()
+        spi = TraderSpi(api=mock_api)
+        assert spi.api is mock_api
+
+    def test_on_front_connected_exists(self):
+        spi = TraderSpi(api=None)
+        assert hasattr(spi, "OnFrontConnected")
+        assert callable(spi.OnFrontConnected)
+
+    def test_on_front_disconnected_exists(self):
+        spi = TraderSpi(api=None)
+        assert hasattr(spi, "OnFrontDisconnected")
+        assert callable(spi.OnFrontDisconnected)
+
+    def test_on_rsp_user_login_exists(self):
+        spi = TraderSpi(api=None)
+        assert hasattr(spi, "OnRspUserLogin")
+        assert callable(spi.OnRspUserLogin)
+
+    def test_on_rtn_order_exists(self):
+        spi = TraderSpi(api=None)
+        assert hasattr(spi, "OnRtnOrder")
+        assert callable(spi.OnRtnOrder)
+
+    def test_on_rtn_trade_exists(self):
+        spi = TraderSpi(api=None)
+        assert hasattr(spi, "OnRtnTrade")
+        assert callable(spi.OnRtnTrade)
+
+    def test_on_rsp_order_insert_exists(self):
+        spi = TraderSpi(api=None)
+        assert hasattr(spi, "OnRspOrderInsert")
+        assert callable(spi.OnRspOrderInsert)
+
+    def test_on_rsp_order_action_exists(self):
+        spi = TraderSpi(api=None)
+        assert hasattr(spi, "OnRspOrderAction")
+        assert callable(spi.OnRspOrderAction)
+
+    def test_on_rsp_error_exists(self):
+        spi = TraderSpi(api=None)
+        assert hasattr(spi, "OnRspError")
+        assert callable(spi.OnRspError)
+
+    def test_callback_defaults_do_not_crash(self):
+        """Default callback implementations should not raise."""
+        spi = TraderSpi(api=None)
+        # (method_name, args_tuple)
+        call_map = [
+            ("OnFrontConnected", ()),
+            ("OnFrontDisconnected", (0,)),
+            ("OnRspUserLogin", (None, None, 0, True)),
+            ("OnRtnOrder", (None,)),
+            ("OnRtnTrade", (None,)),
+            ("OnRspOrderInsert", (None, None, 0, True)),
+            ("OnRspOrderAction", (None, None, 0, True)),
+            ("OnRspError", (None, 0, True)),
+        ]
+        for method_name, args in call_map:
+            method = getattr(spi, method_name)
+            try:
+                method(*args)
+                ok = True
+            except Exception:
+                ok = False
+            assert ok, f"{method_name}{args} should not raise"
+
+
+class TestCallbackLogging:
+    """Test that callbacks record events for debugging."""
+
+    def test_md_spi_has_log_events(self):
+        spi = MdSpi(api=None)
+        # Callbacks should record what happened for debugging
+        assert hasattr(spi, "events")
+        assert isinstance(spi.events, list)
+
+    def test_trader_spi_has_log_events(self):
+        spi = TraderSpi(api=None)
+        assert hasattr(spi, "events")
+        assert isinstance(spi.events, list)
+
+    def test_callback_logs_event(self):
+        spi = MdSpi(api=None)
+        spi.OnFrontConnected()
+        assert len(spi.events) > 0
+        assert spi.events[-1]["type"] == "OnFrontConnected"
+
+    def test_callback_event_has_timestamp(self):
+        spi = MdSpi(api=None)
+        spi.OnFrontConnected()
+        assert "timestamp" in spi.events[-1]

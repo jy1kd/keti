@@ -10,7 +10,7 @@
 
 | PR | 标题 | 状态 | 完成时间 | 提交记录 |
 |----|------|------|----------|----------|
-| PR-1 | 后端CTP连接验证（技术Spike） | ⏳ 待开始 | - | - |
+| PR-1 | 后端CTP连接验证（技术Spike） | ✅ 审查通过，待人工验证合并 | 2026-07-10 | ce44db8, 282ecaf, fa0a872, e6bc245, 2e7f11a, d399fd1, 34c5c9d, 6ddf795, b081b50 |
 | PR-3 | 后端FastAPI框架搭建 | ⏳ 待开始 | - | - |
 | PR-5 | 后端行情API实现 | ⏳ 待开始 | - | - |
 | PR-7 | 后端WebSocket管理完善 | ⏳ 待开始 | - | - |
@@ -27,7 +27,7 @@
 
 ### PR-1: 后端CTP连接验证（技术Spike）
 
-**状态**：⏳ 待开始
+**状态**：✅ 审查通过，待人工验证合并
 
 **PR信息**：
 - PR分支名：`feature/pr-1-ctp-verify`
@@ -35,16 +35,29 @@
 - 工作量：2小时
 
 **完成内容**：
-- 待开发
+- ✅ 配置管理（config.py）— 环境变量读取，SimNow 默认值
+- ✅ CTP 类型定义（ctp/types.py）— 8 个枚举类
+- ✅ 回调框架（ctp/callback.py）— MdSpi + TraderSpi，事件日志 + 自定义 handler
+- ✅ 行情 API 封装（ctp/md_user_api.py）— create/login/subscribe/unsubscribe
+- ✅ 交易 API 封装（ctp/trader_api.py）— create/login/insert_order/cancel_order
+- ✅ 验证入口（main.py）— 4 步验证脚本
+- ✅ 配置模板（.env.sample）
+- ✅ 92 个单元测试（5 个测试文件）
 
 **验证结果**：
-- 待验证
+- ✅ 92 测试全部通过
+- ✅ 代码范围正确（仅 server/ 目录）
+- ✅ 无调试代码残留
+- ✅ dev-record-a.md 已同步
+- ⏳ CTP 连接验证需交易时段手动运行 main.py
 
 **提交记录**：
-- 待提交
+- `ce44db8` feat(task-01): 配置管理、CTP类型定义、回调框架 — 66 tests pass
+- `282ecaf` feat(task-01): CTP行情/交易API封装、验证入口、配置模板 — 92 tests pass
 
 **交接说明**：
-- 待交接
+- 手动验证：交易时段运行 `python server/main.py`
+- 审查时注意：SubscribeMarketData 必须传 str 列表（非 bytes）
 
 ---
 
