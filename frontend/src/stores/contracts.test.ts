@@ -43,7 +43,7 @@ describe('useContractsStore', () => {
 
   it('setContracts 批量设置合约列表', () => {
     const contracts = [
-      { instrument_id: 'au2406', instrument_name: '黄金2406', exchange_id: 'SHFE', product_id: 'au', volume_multiple: 1000, price_tick: 0.02, expire_date: '2024-06-15', is_trading: true },
+      { instrumentID: 'au2406', instrumentName: '黄金2406', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '2024-06-15', isTrading: true },
     ]
     useContractsStore.getState().setContracts(contracts)
     expect(useContractsStore.getState().contracts).toEqual(contracts)

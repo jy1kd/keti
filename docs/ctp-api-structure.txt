@@ -1,0 +1,913 @@
+============================================================
+CTP API 字段结构探测程序
+生成时间: 2026-07-10 09:47:31
+============================================================
+ctp路径: C:\Users\pc\.conda\envs\pytorch\lib\site-packages\ctp\__init__.py
+待探测类: 19 个
+============================================================
+
+
+============================================================
+[生成] TypeScript接口
+============================================================
+
+// CThostFtdcReqAuthenticateField
+export interface AuthenticateRequest {
+  appID: string;
+  authCode: string;
+  brokerID: string;
+  userID: string;
+  userProductInfo: string;
+  this: any;
+  thisown: boolean;
+}
+
+// CThostFtdcRspAuthenticateField
+export interface AuthenticateResponse {
+  appID: string;
+  appType: string;
+  brokerID: string;
+  userID: string;
+  userProductInfo: string;
+  this: any;
+  thisown: boolean;
+}
+
+// CThostFtdcReqUserLoginField
+export interface LoginRequest {
+  brokerID: string;
+  clientIPAddress: string;
+  clientIPPort: number;
+  interfaceProductInfo: string;
+  loginRemark: string;
+  macAddress: string;
+  oneTimePassword: string;
+  password: string;
+  protocolInfo: string;
+  tradingDay: string;
+  userID: string;
+  userProductInfo: string;
+  reserve1: string;
+  this: any;
+  thisown: boolean;
+}
+
+// CThostFtdcRspUserLoginField
+export interface LoginResponse {
+  brokerID: string;
+  cZCETime: string;
+  dCETime: string;
+  fFEXTime: string;
+  frontID: number;
+  gFEXTime: string;
+  iNETime: string;
+  loginTime: string;
+  maxOrderRef: string;
+  sHFETime: string;
+  sessionID: number;
+  sysVersion: string;
+  systemName: string;
+  tradingDay: string;
+  userID: string;
+  this: any;
+  thisown: boolean;
+}
+
+// CThostFtdcDepthMarketDataField
+export interface MarketSnapshot {
+  actionDay: string;
+  askPrice1: number;
+  askPrice2: number;
+  askPrice3: number;
+  askPrice4: number;
+  askPrice5: number;
+  askVolume1: number;
+  askVolume2: number;
+  askVolume3: number;
+  askVolume4: number;
+  askVolume5: number;
+  averagePrice: number;
+  bandingLowerPrice: number;
+  bandingUpperPrice: number;
+  bidPrice1: number;
+  bidPrice2: number;
+  bidPrice3: number;
+  bidPrice4: number;
+  bidPrice5: number;
+  bidVolume1: number;
+  bidVolume2: number;
+  bidVolume3: number;
+  bidVolume4: number;
+  bidVolume5: number;
+  closePrice: number;
+  currDelta: number;
+  exchangeID: string;
+  exchangeInstID: string;
+  highestPrice: number;
+  instrumentID: string;
+  lastPrice: number;
+  lowerLimitPrice: number;
+  lowestPrice: number;
+  openInterest: number;
+  openPrice: number;
+  preClosePrice: number;
+  preDelta: number;
+  preOpenInterest: number;
+  preSettlementPrice: number;
+  settlementPrice: number;
+  tradingDay: string;
+  turnover: number;
+  updateMillisec: number;
+  updateTime: string;
+  upperLimitPrice: number;
+  volume: number;
+  reserve1: string;
+  reserve2: string;
+  this: any;
+  thisown: boolean;
+}
+
+// CThostFtdcSpecificInstrumentField
+export interface SubscribeResponse {
+  instrumentID: string;
+  reserve1: string;
+  this: any;
+  thisown: boolean;
+}
+
+// CThostFtdcInputOrderField
+export interface OrderRequest {
+  accountID: string;
+  brokerID: string;
+  businessUnit: string;
+  clientID: string;
+  combHedgeFlag: string;
+  combOffsetFlag: string;
+  contingentCondition: string;
+  currencyID: string;
+  direction: string;
+  exchangeID: string;
+  forceCloseReason: string;
+  gTDDate: string;
+  iPAddress: string;
+  instrumentID: string;
+  investUnitID: string;
+  investorID: string;
+  isAutoSuspend: number;
+  isSwapOrder: number;
+  limitPrice: number;
+  macAddress: string;
+  minVolume: number;
+  orderMemo: string;
+  orderPriceType: string;
+  orderRef: string;
+  requestID: number;
+  sessionReqSeq: number;
+  stopPrice: number;
+  timeCondition: string;
+  userForceClose: number;
+  userID: string;
+  volumeCondition: string;
+  volumeTotalOriginal: number;
+  reserve1: string;
+  reserve2: string;
+  this: any;
+  thisown: boolean;
+}
+
+// CThostFtdcOrderField
+export interface OrderReturn {
+  accountID: string;
+  activeTime: string;
+  activeTraderID: string;
+  activeUserID: string;
+  branchID: string;
+  brokerID: string;
+  brokerOrderSeq: number;
+  businessUnit: string;
+  cancelTime: string;
+  clearingPartID: string;
+  clientID: string;
+  combHedgeFlag: string;
+  combOffsetFlag: string;
+  contingentCondition: string;
+  currencyID: string;
+  direction: string;
+  exchangeID: string;
+  exchangeInstID: string;
+  forceCloseReason: string;
+  frontID: number;
+  gTDDate: string;
+  iPAddress: string;
+  insertDate: string;
+  insertTime: string;
+  installID: number;
+  instrumentID: string;
+  investUnitID: string;
+  investorID: string;
+  isAutoSuspend: number;
+  isSwapOrder: number;
+  limitPrice: number;
+  macAddress: string;
+  minVolume: number;
+  notifySequence: number;
+  orderLocalID: string;
+  orderMemo: string;
+  orderPriceType: string;
+  orderRef: string;
+  orderSource: string;
+  orderStatus: string;
+  orderSubmitStatus: string;
+  orderSysID: string;
+  orderType: string;
+  participantID: string;
+  relativeOrderSysID: string;
+  requestID: number;
+  sequenceNo: number;
+  sessionID: number;
+  sessionReqSeq: number;
+  settlementID: number;
+  statusMsg: string;
+  stopPrice: number;
+  suspendTime: string;
+  timeCondition: string;
+  traderID: string;
+  tradingDay: string;
+  updateTime: string;
+  userForceClose: number;
+  userID: string;
+  userProductInfo: string;
+  volumeCondition: string;
+  volumeTotal: number;
+  volumeTotalOriginal: number;
+  volumeTraded: number;
+  zCETotalTradedVolume: number;
+  reserve1: string;
+  reserve2: string;
+  reserve3: string;
+  this: any;
+  thisown: boolean;
+}
+
+// CThostFtdcTradeField
+export interface TradeReturn {
+  brokerID: string;
+  brokerOrderSeq: number;
+  businessUnit: string;
+  clearingPartID: string;
+  clientID: string;
+  direction: string;
+  exchangeID: string;
+  exchangeInstID: string;
+  hedgeFlag: string;
+  instrumentID: string;
+  investUnitID: string;
+  investorID: string;
+  offsetFlag: string;
+  orderLocalID: string;
+  orderRef: string;
+  orderSysID: string;
+  participantID: string;
+  price: number;
+  priceSource: string;
+  sequenceNo: number;
+  settlementID: number;
+  tradeDate: string;
+  tradeID: string;
+  tradeSource: string;
+  tradeTime: string;
+  tradeType: string;
+  traderID: string;
+  tradingDay: string;
+  tradingRole: string;
+  userID: string;
+  volume: number;
+  reserve1: string;
+  reserve2: string;
+  this: any;
+  thisown: boolean;
+}
+
+// CThostFtdcInputOrderActionField
+export interface CancelOrderRequest {
+  actionFlag: string;
+  brokerID: string;
+  exchangeID: string;
+  frontID: number;
+  iPAddress: string;
+  instrumentID: string;
+  investUnitID: string;
+  investorID: string;
+  limitPrice: number;
+  macAddress: string;
+  orderActionRef: number;
+  orderMemo: string;
+  orderRef: string;
+  orderSysID: string;
+  requestID: number;
+  sessionID: number;
+  sessionReqSeq: number;
+  userID: string;
+  volumeChange: number;
+  reserve1: string;
+  reserve2: string;
+  this: any;
+  thisown: boolean;
+}
+
+// CThostFtdcOrderActionField
+export interface CancelOrderReturn {
+  actionDate: string;
+  actionFlag: string;
+  actionLocalID: string;
+  actionTime: string;
+  branchID: string;
+  brokerID: string;
+  businessUnit: string;
+  clientID: string;
+  exchangeID: string;
+  frontID: number;
+  iPAddress: string;
+  installID: number;
+  instrumentID: string;
+  investUnitID: string;
+  investorID: string;
+  limitPrice: number;
+  macAddress: string;
+  orderActionRef: number;
+  orderActionStatus: string;
+  orderLocalID: string;
+  orderMemo: string;
+  orderRef: string;
+  orderSysID: string;
+  participantID: string;
+  requestID: number;
+  sessionID: number;
+  sessionReqSeq: number;
+  statusMsg: string;
+  traderID: string;
+  userID: string;
+  volumeChange: number;
+  reserve1: string;
+  reserve2: string;
+  this: any;
+  thisown: boolean;
+}
+
+// CThostFtdcQryInstrumentField
+export interface QueryInstrumentRequest {
+  exchangeID: string;
+  exchangeInstID: string;
+  instrumentID: string;
+  productID: string;
+  reserve1: string;
+  reserve2: string;
+  reserve3: string;
+  this: any;
+  thisown: boolean;
+}
+
+// CThostFtdcInstrumentField
+export interface InstrumentInfo {
+  combinationType: string;
+  createDate: string;
+  deliveryMonth: number;
+  deliveryYear: number;
+  endDelivDate: string;
+  exchangeID: string;
+  exchangeInstID: string;
+  expireDate: string;
+  instLifePhase: string;
+  instrumentID: string;
+  instrumentName: string;
+  isTrading: number;
+  longMarginRatio: number;
+  maxLimitOrderVolume: number;
+  maxMarginSideAlgorithm: string;
+  maxMarketOrderVolume: number;
+  minLimitOrderVolume: number;
+  minMarketOrderVolume: number;
+  openDate: string;
+  optionsType: string;
+  positionDateType: string;
+  positionType: string;
+  priceTick: number;
+  productClass: string;
+  productID: string;
+  shortMarginRatio: number;
+  startDelivDate: string;
+  strikePrice: number;
+  underlyingInstrID: string;
+  underlyingMultiple: number;
+  volumeMultiple: number;
+  reserve1: string;
+  reserve2: string;
+  reserve3: string;
+  reserve4: string;
+  this: any;
+  thisown: boolean;
+}
+
+// CThostFtdcQryInvestorPositionField
+export interface QueryPositionRequest {
+  brokerID: string;
+  exchangeID: string;
+  instrumentID: string;
+  investUnitID: string;
+  investorID: string;
+  reserve1: string;
+  this: any;
+  thisown: boolean;
+}
+
+// CThostFtdcInvestorPositionField
+export interface PositionInfo {
+  abandonFrozen: number;
+  brokerID: string;
+  cashIn: number;
+  closeAmount: number;
+  closeProfit: number;
+  closeProfitByDate: number;
+  closeProfitByTrade: number;
+  closeVolume: number;
+  combLongFrozen: number;
+  combPosition: number;
+  combShortFrozen: number;
+  commission: number;
+  exchangeID: string;
+  exchangeMargin: number;
+  frozenCash: number;
+  frozenCommission: number;
+  frozenMargin: number;
+  hedgeFlag: string;
+  instrumentID: string;
+  investUnitID: string;
+  investorID: string;
+  longFrozen: number;
+  longFrozenAmount: number;
+  marginRateByMoney: number;
+  marginRateByVolume: number;
+  openAmount: number;
+  openCost: number;
+  openVolume: number;
+  posiDirection: string;
+  position: number;
+  positionCost: number;
+  positionCostOffset: number;
+  positionDate: string;
+  positionProfit: number;
+  preMargin: number;
+  preSettlementPrice: number;
+  settlementID: number;
+  settlementPrice: number;
+  shortFrozen: number;
+  shortFrozenAmount: number;
+  strikeFrozen: number;
+  strikeFrozenAmount: number;
+  tasPosition: number;
+  tasPositionCost: number;
+  todayPosition: number;
+  tradingDay: string;
+  useMargin: number;
+  ydPosition: number;
+  ydStrikeFrozen: number;
+  reserve1: string;
+  this: any;
+  thisown: boolean;
+}
+
+// CThostFtdcQryTradingAccountField
+export interface QueryAccountRequest {
+  accountID: string;
+  bizType: string;
+  brokerID: string;
+  currencyID: string;
+  investorID: string;
+  this: any;
+  thisown: boolean;
+}
+
+// CThostFtdcTradingAccountField
+export interface AccountInfo {
+  accountID: string;
+  available: number;
+  balance: number;
+  bizType: string;
+  brokerID: string;
+  cashIn: number;
+  closeProfit: number;
+  commission: number;
+  credit: number;
+  currMargin: number;
+  currencyID: string;
+  deliveryMargin: number;
+  deposit: number;
+  exchangeDeliveryMargin: number;
+  exchangeMargin: number;
+  frozenCash: number;
+  frozenCommission: number;
+  frozenMargin: number;
+  frozenSwap: number;
+  fundMortgageAvailable: number;
+  fundMortgageIn: number;
+  fundMortgageOut: number;
+  interest: number;
+  interestBase: number;
+  mortgage: number;
+  mortgageableFund: number;
+  positionProfit: number;
+  preBalance: number;
+  preCredit: number;
+  preDeposit: number;
+  preFundMortgageIn: number;
+  preFundMortgageOut: number;
+  preMargin: number;
+  preMortgage: number;
+  remainSwap: number;
+  reserve: number;
+  reserveBalance: number;
+  settlementID: number;
+  specProductCloseProfit: number;
+  specProductCommission: number;
+  specProductExchangeMargin: number;
+  specProductFrozenCommission: number;
+  specProductFrozenMargin: number;
+  specProductMargin: number;
+  specProductPositionProfit: number;
+  specProductPositionProfitByAlg: number;
+  tradingDay: string;
+  withdraw: number;
+  withdrawQuota: number;
+  this: any;
+  thisown: boolean;
+}
+
+
+============================================================
+[生成] Mock数据（核心类）
+============================================================
+
+// CThostFtdcDepthMarketDataField
+export const mockMarketSnapshot: MarketSnapshot = {
+  actionDay: "",
+  askPrice1: 0.0,
+  askPrice2: 0.0,
+  askPrice3: 0.0,
+  askPrice4: 0.0,
+  askPrice5: 0.0,
+  askVolume1: 0,
+  askVolume2: 0,
+  askVolume3: 0,
+  askVolume4: 0,
+  askVolume5: 0,
+  averagePrice: 0.0,
+  bandingLowerPrice: 0.0,
+  bandingUpperPrice: 0.0,
+  bidPrice1: 0.0,
+  bidPrice2: 0.0,
+  bidPrice3: 0.0,
+  bidPrice4: 0.0,
+  bidPrice5: 0.0,
+  bidVolume1: 0,
+  bidVolume2: 0,
+  bidVolume3: 0,
+  bidVolume4: 0,
+  bidVolume5: 0,
+  closePrice: 0.0,
+  currDelta: 0.0,
+  exchangeID: "",
+  exchangeInstID: "",
+  highestPrice: 0.0,
+  instrumentID: "",
+  lastPrice: 0.0,
+  lowerLimitPrice: 0.0,
+  lowestPrice: 0.0,
+  openInterest: 0.0,
+  openPrice: 0.0,
+  preClosePrice: 0.0,
+  preDelta: 0.0,
+  preOpenInterest: 0.0,
+  preSettlementPrice: 0.0,
+  settlementPrice: 0.0,
+  tradingDay: "",
+  turnover: 0.0,
+  updateMillisec: 0,
+  updateTime: "",
+  upperLimitPrice: 0.0,
+  volume: 0,
+  reserve1: "",
+  reserve2: "",
+  this: <Swig Object of type 'CThostFtdcDepthMarketDataField *' at 0x00000188CE2E5B40>,
+  thisown: true,
+};
+
+// CThostFtdcInputOrderField
+export const mockOrderRequest: OrderRequest = {
+  accountID: "",
+  brokerID: "",
+  businessUnit: "",
+  clientID: "",
+  combHedgeFlag: "",
+  combOffsetFlag: "",
+  contingentCondition: " ",
+  currencyID: "",
+  direction: " ",
+  exchangeID: "",
+  forceCloseReason: " ",
+  gTDDate: "",
+  iPAddress: "",
+  instrumentID: "",
+  investUnitID: "",
+  investorID: "",
+  isAutoSuspend: 0,
+  isSwapOrder: 0,
+  limitPrice: 0.0,
+  macAddress: "",
+  minVolume: 0,
+  orderMemo: "",
+  orderPriceType: " ",
+  orderRef: "",
+  requestID: 0,
+  sessionReqSeq: 0,
+  stopPrice: 0.0,
+  timeCondition: " ",
+  userForceClose: 0,
+  userID: "",
+  volumeCondition: " ",
+  volumeTotalOriginal: 0,
+  reserve1: "",
+  reserve2: "",
+  this: <Swig Object of type 'CThostFtdcInputOrderField *' at 0x00000188CE2E5D20>,
+  thisown: true,
+};
+
+// CThostFtdcOrderField
+export const mockOrderReturn: OrderReturn = {
+  accountID: "",
+  activeTime: "",
+  activeTraderID: "",
+  activeUserID: "",
+  branchID: "",
+  brokerID: "",
+  brokerOrderSeq: 0,
+  businessUnit: "",
+  cancelTime: "",
+  clearingPartID: "",
+  clientID: "",
+  combHedgeFlag: "",
+  combOffsetFlag: "",
+  contingentCondition: " ",
+  currencyID: "",
+  direction: " ",
+  exchangeID: "",
+  exchangeInstID: "",
+  forceCloseReason: " ",
+  frontID: 0,
+  gTDDate: "",
+  iPAddress: "",
+  insertDate: "",
+  insertTime: "",
+  installID: 0,
+  instrumentID: "",
+  investUnitID: "",
+  investorID: "",
+  isAutoSuspend: 0,
+  isSwapOrder: 0,
+  limitPrice: 0.0,
+  macAddress: "",
+  minVolume: 0,
+  notifySequence: 0,
+  orderLocalID: "",
+  orderMemo: "",
+  orderPriceType: " ",
+  orderRef: "",
+  orderSource: " ",
+  orderStatus: " ",
+  orderSubmitStatus: " ",
+  orderSysID: "",
+  orderType: " ",
+  participantID: "",
+  relativeOrderSysID: "",
+  requestID: 0,
+  sequenceNo: 0,
+  sessionID: 0,
+  sessionReqSeq: 0,
+  settlementID: 0,
+  statusMsg: "",
+  stopPrice: 0.0,
+  suspendTime: "",
+  timeCondition: " ",
+  traderID: "",
+  tradingDay: "",
+  updateTime: "",
+  userForceClose: 0,
+  userID: "",
+  userProductInfo: "",
+  volumeCondition: " ",
+  volumeTotal: 0,
+  volumeTotalOriginal: 0,
+  volumeTraded: 0,
+  zCETotalTradedVolume: 0,
+  reserve1: "",
+  reserve2: "",
+  reserve3: "",
+  this: <Swig Object of type 'CThostFtdcOrderField *' at 0x00000188CE2E5E10>,
+  thisown: true,
+};
+
+// CThostFtdcTradeField
+export const mockTradeReturn: TradeReturn = {
+  brokerID: "",
+  brokerOrderSeq: 0,
+  businessUnit: "",
+  clearingPartID: "",
+  clientID: "",
+  direction: " ",
+  exchangeID: "",
+  exchangeInstID: "",
+  hedgeFlag: " ",
+  instrumentID: "",
+  investUnitID: "",
+  investorID: "",
+  offsetFlag: " ",
+  orderLocalID: "",
+  orderRef: "",
+  orderSysID: "",
+  participantID: "",
+  price: 0.0,
+  priceSource: " ",
+  sequenceNo: 0,
+  settlementID: 0,
+  tradeDate: "",
+  tradeID: "",
+  tradeSource: " ",
+  tradeTime: "",
+  tradeType: " ",
+  traderID: "",
+  tradingDay: "",
+  tradingRole: " ",
+  userID: "",
+  volume: 0,
+  reserve1: "",
+  reserve2: "",
+  this: <Swig Object of type 'CThostFtdcTradeField *' at 0x00000188CE6BF660>,
+  thisown: true,
+};
+
+// CThostFtdcInvestorPositionField
+export const mockPositionInfo: PositionInfo = {
+  abandonFrozen: 0,
+  brokerID: "",
+  cashIn: 0.0,
+  closeAmount: 0.0,
+  closeProfit: 0.0,
+  closeProfitByDate: 0.0,
+  closeProfitByTrade: 0.0,
+  closeVolume: 0,
+  combLongFrozen: 0,
+  combPosition: 0,
+  combShortFrozen: 0,
+  commission: 0.0,
+  exchangeID: "",
+  exchangeMargin: 0.0,
+  frozenCash: 0.0,
+  frozenCommission: 0.0,
+  frozenMargin: 0.0,
+  hedgeFlag: " ",
+  instrumentID: "",
+  investUnitID: "",
+  investorID: "",
+  longFrozen: 0,
+  longFrozenAmount: 0.0,
+  marginRateByMoney: 0.0,
+  marginRateByVolume: 0.0,
+  openAmount: 0.0,
+  openCost: 0.0,
+  openVolume: 0,
+  posiDirection: " ",
+  position: 0,
+  positionCost: 0.0,
+  positionCostOffset: 0.0,
+  positionDate: " ",
+  positionProfit: 0.0,
+  preMargin: 0.0,
+  preSettlementPrice: 0.0,
+  settlementID: 0,
+  settlementPrice: 0.0,
+  shortFrozen: 0,
+  shortFrozenAmount: 0.0,
+  strikeFrozen: 0,
+  strikeFrozenAmount: 0.0,
+  tasPosition: 0,
+  tasPositionCost: 0.0,
+  todayPosition: 0,
+  tradingDay: "",
+  useMargin: 0.0,
+  ydPosition: 0,
+  ydStrikeFrozen: 0,
+  reserve1: "",
+  this: <Swig Object of type 'CThostFtdcInvestorPositionField *' at 0x00000188CE6CD2A0>,
+  thisown: true,
+};
+
+// CThostFtdcTradingAccountField
+export const mockAccountInfo: AccountInfo = {
+  accountID: "",
+  available: 0.0,
+  balance: 0.0,
+  bizType: " ",
+  brokerID: "",
+  cashIn: 0.0,
+  closeProfit: 0.0,
+  commission: 0.0,
+  credit: 0.0,
+  currMargin: 0.0,
+  currencyID: "",
+  deliveryMargin: 0.0,
+  deposit: 0.0,
+  exchangeDeliveryMargin: 0.0,
+  exchangeMargin: 0.0,
+  frozenCash: 0.0,
+  frozenCommission: 0.0,
+  frozenMargin: 0.0,
+  frozenSwap: 0.0,
+  fundMortgageAvailable: 0.0,
+  fundMortgageIn: 0.0,
+  fundMortgageOut: 0.0,
+  interest: 0.0,
+  interestBase: 0.0,
+  mortgage: 0.0,
+  mortgageableFund: 0.0,
+  positionProfit: 0.0,
+  preBalance: 0.0,
+  preCredit: 0.0,
+  preDeposit: 0.0,
+  preFundMortgageIn: 0.0,
+  preFundMortgageOut: 0.0,
+  preMargin: 0.0,
+  preMortgage: 0.0,
+  remainSwap: 0.0,
+  reserve: 0.0,
+  reserveBalance: 0.0,
+  settlementID: 0,
+  specProductCloseProfit: 0.0,
+  specProductCommission: 0.0,
+  specProductExchangeMargin: 0.0,
+  specProductFrozenCommission: 0.0,
+  specProductFrozenMargin: 0.0,
+  specProductMargin: 0.0,
+  specProductPositionProfit: 0.0,
+  specProductPositionProfitByAlg: 0.0,
+  tradingDay: "",
+  withdraw: 0.0,
+  withdrawQuota: 0.0,
+  this: <Swig Object of type 'CThostFtdcTradingAccountField *' at 0x00000188CE6CD960>,
+  thisown: true,
+};
+
+
+============================================================
+[生成] 自定义业务接口（CTP无原生接口）
+============================================================
+
+// ============ 自定义业务接口 ============
+// 以下接口CTP无原生API，由后端自行实现
+
+// 期权T型报价（后端从合约列表 + 行情数据聚合）
+export interface OptionChain {
+  underlying: string;           // 标的合约
+  expireDate: string;           // 到期日
+  calls: OptionQuote[];         // 看涨期权列表（按行权价排序）
+  puts: OptionQuote[];          // 看跌期权列表（按行权价排序）
+  updateTime: string;           // 更新时间
+}
+
+export interface OptionQuote {
+  instrumentID: string;         // 合约代码
+  strikePrice: number;          // 行权价
+  lastPrice: number;            // 最新价
+  bidPrice: number;             // 买一价
+  askPrice: number;             // 卖一价
+  volume: number;               // 成交量
+  openInterest: number;         // 持仓量
+  impliedVolatility: number;    // 隐含波动率（Black-Scholes模型计算）
+}
+
+// 隐含波动率（后端Black-Scholes模型计算）
+export interface VolatilityData {
+  instrumentID: string;         // 合约代码
+  impliedVolatility: number;    // 隐含波动率
+  underlyingPrice: number;      // 标的资产价格
+  strikePrice: number;          // 行权价
+  timeToExpiry: number;         // 到期时间（年）
+  riskFreeRate: number;         // 无风险利率
+  optionType: string;           // 期权类型（'call'/'put'）
+  updateTime: string;           // 更新时间
+}
+
+
+
+============================================================
+[完成] 所有字段结构已输出
+[保存] 文件已保存到: D:/103/note/zhongjin/keti\docs\ctp-api-structure.txt
+============================================================

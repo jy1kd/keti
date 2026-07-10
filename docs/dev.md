@@ -17,7 +17,7 @@
 | 图表库 | ECharts | latest | K线图、技术指标 |
 | 后端框架 | FastAPI | 0.100+ | REST API服务 |
 | WebSocket | websockets | 11.x | 实时推送 |
-| CTP绑定 | openctp-ctp | latest | Python CTP封装库（开箱即用） |
+| CTP绑定 | ctp-python | latest | Python CTP封装库（开箱即用） |
 
 ### 1.3 角色分工
 | 角色 | 职责 | 负责模块 |
@@ -131,7 +131,7 @@ frontend/
 server/
 ├── api/                       # API路由
 │   ├── __init__.py
-│   ├── market.py              # 行情接口（订阅、退订、快照、K线、五档深度）
+│   ├── market.py              # 行情接口（订阅、退订、快照、K线、五档深度、期权链、波动率）
 │   ├── order.py               # 报单接口（限价/市价、止损单、撤单、批量撤单、一键反向/锁仓）
 │   ├── query.py               # 查询接口（报单、成交、持仓、资金、合约、报价）
 │   └── connection.py          # 连接接口（登录、登出、状态）
@@ -151,7 +151,7 @@ server/
 │   └── handlers.py            # 消息处理（行情推送、报单回报、成交回报）
 ├── models/                    # 数据模型
 │   ├── __init__.py
-│   ├── market.py              # 行情数据模型（MarketSnapshot、KLineData、DepthData）
+│   ├── market.py              # 行情数据模型（MarketSnapshot、KLineData、DepthData、OptionChain、VolatilityData）
 │   ├── order.py               # 报单数据模型（OrderRequest、OrderRecord、StopOrder）
 │   ├── account.py             # 账户数据模型（AccountInfo、PositionRecord）
 │   ├── contract.py            # 合约数据模型（ContractInfo）
@@ -348,7 +348,7 @@ app.include_router(query.router, prefix="/api/query", tags=["query"])
 | 模块 | 文件 | 路由前缀 | 职责 |
 |------|------|----------|------|
 | connection | connection.py | /api/connection | 登录、登出、状态查询 |
-| market | market.py | /api/market | 合约列表、行情订阅、K线、五档深度 |
+| market | market.py | /api/market | 合约列表、行情订阅、K线、五档深度、期权链、波动率 |
 | order | order.py | /api/order | 报单、撤单、止损单、一键反向/锁仓 |
 | query | query.py | /api/query | 报单流水、成交、持仓、资金、合约 |
 
@@ -411,11 +411,8 @@ class MdUserApi:
     def subscribe(self, instruments: list[str]) -> bool:
         """订阅行情"""
         try:
-            # 注意：合约代码需要转换为字节串
-            ret = self.api.SubscribeMarketData(
-                [i.encode('utf-8') for i in instruments],
-                len(instruments)
-            )
+            # ⚠️ 必须传字符串列表，不能传bytes列表！
+            ret = self.api.SubscribeMarketData(instruments)
             if ret == 0:
                 logger.info(f"行情订阅成功: {instruments}")
                 return True
@@ -498,17 +495,47 @@ class MdSpi(ctp.CThostFtdcMdSpi):
     def OnRtnDepthMarketData(self, pDepthMarketData):
         """行情数据推送回调 - 核心回调"""
         if self.api.on_market_data:
-            # 转换为统一格式并回调
             data = {
-                'instrument_id': pDepthMarketData.InstrumentID,
-                'last_price': pDepthMarketData.LastPrice,
-                'bid_price1': pDepthMarketData.BidPrice1,
-                'bid_volume1': pDepthMarketData.BidVolume1,
-                'ask_price1': pDepthMarketData.AskPrice1,
-                'ask_volume1': pDepthMarketData.AskVolume1,
+                'tradingDay': pDepthMarketData.TradingDay,
+                'instrumentID': pDepthMarketData.InstrumentID,
+                'exchangeID': pDepthMarketData.ExchangeID,
+                'lastPrice': pDepthMarketData.LastPrice,
+                'preSettlementPrice': pDepthMarketData.PreSettlementPrice,
+                'preClosePrice': pDepthMarketData.PreClosePrice,
+                'openPrice': pDepthMarketData.OpenPrice,
+                'highestPrice': pDepthMarketData.HighestPrice,
+                'lowestPrice': pDepthMarketData.LowestPrice,
                 'volume': pDepthMarketData.Volume,
-                'open_interest': pDepthMarketData.OpenInterest,
-                'update_time': pDepthMarketData.UpdateTime,
+                'turnover': pDepthMarketData.Turnover,
+                'openInterest': pDepthMarketData.OpenInterest,
+                'closePrice': pDepthMarketData.ClosePrice,
+                'settlementPrice': pDepthMarketData.SettlementPrice,
+                'upperLimitPrice': pDepthMarketData.UpperLimitPrice,
+                'lowerLimitPrice': pDepthMarketData.LowerLimitPrice,
+                'bidPrice1': pDepthMarketData.BidPrice1,
+                'bidVolume1': pDepthMarketData.BidVolume1,
+                'askPrice1': pDepthMarketData.AskPrice1,
+                'askVolume1': pDepthMarketData.AskVolume1,
+                'bidPrice2': pDepthMarketData.BidPrice2,
+                'bidVolume2': pDepthMarketData.BidVolume2,
+                'askPrice2': pDepthMarketData.AskPrice2,
+                'askVolume2': pDepthMarketData.AskVolume2,
+                'bidPrice3': pDepthMarketData.BidPrice3,
+                'bidVolume3': pDepthMarketData.BidVolume3,
+                'askPrice3': pDepthMarketData.AskPrice3,
+                'askVolume3': pDepthMarketData.AskVolume3,
+                'bidPrice4': pDepthMarketData.BidPrice4,
+                'bidVolume4': pDepthMarketData.BidVolume4,
+                'askPrice4': pDepthMarketData.AskPrice4,
+                'askVolume4': pDepthMarketData.AskVolume4,
+                'bidPrice5': pDepthMarketData.BidPrice5,
+                'bidVolume5': pDepthMarketData.BidVolume5,
+                'askPrice5': pDepthMarketData.AskPrice5,
+                'askVolume5': pDepthMarketData.AskVolume5,
+                'averagePrice': pDepthMarketData.AveragePrice,
+                'actionDay': pDepthMarketData.ActionDay,
+                'updateMillisec': pDepthMarketData.UpdateMillisec,
+                'updateTime': pDepthMarketData.UpdateTime,
             }
             self.api.on_market_data(data)
 
@@ -796,16 +823,27 @@ class TraderSpi(ctp.CThostFtdcTraderSpi):
         """报单回报"""
         if pOrder:
             data = {
-                'order_ref': pOrder.OrderRef,
-                'instrument_id': pOrder.InstrumentID,
+                'brokerID': pOrder.BrokerID,
+                'investorID': pOrder.InvestorID,
+                'instrumentID': pOrder.InstrumentID,
+                'orderRef': pOrder.OrderRef,
                 'direction': pOrder.Direction,
-                'offset': pOrder.CombOffsetFlag,
-                'price': pOrder.LimitPrice,
-                'volume': pOrder.VolumeTotalOriginal,
-                'volume_traded': pOrder.VolumeTraded,
-                'order_status': pOrder.OrderStatus,
-                'status_msg': pOrder.StatusMsg,
-                'insert_time': pOrder.InsertTime,
+                'combOffsetFlag': pOrder.CombOffsetFlag,
+                'limitPrice': pOrder.LimitPrice,
+                'volumeTotalOriginal': pOrder.VolumeTotalOriginal,
+                'volumeTraded': pOrder.VolumeTraded,
+                'volumeTotal': pOrder.VolumeTotal,
+                'orderStatus': pOrder.OrderStatus,
+                'orderPriceType': pOrder.OrderPriceType,
+                'timeCondition': pOrder.TimeCondition,
+                'statusMsg': pOrder.StatusMsg,
+                'insertDate': pOrder.InsertDate,
+                'insertTime': pOrder.InsertTime,
+                'exchangeID': pOrder.ExchangeID,
+                'orderSysID': pOrder.OrderSysID,
+                'frontID': pOrder.FrontID,
+                'sessionID': pOrder.SessionID,
+                'tradingDay': pOrder.TradingDay,
             }
             logger.info(f"报单回报: {data}")
             if 'on_order' in self.api.callbacks:
@@ -815,14 +853,22 @@ class TraderSpi(ctp.CThostFtdcTraderSpi):
         """成交回报"""
         if pTrade:
             data = {
-                'trade_id': pTrade.TradeID,
-                'order_ref': pTrade.OrderRef,
-                'instrument_id': pTrade.InstrumentID,
+                'brokerID': pTrade.BrokerID,
+                'investorID': pTrade.InvestorID,
+                'instrumentID': pTrade.InstrumentID,
+                'orderRef': pTrade.OrderRef,
+                'tradeID': pTrade.TradeID,
                 'direction': pTrade.Direction,
-                'offset': pTrade.OffsetFlag,
+                'offsetFlag': pTrade.OffsetFlag,
+                'hedgeFlag': pTrade.HedgeFlag,
                 'price': pTrade.Price,
                 'volume': pTrade.Volume,
-                'trade_time': pTrade.TradeTime,
+                'tradeDate': pTrade.TradeDate,
+                'tradeTime': pTrade.TradeTime,
+                'tradingDay': pTrade.TradingDay,
+                'exchangeID': pTrade.ExchangeID,
+                'orderSysID': pTrade.OrderSysID,
+                'settlementID': pTrade.SettlementID,
             }
             logger.info(f"成交回报: {data}")
             if 'on_trade' in self.api.callbacks:
@@ -835,14 +881,21 @@ class TraderSpi(ctp.CThostFtdcTraderSpi):
             return
         if pInstrument:
             data = {
-                'instrument_id': pInstrument.InstrumentID,
-                'instrument_name': pInstrument.InstrumentName,
-                'exchange_id': pInstrument.ExchangeID,
-                'product_id': pInstrument.ProductID,
-                'volume_multiple': pInstrument.VolumeMultiple,
-                'price_tick': pInstrument.PriceTick,
-                'expire_date': pInstrument.ExpireDate,
-                'is_trading': pInstrument.IsTrading,
+                'instrumentID': pInstrument.InstrumentID,
+                'instrumentName': pInstrument.InstrumentName,
+                'exchangeID': pInstrument.ExchangeID,
+                'productID': pInstrument.ProductID,
+                'productClass': pInstrument.ProductClass,
+                'volumeMultiple': pInstrument.VolumeMultiple,
+                'priceTick': pInstrument.PriceTick,
+                'expireDate': pInstrument.ExpireDate,
+                'openDate': pInstrument.OpenDate,
+                'isTrading': pInstrument.IsTrading,
+                'longMarginRatio': pInstrument.LongMarginRatio,
+                'shortMarginRatio': pInstrument.ShortMarginRatio,
+                'underlyingInstrID': pInstrument.UnderlyingInstrID,
+                'strikePrice': pInstrument.StrikePrice,
+                'optionsType': pInstrument.OptionsType,
             }
             if 'on_instrument' in self.api.callbacks:
                 self.api.callbacks['on_instrument'](data, bIsLast)
@@ -854,12 +907,22 @@ class TraderSpi(ctp.CThostFtdcTraderSpi):
             return
         if pInvestorPosition:
             data = {
-                'instrument_id': pInvestorPosition.InstrumentID,
-                'direction': pInvestorPosition.PosiDirection,
+                'instrumentID': pInvestorPosition.InstrumentID,
+                'brokerID': pInvestorPosition.BrokerID,
+                'investorID': pInvestorPosition.InvestorID,
+                'posiDirection': pInvestorPosition.PosiDirection,
+                'hedgeFlag': pInvestorPosition.HedgeFlag,
+                'positionDate': pInvestorPosition.PositionDate,
                 'position': pInvestorPosition.Position,
-                'today_position': pInvestorPosition.TodayPosition,
-                'yd_position': pInvestorPosition.YdPosition,
-                'position_cost': pInvestorPosition.PositionCost,
+                'ydPosition': pInvestorPosition.YdPosition,
+                'todayPosition': pInvestorPosition.TodayPosition,
+                'openCost': pInvestorPosition.OpenCost,
+                'positionCost': pInvestorPosition.PositionCost,
+                'positionProfit': pInvestorPosition.PositionProfit,
+                'closeProfit': pInvestorPosition.CloseProfit,
+                'useMargin': pInvestorPosition.UseMargin,
+                'exchangeMargin': pInvestorPosition.ExchangeMargin,
+                'tradingDay': pInvestorPosition.TradingDay,
             }
             if 'on_position' in self.api.callbacks:
                 self.api.callbacks['on_position'](data, bIsLast)
@@ -871,13 +934,19 @@ class TraderSpi(ctp.CThostFtdcTraderSpi):
             return
         if pTradingAccount:
             data = {
-                'account_id': pTradingAccount.AccountID,
+                'accountID': pTradingAccount.AccountID,
+                'brokerID': pTradingAccount.BrokerID,
                 'balance': pTradingAccount.Balance,
                 'available': pTradingAccount.Available,
-                'frozen_margin': pTradingAccount.FrozenMargin,
+                'frozenMargin': pTradingAccount.FrozenMargin,
+                'currMargin': pTradingAccount.CurrMargin,
                 'commission': pTradingAccount.Commission,
-                'close_profit': pTradingAccount.CloseProfit,
-                'position_profit': pTradingAccount.PositionProfit,
+                'closeProfit': pTradingAccount.CloseProfit,
+                'positionProfit': pTradingAccount.PositionProfit,
+                'deposit': pTradingAccount.Deposit,
+                'withdraw': pTradingAccount.Withdraw,
+                'preBalance': pTradingAccount.PreBalance,
+                'tradingDay': pTradingAccount.TradingDay,
             }
             if 'on_account' in self.api.callbacks:
                 self.api.callbacks['on_account'](data)
@@ -1039,6 +1108,44 @@ type WSMessageType =
   | 'error';            // 错误消息
 ```
 
+### 6.3 自定义业务接口
+
+CTP无原生接口，由后端从合约列表+行情数据聚合实现：
+
+```typescript
+// 期权T型报价（后端聚合）
+interface OptionChain {
+  underlying: string;           // 标的合约
+  expireDate: string;           // 到期日
+  calls: OptionQuote[];         // 看涨期权列表（按行权价排序）
+  puts: OptionQuote[];          // 看跌期权列表（按行权价排序）
+  updateTime: string;           // 更新时间
+}
+
+interface OptionQuote {
+  instrumentID: string;         // 合约代码
+  strikePrice: number;          // 行权价
+  lastPrice: number;            // 最新价
+  bidPrice: number;             // 买一价
+  askPrice: number;             // 卖一价
+  volume: number;               // 成交量
+  openInterest: number;         // 持仓量
+  impliedVolatility: number;    // 隐含波动率（Black-Scholes模型计算）
+}
+
+// 隐含波动率（后端Black-Scholes模型计算）
+interface VolatilityData {
+  instrumentID: string;         // 合约代码
+  impliedVolatility: number;    // 隐含波动率
+  underlyingPrice: number;      // 标的资产价格
+  strikePrice: number;          // 行权价
+  timeToExpiry: number;         // 到期时间（年）
+  riskFreeRate: number;         // 无风险利率
+  optionType: string;           // 期权类型（'call'/'put'）
+  updateTime: string;           // 更新时间
+}
+```
+
 ---
 
 ## 5. 数据流设计
@@ -1087,19 +1194,19 @@ interface MarketDataMessage {
 // 报单回报
 interface OrderReturnMessage {
   type: 'order_return';
-  data: OrderRecord;
+  data: OrderReturn;
 }
 
 // 成交回报
 interface TradeReturnMessage {
   type: 'trade_return';
-  data: TradeRecord;
+  data: TradeReturn;
 }
 
 // 持仓更新
 interface PositionUpdateMessage {
   type: 'position_update';
-  data: PositionRecord;
+  data: PositionInfo;
 }
 
 // 止损单状态更新
@@ -1112,8 +1219,8 @@ interface StopOrderUpdateMessage {
 interface ConnectionStatusMessage {
   type: 'connection_status';
   data: {
-    md_connected: boolean;
-    td_connected: boolean;
+    mdConnected: boolean;
+    tdConnected: boolean;
     message: string;
   };
 }
@@ -1124,7 +1231,7 @@ interface ErrorMessage {
   data: {
     code: string;
     message: string;
-    related_ref?: string;
+    relatedRef?: string;
   };
 }
 ```
@@ -1302,7 +1409,7 @@ feature/pr-3-market-ui
 | 序号 | 交付物 | 说明 |
 |------|--------|------|
 | 1 | 前端代码 | React + TypeScript + Vite，包含所有前端模块和组件 |
-| 2 | Python中间层代码 | FastAPI + openctp-ctp，包含API接口、CTP封装、WebSocket管理 |
+| 2 | Python中间层代码 | FastAPI + ctp-python，包含API接口、CTP封装、WebSocket管理 |
 | 3 | 项目文档 | README.md（项目说明、环境搭建、启动方式）、API文档 |
 | 4 | 测试用例文档 | 单元测试、集成测试、E2E测试用例 |
 
@@ -1313,10 +1420,13 @@ feature/pr-3-market-ui
 | 日期 | 版本 | 内容 | 状态 |
 |------|------|------|------|
 | 2026-07-08 | v1.0 | 初始化dev.md：代码目录结构、前端设计、后端设计、技术规范 | ✅ 完成 |
-| 2026-07-08 | v1.1 | CTP绑定改为openctp-ctp、错误码与design.md统一、WebSocket分端点设计、补充data目录和options.py | ✅ 完成 |
-| 2026-07-08 | v1.2 | 后端目录CTP封装层描述更新为openctp-ctp | ✅ 完成 |
+| 2026-07-08 | v1.1 | CTP绑定改为ctp-python、错误码与design.md统一、WebSocket分端点设计、补充data目录和options.py | ✅ 完成 |
+| 2026-07-08 | v1.2 | 后端目录CTP封装层描述更新为ctp-python | ✅ 完成 |
 | 2026-07-08 | v1.3 | 补充QuoteQuery、ContractQuery、StopOrderList组件职责说明 | ✅ 完成 |
 | 2026-07-08 | v1.4 | 回调处理代码更新为WebSocket分端点调用 | ✅ 完成 |
 | 2026-07-08 | v1.5 | 补充stop_order_update、connection_status、error消息契约定义 | ✅ 完成 |
 | 2026-07-08 | v1.6 | 错误处理代码更新为与错误码定义一致的字段名 | ✅ 完成 |
 | 2026-07-09 | v1.7 | 根据py-ctp.md和trader文件夹更新CTP API文档，补充详细实现代码 | ✅ 完成 |
+| 2026-07-10 | v1.8 | openctp-ctp改为ctp-python，与CLAUDE.md统一 | ✅ 完成 |
+| 2026-07-10 | v1.9 | 补充自定义业务接口（OptionChain、OptionQuote、VolatilityData），更新API路由职责 | ✅ 完成 |
+| 2026-07-10 | v1.8 | 更新Section 4.2 CTP封装代码为camelCase字段名，补全五档行情/报单/成交/持仓/资金/合约全部字段 | ✅ 完成 |

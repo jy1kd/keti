@@ -171,7 +171,7 @@ PR-1 [A] → PR-3 [A] → PR-5 [A] → PR-7 [A] → PR-9 [A] → PR-11 [A] → P
 
 | 风险点 | 影响 | 缓解措施 |
 |--------|------|----------|
-| PR-1 CTP验证失败 | 阻塞整个后端开发 | 提前调研openctp-ctp文档，准备备选方案 |
+| PR-1 CTP验证失败 | 阻塞整个后端开发 | 提前调研ctp-python文档，准备备选方案 |
 | PR-9延迟 | 阻塞PR-11、PR-13、PR-15 | 角色A优先完成PR-9 |
 | PR-11 + PR-13延迟 | 阻塞PR-16（前端查询面板） | 角色A优先完成PR-11，角色B可先开发PR-15 |
 | 角色B等待时间 | Week 3 Day 3-5角色A空闲 | 角色A协助角色B进行联调准备、编写测试用例 |
@@ -516,6 +516,8 @@ Week 3:
 | 2026-07-08 | v1.1 | 修复依赖关系、关键路径、角色A空闲期任务 | ✅ 完成 |
 | 2026-07-08 | v1.2 | 修复Section编号重复、Week 3时间线与对照表不一致 | ✅ 完成 |
 | 2026-07-09 | v1.3 | CTP连接验证完成，记录关键发现 | ✅ 完成 |
+| 2026-07-10 | v1.4 | openctp-ctp改为ctp-python，与CLAUDE.md统一 | ✅ 完成 |
+| 2026-07-10 | v1.5 | 补充真实API字段结构（ctp-api-structure.txt），更新CTP验证记录 | ✅ 完成 |
 
 ---
 
@@ -569,3 +571,35 @@ api.SubscribeMarketData(["au2506"])
 | 交易API连接 | ⏳ | 待PR-1后续开发 |
 | 报单提交 | ⏳ | 待PR-1后续开发 |
 | 市价单支持 | ⏳ | 待PR-1后续开发 |
+
+### 13.5 真实API字段结构
+
+**字段来源**：`docs/ctp-api-structure.txt`
+
+已通过SWIG反射探测的CTP字段结构（19个核心类）：
+
+| 类型 | CTP类名 | TypeScript接口 | 字段数 |
+|------|---------|---------------|--------|
+| 登录请求 | CThostFtdcReqUserLoginField | LoginRequest | 11 |
+| 登录响应 | CThostFtdcRspUserLoginField | LoginResponse | 15 |
+| 行情快照 | CThostFtdcDepthMarketDataField | MarketSnapshot | 50+ |
+| 报单请求 | CThostFtdcInputOrderField | OrderRequest | 30+ |
+| 报单回报 | CThostFtdcOrderField | OrderReturn | 50+ |
+| 成交回报 | CThostFtdcTradeField | TradeReturn | 30+ |
+| 撤单请求 | CThostFtdcInputOrderActionField | CancelOrderRequest | 18 |
+| 持仓信息 | CThostFtdcInvestorPositionField | PositionInfo | 40+ |
+| 账户资金 | CThostFtdcTradingAccountField | AccountInfo | 40+ |
+| 合约信息 | CThostFtdcInstrumentField | InstrumentInfo | 30+ |
+
+**自定义业务接口**（CTP无原生接口，后端聚合实现）：
+
+| 接口 | 说明 | 关键字段 |
+|------|------|----------|
+| OptionChain | 期权T型报价 | underlying, calls[], puts[] |
+| OptionQuote | 单个期权报价 | strikePrice, impliedVolatility |
+| VolatilityData | 隐含波动率 | Black-Scholes模型参数 |
+
+**关键发现**：
+- 所有字段命名采用camelCase（如 `instrumentID`, `lastPrice`, `bidPrice1`）
+- 期权相关字段在 InstrumentInfo 中：`optionsType`, `strikePrice`, `underlyingInstrID`
+- 五档深度字段：`bidPrice1-5`, `askPrice1-5`, `bidVolume1-5`, `askVolume1-5`

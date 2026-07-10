@@ -28,7 +28,7 @@
 │                              Python 中间层                               │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                     │
 │  │  FastAPI     │  │  WebSocket  │  │  CTP 封装层  │                     │
-│  │  (REST API)  │  │  Manager    │  │(openctp-ctp)│                     │
+│  │  (REST API)  │  │  Manager    │  │(ctp-python) │                     │
 │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘                     │
 │         │                │                │                             │
 │         └────────────────┴────────────────┘                             │
@@ -60,7 +60,7 @@
 | 后端框架 | FastAPI | 0.100+ | REST API服务 |
 | WebSocket | websockets | 11.x | 实时推送 |
 | CTP绑定 | ctp-python | latest | Python CTP封装库（SWIG封装，开箱即用） |
-| 包管理 | pnpm (前端) + pip (后端) | - | 依赖管理 |
+| 包管理 | npm (前端) + pip (后端) | - | 依赖管理 |
 
 ### 1.3 CTP API说明
 
@@ -261,36 +261,52 @@ type WSMessageType =
 {
   "type": "market_data",
   "data": {
-    "instrument_id": "au2406",
-    "last_price": 480.50,
-    "bid_price1": 480.40,
-    "bid_volume1": 10,
-    "bid_price2": 480.38,
-    "bid_volume2": 15,
-    "bid_price3": 480.36,
-    "bid_volume3": 20,
-    "bid_price4": 480.34,
-    "bid_volume4": 25,
-    "bid_price5": 480.32,
-    "bid_volume5": 30,
-    "ask_price1": 480.60,
-    "ask_volume1": 8,
-    "ask_price2": 480.62,
-    "ask_volume2": 12,
-    "ask_price3": 480.64,
-    "ask_volume3": 18,
-    "ask_price4": 480.66,
-    "ask_volume4": 22,
-    "ask_price5": 480.68,
-    "ask_volume5": 28,
+    "tradingDay": "20260710",
+    "instrumentID": "au2406",
+    "exchangeID": "SHFE",
+    "exchangeInstID": "au2406",
+    "lastPrice": 480.50,
+    "preSettlementPrice": 480.00,
+    "preClosePrice": 480.20,
+    "preOpenInterest": 67890.0,
+    "openPrice": 480.00,
+    "highestPrice": 481.00,
+    "lowestPrice": 479.50,
     "volume": 12345,
-    "open_interest": 67890,
-    "open_price": 480.00,
-    "high_price": 481.00,
-    "low_price": 479.50,
-    "pre_close_price": 480.20,
-    "spread": 0.20,
-    "update_time": "14:30:05"
+    "turnover": 5928345.00,
+    "openInterest": 67890.0,
+    "closePrice": 0.0,
+    "settlementPrice": 0.0,
+    "upperLimitPrice": 528.00,
+    "lowerLimitPrice": 432.00,
+    "bidPrice1": 480.40,
+    "bidVolume1": 10,
+    "askPrice1": 480.60,
+    "askVolume1": 8,
+    "bidPrice2": 480.38,
+    "bidVolume2": 15,
+    "askPrice2": 480.62,
+    "askVolume2": 12,
+    "bidPrice3": 480.36,
+    "bidVolume3": 20,
+    "askPrice3": 480.64,
+    "askVolume3": 18,
+    "bidPrice4": 480.34,
+    "bidVolume4": 25,
+    "askPrice4": 480.66,
+    "askVolume4": 22,
+    "bidPrice5": 480.32,
+    "bidVolume5": 30,
+    "askPrice5": 480.68,
+    "askVolume5": 28,
+    "averagePrice": 480.50,
+    "actionDay": "20260710",
+    "updateMillisec": 500,
+    "updateTime": "14:30:05",
+    "bandingUpperPrice": 0.0,
+    "bandingLowerPrice": 0.0,
+    "currDelta": 0.0,
+    "preDelta": 0.0
   }
 }
 ```
@@ -300,15 +316,16 @@ type WSMessageType =
 {
   "type": "order_return",
   "data": {
-    "order_ref": "123456",
-    "instrument_id": "au2406",
-    "direction": "buy",
-    "price": 480.50,
-    "volume": 1,
-    "volume_traded": 0,
-    "order_status": "submitted",
-    "status_msg": "报单已提交",
-    "insert_time": "14:30:10"
+    "orderRef": "123456",
+    "instrumentID": "au2406",
+    "direction": "0",
+    "combOffsetFlag": "0",
+    "limitPrice": 480.50,
+    "volumeTotalOriginal": 1,
+    "volumeTraded": 0,
+    "orderStatus": "0",
+    "statusMsg": "报单已提交",
+    "insertTime": "14:30:10"
   }
 }
 ```
@@ -318,13 +335,14 @@ type WSMessageType =
 {
   "type": "trade_return",
   "data": {
-    "trade_id": "T789",
-    "order_ref": "123456",
-    "instrument_id": "au2406",
-    "direction": "buy",
+    "tradeID": "T789",
+    "orderRef": "123456",
+    "instrumentID": "au2406",
+    "direction": "0",
+    "offsetFlag": "0",
     "price": 480.50,
     "volume": 1,
-    "trade_time": "14:30:11"
+    "tradeTime": "14:30:11"
   }
 }
 ```
@@ -334,14 +352,16 @@ type WSMessageType =
 {
   "type": "position_update",
   "data": {
-    "instrument_id": "au2406",
-    "direction": "long",
+    "instrumentID": "au2406",
+    "posiDirection": "2",
     "position": 5,
-    "position_cost": 480.00,
-    "position_profit": 2500.00,
-    "today_position": 2,
-    "yd_position": 3,
-    "update_time": "14:30:05"
+    "positionCost": 240000.00,
+    "positionProfit": 2500.00,
+    "todayPosition": 2,
+    "ydPosition": 3,
+    "openCost": 240000.00,
+    "useMargin": 24000.00,
+    "tradingDay": "20260710"
   }
 }
 ```
@@ -351,10 +371,10 @@ type WSMessageType =
 {
   "type": "stop_order_update",
   "data": {
-    "stop_order_ref": "SO123",
+    "stopOrderRef": "SO123",
     "status": "triggered",
-    "triggered_order_ref": "456789",
-    "triggered_at": "14:35:00"
+    "triggeredOrderRef": "456789",
+    "triggeredAt": "14:35:00"
   }
 }
 ```
@@ -364,8 +384,8 @@ type WSMessageType =
 {
   "type": "connection_status",
   "data": {
-    "md_connected": true,
-    "td_connected": true,
+    "mdConnected": true,
+    "tdConnected": true,
     "message": "连接已恢复"
   }
 }
@@ -378,7 +398,7 @@ type WSMessageType =
   "data": {
     "code": "ORDER_REJECTED",
     "message": "价格不合法",
-    "related_ref": "123456"
+    "relatedRef": "123456"
   }
 }
 ```
@@ -423,14 +443,14 @@ type WSMessageType =
 **报单请求格式**：
 ```json
 {
-  "instrument_id": "au2406",
-  "direction": "buy",           // buy/sell
-  "offset": "open",             // open/close/close_today
-  "price": 480.50,
-  "volume": 1,
-  "order_type": "limit",        // limit/market（价格类型）
-  "time_condition": "gfd",      // gfd/fok/fak（有效期/成交方式）
-  "stop_price": null            // 止损价（止损单时必填，由后端监控触发）
+  "instrumentID": "au2406",
+  "direction": "0",
+  "combOffsetFlag": "0",
+  "limitPrice": 480.50,
+  "volumeTotalOriginal": 1,
+  "orderPriceType": "2",
+  "timeCondition": "3",
+  "stopPrice": 0
 }
 ```
 
@@ -439,15 +459,16 @@ type WSMessageType =
 {
   "type": "order_return",
   "data": {
-    "order_ref": "123456",
-    "instrument_id": "au2406",
-    "direction": "buy",
-    "price": 480.50,
-    "volume": 1,
-    "volume_traded": 0,
-    "order_status": "submitted",  // submitted/partial/all_traded/canceled/rejected
-    "status_msg": "报单已提交",
-    "insert_time": "14:30:10"
+    "orderRef": "123456",
+    "instrumentID": "au2406",
+    "direction": "0",
+    "combOffsetFlag": "0",
+    "limitPrice": 480.50,
+    "volumeTotalOriginal": 1,
+    "volumeTraded": 0,
+    "orderStatus": "0",
+    "statusMsg": "报单已提交",
+    "insertTime": "14:30:10"
   }
 }
 ```
@@ -713,258 +734,502 @@ function handleNewData(newRecord) {
 
 ### 4.6 数据模型
 
-**OrderRequest**：
-```typescript
-interface OrderRequest {
-  instrument_id: string;      // 合约代码
-  direction: 'buy' | 'sell';  // 买卖方向
-  offset: 'open' | 'close' | 'close_today'; // 开平标志
-  price: number;              // 报单价格
-  volume: number;             // 报单数量
-  order_type: 'limit' | 'market';  // 价格类型（限价/市价）。市价单需设置CTP的OrderPriceType字段，开发前需验证simnow市价单支持情况。不支持时降级为对手价+滑点模拟
-  time_condition: 'gfd' | 'fok' | 'fak';  // 有效期/成交方式
-  stop_price?: number;        // 止损价（止损单时必填，由后端监控触发）
-}
-```
+#### CTP标准接口（7个）
 
 **MarketSnapshot**：
 ```typescript
+// 对应CTP: CThostFtdcDepthMarketDataField
 interface MarketSnapshot {
-  instrument_id: string;
-  last_price: number;
-  // 五档行情
-  bid_price1: number;
-  bid_volume1: number;
-  bid_price2: number;
-  bid_volume2: number;
-  bid_price3: number;
-  bid_volume3: number;
-  bid_price4: number;
-  bid_volume4: number;
-  bid_price5: number;
-  bid_volume5: number;
-  ask_price1: number;
-  ask_volume1: number;
-  ask_price2: number;
-  ask_volume2: number;
-  ask_price3: number;
-  ask_volume3: number;
-  ask_price4: number;
-  ask_volume4: number;
-  ask_price5: number;
-  ask_volume5: number;
-  // 基础信息
-  volume: number;
-  open_interest: number;
-  open_price: number;
-  high_price: number;
-  low_price: number;
-  pre_close_price: number;
-  // 价差
-  spread: number;             // 买卖价差（ask1 - bid1）
-  update_time: string;
+  actionDay: string;           // 业务日期
+  askPrice1: number;           // 卖一价
+  askPrice2: number;           // 卖二价
+  askPrice3: number;           // 卖三价
+  askPrice4: number;           // 卖四价
+  askPrice5: number;           // 卖五价
+  askVolume1: number;          // 卖一量
+  askVolume2: number;          // 卖二量
+  askVolume3: number;          // 卖三量
+  askVolume4: number;          // 卖四量
+  askVolume5: number;          // 卖五量
+  averagePrice: number;        // 当日均价
+  bandingLowerPrice: number;   // 下限价
+  bandingUpperPrice: number;   // 上限价
+  bidPrice1: number;           // 买一价
+  bidPrice2: number;           // 买二价
+  bidPrice3: number;           // 买三价
+  bidPrice4: number;           // 买四价
+  bidPrice5: number;           // 买五价
+  bidVolume1: number;          // 买一量
+  bidVolume2: number;          // 买二量
+  bidVolume3: number;          // 买三量
+  bidVolume4: number;          // 买四量
+  bidVolume5: number;          // 买五量
+  closePrice: number;          // 今收盘
+  currDelta: number;           // 当前虚实度
+  exchangeID: string;          // 交易所代码
+  exchangeInstID: string;      // 合约在交易所的代码
+  highestPrice: number;        // 最高价
+  instrumentID: string;        // 合约代码
+  lastPrice: number;           // 最新价
+  lowerLimitPrice: number;     // 最低价
+  lowestPrice: number;         // 最低价
+  openInterest: number;        // 持仓量
+  openPrice: number;           // 今开盘
+  preClosePrice: number;       // 昨收盘
+  preDelta: number;            // 昨虚实度
+  preOpenInterest: number;     // 昨持仓量
+  preSettlementPrice: number;  // 昨结算价
+  settlementPrice: number;     // 今结算价
+  tradingDay: string;          // 交易日
+  turnover: number;            // 成交额
+  updateMillisec: number;      // 最后修改毫秒
+  updateTime: string;          // 最后修改时间
+  upperLimitPrice: number;     // 涨停板价
+  volume: number;              // 成交量
 }
 ```
 
-**OrderRecord**：
+**OrderRequest**：
 ```typescript
-interface OrderRecord {
-  order_ref: string;
-  instrument_id: string;
-  direction: 'buy' | 'sell';
-  offset: 'open' | 'close' | 'close_today';
-  price: number;
-  volume: number;
-  volume_traded: number;
-  order_status: 'submitted' | 'partial' | 'all_traded' | 'canceled' | 'rejected';
-  status_msg: string;
-  insert_time: string;
+// 对应CTP: CThostFtdcInputOrderField
+interface OrderRequest {
+  accountID: string;               // 投资者账号
+  brokerID: string;                // 经纪公司代码
+  businessUnit: string;            // 业务单元
+  clientID: string;                // 客户代码
+  combHedgeFlag: string;           // 组合投机套保标志
+  combOffsetFlag: string;          // 组合开平标志
+  contingentCondition: string;     // 触发条件
+  currencyID: string;              // 币种代码
+  direction: string;               // 买卖方向
+  exchangeID: string;              // 交易所代码
+  forceCloseReason: string;        // 强平原因
+  gTDDate: string;                 // GTD日期
+  iPAddress: string;               // IP地址
+  instrumentID: string;            // 合约代码
+  investUnitID: string;            // 投资单元代码
+  investorID: string;              // 投资者代码
+  isAutoSuspend: number;           // 自动挂起标志
+  isSwapOrder: number;             // 互换单标志
+  limitPrice: number;              // 价格
+  macAddress: string;              // Mac地址
+  minVolume: number;               // 最小成交量
+  orderMemo: string;               // 报单附言
+  orderPriceType: string;          // 报单价格条件
+  orderRef: string;                // 报单引用
+  requestID: number;               // 请求编号
+  sessionReqSeq: number;           // 会话请求序号
+  stopPrice: number;               // 止损价
+  timeCondition: string;           // 有效期类型
+  userForceClose: number;          // 用户强评标志
+  userID: string;                  // 用户代码
+  volumeCondition: string;         // 成交量类型
+  volumeTotalOriginal: number;     // 报单数量
+}
+```
+
+**OrderReturn**：
+```typescript
+// 对应CTP: CThostFtdcOrderField
+interface OrderReturn {
+  accountID: string;               // 投资者账号
+  activeTime: string;              // 激活时间
+  activeTraderID: string;          // 最后修改交易所交易员代码
+  activeUserID: string;            // 操作用户代码
+  branchID: string;                // 期商分支机构代码
+  brokerID: string;                // 经纪公司代码
+  brokerOrderSeq: number;          // 经纪公司报单编号
+  businessUnit: string;            // 业务单元
+  cancelTime: string;              // 撤销时间
+  clearingPartID: string;          // 结算会员编号
+  clientID: string;                // 客户代码
+  combHedgeFlag: string;           // 组合投机套保标志
+  combOffsetFlag: string;          // 组合开平标志
+  contingentCondition: string;     // 触发条件
+  currencyID: string;              // 币种代码
+  direction: string;               // 买卖方向
+  exchangeID: string;              // 交易所代码
+  exchangeInstID: string;          // 合约在交易所的代码
+  forceCloseReason: string;        // 强平原因
+  frontID: number;                 // 前置编号
+  gTDDate: string;                 // GTD日期
+  iPAddress: string;               // IP地址
+  insertDate: string;              // 报单日期
+  insertTime: string;              // 委托时间
+  installID: number;               // 安装编号
+  instrumentID: string;            // 合约代码
+  investUnitID: string;            // 投资单元代码
+  investorID: string;              // 投资者代码
+  isAutoSuspend: number;           // 自动挂起标志
+  isSwapOrder: number;             // 互换单标志
+  limitPrice: number;              // 价格
+  macAddress: string;              // Mac地址
+  minVolume: number;               // 最小成交量
+  notifySequence: number;          // 报单提示序号
+  orderLocalID: string;            // 本地报单编号
+  orderMemo: string;               // 报单附言
+  orderPriceType: string;          // 报单价格条件
+  orderRef: string;                // 报单引用
+  orderSource: string;             // 报单来源
+  orderStatus: string;             // 报单状态
+  orderSubmitStatus: string;       // 报单提交状态
+  orderSysID: string;              // 报单编号
+  orderType: string;               // 报单类型
+  participantID: string;           // 会员代码
+  relativeOrderSysID: string;      // 相关报单编号
+  requestID: number;               // 请求编号
+  sequenceNo: number;              // 序列编号
+  sessionID: number;               // 会话编号
+  sessionReqSeq: number;           // 会话请求序号
+  settlementID: number;            // 结算编号
+  statusMsg: string;               // 状态信息
+  stopPrice: number;               // 止损价
+  suspendTime: string;             // 挂起时间
+  timeCondition: string;           // 有效期类型
+  traderID: string;                // 交易所交易员代码
+  tradingDay: string;              // 交易日
+  updateTime: string;              // 最后修改时间
+  userForceClose: number;          // 用户强评标志
+  userID: string;                  // 用户代码
+  userProductInfo: string;         // 用户端产品信息
+  volumeCondition: string;         // 成交量类型
+  volumeTotal: number;             // 剩余数量
+  volumeTotalOriginal: number;     // 报单数量
+  volumeTraded: number;            // 今成交数量
+  zCETotalTradedVolume: number;    // 郑商所成交数量
+}
+```
+
+**TradeReturn**：
+```typescript
+// 对应CTP: CThostFtdcTradeField
+interface TradeReturn {
+  brokerID: string;                // 经纪公司代码
+  brokerOrderSeq: number;          // 经纪公司报单编号
+  businessUnit: string;            // 业务单元
+  clearingPartID: string;          // 结算会员编号
+  clientID: string;                // 客户代码
+  direction: string;               // 买卖方向
+  exchangeID: string;              // 交易所代码
+  exchangeInstID: string;          // 合约在交易所的代码
+  hedgeFlag: string;               // 投机套保标志
+  instrumentID: string;            // 合约代码
+  investUnitID: string;            // 投资单元代码
+  investorID: string;              // 投资者代码
+  offsetFlag: string;              // 开平标志
+  orderLocalID: string;            // 本地报单编号
+  orderRef: string;                // 报单引用
+  orderSysID: string;              // 报单编号
+  participantID: string;           // 会员代码
+  price: number;                   // 价格
+  priceSource: string;             // 成交价来源
+  sequenceNo: number;              // 序列编号
+  settlementID: number;            // 结算编号
+  tradeDate: string;               // 成交时期
+  tradeID: string;                 // 成交编号
+  tradeSource: string;             // 成交来源
+  tradeTime: string;               // 成交时间
+  tradeType: string;               // 成交类型
+  traderID: string;                // 交易所交易员代码
+  tradingDay: string;              // 交易日
+  tradingRole: string;             // 交易角色
+  userID: string;                  // 用户代码
+  volume: number;                  // 数量
+}
+```
+
+**PositionInfo**：
+```typescript
+// 对应CTP: CThostFtdcInvestorPositionField
+interface PositionInfo {
+  abandonFrozen: number;           // 放弃数量冻结
+  brokerID: string;                // 经纪公司代码
+  cashIn: number;                  // 资金差额
+  closeAmount: number;             // 平仓金额
+  closeProfit: number;             // 平仓盈亏
+  closeProfitByDate: number;       // 逐日平仓盈亏
+  closeProfitByTrade: number;      // 逐笔平仓盈亏
+  closeVolume: number;             // 平仓量
+  combLongFrozen: number;          // 组合多头冻结
+  combPosition: number;            // 组合持仓
+  combShortFrozen: number;         // 组合空头冻结
+  commission: number;              // 手续费
+  exchangeID: string;              // 交易所代码
+  exchangeMargin: number;          // 交易所保证金
+  frozenCash: number;              // 冻结资金
+  frozenCommission: number;        // 冻结手续费
+  frozenMargin: number;            // 冻结保证金
+  hedgeFlag: string;               // 投机套保标志
+  instrumentID: string;            // 合约代码
+  investUnitID: string;            // 投资单元代码
+  investorID: string;              // 投资者代码
+  longFrozen: number;              // 多头冻结
+  longFrozenAmount: number;        // 多头冻结金额
+  marginRateByMoney: number;       // 保证金率
+  marginRateByVolume: number;      // 保证金率(按手数)
+  openAmount: number;              // 开仓金额
+  openCost: number;                // 开仓成本
+  openVolume: number;              // 开仓量
+  posiDirection: string;           // 持仓多空方向
+  position: number;                // 今日持仓
+  positionCost: number;            // 持仓成本
+  positionCostOffset: number;      // 持仓成本差值
+  positionDate: string;            // 持仓日期
+  positionProfit: number;          // 持仓盈亏
+  preMargin: number;               // 上次占用的保证金
+  preSettlementPrice: number;      // 上次结算价
+  settlementID: number;            // 结算编号
+  settlementPrice: number;         // 本次结算价
+  shortFrozen: number;             // 空头冻结
+  shortFrozenAmount: number;       // 空头冻结金额
+  strikeFrozen: number;            // 执行冻结
+  strikeFrozenAmount: number;      // 执行冻结金额
+  tasPosition: number;             // TAS持仓
+  tasPositionCost: number;         // TAS持仓成本
+  todayPosition: number;           // 今日持仓
+  tradingDay: string;              // 交易日
+  useMargin: number;               // 占用保证金
+  ydPosition: number;              // 上日持仓
+  ydStrikeFrozen: number;          // 执行冻结的昨仓
+}
+```
+
+**AccountInfo**：
+```typescript
+// 对应CTP: CThostFtdcTradingAccountField
+interface AccountInfo {
+  accountID: string;               // 投资者账号
+  available: number;               // 可用资金
+  balance: number;                 // 期货结算准备金
+  bizType: string;                 // 业务类型
+  brokerID: string;                // 经纪公司代码
+  cashIn: number;                  // 资金差额
+  closeProfit: number;             // 平仓盈亏
+  commission: number;              // 手续费
+  credit: number;                  // 信用额度
+  currMargin: number;              // 当前保证金总额
+  currencyID: string;              // 币种代码
+  deliveryMargin: number;          // 投资者交割保证金
+  deposit: number;                 // 入金金额
+  exchangeDeliveryMargin: number;  // 交易所交割保证金
+  exchangeMargin: number;          // 交易所保证金
+  frozenCash: number;              // 冻结的资金
+  frozenCommission: number;        // 冻结的手续费
+  frozenMargin: number;            // 冻结的保证金
+  frozenSwap: number;              // 多交割品价差冻结资金
+  fundMortgageAvailable: number;   // 货币质押余额
+  fundMortgageIn: number;          // 货币质入金额
+  fundMortgageOut: number;         // 货币质出金额
+  interest: number;                // 利息收入
+  interestBase: number;            // 利息基数
+  mortgage: number;                // 质押金额
+  mortgageableFund: number;        // 可质押货币金额
+  positionProfit: number;          // 持仓盈亏
+  preBalance: number;              // 上次结算准备金
+  preCredit: number;               // 上次信用额度
+  preDeposit: number;              // 上次存款额
+  preFundMortgageIn: number;       // 上次货币质入金额
+  preFundMortgageOut: number;      // 上次货币质出金额
+  preMargin: number;               // 上次占用的保证金
+  preMortgage: number;             // 上次质押金额
+  remainSwap: number;              // 多交割品价差剩余资金
+  reserve: number;                 // 基本准备金
+  reserveBalance: number;          // 保底期货结算准备金
+  settlementID: number;            // 结算编号
+  specProductCloseProfit: number;  // 特殊产品平仓盈亏
+  specProductCommission: number;   // 特殊产品手续费
+  specProductExchangeMargin: number; // 特殊产品交易所保证金
+  specProductFrozenCommission: number; // 特殊产品冻结手续费
+  specProductFrozenMargin: number; // 特殊产品冻结保证金
+  specProductMargin: number;       // 特殊产品占用保证金
+  specProductPositionProfit: number; // 特殊产品持仓盈亏
+  specProductPositionProfitByAlg: number; // 特殊产品持仓盈亏算法
+  tradingDay: string;              // 交易日
+  withdraw: number;                // 出金金额
+  withdrawQuota: number;           // 可取资金
+}
+```
+
+**InstrumentInfo**：
+```typescript
+// 对应CTP: CThostFtdcInstrumentField
+interface InstrumentInfo {
+  combinationType: string;         // 组合类型
+  createDate: string;              // 创建日
+  deliveryMonth: number;           // 交割月
+  deliveryYear: number;            // 交割年份
+  endDelivDate: string;            // 结束交割日
+  exchangeID: string;              // 交易所代码
+  exchangeInstID: string;          // 合约在交易所的代码
+  expireDate: string;              // 到期日
+  instLifePhase: string;           // 合约生命周期状态
+  instrumentID: string;            // 合约代码
+  instrumentName: string;          // 合约名称
+  isTrading: number;               // 当前是否交易
+  longMarginRatio: number;         // 多头保证金率
+  maxLimitOrderVolume: number;     // 限价单最大下单量
+  maxMarginSideAlgorithm: string;  // 是否使用大额单边保证金算法
+  maxMarketOrderVolume: number;    // 市价单最大下单量
+  minLimitOrderVolume: number;     // 限价单最小下单量
+  minMarketOrderVolume: number;    // 市价单最小下单量
+  openDate: string;                // 上市日
+  optionsType: string;             // 期权类型
+  positionDateType: string;        // 持仓日期类型
+  positionType: string;            // 持仓类型
+  priceTick: number;               // 最小变动价位
+  productClass: string;            // 产品类型
+  productID: string;               // 产品代码
+  shortMarginRatio: number;        // 空头保证金率
+  startDelivDate: string;          // 开始交割日
+  strikePrice: number;             // 执行价
+  underlyingInstrID: string;       // 基础商品代码
+  underlyingMultiple: number;      // 合约基础商品乘数
+  volumeMultiple: number;          // 合约乘数
+}
+```
+
+#### 自定义业务接口（10个）
+
+**OrderStatus**（报单状态）：
+```typescript
+interface OrderStatus {
+  orderRef: string;                // 报单引用
+  instrumentID: string;            // 合约代码
+  direction: string;               // 买卖方向
+  combOffsetFlag: string;          // 组合开平标志
+  limitPrice: number;              // 报单价格
+  volumeTotalOriginal: number;     // 报单数量
+  volumeTraded: number;            // 已成交数量
+  orderStatus: string;             // 报单状态
+  statusMsg: string;               // 状态信息
+  insertTime: string;              // 报单时间
 }
 ```
 
 **StopOrderRequest**（止损单请求）：
 ```typescript
 interface StopOrderRequest {
-  instrument_id: string;      // 合约代码
-  direction: 'buy' | 'sell';  // 买卖方向
-  offset: 'open' | 'close' | 'close_today'; // 开平标志
-  price: number;              // 报单价格（触发后的报单价格）
-  volume: number;             // 报单数量
-  stop_price: number;         // 止损价（必填）
-  time_condition: 'gfd' | 'fok' | 'fak';  // 有效期/成交方式（默认gfd）
+  instrumentID: string;            // 合约代码
+  direction: string;               // 买卖方向
+  combOffsetFlag: string;          // 组合开平标志
+  limitPrice: number;              // 报单价格（触发后的报单价格）
+  volumeTotalOriginal: number;     // 报单数量
+  stopPrice: number;               // 止损价（必填）
+  timeCondition: string;           // 有效期类型（默认GFD）
 }
 ```
 
 **StopOrder**（止损单状态）：
 ```typescript
 interface StopOrder {
-  stop_order_ref: string;     // 止损单引用
-  instrument_id: string;      // 合约代码
-  direction: 'buy' | 'sell';  // 买卖方向
-  offset: 'open' | 'close' | 'close_today'; // 开平标志
-  price: number;              // 报单价格
-  volume: number;             // 报单数量
-  stop_price: number;         // 止损价
-  status: 'pending' | 'triggered' | 'trigger_failed' | 'canceled'; // 状态
-  triggered_order_ref?: string; // 触发后的报单引用
-  created_at: string;         // 创建时间
-  triggered_at?: string;      // 触发时间
-}
-```
-
-**AccountInfo**（账户资金）：
-```typescript
-interface AccountInfo {
-  account_id: string;        // 资金账号
-  balance: number;           // 余额（权益）
-  available: number;         // 可用资金
-  frozen_margin: number;     // 冻结保证金
-  frozen_cash: number;       // 冻结资金
-  commission: number;         // 手续费
-  close_profit: number;      // 平仓盈亏
-  position_profit: number;   // 持仓盈亏
-  risk_ratio: number;        // 风险度（保证金/权益）
-  update_time: string;
+  stopOrderRef: string;            // 止损单引用
+  instrumentID: string;            // 合约代码
+  direction: string;               // 买卖方向
+  combOffsetFlag: string;          // 组合开平标志
+  limitPrice: number;              // 报单价格
+  volumeTotalOriginal: number;     // 报单数量
+  stopPrice: number;               // 止损价
+  status: string;                  // 状态（pending/triggered/trigger_failed/canceled）
+  triggeredOrderRef?: string;      // 触发后的报单引用
+  createdAt: string;               // 创建时间
+  triggeredAt?: string;            // 触发时间
 }
 ```
 
 **QuoteDepth**（报价深度）：
 ```typescript
 interface QuoteDepth {
-  instrument_id: string;
-  bid_prices: number[];    // 买一到买五价格
-  bid_volumes: number[];   // 买一到买五数量
-  ask_prices: number[];    // 卖一到卖五价格
-  ask_volumes: number[];   // 卖一到卖五数量
-  update_time: string;
+  instrumentID: string;            // 合约代码
+  bidPrices: number[];             // 买一到买五价格
+  bidVolumes: number[];            // 买一到买五数量
+  askPrices: number[];             // 卖一到卖五价格
+  askVolumes: number[];            // 卖一到卖五数量
+  updateTime: string;              // 更新时间
 }
 ```
 
-**ContractInfo**（合约信息）：
+**ContractInfo**（合约信息，InstrumentInfo别名）：
 ```typescript
+// 业务层别名，对应CTP: CThostFtdcInstrumentField
 interface ContractInfo {
-  instrument_id: string;
-  instrument_name: string;
-  exchange_id: string;
-  product_id: string;
-  volume_multiple: number;   // 合约乘数
-  price_tick: number;        // 最小变动价位
-  expire_date: string;       // 到期日
-  is_trading: boolean;       // 是否可交易
+  instrumentID: string;            // 合约代码
+  instrumentName: string;          // 合约名称
+  exchangeID: string;              // 交易所代码
+  productID: string;               // 产品代码
+  volumeMultiple: number;          // 合约乘数
+  priceTick: number;               // 最小变动价位
+  expireDate: string;              // 到期日
+  isTrading: number;               // 是否可交易
 }
 ```
 
 **KLineData**（K线数据）：
 ```typescript
 interface KLineData {
-  timestamp: number;         // 时间戳
-  open: number;              // 开盘价
-  high: number;              // 最高价
-  low: number;               // 最低价
-  close: number;             // 收盘价
-  volume: number;            // 成交量
-  open_interest: number;     // 持仓量
+  timestamp: number;               // 时间戳
+  open: number;                    // 开盘价
+  high: number;                    // 最高价
+  low: number;                     // 最低价
+  close: number;                   // 收盘价
+  volume: number;                  // 成交量
+  openInterest: number;            // 持仓量
 }
 ```
 
 **DepthData**（五档行情深度）：
 ```typescript
 interface DepthData {
-  instrument_id: string;
+  instrumentID: string;            // 合约代码
   bids: Array<{price: number, volume: number}>;  // 买一到买五
   asks: Array<{price: number, volume: number}>;  // 卖一到卖五
-  update_time: string;
+  updateTime: string;              // 更新时间
 }
 ```
 
 **VolatilityData**（波动率数据）：
 ```typescript
 interface VolatilityData {
-  instrument_id: string;
-  implied_volatility: number;  // 隐含波动率（基于Black-Scholes模型计算）
-  // historical_volatility: number; // 历史波动率（P2，需额外数据源，暂不实现）
-  update_time: string;
-}
-```
-
-**TradeRecord**（成交记录）：
-```typescript
-interface TradeRecord {
-  trade_id: string;           // 成交编号
-  order_ref: string;          // 报单引用
-  instrument_id: string;      // 合约代码
-  direction: 'buy' | 'sell';  // 买卖方向
-  offset: 'open' | 'close' | 'close_today'; // 开平标志
-  price: number;              // 成交价格
-  volume: number;             // 成交数量
-  trade_time: string;         // 成交时间
-}
-```
-
-**PositionRecord**（持仓记录）：
-```typescript
-interface PositionRecord {
-  instrument_id: string;      // 合约代码
-  direction: 'long' | 'short'; // 持仓方向
-  position: number;           // 持仓数量
-  position_cost: number;      // 持仓成本
-  position_profit: number;    // 持仓盈亏
-  today_position: number;     // 今仓数量
-  yd_position: number;        // 昨仓数量
-  update_time: string;
-}
-```
-
-**OrderStatus**（报单状态）：
-```typescript
-interface OrderStatus {
-  order_ref: string;          // 报单引用
-  instrument_id: string;      // 合约代码
-  direction: 'buy' | 'sell';  // 买卖方向
-  offset: 'open' | 'close' | 'close_today'; // 开平标志
-  price: number;              // 报单价格
-  volume: number;             // 报单数量
-  volume_traded: number;      // 已成交数量
-  order_status: 'submitted' | 'partial' | 'all_traded' | 'canceled' | 'rejected'; // 报单状态
-  status_msg: string;         // 状态信息
-  insert_time: string;        // 报单时间
+  instrumentID: string;            // 合约代码
+  impliedVolatility: number;       // 隐含波动率（基于Black-Scholes模型计算）
+  // historicalVolatility: number; // 历史波动率（P2，需额外数据源，暂不实现）
+  updateTime: string;              // 更新时间
 }
 ```
 
 **OptionContract**（期权合约）：
 ```typescript
 interface OptionContract {
-  instrument_id: string;      // 合约代码
-  instrument_name: string;    // 合约名称
-  underlying: string;         // 标的合约
-  option_type: 'call' | 'put'; // 期权类型（看涨/看跌）
-  strike_price: number;       // 行权价
-  expire_date: string;        // 到期日
-  volume_multiple: number;    // 合约乘数
-  price_tick: number;         // 最小变动价位
-  is_trading: boolean;        // 是否可交易
+  instrumentID: string;            // 合约代码
+  instrumentName: string;          // 合约名称
+  underlying: string;              // 标的合约
+  optionsType: string;             // 期权类型（call/put）
+  strikePrice: number;             // 行权价
+  expireDate: string;              // 到期日
+  volumeMultiple: number;          // 合约乘数
+  priceTick: number;               // 最小变动价位
+  isTrading: number;               // 是否可交易
 }
 ```
 
-**OptionChain**（期权T型报价）：
+**OptionChain + OptionQuote**（期权T型报价）：
 ```typescript
 interface OptionChain {
-  underlying: string;         // 标的合约
-  expire_date: string;        // 到期日
-  calls: OptionQuote[];       // 看涨期权列表（按行权价排序）
-  puts: OptionQuote[];        // 看跌期权列表（按行权价排序）
-  update_time: string;
+  underlying: string;              // 标的合约
+  expireDate: string;              // 到期日
+  calls: OptionQuote[];            // 看涨期权列表（按行权价排序）
+  puts: OptionQuote[];             // 看跌期权列表（按行权价排序）
+  updateTime: string;              // 更新时间
 }
 
 interface OptionQuote {
-  instrument_id: string;      // 合约代码
-  strike_price: number;       // 行权价
-  last_price: number;         // 最新价
-  bid_price: number;          // 买一价
-  ask_price: number;          // 卖一价
-  volume: number;             // 成交量
-  open_interest: number;      // 持仓量
-  implied_volatility: number; // 隐含波动率
+  instrumentID: string;            // 合约代码
+  strikePrice: number;             // 行权价
+  lastPrice: number;               // 最新价
+  bidPrice: number;                // 买一价
+  askPrice: number;                // 卖一价
+  volume: number;                  // 成交量
+  openInterest: number;            // 持仓量
+  impliedVolatility: number;       // 隐含波动率
 }
 ```
 
@@ -1130,19 +1395,17 @@ interface OptionQuote {
 
 ```bash
 # 安装Node.js (推荐v18+)
-# 安装pnpm
-npm install -g pnpm
 
 # 创建项目
-pnpm create vite trader-frontend --template react-ts
+npm create vite trader-frontend -- --template react-ts
 cd trader-frontend
 
 # 安装依赖
-pnpm install
-pnpm add @visactor/vtable zustand axios echarts
+npm install
+npm install @visactor/vtable zustand axios echarts
 
 # 启动开发服务器
-pnpm dev
+npm run dev
 ```
 
 ### 7.2 后端环境
@@ -1154,7 +1417,7 @@ python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # 安装依赖
-pip install fastapi uvicorn websockets pydantic openctp-ctp
+pip install fastapi uvicorn websockets ctp-python
 
 # 启动服务
 uvicorn main:app --reload --port 8000
@@ -1168,12 +1431,11 @@ uvicorn main:app --reload --port 8000
    - 行情API DLL：`trader/mduserapi/v6.7.13_20260225_winApi/mduserapi/20260225_mduserapi64_se_windows/thostmduserapi_se.dll`
    - 交易API DLL：`trader/traderapi/v6.7.13_20260225_winApi/traderapi/20260225_traderapi64_se_windows/thosttraderapi_se.dll`
    - 头文件（参考用）：`ThostFtdcMdApi.h`、`ThostFtdcTraderApi.h`、`ThostFtdcUserApiStruct.h`、`ThostFtdcUserApiDataType.h`
-4. Python CTP封装库（openctp-ctp）：
-   - 使用`openctp-ctp`库，已处理SWIG绑定，开箱即用
-   - 安装：`pip install openctp-ctp`
-   - GitHub：https://github.com/openctp/openctp-ctp
+4. Python CTP封装库（ctp-python）：
+   - 使用`ctp-python`库，SWIG封装，开箱即用
+   - 安装：`pip install ctp-python`
    - **开发前必须完成技术Spike验证**：
-     ① 能否通过openctp-ctp成功加载DLL并创建API实例
+     ① 能否通过ctp-python成功加载DLL并创建API实例
      ② 能否成功连接到simnow模拟柜台并登录
      ③ 能否收到行情回调（OnRtnDepthMarketData）
      ④ 能否成功提交一笔报单并收到回报（OnRtnOrder）
@@ -1258,8 +1520,8 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 | 2026-07-07 | v0.9 | PRD功能补充：五档行情、K线图、波动率、价格步进、价差显示、一键反向/锁仓、点击持仓平仓 | ✅ 完成 |
 | 2026-07-08 | v1.0 | 文档完善：WebSocket消息协议、断线重连、止损单持久化、错误码定义、可行性验证闭环、数据模型补充、接口搜索功能 | ✅ 完成 |
 | 2026-07-08 | v1.1 | 实时数据展示方案：行情批量更新(50ms)、查询数据增量更新、新数据高亮、自动滚动、暂停更新、时间倒序 | ✅ 完成 |
-| 2026-07-08 | v1.2 | CTP绑定方案：从SWIG改为openctp-ctp封装库（开箱即用，无需编译） | ✅ 完成 |
-| - | v1.3 | 技术Spike：openctp-ctp验证（DLL加载、登录、行情回调、报单回调）【对应里程碑M0】 | ⏳ 待开始 |
+| 2026-07-08 | v1.2 | CTP绑定方案：从SWIG改为ctp-python封装库（开箱即用，无需编译） | ✅ 完成 |
+| - | v1.3 | 技术Spike：ctp-python验证（DLL加载、登录、行情回调、报单回调）【对应里程碑M0】 | ⏳ 待开始 |
 | - | v1.4 | Python中间层开发（含止损单监控服务、断线重连、止损单持久化、错误处理）【对应里程碑M1】 | ⏳ 待开始 |
 | - | v1.5 | 前端行情模块开发（vtable高性能渲染、点价报单、期权T型报价、K线图、WebSocket消息处理）【对应里程碑M2】 | ⏳ 待开始 |
 | - | v1.6 | 前端报单模块开发（快捷键、批量撤单、一键反向/锁仓、止损单提交）【对应里程碑M3】 | ⏳ 待开始 |
@@ -1279,7 +1541,7 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 | **C** | **Python+React** | **DLL对接简单、前端体验好** | **两套语言栈** | **✅ 选择** |
 
 **选择方案C的理由**：
-1. Python的openctp-ctp封装库是成熟的CTP对接方案，开箱即用
+1. Python的ctp-python封装库是成熟的CTP对接方案，开箱即用
 2. React+vtable满足高性能表格需求
 3. WebSocket实现行情实时推送
 4. 两套语言栈的维护成本可接受
@@ -1290,5 +1552,5 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 |--------|----------|------|
 | vtable性能 | vtable支持虚拟滚动和增量渲染，官方示例可处理10万+行数据 | ✅ 可行 |
 | CTP回调转WebSocket | Python回调函数可直接调用WebSocket推送，延迟<1ms | ✅ 可行 |
-| DLL加载 | openctp-ctp库已封装CTP API，支持v6.7.13版本，开箱即用 | ✅ 可行 |
+| DLL加载 | ctp-python库已封装CTP API，支持v6.7.13版本，开箱即用 | ✅ 可行 |
 | 100合约+10档深度 | 100×10×2×8bytes=16KB/次，WebSocket带宽充足 | ✅ 可行 |

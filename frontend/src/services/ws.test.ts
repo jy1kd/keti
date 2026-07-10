@@ -63,9 +63,9 @@ describe('WSManager', () => {
     const callback = vi.fn()
     manager.connect('market', callback)
     MockWebSocket.instances[0].onmessage?.({
-      data: JSON.stringify({ type: 'market_data', data: { instrument_id: 'au2406' } }),
+      data: JSON.stringify({ type: 'market_data', data: { instrumentID: 'au2406' } }),
     })
-    expect(callback).toHaveBeenCalledWith({ type: 'market_data', data: { instrument_id: 'au2406' } })
+    expect(callback).toHaveBeenCalledWith({ type: 'market_data', data: { instrumentID: 'au2406' } })
   })
 
   it('disconnect 关闭指定端点的连接', () => {
