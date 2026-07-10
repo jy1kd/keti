@@ -23,8 +23,11 @@ from ctp_wrapper.trader_api import TraderApi
 from ctp_wrapper.types import Direction, OffsetFlag, OrderPriceType
 
 
-# Default test instrument — override via CTP_TEST_INSTRUMENT env var
-_TEST_INSTRUMENT = os.getenv("CTP_TEST_INSTRUMENT", "au2506")
+# Default test instruments — override via CTP_TEST_INSTRUMENT env var
+# Supports comma-separated list (e.g. "IF2607,IF2608,IF2609")
+_test_instruments_str = os.getenv("CTP_TEST_INSTRUMENT", "au2506")
+_TEST_INSTRUMENTS = [s.strip() for s in _test_instruments_str.split(",")]
+_TEST_INSTRUMENT = _TEST_INSTRUMENTS[0]  # Use first for single-instrument calls
 
 
 def print_separator(title: str) -> None:
@@ -123,10 +126,10 @@ def verify_md_connection() -> bool:
     else:
         print("   ⏳ No login callback received (may need trading hours)")
 
-    # Try subscribing to a test instrument
-    print("   Subscribing to test instruments...")
+    # Try subscribing to test instruments
+    print(f"   Subscribing to test instruments: {_TEST_INSTRUMENTS}...")
     try:
-        result = md.subscribe([_TEST_INSTRUMENT])
+        result = md.subscribe(_TEST_INSTRUMENTS)
         print(f"   SubscribeMarketData returned: {result}")
         if result == 0:
             print(f"   ✅ Subscribed: {md.subscribed_instruments}")
