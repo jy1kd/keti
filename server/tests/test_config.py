@@ -109,7 +109,8 @@ class TestLoadConfig:
     def test_config_repr(self):
         cfg = Config()
         cfg.user_id = "user1"
+        cfg.password = "test_secret_123"
         r = repr(cfg)
         # Password should NOT appear in repr
         assert "user1" in r
-        assert "secret" not in r.lower() if "secret" not in cfg.password else True
+        assert cfg.password not in r

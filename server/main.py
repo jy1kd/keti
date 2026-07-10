@@ -22,10 +22,27 @@ from ctp.trader_api import TraderApi
 from ctp.types import Direction, OffsetFlag, OrderPriceType
 
 
+# Default test instrument — override via CTP_TEST_INSTRUMENT env var
+_TEST_INSTRUMENT = os.getenv("CTP_TEST_INSTRUMENT", "au2506")
+
+
 def print_separator(title: str) -> None:
     print(f"\n{'=' * 60}")
     print(f"  {title}")
     print(f"{'=' * 60}")
+
+
+def wait_for_event(spi, event_type: str, timeout: float = 5.0) -> bool:
+    """Poll for a specific callback event instead of fixed sleep.
+
+    Returns True if the event was received within timeout.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if any(e["type"] == event_type for e in spi.events):
+            return True
+        time.sleep(0.1)
+    return False
 
 
 def verify_ctp_import() -> bool:
@@ -113,7 +130,7 @@ def verify_md_connection() -> bool:
     # Try subscribing to a test instrument
     print("   Subscribing to test instruments...")
     try:
-        result = md.subscribe(["au2506"])
+        result = md.subscribe([_TEST_INSTRUMENT])
         print(f"   SubscribeMarketData returned: {result}")
         if result == 0:
             print(f"   ✅ Subscribed: {md.subscribed_instruments}")
@@ -174,7 +191,7 @@ def verify_td_connection() -> bool:
     print("   Submitting test order (limit buy, au2506)...")
     try:
         order_ref = td.insert_order(
-            instrument_id="au2506",
+            instrument_id=_TEST_INSTRUMENT,
             direction=Direction.BUY,
             offset_flag=OffsetFlag.OPEN,
             price_type=OrderPriceType.LIMIT,
@@ -244,7 +261,7 @@ def verify_market_order() -> bool:
     print("   Submitting market order (buy, au2506, ANY price)...")
     try:
         order_ref = td.insert_order(
-            instrument_id="au2506",
+            instrument_id=_TEST_INSTRUMENT,
             direction=Direction.BUY,
             offset_flag=OffsetFlag.OPEN,
             price_type=OrderPriceType.ANY,
