@@ -1395,19 +1395,17 @@ interface OptionQuote {
 
 ```bash
 # 安装Node.js (推荐v18+)
-# 安装pnpm
-npm install -g pnpm
 
 # 创建项目
-pnpm create vite trader-frontend --template react-ts
+npm create vite trader-frontend -- --template react-ts
 cd trader-frontend
 
 # 安装依赖
-pnpm install
-pnpm add @visactor/vtable zustand axios echarts
+npm install
+npm install @visactor/vtable zustand axios echarts
 
 # 启动开发服务器
-pnpm dev
+npm run dev
 ```
 
 ### 7.2 后端环境
