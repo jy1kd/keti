@@ -44,3 +44,6 @@ Thumbs.db
 # Superpowers process files
 .superpowers/
 docs/superpowers/
+
+# Claude config
+CLAUDE.md
