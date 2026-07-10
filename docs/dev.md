@@ -17,7 +17,7 @@
 | 图表库 | ECharts | latest | K线图、技术指标 |
 | 后端框架 | FastAPI | 0.100+ | REST API服务 |
 | WebSocket | websockets | 11.x | 实时推送 |
-| CTP绑定 | openctp-ctp | latest | Python CTP封装库（开箱即用） |
+| CTP绑定 | ctp-python | latest | Python CTP封装库（开箱即用） |
 
 ### 1.3 角色分工
 | 角色 | 职责 | 负责模块 |
@@ -1371,7 +1371,7 @@ feature/pr-3-market-ui
 | 序号 | 交付物 | 说明 |
 |------|--------|------|
 | 1 | 前端代码 | React + TypeScript + Vite，包含所有前端模块和组件 |
-| 2 | Python中间层代码 | FastAPI + openctp-ctp，包含API接口、CTP封装、WebSocket管理 |
+| 2 | Python中间层代码 | FastAPI + ctp-python，包含API接口、CTP封装、WebSocket管理 |
 | 3 | 项目文档 | README.md（项目说明、环境搭建、启动方式）、API文档 |
 | 4 | 测试用例文档 | 单元测试、集成测试、E2E测试用例 |
 
@@ -1382,11 +1382,12 @@ feature/pr-3-market-ui
 | 日期 | 版本 | 内容 | 状态 |
 |------|------|------|------|
 | 2026-07-08 | v1.0 | 初始化dev.md：代码目录结构、前端设计、后端设计、技术规范 | ✅ 完成 |
-| 2026-07-08 | v1.1 | CTP绑定改为openctp-ctp、错误码与design.md统一、WebSocket分端点设计、补充data目录和options.py | ✅ 完成 |
-| 2026-07-08 | v1.2 | 后端目录CTP封装层描述更新为openctp-ctp | ✅ 完成 |
+| 2026-07-08 | v1.1 | CTP绑定改为ctp-python、错误码与design.md统一、WebSocket分端点设计、补充data目录和options.py | ✅ 完成 |
+| 2026-07-08 | v1.2 | 后端目录CTP封装层描述更新为ctp-python | ✅ 完成 |
 | 2026-07-08 | v1.3 | 补充QuoteQuery、ContractQuery、StopOrderList组件职责说明 | ✅ 完成 |
 | 2026-07-08 | v1.4 | 回调处理代码更新为WebSocket分端点调用 | ✅ 完成 |
 | 2026-07-08 | v1.5 | 补充stop_order_update、connection_status、error消息契约定义 | ✅ 完成 |
 | 2026-07-08 | v1.6 | 错误处理代码更新为与错误码定义一致的字段名 | ✅ 完成 |
 | 2026-07-09 | v1.7 | 根据py-ctp.md和trader文件夹更新CTP API文档，补充详细实现代码 | ✅ 完成 |
+| 2026-07-10 | v1.8 | openctp-ctp改为ctp-python，与CLAUDE.md统一 | ✅ 完成 |
 | 2026-07-10 | v1.8 | 更新Section 4.2 CTP封装代码为camelCase字段名，补全五档行情/报单/成交/持仓/资金/合约全部字段 | ✅ 完成 |

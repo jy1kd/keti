@@ -13,8 +13,8 @@
 
 **技术栈**：
 - 前端：React + TypeScript + Vite（桌面端浏览器）
-- 表格组件：字节vtable（高性能渲染，大数据调优）
-- 后端中间层：Python（使用openctp-ctp封装库调用CTP API）
+- 表格组件：@visactor/vtable（高性能渲染，大数据调优）
+- 后端中间层：Python（使用ctp-python封装库调用CTP API）
 - API对接：simnow mduserapi（行情）+ traderapi（交易）
 
 ---
@@ -172,7 +172,7 @@
 ### 系统架构
 
 ```
-┌─────────────┐    HTTP/WS     ┌──────────────┐  openctp-ctp  ┌─────────────┐
+┌─────────────┐    HTTP/WS     ┌──────────────┐  ctp-python   ┌─────────────┐
 │   前端       │ ◄──────────► │  Python中间层  │ ◄──────────► │ simnow柜台   │
 │ React+TS    │               │    FastAPI    │              │ mduserapi    │
 │ + vtable    │               │  + WebSocket  │              │ traderapi    │
@@ -180,7 +180,7 @@
 ```
 
 ### Python中间层职责
-1. 使用openctp-ctp封装库调用CTP API，暴露为HTTP REST接口
+1. 使用ctp-python封装库调用CTP API，暴露为HTTP REST接口
 2. 管理行情WebSocket推送
 3. 处理CTP回调转为前端可理解的JSON格式
 4. 维护连接状态和会话管理
@@ -274,7 +274,7 @@ simnow柜台 → Python中间层(回调) → WebSocket推送 → 前端(vtable�
 
 | 阶段 | 内容 | 预计工期 |
 |------|------|----------|
-| M0 | 技术Spike：openctp-ctp验证（DLL加载、登录、行情回调、报单回调、市价单支持） | 1天 |
+| M0 | 技术Spike：ctp-python验证（DLL加载、登录、行情回调、报单回调、市价单支持） | 1天 |
 | M1 | 环境搭建 + Python中间层基础框架 + 断线重连机制设计 | 2天 |
 | M2 | 行情模块开发（订阅+展示） | 3天 |
 | M3 | 报单模块开发（限价+市价+止损单后端监控） | 4天 |
@@ -288,6 +288,6 @@ simnow柜台 → Python中间层(回调) → WebSocket推送 → 前端(vtable�
 | 风险 | 影响 | 缓解措施 |
 |------|------|----------|
 | simnow接口文档不全 | 开发受阻 | 参考无限易demo代码 |
-| C++ DLL Python绑定困难 | 中间层开发延期 | 使用openctp-ctp封装库，开发前完成技术Spike验证 |
+| C++ DLL Python绑定困难 | 中间层开发延期 | 使用ctp-python封装库，开发前完成技术Spike验证 |
 | vtable性能不达标 | 行情卡顿 | 减少同时展示合约数量 |
 | simnow环境不稳定 | 测试受阻 | 实现断线重连机制 |
