@@ -225,3 +225,66 @@ CTP 使用 PascalCase 字段名（如 `InstrumentID`, `LastPrice`, `BidPrice1`�
 - 止损单由后端监控服务实现，复用行情订阅数据流
 - GFD 报单依赖 simnow 柜台收盘自动撤销
 - 项目依赖 `docs/ctp-api-structure.txt` 做前后端类型对齐，修改 CTP 字段时需同步更新
+
+## 角色B 双窗口开发流程
+
+角色 B 使用两个窗口协作：**开发模式**（写代码、TDD、commit）和 **审查模式**（只读 diff、写反馈）。
+
+### 双窗口规则
+
+| 项目 | 开发模式 | 审查模式 |
+|------|----------|----------|
+| 职责 | 写代码、跑测试、提交 | 读 diff、写审查反馈 |
+| 产出 | `snapshots/role-b/dev-record-b.md` | `snapshots/role-b/review-feedback-b.md` |
+| 文档 | 可读全部、可改 `dev-record-b.md` | 只读、只写 `review-feedback-b.md` |
+| 操作 | 按 TDD 流程：红→绿→重构→提交 | 写完反馈后停，不改代码 |
+
+### 开发模式启动约束
+
+**可操作范围**：读写 `frontend/`，读写 `snapshots/role-b/dev-record-b.md`，读 `docs/*.md` + `CLAUDE.md`。只改 Task N 对应文件。
+
+**禁止事项**：禁止读写 `review-feedback-b.md` / `review-reply-b.md`，禁止改 `docs/*.md`，禁止提交 Task N+1。
+
+### 诊断输出格式
+
+```
+📋 当前状态
+- Task: PR-N (标题)
+- 分支: task/N-description
+- 基准: commit_hash
+- 变更: X 个文件（list）
+- 测试: X passed / Y total
+- 状态: 🔴红灯 | 🟢绿灯 | 🟡待绿灯 | ⚫未开始
+```
+
+### Commit 规范
+
+- 测试红灯：`test(PR-N): failing tests for XXX`
+- 测试绿灯：`feat(PR-N): implement XXX`
+- 重构：`refactor(PR-N): optimize XXX`
+
+### 文档更新时机
+
+- **dev-record-b.md**：Task N 测试全部绿灯后、提交前更新
+- **进度速查表**：标记 PR-N 状态为"开发中"或"已开发"
+- **提交后**：切审查模式
+
+### 交接触发逻辑
+
+PR-N 代码全部完成 + 测试全绿 + 自验证通过 → 更新 dev-record-b.md → 提交 → **停，等审查反馈**。
+
+### 完整流程速查
+
+```
+[启动] → 读 CLAUDE.md + docs/task.md + dev-record-b.md → 输出诊断
+  ↓
+[读需求] → docs/task.md PR-N 确认待开发 → 输出任务清单
+  ↓
+[TDD 循环] → 红（写测试）→ 绿（写实现）→ 提交 → 循环
+  ↓
+[绿灯确认] → 测试全绿 → 读 dev-record-b.md 确认无待办
+  ↓
+[更新文档] → dev-record-b.md 更新关键产出 → 提交
+  ↓
+[交出] → 停，等审查反馈
+```
