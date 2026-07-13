@@ -60,3 +60,47 @@
 
 **Commit**: `b081b50`
 **测试**: 108 passed
+
+---
+
+## PR-3 Code Review 反馈处理记录
+
+**审查分支**：`feature/pr-3-fastapi-framework`
+**审查文件**：`review-feedback-a-pr3.md`
+**处理时间**：2026-07-13
+**审查结论**：0 阻断 + 6 建议
+
+---
+
+### 🔴 阻断性问题
+
+无。
+
+---
+
+### 🟡 改进建议处理（6 条）
+
+| # | 建议 | 采纳 | 处理说明 |
+|---|------|------|----------|
+| 1 | WS handler 端到端测试缺失 | ⏳ 延期 | PR-7 将重写全部 handler，届时补充 TestClient 端到端测试 |
+| 2 | 五个 handler 函数重复 | ⏳ 延期 | PR-7 将实现差异逻辑（消息路由/dispatch），若仍有共性再提取 |
+| 3 | connection.py `request: Request` 未使用 | ✅ 采纳 | 移除 3 个路由函数中的 `request` 参数及 import |
+| 4 | password/userID 无 min_length | ✅ 采纳 | 添加 `Field(..., min_length=1)`，与 brokerID 一致 |
+| 5 | dev-record-a.md / progress.md 不一致 | ✅ 采纳 | 统一状态为「开发完成，待审查」，补全 progress.md 详细记录区 |
+| 6 | handler→manager 集成 gap 加注释 | ✅ 采纳 | handlers.py docstring 添加 PR-7 TODO 块，说明当前 gap |
+
+---
+
+### 🔵 疑问确认回复
+
+无。
+
+---
+
+### 测试记录
+
+```
+150 passed in 0.49s
+```
+
+全部测试通过，无回归。

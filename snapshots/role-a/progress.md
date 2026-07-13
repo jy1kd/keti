@@ -11,7 +11,7 @@
 | PR | 标题 | 状态 | 完成时间 | 提交记录 |
 |----|------|------|----------|----------|
 | PR-1 | 后端CTP连接验证（技术Spike） | ✅ 审查通过，待人工验证合并 | 2026-07-10 | ce44db8, 282ecaf, fa0a872, e6bc245, 2e7f11a, d399fd1, 34c5c9d, 6ddf795, b081b50 |
-| PR-3 | 后端FastAPI框架搭建 | ✅ 开发完成，待审查 | 2026-07-10 | 47a5fa1, c545354, 9217d61 |
+| PR-3 | 后端FastAPI框架搭建 | ✅ 修复完成，待二次审查 | 2026-07-10 | 47a5fa1, c545354, 9217d61 |
 | PR-5 | 后端行情API实现 | ⏳ 待开始 | - | - |
 | PR-7 | 后端WebSocket管理完善 | ⏳ 待开始 | - | - |
 | PR-9 | 后端交易API实现 | ⏳ 待开始 | - | - |
@@ -63,7 +63,7 @@
 
 ### PR-3: 后端FastAPI框架搭建
 
-**状态**：⏳ 待开始
+**状态**：✅ 开发完成，待审查
 
 **PR信息**：
 - PR分支名：`feature/pr-3-fastapi-framework`
@@ -71,16 +71,33 @@
 - 工作量：2小时
 
 **完成内容**：
-- 待开发
+- ✅ `models/market.py` — MarketSnapshot（50+ 字段）、KLineData
+- ✅ `models/order.py` — OrderRequest、OrderReturn
+- ✅ `models/account.py` — AccountInfo、PositionInfo
+- ✅ `models/contract.py` — InstrumentInfo（含期权字段）
+- ✅ `ws/manager.py` — 5 端点连接池 + broadcast() + 自动清理断线
+- ✅ `ws/handlers.py` — 占位处理器（PR-7 完善）
+- ✅ `api/connection.py` — POST login/logout、GET status
+- ✅ `api/market.py` — 占位路由（PR-5 实现）
+- ✅ `api/order.py` — 占位路由（PR-9 实现）
+- ✅ `api/query.py` — 占位路由（PR-11 实现）
+- ✅ `main.py` — 重写为 FastAPI 应用（CORS、13 路由、全局异常处理）
 
 **验证结果**：
-- 待验证
+- ✅ 150 tests 全部通过（108 回归 + 42 新增）
+- ✅ 代码范围正确（仅 server/ 目录）
+- ✅ 无调试代码残留
+- ✅ dev-record-a.md 已同步
+- ✅ 审查通过（0 阻断 + 6 建议，全部采纳）
 
 **提交记录**：
-- 待提交
+- `47a5fa1` feat(task-03): Pydantic数据模型 — 20 tests
+- `c545354` feat(task-03): WebSocket连接管理器 — 14 tests
+- `9217d61` feat(task-03): FastAPI应用入口+连接管理API+占位路由 — 150 tests
 
 **交接说明**：
-- 待交接
+- PR-7 需将 handler 接入 WebSocketManager
+- PR-5/PR-9/PR-11 需实现占位路由
 
 ---
 

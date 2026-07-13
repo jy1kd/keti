@@ -1,7 +1,15 @@
 """WebSocket message handlers — placeholder (full implementation in PR-7).
 
 Routes incoming client messages and dispatches to appropriate handlers.
+
+PR-7 TODO: 当前 handler 直接调用 websocket.accept()/receive_text()，
+未经过 WebSocketManager（ws/manager.py）的 connect()/disconnect() 跟踪。
+PR-7 需要：
+  - 将 handler 接入 ws_manager 连接池（connect on accept, disconnect on break）
+  - 实现消息路由（subscribe/unsubscribe/ping）
+  - 连接断开时自动从 ws_manager 移除
 """
+
 
 from fastapi import WebSocket
 

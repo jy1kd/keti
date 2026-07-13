@@ -70,7 +70,7 @@
 
 **分支**：`feature/pr-3-fastapi-framework`
 **依赖**：PR-1
-**状态**：🔄 开发完成，待自验证
+**状态**：✅ 开发完成，待审查
 
 ### 测试用例列表
 
@@ -115,3 +115,16 @@
 | `47a5fa1` | feat(task-03): Pydantic数据模型 — 行情/报单/账户/合约 — 20 tests pass |
 | `c545354` | feat(task-03): WebSocket连接管理器 — 5端点连接池+广播+自动清理 — 14 tests pass |
 | `9217d61` | feat(task-03): FastAPI应用入口+连接管理API+占位路由+5端点WebSocket — 150 tests pass |
+
+### 审查反馈修复（2026-07-10）
+
+审查文件：`review-feedback-a-pr3.md`（0 阻断 + 6 建议）
+
+| 建议 | 处理 |
+|------|------|
+| 🟡 connection.py `request: Request` 未使用 | ✅ 移除，已修复 |
+| 🟡 password/userID 无 min_length | ✅ 添加 `min_length=1`，已修复 |
+| 🟡 dev-record-a.md 与 progress.md 不一致 | ✅ 统一为「开发完成，待审查」并补全详细记录 |
+| 🟡 handler↔manager 集成 gap 加注释 | ✅ handlers.py 添加 PR-7 TODO 注释块 |
+| 🟡 WS handler 端到端测试缺失 | ⏳ 延期 PR-7 |
+| 🟡 五个 handler 函数重复 | ⏳ 延期 PR-7 |

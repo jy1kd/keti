@@ -5,7 +5,7 @@ POST /api/connection/logout
 GET  /api/connection/status
 """
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 router = APIRouter()
@@ -13,8 +13,8 @@ router = APIRouter()
 
 class LoginRequest(BaseModel):
     brokerID: str = Field(..., min_length=1)
-    userID: str
-    password: str
+    userID: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1)
 
 
 class LoginResponse(BaseModel):
@@ -36,7 +36,7 @@ _user_id: str = ""
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(request: Request, body: LoginRequest):
+async def login(body: LoginRequest):
     """Handle CTP login request."""
     global _logged_in, _user_id
     _logged_in = True
@@ -45,7 +45,7 @@ async def login(request: Request, body: LoginRequest):
 
 
 @router.post("/logout", response_model=LoginResponse)
-async def logout(request: Request):
+async def logout():
     """Handle logout — clears session state."""
     global _logged_in, _user_id
     _logged_in = False
@@ -54,7 +54,7 @@ async def logout(request: Request):
 
 
 @router.get("/status", response_model=StatusResponse)
-async def status(request: Request):
+async def status():
     """Return current connection status."""
     return {
         "loggedIn": _logged_in,
