@@ -182,6 +182,8 @@ input:focus-visible, select:focus-visible {
 
 .panel-content {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow: auto;
   padding: 8px;
 }

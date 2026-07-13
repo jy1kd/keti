@@ -153,3 +153,59 @@
 - `ffedb9f` docs(PR-4): 更新进度快照和开发流程文档
 - `e6077c6` refactor(PR-4): 设计系统优化 — CSS变量统一、无障碍、样式去重
 - `13f956d` fix(PR-4): 移除 .con 敏感文件，添加到 .gitignore
+
+---
+
+## PR-6: 前端行情表格（vtable）
+
+**分支**：`feature/pr-6-market-table`
+**开始时间**：2026-07-13
+**状态**：🔄 开发中
+
+---
+
+### TDD 测试用例清单
+
+| # | 模块 | 测试文件 | 测试数 | 状态 |
+|---|------|----------|--------|------|
+| 1 | MarketStore | market/store.test.ts | 9 | ✅ 全部通过 |
+| 2 | usePointOrder | hooks/usePointOrder.test.ts | 5 | ✅ 全部通过 |
+| 3 | ContractSearch | ContractSearch/index.test.tsx | 9 | ✅ 全部通过 |
+| 4 | MarketTable | market/MarketTable.test.tsx | 4 | ✅ 全部通过 |
+
+**总计**：27个测试，全部通过（含全局 vtable mock）
+
+---
+
+### 实现文件清单
+
+| 文件 | 说明 |
+|------|------|
+| `src/modules/market/store.ts` | 行情 Store 增强：snapshots Map、updateSnapshot、batchUpdate |
+| `src/modules/market/MarketTable.tsx` | vtable 行情表格组件（列定义、涨跌计算、点击事件） |
+| `src/modules/market/MarketPanel.tsx` | 行情面板集成（MarketTable + ContractSearch + 点价Hook） |
+| `src/hooks/usePointOrder.ts` | 点价报单 Hook（单击报单、双击填充） |
+| `src/components/ContractSearch/index.tsx` | 合约搜索框完善（模糊搜索、结果列表、点击选择） |
+| `src/setupTests.ts` | 全局 vtable mock（canvas 库无法在 jsdom 运行） |
+
+---
+
+### 提交记录
+
+- `762bfa0` feat(PR-6): MarketStore 增加 snapshots Map 和 updateSnapshot
+- `80249bc` feat(PR-6): usePointOrder Hook 基础框架 — 单击报单、双击填充
+- `46b2419` feat(PR-6): ContractSearch 模糊搜索 — 支持合约代码/名称搜索、结果列表、点击选择
+- `4f5b52a` feat(PR-6): MarketTable 组件 — vtable 行情表格、列定义、涨跌计算、点击事件
+- `51745d8` feat(PR-6): MarketPanel 集成 — MarketTable + ContractSearch + 点价Hook，全局 vtable mock
+- `95234d4` feat(PR-6): MarketStore batchUpdate — 批量更新行情快照
+- `921c7f7` fix(PR-6): ContractSearch 测试 mock 数据补全 ContractInfo 必填字段，修复 TypeScript 编译错误
+- `080b551` fix(PR-6): vtable 容器高度为 0 — .market-table-container 样式 + panel-content flex 列 + stale closure 修复
+- `3c3b64f` feat(PR-6): 开发环境 mock 行情数据 — 5 个合约（au/ag/cu/rb/IF）初始化到 store
+- `38cebf2` fix(PR-6): mock 数据字段名对齐 MarketSnapshot 类型 — highPrice→highestPrice, lowPrice→lowestPrice，补全五档盘口和必填字段
+- `c405f63` feat(PR-6): 开发环境 mock 合约数据 — 16 个合约覆盖 SHFE/CFFEX/DCE/CZCE，搜索功能可用
+- `cdb4823` fix(PR-6): 搜索结果过滤 — 只显示有行情数据的合约，避免点击后无反应
+- `694cb76` feat(PR-6): 选中合约高亮 — 搜索选择后表格自动高亮并滚动到对应行
+- `0f6b55f` fix(PR-6): 高亮修正 — selectCell→selectRow，整行高亮而非单列
+- `7657bce` fix(PR-6): 滚动修正 — scrollToRow→scrollToCell，精确定位选中行
+- `c02794e` fix(PR-6): 滚动索引修正 — vtable 行索引从 1 开始（0 是表头），scrollToCell row+1
+- `fba344e` fix(PR-6): 滚动 API 替换 — scrollToCell→makeVisible，避免索引偏移问题
