@@ -95,7 +95,7 @@ export function MarketTable({ snapshots, selectedInstrument, onRowClick, onRowDo
     const records = Array.from(snapshots.values()).map(snapshotToRecord)
     const rowIndex = records.findIndex((r) => r.instrumentID === selectedInstrument)
     if (rowIndex >= 0) {
-      tableRef.current.selectCell(rowIndex, 0)
+      tableRef.current.selectRow(rowIndex)
       tableRef.current.scrollToRow(rowIndex)
     }
   }, [selectedInstrument, snapshots])
