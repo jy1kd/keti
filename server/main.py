@@ -1,341 +1,94 @@
-"""CTP Connection Verification — Simplified Entry Point.
+"""FastAPI Application Entry Point.
 
 Usage:
-    python main.py
-
-This script verifies:
-1. ctp-python library loads correctly
-2. Market data API: connect, login, subscribe
-3. Trading API: connect, login, order submission
-4. Callback event recording
-
-NOTE: Run during trading hours (09:00-15:00 or 21:00-02:30 CST)
-      to receive actual market data and order callbacks.
+    uvicorn main:app --reload --port 8000
 """
 
-import os
-import time
-import sys
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from config import load_config
-from ctp_wrapper.md_user_api import MdUserApi
-from ctp_wrapper.trader_api import TraderApi
-from ctp_wrapper.types import Direction, OffsetFlag, OrderPriceType
+from api.connection import router as connection_router
+from api.market import router as market_router
+from api.order import router as order_router
+from api.query import router as query_router
+from ws.manager import ws_manager
+from ws.handlers import (
+    handle_market_ws,
+    handle_order_ws,
+    handle_position_ws,
+    handle_stop_ws,
+    handle_system_ws,
+)
 
 
-# Default test instruments — override via CTP_TEST_INSTRUMENT env var
-# Supports comma-separated list (e.g. "IF2607,IF2608,IF2609")
-_test_instruments_str = os.getenv("CTP_TEST_INSTRUMENT", "au2506")
-_TEST_INSTRUMENTS = [s.strip() for s in _test_instruments_str.split(",")]
-_TEST_INSTRUMENT = _TEST_INSTRUMENTS[0]  # Use first for single-instrument calls
+def create_app() -> FastAPI:
+    """Factory: build and configure the FastAPI application."""
+    app = FastAPI(title="Simnow Trader API", version="1.0.0")
 
+    # CORS
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-def print_separator(title: str) -> None:
-    print(f"\n{'=' * 60}")
-    print(f"  {title}")
-    print(f"{'=' * 60}")
+    # REST routes
+    app.include_router(connection_router, prefix="/api/connection", tags=["connection"])
+    app.include_router(market_router, prefix="/api/market", tags=["market"])
+    app.include_router(order_router, prefix="/api/order", tags=["order"])
+    app.include_router(query_router, prefix="/api/query", tags=["query"])
 
+    # WebSocket endpoints
+    @app.websocket("/ws/market")
+    async def ws_market(ws):
+        await handle_market_ws(ws)
 
-def wait_for_event(spi, event_type: str, timeout: float = 5.0) -> bool:
-    """Poll for a specific callback event instead of fixed sleep.
+    @app.websocket("/ws/order")
+    async def ws_order(ws):
+        await handle_order_ws(ws)
 
-    Returns True if the event was received within timeout.
-    """
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        if any(e["type"] == event_type for e in spi.events):
-            return True
-        time.sleep(0.1)
-    return False
+    @app.websocket("/ws/position")
+    async def ws_position(ws):
+        await handle_position_ws(ws)
 
+    @app.websocket("/ws/stop")
+    async def ws_stop(ws):
+        await handle_stop_ws(ws)
 
-def verify_ctp_import() -> bool:
-    """Step 1: Verify ctp-python can be imported."""
-    print_separator("Step 1: CTP Library Import")
-    try:
-        import ctp
-        api_cls = ctp.CThostFtdcMdApi
-        print(f"✅ ctp-python imported successfully")
-        print(f"   MdApi class: {api_cls}")
-        return True
-    except ImportError as e:
-        print(f"❌ Import failed: {e}")
-        print("   Install: pip install ctp-python")
-        return False
-    except AttributeError as e:
-        print(f"❌ CTP DLL not available: {e}")
-        return False
+    @app.websocket("/ws/system")
+    async def ws_system(ws):
+        await handle_system_ws(ws)
 
+    # Store ws_manager on app state for access from routes
+    app.state.ws_manager = ws_manager
 
-def verify_config() -> bool:
-    """Step 2: Verify config loading."""
-    print_separator("Step 2: Configuration")
-    cfg = load_config()
-    print(f"   Broker ID : {cfg.broker_id}")
-    print(f"   MD Front  : {cfg.md_front}")
-    print(f"   TD Front  : {cfg.td_front}")
-    print(f"   User ID   : {cfg.user_id or '(not set)'}")
-    print(f"   App ID    : {cfg.app_id}")
-
-    if not cfg.user_id:
-        print("⚠️  User ID not set. Create server/.env with:")
-        print("   CTP_USER_ID=your_simnow_user_id")
-        print("   CTP_PASSWORD=your_simnow_password")
-        return False
-    return True
-
-
-def verify_md_connection() -> bool:
-    """Step 3: Verify market data connection and login."""
-    print_separator("Step 3: Market Data Connection")
-
-    cfg = load_config()
-    md = MdUserApi(cfg)
-
-    # Register handlers for key callbacks
-    md.spi.on("OnFrontConnected",
-              lambda: setattr(md, "connection_status", "connected"))
-    md.spi.on("OnRspUserLogin",
-              lambda *args: setattr(md, "login_status", "logged_in"))
-
-    print("   Creating MdUserApi...")
-    try:
-        md.create()
-        print("   ✅ MdUserApi created, Init() called")
-    except Exception as e:
-        print(f"   ❌ Create failed: {e}")
-        return False
-
-    print("   Waiting for OnFrontConnected callback (5s)...")
-    if wait_for_event(md.spi, "OnFrontConnected", timeout=5.0):
-        print("   ✅ Front connected")
-    else:
-        print("   ⏳ Connection status not confirmed (may still succeed)")
-
-    print("   Sending login request...")
-    try:
-        result = md.login()
-        print(f"   ReqUserLogin returned: {result}")
-    except Exception as e:
-        print(f"   ❌ Login failed: {e}")
-        return False
-
-    print("   Waiting for OnRspUserLogin callback (5s)...")
-    if wait_for_event(md.spi, "OnRspUserLogin", timeout=5.0):
-        print("   ✅ Login callback received")
-    else:
-        print("   ⏳ No login callback received (may need trading hours)")
-
-    # Try subscribing to test instruments
-    print(f"   Subscribing to test instruments: {_TEST_INSTRUMENTS}...")
-    try:
-        result = md.subscribe(_TEST_INSTRUMENTS)
-        print(f"   SubscribeMarketData returned: {result}")
-        if result == 0:
-            print(f"   ✅ Subscribed: {md.subscribed_instruments}")
-    except Exception as e:
-        print(f"   ❌ Subscribe failed: {e}")
-
-    print("   Waiting for OnRspSubMarketData / OnRtnDepthMarketData (5s)...")
-    print("   Waiting for OnRspSubMarketData / OnRtnDepthMarketData (5s)...")
-    received = wait_for_event(md.spi, "OnRtnDepthMarketData", timeout=5.0)
-    md_events = [
-        e for e in md.spi.events
-        if e["type"] in ("OnRspSubMarketData", "OnRtnDepthMarketData")
-    ]
-    if received and md_events:
-        print(f"   ✅ Market data events received: {len(md_events)}")
-    else:
-        print("   ⏳ No market data received (expected outside trading hours)")
-
-    md.release()
-    return True
-
-
-def verify_td_connection() -> bool:
-    """Step 4: Verify trading connection and order submission."""
-    print_separator("Step 4: Trading Connection & Order")
-
-    cfg = load_config()
-    td = TraderApi(cfg)
-
-    td.spi.on("OnFrontConnected",
-              lambda: setattr(td, "connection_status", "connected"))
-    td.spi.on("OnRspUserLogin",
-              lambda *args: setattr(td, "login_status", "logged_in"))
-
-    print("   Creating TraderApi...")
-    try:
-        td.create()
-        print("   ✅ TraderApi created, Init() called")
-    except Exception as e:
-        print(f"   ❌ Create failed: {e}")
-        return False
-
-    print("   Waiting for OnFrontConnected callback (5s)...")
-    wait_for_event(td.spi, "OnFrontConnected", timeout=5.0)
-
-    print("   Sending login request...")
-    try:
-        result = td.login()
-        print(f"   ReqUserLogin returned: {result}")
-    except Exception as e:
-        print(f"   ❌ Login failed: {e}")
-        return False
-
-    print("   Waiting for OnRspUserLogin callback (5s)...")
-    wait_for_event(td.spi, "OnRspUserLogin", timeout=5.0)
-
-    # Try submitting a test order
-    print(f"   Submitting test order (limit buy, {_TEST_INSTRUMENT})...")
-    try:
-        order_ref = td.insert_order(
-            instrument_id=_TEST_INSTRUMENT,
-            direction=Direction.BUY,
-            offset_flag=OffsetFlag.OPEN,
-            price_type=OrderPriceType.LIMIT,
-            limit_price=480.0,
-            volume=1,
+    # Global exception handler
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception):
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": str(exc),
+                },
+            },
         )
-        if order_ref:
-            print(f"   ✅ Order submitted, order_ref={order_ref}")
-        else:
-            print(f"   ❌ Order submission failed")
-    except Exception as e:
-        print(f"   ❌ Order submit error: {e}")
 
-    print("   Waiting for OnRtnOrder callback (5s)...")
-    if wait_for_event(td.spi, "OnRtnOrder", timeout=5.0):
-        print("   ✅ Order return received")
-    else:
-        print("   ⏳ No order return (expected outside trading hours)")
-
-    td.release()
-    return True
+    return app
 
 
-def verify_market_order() -> bool:
-    """Step 5: Verify market order support (OrderPriceType.ANY).
+# ── Application instance ──────────────────────────────────────────────
 
-    Submits a market order and checks if SimNow accepts it.
-    Some simulation environments do NOT support market orders,
-    which affects the design of PR-9 (order API) and PR-10 (order form).
-    """
-    print_separator("Step 5: Market Order Verification")
-
-    cfg = load_config()
-    td = TraderApi(cfg)
-
-    td.spi.on("OnFrontConnected",
-              lambda: setattr(td, "connection_status", "connected"))
-    td.spi.on("OnRspUserLogin",
-              lambda *args: setattr(td, "login_status", "logged_in"))
-
-    print("   Creating TraderApi for market order test...")
-    try:
-        td.create()
-        print("   ✅ TraderApi created, Init() called")
-    except Exception as e:
-        print(f"   ❌ Create failed: {e}")
-        return False
-
-    print("   Waiting for OnFrontConnected callback (5s)...")
-    wait_for_event(td.spi, "OnFrontConnected", timeout=5.0)
-
-    print("   Sending login request...")
-    try:
-        result = td.login()
-        print(f"   ReqUserLogin returned: {result}")
-    except Exception as e:
-        print(f"   ❌ Login failed: {e}")
-        return False
-
-    print("   Waiting for OnRspUserLogin callback (5s)...")
-    wait_for_event(td.spi, "OnRspUserLogin", timeout=5.0)
-
-    # Submit market order (OrderPriceType.ANY)
-    print(f"   Submitting market order (buy, {_TEST_INSTRUMENT}, ANY price)...")
-    try:
-        order_ref = td.insert_order(
-            instrument_id=_TEST_INSTRUMENT,
-            direction=Direction.BUY,
-            offset_flag=OffsetFlag.OPEN,
-            price_type=OrderPriceType.ANY,
-            limit_price=0.0,
-            volume=1,
-        )
-        if order_ref:
-            print(f"   ✅ Market order submitted, order_ref={order_ref}")
-        else:
-            print(f"   ❌ Market order rejected (may not be supported)")
-    except Exception as e:
-        print(f"   ❌ Market order error: {e}")
-
-    print("   Waiting for OnRtnOrder / OnRspOrderInsert callback (5s)...")
-    wait_for_event(td.spi, "OnRtnOrder", timeout=5.0)
-
-    # Check for order return or error
-    order_events = [e for e in td.spi.events if e["type"] == "OnRtnOrder"]
-    error_events = [e for e in td.spi.events if e["type"] == "OnRspError"]
-
-    if order_events:
-        print(f"   ✅ Market order accepted ({len(order_events)} order event(s))")
-        print("   📊 SimNow supports market orders (OrderPriceType.ANY)")
-        supported = True
-    elif error_events:
-        print(f"   ⚠️ Market order rejected by exchange ({len(error_events)} error(s))")
-        print("   📊 SimNow may NOT support market orders — check PR-9/PR-10 design")
-        supported = True  # Step passed (obtained result)
-    else:
-        print("   ⏳ No response received (expected outside trading hours)")
-        supported = True  # Step passed (no error)
-
-    td.release()
-    return supported
-
-
-def print_summary(results: dict) -> None:
-    """Print verification summary."""
-    print_separator("Verification Summary")
-    for step, passed in results.items():
-        status = "✅ PASS" if passed else "❌ FAIL"
-        print(f"   {step}: {status}")
-    all_pass = all(results.values())
-    print(f"\n   Overall: {'✅ ALL PASSED' if all_pass else '❌ SOME FAILED'}")
-    return all_pass
-
-
-def main() -> None:
-    """Main entry point — run all CTP verification steps."""
-    print("CTP Connection Verification")
-    print(f"Python: {sys.version}")
-    print("⚠️  Run during trading hours for full verification")
-    print("   (09:00-15:00 or 21:00-02:30 CST)")
-
-    results = {}
-
-    # Step 1: Import check
-    results["CTP Import"] = verify_ctp_import()
-    if not results["CTP Import"]:
-        print("\n❌ Cannot proceed without ctp-python. Exiting.")
-        sys.exit(1)
-
-    # Step 2: Config check
-    results["Configuration"] = verify_config()
-
-    # Step 3: Market data connection
-    results["MD Connection"] = verify_md_connection()
-
-    # Step 4: Trading connection
-    results["TD Connection"] = verify_td_connection()
-
-    # Step 5: Market order verification
-    results["Market Order"] = verify_market_order()
-
-    # Summary
-    all_pass = print_summary(results)
-    sys.exit(0 if all_pass else 1)
+app = create_app()
+config = load_config()
 
 
 if __name__ == "__main__":
-    main()
+    import uvicorn
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
