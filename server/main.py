@@ -15,6 +15,7 @@ from api.order import router as order_router
 from api.query import router as query_router
 from ws.manager import WebSocketManager
 from services.market_service import MarketService
+from services.ctp_bridge import wire_market_data_callback
 from ws.handlers import (
     handle_market_ws,
     handle_order_ws,
@@ -70,11 +71,8 @@ def create_app() -> FastAPI:
 
     market_service = MarketService()
     # Load instrument cache from file (if available)
-    import os as _os
-    _instruments_path = _os.path.join(
-        _os.path.dirname(__file__), "data", "instruments.json"
-    )
-    market_service.load_instruments_from_file(_instruments_path)
+    _instruments_path = Path(__file__).parent / "data" / "instruments.json"
+    market_service.load_instruments_from_file(str(_instruments_path))
     app.state.market_service = market_service
 
     # Global exception handler
@@ -92,6 +90,42 @@ def create_app() -> FastAPI:
         )
 
     return app
+
+
+def wire_ctp_market_bridge(md_api, app: FastAPI) -> None:
+    """Wire CTP market-data callbacks → MarketService → WebSocket broadcast.
+
+    Call this AFTER MdUserApi has been created and connected. The bridge
+    ensures every CTP OnRtnDepthMarketData tick is:
+    1. Mapped (PascalCase → camelCase) via field_mapping
+    2. Cached in MarketService (thread-safe, in-memory snapshot store)
+    3. Pushed to all /ws/market clients via WebSocketManager.broadcast()
+
+    Because CTP callbacks run in the CTP worker thread (not the asyncio event
+    loop), the broadcast uses asyncio.run_coroutine_threadsafe() to safely
+    cross the thread boundary.
+
+    Example usage:
+        app = create_app()
+        md_api = MdUserApi(config)
+        md_api.create()
+        # ... wait for OnFrontConnected → login → OnRspUserLogin ...
+        wire_ctp_market_bridge(md_api, app)
+    """
+    loop = asyncio.get_event_loop()
+
+    def _broadcast_to_ws(data: dict) -> None:
+        """Bridge: CTP thread → asyncio event loop for WebSocket send."""
+        asyncio.run_coroutine_threadsafe(
+            app.state.ws_manager.broadcast("market", "market_data", data),
+            loop,
+        )
+
+    wire_market_data_callback(
+        md_api.spi,
+        app.state.market_service,
+        broadcast_fn=_broadcast_to_ws,
+    )
 
 
 # ── Application instance ──────────────────────────────────────────────

@@ -6,6 +6,7 @@ all CTP-dependent operations accept the MdUserApi as an optional dependency.
 
 import json
 import logging
+import threading
 from typing import Any, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ class MarketService:
         self._instruments: List[dict] = []
         self._snapshots: Dict[str, dict] = {}
         self._subscriptions: Set[str] = set()
+        self._lock = threading.Lock()
 
     # ── Instrument cache ──────────────────────────────────────────────
 
@@ -157,18 +159,23 @@ class MarketService:
         return len(self._snapshots)
 
     def update_snapshot(self, data: dict) -> None:
-        """Store or merge a market data snapshot."""
+        """Store or merge a market data snapshot. Thread-safe.
+
+        Can be safely called from CTP worker threads (via ctp_bridge)
+        and from async route handlers concurrently.
+        """
         inst_id = data.get("instrumentID", "")
         if not inst_id:
             return
 
-        if inst_id in self._snapshots:
-            # Merge: new fields overwrite old, old fields preserved
-            merged = dict(self._snapshots[inst_id])
-            merged.update(data)
-            self._snapshots[inst_id] = merged
-        else:
-            self._snapshots[inst_id] = dict(data)
+        with self._lock:
+            if inst_id in self._snapshots:
+                # Merge: new fields overwrite old, old fields preserved
+                merged = dict(self._snapshots[inst_id])
+                merged.update(data)
+                self._snapshots[inst_id] = merged
+            else:
+                self._snapshots[inst_id] = dict(data)
 
     def get_snapshot(self, instrument_id: str) -> Optional[dict]:
         """Get a single snapshot by instrument ID. Returns None if missing."""
