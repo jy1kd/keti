@@ -566,10 +566,10 @@ Week 3:
 
 ```python
 # ❌ 错误：bytes列表导致堆损坏崩溃(0xC0000374)
-api.SubscribeMarketData([b"au2506"])
+api.SubscribeMarketData([b"IF2608"])
 
 # ✅ 正确：必须传字符串列表
-api.SubscribeMarketData(["au2506"])
+api.SubscribeMarketData(["IF2608"])
 ```
 
 原因：ctp-python的SWIG绑定处理bytes时内存越界。

@@ -96,10 +96,10 @@ ctp-python 的 SWIG 绑定有 bug：传 bytes 列表会导致堆损坏崩溃（`
 
 ```python
 # ✅ 正确
-api.SubscribeMarketData(["au2506"])
+api.SubscribeMarketData(["IF2608"])
 
 # ❌ 崩溃！
-api.SubscribeMarketData([b"au2506"])
+api.SubscribeMarketData([b"IF2608"])
 ```
 
 `md_user_api.subscribe()` 已内置 `bytes → str` 防护（使用 `.decode()` 而非 `str()`，因为 `str(b"xxx")` 在 Python 3 中会得到 `"b'xxx'"`）。
@@ -113,7 +113,7 @@ CreateFtdcMdApi() → RegisterSpi(spi) → RegisterFront("tcp://...") → Init()
   → OnFrontConnected 回调
     → ReqUserLogin(login_field, request_id)
       → OnRspUserLogin 回调（检查 pRspInfo.ErrorID == 0）
-        → SubscribeMarketData(["au2506"])  # 字符串列表！
+        → SubscribeMarketData(["IF2608"])  # 字符串列表！
           → OnRspSubMarketData 回调
           → OnRtnDepthMarketData 回调（持续推送）
 ```

@@ -76,10 +76,10 @@
 
 ```python
 # ❌ 错误：传bytes列表会导致堆损坏崩溃(0xC0000374)
-api.SubscribeMarketData([b"au2506"])
+api.SubscribeMarketData([b"IF2608"])
 
 # ✅ 正确：必须传字符串列表
-api.SubscribeMarketData(["au2506"])
+api.SubscribeMarketData(["IF2608"])
 ```
 
 原因：ctp-python的SWIG绑定处理bytes时内存越界。所有Subscribe/Unsubscribe方法都受影响。
@@ -262,9 +262,9 @@ type WSMessageType =
   "type": "market_data",
   "data": {
     "tradingDay": "20260710",
-    "instrumentID": "au2406",
+    "instrumentID": "IF2608",
     "exchangeID": "SHFE",
-    "exchangeInstID": "au2406",
+    "exchangeInstID": "IF2608",
     "lastPrice": 480.50,
     "preSettlementPrice": 480.00,
     "preClosePrice": 480.20,
@@ -317,7 +317,7 @@ type WSMessageType =
   "type": "order_return",
   "data": {
     "orderRef": "123456",
-    "instrumentID": "au2406",
+    "instrumentID": "IF2608",
     "direction": "0",
     "combOffsetFlag": "0",
     "limitPrice": 480.50,
@@ -337,7 +337,7 @@ type WSMessageType =
   "data": {
     "tradeID": "T789",
     "orderRef": "123456",
-    "instrumentID": "au2406",
+    "instrumentID": "IF2608",
     "direction": "0",
     "offsetFlag": "0",
     "price": 480.50,
@@ -352,7 +352,7 @@ type WSMessageType =
 {
   "type": "position_update",
   "data": {
-    "instrumentID": "au2406",
+    "instrumentID": "IF2608",
     "posiDirection": "2",
     "position": 5,
     "positionCost": 240000.00,
@@ -443,7 +443,7 @@ type WSMessageType =
 **报单请求格式**：
 ```json
 {
-  "instrumentID": "au2406",
+  "instrumentID": "IF2608",
   "direction": "0",
   "combOffsetFlag": "0",
   "limitPrice": 480.50,
@@ -460,7 +460,7 @@ type WSMessageType =
   "type": "order_return",
   "data": {
     "orderRef": "123456",
-    "instrumentID": "au2406",
+    "instrumentID": "IF2608",
     "direction": "0",
     "combOffsetFlag": "0",
     "limitPrice": 480.50,
@@ -527,7 +527,7 @@ type WSMessageType =
   "stop_orders": [
     {
       "stop_order_ref": "SO123",
-      "instrument_id": "au2406",
+      "instrument_id": "IF2608",
       "direction": "sell",
       "offset": "close",
       "price": 480.00,
@@ -663,11 +663,11 @@ function handleNewData(newRecord) {
 | 方法 | 路径 | 描述 | 请求体 | 响应 |
 |------|------|------|--------|------|
 | GET | `/api/market/instruments` | 获取合约列表 | `?search=au&exchange=SHFE` | `[{instrument_id, instrument_name, exchange_id}]` |
-| POST | `/api/market/subscribe` | 订阅行情 | `{instruments: ["au2406", "rb2406"]}` | `{success}` |
-| POST | `/api/market/unsubscribe` | 退订行情 | `{instruments: ["au2406"]}` | `{success}` |
-| GET | `/api/market/snapshots` | 获取行情快照 | `?instruments=au2406,rb2406` | `{[instrument_id]: MarketSnapshot}` |
-| GET | `/api/market/options` | 获取期权合约列表 | `?underlying=au2406` | `[OptionContract]` |
-| GET | `/api/market/option_chain` | 获取期权T型报价 | `?underlying=au2406` | `OptionChain` |
+| POST | `/api/market/subscribe` | 订阅行情 | `{instruments: ["IF2608", "IF2609"]}` | `{success}` |
+| POST | `/api/market/unsubscribe` | 退订行情 | `{instruments: ["IF2608"]}` | `{success}` |
+| GET | `/api/market/snapshots` | 获取行情快照 | `?instruments=IF2608,IF2609` | `{[instrument_id]: MarketSnapshot}` |
+| GET | `/api/market/options` | 获取期权合约列表 | `?underlying=IF2608` | `[OptionContract]` |
+| GET | `/api/market/option_chain` | 获取期权T型报价 | `?underlying=IF2608` | `OptionChain` |
 
 **合约搜索说明**：
 - `search`参数支持模糊匹配合约代码和合约名称
@@ -717,9 +717,9 @@ function handleNewData(newRecord) {
 
 | 方法 | 路径 | 描述 | 请求体 | 响应 |
 |------|------|------|--------|------|
-| GET | `/api/market/kline` | 获取K线数据（当前会话内实时聚合，不依赖历史数据） | `?instrument=au2406&period=1m&count=100` | `[KLineData]` |
-| GET | `/api/market/depth` | 获取五档行情深度 | `?instrument=au2406` | `DepthData` |
-| GET | `/api/market/volatility` | 获取隐含波动率（Black-Scholes模型计算） | `?instrument=au2406` | `VolatilityData` |
+| GET | `/api/market/kline` | 获取K线数据（当前会话内实时聚合，不依赖历史数据） | `?instrument=IF2608&period=1m&count=100` | `[KLineData]` |
+| GET | `/api/market/depth` | 获取五档行情深度 | `?instrument=IF2608` | `DepthData` |
+| GET | `/api/market/volatility` | 获取隐含波动率（Black-Scholes模型计算） | `?instrument=IF2608` | `VolatilityData` |
 
 ### 4.5 查询接口
 
@@ -729,8 +729,8 @@ function handleNewData(newRecord) {
 | GET | `/api/query/trades` | 查询成交流水 | - | `[TradeRecord]` |
 | GET | `/api/query/positions` | 查询持仓 | - | `[PositionRecord]` |
 | GET | `/api/query/account` | 查询账户资金 | - | `AccountInfo` |
-| GET | `/api/query/quotes` | 查询五档行情深度 | `?instruments=au2406,rb2406` | `{[instrument_id]: QuoteDepth}` |
-| GET | `/api/query/contracts` | 查询合约信息 | `?instruments=au2406` | `{[instrument_id]: ContractInfo}` |
+| GET | `/api/query/quotes` | 查询五档行情深度 | `?instruments=IF2608,IF2609` | `{[instrument_id]: QuoteDepth}` |
+| GET | `/api/query/contracts` | 查询合约信息 | `?instruments=IF2608` | `{[instrument_id]: ContractInfo}` |
 
 ### 4.6 数据模型
 
@@ -1329,8 +1329,8 @@ interface OptionQuote {
 
 | 测试ID | 测试项 | 输入 | 预期输出 | 优先级 |
 |--------|--------|------|----------|--------|
-| UT-01 | 行情订阅 | 订阅合约列表["au2406"] | 返回success=true | P0 |
-| UT-02 | 行情退订 | 退订合约列表["au2406"] | 返回success=true | P0 |
+| UT-01 | 行情订阅 | 订阅合约列表["IF2608"] | 返回success=true | P0 |
+| UT-02 | 行情退订 | 退订合约列表["IF2608"] | 返回success=true | P0 |
 | UT-03 | 限价报单 | {price:480.50, volume:1} | 返回order_ref | P0 |
 | UT-04 | 市价报单 | {order_type:"market"} | 返回order_ref或错误信息（需调研simnow市价单支持） | P0 |
 | UT-05 | 撤单 | {order_ref:"123456"} | 返回success=true | P0 |
@@ -1341,9 +1341,9 @@ interface OptionQuote {
 | UT-10 | FOK报单 | {order_type:"limit", time_condition:"fok"} | 返回order_ref | P1 |
 | UT-11 | FAK报单 | {order_type:"limit", time_condition:"fak"} | 返回order_ref | P1 |
 | UT-12 | 批量撤单 | {cancel_all: true} | 返回撤单数量 | P1 |
-| UT-13 | 报价查询 | 查询au2406报价 | 返回QuoteDepth | P1 |
-| UT-14 | 合约查询 | 查询au2406合约信息 | 返回ContractInfo | P1 |
-| UT-15 | 止损单提交 | {instrument_id:"au2406", direction:"sell", stop_price:480.00} | 返回stop_order_ref | P1 |
+| UT-13 | 报价查询 | 查询IF2608报价 | 返回QuoteDepth | P1 |
+| UT-14 | 合约查询 | 查询IF2608合约信息 | 返回ContractInfo | P1 |
+| UT-15 | 止损单提交 | {instrument_id:"IF2608", direction:"sell", stop_price:480.00} | 返回stop_order_ref | P1 |
 | UT-16 | 止损单取消 | {stop_order_ref:"SO123"} | 返回success=true | P1 |
 | UT-17 | 止损单查询 | 查询止损单列表 | 返回止损单列表 | P1 |
 
@@ -1352,7 +1352,7 @@ interface OptionQuote {
 | 测试ID | 测试项 | 测试步骤 | 预期结果 | 优先级 |
 |--------|--------|----------|----------|--------|
 | IT-01 | 登录流程 | 1.调用登录接口 2.检查连接状态 | md_connected=true, td_connected=true | P0 |
-| IT-02 | 行情推送 | 1.订阅au2406 2.等待WebSocket推送 | 收到market_data消息 | P0 |
+| IT-02 | 行情推送 | 1.订阅IF2608 2.等待WebSocket推送 | 收到market_data消息 | P0 |
 | IT-03 | 完整报单流程 | 1.报单 2.查询报单流水 3.查询成交流水 | 报单记录和成交记录正确 | P0 |
 | IT-04 | 报单撤单流程 | 1.报单 2.撤单 3.查询状态 | order_status=canceled | P0 |
 | IT-05 | 止损单触发 | 1.提交止损单（止损价480.00）2.等待价格达到止损价 3.检查止损单状态 | 止损单状态变为triggered，自动生成报单 | P1 |
@@ -1467,12 +1467,12 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 │                                             │                               │
 │  行情面板（左侧70%）                          │  报单面板（右侧30%）           │
 │                                             │                               │
-│  搜索: [________] [订阅] [退订] [批量撤单]    │  合约: [au2406    ]           │
+│  搜索: [________] [订阅] [退订] [批量撤单]    │  合约: [IF2608    ]           │
 │                                             │  方向: (●买 ○卖)              │
 │  ┌─────────────────────────────────────┐   │  开平: (●开 ○平 ○平今)        │
 │  │ 合约   │最新│涨跌│买一│...│卖一│成交量│持仓│   │  类型: [限价  ▼]              │
-│  │ au2406 │480↑│+5 │480 │481 │12345│678│   │  价格: [480.50] [+] [-]       │
-│  │ rb2406 │3800│-10│3799│3801│54321│987│   │  数量: [1    ] [+] [-]        │
+│  │ IF2608 │480↑│+5 │480 │481 │12345│678│   │  价格: [480.50] [+] [-]       │
+│  │ IF2609 │3800│-10│3799│3801│54321│987│   │  数量: [1    ] [+] [-]        │
 │  └─────────────────────────────────────┘   │                               │
 │  (vtable高性能渲染，支持1000+合约)           │  [买入 B] [卖出 S] [撤单 C]   │
 │                                             │                               │

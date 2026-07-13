@@ -85,15 +85,15 @@ login_field.Password = "your_password"
 md_api.ReqUserLogin(login_field, request_id)
 
 # 6. 在OnRspUserLogin回调中订阅（⚠️ 必须传字符串列表！）
-md_api.SubscribeMarketData(["au2506", "ag2506"])  # ✅ 正确
-# md_api.SubscribeMarketData([b"au2506"])          # ❌ 崩溃！
+md_api.SubscribeMarketData(["IF2608", "IF2609"])  # ✅ 正确
+# md_api.SubscribeMarketData([b"IF2608"])          # ❌ 崩溃！
 ```
 
 **⚠️ 关键发现：SubscribeMarketData参数必须传字符串列表**
 
 ```
-❌ md_api.SubscribeMarketData([b"au2506"])   # bytes导致堆损坏崩溃(0xC0000374)
-✅ md_api.SubscribeMarketData(["au2506"])    # 字符串正常工作
+❌ md_api.SubscribeMarketData([b"IF2608"])   # bytes导致堆损坏崩溃(0xC0000374)
+✅ md_api.SubscribeMarketData(["IF2608"])    # 字符串正常工作
 ```
 
 这是ctp-python库的SWIG绑定bug，bytes参数会导致内存越界。
@@ -478,8 +478,8 @@ server/
 **用户手动验证**：
 1. 启动后端：`cd server && C:\Users\pc\.conda\envs\pytorch\python.exe -m uvicorn main:app --reload --port 8000`
 2. 测试合约列表：浏览器访问 http://localhost:8000/api/market/instruments
-3. 测试行情订阅：`curl -X POST http://localhost:8000/api/market/subscribe -H "Content-Type: application/json" -d "{\"instruments\":[\"au2508\"]}"`
-4. 测试行情快照：浏览器访问 http://localhost:8000/api/market/snapshots?instruments=au2508
+3. 测试行情订阅：`curl -X POST http://localhost:8000/api/market/subscribe -H "Content-Type: application/json" -d "{\"instruments\":[\"IF2608\"]}"`
+4. 测试行情快照：浏览器访问 http://localhost:8000/api/market/snapshots?instruments=IF2608
 
 ---
 
@@ -627,7 +627,7 @@ frontend/src/
 1. 启动后端：`cd server && python -m uvicorn main:app --reload --port 8000`
 2. 启动前端：`cd frontend && npm run dev`
 3. 浏览器访问 http://localhost:5173
-4. 确认行情表格显示真实合约数据（非au2506/ag2506等mock数据）
+4. 确认行情表格显示真实合约数据（非mock数据）
 
 ---
 
@@ -862,7 +862,7 @@ server/
 
 **用户手动验证**：
 1. 启动后端
-2. 测试报单接口：`curl -X POST http://localhost:8000/api/order/insert -H "Content-Type: application/json" -d "{\"instrumentID\":\"au2508\",\"direction\":\"0\",\"combOffsetFlag\":\"0\",\"limitPrice\":480.0,\"volumeTotalOriginal\":1}"`
+2. 测试报单接口：`curl -X POST http://localhost:8000/api/order/insert -H "Content-Type: application/json" -d "{\"instrumentID\":\"IF2608\",\"direction\":\"0\",\"combOffsetFlag\":\"0\",\"limitPrice\":4800.0,\"volumeTotalOriginal\":1}"`
 3. 确认返回orderRef
 4. 测试撤单接口
 
@@ -1030,7 +1030,7 @@ server/
 1. 启动后端
 2. 测试持仓查询：浏览器访问 http://localhost:8000/api/query/positions
 3. 测试资金查询：浏览器访问 http://localhost:8000/api/query/account
-4. 测试合约查询：浏览器访问 http://localhost:8000/api/query/contracts?instruments=au2508
+4. 测试合约查询：浏览器访问 http://localhost:8000/api/query/contracts?instruments=IF2608
 
 ---
 
@@ -1171,7 +1171,7 @@ server/
 
 **用户手动验证**：
 1. 启动后端
-2. 提交止损单：`curl -X POST http://localhost:8000/api/order/stop -H "Content-Type: application/json" -d "{\"instrumentID\":\"au2508\",\"direction\":\"1\",\"combOffsetFlag\":\"1\",\"limitPrice\":480.0,\"volumeTotalOriginal\":1,\"stopPrice\":479.0}"`
+2. 提交止损单：`curl -X POST http://localhost:8000/api/order/stop -H "Content-Type: application/json" -d "{\"instrumentID\":\"IF2608\",\"direction\":\"1\",\"combOffsetFlag\":\"1\",\"limitPrice\":4800.0,\"volumeTotalOriginal\":1,\"stopPrice\":4790.0}"`
 3. 查询止损单列表：浏览器访问 http://localhost:8000/api/order/stop/list
 4. 取消止损单
 
