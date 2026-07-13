@@ -3,6 +3,8 @@
 Uses MarketService from app.state.market_service for business logic.
 """
 
+from typing import List
+
 from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel, Field
 
@@ -12,11 +14,11 @@ router = APIRouter()
 # ── Request models ──────────────────────────────────────────────────────
 
 class SubscribeRequest(BaseModel):
-    instruments: list[str] = Field(..., min_length=1)
+    instruments: List[str] = Field(..., min_length=1)
 
 
 class UnsubscribeRequest(BaseModel):
-    instruments: list[str] = Field(..., min_length=1)
+    instruments: List[str] = Field(..., min_length=1)
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────
