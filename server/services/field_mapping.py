@@ -4,13 +4,13 @@ All mapping functions use getattr() with sensible defaults so they work
 with both real CTP objects (when DLL is available) and mock objects (tests).
 """
 
-from typing import Any
+from typing import Any, List, Tuple
 
 
 # ── Depth market data (OnRtnDepthMarketData) ───────────────────────────
 
 # Mapping table: (PascalCase attr, camelCase key, default)
-_DEPTH_MARKET_DATA_FIELDS: list = [
+_DEPTH_MARKET_DATA_FIELDS: List[Tuple[str, str, object]] = [
     # Instrument
     ("InstrumentID", "instrumentID", ""),
     ("ExchangeID", "exchangeID", ""),

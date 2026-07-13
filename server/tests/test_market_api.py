@@ -154,17 +154,15 @@ class TestSubscribe:
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_subscribe_empty_list(self, app):
-        """Empty instruments list is accepted."""
+    async def test_subscribe_empty_list_rejected(self, app):
+        """Empty instruments list is rejected (min_length=1)."""
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             resp = await client.post(
                 "/api/market/subscribe",
                 json={"instruments": []},
             )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["added"] == 0
+        assert resp.status_code == 422
 
     @pytest.mark.asyncio
     async def test_subscribe_limit_exceeded(self, app):

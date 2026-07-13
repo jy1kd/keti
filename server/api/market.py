@@ -3,8 +3,6 @@
 Uses MarketService from app.state.market_service for business logic.
 """
 
-from typing import Optional
-
 from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel, Field
 
@@ -14,11 +12,11 @@ router = APIRouter()
 # ── Request models ──────────────────────────────────────────────────────
 
 class SubscribeRequest(BaseModel):
-    instruments: list[str] = Field(..., min_length=0)
+    instruments: list[str] = Field(..., min_length=1)
 
 
 class UnsubscribeRequest(BaseModel):
-    instruments: list[str] = Field(..., min_length=0)
+    instruments: list[str] = Field(..., min_length=1)
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────
@@ -92,14 +90,21 @@ async def get_snapshots(request: Request, instruments: str = ""):
 
 @router.get("/kline")
 async def get_kline(
-    request: Request,
     instrument: str = Query(..., min_length=1),
     period: str = Query("1m"),
 ):
     """Get K-line (candlestick) data for an instrument.
 
-    Currently returns empty bars — real K-line requires CTP historical
-    data query, to be implemented when CTP integration connects.
+    ⚠️ PLACEHOLDER — returns empty bars[].
+
+    Real K-line implementation requires CTP historical data query:
+      - Request: ReqQryDepthMarketData (or similar) with instrument + period
+      - Response: OnRspQryDepthMarketData callback with historical bars
+    This depends on CTP connection + simnow support for historical queries.
+    Scheduled for PR-7 (WebSocket manager completion) or later CTP integration PR.
+
+    The response format {instrumentID, period, bars[...]} is stable.
+    Frontend can integrate against this contract now.
     """
     return {
         "instrumentID": instrument,

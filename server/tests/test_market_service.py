@@ -8,42 +8,6 @@ import pytest
 from services.market_service import MarketService
 
 
-# ── Fake MdUserApi for test isolation ───────────────────────────────────
-
-class _FakeMdApi:
-    """Fake MdUserApi — no CTP DLL needed."""
-
-    def __init__(self):
-        self.connection_status = "disconnected"
-        self.login_status = "not_logged_in"
-        self.subscribed_instruments = []
-
-    def create(self):
-        self.connection_status = "connecting"
-
-    def login(self):
-        self.login_status = "logged_in"
-        self.connection_status = "connected"
-        return 0
-
-    def subscribe(self, instruments):
-        for inst in instruments:
-            if inst not in self.subscribed_instruments:
-                self.subscribed_instruments.append(inst)
-        return 0
-
-    def unsubscribe(self, instruments):
-        for inst in instruments:
-            if inst in self.subscribed_instruments:
-                self.subscribed_instruments.remove(inst)
-        return 0
-
-    def release(self):
-        self.connection_status = "disconnected"
-        self.login_status = "not_logged_in"
-        self.subscribed_instruments.clear()
-
-
 # ── Initialization ──────────────────────────────────────────────────────
 
 class TestMarketServiceInit:
