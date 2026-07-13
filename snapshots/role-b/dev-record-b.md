@@ -199,3 +199,4 @@
 - `51745d8` feat(PR-6): MarketPanel 集成 — MarketTable + ContractSearch + 点价Hook，全局 vtable mock
 - `95234d4` feat(PR-6): MarketStore batchUpdate — 批量更新行情快照
 - `921c7f7` fix(PR-6): ContractSearch 测试 mock 数据补全 ContractInfo 必填字段，修复 TypeScript 编译错误
+- `080b551` fix(PR-6): vtable 容器高度为 0 — .market-table-container 样式 + panel-content flex 列 + stale closure 修复
