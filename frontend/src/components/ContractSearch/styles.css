@@ -1,0 +1,24 @@
+.contract-search {
+  display: flex;
+  align-items: center;
+}
+
+.contract-search .search-input {
+  width: 200px;
+  padding: 6px 12px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.contract-search .search-input:focus {
+  border-color: #1890ff;
+}
+
+.contract-search .search-input::placeholder {
+  color: #666;
+}

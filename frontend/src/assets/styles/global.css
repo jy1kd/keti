@@ -83,3 +83,53 @@ input, select {
 input:focus, select:focus {
   border-color: #3b82f6;
 }
+
+/* App Layout */
+.app {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.app-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.market-area {
+  width: 70%;
+  border-right: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.order-area {
+  width: 30%;
+  overflow: hidden;
+}
+
+.query-area {
+  height: 250px;
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+  overflow: hidden;
+}
