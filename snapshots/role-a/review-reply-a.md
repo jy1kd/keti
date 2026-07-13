@@ -157,3 +157,52 @@
 ```
 
 全部测试通过，无回归。5 个 WS 端点手动验证全部连通。
+
+---
+
+## PR-5 Code Review 反馈处理记录
+
+**审查分支**：`feature/pr-5-market-api`
+**审查文件**：`review-feedback-a-pr5.md`
+**处理时间**：2026-07-13
+**审查结论**：2 阻断 + 6 建议 + 1 疑问
+
+---
+
+### 🔴 阻断性问题修复（2 条）
+
+| # | 问题 | 修复 Commit | 处理说明 |
+|---|------|------------|----------|
+| B1 | CTP 回调链路未接通（MdSpi→mapping→MarketService→WS） | `c286776` | 新建 `services/ctp_bridge.py`（wire_market_data_callback），MarketService 添加 `threading.Lock` 线程安全保护，main.py 添加 `wire_ctp_market_bridge()` 桥接函数（含 asyncio.run_coroutine_threadsafe WS 广播）。新增 8 个 ctp_bridge 测试。 |
+| B2 | K线端点硬编码空数据 | `036410e` | `get_kline` docstring 添加详细的 CTP 历史查询依赖说明、延期 PR-7 标注、前后端契约稳定性声明。端点格式保持稳定。 |
+
+---
+
+### 🟡 改进建议处理（6 条）
+
+| # | 建议 | 采纳 | 处理说明 |
+|---|------|------|----------|
+| S1 | `Optional` 导入未使用 | ✅ | 删除 `api/market.py` 中 `from typing import Optional` |
+| S2 | `request: Request` 未使用 | ✅ | `get_kline` 移除 `request: Request` 参数 |
+| S3 | `import os as _os` → pathlib | ✅ | 已在 B1 修复中一并改为 `Path(__file__).parent / "data" / "instruments.json"` |
+| S4 | `_FakeMdApi` 死代码 | ✅ | 删除 `test_market_service.py` 中 30 行未使用代码 |
+| S5 | 裸 `list` 类型注解 | ✅ | 改为 `List[Tuple[str, str, object]]`，添加 import |
+| S6 | `min_length=0` 语义模糊 | ✅ | 改为 `min_length=1`，订阅/退订空列表返回 422；同步更新测试 |
+
+---
+
+### 🔵 疑问确认回复（1 条）
+
+**Q1**：WebSocket 行情推送是否明确延期至 PR-7？
+
+**回复**：已在本轮修复中实现，不延期。完整链路：`CTP OnRtnDepthMarketData → field_mapping.map_depth_market_data() → MarketService.update_snapshot() [thread-safe] → ws_manager.broadcast("market", "market_data", data) [asyncio.run_coroutine_threadsafe]`。`wire_market_data_callback()` 函数在 `services/ctp_bridge.py` 中，`wire_ctp_market_bridge()` 在 `main.py` 中提供开箱即用的集成。
+
+---
+
+### 测试记录
+
+```
+235 passed in 0.76s
+```
+
+全部测试通过，无回归。新增 8 个 ctp_bridge 测试覆盖回调注册、快照更新、字段映射、广播调用、合并语义、空 instrumentID、无 broadcast_fn 场景。

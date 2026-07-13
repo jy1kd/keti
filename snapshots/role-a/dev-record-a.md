@@ -135,7 +135,7 @@
 
 **分支**：`feature/pr-5-market-api`
 **依赖**：PR-3
-**状态**：✅ 开发完成，待审查
+**状态**：✅ 修复完成，待二次审查
 
 ### 测试用例列表
 
@@ -184,3 +184,23 @@
 | `f810499` | feat(task-05): CTP字段映射 — PascalCase→camelCase深度行情数据 — 22 tests pass |
 | `77a8f9f` | feat(task-05): 行情API路由实现 — instruments/subscribe/unsubscribe/snapshots/kline/depth — 20 tests pass |
 | `ef837a3` | feat(task-05): 合约列表缓存 — instruments.json文件加载+启动自加载 — 5 tests pass |
+
+### 审查反馈修复（2026-07-13）
+
+审查文件：`review-feedback-a-pr5.md`（2 阻断 + 6 建议 + 1 疑问）
+
+| # | 严重度 | 问题 | 处理 |
+|---|--------|------|------|
+| B1 | 🔴 | CTP 回调链路未接通 | ✅ 新建 `ctp_bridge.py` + MarketService 线程安全 + `wire_ctp_market_bridge()`，8 新测试 |
+| B2 | 🔴 | K线端点硬编码空数据 | ✅ docstring 详细标注 CTP 依赖 + PR-7 延期说明 |
+| S1 | 🟡 | `Optional` 未使用 | ✅ 删除 import |
+| S2 | 🟡 | `request: Request` 未使用 | ✅ `get_kline` 移除参数 |
+| S3 | 🟡 | `import os as _os` → pathlib | ✅ 改为 `Path(__file__).parent / "data" / "instruments.json"` |
+| S4 | 🟡 | `_FakeMdApi` 死代码 | ✅ 删除 30 行 |
+| S5 | 🟡 | 裸 `list` 类型注解 | ✅ 改为 `List[Tuple[str, str, object]]` |
+| S6 | 🟡 | `min_length=0` 语义模糊 | ✅ 改为 `min_length=1`，测试同步更新 |
+| Q1 | 🔵 | WS 推送是否延期 | ✅ 在 PR-5 内实现，不延期 |
+
+**修复 Commits**：
+- `c286776` fix(task-05): CTP回调链路接通
+- `036410e` fix(task-05): K线占位文档化+代码清理

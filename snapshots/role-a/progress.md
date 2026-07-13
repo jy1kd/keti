@@ -12,7 +12,7 @@
 |----|------|------|----------|----------|
 | PR-1 | 后端CTP连接验证（技术Spike） | ✅ 审查通过，待人工验证合并 | 2026-07-10 | ce44db8, 282ecaf, fa0a872, e6bc245, 2e7f11a, d399fd1, 34c5c9d, 6ddf795, b081b50 |
 | PR-3 | 后端FastAPI框架搭建 | ✅ 二次审查完成，待手动验证合并 | 2026-07-13 | 47a5fa1, c545354, 9217d61, 98f705a, 2bb9b69, 1d28ea8, 1bf6c7c |
-| PR-5 | 后端行情API实现 | ✅ 开发完成，待审查 | 2026-07-13 | 6f19568, f810499, 77a8f9f, ef837a3, c76db1a |
+| PR-5 | 后端行情API实现 | ✅ 修复完成，待二次审查 | 2026-07-13 | 6f19568, f810499, 77a8f9f, ef837a3, c76db1a, c286776, 036410e |
 | PR-7 | 后端WebSocket管理完善 | ⏳ 待开始 | - | - |
 | PR-9 | 后端交易API实现 | ⏳ 待开始 | - | - |
 | PR-11 | 后端查询API实现 | ⏳ 待开始 | - | - |
@@ -109,7 +109,7 @@
 
 ### PR-5: 后端行情API实现
 
-**状态**：✅ 开发完成，待审查
+**状态**：✅ 修复完成，待二次审查
 
 **PR信息**：
 - PR分支名：`feature/pr-5-market-api`
@@ -117,20 +117,20 @@
 - 工作量：3小时
 
 **完成内容**：
-- ✅ `services/market_service.py` — 合约缓存、行情快照缓存、订阅管理（500上限）、模糊搜索
+- ✅ `services/market_service.py` — 合约缓存、行情快照缓存、订阅管理（500上限）、模糊搜索（+线程安全）
 - ✅ `services/field_mapping.py` — CTP PascalCase → camelCase 字段映射（40字段）
+- ✅ `services/ctp_bridge.py` — CTP 回调桥接（MdSpi→field_mapping→MarketService→WS）
 - ✅ `api/market.py` — GET instruments/subscribe/unsubscribe/snapshots/kline/depth 全部重写
 - ✅ `data/instruments.json` — 8 个股指期货合约缓存（IF/IC/IH/IM）
-- ✅ `main.py` — 注入 MarketService + 启动自动加载 instruments.json
+- ✅ `main.py` — 注入 MarketService + 启动自动加载 + `wire_ctp_market_bridge()` 桥接函数
 
 **验证结果**：
-- ✅ 227 tests 全部通过（150 回归 + 77 新增）
+- ✅ 235 tests 全部通过（150 回归 + 85 新增）
 - ✅ 代码范围正确（仅 server/ 目录）
 - ✅ 无调试代码残留
-- ✅ 应用启动正常（13 routes）
-- ✅ 自验证全部通过
-- ⚠️ K线返回空数据（需 CTP 历史数据查询）
-- ⚠️ WebSocket 行情推送未集成（需 CTP 连接 + 事件循环桥接，代码已就绪）
+- ✅ CTP 回调→快照→WebSocket 完整链路已接通（ctp_bridge.py）
+- ✅ MarketService 线程安全（threading.Lock 保护快照写操作）
+- ⚠️ K线返回空数据（需 CTP 历史数据查询，PR-7 完成）
 
 **提交记录**：
 - `6f19568` feat(task-05): MarketService核心逻辑 — 合约缓存+订阅管理+快照缓存 — 30 tests
@@ -138,11 +138,13 @@
 - `77a8f9f` feat(task-05): 行情API路由实现 — instruments/subscribe/unsubscribe/snapshots/kline/depth — 20 tests
 - `ef837a3` feat(task-05): 合约列表缓存 — instruments.json文件加载+启动自加载 — 5 tests
 - `c76db1a` docs(task-05): PR-5开发记录更新 — 4次TDD循环，227 tests全部通过
+- `c286776` fix(task-05): review反馈 — CTP回调链路接通 (MdSpi→field_mapping→MarketService→WS)
+- `036410e` fix(task-05): review反馈 — K线占位文档化+代码清理(6条建议)
 
 **交接说明**：
-- K线接入 + WebSocket 推送需 CTP 连接后手动验证
-- 字段映射代码可直接用于 CTP 回调 OnRtnDepthMarketData
-- PR-7 需将 WS handler 接入 ws_manager，届时一并完成行情推送
+- CTP 回调链路已就绪：`wire_ctp_market_bridge(md_api, app)` 一行接入
+- K线需 CTP 连接后通过历史查询接口实现，当前占位格式稳定
+- WS 推送已桥接：`asyncio.run_coroutine_threadsafe` 跨线程安全
 
 ---
 
