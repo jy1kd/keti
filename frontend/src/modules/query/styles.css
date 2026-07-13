@@ -1,0 +1,33 @@
+.query-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.query-panel .tab-bar {
+  display: flex;
+  gap: 4px;
+}
+
+.query-panel .tab-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  background-color: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.query-panel .tab-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.query-panel .tab-btn.active {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}

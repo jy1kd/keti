@@ -1,0 +1,33 @@
+.connection-status {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.connection-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.connection-item .label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.connection-item .indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.connection-item .indicator.connected {
+  background-color: var(--color-success);
+  box-shadow: 0 0 4px var(--color-success);
+}
+
+.connection-item .indicator.disconnected {
+  background-color: var(--color-error);
+  box-shadow: 0 0 4px var(--color-error);
+}
