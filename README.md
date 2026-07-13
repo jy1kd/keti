@@ -1,76 +1,78 @@
-# 上期所Simnow模拟交易终端
+# 上期所 SimNow 模拟交易终端
 
-简易桌面交易终端（浏览器Web应用），对接上期所simnow模拟柜台，实现行情接入、交易接入、手动报单等核心功能。
+浏览器 Web 应用，对接 SimNow 模拟柜台，实现行情接入、交易接入、手动报单等功能。
 
 ## 技术栈
 
 | 层级 | 技术 |
 |------|------|
 | 前端 | React 18 + TypeScript 5 + Vite 5 |
-| 表格 | @visactor/vtable（高性能虚拟滚动） |
-| 图表 | ECharts 5（K线图、技术指标） |
-| 状态管理 | Zustand |
-| 后端 | Python FastAPI + WebSocket |
-| CTP绑定 | SWIG（自动生成C++ DLL的Python绑定） |
-| 对接平台 | simnow模拟柜台（mduserapi + traderapi v6.7.13） |
-
-## 文档索引
-
-| 文档 | 说明 |
-|------|------|
-| [prd.md](./prd.md) | 产品需求文档（功能需求、验收标准、里程碑） |
-| [design.md](./design.md) | 技术架构设计（系统架构、接口设计、数据模型、环境搭建） |
-
-## 开发状态
-
-- **当前阶段**：规划完成，待进入技术Spike
-- **下一步**：SWIG绑定技术验证（DLL加载、登录、行情回调、报单回调）
+| 表格 | @visactor/vtable（虚拟滚动，支持 1000+ 合约） |
+| 图表 | ECharts 5（K 线、技术指标） |
+| 状态管理 | Zustand + localStorage 持久化 |
+| 后端 | Python FastAPI 0.100+ + websockets 11.x |
+| CTP 绑定 | ctp-python 6.7.7.post1 |
 
 ## 快速开始
 
-### 环境要求
-
-- Node.js 18+
-- Python 3.10+
-- pnpm（前端包管理）
-- SWIG（CTP绑定生成）
-
-### 安装与运行
+### 后端
 
 ```bash
-# 后端
 cd server
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install ctp-python fastapi uvicorn websockets
-uvicorn main:app --reload --port 8000
+pip install -r requirements.txt
+cp .env.sample .env          # 填入 SimNow 账号密码
+python -m pytest tests/ -v   # 运行测试
+python main.py               # CTP 连接验证（需交易时段）
+```
 
-# 前端
+### 前端
+
+```bash
 cd frontend
 npm install
-npm run dev
+npm run dev       # 开发服务器 → http://localhost:5173
+npm run build     # 生产构建
 ```
 
-### simnow环境配置
+## 项目结构
 
-```bash
-# .env 文件
-SIMNOW_BROKER_ID=9999
-SIMNOW_USER_ID=your_user_id
-SIMNOW_PASSWORD=your_password
-SIMNOW_MD_FRONT=tcp://180.168.146.187:10131
-SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 ```
+keti/
+├── docs/                     # 项目文档（PRD、设计、任务拆分）
+├── snapshots/                # 双窗口协作快照
+│   ├── role-a/               # 后端（角色A）
+│   └── role-b/               # 前端（角色B）
+├── frontend/                 # 前端代码
+├── server/                   # 后端代码
+│   ├── ctp_wrapper/          # CTP API 封装层
+│   ├── config.py             # 配置管理
+│   ├── main.py               # CTP 验证脚本
+│   └── tests/                # 单元测试
+├── md_demo.py                # CTP 字段结构探测
+└── ctp_realtime_demo.py      # 实时行情显示
+```
+
+## 文档
+
+- [产品需求文档](docs/prd.md)
+- [技术架构设计](docs/design.md)
+- [项目设计稿](docs/dev.md)
+- [任务拆分](docs/task.md)（17 个 PR，5 个阶段）
+- [开发流程指南](docs/task-dev-flow.md)
 
 ## 核心功能
 
-- **行情模块**：实时行情表格（1000+合约）、五档深度、K线图、期权T型报价
-- **报单模块**：限价/市价/止损/FOK/FAK/GFD、点价报单、快捷键、一键反向/锁仓
-- **查询模块**：报单流水、成交流水、持仓、资金、报价深度、合约信息
-- **系统连接**：simnow登录、连接状态监控、断线重连
+- **行情模块**：实时行情表格、五档深度、K 线图、期权 T 型报价
+- **报单模块**：限价/市价/止损单、点价报单、一键反向/锁仓
+- **查询模块**：报单流水、成交、持仓、资金、合约信息
+- **系统连接**：SimNow 登录、连接状态监控、断线重连
 
-## 架构概览
+## 架构
 
 ```
-前端 (React+TS+vtable) ←→ Python中间层 (FastAPI+WebSocket) ←→ simnow柜台 (CTP DLL)
+前端 (React + TS + vtable)
+    ↕ WebSocket / REST
+Python 中间层 (FastAPI)
+    ↕ CTP DLL
+SimNow 柜台
 ```

@@ -3,19 +3,24 @@
 # 运行时间：交易时段（09:00-15:00 或 21:00-02:30）
 
 import ctp
+import os
 import time
 import warnings
 from datetime import datetime
+from pathlib import Path
+
+# 从环境变量读取配置
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent / "server" / ".env")
 
 
-# ============ 配置 ============
+# ============ 配置（从环境变量读取） ============
 CONFIG = {
-    "broker_id": "9999",
-    "user_id": "268326",
-    "password": "703495jy!!!",
-    "md_front": "tcp://182.254.243.31:40011",  # 7x24环境
-    # "md_front": "tcp://180.168.146.187:10131",  # 第一套（仅交易时段）
-    "instruments": ["IF2607", "IF2608", "IF2609"],  # 中金所股指期货（活跃合约）
+    "broker_id": os.getenv("CTP_BROKER_ID", "9999"),
+    "user_id": os.getenv("CTP_USER_ID", ""),
+    "password": os.getenv("CTP_PASSWORD", ""),
+    "md_front": os.getenv("CTP_MD_FRONT", "tcp://182.254.243.31:40011"),
+    "instruments": [s.strip() for s in os.getenv("CTP_TEST_INSTRUMENT", "au2506").split(",")],
 }
 
 

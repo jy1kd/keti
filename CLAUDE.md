@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 图表 | ECharts 5 | K 线图、技术指标 |
 | 状态管理 | Zustand | 轻量级状态管理，localStorage 持久化 |
 | 后端 | Python FastAPI 0.100+ + websockets 11.x | REST API、WebSocket |
-| CTP 绑定 | ctp-python 6.7.7.post1 | Python CTP 封装（conda env: `keti`） |
+| CTP 绑定 | ctp-python 6.7.7.post1 | Python CTP 封装 |
 
 ## 项目结构
 
@@ -55,10 +55,6 @@ keti/
 ### 后端
 
 ```bash
-# 激活 conda 环境（CTP DLL 在此环境可用）
-conda activate keti
-# Python 路径: D:\Python\Anaconda3\envs\keti\python.exe
-
 # 安装依赖
 cd server && pip install ctp-python python-dotenv pytest
 
@@ -72,10 +68,10 @@ python -m pytest tests/test_config.py -v
 python server/main.py
 
 # 运行字段探测（无需连接，直接反射 CTP 字段定义）
-D:\Python\Anaconda3\envs\keti\python.exe md_demo.py
+python md_demo.py
 
 # 运行实时行情（需交易时段）
-D:\Python\Anaconda3\envs\keti\python.exe ctp_realtime_demo.py
+python ctp_realtime_demo.py
 ```
 
 ### 前端
