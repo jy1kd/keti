@@ -1,13 +1,33 @@
 :root {
+  /* 背景色 */
   --bg-primary: #1a1a2e;
   --bg-secondary: #16213e;
   --bg-panel: #0f3460;
+  --bg-input: #1a1a1a;
+
+  /* 文字色 */
   --text-primary: #e0e0e0;
   --text-secondary: #a0a0a0;
+  --text-muted: #666666;
+
+  /* 涨跌色 */
   --color-up: #ef4444;
   --color-down: #22c55e;
   --color-flat: #6b7280;
+  --color-up-bg: rgba(239, 68, 68, 0.1);
+  --color-down-bg: rgba(34, 197, 94, 0.1);
+
+  /* 交互色 */
+  --color-primary: #1890ff;
+  --color-success: #52c41a;
+  --color-error: #ff4d4f;
+  --color-focus: #3b82f6;
+
+  /* 边框色 */
   --border-color: #2a2a4a;
+  --border-light: #333333;
+
+  /* 字体 */
   --font-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
@@ -55,7 +75,6 @@ body {
 button {
   cursor: pointer;
   border: none;
-  outline: none;
   font-size: 12px;
   padding: 4px 12px;
   border-radius: 3px;
@@ -70,6 +89,11 @@ button:active {
   opacity: 0.7;
 }
 
+button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
 input, select {
   font-size: 12px;
   padding: 4px 8px;
@@ -77,9 +101,95 @@ input, select {
   border-radius: 3px;
   background: var(--bg-secondary);
   color: var(--text-primary);
-  outline: none;
 }
 
 input:focus, select:focus {
-  border-color: #3b82f6;
+  border-color: var(--color-focus);
+}
+
+input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+/* App Layout */
+.app {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  min-width: 1024px;
+}
+
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.app-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.market-area {
+  width: 70%;
+  border-right: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.order-area {
+  width: 30%;
+  overflow: hidden;
+}
+
+.query-area {
+  height: 250px;
+  min-height: 150px;
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* 共享 Panel 基础样式 */
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.panel-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  padding: 8px;
+}
+
+/* 数值数据等宽显示 */
+.data-cell {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }

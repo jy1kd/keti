@@ -12,14 +12,17 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@visactor/vtable": "^1.26.4",
+    "axios": "^1.7.0",
+    "echarts": "^5.5.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "@visactor/vtable": "latest",
-    "zustand": "^4.5.0",
-    "axios": "^1.7.0",
-    "echarts": "^5.5.0"
+    "zustand": "^4.5.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
