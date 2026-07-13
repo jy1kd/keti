@@ -200,3 +200,4 @@
 - `95234d4` feat(PR-6): MarketStore batchUpdate — 批量更新行情快照
 - `921c7f7` fix(PR-6): ContractSearch 测试 mock 数据补全 ContractInfo 必填字段，修复 TypeScript 编译错误
 - `080b551` fix(PR-6): vtable 容器高度为 0 — .market-table-container 样式 + panel-content flex 列 + stale closure 修复
+- `3c3b64f` feat(PR-6): 开发环境 mock 行情数据 — 5 个合约（au/ag/cu/rb/IF）初始化到 store
