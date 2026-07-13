@@ -5,7 +5,7 @@ POST /api/connection/logout
 GET  /api/connection/status
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
 router = APIRouter()
@@ -54,10 +54,21 @@ async def logout():
 
 
 @router.get("/status", response_model=StatusResponse)
-async def status():
-    """Return current connection status."""
+async def status(request: Request):
+    """Return current CTP connection status.
+
+    Reads real connection state from app.state.md_api when available
+    (after auto-startup). Falls back to module-level state otherwise.
+    """
+    md_api = getattr(request.app.state, "md_api", None)
+    if md_api is not None:
+        return {
+            "loggedIn": md_api.login_status == "logged_in",
+            "mdConnected": md_api.connection_status == "connected",
+            "tdConnected": False,  # TD not started until PR-9
+        }
     return {
         "loggedIn": _logged_in,
-        "mdConnected": _logged_in,  # Simplified: same as login until PR-5
+        "mdConnected": _logged_in,
         "tdConnected": _logged_in,
     }

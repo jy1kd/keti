@@ -19,6 +19,7 @@ from api.query import router as query_router
 from ws.manager import WebSocketManager
 from services.market_service import MarketService
 from services.ctp_bridge import wire_market_data_callback
+from services.ctp_startup import start_ctp_market_connection
 from ws.handlers import (
     handle_market_ws,
     handle_order_ws,
@@ -77,6 +78,12 @@ def create_app() -> FastAPI:
     _instruments_path = Path(__file__).parent / "data" / "instruments.json"
     market_service.load_instruments_from_file(str(_instruments_path))
     app.state.market_service = market_service
+
+    # Startup event — auto-connect CTP in background thread
+    @app.on_event("startup")
+    async def _startup_ctp() -> None:
+        _config = load_config()
+        start_ctp_market_connection(app, _config)
 
     # Global exception handler
     @app.exception_handler(Exception)
