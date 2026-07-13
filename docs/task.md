@@ -1,3 +1,4 @@
+
 # Task: 上期所Simnow模拟交易终端 - PR任务拆分
 
 ## 1. 概述
@@ -30,13 +31,13 @@
 | **PR分支名** | `feature/pr-1-ctp-verify` |
 | **负责角色** | 角色A |
 | **依赖PR** | 无 |
-| **工作量** | 2小时 |
+| **工作量** | 4小时 |
 | **状态** | ⏳ 待开始 |
 
 **提交文件**：
 ```
 server/
-├── ctp/
+├── ctp_wrapper/
 │   ├── __init__.py
 │   ├── md_user_api.py         # 行情API封装
 │   ├── trader_api.py          # 交易API封装
@@ -139,7 +140,7 @@ md_api.SubscribeMarketData(["au2506", "ag2506"])  # ✅ 正确
 | **负责角色** | 角色B |
 | **依赖PR** | 无 |
 | **工作量** | 2小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
 
 **提交文件**：
 ```
@@ -225,7 +226,7 @@ frontend/
 2. TypeScript编译无错误
 3. ESLint检查通过
 4. Store状态管理正常工作
-5. API封装可正常调用（mock数据）
+5. API封装框架就绪（等待后端PR-5提供真实接口）
 
 **验收标准**：
 - [ ] 项目正常启动，访问http://localhost:5173
@@ -408,7 +409,7 @@ frontend/src/
 server/
 ├── api/
 │   └── market.py               # 行情接口（完善）
-├── ctp/
+├── ctp_wrapper/
 │   └── md_user_api.py          # 行情API封装（完善）
 ├── services/
 │   ├── __init__.py
@@ -436,9 +437,6 @@ server/
    - GET /api/market/snapshots（行情快照）
    - GET /api/market/kline（K线数据，支持多周期）
    - GET /api/market/depth（五档行情深度）
-   - GET /api/market/options（期权合约列表，基于 productClass='1' 筛选）
-   - GET /api/market/option_chain（期权T型报价，聚合 InstrumentInfo + MarketSnapshot）
-   - GET /api/market/volatility（隐含波动率，Black-Scholes模型，需 strikePrice/underlyingInstrID）
 4. 实现WebSocket行情推送
    - 行情回调 → WebSocket广播（market_data）
    - 消息格式：`{ type: 'market_data', data: MarketSnapshot }`
@@ -447,7 +445,11 @@ server/
 **真实API字段参考**：
 - 行情回调字段：`ctp-api-structure.txt` → MarketSnapshot（50+字段）
 - 合约信息字段：`ctp-api-structure.txt` → InstrumentInfo（含 optionsType, strikePrice, underlyingInstrID）
-- 自定义接口：`ctp-api-structure.txt` → OptionChain, OptionQuote, VolatilityData
+
+**不含**（在PR-18实现）：
+- 期权合约列表接口（/api/market/options）
+- 期权T型报价接口（/api/market/option_chain）
+- 隐含波动率接口（/api/market/volatility）
 
 **验证方法**：
 1. 调用登录接口，成功登录
@@ -489,7 +491,7 @@ server/
 | **PR标题** | 前端行情表格（vtable） |
 | **PR分支名** | `feature/pr-6-market-table` |
 | **负责角色** | 角色B |
-| **依赖PR** | PR-4 |
+| **依赖PR** | PR-5（需要后端行情API提供真实数据） |
 | **工作量** | 3小时 |
 | **状态** | ⏳ 待开始 |
 
@@ -509,7 +511,7 @@ frontend/src/
 ```
 
 **PR描述**：
-实现高性能行情表格，使用vtable渲染，支持虚拟滚动、增量渲染、单击/双击点价。
+实现高性能行情表格，使用vtable渲染，支持虚拟滚动、增量渲染、单击/双击点价。**直接调用后端真实API获取数据，不使用mock数据**。
 
 **实现方式**：
 1. 实现MarketTable组件（基于@visactor/vtable）
@@ -524,10 +526,14 @@ frontend/src/
    - 行情数据推送到缓冲区
    - 每50ms从缓冲区取出最新数据
    - 批量更新vtable
-4. 实现点价报单Hook（基础框架）
+4. **调用后端真实API获取数据**
+   - GET /api/market/instruments（获取合约列表）
+   - GET /api/market/snapshots（获取行情快照）
+   - WebSocket /ws/market（接收实时行情推送）
+5. 实现点价报单Hook（基础框架）
    - 单击行情表格：直接报单
    - 双击行情表格：填充报单面板
-5. 实现合约搜索框
+6. 实现合约搜索框
    - 支持模糊搜索
    - 显示搜索结果列表
    - 点击添加到自选合约
@@ -557,6 +563,74 @@ frontend/src/
 
 ---
 
+#### PR-6a: 前端行情表格接入真实API
+
+| 项目 | 内容 |
+|------|------|
+| **PR编号** | PR-6a |
+| **PR标题** | 前端行情表格接入真实后端API |
+| **PR分支名** | `feature/pr-6a-market-real-api` |
+| **负责角色** | 角色B |
+| **依赖PR** | PR-5（后端行情API已就绪）、PR-6（已完成） |
+| **工作量** | 1小时 |
+| **状态** | ⏳ 待开始 |
+
+**PR描述**：
+将PR-6中使用的mock数据替换为真实后端API调用。删除mockData.ts，行情数据全部来自后端 `/api/market/*` 接口和 WebSocket 推送。
+
+**提交文件**：
+```
+frontend/src/
+├── modules/market/
+│   ├── mockData.ts             # 删除
+│   ├── store.ts                # 修改：去掉mock初始化，接入真实API
+│   └── MarketPanel.tsx         # 修改：启动时调用API获取初始数据
+├── services/
+│   └── api.ts                  # 修改：实现行情相关API调用
+└── hooks/
+    └── useMarketWs.ts          # 新增：WebSocket行情推送Hook
+```
+
+**实现方式**：
+1. 删除 `mockData.ts` 文件
+2. 修改 `store.ts`：
+   - 去掉 `initMockSnapshots()` 和 `import.meta.env.DEV` 判断
+   - snapshots 初始为空 Map
+   - 新增 `fetchInstruments()` 方法：调用 `GET /api/market/instruments` 获取合约列表
+   - 新增 `subscribeInstruments()` 方法：调用 `POST /api/market/subscribe` 订阅行情
+3. 修改 `MarketPanel.tsx`：
+   - 组件挂载时调用 `fetchInstruments()` 获取合约列表
+   - 调用 `subscribeInstruments()` 订阅默认合约
+4. 新增 `useMarketWs.ts` Hook：
+   - 连接 `ws://localhost:8000/ws/market`
+   - 监听 `market_data` 消息，调用 `updateSnapshot()` 更新 store
+   - 自动重连机制
+5. 修改 `services/api.ts`：
+   - 实现 `getInstruments()` → `GET /api/market/instruments`
+   - 实现 `subscribeMarket(instruments)` → `POST /api/market/subscribe`
+   - 实现 `getSnapshots(instruments)` → `GET /api/market/snapshots`
+
+**验证方法**：
+1. 启动后端（PR-5已完成）
+2. 启动前端，确认行情表格显示真实数据（非mock）
+3. 确认WebSocket连接建立，行情实时更新
+4. 确认合约搜索返回真实合约列表
+
+**验收标准**：
+- [ ] mockData.ts 已删除
+- [ ] 行情表格显示后端真实数据
+- [ ] WebSocket行情推送正常工作
+- [ ] 合约搜索使用后端合约列表
+- [ ] 无mock数据残留
+
+**用户手动验证**：
+1. 启动后端：`cd server && python -m uvicorn main:app --reload --port 8000`
+2. 启动前端：`cd frontend && npm run dev`
+3. 浏览器访问 http://localhost:5173
+4. 确认行情表格显示真实合约数据（非au2506/ag2506等mock数据）
+
+---
+
 #### PR-7: 后端WebSocket管理
 
 | 项目 | 内容 |
@@ -575,7 +649,7 @@ server/
 ├── ws/
 │   ├── manager.py              # WebSocket管理器（完善）
 │   └── handlers.py             # 消息处理器（完善）
-├── ctp/
+├── ctp_wrapper/
 │   └── callback.py             # 回调处理（完善）
 └── services/
     └── reconnect.py            # 断线重连服务
@@ -639,7 +713,7 @@ server/
 | **PR标题** | 前端五档行情展示 |
 | **PR分支名** | `feature/pr-8-depth-quote` |
 | **负责角色** | 角色B |
-| **依赖PR** | PR-6 |
+| **依赖PR** | PR-7（需要WebSocket推送实时行情数据） |
 | **工作量** | 2小时 |
 | **状态** | ⏳ 待开始 |
 
@@ -717,7 +791,7 @@ frontend/src/
 server/
 ├── api/
 │   └── order.py                # 报单接口（完善）
-├── ctp/
+├── ctp_wrapper/
 │   ├── trader_api.py           # 交易API封装（完善）
 │   └── callback.py             # 回调处理（完善报单/成交）
 ├── services/
@@ -896,7 +970,7 @@ frontend/src/
 server/
 ├── api/
 │   └── query.py                # 查询接口（完善）
-├── ctp/
+├── ctp_wrapper/
 │   └── trader_api.py           # 交易API封装（完善查询功能）
 └── models/
     ├── account.py              # 账户数据模型（完善）
@@ -1103,6 +1177,66 @@ server/
 
 ---
 
+#### PR-18: 后端期权API实现
+
+| 项目 | 内容 |
+|------|------|
+| **PR编号** | PR-18 |
+| **PR标题** | 后端期权API实现 |
+| **PR分支名** | `feature/pr-18-options-api` |
+| **负责角色** | 角色A |
+| **依赖PR** | PR-5 |
+| **工作量** | 2小时 |
+| **状态** | ⏳ 待开始 |
+
+**提交文件**：
+```
+server/
+├── api/
+│   └── market.py               # 行情接口（新增期权端点）
+├── services/
+│   └── options_service.py      # 期权服务层（新增）
+└── models/
+    └── options.py              # 期权数据模型（OptionChain, VolatilityData）
+```
+
+**PR描述**：
+实现期权相关API接口，包括期权合约列表、期权T型报价、隐含波动率计算。
+
+**实现方式**：
+1. 实现期权服务层（OptionsService）
+   - 期权合约筛选（基于 InstrumentInfo.productClass='1'）
+   - 期权链聚合（按标的合约+到期日分组）
+   - 隐含波动率计算（Black-Scholes模型）
+2. 实现期权API接口
+   - GET /api/market/options（期权合约列表，返回 InstrumentInfo[]）
+   - GET /api/market/option_chain（期权T型报价，返回 OptionChain）
+   - GET /api/market/volatility（隐含波动率，返回 VolatilityData）
+3. 实现数据模型
+   - OptionChain：期权链（underlying, expireDate, calls[], puts[]）
+   - OptionQuote：单个期权报价（strikePrice, impliedVolatility）
+   - VolatilityData：波动率数据（Black-Scholes参数）
+
+**真实API字段参考**：
+- 自定义接口来源：`ctp-api-structure.txt` → 自定义业务接口部分
+- 合约筛选：InstrumentInfo.productClass='1'（期权）
+- 期权类型：InstrumentInfo.optionsType（'1'=看涨，'2'=看跌）
+- 行权价：InstrumentInfo.strikePrice
+- 标的合约：InstrumentInfo.underlyingInstrID
+
+**验证方法**：
+1. 调用期权合约列表接口，返回期权合约数据
+2. 调用期权T型报价接口，返回按行权价排序的期权链
+3. 调用隐含波动率接口，返回Black-Scholes计算结果
+
+**验收标准**：
+- [ ] 期权合约列表获取正常（基于productClass筛选）
+- [ ] 期权T型报价数据获取正常（按标的+到期日分组）
+- [ ] 隐含波动率计算正常（Black-Scholes模型）
+- [ ] 看涨/看跌期权正确分类
+
+---
+
 #### PR-14: 前端期权T型报价
 
 | 项目 | 内容 |
@@ -1111,7 +1245,7 @@ server/
 | **PR标题** | 前端期权T型报价实现 |
 | **PR分支名** | `feature/pr-14-option-tquote` |
 | **负责角色** | 角色B |
-| **依赖PR** | PR-6 |
+| **依赖PR** | PR-6, PR-18 |
 | **工作量** | 2小时 |
 | **状态** | ⏳ 待开始 |
 
@@ -1142,7 +1276,7 @@ frontend/src/
 3. 实现期权Store
    - optionChain: OptionChain
    - updateOptionChain: 更新期权链
-4. 调用期权API接口（已在PR-5后端实现）
+4. 调用期权API接口（已在PR-18后端实现）
    - GET /api/market/options（获取期权合约列表，返回 InstrumentInfo[]）
    - GET /api/market/option_chain（获取期权T型报价数据，返回 OptionChain）
    - GET /api/market/volatility（获取隐含波动率，返回 VolatilityData）
@@ -1479,62 +1613,42 @@ server/                       # 后端Bug修复
 
 ## 3. PR依赖关系图
 
+**设计原则**：前端PR必须等对应后端API完成后再开发，直接调用真实接口，不使用mock数据。
+
 ```
-PR-1 (CTP验证) ──────────────────────────────────────┐
-    │                                                  │
-    ▼                                                  │
-PR-3 (FastAPI框架) ───────────────────────────────────┤
-    │                                                  │
-    ▼                                                  │
-PR-5 (行情API) ──────────────────────────────────────┤
-    │                                                  │
-    ├──►PR-7 (WebSocket) ─────────────────────────────┤
-    │       │                                          │
-    │       ▼                                          │
-    │   PR-9 (交易API) ───────────────────────────────┤
-    │       │                                          │
-    │       ├──►PR-11 (查询API) ──────────────────────┤
-    │       │                                          │
-    │       ├──►PR-13 (止损单) ───────────────────────┤
-    │       │       │                                  │
-    │       │       ▼                                  │
-    │       │   PR-16 (查询面板) ◄──── PR-11 ─────────┤
-    │       │                                          │
-    │       ▼                                          │
-    │   PR-10 (报单表单) ─────────────────────────────┤
-    │       │                                          │
-    │       ▼                                          │
-    │   PR-15 (快捷功能) ◄──── PR-9 ─────────────────┤
-    │                                                  │
-    ▼                                                  │
-PR-2 (前端初始化) ───────────────────────────────────┤
-    │                                                  │
-    ▼                                                  │
-PR-4 (布局框架) ─────────────────────────────────────┤
-    │                                                  │
-    ▼                                                  │
-PR-6 (行情表格) ─────────────────────────────────────┤
-    │                                                  │
-    ├──►PR-8 (五档行情) ──────────────────────────────┤
-    │                                                  │
-    ├──►PR-12 (K线图) ───────────────────────────────┤
-    │                                                  │
-    └──►PR-14 (期权T型报价) ─────────────────────────┘
-                                                    │
-                                                    ▼
-                                              PR-17 (联调测试)
+阶段1: 基础框架
+PR-1 (CTP验证) ──►PR-3 (FastAPI框架)
+PR-2 (前端初始化)  ← 无依赖，可与PR-1/PR-3并行
+
+阶段2: 行情模块（后端先行）
+PR-3 ──►PR-5 (行情API) ──►PR-4 (前端布局) ──►PR-6 (行情表格)
+                                    │
+PR-5 ──►PR-7 (WebSocket) ──►PR-8 (五档行情)
+                                    │
+PR-5 ──►PR-12 (K线图)              │
+PR-5 ──►PR-18 (期权API) ──►PR-14 (期权T型报价)
+
+阶段3: 交易模块（后端先行）
+PR-7 ──►PR-9 (交易API) ──►PR-10 (报单表单) ──►PR-15 (快捷功能)
+
+阶段4: 查询模块（后端先行）
+PR-9 ──►PR-11 (查询API) ──►PR-16 (查询面板)
+PR-9 ──►PR-13 (止损单)   ──►PR-16 (查询面板)
+
+阶段5: 联调优化
+PR-1~16,PR-18 ──►PR-17 (联调测试)
 ```
 
 **并行开发建议**：
 - PR-1 和 PR-2 可以并行开发（无依赖）
-- PR-3 和 PR-4 可以并行开发（分别依赖PR-1和PR-2）
-- PR-5 和 PR-6 可以并行开发（分别依赖PR-3和PR-4）
-- PR-7 和 PR-8 可以并行开发（分别依赖PR-5和PR-6）
-- PR-9 和 PR-12 可以并行开发（分别依赖PR-7和PR-6）
-- PR-10 和 PR-14 可以并行开发（分别依赖PR-8和PR-6）
-- PR-11 和 PR-13 可以并行开发（都依赖PR-9）
-- PR-15 依赖PR-9和PR-10（一键反向/锁仓需要后端支持）
-- PR-16 依赖PR-11和PR-13（查询面板需要查询API和止损单服务）
+- PR-3 完成后，PR-5 可以开始（依赖FastAPI框架）
+- PR-2 完成后，PR-4 可以开始（前端布局不需要后端数据）
+- PR-5 完成后，PR-6/7/12/18 可以并行开发（都依赖行情API）
+- PR-7 完成后，PR-8/9 可以并行开发（分别依赖WebSocket和交易API）
+- PR-9 完成后，PR-10/11/13 可以并行开发（都依赖交易API）
+- PR-10 完成后，PR-15 可以开始（快捷功能依赖报单表单）
+- PR-11 和 PR-13 完成后，PR-16 可以开始（查询面板需要查询API和止损单服务）
+- PR-18 完成后，PR-14 可以开始（期权T型报价依赖期权API）
 
 ---
 
@@ -1545,7 +1659,7 @@ PR-6 (行情表格) ────────────────────
 | **M0** | PR-1, PR-2 | 基础框架（CTP验证 + 前端初始化） | Week 1 Day 1-2 |
 | **M1** | PR-3, PR-4, PR-5, PR-6 | 框架搭建 + 行情模块启动 | Week 1 Day 3-5 |
 | **M2** | PR-7, PR-8, PR-9, PR-10, PR-11, PR-12 | 行情完善 + 交易模块 | Week 2 |
-| **M3** | PR-13, PR-14, PR-15, PR-16 | 高级功能 | Week 3 Day 1-4 |
+| **M3** | PR-13, PR-14, PR-15, PR-16, PR-18 | 高级功能 | Week 3 Day 1-4 |
 | **M4** | PR-17 | 联调测试与Bug修复 | Week 3 Day 5 |
 
 ---
@@ -1559,4 +1673,6 @@ PR-6 (行情表格) ────────────────────
 | 2026-07-08 | v1.2 | 修复PR-14 API描述混淆，明确后端API职责 | ✅ 完成 |
 | 2026-07-10 | v1.3 | 里程碑与task-dev-flow.md对齐，openctp-ctp改为ctp-python | ✅ 完成 |
 | 2026-07-10 | v1.4 | 基于ctp-api-structure.txt真实API字段更新PR-2/5/9/11/14/16 | ✅ 完成 |
+| 2026-07-10 | v1.5 | 修复ctp_wrapper命名、PR-2状态、PR-1工作量；新增PR-18期权API | ✅ 完成 |
 | 2026-07-10 | v1.5 | 每个PR增加用户手动验证提示 | ✅ 完成 |
+| 2026-07-13 | v1.6 | 前端PR依赖后端API先行，去掉mock数据，直接调用真实接口 | ✅ 完成 |
