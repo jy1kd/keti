@@ -7,7 +7,7 @@ import { usePointOrder } from '@/hooks/usePointOrder'
 import './styles.css'
 
 export function MarketPanel() {
-  const { snapshots, setSelectedInstrument } = useMarketStore()
+  const { snapshots, selectedInstrument, setSelectedInstrument } = useMarketStore()
   const { contracts, addContract } = useContractsStore()
 
   // 只显示有行情数据的合约（搜索结果与表格数据对齐）
@@ -43,6 +43,7 @@ export function MarketPanel() {
       <div className="panel-content">
         <MarketTable
           snapshots={snapshots}
+          selectedInstrument={selectedInstrument}
           onRowClick={handleClick}
           onRowDoubleClick={handleDoubleClick}
         />

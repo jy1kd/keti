@@ -4,6 +4,7 @@ import type { MarketSnapshot } from '@/services/types'
 
 interface MarketTableProps {
   snapshots: Map<string, MarketSnapshot>
+  selectedInstrument?: string | null
   onRowClick?: (instrumentID: string, price: number) => void
   onRowDoubleClick?: (instrumentID: string, price: number) => void
 }
@@ -35,7 +36,7 @@ function snapshotToRecord(snap: MarketSnapshot) {
   }
 }
 
-export function MarketTable({ snapshots, onRowClick, onRowDoubleClick }: MarketTableProps) {
+export function MarketTable({ snapshots, selectedInstrument, onRowClick, onRowDoubleClick }: MarketTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
   const onClickRef = useRef(onRowClick)
@@ -87,6 +88,17 @@ export function MarketTable({ snapshots, onRowClick, onRowDoubleClick }: MarketT
     const records = Array.from(snapshots.values()).map(snapshotToRecord)
     tableRef.current.setRecords(records)
   }, [snapshots])
+
+  // 高亮选中合约行
+  useEffect(() => {
+    if (!tableRef.current || !selectedInstrument) return
+    const records = Array.from(snapshots.values()).map(snapshotToRecord)
+    const rowIndex = records.findIndex((r) => r.instrumentID === selectedInstrument)
+    if (rowIndex >= 0) {
+      tableRef.current.selectCell(rowIndex, 0)
+      tableRef.current.scrollToRow(rowIndex)
+    }
+  }, [selectedInstrument, snapshots])
 
   return <div ref={containerRef} className="market-table-container" />
 }
