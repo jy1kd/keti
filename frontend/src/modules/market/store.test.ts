@@ -72,4 +72,33 @@ describe('MarketStore', () => {
     expect(useMarketStore.getState().snapshots.get('au2508')?.lastPrice).toBe(480.5)
     expect(useMarketStore.getState().snapshots.get('ag2508')?.lastPrice).toBe(6500)
   })
+
+  it('batchUpdate merges multiple snapshots at once', () => {
+    const snaps = [
+      { instrumentID: 'au2508', lastPrice: 480.5 } as MarketSnapshot,
+      { instrumentID: 'ag2508', lastPrice: 6500 } as MarketSnapshot,
+      { instrumentID: 'cu2508', lastPrice: 72000 } as MarketSnapshot,
+    ]
+
+    useMarketStore.getState().batchUpdate(snaps)
+    expect(useMarketStore.getState().snapshots.size).toBe(3)
+    expect(useMarketStore.getState().snapshots.get('au2508')?.lastPrice).toBe(480.5)
+    expect(useMarketStore.getState().snapshots.get('ag2508')?.lastPrice).toBe(6500)
+    expect(useMarketStore.getState().snapshots.get('cu2508')?.lastPrice).toBe(72000)
+  })
+
+  it('batchUpdate updates existing snapshots', () => {
+    useMarketStore.getState().updateSnapshot({
+      instrumentID: 'au2508',
+      lastPrice: 480.5,
+    } as MarketSnapshot)
+
+    useMarketStore.getState().batchUpdate([
+      { instrumentID: 'au2508', lastPrice: 481.0 } as MarketSnapshot,
+      { instrumentID: 'ag2508', lastPrice: 6500 } as MarketSnapshot,
+    ])
+
+    expect(useMarketStore.getState().snapshots.size).toBe(2)
+    expect(useMarketStore.getState().snapshots.get('au2508')?.lastPrice).toBe(481.0)
+  })
 })

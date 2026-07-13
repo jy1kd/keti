@@ -6,6 +6,7 @@ interface MarketStore {
   setSelectedInstrument: (instrument: string | null) => void
   snapshots: Map<string, MarketSnapshot>
   updateSnapshot: (snapshot: MarketSnapshot) => void
+  batchUpdate: (snapshots: MarketSnapshot[]) => void
 }
 
 export const useMarketStore = create<MarketStore>((set) => ({
@@ -16,6 +17,14 @@ export const useMarketStore = create<MarketStore>((set) => ({
     set((state) => {
       const next = new Map(state.snapshots)
       next.set(snapshot.instrumentID, snapshot)
+      return { snapshots: next }
+    }),
+  batchUpdate: (updates) =>
+    set((state) => {
+      const next = new Map(state.snapshots)
+      for (const snap of updates) {
+        next.set(snap.instrumentID, snap)
+      }
       return { snapshots: next }
     }),
 }))
