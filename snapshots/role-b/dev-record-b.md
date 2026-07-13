@@ -203,3 +203,4 @@
 - `3c3b64f` feat(PR-6): 开发环境 mock 行情数据 — 5 个合约（au/ag/cu/rb/IF）初始化到 store
 - `38cebf2` fix(PR-6): mock 数据字段名对齐 MarketSnapshot 类型 — highPrice→highestPrice, lowPrice→lowestPrice，补全五档盘口和必填字段
 - `c405f63` feat(PR-6): 开发环境 mock 合约数据 — 16 个合约覆盖 SHFE/CFFEX/DCE/CZCE，搜索功能可用
+- `cdb4823` fix(PR-6): 搜索结果过滤 — 只显示有行情数据的合约，避免点击后无反应
