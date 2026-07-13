@@ -4,7 +4,7 @@ Usage:
     uvicorn main:app --reload --port 8000
 """
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -13,7 +13,7 @@ from api.connection import router as connection_router
 from api.market import router as market_router
 from api.order import router as order_router
 from api.query import router as query_router
-from ws.manager import ws_manager
+from ws.manager import WebSocketManager
 from ws.handlers import (
     handle_market_ws,
     handle_order_ws,
@@ -44,26 +44,27 @@ def create_app() -> FastAPI:
 
     # WebSocket endpoints
     @app.websocket("/ws/market")
-    async def ws_market(ws):
-        await handle_market_ws(ws)
+    async def ws_market(websocket: WebSocket):
+        await handle_market_ws(websocket)
 
     @app.websocket("/ws/order")
-    async def ws_order(ws):
-        await handle_order_ws(ws)
+    async def ws_order(websocket: WebSocket):
+        await handle_order_ws(websocket)
 
     @app.websocket("/ws/position")
-    async def ws_position(ws):
-        await handle_position_ws(ws)
+    async def ws_position(websocket: WebSocket):
+        await handle_position_ws(websocket)
 
     @app.websocket("/ws/stop")
-    async def ws_stop(ws):
-        await handle_stop_ws(ws)
+    async def ws_stop(websocket: WebSocket):
+        await handle_stop_ws(websocket)
 
     @app.websocket("/ws/system")
-    async def ws_system(ws):
-        await handle_system_ws(ws)
+    async def ws_system(websocket: WebSocket):
+        await handle_system_ws(websocket)
 
-    # Store ws_manager on app state for access from routes
+    # Create and store ws_manager on app state for access from routes
+    ws_manager = WebSocketManager()
     app.state.ws_manager = ws_manager
 
     # Global exception handler

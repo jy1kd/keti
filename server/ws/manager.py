@@ -52,7 +52,7 @@ class WebSocketManager:
         message = {"type": msg_type, "data": data}
         dead: List[WebSocket] = []
 
-        for ws in self.connections[endpoint]:
+        for ws in list(self.connections[endpoint]):
             try:
                 await ws.send_json(message)
             except Exception:
@@ -60,7 +60,3 @@ class WebSocketManager:
 
         for ws in dead:
             self.disconnect(endpoint, ws)
-
-
-# Global singleton instance
-ws_manager = WebSocketManager()
