@@ -96,7 +96,8 @@ export function MarketTable({ snapshots, selectedInstrument, onRowClick, onRowDo
     const rowIndex = records.findIndex((r) => r.instrumentID === selectedInstrument)
     if (rowIndex >= 0) {
       tableRef.current.selectRow(rowIndex)
-      tableRef.current.scrollToCell({ row: rowIndex, col: 0 })
+      // vtable 行索引从 1 开始（0 是表头），需要 +1
+      tableRef.current.scrollToCell({ row: rowIndex + 1, col: 0 })
     }
   }, [selectedInstrument, snapshots])
 
