@@ -5,6 +5,7 @@ Usage:
 """
 
 import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request, WebSocket
@@ -31,7 +32,16 @@ from ws.handlers import (
 
 def create_app() -> FastAPI:
     """Factory: build and configure the FastAPI application."""
-    app = FastAPI(title="Simnow Trader API", version="1.0.0")
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        """Startup / shutdown lifecycle."""
+        cfg = load_config()
+        start_ctp_market_connection(app, cfg)
+        yield
+        # Shutdown: nothing to clean up — daemon threads die with the process
+
+    app = FastAPI(title="Simnow Trader API", version="1.0.0", lifespan=lifespan)
 
     # CORS
     app.add_middleware(
@@ -79,12 +89,6 @@ def create_app() -> FastAPI:
     market_service.load_instruments_from_file(str(_instruments_path))
     app.state.market_service = market_service
 
-    # Startup event — auto-connect CTP in background thread
-    @app.on_event("startup")
-    async def _startup_ctp() -> None:
-        _config = load_config()
-        start_ctp_market_connection(app, _config)
-
     # Global exception handler
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
@@ -114,6 +118,10 @@ def wire_ctp_market_bridge(md_api, app: FastAPI) -> None:
     Because CTP callbacks run in the CTP worker thread (not the asyncio event
     loop), the broadcast uses asyncio.run_coroutine_threadsafe() to safely
     cross the thread boundary.
+
+    NOTE: Must be called from the asyncio main thread (where get_event_loop()
+    is valid). For automatic startup, use ctp_startup.start_ctp_market_connection()
+    instead — it handles the event-loop capture internally.
 
     Example usage:
         app = create_app()

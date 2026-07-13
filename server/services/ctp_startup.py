@@ -51,6 +51,15 @@ def start_ctp_market_connection(
     Returns:
         The background thread (daemon=True). Caller may ignore it.
     """
+    # Capture the event loop from the calling asyncio thread.
+    # CTP callbacks fire in a non-asyncio thread where get_event_loop()
+    # would raise RuntimeError, so we grab it here while we can.
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # Called from a sync context (e.g. test) — use or create a loop
+        loop = asyncio.new_event_loop()
+
     def _connect() -> None:
         # Lazy import — only when we actually need CTP
         from ctp_wrapper.md_user_api import MdUserApi
@@ -89,8 +98,8 @@ def start_ctp_market_connection(
             md_api.login_status = "logged_in"
             logger.info("CTP login successful (user=%s)", config.user_id)
 
-            # Wire the market data bridge
-            _wire_bridge(app, md_api)
+            # Wire the market data bridge (uses captured loop)
+            _wire_bridge(app, md_api, loop)
             login_done.set()
 
         # Register callbacks
@@ -126,14 +135,21 @@ def start_ctp_market_connection(
     return thread
 
 
-def _wire_bridge(app: "FastAPI", md_api: Any) -> None:
+def _wire_bridge(
+    app: "FastAPI",
+    md_api: Any,
+    loop: asyncio.AbstractEventLoop,
+) -> None:
     """Wire the market data bridge: CTP → MarketService → WebSocket.
 
-    Uses asyncio.run_coroutine_threadsafe() to cross from the CTP worker
-    thread into the asyncio event loop for WebSocket broadcasts.
-    """
-    loop = asyncio.get_event_loop()
+    Uses the provided event loop (from the asyncio main thread) to schedule
+    WebSocket broadcasts via asyncio.run_coroutine_threadsafe().
 
+    Args:
+        app: The FastAPI application instance.
+        md_api: The MdUserApi instance.
+        loop: The asyncio event loop captured during startup.
+    """
     def _broadcast_to_ws(data: dict) -> None:
         asyncio.run_coroutine_threadsafe(
             app.state.ws_manager.broadcast("market", "market_data", data),
