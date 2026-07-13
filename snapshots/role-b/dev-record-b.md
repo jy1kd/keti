@@ -206,3 +206,4 @@
 - `cdb4823` fix(PR-6): 搜索结果过滤 — 只显示有行情数据的合约，避免点击后无反应
 - `694cb76` feat(PR-6): 选中合约高亮 — 搜索选择后表格自动高亮并滚动到对应行
 - `0f6b55f` fix(PR-6): 高亮修正 — selectCell→selectRow，整行高亮而非单列
+- `7657bce` fix(PR-6): 滚动修正 — scrollToRow→scrollToCell，精确定位选中行
