@@ -14,6 +14,7 @@ from api.market import router as market_router
 from api.order import router as order_router
 from api.query import router as query_router
 from ws.manager import WebSocketManager
+from services.market_service import MarketService
 from ws.handlers import (
     handle_market_ws,
     handle_order_ws,
@@ -63,9 +64,12 @@ def create_app() -> FastAPI:
     async def ws_system(websocket: WebSocket):
         await handle_system_ws(websocket)
 
-    # Create and store ws_manager on app state for access from routes
+    # Create and store ws_manager and market_service on app state
     ws_manager = WebSocketManager()
     app.state.ws_manager = ws_manager
+
+    market_service = MarketService()
+    app.state.market_service = market_service
 
     # Global exception handler
     @app.exception_handler(Exception)
