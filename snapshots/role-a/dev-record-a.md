@@ -135,7 +135,7 @@
 
 **分支**：`feature/pr-5-market-api`
 **依赖**：PR-3
-**状态**：✅ 修复完成，待二次审查
+**状态**：✅ 二次审查修复完成，待合并
 
 ### 测试用例列表
 
@@ -144,8 +144,9 @@
 | `tests/test_market_service.py` | 35 | MarketService 初始化、合约缓存(CRUD+模糊搜索)、订阅管理(500上限)、快照缓存、文件加载 |
 | `tests/test_field_mapping.py` | 22 | CTP深度行情 PascalCase→camelCase 全字段映射、边界值、缺失属性 |
 | `tests/test_market_api.py` | 20 | REST API 集成测试(instruments/subscribe/unsubscribe/snapshots/kline/depth) |
+| `tests/test_ctp_bridge.py` | 8 | CTP回调桥接 (注册/快照/映射/广播/合并/容错) |
 | `tests/test_*.py` (PR-1/PR-3 原有) | 150 | 回归 |
-| **合计** | **227** | |
+| **合计** | **235** | |
 
 ### 实现进度
 
@@ -204,3 +205,13 @@
 **修复 Commits**：
 - `c286776` fix(task-05): CTP回调链路接通
 - `036410e` fix(task-05): K线占位文档化+代码清理
+
+### 二次审查反馈修复（2026-07-13）
+
+审查文件：`review-feedback-a-pr5-r2.md`（1 阻断 + 0 建议 + 0 疑问）
+
+| # | 严重度 | 问题 | 处理 |
+|---|--------|------|------|
+| B3 | 🔴 | `main.py` 缺少 `import asyncio` 和 `from pathlib import Path` | `40254cd` — 添加 2 行 import |
+
+**验证**：`from main import create_app, wire_ctp_market_bridge` 成功，235 tests 通过。

@@ -12,7 +12,7 @@
 |----|------|------|----------|----------|
 | PR-1 | 后端CTP连接验证（技术Spike） | ✅ 审查通过，待人工验证合并 | 2026-07-10 | ce44db8, 282ecaf, fa0a872, e6bc245, 2e7f11a, d399fd1, 34c5c9d, 6ddf795, b081b50 |
 | PR-3 | 后端FastAPI框架搭建 | ✅ 二次审查完成，待手动验证合并 | 2026-07-13 | 47a5fa1, c545354, 9217d61, 98f705a, 2bb9b69, 1d28ea8, 1bf6c7c |
-| PR-5 | 后端行情API实现 | ✅ 修复完成，待二次审查 | 2026-07-13 | 6f19568, f810499, 77a8f9f, ef837a3, c76db1a, c286776, 036410e |
+| PR-5 | 后端行情API实现 | ✅ 二次审查修复完成，待合并 | 2026-07-13 | 6f19568, f810499, 77a8f9f, ef837a3, c76db1a, c286776, 036410e, 40254cd |
 | PR-7 | 后端WebSocket管理完善 | ⏳ 待开始 | - | - |
 | PR-9 | 后端交易API实现 | ⏳ 待开始 | - | - |
 | PR-11 | 后端查询API实现 | ⏳ 待开始 | - | - |
@@ -109,7 +109,7 @@
 
 ### PR-5: 后端行情API实现
 
-**状态**：✅ 修复完成，待二次审查
+**状态**：✅ 二次审查修复完成，待合并
 
 **PR信息**：
 - PR分支名：`feature/pr-5-market-api`
@@ -140,6 +140,11 @@
 - `c76db1a` docs(task-05): PR-5开发记录更新 — 4次TDD循环，227 tests全部通过
 - `c286776` fix(task-05): review反馈 — CTP回调链路接通 (MdSpi→field_mapping→MarketService→WS)
 - `036410e` fix(task-05): review反馈 — K线占位文档化+代码清理(6条建议)
+- `40254cd` fix(task-05): review二次审查 — 补充import asyncio和pathlib.Path
+
+**审查记录**：
+- 一次审查（`review-feedback-a-pr5.md`）：2 🔴 + 6 🟡 + 1 🔵 → 全部修复
+- 二次审查（`review-feedback-a-pr5-r2.md`）：1 🔴（import遗漏）→ 已修复，8项修复全部验证通过
 
 **交接说明**：
 - CTP 回调链路已就绪：`wire_ctp_market_bridge(md_api, app)` 一行接入

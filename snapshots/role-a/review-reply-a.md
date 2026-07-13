@@ -206,3 +206,36 @@
 ```
 
 全部测试通过，无回归。新增 8 个 ctp_bridge 测试覆盖回调注册、快照更新、字段映射、广播调用、合并语义、空 instrumentID、无 broadcast_fn 场景。
+
+---
+
+## PR-5 Code Review 二次审查反馈处理记录
+
+**审查分支**：`feature/pr-5-market-api`
+**审查文件**：`review-feedback-a-pr5-r2.md`
+**处理时间**：2026-07-13
+**审查结论**：1 阻断 + 0 建议 + 0 疑问
+
+---
+
+### 🔴 阻断性问题修复（1 条）
+
+| # | 问题 | 修复 Commit | 处理说明 |
+|---|------|------------|----------|
+| B3 | `main.py` 缺少 `import asyncio` 和 `from pathlib import Path` | `40254cd` | S3 修复漏掉了模块顶部 import，导致运行时 `NameError`。验证：`from main import create_app` 可正常导入。 |
+
+---
+
+### ✅ 一次审查修复验证
+
+全部 8 项（B1/B2/S1-S6/Q1）二次验证通过。
+
+---
+
+### 测试记录
+
+```
+235 passed in 0.83s
+```
+
+导入验证：`from main import create_app, wire_ctp_market_bridge` 成功。
