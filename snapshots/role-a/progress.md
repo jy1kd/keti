@@ -12,7 +12,7 @@
 |----|------|------|----------|----------|
 | PR-1 | 后端CTP连接验证（技术Spike） | ✅ 审查通过，待人工验证合并 | 2026-07-10 | ce44db8, 282ecaf, fa0a872, e6bc245, 2e7f11a, d399fd1, 34c5c9d, 6ddf795, b081b50 |
 | PR-3 | 后端FastAPI框架搭建 | ✅ 二次审查完成，待手动验证合并 | 2026-07-13 | 47a5fa1, c545354, 9217d61, 98f705a, 2bb9b69, 1d28ea8, 1bf6c7c |
-| PR-5 | 后端行情API实现 | ⏳ 待开始 | - | - |
+| PR-5 | 后端行情API实现 | ✅ 开发完成，待审查 | 2026-07-13 | 6f19568, f810499, 77a8f9f, ef837a3, c76db1a |
 | PR-7 | 后端WebSocket管理完善 | ⏳ 待开始 | - | - |
 | PR-9 | 后端交易API实现 | ⏳ 待开始 | - | - |
 | PR-11 | 后端查询API实现 | ⏳ 待开始 | - | - |
@@ -109,7 +109,7 @@
 
 ### PR-5: 后端行情API实现
 
-**状态**：⏳ 待开始
+**状态**：✅ 开发完成，待审查
 
 **PR信息**：
 - PR分支名：`feature/pr-5-market-api`
@@ -117,16 +117,32 @@
 - 工作量：3小时
 
 **完成内容**：
-- 待开发
+- ✅ `services/market_service.py` — 合约缓存、行情快照缓存、订阅管理（500上限）、模糊搜索
+- ✅ `services/field_mapping.py` — CTP PascalCase → camelCase 字段映射（40字段）
+- ✅ `api/market.py` — GET instruments/subscribe/unsubscribe/snapshots/kline/depth 全部重写
+- ✅ `data/instruments.json` — 8 个股指期货合约缓存（IF/IC/IH/IM）
+- ✅ `main.py` — 注入 MarketService + 启动自动加载 instruments.json
 
 **验证结果**：
-- 待验证
+- ✅ 227 tests 全部通过（150 回归 + 77 新增）
+- ✅ 代码范围正确（仅 server/ 目录）
+- ✅ 无调试代码残留
+- ✅ 应用启动正常（13 routes）
+- ✅ 自验证全部通过
+- ⚠️ K线返回空数据（需 CTP 历史数据查询）
+- ⚠️ WebSocket 行情推送未集成（需 CTP 连接 + 事件循环桥接，代码已就绪）
 
 **提交记录**：
-- 待提交
+- `6f19568` feat(task-05): MarketService核心逻辑 — 合约缓存+订阅管理+快照缓存 — 30 tests
+- `f810499` feat(task-05): CTP字段映射 — PascalCase→camelCase深度行情数据 — 22 tests
+- `77a8f9f` feat(task-05): 行情API路由实现 — instruments/subscribe/unsubscribe/snapshots/kline/depth — 20 tests
+- `ef837a3` feat(task-05): 合约列表缓存 — instruments.json文件加载+启动自加载 — 5 tests
+- `c76db1a` docs(task-05): PR-5开发记录更新 — 4次TDD循环，227 tests全部通过
 
 **交接说明**：
-- 待交接
+- K线接入 + WebSocket 推送需 CTP 连接后手动验证
+- 字段映射代码可直接用于 CTP 回调 OnRtnDepthMarketData
+- PR-7 需将 WS handler 接入 ws_manager，届时一并完成行情推送
 
 ---
 
