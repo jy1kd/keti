@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { ContractSearch } from '@/components/ContractSearch'
 import { MarketTable } from './MarketTable'
 import { useMarketStore } from './store'
@@ -8,6 +9,12 @@ import './styles.css'
 export function MarketPanel() {
   const { snapshots, setSelectedInstrument } = useMarketStore()
   const { contracts, addContract } = useContractsStore()
+
+  // 只显示有行情数据的合约（搜索结果与表格数据对齐）
+  const contractsInMarket = useMemo(
+    () => contracts.filter((c) => snapshots.has(c.instrumentID)),
+    [contracts, snapshots],
+  )
 
   const { handleClick, handleDoubleClick } = usePointOrder({
     onOrder: ({ instrumentID, price }) => {
@@ -31,7 +38,7 @@ export function MarketPanel() {
     <section className="market-panel">
       <div className="panel-header">
         <h2>行情面板</h2>
-        <ContractSearch contracts={contracts} onSelect={handleSelectContract} />
+        <ContractSearch contracts={contractsInMarket} onSelect={handleSelectContract} />
       </div>
       <div className="panel-content">
         <MarketTable
