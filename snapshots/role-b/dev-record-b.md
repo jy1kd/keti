@@ -207,3 +207,4 @@
 - `694cb76` feat(PR-6): 选中合约高亮 — 搜索选择后表格自动高亮并滚动到对应行
 - `0f6b55f` fix(PR-6): 高亮修正 — selectCell→selectRow，整行高亮而非单列
 - `7657bce` fix(PR-6): 滚动修正 — scrollToRow→scrollToCell，精确定位选中行
+- `c02794e` fix(PR-6): 滚动索引修正 — vtable 行索引从 1 开始（0 是表头），scrollToCell row+1
