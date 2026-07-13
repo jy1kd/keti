@@ -149,4 +149,7 @@
 
 ### 提交记录
 
-- 待提交
+- `3feccf9` feat(PR-4): 前端多面板布局框架
+- `ffedb9f` docs(PR-4): 更新进度快照和开发流程文档
+- `e6077c6` refactor(PR-4): 设计系统优化 — CSS变量统一、无障碍、样式去重
+- `13f956d` fix(PR-4): 移除 .con 敏感文件，添加到 .gitignore
