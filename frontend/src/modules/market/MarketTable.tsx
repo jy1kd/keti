@@ -38,6 +38,11 @@ function snapshotToRecord(snap: MarketSnapshot) {
 export function MarketTable({ snapshots, onRowClick, onRowDoubleClick }: MarketTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
+  const onClickRef = useRef(onRowClick)
+  const onDblClickRef = useRef(onRowDoubleClick)
+
+  useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
+  useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -57,15 +62,15 @@ export function MarketTable({ snapshots, onRowClick, onRowDoubleClick }: MarketT
 
     table.on('click_cell', (args: any) => {
       const record = records[args.row]
-      if (record && onRowClick) {
-        onRowClick(record.instrumentID, record.lastPrice)
+      if (record && onClickRef.current) {
+        onClickRef.current(record.instrumentID, record.lastPrice)
       }
     })
 
     table.on('dblclick_cell', (args: any) => {
       const record = records[args.row]
-      if (record && onRowDoubleClick) {
-        onRowDoubleClick(record.instrumentID, record.lastPrice)
+      if (record && onDblClickRef.current) {
+        onDblClickRef.current(record.instrumentID, record.lastPrice)
       }
     })
 
