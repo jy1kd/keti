@@ -128,3 +128,59 @@
 | 🟡 handler↔manager 集成 gap 加注释 | ✅ handlers.py 添加 PR-7 TODO 注释块 |
 | 🟡 WS handler 端到端测试缺失 | ⏳ 延期 PR-7 |
 | 🟡 五个 handler 函数重复 | ⏳ 延期 PR-7 |
+
+---
+
+## PR-5: 后端行情API实现
+
+**分支**：`feature/pr-5-market-api`
+**依赖**：PR-3
+**状态**：🟢 开发中
+
+### 测试用例列表
+
+| 测试文件 | 测试数 | 覆盖内容 |
+|----------|--------|----------|
+| `tests/test_market_service.py` | 35 | MarketService 初始化、合约缓存(CRUD+模糊搜索)、订阅管理(500上限)、快照缓存、文件加载 |
+| `tests/test_field_mapping.py` | 22 | CTP深度行情 PascalCase→camelCase 全字段映射、边界值、缺失属性 |
+| `tests/test_market_api.py` | 20 | REST API 集成测试(instruments/subscribe/unsubscribe/snapshots/kline/depth) |
+| `tests/test_*.py` (PR-1/PR-3 原有) | 150 | 回归 |
+| **合计** | **227** | |
+
+### 实现进度
+
+#### 第1次循环：MarketService 核心逻辑（30 tests）
+- ✅ `services/market_service.py` — 合约缓存、订阅管理(500上限)、快照缓存、模糊搜索
+- 📦 Commit: `6f19568`
+
+#### 第2次循环：CTP 字段映射（22 tests）
+- ✅ `services/field_mapping.py` — CTP CThostFtdcDepthMarketDataField → camelCase dict，40 字段全覆盖
+- 📦 Commit: `f810499`
+
+#### 第3次循环：行情 API 路由（20 tests）
+- ✅ `api/market.py` — GET instruments/subscribe/unsubscribe/snapshots/kline/depth 全部重写
+- ✅ `main.py` — MarketService 注入 app.state
+- 📦 Commit: `77a8f9f`
+
+#### 第4次循环：合约列表缓存（5 tests）
+- ✅ `data/instruments.json` — 8 个股指期货合约(IF/IC/IH/IM 2608+2609)
+- ✅ `MarketService.load_instruments_from_file()` — JSON 文件加载+容错
+- ✅ `main.py` — 启动时自动加载 instruments.json
+- 📦 Commit: `ef837a3`
+
+### 关键设计决策
+
+1. **MarketService 纯同步设计**：所有数据操作方法均为同步，CTP 回调线程安全。WebSocket 推送由外部调用方处理
+2. **字段映射表驱动**：`_DEPTH_MARKET_DATA_FIELDS` 列表定义 CTP→camelCase 映射，40 字段含默认值，`getattr` 兜底
+3. **集成测试用独立 FastAPI app**：每个测试文件创建独立 app 实例，不依赖 `main.py` 的全局 `app`
+4. **K线占位**：当前返回空 bars，需 CTP 历史数据查询接口支持
+5. **订阅限制批处理原子性**：整批检查上限，不部分添加
+
+### Commit 记录
+
+| Commit | 内容 |
+|--------|------|
+| `6f19568` | feat(task-05): MarketService核心逻辑 — 合约缓存+订阅管理+快照缓存 — 30 tests pass |
+| `f810499` | feat(task-05): CTP字段映射 — PascalCase→camelCase深度行情数据 — 22 tests pass |
+| `77a8f9f` | feat(task-05): 行情API路由实现 — instruments/subscribe/unsubscribe/snapshots/kline/depth — 20 tests pass |
+| `ef837a3` | feat(task-05): 合约列表缓存 — instruments.json文件加载+启动自加载 — 5 tests pass |
