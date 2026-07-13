@@ -69,6 +69,12 @@ def create_app() -> FastAPI:
     app.state.ws_manager = ws_manager
 
     market_service = MarketService()
+    # Load instrument cache from file (if available)
+    import os as _os
+    _instruments_path = _os.path.join(
+        _os.path.dirname(__file__), "data", "instruments.json"
+    )
+    market_service.load_instruments_from_file(_instruments_path)
     app.state.market_service = market_service
 
     # Global exception handler

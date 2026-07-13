@@ -4,7 +4,11 @@ Sits between API routes and CTP MdUserApi. Designed for testability:
 all CTP-dependent operations accept the MdUserApi as an optional dependency.
 """
 
+import json
+import logging
 from typing import Any, Dict, List, Optional, Set
+
+logger = logging.getLogger(__name__)
 
 
 class MarketService:
@@ -32,6 +36,29 @@ class MarketService:
     def load_instruments(self, instruments: List[dict]) -> None:
         """Replace the instrument cache with a new list."""
         self._instruments = list(instruments)
+
+    def load_instruments_from_file(self, file_path: str) -> int:
+        """Load instrument cache from a JSON file.
+
+        Returns:
+            Number of instruments loaded. 0 on error or empty file.
+        """
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError, OSError) as exc:
+            logger.warning("Failed to load instruments from %s: %s", file_path, exc)
+            return 0
+
+        if not isinstance(data, list):
+            logger.warning(
+                "Instruments file %s is not a JSON array (got %s)",
+                file_path, type(data).__name__,
+            )
+            return 0
+
+        self.load_instruments(data)
+        return len(data)
 
     def get_instruments(self, keyword: str = "") -> List[dict]:
         """Query instruments, optionally filtered by keyword (fuzzy search).

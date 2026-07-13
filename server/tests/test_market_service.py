@@ -1,5 +1,9 @@
 """Tests for services/market_service.py — MarketService core logic."""
 
+import json
+import os
+import tempfile
+
 import pytest
 from services.market_service import MarketService
 
@@ -363,3 +367,84 @@ class TestSnapshotCache:
         assert snap["lastPrice"] == 3900.0
         # Old fields should be merged (not wiped)
         assert snap.get("openPrice") == 3845.0
+
+
+# ── File loading ───────────────────────────────────────────────────────
+
+class TestLoadInstrumentsFromFile:
+    """Loading instrument cache from JSON file."""
+
+    def test_load_from_file_replaces_cache(self):
+        """load_instruments_from_file replaces the instrument cache."""
+        svc = MarketService()
+        # Create a temp JSON file
+        data = [
+            {"instrumentID": "TEST01", "instrumentName": "Test 1"},
+            {"instrumentID": "TEST02", "instrumentName": "Test 2"},
+        ]
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as f:
+            json.dump(data, f)
+            tmp_path = f.name
+
+        try:
+            count = svc.load_instruments_from_file(tmp_path)
+            assert count == 2
+            assert svc.instrument_count == 2
+            result = svc.get_instruments()
+            assert result[0]["instrumentID"] == "TEST01"
+        finally:
+            os.unlink(tmp_path)
+
+    def test_load_from_nonexistent_file(self):
+        """Loading from a nonexistent file returns 0 and keeps cache empty."""
+        svc = MarketService()
+        count = svc.load_instruments_from_file("/nonexistent/path.json")
+        assert count == 0
+        assert svc.instrument_count == 0
+
+    def test_load_from_invalid_json(self):
+        """Loading from a file with invalid JSON returns 0."""
+        svc = MarketService()
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as f:
+            f.write("not valid json {{{")
+            tmp_path = f.name
+
+        try:
+            count = svc.load_instruments_from_file(tmp_path)
+            assert count == 0
+        finally:
+            os.unlink(tmp_path)
+
+    def test_load_from_file_not_a_list(self):
+        """Loading from a JSON file that is not a list returns 0."""
+        svc = MarketService()
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as f:
+            json.dump({"not": "a list"}, f)
+            tmp_path = f.name
+
+        try:
+            count = svc.load_instruments_from_file(tmp_path)
+            assert count == 0
+        finally:
+            os.unlink(tmp_path)
+
+    def test_load_real_instruments_file(self):
+        """The real data/instruments.json file can be loaded."""
+        svc = MarketService()
+        # Path relative to server/ directory
+        file_path = os.path.join(
+            os.path.dirname(__file__), "..", "data", "instruments.json"
+        )
+        count = svc.load_instruments_from_file(file_path)
+        assert count > 0
+        assert svc.instrument_count == count
+        # All instruments should have required fields
+        for inst in svc.get_instruments():
+            assert "instrumentID" in inst
+            assert "instrumentName" in inst
