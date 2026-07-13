@@ -62,3 +62,56 @@
 | `ce44db8` | feat(task-01): 配置管理、CTP类型定义、回调框架 — 66 tests pass |
 | `282ecaf` | feat(task-01): CTP行情/交易API封装、验证入口、配置模板 — 92 tests pass |
 | `fa0a872` | docs(task-01): 更新progress.md — 开发完成，待审查 |
+| (更多 PR-1 commits 见完整记录) | |
+
+---
+
+## PR-3: 后端 FastAPI 框架搭建
+
+**分支**：`feature/pr-3-fastapi-framework`
+**依赖**：PR-1
+**状态**：🔄 开发完成，待自验证
+
+### 测试用例列表
+
+| 测试文件 | 测试数 | 覆盖内容 |
+|----------|--------|----------|
+| `tests/test_models.py` | 20 | 6 个 Pydantic 模型（MarketSnapshot/KLineData/OrderRequest/OrderReturn/AccountInfo/PositionInfo/InstrumentInfo） |
+| `tests/test_ws_manager.py` | 14 | WebSocketManager 连接池、广播、断开清理 |
+| `tests/test_connection_api.py` | 8 | 登录/登出/状态 API、参数校验 |
+| `tests/test_*.py` (PR-1 原有) | 108 | 回归 |
+| **合计** | **150** | |
+
+### 实现进度
+
+#### 第1次循环：数据模型（20 tests）
+- ✅ `models/market.py` — MarketSnapshot（50+ 字段）、KLineData
+- ✅ `models/order.py` — OrderRequest、OrderReturn
+- ✅ `models/account.py` — AccountInfo、PositionInfo
+- ✅ `models/contract.py` — InstrumentInfo（含期权字段）
+
+#### 第2次循环：WebSocket 管理（14 tests）
+- ✅ `ws/manager.py` — 5 端点连接池 + `broadcast()` + 自动清理断线
+- ✅ `ws/handlers.py` — 占位处理器（PR-7 完善）
+
+#### 第3次循环：FastAPI 应用 + 连接 API（8 tests）
+- ✅ `api/connection.py` — POST login/logout、GET status
+- ✅ `api/market.py` — 占位路由（PR-5 实现）
+- ✅ `api/order.py` — 占位路由（PR-9 实现）
+- ✅ `api/query.py` — 占位路由（PR-11 实现）
+- ✅ `main.py` — 重写为 FastAPI 应用（CORS、13 路由、全局异常处理）
+
+### 关键设计决策
+
+1. **`create_app()` 工厂函数**：main.py 提供 `app` 实例 + `create_app()` 工厂，测试可用工厂创建隔离实例
+2. **`WebSocketManager` 全局单例**：`ws_manager` 在模块级创建，路由通过 `app.state` 访问
+3. **Pydantic Field 校验**：brokerID 使用 `min_length=1`，由 Pydantic 自动返回 422
+4. **连接状态简化**：PR-3 阶段 mdConnected/tdConnected 与 loggedIn 同值，PR-5/PR-9 独立
+
+### Commit 记录
+
+| Commit | 内容 |
+|--------|------|
+| `47a5fa1` | feat(task-03): Pydantic数据模型 — 行情/报单/账户/合约 — 20 tests pass |
+| `c545354` | feat(task-03): WebSocket连接管理器 — 5端点连接池+广播+自动清理 — 14 tests pass |
+| `9217d61` | feat(task-03): FastAPI应用入口+连接管理API+占位路由+5端点WebSocket — 150 tests pass |
