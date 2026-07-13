@@ -60,3 +60,100 @@
 
 **Commit**: `b081b50`
 **测试**: 108 passed
+
+---
+
+## PR-3 Code Review 反馈处理记录
+
+**审查分支**：`feature/pr-3-fastapi-framework`
+**审查文件**：`review-feedback-a-pr3.md`
+**处理时间**：2026-07-13
+**审查结论**：0 阻断 + 6 建议
+
+---
+
+### 🔴 阻断性问题
+
+无。
+
+---
+
+### 🟡 改进建议处理（6 条）
+
+| # | 建议 | 采纳 | 处理说明 |
+|---|------|------|----------|
+| 1 | WS handler 端到端测试缺失 | ⏳ 延期 | PR-7 将重写全部 handler，届时补充 TestClient 端到端测试 |
+| 2 | 五个 handler 函数重复 | ⏳ 延期 | PR-7 将实现差异逻辑（消息路由/dispatch），若仍有共性再提取 |
+| 3 | connection.py `request: Request` 未使用 | ✅ 采纳 | 移除 3 个路由函数中的 `request` 参数及 import |
+| 4 | password/userID 无 min_length | ✅ 采纳 | 添加 `Field(..., min_length=1)`，与 brokerID 一致 |
+| 5 | dev-record-a.md / progress.md 不一致 | ✅ 采纳 | 统一状态为「开发完成，待审查」，补全 progress.md 详细记录区 |
+| 6 | handler→manager 集成 gap 加注释 | ✅ 采纳 | handlers.py docstring 添加 PR-7 TODO 块，说明当前 gap |
+
+---
+
+### 🔵 疑问确认回复
+
+无。
+
+---
+
+### 测试记录
+
+```
+150 passed in 0.49s
+```
+
+全部测试通过，无回归。
+
+---
+
+## PR-3 二次审查反馈处理记录（WebSocket 深度审查）
+
+**审查文件**：`review-feedback-a-pr3-ws.md`
+**处理时间**：2026-07-13
+**审查结论**：0 阻断 + 6 建议 + 1 疑问
+
+---
+
+### 🔴 阻断性问题
+
+无。但发现运行时 WS 端点返回 403 bug（根因：main.py WS 路由参数 `ws` 缺少 `WebSocket` 类型注解，Starlette 依赖注入失败）。已在本次修复中一并解决。
+
+---
+
+### 🟡 改进建议处理（6 条）
+
+| # | 建议 | 采纳 | 处理说明 |
+|---|------|------|----------|
+| 1 | broadcast() 迭代并发风险 | ✅ 采纳 | `for ws in list(self.connections[endpoint])` — 一行防御 |
+| 2 | connect() 无去重 | ⏳ 延期 PR-7 | PR-7 引入 handler 接入 manager 时一并处理 |
+| 3 | broadcast data 类型约束 | ⏳ 延期 PR-7 | 届时配合消息协议 Pydantic 模型 (#7) 一起约束 |
+| 4 | handler 裸 except Exception | ⏳ 延期 PR-7 | PR-7 重写全部 handler 时会区分 WebSocketDisconnect |
+| 5 | ws_manager 单例 vs create_app() 工厂矛盾 | ✅ 采纳 | `WebSocketManager()` 移入 `create_app()` 内部，删除 `ws/manager.py` 全局单例 |
+| 6 | _FakeWebSocket.send_json 无真正 yield | ⏳ 延期 PR-7 | #1 已用 `list()` 防御，PR-7 补充并发测试时加 `asyncio.sleep(0)` |
+
+---
+
+### 🔵 疑问确认回复（1 条）
+
+**疑问-7**：是否需要在 PR-3 定义消息协议 Pydantic 模型？
+
+**回复**：同意在 PR-7 前定义。但 PR-3 当前 handler 为纯占位（只 accept + receive + discard），尚未实现任何消息路由，提前定义模型会引入未使用代码。建议 PR-7 第一步定义 `ws/protocol.py`，PR-3 的 handlers.py TODO 注释已明确标注。
+
+---
+
+### Bug 修复（审查期间发现）
+
+| 问题 | 修复 | Commit |
+|------|------|--------|
+| 5 个 WS 端点返回 403 | WS 路由参数添加 `WebSocket` 类型注解 + ws_manager 移入工厂函数 + broadcast 并发防护 | `1d28ea8` |
+
+---
+
+### 测试记录
+
+```
+150 passed in 0.51s
+```
+
+全部测试通过，无回归。5 个 WS 端点手动验证全部连通。

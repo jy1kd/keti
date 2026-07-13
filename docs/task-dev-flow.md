@@ -200,11 +200,10 @@ PR-1 [A] → PR-3 [A] → PR-5 [A] → PR-7 [A] → PR-9 [A] → PR-11 [A] → P
 
 **当前阶段**：阶段1 - 基础框架
 
-**当前状态**：PR-1 ✅ 完成 / PR-2 ✅ 完成 / PR-3 ⏳ 待开始 / PR-4 ✅ 完成
+**当前状态**：PR-1 ✅ 完成 / PR-2 ✅ 完成 / PR-3 ✅ 完成 / PR-4 ⏳ 待开始
 
 **下一步行动**：
-- 角色A：开始 PR-3（后端 FastAPI 框架搭建，依赖 PR-1）
-- 角色B：开始 PR-6（前端行情表格 vtable，依赖 PR-4）
+- 角色A：开始 PR-5（后端行情API实现，依赖 PR-3）
 
 ---
 
@@ -333,7 +332,7 @@ git branch -d feature/pr-<编号>-<描述>
 | PR | 任务 | 依赖 | 状态 | 分支名 |
 |----|------|------|------|--------|
 | PR-1 | 后端CTP连接验证 | 无 | ✅ 已完成 | `feature/pr-1-ctp-verify` |
-| PR-3 | 后端FastAPI框架搭建 | PR-1 | ⏳ 待开始 | `feature/pr-3-fastapi-framework` |
+| PR-3 | 后端FastAPI框架搭建 | PR-1 | ✅ 已完成 | `feature/pr-3-fastapi-framework` |
 
 ### 阶段2：行情模块
 
@@ -537,9 +536,7 @@ Week 3:
 | 2026-07-09 | v1.3 | CTP连接验证完成，记录关键发现 | ✅ 完成 |
 | 2026-07-10 | v1.4 | openctp-ctp改为ctp-python，与CLAUDE.md统一 | ✅ 完成 |
 | 2026-07-10 | v1.5 | 补充真实API字段结构（ctp-api-structure.txt），更新CTP验证记录 | ✅ 完成 |
-| 2026-07-10 | v1.6 | 修复章节编号、新增PR-18期权API、更新PR-14依赖 | ✅ 完成 |
-| 2026-07-13 | v1.6 | 前端PR依赖后端API先行，去掉mock数据，同步task.md依赖关系 | ✅ 完成 |
-| 2026-07-13 | v1.7 | 新增PR-6a：将PR-6的mock数据替换为真实后端API调用 | ✅ 完成 |
+| 2026-07-13 | v1.6 | PR-3 FastAPI框架完成（150 tests，两轮审查通过，WS 403 bug 修复） | ✅ 完成 |
 
 ---
 
