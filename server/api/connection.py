@@ -1,7 +1,7 @@
 """Connection management API — login, logout, status.
 
 POST /api/connection/login  — trigger CTP connection with credentials
-POST /api/connection/logout — clear session state
+POST /api/connection/logout — disconnect CTP and clear state
 GET  /api/connection/status — real CTP connection status
 """
 
@@ -35,10 +35,10 @@ class StatusResponse(BaseModel):
 async def login(body: LoginRequest, request: Request):
     """Trigger CTP connection with the provided credentials.
 
-    If CTP is already connected with the same user, returns success immediately.
-    If CTP is connected with a different user, returns error.
-    If not connected, starts a background connection thread.
-    The frontend should poll GET /status to monitor connection progress.
+    Guards against:
+    - Already logged in with same user → return success
+    - Already logged in with different user → return error
+    - Connection thread already running → return error (prevent re-entry)
     """
     md_api = getattr(request.app.state, "md_api", None)
 
@@ -49,7 +49,15 @@ async def login(body: LoginRequest, request: Request):
             return {"success": True, "message": "Already connected", "userID": body.userID}
         return {
             "success": False,
-            "message": f"Already connected as different user. Restart to switch accounts.",
+            "message": "Already connected as different user. Restart to switch accounts.",
+        }
+
+    # Connection thread already running — prevent re-entry
+    ctp_thread = getattr(request.app.state, "ctp_thread", None)
+    if ctp_thread is not None and ctp_thread.is_alive():
+        return {
+            "success": False,
+            "message": "Connection in progress. Poll /api/connection/status.",
         }
 
     # Start CTP connection with provided credentials (non-blocking)
@@ -67,20 +75,31 @@ async def login(body: LoginRequest, request: Request):
 
 @router.post("/logout", response_model=LoginResponse)
 async def logout(request: Request):
-    """Clear session state.
+    """Disconnect CTP and clear state.
 
-    Note: CTP connections are long-lived. This only clears the HTTP-level state.
-    The CTP connection remains active until the process restarts.
+    Releases the CTP API resources and clears app.state.md_api.
+    The frontend should call login again to reconnect.
     """
-    return {"success": True, "message": "Logged out. CTP connection remains active until restart."}
+    md_api = getattr(request.app.state, "md_api", None)
+    if md_api is not None:
+        try:
+            md_api.release()
+        except Exception:
+            pass
+        request.app.state.md_api = None
+
+    # Clear the thread reference
+    if hasattr(request.app.state, "ctp_thread"):
+        request.app.state.ctp_thread = None
+
+    return {"success": True, "message": "Logged out and CTP disconnected"}
 
 
 @router.get("/status", response_model=StatusResponse)
 async def status(request: Request):
     """Return current CTP connection status.
 
-    Reads real connection state from app.state.md_api when available
-    (after auto-startup or /login). Falls back to disconnected otherwise.
+    Reads real connection state from app.state.md_api when available.
     """
     md_api = getattr(request.app.state, "md_api", None)
     if md_api is not None:
