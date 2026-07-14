@@ -20,7 +20,7 @@ from api.query import router as query_router
 from ws.manager import WebSocketManager
 from services.market_service import MarketService
 from services.ctp_bridge import wire_market_data_callback
-from services.ctp_startup import start_ctp_market_connection
+from services.ctp_startup import connect_ctp
 from ws.handlers import (
     handle_market_ws,
     handle_order_ws,
@@ -37,7 +37,7 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         """Startup / shutdown lifecycle."""
         cfg = load_config()
-        start_ctp_market_connection(app, cfg)
+        connect_ctp(app, cfg.broker_id, cfg.user_id, cfg.password)
         yield
         # Shutdown: nothing to clean up — daemon threads die with the process
 

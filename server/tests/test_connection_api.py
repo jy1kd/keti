@@ -2,6 +2,8 @@
 
 import sys
 import os
+from unittest.mock import patch, MagicMock
+
 import pytest
 from httpx import AsyncClient, ASGITransport
 
@@ -21,7 +23,7 @@ def _make_app():
         allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"],
-        allow_headers=["*"],
+        allow_headers="*",
     )
     app.include_router(connection_router, prefix="/api/connection")
     app.state.ws_manager = WebSocketManager()
@@ -38,12 +40,17 @@ def app():
 class TestLogin:
     @pytest.mark.asyncio
     async def test_login_returns_success(self, app):
+        """Login returns success and starts background connection."""
         payload = {"brokerID": "9999", "userID": "test_user", "password": "test_pass"}
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as c:
-            response = await c.post("/api/connection/login", json=payload)
-            assert response.status_code == 200
-            assert response.json()["success"] is True
+        with patch("api.connection.connect_ctp") as mock_connect:
+            async with AsyncClient(transport=transport, base_url="http://test") as c:
+                response = await c.post("/api/connection/login", json=payload)
+                assert response.status_code == 200
+                data = response.json()
+                assert data["success"] is True
+                assert data["userID"] == "test_user"
+                mock_connect.assert_called_once_with(app, "9999", "test_user", "test_pass")
 
     @pytest.mark.asyncio
     async def test_login_missing_fields_returns_422(self, app):
@@ -61,17 +68,49 @@ class TestLogin:
             response = await c.post("/api/connection/login", json=payload)
             assert response.status_code == 422
 
+    @pytest.mark.asyncio
+    async def test_login_already_connected_same_user(self, app):
+        """Login returns success if already connected with same user."""
+        md_api = MagicMock()
+        md_api.login_status = "logged_in"
+        md_api.config = MagicMock()
+        md_api.config.user_id = "test_user"
+        app.state.md_api = md_api
+
+        payload = {"brokerID": "9999", "userID": "test_user", "password": "pwd"}
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as c:
+            response = await c.post("/api/connection/login", json=payload)
+            data = response.json()
+            assert data["success"] is True
+            assert "Already connected" in data["message"]
+
+    @pytest.mark.asyncio
+    async def test_login_already_connected_different_user(self, app):
+        """Login returns error if connected with different user."""
+        md_api = MagicMock()
+        md_api.login_status = "logged_in"
+        md_api.config = MagicMock()
+        md_api.config.user_id = "other_user"
+        app.state.md_api = md_api
+
+        payload = {"brokerID": "9999", "userID": "test_user", "password": "pwd"}
+        transport = ASGITransport(app=app)
+        with patch("api.connection.connect_ctp"):
+            async with AsyncClient(transport=transport, base_url="http://test") as c:
+                response = await c.post("/api/connection/login", json=payload)
+                data = response.json()
+                assert data["success"] is False
+                assert "different user" in data["message"]
+
 
 # ── Logout tests ───────────────────────────────────────────────────────
 
 class TestLogout:
     @pytest.mark.asyncio
-    async def test_logout_after_login(self, app):
+    async def test_logout_returns_success(self, app):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
-            await c.post("/api/connection/login", json={
-                "brokerID": "9999", "userID": "test", "password": "pwd",
-            })
             response = await c.post("/api/connection/logout")
             assert response.status_code == 200
             assert response.json()["success"] is True
@@ -101,19 +140,42 @@ class TestStatus:
 
     @pytest.mark.asyncio
     async def test_status_initial_state(self, app):
+        """Without CTP connection, status returns all False."""
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
             response = await c.get("/api/connection/status")
             data = response.json()
             assert data["loggedIn"] is False
+            assert data["mdConnected"] is False
+            assert data["tdConnected"] is False
 
     @pytest.mark.asyncio
-    async def test_status_after_login(self, app):
+    async def test_status_with_ctp_connected(self, app):
+        """Status reads real state from app.state.md_api."""
+        md_api = MagicMock()
+        md_api.login_status = "logged_in"
+        md_api.connection_status = "connected"
+        app.state.md_api = md_api
+
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
-            await c.post("/api/connection/login", json={
-                "brokerID": "9999", "userID": "test", "password": "pwd",
-            })
             response = await c.get("/api/connection/status")
             data = response.json()
             assert data["loggedIn"] is True
+            assert data["mdConnected"] is True
+            assert data["tdConnected"] is False  # TD not started until PR-9
+
+    @pytest.mark.asyncio
+    async def test_status_with_ctp_disconnected(self, app):
+        """Status returns False when md_api exists but not logged in."""
+        md_api = MagicMock()
+        md_api.login_status = "not_logged_in"
+        md_api.connection_status = "disconnected"
+        app.state.md_api = md_api
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as c:
+            response = await c.get("/api/connection/status")
+            data = response.json()
+            assert data["loggedIn"] is False
+            assert data["mdConnected"] is False
