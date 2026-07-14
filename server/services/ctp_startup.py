@@ -135,16 +135,16 @@ def _connect_ctp(
         if not bIsLast:
             return
 
-        if pRspInfo is not None and getattr(pRspInfo, "ErrorID", -1) != 0:
-            error_message = getattr(pRspInfo, "ErrorMsg", "unknown error")
-            logger.warning("CTP login failed: %s", error_message)
+        # pRspInfo=None or ErrorID=0 means success; anything else is failure
+        if pRspInfo is None or getattr(pRspInfo, "ErrorID", -1) == 0:
+            md_api.login_status = "logged_in"
+            logger.info("CTP login successful (user=%s)", user_id)
+            _wire_bridge(app, md_api, loop)
             login_done.set()
             return
 
-        md_api.login_status = "logged_in"
-        logger.info("CTP login successful (user=%s)", user_id)
-
-        _wire_bridge(app, md_api, loop)
+        error_message = getattr(pRspInfo, "ErrorMsg", "unknown error")
+        logger.warning("CTP login failed: %s", error_message)
         login_done.set()
 
     md_api.spi.on("OnFrontConnected", _on_front_connected)
