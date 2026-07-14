@@ -92,27 +92,27 @@ async def get_snapshots(request: Request, instruments: str = ""):
 
 @router.get("/kline")
 async def get_kline(
+    request: Request,
     instrument: str = Query(..., min_length=1),
     period: str = Query("1m"),
+    count: int = Query(100, ge=1, le=500),
 ):
     """Get K-line (candlestick) data for an instrument.
 
-    ⚠️ PLACEHOLDER — returns empty bars[].
+    Returns real-time aggregated bars from the K-line service.
+    Bars accumulate from server start (no historical data).
 
-    Real K-line implementation requires CTP historical data query:
-      - Request: ReqQryDepthMarketData (or similar) with instrument + period
-      - Response: OnRspQryDepthMarketData callback with historical bars
-    This depends on CTP connection + simnow support for historical queries.
-    Scheduled for PR-7 (WebSocket manager completion) or later CTP integration PR.
-
-    The response format {instrumentID, period, bars[...]} is stable.
-    Frontend can integrate against this contract now.
+    Args:
+        instrument: Instrument ID (e.g. "IF2608")
+        period: Bar period — "1m", "5m", "15m", "30m", "1h"
+        count: Number of bars to return (1-500, default 100)
     """
-    return {
-        "instrumentID": instrument,
-        "period": period,
-        "bars": [],
-    }
+    kline_svc = getattr(request.app.state, "kline_service", None)
+    if kline_svc is None:
+        return {"instrumentID": instrument, "period": period, "bars": []}
+
+    bars = kline_svc.get_klines(instrument, period, count)
+    return {"instrumentID": instrument, "period": period, "bars": bars}
 
 
 # ── Depth (5-level order book) ──────────────────────────────────────────

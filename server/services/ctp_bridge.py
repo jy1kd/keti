@@ -22,6 +22,7 @@ from typing import Any, Callable, Optional
 from services.field_mapping import map_depth_market_data
 from ctp_wrapper.callback import MdSpi
 from services.market_service import MarketService
+from services.kline_service import KLineService
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ def wire_market_data_callback(
     md_spi: MdSpi,
     market_service: MarketService,
     broadcast_fn: Optional[Callable[[dict], None]] = None,
+    kline_service: Optional[KLineService] = None,
 ) -> None:
     """Wire the CTP OnRtnDepthMarketData callback to the service layer.
 
@@ -37,16 +39,14 @@ def wire_market_data_callback(
     1. Be mapped from PascalCase CTP fields → camelCase dict
     2. Update the MarketService snapshot cache (thread-safe)
     3. Call broadcast_fn(data) if provided (for WebSocket push)
-
-    The broadcast_fn is responsible for bridging from the CTP thread to the
-    asyncio event loop. A typical broadcast_fn uses
-    asyncio.run_coroutine_threadsafe() — see main.py for the recipe.
+    4. Update KLineService bars if provided (K-line aggregation)
 
     Args:
         md_spi: The MdSpi instance from MdUserApi (ctp_wrapper.callback.MdSpi).
         market_service: The MarketService instance to update with snapshots.
         broadcast_fn: Optional callback(dict) for WebSocket broadcast.
                       Called in the CTP worker thread.
+        kline_service: Optional KLineService for K-line aggregation.
     """
     def _on_depth_market_data(pDepthMarketData: Any) -> None:
         # Step 1: Map CTP PascalCase → camelCase dict
@@ -62,6 +62,16 @@ def wire_market_data_callback(
             except Exception:
                 logger.warning(
                     "Broadcast handler raised an exception",
+                    exc_info=True,
+                )
+
+        # Step 4: Update K-line bars (if provided)
+        if kline_service is not None:
+            try:
+                kline_service.update_tick(data)
+            except Exception:
+                logger.warning(
+                    "KLineService.update_tick raised an exception",
                     exc_info=True,
                 )
 

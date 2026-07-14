@@ -157,10 +157,16 @@ def _wire_bridge(
             loop,
         )
 
+    # Create K-line aggregation service
+    from services.kline_service import KLineService
+    kline_service = KLineService()
+    app.state.kline_service = kline_service
+
     wire_market_data_callback(
         md_api.spi,
         app.state.market_service,
         broadcast_fn=_broadcast_to_ws,
+        kline_service=kline_service,
     )
 
     # Wire subscribe/unsubscribe: MarketService → CTP MdUserApi
@@ -169,4 +175,4 @@ def _wire_bridge(
         unsubscribe_fn=md_api.unsubscribe,
     )
 
-    logger.info("CTP market data bridge wired — snapshots + WebSocket + subscribe active")
+    logger.info("CTP market data bridge wired — snapshots + WebSocket + K-line + subscribe active")
