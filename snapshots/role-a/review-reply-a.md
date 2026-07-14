@@ -239,3 +239,39 @@
 ```
 
 导入验证：`from main import create_app, wire_ctp_market_bridge` 成功。
+
+---
+
+## PR-5 Code Review 四次审查反馈处理记录
+
+**审查分支**：`feature/pr-5-market-api`
+**审查文件**：`review-feedback-a-pr5-r4.md`
+**处理时间**：2026-07-14
+**审查结论**：1 阻断 + 0 建议 + 0 疑问
+
+---
+
+### 🔴 阻断性问题修复（1 条）
+
+| # | 问题 | 修复 Commit | 处理说明 |
+|---|------|------------|----------|
+| B4 | `ctp_startup.py` `_on_front_connected()` 缺少 `front_connected.set()`，主线程 30s 超时 | `bd74a88` | `_on_front_connected()` 开头添加 `front_connected.set()`。因果链：CTP 回调线程未通知主线程 front 已连接 → 主线程 `front_connected.wait(30s)` 超时 → "market data will not be available"。 |
+
+### ✅ 人工验证问题关联
+
+| # | 问题 | 结论 |
+|---|------|------|
+| 1 | `GET /` → 404 | ✅ 非 bug（无根路由，文档在 `/docs`） |
+| 2 | `/api/market/snapshots` → `{}` | ✅ B4 根因（CTP 超时，桥接未接通） |
+| 3 | `/api/market/kline` → `bars:[]` | ✅ 设计占位（B2 已确认） |
+| 4 | `/api/market/depth` → 空 bids/asks | ✅ B4 根因（无 snapshot 数据） |
+| 5 | "CTP OnFrontConnected timeout after 30s" | ✅ B4 根因（`front_connected.set()` 缺失） |
+
+### 测试记录
+
+```
+202 passed, 2 failed (test_config.py 环境相关，非回归), 37 skipped
+14 passed (test_ctp_startup + test_ctp_bridge)
+```
+
+无回归。
