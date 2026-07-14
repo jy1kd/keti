@@ -73,6 +73,7 @@ def start_ctp_market_connection(
 
         def _on_front_connected() -> None:
             """Callback: CTP front connected → send login request."""
+            front_connected.set()
             try:
                 md_api.login()
                 logger.info("CTP front connected, login sent (user=%s)",
