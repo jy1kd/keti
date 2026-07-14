@@ -20,10 +20,15 @@ class Config:
     Provides sensible defaults for SimNow 7x24 test environment.
     """
 
-    def __init__(self) -> None:
-        self.broker_id: str = os.getenv("CTP_BROKER_ID", "9999")
-        self.user_id: str = os.getenv("CTP_USER_ID", "")
-        self.password: str = os.getenv("CTP_PASSWORD", "")
+    def __init__(
+        self,
+        broker_id: str = None,
+        user_id: str = None,
+        password: str = None,
+    ) -> None:
+        self.broker_id: str = broker_id or os.getenv("CTP_BROKER_ID", "9999")
+        self.user_id: str = user_id or os.getenv("CTP_USER_ID", "")
+        self.password: str = password or os.getenv("CTP_PASSWORD", "")
         self.app_id: str = os.getenv("CTP_APP_ID", "simnow_client")
         self.auth_code: str = os.getenv("CTP_AUTH_CODE", "0000000000000000")
         self.md_front: str = os.getenv(
