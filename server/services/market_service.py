@@ -7,7 +7,7 @@ all CTP-dependent operations accept the MdUserApi as an optional dependency.
 import json
 import logging
 import threading
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,22 @@ class MarketService:
         self._snapshots: Dict[str, dict] = {}
         self._subscriptions: Set[str] = set()
         self._lock = threading.Lock()
+        # CTP callback hooks — set via set_ctp_hooks() after CTP connects
+        self._subscribe_fn: Optional[Callable[[List[str]], Any]] = None
+        self._unsubscribe_fn: Optional[Callable[[List[str]], Any]] = None
+
+    def set_ctp_hooks(
+        self,
+        subscribe_fn: Callable[[List[str]], Any],
+        unsubscribe_fn: Callable[[List[str]], Any],
+    ) -> None:
+        """Inject CTP subscribe/unsubscribe callables.
+
+        Called by ctp_startup after CTP connects. Before this,
+        subscribe/unsubscribe only do local bookkeeping.
+        """
+        self._subscribe_fn = subscribe_fn
+        self._unsubscribe_fn = unsubscribe_fn
 
     # ── Instrument cache ──────────────────────────────────────────────
 
@@ -129,6 +145,13 @@ class MarketService:
         for inst in new_instruments:
             self._subscriptions.add(inst)
 
+        # Call CTP SubscribeMarketData for the new instruments
+        if new_instruments and self._subscribe_fn is not None:
+            try:
+                self._subscribe_fn(new_instruments)
+            except Exception:
+                logger.warning("CTP subscribe failed for %s", new_instruments, exc_info=True)
+
         return {
             "success": True,
             "added": len(new_instruments),
@@ -144,13 +167,20 @@ class MarketService:
         if not instruments:
             return {"success": True, "removed": 0}
 
-        removed = 0
+        removed_instruments: List[str] = []
         for inst in instruments:
             if inst in self._subscriptions:
                 self._subscriptions.discard(inst)
-                removed += 1
+                removed_instruments.append(inst)
 
-        return {"success": True, "removed": removed}
+        # Call CTP UnSubscribeMarketData for the removed instruments
+        if removed_instruments and self._unsubscribe_fn is not None:
+            try:
+                self._unsubscribe_fn(removed_instruments)
+            except Exception:
+                logger.warning("CTP unsubscribe failed for %s", removed_instruments, exc_info=True)
+
+        return {"success": True, "removed": len(removed_instruments)}
 
     # ── Snapshot cache ────────────────────────────────────────────────
 

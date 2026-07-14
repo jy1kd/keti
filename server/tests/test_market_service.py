@@ -231,6 +231,106 @@ class TestSubscriptionManagement:
         assert svc.subscription_count == 1
 
 
+# ── CTP hooks ──────────────────────────────────────────────────────────
+
+class TestCtpHooks:
+    """subscribe_fn / unsubscribe_fn integration with CTP."""
+
+    def test_set_ctp_hooks(self):
+        """set_ctp_hooks stores the callables."""
+        svc = MarketService()
+        sub_fn = lambda instruments: 0
+        unsub_fn = lambda instruments: 0
+        svc.set_ctp_hooks(sub_fn, unsub_fn)
+        assert svc._subscribe_fn is sub_fn
+        assert svc._unsubscribe_fn is unsub_fn
+
+    def test_subscribe_calls_ctp_fn(self):
+        """subscribe calls subscribe_fn with new instruments only."""
+        called_with = []
+        svc = MarketService()
+        svc.set_ctp_hooks(
+            subscribe_fn=lambda insts: called_with.extend(insts),
+            unsubscribe_fn=lambda insts: None,
+        )
+        svc.subscribe(["IF2608", "IF2609"])
+        assert called_with == ["IF2608", "IF2609"]
+
+    def test_subscribe_calls_ctp_fn_only_for_new(self):
+        """subscribe_fn receives only newly added instruments, not duplicates."""
+        called_with = []
+        svc = MarketService()
+        svc.set_ctp_hooks(
+            subscribe_fn=lambda insts: called_with.extend(insts),
+            unsubscribe_fn=lambda insts: None,
+        )
+        svc.subscribe(["IF2608"])
+        svc.subscribe(["IF2608", "IF2609"])
+        assert called_with == ["IF2608", "IF2609"]  # IF2608 only once
+
+    def test_unsubscribe_calls_ctp_fn(self):
+        """unsubscribe calls unsubscribe_fn with removed instruments."""
+        called_with = []
+        svc = MarketService()
+        svc.set_ctp_hooks(
+            subscribe_fn=lambda insts: None,
+            unsubscribe_fn=lambda insts: called_with.extend(insts),
+        )
+        svc.subscribe(["IF2608", "IF2609"])
+        svc.unsubscribe(["IF2608"])
+        assert called_with == ["IF2608"]
+
+    def test_unsubscribe_calls_ctp_fn_only_for_subscribed(self):
+        """unsubscribe_fn receives only actually subscribed instruments."""
+        called_with = []
+        svc = MarketService()
+        svc.set_ctp_hooks(
+            subscribe_fn=lambda insts: None,
+            unsubscribe_fn=lambda insts: called_with.extend(insts),
+        )
+        svc.subscribe(["IF2608"])
+        svc.unsubscribe(["IF2608", "IF2609"])  # IF2609 not subscribed
+        assert called_with == ["IF2608"]
+
+    def test_subscribe_without_hooks_no_error(self):
+        """subscribe works without CTP hooks set (backward compatible)."""
+        svc = MarketService()
+        result = svc.subscribe(["IF2608"])
+        assert result["success"] is True
+        assert svc.subscription_count == 1
+
+    def test_unsubscribe_without_hooks_no_error(self):
+        """unsubscribe works without CTP hooks set (backward compatible)."""
+        svc = MarketService()
+        svc.subscribe(["IF2608"])
+        result = svc.unsubscribe(["IF2608"])
+        assert result["success"] is True
+        assert svc.subscription_count == 0
+
+    def test_subscribe_ctp_fn_exception_does_not_break(self):
+        """If CTP subscribe raises, local bookkeeping still succeeds."""
+        svc = MarketService()
+        svc.set_ctp_hooks(
+            subscribe_fn=lambda insts: (_ for _ in ()).throw(RuntimeError("CTP error")),
+            unsubscribe_fn=lambda insts: None,
+        )
+        result = svc.subscribe(["IF2608"])
+        assert result["success"] is True
+        assert svc.subscription_count == 1  # local state preserved
+
+    def test_unsubscribe_ctp_fn_exception_does_not_break(self):
+        """If CTP unsubscribe raises, local bookkeeping still succeeds."""
+        svc = MarketService()
+        svc.set_ctp_hooks(
+            subscribe_fn=lambda insts: None,
+            unsubscribe_fn=lambda insts: (_ for _ in ()).throw(RuntimeError("CTP error")),
+        )
+        svc.subscribe(["IF2608"])
+        result = svc.unsubscribe(["IF2608"])
+        assert result["success"] is True
+        assert svc.subscription_count == 0
+
+
 # ── Subscription limit ─────────────────────────────────────────────────
 
 class TestSubscriptionLimit:

@@ -162,4 +162,11 @@ def _wire_bridge(
         app.state.market_service,
         broadcast_fn=_broadcast_to_ws,
     )
-    logger.info("CTP market data bridge wired — snapshots + WebSocket active")
+
+    # Wire subscribe/unsubscribe: MarketService → CTP MdUserApi
+    app.state.market_service.set_ctp_hooks(
+        subscribe_fn=md_api.subscribe,
+        unsubscribe_fn=md_api.unsubscribe,
+    )
+
+    logger.info("CTP market data bridge wired — snapshots + WebSocket + subscribe active")
