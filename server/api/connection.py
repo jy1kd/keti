@@ -60,17 +60,15 @@ async def login(body: LoginRequest, request: Request):
             "message": "Connection in progress. Poll /api/connection/status.",
         }
 
-    # Start CTP connection with provided credentials (non-blocking)
+    # Start CTP connection and wait for result
     try:
-        connect_ctp(request.app, body.brokerID, body.userID, body.password)
+        result = connect_ctp(
+            request.app, body.brokerID, body.userID, body.password,
+            wait=True,
+        )
+        return result
     except Exception as exc:
         return {"success": False, "message": f"Connection failed: {exc}"}
-
-    return {
-        "success": True,
-        "message": "Connection initiated. Poll /api/connection/status for progress.",
-        "userID": body.userID,
-    }
 
 
 @router.post("/logout", response_model=LoginResponse)

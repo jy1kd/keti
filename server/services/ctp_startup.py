@@ -1,8 +1,8 @@
 """CTP connection management — auto-startup and explicit login.
 
 Two entry points:
-  - start_ctp_market_connection(app, config): called at startup (blocks until connected or timeout)
-  - connect_ctp(app, broker_id, user_id, password): called from /login endpoint (non-blocking)
+  - start_ctp_market_connection(app, config): called at startup (blocks)
+  - connect_ctp(app, broker_id, user_id, password, wait): called from /login
 
 Both share the same internal _connect_ctp() implementation.
 """
@@ -30,58 +30,66 @@ def connect_ctp(
     broker_id: str,
     user_id: str,
     password: str,
-) -> threading.Thread:
-    """Start CTP connection with explicit credentials (non-blocking).
-
-    This is the primary entry point for the /login endpoint.
-    Starts a daemon thread and returns immediately.
+    wait: bool = False,
+) -> dict:
+    """Start CTP connection with explicit credentials.
 
     Args:
         app: The FastAPI application instance.
         broker_id: CTP broker ID (e.g. "9999").
         user_id: CTP user ID.
         password: CTP password.
+        wait: If True, block until connection result is known (up to LOGIN_TIMEOUT).
+              If False, return immediately with success=True.
 
     Returns:
-        The background thread (daemon=True).
+        dict with keys: success, message, userID.
     """
-    # Capture event loop from the asyncio thread
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
         loop = asyncio.new_event_loop()
 
+    # Shared result dict — _connect_ctp writes the outcome here
+    result: dict = {"success": False, "message": "Connection not started", "userID": user_id}
+    login_done = threading.Event() if wait else None
+
     thread = threading.Thread(
         target=_connect_ctp,
-        args=(app, broker_id, user_id, password, loop),
+        args=(app, broker_id, user_id, password, loop, result, login_done),
         daemon=True,
         name="ctp-connect",
     )
     thread.start()
     app.state.ctp_thread = thread
     logger.info("CTP connection thread started (user=%s)", user_id)
-    return thread
+
+    if wait and login_done is not None:
+        login_done.wait(timeout=LOGIN_TIMEOUT)
+        return result
+
+    return {"success": True, "message": "Connection initiated", "userID": user_id}
 
 
 def start_ctp_market_connection(
     app: "FastAPI",
     config: "Config",
-) -> threading.Thread:
+) -> dict:
     """Start CTP connection at app startup using .env credentials.
 
-    Calls connect_ctp() with credentials from config.
-    Blocks until connected or timeout (for startup sequencing).
+    Calls connect_ctp() with wait=True to block until result is known.
 
     Args:
         app: The FastAPI application instance.
         config: The Config instance with CTP connection parameters.
 
     Returns:
-        The background thread (daemon=True). Caller may ignore it.
+        dict with connection result.
     """
-    thread = connect_ctp(app, config.broker_id, config.user_id, config.password)
-    thread.join(timeout=LOGIN_TIMEOUT)
-    return thread
+    return connect_ctp(
+        app, config.broker_id, config.user_id, config.password,
+        wait=True,
+    )
 
 
 def _connect_ctp(
@@ -90,8 +98,15 @@ def _connect_ctp(
     user_id: str,
     password: str,
     loop: asyncio.AbstractEventLoop,
+    result: dict,
+    login_done_signal: Optional[threading.Event] = None,
 ) -> None:
-    """Internal: run the full CTP connection flow in the current thread."""
+    """Internal: run the full CTP connection flow in the current thread.
+
+    Args:
+        result: Mutable dict to write the outcome into.
+        login_done_signal: Optional Event to signal when login succeeds/fails.
+    """
     from ctp_wrapper.md_user_api import MdUserApi
     from config import Config
 
@@ -101,6 +116,7 @@ def _connect_ctp(
 
     front_connected = threading.Event()
     login_done = threading.Event()
+    error_message = ""
 
     def _on_front_connected() -> None:
         front_connected.set()
@@ -115,12 +131,13 @@ def _connect_ctp(
         pRspUserLogin: Any, pRspInfo: Any,
         nRequestID: int, bIsLast: bool,
     ) -> None:
+        nonlocal error_message
         if not bIsLast:
             return
 
         if pRspInfo is not None and getattr(pRspInfo, "ErrorID", -1) != 0:
-            error_msg = getattr(pRspInfo, "ErrorMsg", "unknown error")
-            logger.warning("CTP login failed: %s", error_msg)
+            error_message = getattr(pRspInfo, "ErrorMsg", "unknown error")
+            logger.warning("CTP login failed: %s", error_message)
             login_done.set()
             return
 
@@ -136,22 +153,40 @@ def _connect_ctp(
     try:
         md_api.create()
         logger.info("CTP connection initiated (front=%s)", config.md_front)
-    except Exception:
+    except Exception as exc:
         logger.warning("CTP MdUserApi.create() failed", exc_info=True)
+        result["message"] = f"CTP create failed: {exc}"
+        if login_done_signal:
+            login_done_signal.set()
         return
 
+    # Wait for OnFrontConnected
     if not front_connected.wait(timeout=LOGIN_TIMEOUT):
-        logger.warning(
-            "CTP OnFrontConnected timeout after %.0fs — "
-            "market data will not be available", LOGIN_TIMEOUT,
-        )
+        msg = "CTP front connection timeout"
+        logger.warning(msg)
+        result["message"] = msg
+        if login_done_signal:
+            login_done_signal.set()
         return
 
+    # Wait for OnRspUserLogin
     if not login_done.wait(timeout=LOGIN_TIMEOUT):
-        logger.warning(
-            "CTP login timeout after %.0fs — "
-            "market data will not be available", LOGIN_TIMEOUT,
-        )
+        msg = "CTP login timeout"
+        logger.warning(msg)
+        result["message"] = msg
+        if login_done_signal:
+            login_done_signal.set()
+        return
+
+    # Check result
+    if md_api.login_status == "logged_in":
+        result["success"] = True
+        result["message"] = "Login successful"
+    else:
+        result["message"] = f"Login failed: {error_message}" if error_message else "Login failed"
+
+    if login_done_signal:
+        login_done_signal.set()
 
 
 def _wire_bridge(

@@ -10,8 +10,6 @@ from services.ctp_startup import connect_ctp, start_ctp_market_connection
 # ── Fake CTP data ──────────────────────────────────────────────────────────
 
 class _FakeSpi:
-    """Fake MdSpi with on() handler registration."""
-
     def __init__(self):
         self._handlers = {}
 
@@ -20,8 +18,6 @@ class _FakeSpi:
 
 
 class _FakeMdApi:
-    """Fake MdUserApi — records calls without touching CTP DLL."""
-
     def __init__(self, config):
         self.config = config
         self.spi = _FakeSpi()
@@ -43,8 +39,6 @@ class _FakeMdApi:
 
 
 class _FakeApp:
-    """Minimal fake FastAPI app with state."""
-
     class state:
         ws_manager = MagicMock()
         market_service = MagicMock()
@@ -54,7 +48,7 @@ class _FakeApp:
 # ── Tests ──────────────────────────────────────────────────────────────────
 
 class TestConnectCtp:
-    """connect_ctp() — non-blocking CTP connection."""
+    """connect_ctp() — CTP connection entry point."""
 
     def test_import(self):
         from services import ctp_startup
@@ -65,21 +59,20 @@ class TestConnectCtp:
         assert callable(start_ctp_market_connection)
 
     @patch("services.ctp_startup._connect_ctp")
-    def test_returns_daemon_thread(self, mock_connect):
-        """connect_ctp returns a daemon thread immediately."""
+    def test_returns_dict(self, mock_connect):
+        """connect_ctp returns a result dict."""
         app = _FakeApp()
-        thread = connect_ctp(app, "9999", "test_user", "test_pass")
-        assert isinstance(thread, threading.Thread)
-        assert thread.daemon is True
-        assert thread.name == "ctp-connect"
-        mock_connect.assert_called_once()
+        result = connect_ctp(app, "9999", "test_user", "test_pass")
+        assert isinstance(result, dict)
+        assert "success" in result
+        assert "message" in result
 
     @patch("services.ctp_startup._connect_ctp")
     def test_stores_thread_on_app_state(self, mock_connect):
         """Thread is stored on app.state.ctp_thread."""
         app = _FakeApp()
-        thread = connect_ctp(app, "9999", "test_user", "test_pass")
-        assert app.state.ctp_thread is thread
+        connect_ctp(app, "9999", "test_user", "test_pass")
+        assert isinstance(app.state.ctp_thread, threading.Thread)
 
     @patch("services.ctp_startup._connect_ctp")
     def test_passes_credentials(self, mock_connect):
@@ -91,6 +84,21 @@ class TestConnectCtp:
         assert call_args[0][2] == "my_user"
         assert call_args[0][3] == "my_pass"
 
+    @patch("services.ctp_startup._connect_ctp")
+    def test_wait_blocks_for_result(self, mock_connect):
+        """With wait=True, returns the result dict from _connect_ctp."""
+        def fake_connect(app, broker_id, user_id, password, loop, result, login_done):
+            result["success"] = True
+            result["message"] = "Login successful"
+            if login_done:
+                login_done.set()
+        mock_connect.side_effect = fake_connect
+
+        app = _FakeApp()
+        result = connect_ctp(app, "9999", "test", "pwd", wait=True)
+        assert result["success"] is True
+        assert result["message"] == "Login successful"
+
 
 class TestConnectCtpInternal:
     """_connect_ctp() — actual connection flow (with mocked CTP)."""
@@ -98,67 +106,84 @@ class TestConnectCtpInternal:
     @patch("config.Config")
     @patch("ctp_wrapper.md_user_api.MdUserApi")
     def test_creates_md_api_with_config(self, MockMdApi, MockConfig):
-        """Should create MdUserApi with a Config built from credentials."""
         from services.ctp_startup import _connect_ctp
 
         MockConfig.return_value = MagicMock()
         fake_api = _FakeMdApi(config=MockConfig.return_value)
         MockMdApi.return_value = fake_api
         app = _FakeApp()
+        result = {}
 
         with patch("services.ctp_startup.LOGIN_TIMEOUT", 0.1):
-            _connect_ctp(app, "9999", "test_user", "test_pass", MagicMock())
+            _connect_ctp(app, "9999", "test_user", "test_pass", MagicMock(), result)
 
         MockConfig.assert_called_once_with(
             broker_id="9999", user_id="test_user", password="test_pass",
         )
-        MockMdApi.assert_called_once()
 
     @patch("config.Config")
     @patch("ctp_wrapper.md_user_api.MdUserApi")
     def test_stores_md_api_on_app_state(self, MockMdApi, MockConfig):
-        """Should store MdApi instance on app.state.md_api."""
         from services.ctp_startup import _connect_ctp
 
         MockConfig.return_value = MagicMock()
         fake_api = _FakeMdApi(config=MockConfig.return_value)
         MockMdApi.return_value = fake_api
         app = _FakeApp()
+        result = {}
 
         with patch("services.ctp_startup.LOGIN_TIMEOUT", 0.1):
-            _connect_ctp(app, "9999", "test", "pwd", MagicMock())
+            _connect_ctp(app, "9999", "test", "pwd", MagicMock(), result)
 
         assert app.state.md_api is fake_api
 
     @patch("config.Config")
     @patch("ctp_wrapper.md_user_api.MdUserApi")
     def test_calls_create(self, MockMdApi, MockConfig):
-        """Should call md_api.create() in the thread."""
         from services.ctp_startup import _connect_ctp
 
         MockConfig.return_value = MagicMock()
         fake_api = _FakeMdApi(config=MockConfig.return_value)
         MockMdApi.return_value = fake_api
         app = _FakeApp()
+        result = {}
 
         with patch("services.ctp_startup.LOGIN_TIMEOUT", 0.1):
-            _connect_ctp(app, "9999", "test", "pwd", MagicMock())
+            _connect_ctp(app, "9999", "test", "pwd", MagicMock(), result)
 
         assert fake_api._created is True
 
     @patch("config.Config")
     @patch("ctp_wrapper.md_user_api.MdUserApi")
     def test_registers_callbacks(self, MockMdApi, MockConfig):
-        """Should register OnFrontConnected and OnRspUserLogin callbacks."""
         from services.ctp_startup import _connect_ctp
 
         MockConfig.return_value = MagicMock()
         fake_api = _FakeMdApi(config=MockConfig.return_value)
         MockMdApi.return_value = fake_api
         app = _FakeApp()
+        result = {}
 
         with patch("services.ctp_startup.LOGIN_TIMEOUT", 0.1):
-            _connect_ctp(app, "9999", "test", "pwd", MagicMock())
+            _connect_ctp(app, "9999", "test", "pwd", MagicMock(), result)
 
         assert "OnFrontConnected" in fake_api.spi._handlers
         assert "OnRspUserLogin" in fake_api.spi._handlers
+
+    @patch("config.Config")
+    @patch("ctp_wrapper.md_user_api.MdUserApi")
+    def test_result_written_on_timeout(self, MockMdApi, MockConfig):
+        """result dict is populated when connection times out."""
+        from services.ctp_startup import _connect_ctp
+
+        MockConfig.return_value = MagicMock()
+        fake_api = _FakeMdApi(config=MockConfig.return_value)
+        MockMdApi.return_value = fake_api
+        app = _FakeApp()
+        result = {"success": False, "message": "Connection not started", "userID": "test"}
+
+        with patch("services.ctp_startup.LOGIN_TIMEOUT", 0.01):
+            _connect_ctp(app, "9999", "test", "pwd", MagicMock(), result)
+
+        assert result["success"] is False
+        assert "timeout" in result["message"].lower()

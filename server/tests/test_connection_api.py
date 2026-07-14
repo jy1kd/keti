@@ -40,17 +40,18 @@ def app():
 class TestLogin:
     @pytest.mark.asyncio
     async def test_login_returns_success(self, app):
-        """Login returns success and starts background connection."""
+        """Login returns success from connect_ctp result."""
         payload = {"brokerID": "9999", "userID": "test_user", "password": "test_pass"}
         transport = ASGITransport(app=app)
         with patch("api.connection.connect_ctp") as mock_connect:
+            mock_connect.return_value = {"success": True, "message": "Login successful", "userID": "test_user"}
             async with AsyncClient(transport=transport, base_url="http://test") as c:
                 response = await c.post("/api/connection/login", json=payload)
                 assert response.status_code == 200
                 data = response.json()
                 assert data["success"] is True
                 assert data["userID"] == "test_user"
-                mock_connect.assert_called_once_with(app, "9999", "test_user", "test_pass")
+                mock_connect.assert_called_once_with(app, "9999", "test_user", "test_pass", wait=True)
 
     @pytest.mark.asyncio
     async def test_login_missing_fields_returns_422(self, app):
@@ -123,11 +124,25 @@ class TestLogin:
 
         payload = {"brokerID": "9999", "userID": "test_user", "password": "pwd"}
         transport = ASGITransport(app=app)
-        with patch("api.connection.connect_ctp"):
+        with patch("api.connection.connect_ctp") as mock_connect:
+            mock_connect.return_value = {"success": True, "message": "Login successful", "userID": "test_user"}
             async with AsyncClient(transport=transport, base_url="http://test") as c:
                 response = await c.post("/api/connection/login", json=payload)
                 data = response.json()
                 assert data["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_login_returns_failure_on_wrong_password(self, app):
+        """Login returns failure when connect_ctp reports failure."""
+        payload = {"brokerID": "9999", "userID": "test_user", "password": "wrong"}
+        transport = ASGITransport(app=app)
+        with patch("api.connection.connect_ctp") as mock_connect:
+            mock_connect.return_value = {"success": False, "message": "Login failed: invalid password", "userID": "test_user"}
+            async with AsyncClient(transport=transport, base_url="http://test") as c:
+                response = await c.post("/api/connection/login", json=payload)
+                data = response.json()
+                assert data["success"] is False
+                assert "failed" in data["message"].lower()
 
     @pytest.mark.asyncio
     async def test_login_disconnected_md_api_allows_retry(self, app):
@@ -138,7 +153,8 @@ class TestLogin:
 
         payload = {"brokerID": "9999", "userID": "test_user", "password": "pwd"}
         transport = ASGITransport(app=app)
-        with patch("api.connection.connect_ctp"):
+        with patch("api.connection.connect_ctp") as mock_connect:
+            mock_connect.return_value = {"success": True, "message": "Login successful", "userID": "test_user"}
             async with AsyncClient(transport=transport, base_url="http://test") as c:
                 response = await c.post("/api/connection/login", json=payload)
                 data = response.json()
