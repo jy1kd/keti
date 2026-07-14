@@ -5,8 +5,11 @@ Usage:
 """
 
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,7 +40,9 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         """Startup / shutdown lifecycle."""
         cfg = load_config()
-        connect_ctp(app, cfg.broker_id, cfg.user_id, cfg.password)
+        result = connect_ctp(app, cfg.broker_id, cfg.user_id, cfg.password, wait=True)
+        if not result.get("success"):
+            logger.warning("CTP startup login failed: %s", result.get("message"))
         yield
         # Shutdown: nothing to clean up — daemon threads die with the process
 
