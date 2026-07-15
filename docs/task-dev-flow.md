@@ -9,7 +9,7 @@
 | 阶段 | PR范围 | 状态 | 说明 |
 |------|--------|------|------|
 | **阶段1：基础框架** | PR-1 ~ PR-4 | 🔄 进行中 | CTP验证 ✅ / 前端初始化 ✅ / FastAPI框架 ⏳ / 布局 ✅ |
-| **阶段2：行情模块** | PR-5 ~ PR-8, PR-6a | 🔄 进行中 | 行情API ✅ / 行情表格 ✅ / WebSocket ✅ / 五档行情 ⏳ |
+| **阶段2：行情模块** | PR-5 ~ PR-8, PR-6a | 🔄 进行中 | 行情API ✅ / 行情表格 ✅ / 行情接入 ✅ / 五档行情 ⏳ |
 | **阶段3：交易模块** | PR-9 ~ PR-12 | ⏳ 待开始 | 交易API、报单表单、K线图 |
 | **阶段4：高级功能** | PR-13 ~ PR-16 | ⏳ 待开始 | 止损单、期权、快捷功能、查询 |
 | **阶段5：联调优化** | PR-17 | ⏳ 待开始 | 联调测试、Bug修复 |
@@ -383,7 +383,7 @@ git branch -d feature/pr-<编号>-<描述>
 | PR | 任务 | 依赖 | 状态 | 分支名 |
 |----|------|------|------|--------|
 | PR-6 | 前端行情表格（vtable） | PR-4 | ✅ 已完成 | `feature/pr-6-market-table` |
-| PR-6a | 前端行情表格接入真实API | PR-5 + PR-6 | ✅ 可开始（依赖已满足） | `feature/pr-6a-market-real-api` |
+| PR-6a | 前端行情表格接入真实API | PR-5 + PR-6 | ✅ 已完成 | `feature/pr-6a-market-real-api` |
 | PR-8 | 前端五档行情展示 | PR-7（需要WebSocket推送） | ⏳ 待开始 | `feature/pr-8-depth-quote` |
 | PR-12 | 前端K线图实现 | PR-5（需要行情API） | ⏳ 待开始 | `feature/pr-12-kline-chart` |
 | PR-14 | 前端期权T型报价实现 | PR-6, PR-18（需要期权API） | ⏳ 待开始 | `feature/pr-14-option-tquote` |

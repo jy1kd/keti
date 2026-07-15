@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import type { ContractInfo } from '@/services/types'
-import { MOCK_CONTRACTS } from './contractsMockData'
 
 interface ContractsStore {
   contracts: ContractInfo[]
@@ -11,7 +10,7 @@ interface ContractsStore {
 }
 
 export const useContractsStore = create<ContractsStore>((set) => ({
-  contracts: import.meta.env.DEV ? MOCK_CONTRACTS : [],
+  contracts: [],
   selectedContracts: [],
   setContracts: (contracts) => set({ contracts }),
   addContract: (instrumentId) =>

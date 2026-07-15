@@ -209,3 +209,55 @@
 - `7657bce` fix(PR-6): 滚动修正 — scrollToRow→scrollToCell，精确定位选中行
 - `c02794e` fix(PR-6): 滚动索引修正 — vtable 行索引从 1 开始（0 是表头），scrollToCell row+1
 - `fba344e` fix(PR-6): 滚动 API 替换 — scrollToCell→makeVisible，避免索引偏移问题
+
+---
+
+## PR-6a: 前端行情表格接入真实API
+
+**分支**：`feature/pr-6a-market-real-api`
+**开始时间**：2026-07-15
+**状态**：🔄 开发中
+
+---
+
+### TDD 测试用例清单
+
+| # | 模块 | 测试文件 | 测试数 | 状态 |
+|---|------|----------|--------|------|
+| 1 | Market API 函数 | services/api.test.ts | 6 | ✅ 全部通过 |
+| 2 | useMarketWs Hook | hooks/useMarketWs.test.ts | 4 | ✅ 全部通过 |
+| 3 | MarketStore API 集成 | market/store.test.ts | 4 | ✅ 全部通过 |
+| 4 | MarketPanel 启动 | market/MarketPanel.test.tsx | 1 | ✅ 全部通过 |
+
+**总计**：15个新增测试，全部通过（全量 122/122）
+
+---
+
+### 实现文件清单
+
+| 文件 | 说明 |
+|------|------|
+| `src/services/api.ts` | 新增 getInstruments、subscribeMarket、getSnapshots |
+| `src/hooks/useMarketWs.ts` | WebSocket 行情推送 Hook（market_data → updateSnapshot） |
+| `src/modules/market/store.ts` | 去掉 mock，新增 fetchInstruments、subscribeInstruments |
+| `src/modules/market/MarketPanel.tsx` | useEffect 调用 fetchInstruments |
+| `src/modules/market/mockData.ts` | 已删除（mock 数据不再需要） |
+
+---
+
+### 提交记录
+
+- `a2d767d` test(task-6a): failing tests for market API functions
+- `30091a9` feat(task-6a): implement useMarketWs WebSocket hook
+- `b18370c` feat(task-6a): remove mock data, add API integration to market store
+- `863e6a0` feat(task-6a): MarketPanel calls fetchInstruments on mount
+- `c5a00a2` refactor(task-6a): delete mockData.ts — no longer referenced
+
+---
+
+### 审查反馈修复
+
+- `8ac415e` fix(task-6a): review反馈 - fetchInstruments同步到contracts store
+- `5326be4` fix(task-6a): review反馈 - MarketPanel集成useMarketWs WebSocket推送
+- `c05b4e1` fix(task-6a): review反馈 - 移除contracts store mock数据
+- `269a0f1` fix(task-6a): review反馈 - 改进建议批量修复

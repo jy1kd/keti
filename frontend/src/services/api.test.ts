@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { api, API_BASE } from './api'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { api, API_BASE, getInstruments, subscribeMarket, getSnapshots } from './api'
 
 describe('api (Axios 实例)', () => {
   it('API_BASE 有值', () => {
@@ -22,5 +22,81 @@ describe('api (Axios 实例)', () => {
 
   it('api.defaults.headers 包含 Content-Type: application/json', () => {
     expect(api.defaults.headers['Content-Type']).toBe('application/json')
+  })
+})
+
+describe('getInstruments', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('调用 GET /api/market/instruments 并返回合约列表', async () => {
+    const mockData = {
+      instruments: [{ instrumentID: 'IF2608', instrumentName: '沪深300' }],
+      count: 1,
+    }
+    vi.spyOn(api, 'get').mockResolvedValue({ data: mockData })
+
+    const result = await getInstruments()
+    expect(api.get).toHaveBeenCalledWith('/api/market/instruments', { params: undefined })
+    expect(result).toEqual(mockData)
+  })
+
+  it('支持 keyword 参数进行模糊搜索', async () => {
+    const mockData = { instruments: [], count: 0 }
+    vi.spyOn(api, 'get').mockResolvedValue({ data: mockData })
+
+    await getInstruments('IF')
+    expect(api.get).toHaveBeenCalledWith('/api/market/instruments', { params: { keyword: 'IF' } })
+  })
+})
+
+describe('subscribeMarket', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('调用 POST /api/market/subscribe 并返回结果', async () => {
+    const mockData = { success: true, added: ['IF2608'], alreadySubscribed: [] }
+    vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
+
+    const result = await subscribeMarket(['IF2608'])
+    expect(api.post).toHaveBeenCalledWith('/api/market/subscribe', { instruments: ['IF2608'] })
+    expect(result).toEqual(mockData)
+  })
+})
+
+describe('getSnapshots', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('调用 GET /api/market/snapshots 并返回行情快照', async () => {
+    const mockData = {
+      snapshots: {
+        IF2608: { instrumentID: 'IF2608', lastPrice: 4120.0 },
+      },
+    }
+    vi.spyOn(api, 'get').mockResolvedValue({ data: mockData })
+
+    const result = await getSnapshots(['IF2608'])
+    expect(api.get).toHaveBeenCalledWith('/api/market/snapshots', { params: { instruments: 'IF2608' } })
+    expect(result).toEqual(mockData)
+  })
+
+  it('多个合约用逗号分隔', async () => {
+    const mockData = { snapshots: {} }
+    vi.spyOn(api, 'get').mockResolvedValue({ data: mockData })
+
+    await getSnapshots(['IF2608', 'IF2609'])
+    expect(api.get).toHaveBeenCalledWith('/api/market/snapshots', { params: { instruments: 'IF2608,IF2609' } })
+  })
+
+  it('不传参数时获取全部快照', async () => {
+    const mockData = { snapshots: {} }
+    vi.spyOn(api, 'get').mockResolvedValue({ data: mockData })
+
+    await getSnapshots()
+    expect(api.get).toHaveBeenCalledWith('/api/market/snapshots', { params: undefined })
   })
 })
