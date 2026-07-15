@@ -4,6 +4,8 @@ Routes incoming client messages and dispatches to appropriate handlers.
 All handlers integrate with WebSocketManager for connection lifecycle.
 """
 
+import asyncio
+import inspect
 import json
 import logging
 from typing import Any, Callable, Coroutine, List, Optional
@@ -53,7 +55,9 @@ async def handle_ws(
                 instruments = msg.get("instruments", [])
                 if isinstance(instruments, list):
                     try:
-                        await subscribe_fn(instruments)
+                        result = subscribe_fn(instruments)
+                        if inspect.isawaitable(result):
+                            await result
                         await websocket.send_json({
                             "type": "subscribed",
                             "instruments": instruments,
@@ -69,7 +73,9 @@ async def handle_ws(
                 instruments = msg.get("instruments", [])
                 if isinstance(instruments, list):
                     try:
-                        await unsubscribe_fn(instruments)
+                        result = unsubscribe_fn(instruments)
+                        if inspect.isawaitable(result):
+                            await result
                         await websocket.send_json({
                             "type": "unsubscribed",
                             "instruments": instruments,

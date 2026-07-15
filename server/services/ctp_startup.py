@@ -119,6 +119,7 @@ def _connect_ctp(
     error_message = ""
 
     def _on_front_connected() -> None:
+        md_api.connection_status = "connected"
         front_connected.set()
         try:
             md_api.login()
