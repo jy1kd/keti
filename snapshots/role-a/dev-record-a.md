@@ -373,3 +373,4 @@ PR-7 已完成的基础设施：
 | `4f07b9f` | feat(PR-7): CTP reconnect service — exponential backoff + auto-resubscribe — 12 tests |
 | `5386563` | feat(PR-7): WebSocket integration — unified handlers + heartbeat + disconnect handling — 7 tests |
 | `200ab85` | refactor(PR-7): remove unused placeholder handlers from ws/handlers.py |
+| `82ef2e9` | fix(PR-7): review R3 - await同步函数+connection_status状态缺失 |

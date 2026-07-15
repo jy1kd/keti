@@ -323,3 +323,30 @@
 ```
 
 无回归。新增 4 个测试（heartbeat ping 响应、subscribe 错误响应、get_current_delay × 2）。
+
+---
+
+## PR-7 Code Review 三次审查反馈处理记录（人工验证后）
+
+**审查分支**：`feature/pr-7-websocket-manager`
+**审查文件**：`review-feedback-a-pr7-r3.md`
+**处理时间**：2026-07-15
+**审查结论**：2 阻断 + 0 建议 + 0 疑问
+
+---
+
+### 🔴 阻断性问题修复（2 条）
+
+| # | 问题 | 修复 Commit | 处理说明 |
+|---|------|------------|----------|
+| B1 | `handlers.py` 对同步函数使用 `await` — subscribe/unsubscribe 返回错误消息 | `82ef2e9` | 使用 `inspect.isawaitable(result)` 判断，兼容同步函数和协程。`subscribe_fn`/`unsubscribe_fn` 可能是 `MarketService` 的同步方法（`def`），不能直接 `await`。 |
+| B2 | `connection_status` 永远为 `"connecting"` — status 接口 `mdConnected: false` | `82ef2e9` | 在 `_on_front_connected()` 开头添加 `md_api.connection_status = "connected"`。回调链遗漏了这步状态更新。 |
+
+### 测试记录
+
+```
+278 passed, 4 failed (pre-existing test_config), 46 skipped
+11 passed (test_ws_handlers.py — 含修复后的 subscribe/unsubscribe 测试)
+```
+
+无回归。
