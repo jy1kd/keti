@@ -95,8 +95,10 @@ export function MarketTable({ snapshots, selectedInstrument, onRowClick, onRowDo
     const records = Array.from(snapshots.values()).map(snapshotToRecord)
     const rowIndex = records.findIndex((r) => r.instrumentID === selectedInstrument)
     if (rowIndex >= 0) {
-      tableRef.current.selectRow(rowIndex)
-      tableRef.current.scrollToCell({ row: rowIndex, col: 0 })
+      // vtable 行索引：0 是表头，数据行从 1 开始
+      const vtableRow = rowIndex + 1
+      tableRef.current.selectRow(vtableRow)
+      tableRef.current.scrollToCell({ row: vtableRow, col: 0 })
     }
   }, [selectedInstrument, snapshots])
 
