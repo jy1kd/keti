@@ -54,9 +54,46 @@ export function MarketTable({ snapshots, selectedInstrument, onRowClick, onRowDo
       columns,
       records,
       theme: {
+        underlayBackgroundColor: '#0d1117',
         defaultStyle: {
           fontSize: 12,
-          fontFamily: 'Consolas, Monaco, monospace',
+          fontFamily: "'JetBrains Mono', Consolas, Monaco, monospace",
+          color: '#e6edf3',
+          bgColor: '#0d1117',
+          borderColor: '#21262d',
+          hover: {
+            cellBgColor: '#1c2333',
+          },
+          select: {
+            inlineRowBgColor: 'rgba(240, 180, 41, 0.12)',
+          },
+        },
+        headerStyle: {
+          fontSize: 11,
+          fontFamily: "'JetBrains Mono', Consolas, Monaco, monospace",
+          fontWeight: '600',
+          color: '#8b949e',
+          bgColor: '#161b22',
+          borderColor: '#30363d',
+        },
+        bodyStyle: {
+          bgColor: '#0d1117',
+          borderColor: '#21262d',
+        },
+        selectionStyle: {
+          cellBorderColor: '#f0b429',
+          cellBorderLineWidth: 1,
+          cellBgColor: 'rgba(240, 180, 41, 0.08)',
+          inlineRowBgColor: 'rgba(240, 180, 41, 0.12)',
+        },
+        scrollStyle: {
+          scrollSliderColor: '#30363d',
+          scrollRailColor: '#161b22',
+          visible: 'scrolling',
+        },
+        frameStyle: {
+          borderColor: '#30363d',
+          cornerRadius: 0,
         },
       },
     })

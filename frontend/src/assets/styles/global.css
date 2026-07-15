@@ -1,34 +1,39 @@
 :root {
-  /* 背景色 */
-  --bg-primary: #1a1a2e;
-  --bg-secondary: #16213e;
-  --bg-panel: #0f3460;
-  --bg-input: #1a1a1a;
+  /* 背景色 — 三层递进 */
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-panel: #1c2333;
+  --bg-input: #0d1117;
 
   /* 文字色 */
-  --text-primary: #e0e0e0;
-  --text-secondary: #a0a0a0;
-  --text-muted: #666666;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #484f58;
 
-  /* 涨跌色 */
-  --color-up: #ef4444;
-  --color-down: #22c55e;
-  --color-flat: #6b7280;
-  --color-up-bg: rgba(239, 68, 68, 0.1);
-  --color-down-bg: rgba(34, 197, 94, 0.1);
+  /* 签名色 — 琥珀 */
+  --accent: #f0b429;
+  --accent-dim: rgba(240, 180, 41, 0.12);
+  --accent-glow: rgba(240, 180, 41, 0.25);
+
+  /* 涨跌色（中国惯例：红涨绿跌） */
+  --color-up: #f85149;
+  --color-down: #3fb950;
+  --color-flat: #8b949e;
+  --color-up-bg: rgba(248, 81, 73, 0.12);
+  --color-down-bg: rgba(63, 185, 80, 0.12);
 
   /* 交互色 */
-  --color-primary: #1890ff;
-  --color-success: #52c41a;
-  --color-error: #ff4d4f;
-  --color-focus: #3b82f6;
+  --color-primary: #58a6ff;
+  --color-success: #3fb950;
+  --color-error: #f85149;
+  --color-focus: #58a6ff;
 
   /* 边框色 */
-  --border-color: #2a2a4a;
-  --border-light: #333333;
+  --border-color: #30363d;
+  --border-light: #21262d;
 
   /* 字体 */
-  --font-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
+  --font-mono: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -60,55 +65,59 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--border-color);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3a3a5a;
+  background: var(--text-muted);
 }
 
 button {
   cursor: pointer;
   border: none;
   font-size: 12px;
-  padding: 4px 12px;
-  border-radius: 3px;
-  transition: opacity 0.15s;
+  padding: 5px 14px;
+  border-radius: 4px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-weight: 500;
+  transition: background 0.15s;
 }
 
 button:hover {
-  opacity: 0.85;
+  background: var(--accent-glow);
 }
 
 button:active {
-  opacity: 0.7;
+  background: var(--accent-dim);
 }
 
 button:focus-visible {
-  outline: 2px solid var(--color-focus);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
 input, select {
   font-size: 12px;
-  padding: 4px 8px;
+  padding: 5px 10px;
   border: 1px solid var(--border-color);
-  border-radius: 3px;
-  background: var(--bg-secondary);
+  border-radius: 4px;
+  background: var(--bg-input);
   color: var(--text-primary);
+  transition: border-color 0.15s;
 }
 
 input:focus, select:focus {
-  border-color: var(--color-focus);
+  border-color: var(--accent);
 }
 
 input:focus-visible, select:focus-visible {
-  outline: 2px solid var(--color-focus);
+  outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
@@ -126,7 +135,7 @@ input:focus-visible, select:focus-visible {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 16px;
+  padding: 0 16px;
   background-color: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
   height: 40px;
@@ -134,9 +143,11 @@ input:focus-visible, select:focus-visible {
 }
 
 .app-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary);
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  text-transform: uppercase;
 }
 
 .main-content {
@@ -149,11 +160,13 @@ input:focus-visible, select:focus-visible {
   width: 70%;
   border-right: 1px solid var(--border-color);
   overflow: hidden;
+  background: var(--bg-primary);
 }
 
 .order-area {
   width: 30%;
   overflow: hidden;
+  background: var(--bg-primary);
 }
 
 .query-area {
@@ -162,6 +175,7 @@ input:focus-visible, select:focus-visible {
   border-top: 1px solid var(--border-color);
   flex-shrink: 0;
   overflow: hidden;
+  background: var(--bg-primary);
 }
 
 /* 共享 Panel 基础样式 */
@@ -170,14 +184,27 @@ input:focus-visible, select:focus-visible {
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-color);
+  position: relative;
+}
+
+.panel-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
 }
 
 .panel-header h2 {
   margin: 0;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-primary);
+  letter-spacing: 0.03em;
 }
 
 .panel-content {
@@ -185,11 +212,12 @@ input:focus-visible, select:focus-visible {
   display: flex;
   flex-direction: column;
   overflow: auto;
-  padding: 8px;
+  padding: 0;
 }
 
 /* 数值数据等宽显示 */
 .data-cell {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
