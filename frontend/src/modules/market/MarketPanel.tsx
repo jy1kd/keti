@@ -9,7 +9,7 @@ import { API_BASE } from '@/services/api'
 import './styles.css'
 
 export function MarketPanel() {
-  const { snapshots, selectedInstrument, setSelectedInstrument, fetchInstruments } = useMarketStore()
+  const { snapshots, selectedInstrument, setSelectedInstrument, fetchInstruments, subscribeInstruments } = useMarketStore()
   const fetchedRef = useRef(false)
 
   // WebSocket 行情推送
@@ -18,9 +18,15 @@ export function MarketPanel() {
   useEffect(() => {
     if (!fetchedRef.current) {
       fetchedRef.current = true
-      fetchInstruments()
+      // 获取合约列表后，订阅所有合约的行情
+      fetchInstruments().then(() => {
+        const instruments = useContractsStore.getState().contracts
+        if (instruments.length > 0) {
+          subscribeInstruments(instruments.map(c => c.instrumentID))
+        }
+      })
     }
-  }, [fetchInstruments])
+  }, [fetchInstruments, subscribeInstruments])
   const { contracts, addContract } = useContractsStore()
 
   // 只显示有行情数据的合约（搜索结果与表格数据对齐）
