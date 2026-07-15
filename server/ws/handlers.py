@@ -1,24 +1,81 @@
-"""WebSocket message handlers — placeholder (full implementation in PR-7).
+"""WebSocket message handlers.
 
 Routes incoming client messages and dispatches to appropriate handlers.
-
-PR-7 TODO: 当前 handler 直接调用 websocket.accept()/receive_text()，
-未经过 WebSocketManager（ws/manager.py）的 connect()/disconnect() 跟踪。
-PR-7 需要：
-  - 将 handler 接入 ws_manager 连接池（connect on accept, disconnect on break）
-  - 实现消息路由（subscribe/unsubscribe/ping）
-  - 连接断开时自动从 ws_manager 移除
+All handlers integrate with WebSocketManager for connection lifecycle.
 """
 
+import json
+import logging
+from typing import Any, Callable, Coroutine, List, Optional
 
 from fastapi import WebSocket
+
+from ws.manager import WebSocketManager
+
+logger = logging.getLogger(__name__)
+
+
+async def handle_ws(
+    endpoint: str,
+    ws_manager: WebSocketManager,
+    websocket: WebSocket,
+    subscribe_fn: Optional[Callable[[List[str]], Coroutine]] = None,
+    unsubscribe_fn: Optional[Callable[[List[str]], Coroutine]] = None,
+) -> None:
+    """Generic WebSocket handler — lifecycle + message routing.
+
+    Manages:
+    1. Accept and register in ws_manager connection pool
+    2. Route incoming messages (subscribe/unsubscribe/ping)
+    3. Unregister on disconnect
+    """
+    await ws_manager.connect(endpoint, websocket)
+    try:
+        while True:
+            try:
+                raw = await websocket.receive_text()
+            except Exception:
+                break
+
+            # Parse JSON
+            try:
+                msg = json.loads(raw)
+            except (json.JSONDecodeError, TypeError):
+                continue  # ignore invalid JSON
+
+            action = msg.get("action")
+
+            if action == "ping":
+                await websocket.send_json({"type": "pong"})
+
+            elif action == "subscribe" and subscribe_fn is not None:
+                instruments = msg.get("instruments", [])
+                if isinstance(instruments, list):
+                    await subscribe_fn(instruments)
+                    await websocket.send_json({
+                        "type": "subscribed",
+                        "instruments": instruments,
+                    })
+
+            elif action == "unsubscribe" and unsubscribe_fn is not None:
+                instruments = msg.get("instruments", [])
+                if isinstance(instruments, list):
+                    await unsubscribe_fn(instruments)
+                    await websocket.send_json({
+                        "type": "unsubscribed",
+                        "instruments": instruments,
+                    })
+    finally:
+        ws_manager.disconnect(endpoint, websocket)
+
+
+# ── Legacy per-endpoint handlers (kept for backward compatibility) ──
 
 
 async def handle_market_ws(websocket: WebSocket):
     """Handle ws/market endpoint connections — placeholder."""
     await websocket.accept()
     while True:
-        # PR-7: will read client messages and dispatch
         try:
             _ = await websocket.receive_text()
         except Exception:
