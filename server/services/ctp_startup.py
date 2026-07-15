@@ -235,7 +235,7 @@ def _wire_bridge(
     from services.reconnect import ReconnectService
 
     reconnect_svc = ReconnectService(
-        connect_fn=lambda: _attempt_reconnect(app, md_api),
+        connect_fn=lambda: _attempt_reconnect(app, md_api, loop),
         subscribe_fn=md_api.subscribe,
     )
     app.state.reconnect_service = reconnect_svc
@@ -285,13 +285,14 @@ def _wire_bridge(
     logger.info("CTP market data bridge wired — snapshots + WebSocket + K-line + subscribe + disconnect handling active")
 
 
-def _attempt_reconnect(app: "FastAPI", md_api: Any) -> bool:
+def _attempt_reconnect(app: "FastAPI", md_api: Any, loop: asyncio.AbstractEventLoop) -> bool:
     """Attempt to reconnect CTP. Returns True on success.
 
     Steps:
     1. Release old CTP API instance (cleanup DLL handles + threads)
     2. Create new instance and wait for OnFrontConnected
     3. Login and wait for OnRspUserLogin
+    4. On success, re-wire the market data bridge
     """
     try:
         # Release old instance to avoid resource leaks
@@ -338,7 +339,12 @@ def _attempt_reconnect(app: "FastAPI", md_api: Any) -> bool:
             logger.warning("reconnect: login timeout")
             return False
 
-        return md_api.login_status == "logged_in"
+        if md_api.login_status != "logged_in":
+            return False
+
+        # Re-wire the market data bridge after successful reconnect
+        _wire_bridge(app, md_api, loop)
+        return True
     except Exception as e:
         logger.error("reconnect attempt failed: %s", e)
         return False
