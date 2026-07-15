@@ -12,7 +12,7 @@
 |----|------|------|----------|----------|
 | PR-1 | 后端CTP连接验证（技术Spike） | ✅ 审查通过，待人工验证合并 | 2026-07-10 | ce44db8, 282ecaf, fa0a872, e6bc245, 2e7f11a, d399fd1, 34c5c9d, 6ddf795, b081b50 |
 | PR-3 | 后端FastAPI框架搭建 | ✅ 二次审查完成，待手动验证合并 | 2026-07-13 | 47a5fa1, c545354, 9217d61, 98f705a, 2bb9b69, 1d28ea8, 1bf6c7c |
-| PR-5 | 后端行情API实现 | ⏳ 待开始 | - | - |
+| PR-5 | 后端行情API实现 | ✅ 开发完成，待合并 | 2026-07-14 | 6f19568, f810499, 77a8f9f, ef837a3, c286776, 036410e, 40254cd, a583dae, 51c7639, b7d5e7b, bd74a88, 6d7d5f2, 748d6e3, 041179a, e48ae29, dbf2756, c55bcc8, 1e72b12, e4b2091 |
 | PR-7 | 后端WebSocket管理完善 | ⏳ 待开始 | - | - |
 | PR-9 | 后端交易API实现 | ⏳ 待开始 | - | - |
 | PR-11 | 后端查询API实现 | ⏳ 待开始 | - | - |
@@ -109,24 +109,68 @@
 
 ### PR-5: 后端行情API实现
 
-**状态**：⏳ 待开始
+**状态**：✅ 开发完成，待合并
 
 **PR信息**：
 - PR分支名：`feature/pr-5-market-api`
 - 依赖PR：PR-3
-- 工作量：3小时
+- 工作量：5小时
 
 **完成内容**：
-- 待开发
+- ✅ `services/market_service.py` — 合约缓存、行情快照缓存、订阅管理（500上限）、模糊搜索、线程安全、CTP hooks
+- ✅ `services/field_mapping.py` — CTP PascalCase → camelCase 字段映射（40字段）
+- ✅ `services/ctp_bridge.py` — CTP 回调桥接（MdSpi→field_mapping→MarketService→WS→KLine）
+- ✅ `services/ctp_startup.py` — CTP 自动连接（connect_ctp + wait=True + 凭证透传）
+- ✅ `services/kline_service.py` — 实时 K 线聚合（tick→OHLCV 多周期 bar）
+- ✅ `api/market.py` — GET instruments/subscribe/unsubscribe/snapshots/kline/depth
+- ✅ `api/connection.py` — login 真实化 + 防重入 + logout 真实断开
+- ✅ `config.py` — Config 构造函数支持显式凭证
+- ✅ `start.py` — 根据时间自动选择 CTP 地址
+- ✅ `data/instruments.json` — 8 个股指期货合约缓存
 
 **验证结果**：
-- 待验证
+- ✅ 241 tests 通过（3 failed 环境相关）
+- ✅ 代码范围正确（仅 server/ 目录）
+- ✅ CTP 回调→快照→WebSocket→KLine 完整链路已接通
+- ✅ subscribe/unsubscribe 真实调用 CTP SubscribeMarketData
+- ✅ login 等待 CTP 结果再返回（密码错误返回 false）
 
 **提交记录**：
-- 待提交
+- `6f19568` feat(task-05): MarketService核心逻辑 — 合约缓存+订阅管理+快照缓存 — 30 tests
+- `f810499` feat(task-05): CTP字段映射 — PascalCase→camelCase深度行情数据 — 22 tests
+- `77a8f9f` feat(task-05): 行情API路由实现 — instruments/subscribe/unsubscribe/snapshots/kline/depth — 20 tests
+- `ef837a3` feat(task-05): 合约列表缓存 — instruments.json文件加载+启动自加载 — 5 tests
+- `c76db1a` docs(task-05): PR-5开发记录更新 — 4次TDD循环，227 tests全部通过
+- `c286776` fix(task-05): review反馈 — CTP回调链路接通 (MdSpi→field_mapping→MarketService→WS)
+- `036410e` fix(task-05): review反馈 — K线占位文档化+代码清理(6条建议)
+- `40254cd` fix(task-05): review二次审查 — 补充import asyncio和pathlib.Path
+- `a583dae` fix(task-05): list[str]→List[str]兼容旧版Python (Pydantic字段定义运行时求值)
+- `51c7639` feat(task-05): 应用启动时自动创建CTP连接并接线 — 后台线程+startup事件+status真实状态
+- `b7d5e7b` fix(task-05): CTP startup修复 — lifespan替代on_event + get_running_loop替代get_event_loop
+- `bd74a88` fix(task-05): review R4 - front_connected.set()缺失导致CTP永远超时
+- `6d7d5f2` fix(task-05): subscribe/unsubscribe接入CTP — set_ctp_hooks()
+- `748d6e3` fix(task-05): login接口真实化 — connect_ctp()凭证透传
+- `041179a` fix(task-05): login防重入+logout真实断开
+- `e48ae29` fix(task-05): Config构造函数支持显式凭证
+- `dbf2756` fix(task-05): login等待CTP结果再返回
+- `c55bcc8` fix(task-05): lifespan启动时wait=True
+- `1e72b12` feat(task-05): 实时K线聚合服务 — tick→OHLCV多周期bar
+- `e4b2091` fix(task-05): CTP登录判断逻辑反转 — pRspInfo=None不再误判
+
+**审查记录**：
+- 一次审查（`review-feedback-a-pr5.md`）：2 🔴 + 6 🟡 + 1 🔵 → 全部修复
+- 二次审查（`review-feedback-a-pr5-r2.md`）：1 🔴（import遗漏）→ 已修复
+- 三次审查（运行时修复）：list[str]兼容 + lifespan + event loop
+- 四次审查（`review-feedback-a-pr5-r4.md`）：1 🔴（front_connected.set()缺失）→ 已修复
 
 **交接说明**：
-- 待交接
+- CTP 回调链路已就绪：`ctp_startup._wire_bridge()` 自动接线
+- CTP 启动自动化：lifespan → connect_ctp(wait=True) → 后台线程
+- K 线实时聚合：KLineService 从 tick 累积 OHLCV bar（1m/5m/15m/30m/1h）
+- subscribe/unsubscribe 真实调用 CTP SubscribeMarketData
+- login 同步等待 CTP 结果，密码错误返回 false
+- WS 推送已桥接：`asyncio.run_coroutine_threadsafe` 跨线程安全
+- 地址自动切换：`start.py` 根据时间选择 Primary/Secondary 地址
 
 ---
 

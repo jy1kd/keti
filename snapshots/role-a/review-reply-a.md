@@ -157,3 +157,121 @@
 ```
 
 全部测试通过，无回归。5 个 WS 端点手动验证全部连通。
+
+---
+
+## PR-5 Code Review 反馈处理记录
+
+**审查分支**：`feature/pr-5-market-api`
+**审查文件**：`review-feedback-a-pr5.md`
+**处理时间**：2026-07-13
+**审查结论**：2 阻断 + 6 建议 + 1 疑问
+
+---
+
+### 🔴 阻断性问题修复（2 条）
+
+| # | 问题 | 修复 Commit | 处理说明 |
+|---|------|------------|----------|
+| B1 | CTP 回调链路未接通（MdSpi→mapping→MarketService→WS） | `c286776` | 新建 `services/ctp_bridge.py`（wire_market_data_callback），MarketService 添加 `threading.Lock` 线程安全保护，main.py 添加 `wire_ctp_market_bridge()` 桥接函数（含 asyncio.run_coroutine_threadsafe WS 广播）。新增 8 个 ctp_bridge 测试。 |
+| B2 | K线端点硬编码空数据 | `036410e` | `get_kline` docstring 添加详细的 CTP 历史查询依赖说明、延期 PR-7 标注、前后端契约稳定性声明。端点格式保持稳定。 |
+
+---
+
+### 🟡 改进建议处理（6 条）
+
+| # | 建议 | 采纳 | 处理说明 |
+|---|------|------|----------|
+| S1 | `Optional` 导入未使用 | ✅ | 删除 `api/market.py` 中 `from typing import Optional` |
+| S2 | `request: Request` 未使用 | ✅ | `get_kline` 移除 `request: Request` 参数 |
+| S3 | `import os as _os` → pathlib | ✅ | 已在 B1 修复中一并改为 `Path(__file__).parent / "data" / "instruments.json"` |
+| S4 | `_FakeMdApi` 死代码 | ✅ | 删除 `test_market_service.py` 中 30 行未使用代码 |
+| S5 | 裸 `list` 类型注解 | ✅ | 改为 `List[Tuple[str, str, object]]`，添加 import |
+| S6 | `min_length=0` 语义模糊 | ✅ | 改为 `min_length=1`，订阅/退订空列表返回 422；同步更新测试 |
+
+---
+
+### 🔵 疑问确认回复（1 条）
+
+**Q1**：WebSocket 行情推送是否明确延期至 PR-7？
+
+**回复**：已在本轮修复中实现，不延期。完整链路：`CTP OnRtnDepthMarketData → field_mapping.map_depth_market_data() → MarketService.update_snapshot() [thread-safe] → ws_manager.broadcast("market", "market_data", data) [asyncio.run_coroutine_threadsafe]`。`wire_market_data_callback()` 函数在 `services/ctp_bridge.py` 中，`wire_ctp_market_bridge()` 在 `main.py` 中提供开箱即用的集成。
+
+---
+
+### 测试记录
+
+```
+235 passed in 0.76s
+```
+
+全部测试通过，无回归。新增 8 个 ctp_bridge 测试覆盖回调注册、快照更新、字段映射、广播调用、合并语义、空 instrumentID、无 broadcast_fn 场景。
+
+---
+
+## PR-5 Code Review 二次审查反馈处理记录
+
+**审查分支**：`feature/pr-5-market-api`
+**审查文件**：`review-feedback-a-pr5-r2.md`
+**处理时间**：2026-07-13
+**审查结论**：1 阻断 + 0 建议 + 0 疑问
+
+---
+
+### 🔴 阻断性问题修复（1 条）
+
+| # | 问题 | 修复 Commit | 处理说明 |
+|---|------|------------|----------|
+| B3 | `main.py` 缺少 `import asyncio` 和 `from pathlib import Path` | `40254cd` | S3 修复漏掉了模块顶部 import，导致运行时 `NameError`。验证：`from main import create_app` 可正常导入。 |
+
+---
+
+### ✅ 一次审查修复验证
+
+全部 8 项（B1/B2/S1-S6/Q1）二次验证通过。
+
+---
+
+### 测试记录
+
+```
+235 passed in 0.83s
+```
+
+导入验证：`from main import create_app, wire_ctp_market_bridge` 成功。
+
+---
+
+## PR-5 Code Review 四次审查反馈处理记录
+
+**审查分支**：`feature/pr-5-market-api`
+**审查文件**：`review-feedback-a-pr5-r4.md`
+**处理时间**：2026-07-14
+**审查结论**：1 阻断 + 0 建议 + 0 疑问
+
+---
+
+### 🔴 阻断性问题修复（1 条）
+
+| # | 问题 | 修复 Commit | 处理说明 |
+|---|------|------------|----------|
+| B4 | `ctp_startup.py` `_on_front_connected()` 缺少 `front_connected.set()`，主线程 30s 超时 | `bd74a88` | `_on_front_connected()` 开头添加 `front_connected.set()`。因果链：CTP 回调线程未通知主线程 front 已连接 → 主线程 `front_connected.wait(30s)` 超时 → "market data will not be available"。 |
+
+### ✅ 人工验证问题关联
+
+| # | 问题 | 结论 |
+|---|------|------|
+| 1 | `GET /` → 404 | ✅ 非 bug（无根路由，文档在 `/docs`） |
+| 2 | `/api/market/snapshots` → `{}` | ✅ B4 根因（CTP 超时，桥接未接通） |
+| 3 | `/api/market/kline` → `bars:[]` | ✅ 设计占位（B2 已确认） |
+| 4 | `/api/market/depth` → 空 bids/asks | ✅ B4 根因（无 snapshot 数据） |
+| 5 | "CTP OnFrontConnected timeout after 30s" | ✅ B4 根因（`front_connected.set()` 缺失） |
+
+### 测试记录
+
+```
+202 passed, 2 failed (test_config.py 环境相关，非回归), 37 skipped
+14 passed (test_ctp_startup + test_ctp_bridge)
+```
+
+无回归。

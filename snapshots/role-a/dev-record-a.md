@@ -128,3 +128,162 @@
 | 🟡 handler↔manager 集成 gap 加注释 | ✅ handlers.py 添加 PR-7 TODO 注释块 |
 | 🟡 WS handler 端到端测试缺失 | ⏳ 延期 PR-7 |
 | 🟡 五个 handler 函数重复 | ⏳ 延期 PR-7 |
+
+---
+
+## PR-5: 后端行情API实现
+
+**分支**：`feature/pr-5-market-api`
+**依赖**：PR-3
+**状态**：✅ 开发完成，待合并
+
+### 测试用例列表
+
+| 测试文件 | 测试数 | 覆盖内容 |
+|----------|--------|----------|
+| `tests/test_market_service.py` | 44 | MarketService 初始化、合约缓存、订阅管理(500上限)、快照缓存、CTP hooks |
+| `tests/test_field_mapping.py` | 22 | CTP深度行情 PascalCase→camelCase 全字段映射 |
+| `tests/test_market_api.py` | 20 | REST API 集成测试 |
+| `tests/test_ctp_bridge.py` | 8 | CTP回调桥接 |
+| `tests/test_ctp_startup.py` | 11 | CTP连接管理（connect_ctp/_connect_ctp/凭证/超时） |
+| `tests/test_kline_service.py` | 25 | K线聚合（OHLCV/时间窗口/多周期/volume增量/线程安全） |
+| `tests/test_connection_api.py` | 16 | Login/logout/status API（防重入/真实断开/状态读取） |
+| `tests/test_*.py` (原有) | 95 | 回归 |
+| **合计** | **241** | |
+
+### 实现进度
+
+#### 第1次循环：MarketService 核心逻辑（30 tests）
+- ✅ `services/market_service.py` — 合约缓存、订阅管理(500上限)、快照缓存、模糊搜索
+- 📦 Commit: `6f19568`
+
+#### 第2次循环：CTP 字段映射（22 tests）
+- ✅ `services/field_mapping.py` — CTP CThostFtdcDepthMarketDataField → camelCase dict，40 字段全覆盖
+- 📦 Commit: `f810499`
+
+#### 第3次循环：行情 API 路由（20 tests）
+- ✅ `api/market.py` — GET instruments/subscribe/unsubscribe/snapshots/kline/depth 全部重写
+- ✅ `main.py` — MarketService 注入 app.state
+- 📦 Commit: `77a8f9f`
+
+#### 第4次循环：合约列表缓存（5 tests）
+- ✅ `data/instruments.json` — 8 个股指期货合约(IF/IC/IH/IM 2608+2609)
+- ✅ `MarketService.load_instruments_from_file()` — JSON 文件加载+容错
+- ✅ `main.py` — 启动时自动加载 instruments.json
+- 📦 Commit: `ef837a3`
+
+#### 第5次循环：CTP自动连接 + login真实化（11+16 tests）
+- ✅ `services/ctp_startup.py` — connect_ctp() 非阻塞 + wait=True 同步等待 + 凭证透传
+- ✅ `api/connection.py` — login真实化（CTP连接+防重入）、logout真实断开（release+清理状态）
+- ✅ `config.py` — Config 构造函数支持显式凭证覆盖 env
+- 📦 Commit: `748d6e3`, `041179a`, `e48ae29`, `dbf2756`, `c55bcc8`
+
+#### 第6次循环：K线聚合（25 tests）
+- ✅ `services/kline_service.py` — 实时 tick→OHLCV 多周期 bar（1m/5m/15m/30m/1h）
+- ✅ `services/ctp_bridge.py` — 新增 kline_service 参数
+- 📦 Commit: `1e72b12`
+
+#### 第7次循环：CTP登录逻辑修复 + subscribe接入CTP + 地址自动切换
+- ✅ `services/ctp_startup.py` — _on_rsp_user_login 逻辑反转（pRspInfo=None 不再误判成功）
+- ✅ `services/market_service.py` — set_ctp_hooks() 桥接 subscribe/unsubscribe 到 CTP
+- ✅ `start.py` — 根据时间自动选择 CTP 地址（工作日 09-16 第一套，其余第二套）
+- 📦 Commit: `e4b2091`, `6d7d5f2`
+
+### 关键设计决策
+
+1. **MarketService 纯同步设计**：所有数据操作方法均为同步，CTP 回调线程安全。WebSocket 推送由外部调用方处理
+2. **字段映射表驱动**：`_DEPTH_MARKET_DATA_FIELDS` 列表定义 CTP→camelCase 映射，40 字段含默认值，`getattr` 兜底
+3. **集成测试用独立 FastAPI app**：每个测试文件创建独立 app 实例，不依赖 `main.py` 的全局 `app`
+4. **K线实时聚合**：从 tick 累积为 OHLCV bar，5 个周期同时更新，无历史数据
+5. **订阅限制批处理原子性**：整批检查上限，不部分添加
+6. **CTP hooks 注入**：MarketService 通过 set_ctp_hooks() 接收 subscribe/unsubscribe 回调，解耦 CTP 依赖
+7. **login 同步等待**：connect_ctp(wait=True) 阻塞等 CTP 回调结果，密码错误返回 false
+
+### Commit 记录
+
+| Commit | 内容 |
+|--------|------|
+| `6f19568` | feat(task-05): MarketService核心逻辑 — 合约缓存+订阅管理+快照缓存 — 30 tests pass |
+| `f810499` | feat(task-05): CTP字段映射 — PascalCase→camelCase深度行情数据 — 22 tests pass |
+| `77a8f9f` | feat(task-05): 行情API路由实现 — instruments/subscribe/unsubscribe/snapshots/kline/depth — 20 tests pass |
+| `ef837a3` | feat(task-05): 合约列表缓存 — instruments.json文件加载+启动自加载 — 5 tests pass |
+| `c286776` | fix(task-05): CTP回调链路接通 — ctp_bridge.py + MarketService线程安全 |
+| `036410e` | fix(task-05): K线占位文档化+代码清理 |
+| `40254cd` | fix(task-05): 补充import asyncio和pathlib.Path |
+| `a583dae` | fix(task-05): list[str]→List[str]兼容Python 3.8 |
+| `51c7639` | feat(task-05): CTP auto-startup — ctp_startup.py + connection.py真实状态 |
+| `b7d5e7b` | fix(task-05): lifespan替代on_event + get_running_loop替代get_event_loop |
+| `bd74a88` | fix(task-05): front_connected.set()缺失导致CTP永远超时 |
+| `6d7d5f2` | fix(task-05): subscribe/unsubscribe接入CTP — set_ctp_hooks() |
+| `748d6e3` | fix(task-05): login接口真实化 — connect_ctp()非阻塞+凭证透传 |
+| `041179a` | fix(task-05): login防重入+logout真实断开 |
+| `e48ae29` | fix(task-05): Config构造函数支持显式凭证 |
+| `dbf2756` | fix(task-05): login等待CTP结果再返回 |
+| `c55bcc8` | fix(task-05): lifespan启动时wait=True |
+| `1e72b12` | feat(task-05): 实时K线聚合服务 — tick→OHLCV多周期bar |
+| `e4b2091` | fix(task-05): CTP登录判断逻辑反转 — pRspInfo=None不再误判 |
+
+### 审查反馈修复（2026-07-13）
+
+审查文件：`review-feedback-a-pr5.md`（2 阻断 + 6 建议 + 1 疑问）
+
+| # | 严重度 | 问题 | 处理 |
+|---|--------|------|------|
+| B1 | 🔴 | CTP 回调链路未接通 | ✅ 新建 `ctp_bridge.py` + MarketService 线程安全 + `wire_ctp_market_bridge()`，8 新测试 |
+| B2 | 🔴 | K线端点硬编码空数据 | ✅ docstring 详细标注 CTP 依赖 + PR-7 延期说明 |
+| S1 | 🟡 | `Optional` 未使用 | ✅ 删除 import |
+| S2 | 🟡 | `request: Request` 未使用 | ✅ `get_kline` 移除参数 |
+| S3 | 🟡 | `import os as _os` → pathlib | ✅ 改为 `Path(__file__).parent / "data" / "instruments.json"` |
+| S4 | 🟡 | `_FakeMdApi` 死代码 | ✅ 删除 30 行 |
+| S5 | 🟡 | 裸 `list` 类型注解 | ✅ 改为 `List[Tuple[str, str, object]]` |
+| S6 | 🟡 | `min_length=0` 语义模糊 | ✅ 改为 `min_length=1`，测试同步更新 |
+| Q1 | 🔵 | WS 推送是否延期 | ✅ 在 PR-5 内实现，不延期 |
+
+**修复 Commits**：
+- `c286776` fix(task-05): CTP回调链路接通
+- `036410e` fix(task-05): K线占位文档化+代码清理
+
+### 二次审查反馈修复（2026-07-13）
+
+审查文件：`review-feedback-a-pr5-r2.md`（1 阻断 + 0 建议 + 0 疑问）
+
+| # | 严重度 | 问题 | 处理 |
+|---|--------|------|------|
+| B3 | 🔴 | `main.py` 缺少 `import asyncio` 和 `from pathlib import Path` | `40254cd` — 添加 2 行 import |
+
+**验证**：`from main import create_app, wire_ctp_market_bridge` 成功，235 tests 通过。
+
+### 三次审查修复（2026-07-14）
+
+审查文件：`review-feedback-a-pr5-r3.md`（CTP auto-startup 实现期间的运行时修复）
+
+| # | 问题 | 处理 |
+|---|------|------|
+| 1 | `list[str]` TypeError（Python 3.8 兼容） | `a583dae` — `list[str]` → `List[str]` |
+| 2 | `@app.on_event("startup")` 废弃警告 | `b7d5e7b` — 改用 `lifespan` context manager |
+| 3 | `asyncio.get_event_loop()` RuntimeError | `b7d5e7b` — `get_running_loop()` + fallback |
+| 4 | CTP auto-startup 实现 | `51c7639` — `ctp_startup.py` + `connection.py` 真实状态 |
+
+### 四次审查修复（2026-07-14）
+
+审查文件：`review-feedback-a-pr5-r4.md`（1 阻断 + 0 建议 + 0 疑问）
+
+| # | 严重度 | 问题 | 处理 |
+|---|--------|------|------|
+| B4 | 🔴 | `front_connected.set()` 缺失，CTP 永远超时 | `bd74a88` — 1 行修复 |
+
+**验证**：14/14 ctp_startup + ctp_bridge 测试通过，202 总测试通过。
+
+### 后续开发（审查后新增功能，2026-07-14）
+
+| 功能 | 说明 | Commit |
+|------|------|--------|
+| subscribe/unsubscribe 接入 CTP | MarketService.set_ctp_hooks() 桥接 MdUserApi | `6d7d5f2` |
+| login 接口真实化 | connect_ctp() 凭证透传 + wait=True 同步等待 | `748d6e3`, `dbf2756` |
+| login 防重入 + logout 真实断开 | ctp_thread.is_alive() 守卫 + md_api.release() | `041179a` |
+| Config 支持显式凭证 | broker_id/user_id/password 可选参数覆盖 env | `e48ae29` |
+| lifespan wait=True | 启动时等待 CTP 登录结果 | `c55bcc8` |
+| 实时 K 线聚合 | KLineService — tick→OHLCV 多周期 bar | `1e72b12` |
+| CTP 登录逻辑修复 | pRspInfo=None 不再误判成功 | `e4b2091` |
+
+**最终测试**：241 passed（3 failed 环境相关）
