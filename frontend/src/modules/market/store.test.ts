@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useMarketStore } from './store'
+import { useContractsStore } from '@/stores/contracts'
 import type { MarketSnapshot } from '@/services/types'
 
 // Mock api module
@@ -121,22 +122,26 @@ describe('MarketStore - fetchInstruments', () => {
       selectedInstrument: null,
       snapshots: new Map(),
     })
+    useContractsStore.setState({ contracts: [] })
     vi.mocked(getInstruments).mockReset()
     vi.mocked(subscribeMarket).mockReset()
     vi.mocked(getSnapshots).mockReset()
   })
 
-  it('fetchInstruments 调用 API 获取合约列表并更新 contracts store', async () => {
+  it('fetchInstruments 调用 API 获取合约列表并同步到 contracts store', async () => {
+    const mockInstruments = [
+      { instrumentID: 'IF2608', instrumentName: '沪深300' },
+      { instrumentID: 'IF2609', instrumentName: '沪深300' },
+    ]
     vi.mocked(getInstruments).mockResolvedValue({
-      instruments: [
-        { instrumentID: 'IF2608', instrumentName: '沪深300' },
-        { instrumentID: 'IF2609', instrumentName: '沪深300' },
-      ],
+      instruments: mockInstruments,
       count: 2,
     })
 
     await useMarketStore.getState().fetchInstruments()
     expect(getInstruments).toHaveBeenCalled()
+    // 验证同步到 contracts store
+    expect(useContractsStore.getState().contracts).toEqual(mockInstruments)
   })
 
   it('fetchInstruments 失败时不影响现有状态', async () => {

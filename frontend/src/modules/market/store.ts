@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { MarketSnapshot } from '@/services/types'
 import { getInstruments, subscribeMarket, getSnapshots } from '@/services/api'
+import { useContractsStore } from '@/stores/contracts'
 
 interface MarketStore {
   selectedInstrument: string | null
@@ -32,7 +33,10 @@ export const useMarketStore = create<MarketStore>((set, get) => ({
     }),
   fetchInstruments: async () => {
     try {
-      await getInstruments()
+      const data = await getInstruments()
+      if (data?.instruments) {
+        useContractsStore.getState().setContracts(data.instruments)
+      }
     } catch {
       // 网络失败不影响现有状态
     }
