@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { ContractSearch } from '@/components/ContractSearch'
 import { MarketTable } from './MarketTable'
 import { useMarketStore } from './store'
@@ -10,6 +10,7 @@ import './styles.css'
 
 export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, fetchInstruments, subscribeInstruments } = useMarketStore()
+  const { contracts, addContract } = useContractsStore()
   const fetchedRef = useRef(false)
 
   // WebSocket 行情推送
@@ -20,20 +21,13 @@ export function MarketPanel() {
       fetchedRef.current = true
       // 获取合约列表后，订阅所有合约的行情
       fetchInstruments().then(() => {
-        const instruments = useContractsStore.getState().contracts
-        if (instruments.length > 0) {
-          subscribeInstruments(instruments.map(c => c.instrumentID))
+        const allContracts = useContractsStore.getState().contracts
+        if (allContracts.length > 0) {
+          subscribeInstruments(allContracts.map(c => c.instrumentID))
         }
       })
     }
   }, [fetchInstruments, subscribeInstruments])
-  const { contracts, addContract } = useContractsStore()
-
-  // 只显示有行情数据的合约（搜索结果与表格数据对齐）
-  const contractsInMarket = useMemo(
-    () => contracts.filter((c) => snapshots.has(c.instrumentID)),
-    [contracts, snapshots],
-  )
 
   const { handleClick, handleDoubleClick } = usePointOrder({
     onOrder: ({ instrumentID, price }) => {
@@ -57,10 +51,11 @@ export function MarketPanel() {
     <section className="market-panel">
       <div className="panel-header">
         <h2>行情面板</h2>
-        <ContractSearch contracts={contractsInMarket} onSelect={handleSelectContract} />
+        <ContractSearch contracts={contracts} onSelect={handleSelectContract} />
       </div>
       <div className="panel-content">
         <MarketTable
+          contracts={contracts}
           snapshots={snapshots}
           selectedInstrument={selectedInstrument}
           onRowClick={handleClick}

@@ -1,13 +1,16 @@
 import { useRef, useEffect } from 'react'
 import { ListTable } from '@visactor/vtable'
-import type { MarketSnapshot } from '@/services/types'
+import type { MarketSnapshot, ContractInfo } from '@/services/types'
 
 interface MarketTableProps {
+  contracts: ContractInfo[]
   snapshots: Map<string, MarketSnapshot>
   selectedInstrument?: string | null
   onRowClick?: (instrumentID: string, price: number) => void
   onRowDoubleClick?: (instrumentID: string, price: number) => void
 }
+
+const PLACEHOLDER = '--'
 
 const columns = [
   { field: 'instrumentID', title: '合约', width: 100 },
@@ -20,7 +23,19 @@ const columns = [
   { field: 'openInterest', title: '持仓量', width: 100 },
 ]
 
-function snapshotToRecord(snap: MarketSnapshot) {
+function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined) {
+  if (!snap) {
+    return {
+      instrumentID: contract.instrumentID,
+      lastPrice: PLACEHOLDER,
+      change: PLACEHOLDER,
+      changePercent: PLACEHOLDER,
+      bidPrice1: PLACEHOLDER,
+      askPrice1: PLACEHOLDER,
+      volume: PLACEHOLDER,
+      openInterest: PLACEHOLDER,
+    }
+  }
   const preClose = snap.preClosePrice || snap.preSettlementPrice || snap.lastPrice
   const change = snap.lastPrice - preClose
   const changePercent = preClose ? (change / preClose) * 100 : 0
@@ -36,13 +51,13 @@ function snapshotToRecord(snap: MarketSnapshot) {
   }
 }
 
-export function MarketTable({ snapshots, selectedInstrument, onRowClick, onRowDoubleClick }: MarketTableProps) {
+export function MarketTable({ contracts, snapshots, selectedInstrument, onRowClick, onRowDoubleClick }: MarketTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
   const onClickRef = useRef(onRowClick)
   const onDblClickRef = useRef(onRowDoubleClick)
   const rafRef = useRef<number>(0)
-  const pendingSnapshotsRef = useRef<Map<string, MarketSnapshot> | null>(null)
+  const pendingRef = useRef<{ contracts: ContractInfo[]; snapshots: Map<string, MarketSnapshot> } | null>(null)
 
   useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
@@ -50,7 +65,7 @@ export function MarketTable({ snapshots, selectedInstrument, onRowClick, onRowDo
   useEffect(() => {
     if (!containerRef.current) return
 
-    const records = Array.from(snapshots.values()).map(snapshotToRecord)
+    const records = contracts.map((c) => buildRecord(c, snapshots.get(c.instrumentID)))
 
     const table = new ListTable(containerRef.current, {
       columns,
@@ -102,15 +117,15 @@ export function MarketTable({ snapshots, selectedInstrument, onRowClick, onRowDo
 
     table.on('click_cell', (args: any) => {
       const record = records[args.row]
-      if (record && onClickRef.current) {
-        onClickRef.current(record.instrumentID, record.lastPrice)
+      if (record && onClickRef.current && record.lastPrice !== PLACEHOLDER) {
+        onClickRef.current(record.instrumentID, record.lastPrice as number)
       }
     })
 
     table.on('dblclick_cell', (args: any) => {
       const record = records[args.row]
-      if (record && onDblClickRef.current) {
-        onDblClickRef.current(record.instrumentID, record.lastPrice)
+      if (record && onDblClickRef.current && record.lastPrice !== PLACEHOLDER) {
+        onDblClickRef.current(record.instrumentID, record.lastPrice as number)
       }
     })
 
@@ -121,14 +136,15 @@ export function MarketTable({ snapshots, selectedInstrument, onRowClick, onRowDo
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Update records when snapshots change (debounced via rAF)
+  // Update records when contracts or snapshots change (debounced via rAF)
   useEffect(() => {
-    pendingSnapshotsRef.current = snapshots
-    if (rafRef.current) return // 已有待处理的 rAF，跳过
+    pendingRef.current = { contracts, snapshots }
+    if (rafRef.current) return
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = 0
-      if (!tableRef.current || !pendingSnapshotsRef.current) return
-      const records = Array.from(pendingSnapshotsRef.current.values()).map(snapshotToRecord)
+      if (!tableRef.current || !pendingRef.current) return
+      const { contracts: c, snapshots: s } = pendingRef.current
+      const records = c.map((contract) => buildRecord(contract, s.get(contract.instrumentID)))
       tableRef.current.setRecords(records)
     })
     return () => {
@@ -137,20 +153,18 @@ export function MarketTable({ snapshots, selectedInstrument, onRowClick, onRowDo
         rafRef.current = 0
       }
     }
-  }, [snapshots])
+  }, [contracts, snapshots])
 
   // 高亮选中合约行
   useEffect(() => {
     if (!tableRef.current || !selectedInstrument) return
-    const records = Array.from(snapshots.values()).map(snapshotToRecord)
-    const rowIndex = records.findIndex((r) => r.instrumentID === selectedInstrument)
+    const rowIndex = contracts.findIndex((c) => c.instrumentID === selectedInstrument)
     if (rowIndex >= 0) {
-      // vtable 行索引：0 是表头，数据行从 1 开始
       const vtableRow = rowIndex + 1
       tableRef.current.selectRow(vtableRow)
       tableRef.current.scrollToCell({ row: vtableRow, col: 0 })
     }
-  }, [selectedInstrument, snapshots])
+  }, [selectedInstrument, contracts])
 
   return <div ref={containerRef} className="market-table-container" />
 }
