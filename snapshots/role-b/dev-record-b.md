@@ -252,3 +252,12 @@
 - `b18370c` feat(task-6a): remove mock data, add API integration to market store
 - `863e6a0` feat(task-6a): MarketPanel calls fetchInstruments on mount
 - `c5a00a2` refactor(task-6a): delete mockData.ts — no longer referenced
+
+---
+
+### 审查反馈修复
+
+- `8ac415e` fix(task-6a): review反馈 - fetchInstruments同步到contracts store
+- `5326be4` fix(task-6a): review反馈 - MarketPanel集成useMarketWs WebSocket推送
+- `c05b4e1` fix(task-6a): review反馈 - 移除contracts store mock数据
+- `269a0f1` fix(task-6a): review反馈 - 改进建议批量修复
