@@ -4,22 +4,26 @@ Logic:
   Weekday (Mon-Fri) 09:00-16:00 → Primary addresses (real trading)
   All other times               → Secondary addresses (extended hours)
 
+Address defaults are hardcoded; .env can override individual keys via:
+  CTP_MD_FRONT_PRIMARY   CTP_TD_FRONT_PRIMARY
+  CTP_MD_FRONT_SECONDARY CTP_TD_FRONT_SECONDARY
+
 Usage:
   cd server && python start.py
   cd server && python start.py --port 8001
   cd server && python start.py --reload
-
-.env keys (add these alongside existing ones):
-  CTP_MD_FRONT_PRIMARY=tcp://182.254.243.31:30011
-  CTP_TD_FRONT_PRIMARY=tcp://182.254.243.31:30001
-  CTP_MD_FRONT_SECONDARY=tcp://182.254.243.31:40011
-  CTP_TD_FRONT_SECONDARY=tcp://182.254.243.31:40001
 """
 
 import os
 import sys
 from datetime import datetime
 from pathlib import Path
+
+# ── Hardcoded defaults (SimNow) ─────────────────────────────────────────
+_DEFAULT_MD_PRIMARY = "tcp://182.254.243.31:30011"
+_DEFAULT_TD_PRIMARY = "tcp://182.254.243.31:30001"
+_DEFAULT_MD_SECONDARY = "tcp://182.254.243.31:40011"
+_DEFAULT_TD_SECONDARY = "tcp://182.254.243.31:40001"
 
 
 def _load_env_file(env_path: Path) -> dict:
@@ -41,6 +45,8 @@ def _load_env_file(env_path: Path) -> dict:
 def select_addresses(env: dict) -> tuple:
     """Pick primary or secondary CTP addresses based on current time.
 
+    Hardcoded defaults are used unless .env overrides a specific key.
+
     Returns:
         (md_front, td_front) tuple.
     """
@@ -52,19 +58,13 @@ def select_addresses(env: dict) -> tuple:
     use_primary = is_weekday and 9 <= hour < 16
 
     if use_primary:
-        md = env.get("CTP_MD_FRONT_PRIMARY")
-        td = env.get("CTP_TD_FRONT_PRIMARY")
+        md = env.get("CTP_MD_FRONT_PRIMARY") or _DEFAULT_MD_PRIMARY
+        td = env.get("CTP_TD_FRONT_PRIMARY") or _DEFAULT_TD_PRIMARY
         label = "PRIMARY (real trading)"
     else:
-        md = env.get("CTP_MD_FRONT_SECONDARY")
-        td = env.get("CTP_TD_FRONT_SECONDARY")
+        md = env.get("CTP_MD_FRONT_SECONDARY") or _DEFAULT_MD_SECONDARY
+        td = env.get("CTP_TD_FRONT_SECONDARY") or _DEFAULT_TD_SECONDARY
         label = "SECONDARY (extended hours)"
-
-    # Fallback to original keys if primary/secondary not configured
-    if not md:
-        md = env.get("CTP_MD_FRONT", "tcp://182.254.243.31:40011")
-    if not td:
-        td = env.get("CTP_TD_FRONT", "tcp://182.254.243.31:40001")
 
     print(f"[start.py] {now.strftime('%Y-%m-%d %H:%M:%S')} ({now.strftime('%A')})")
     print(f"[start.py] Selected: {label}")
