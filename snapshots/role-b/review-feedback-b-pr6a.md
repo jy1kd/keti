@@ -109,3 +109,93 @@
 4. 运行测试确认通过
 5. 更新 dev-record-b.md
 6. 修复完成后切审查窗口进行复审
+
+---
+
+## 第 2 轮审查（复审）
+
+**审查分支**：`feature/pr-6a-market-real-api`
+**审查 commit**：`8ac415e` ~ `94a8f85`（4 commits 修复）
+**审查时间**：2026-07-15
+
+---
+
+### 🔴 阻断性问题（必须修改）
+
+无
+
+**修复确认**：
+
+| 问题 | 状态 | 验证 |
+|------|------|------|
+| #1 fetchInstruments 未同步到 contracts store | ✅ 已修复 | `store.ts:38` 调用 `useContractsStore.getState().setContracts(data.instruments)` |
+| #2 useMarketWs Hook 未被调用 | ✅ 已修复 | `MarketPanel.tsx:16` 调用 `useMarketWs(API_BASE.replace('http', 'ws'))` |
+| #3 contracts store 仍使用 mock 数据 | ✅ 已修复 | `contracts.ts:13` 改为 `contracts: []`，删除 mock 导入 |
+
+---
+
+### 🟡 改进建议
+
+无
+
+**改进采纳确认**：
+
+| 建议 | 状态 | 说明 |
+|------|------|------|
+| #1 subscribeInstruments 错误处理 | ✅ 已采纳 | 添加 `console.warn` |
+| #2 WSManager.connect 端点路由 | ✅ 确认 | 无需修改，已支持端点路由 |
+| #3 fetchInstruments 防重复调用 | ✅ 已采纳 | 添加 `useRef(false)` 标记 |
+| #4 getInstruments 返回类型 | ✅ 已采纳 | 定义 `InstrumentsResponse`、`SubscribeResponse`、`SnapshotsResponse` |
+
+---
+
+### 🔵 疑问确认
+
+无
+
+---
+
+### 测试验证
+
+```
+Test Files  19 passed (19)
+     Tests  123 passed (123)
+  Duration  16.37s
+```
+
+**新增测试**：
+- `store.test.ts:131-145` — 验证 fetchInstruments 同步到 contracts store
+- `MarketPanel.test.tsx:53-56` — 验证 useMarketWs 调用参数
+
+---
+
+### 审查结论
+
+**✅ 通过**
+
+**理由**：
+1. 3 个阻断性问题全部修复，代码验证正确
+2. 4 个改进建议全部采纳并实现
+3. 123 个测试全部通过（新增 1 个，共 19 文件）
+4. 功能完整性：API 封装、WebSocket 推送、Store 集成、合约搜索 — 调用链完整
+5. 代码质量：类型定义完善、错误处理到位、防重复调用机制
+
+**下一步**：
+请完成人工验证后切回开发窗口生成 PR 描述，执行合并操作。
+
+**人工验证内容**：
+```bash
+# 1. 启动后端
+cd server && python -m uvicorn main:app --reload --port 8000
+
+# 2. 启动前端
+cd frontend && npm run dev
+
+# 3. 浏览器访问 http://localhost:5173
+
+# 4. 验证以下内容：
+#    - 行情面板显示合约数据（非 mock）
+#    - 合约搜索框可输入并显示搜索结果
+#    - 表格数据通过 WebSocket 实时更新
+#    - 控制台无报错
+```
