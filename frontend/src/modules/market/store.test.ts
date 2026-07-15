@@ -175,20 +175,16 @@ describe('MarketStore - subscribeInstruments', () => {
     expect(subscribeMarket).toHaveBeenCalledWith(['IF2608'])
   })
 
-  it('subscribeInstruments 订阅后获取初始快照', async () => {
+  it('subscribeInstruments 订阅后不立即获取快照（依赖 WebSocket 推送）', async () => {
     vi.mocked(subscribeMarket).mockResolvedValue({
       success: true,
       added: ['IF2608'],
       alreadySubscribed: [],
     })
-    vi.mocked(getSnapshots).mockResolvedValue({
-      snapshots: {
-        IF2608: { instrumentID: 'IF2608', lastPrice: 4120.0 },
-      },
-    })
 
     await useMarketStore.getState().subscribeInstruments(['IF2608'])
-    expect(getSnapshots).toHaveBeenCalledWith(['IF2608'])
-    expect(useMarketStore.getState().snapshots.get('IF2608')?.lastPrice).toBe(4120.0)
+    expect(subscribeMarket).toHaveBeenCalledWith(['IF2608'])
+    // 不调用 getSnapshots — 数据通过 WebSocket market_data 消息自然填充
+    expect(getSnapshots).not.toHaveBeenCalled()
   })
 })
