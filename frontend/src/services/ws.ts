@@ -61,12 +61,16 @@ export class WSManager {
   disconnect(endpoint: WSEndpoint): void {
     const ws = this.connections.get(endpoint)
     if (ws) {
-      // 移除回调，防止关闭过程中触发旧消息
+      // 清除所有回调，防止关闭过程中触发旧消息
       ws.onmessage = null
       ws.onerror = null
       ws.onopen = null
-      // 无论 readyState 都关闭，包括 CONNECTING 状态的孤儿连接
-      ws.close()
+      ws.onclose = null
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close()
+      }
+      // CONNECTING 状态不调用 close()（浏览器会报 "closed before established"）
+      // 清除回调后它会自然超时关闭，不会触发任何业务逻辑
       this.connections.delete(endpoint)
       this.callbacks.delete(endpoint)
     }

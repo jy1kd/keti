@@ -41,6 +41,8 @@ export function MarketTable({ snapshots, selectedInstrument, onRowClick, onRowDo
   const tableRef = useRef<ListTable | null>(null)
   const onClickRef = useRef(onRowClick)
   const onDblClickRef = useRef(onRowDoubleClick)
+  const rafRef = useRef<number>(0)
+  const pendingSnapshotsRef = useRef<Map<string, MarketSnapshot> | null>(null)
 
   useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
@@ -119,11 +121,22 @@ export function MarketTable({ snapshots, selectedInstrument, onRowClick, onRowDo
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Update records when snapshots change
+  // Update records when snapshots change (debounced via rAF)
   useEffect(() => {
-    if (!tableRef.current) return
-    const records = Array.from(snapshots.values()).map(snapshotToRecord)
-    tableRef.current.setRecords(records)
+    pendingSnapshotsRef.current = snapshots
+    if (rafRef.current) return // 已有待处理的 rAF，跳过
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = 0
+      if (!tableRef.current || !pendingSnapshotsRef.current) return
+      const records = Array.from(pendingSnapshotsRef.current.values()).map(snapshotToRecord)
+      tableRef.current.setRecords(records)
+    })
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = 0
+      }
+    }
   }, [snapshots])
 
   // 高亮选中合约行
