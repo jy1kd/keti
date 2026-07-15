@@ -39,3 +39,25 @@ export async function post<T>(url: string, body?: unknown): Promise<ApiResponse<
   const { data } = await api.post<ApiResponse<T>>(url, body)
   return data
 }
+
+// ── 行情 API ────────────────────────────────────────────────────────
+
+/** 获取合约列表，支持 keyword 模糊搜索 */
+export async function getInstruments(keyword?: string) {
+  const params = keyword ? { keyword } : undefined
+  const { data } = await api.get('/api/market/instruments', { params })
+  return data
+}
+
+/** 订阅行情 */
+export async function subscribeMarket(instruments: string[]) {
+  const { data } = await api.post('/api/market/subscribe', { instruments })
+  return data
+}
+
+/** 获取行情快照，不传参数则获取全部 */
+export async function getSnapshots(instruments?: string[]) {
+  const params = instruments?.length ? { instruments: instruments.join(',') } : undefined
+  const { data } = await api.get('/api/market/snapshots', { params })
+  return data
+}
