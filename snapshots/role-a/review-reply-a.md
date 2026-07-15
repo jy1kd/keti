@@ -275,3 +275,51 @@
 ```
 
 无回归。
+
+---
+
+## PR-7 Code Review 反馈处理记录
+
+**审查分支**：`feature/pr-7-websocket-manager`
+**审查文件**：`review-feedback-a-pr7.md`
+**处理时间**：2026-07-15
+**审查结论**：2 阻断 + 6 建议 + 2 疑问
+
+---
+
+### 🔴 阻断性问题修复（2 条）
+
+| # | 问题 | 修复 Commit | 处理说明 |
+|---|------|------------|----------|
+| B1 | `_attempt_reconnect()` 资源泄漏 + 硬编码 sleep | `89cb00a` | 先 `md_api.release()` 清理旧实例，重置 login_status，注册临时 OnFrontConnected + OnRspUserLogin 回调，`threading.Event` 等待（15s 超时）替代 `time.sleep(2.0)` |
+| B2 | `update_subscriptions()` 未在 REST 路径中调用 | `89cb00a` | 包装 `md_api.subscribe` 为 `_subscribe_with_tracking`，每次 subscribe 后调用 `reconnect_svc.update_subscriptions(market_service.get_subscriptions())` |
+
+### 🟡 改进建议处理（6 条）
+
+| # | 建议 | 采纳 | 处理说明 |
+|---|------|------|----------|
+| 1 | subscribe/unsubscribe 无错误响应 | ✅ 采纳 | try/except 包装，异常时返回 `{"type":"error","action":"subscribe","message":"..."}` |
+| 2 | 心跳 ping 与 handler ping 语义重叠 | ✅ 采纳 | handler 同时处理 `{"action":"ping"}` 和 `{"type":"ping"}`（心跳），均回复 pong |
+| 3 | `_retry_count` 直接访问违反封装 | ✅ 采纳 | 新增 `get_current_delay()` 方法，`_on_front_disconnected` 改用此方法 |
+| 4 | `on_disconnect()` 命名歧义 | 🟡 保留 | 命名与 CTP 回调语义一致，`get_current_delay()` 已解决封装问题 |
+| 5 | 集成测试深度不足 | 🟡 保留 | 39 个测试覆盖正常/异常/边界，深度行为测试需 CTP 环境，PR-17 联调补充 |
+| 6 | progress.md 未同步 | ✅ 采纳 | 更新 PR-7 状态为 "✅ 开发完成，待审查"，补全提交记录和交接说明 |
+
+### 🔵 疑问确认回复（2 条）
+
+**Q1**：`_attempt_reconnect` 是否需要重新注册 SPI？
+
+**回复**：需要。CTP 断线后底层清理 SPI 注册，`MdUserApi.create()` 内部重新 `RegisterSpi()`。重复注册无副作用（CTP 文档允许）。已在 `_attempt_reconnect` 中保留 `md_api.create()` 流程。
+
+**Q2**：心跳间隔 15 秒是否合适？
+
+**回复**：15 秒是保守选择。模拟交易终端（非高频）可接受。`start_heartbeat(interval=N)` 参数化支持调整。带宽影响极小（每连接每 15 秒 <50 bytes）。
+
+### 测试记录
+
+```
+39 passed (PR-7 tests)
+276 passed (full suite), 2 failed (pre-existing test_config), 46 skipped
+```
+
+无回归。新增 4 个测试（heartbeat ping 响应、subscribe 错误响应、get_current_delay × 2）。

@@ -13,7 +13,7 @@
 | PR-1 | 后端CTP连接验证（技术Spike） | ✅ 审查通过，待人工验证合并 | 2026-07-10 | ce44db8, 282ecaf, fa0a872, e6bc245, 2e7f11a, d399fd1, 34c5c9d, 6ddf795, b081b50 |
 | PR-3 | 后端FastAPI框架搭建 | ✅ 二次审查完成，待手动验证合并 | 2026-07-13 | 47a5fa1, c545354, 9217d61, 98f705a, 2bb9b69, 1d28ea8, 1bf6c7c |
 | PR-5 | 后端行情API实现 | ✅ 已合并 | 2026-07-14 | 81643c8 (merge), 6f19568~e4b2091 (19 commits) |
-| PR-7 | 后端WebSocket管理完善 | ⏳ 待开始 | - | - |
+| PR-7 | 后端WebSocket管理完善 | ✅ 开发完成，待审查 | 2026-07-15 | c370cbc, 05b16a6, 4f07b9f, 5386563, 200ab85, 0a0e29c, 443a6c5, 89cb00a |
 | PR-9 | 后端交易API实现 | ⏳ 待开始 | - | - |
 | PR-11 | 后端查询API实现 | ⏳ 待开始 | - | - |
 | PR-13 | 后端止损单服务实现 | ⏳ 待开始 | - | - |
@@ -176,7 +176,7 @@
 
 ### PR-7: 后端WebSocket管理完善
 
-**状态**：⏳ 待开始
+**状态**：✅ 开发完成，待审查
 
 **PR信息**：
 - PR分支名：`feature/pr-7-websocket-manager`
@@ -184,16 +184,33 @@
 - 工作量：2小时
 
 **完成内容**：
-- 待开发
+- ✅ `ws/handlers.py` — 统一 `handle_ws()` 替代 5 个 placeholder，消息路由（subscribe/unsubscribe/ping），错误响应
+- ✅ `ws/manager.py` — 心跳机制（`start_heartbeat`/`stop_heartbeat`/`_heartbeat_tick`），死连接清理
+- ✅ `services/reconnect.py` — ReconnectService（指数退避 5 次，自动重新订阅）
+- ✅ `services/ctp_startup.py` — OnFrontDisconnected → system 广播 + reconnect 触发，subscribe 钩子同步订阅列表
+- ✅ `main.py` — 所有 WS 路由改用 handle_ws，lifespan 心跳启动/停止
 
 **验证结果**：
-- 待验证
+- ✅ 39 tests 全部通过（新增 39，回归 276 passed）
+- ✅ 代码范围正确（仅 server/ + snapshots/）
+- ✅ 无调试代码残留
+- ✅ 后续依赖已标注（报单/成交/持仓广播需 PR-9/PR-13）
 
 **提交记录**：
-- 待提交
+- `c370cbc` feat(PR-7): WebSocket handler lifecycle + message routing — 9 tests
+- `05b16a6` feat(PR-7): WebSocket heartbeat — periodic ping + dead connection cleanup — 7 tests
+- `4f07b9f` feat(PR-7): CTP reconnect service — exponential backoff + auto-resubscribe — 12 tests
+- `5386563` feat(PR-7): WebSocket integration — unified handlers + heartbeat + disconnect handling — 7 tests
+- `200ab85` refactor(PR-7): remove unused placeholder handlers from ws/handlers.py
+- `0a0e29c` docs(PR-7): 开发记录 — 35测试+5commits+WebSocket管理完善
+- `443a6c5` docs(PR-7): 标注后续PR依赖 — 报单/成交/持仓/止损广播需PR-9/PR-13
+- `89cb00a` fix(PR-7): review反馈 — reconnect资源泄漏+订阅同步+错误响应
 
 **交接说明**：
-- 待交接
+- PR-9 接入时，需在 `_wire_bridge` 中添加 OnRtnOrder → ws/order 广播
+- PR-13 接入时，需添加 StopOrderService → ws/stop 广播
+- 心跳间隔 15 秒（可在 `start_heartbeat(interval=N)` 调整）
+- ReconnectService 最大 5 次重试，指数退避 1s/2s/4s/8s/16s
 
 ---
 
