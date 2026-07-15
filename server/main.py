@@ -9,6 +9,12 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
+
 logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, Request, WebSocket
@@ -38,9 +44,15 @@ def create_app() -> FastAPI:
         logger.info("WebSocket heartbeat started (interval=15s)")
 
         cfg = load_config()
+        logger.info("starting CTP connection (broker=%s user=%s)", cfg.broker_id, cfg.user_id)
         result = connect_ctp(app, cfg.broker_id, cfg.user_id, cfg.password, wait=True)
         if not result.get("success"):
             logger.warning("CTP startup login failed: %s", result.get("message"))
+
+        # Startup summary
+        instruments = app.state.market_service.instrument_count
+        logger.info("startup complete — instruments=%d, CTP=%s",
+                     instruments, "connected" if result.get("success") else "failed")
 
         yield
 
