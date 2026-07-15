@@ -347,6 +347,23 @@
 4. **OnFrontDisconnected 异步重连**：新线程执行 sleep + try_reconnect，不阻塞 CTP 回调线程
 5. **订阅跟踪自动恢复**：MarketService.subscribe 调用时同步更新 ReconnectService 的订阅列表
 
+### 后续 PR 依赖标注
+
+以下功能在 PR-7 中提供了基础设施（handle_ws + ws_manager + broadcast），但数据源依赖后续 PR：
+
+| 缺口 | 依赖 PR | 说明 |
+|------|---------|------|
+| 报单回报 → ws/order 广播 | PR-9 | OnRtnOrder 回调 → ws_manager.broadcast("order", "order_return", data) |
+| 成交回报 → ws/order 广播 | PR-9 | OnRtnTrade 回调 → ws_manager.broadcast("order", "trade_return", data) |
+| 持仓更新 → ws/position 广播 | PR-9 | ReqQryInvestorPosition 结果 → ws_manager.broadcast("position", "position_update", data) |
+| 止损单状态 → ws/stop 广播 | PR-13 | StopOrderService 状态变更 → ws_manager.broadcast("stop", "stop_order_update", data) |
+
+PR-7 已完成的基础设施：
+- `handle_ws()` 统一 handler，支持任意 endpoint + 可选 subscribe_fn/unsubscribe_fn
+- `WebSocketManager.broadcast(endpoint, msg_type, data)` 通用广播
+- `ReconnectService` 断线重连 + 自动重新订阅
+- `OnFrontDisconnected` → system 广播 + reconnect 触发
+
 ### Commit 记录
 
 | Commit | 内容 |
