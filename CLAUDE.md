@@ -231,56 +231,66 @@ CTP 使用 PascalCase 字段名（如 `InstrumentID`, `LastPrice`, `BidPrice1`�
 | 项目 | 开发模式 | 审查模式 |
 |------|----------|----------|
 | 职责 | 写代码、跑测试、提交 | 读 diff、写审查反馈 |
-| 产出 | `snapshots/role-b/dev-record-b.md` | `snapshots/role-b/review-feedback-b.md` |
-| 文档 | 可读全部、可改 `dev-record-b.md` | 只读、只写 `review-feedback-b.md` |
+| 产出 | `snapshots/role-b/dev-record-b.md` | `snapshots/role-b/review-feedback-b-prX.md` |
+| 文档 | 可读全部、可改 `dev-record-b.md` | 只读、只写 `review-feedback-b-prX.md` |
 | 操作 | 按 TDD 流程：红→绿→重构→提交 | 写完反馈后停，不改代码 |
+
+### 文件命名规范
+
+| 文件 | 用途 | 写入窗口 |
+|------|------|----------|
+| `dev-record-b.md` | 开发记录（所有PR共用） | 开发模式 |
+| `progress.md` | 进度快照 | 开发模式 |
+| `review-feedback-b-prX.md` | 审查反馈（每个PR单独一个） | 审查模式 |
+| `review-reply-b-prX.md` | 反馈处理记录（每个PR单独一个） | 开发模式 |
+| `verify-discussion-prX.md` | 人工验证讨论记录 | 开发模式 |
 
 ### 开发模式启动约束
 
 **可操作范围**：读写 `frontend/`，读写 `snapshots/role-b/dev-record-b.md`，读 `docs/*.md` + `CLAUDE.md`。只改 Task N 对应文件。
 
-**禁止事项**：禁止读写 `review-feedback-b.md` / `review-reply-b.md`，禁止改 `docs/*.md`，禁止提交 Task N+1。
+**禁止事项**：禁止读写 `review-feedback-b-prX.md` / `review-reply-b-prX.md`，禁止改 `docs/*.md`，禁止提交 Task N+1。
 
 ### 诊断输出格式
 
 ```
-📋 当前状态
-- Task: PR-N (标题)
-- 分支: task/N-description
-- 基准: commit_hash
-- 变更: X 个文件（list）
-- 测试: X passed / Y total
-- 状态: 🔴红灯 | 🟢绿灯 | 🟡待绿灯 | ⚫未开始
+📋 诊断结果
+
+当前 PR：PR-X（标题）
+当前阶段：阶段N - 模块名
+任务描述：（一句话说明要做什么）
+建议分支名：feature/pr-x-xxx
+依赖检查：
+  - PR-X1：✅ 已完成
+  - PR-X2：✅ 已完成
+工作区状态：干净 / 有未提交内容（列出）
 ```
 
 ### Commit 规范
 
-- 测试红灯：`test(PR-N): failing tests for XXX`
-- 测试绿灯：`feat(PR-N): implement XXX`
-- 重构：`refactor(PR-N): optimize XXX`
+- 测试红灯：`test(task-xx): failing tests for XXX`
+- 测试绿灯：`feat(task-xx): implement XXX`
+- 重构：`refactor(task-xx): optimize XXX`
+- 修复审查反馈：`fix(task-xx): review反馈 - 简述修复内容`
 
 ### 文档更新时机
 
-- **dev-record-b.md**：Task N 测试全部绿灯后、提交前更新
-- **进度速查表**：标记 PR-N 状态为"开发中"或"已开发"
-- **提交后**：切审查模式
+- **dev-record-b.md**：开发过程中同步更新
+- **progress.md**：仅两处节点允许更新：①自验证全部确认通过；②审查反馈全部修复完成
+- **task-dev-flow.md**：仅在整个阶段（开发+验证+审查+人工验证全部完成）结束后才更新状态
 
-### 交接触发逻辑
-
-PR-N 代码全部完成 + 测试全绿 + 自验证通过 → 更新 dev-record-b.md → 提交 → **停，等审查反馈**。
-
-### 完整流程速查
+### 完整流程速查（9步）
 
 ```
-[启动] → 读 CLAUDE.md + docs/task.md + dev-record-b.md → 输出诊断
-  ↓
-[读需求] → docs/task.md PR-N 确认待开发 → 输出任务清单
-  ↓
-[TDD 循环] → 红（写测试）→ 绿（写实现）→ 提交 → 循环
-  ↓
-[绿灯确认] → 测试全绿 → 读 dev-record-b.md 确认无待办
-  ↓
-[更新文档] → dev-record-b.md 更新关键产出 → 提交
-  ↓
-[交出] → 停，等审查反馈
+第1步 窗口1 → 启动诊断（输出诊断结果+分支建议）
+第2步 终端 → 手动创建分支（git checkout -b feature/pr-x-xxx）
+第3步 窗口1 → TDD开发（/superpowers:test-driven-development）
+第4步 窗口1 → 自验证（/superpowers:verification-before-completion）
+第5步 窗口2 → 代码审查（/superpowers:requesting-code-review）
+第6步 窗口1 → 处理审查意见（仅审查不通过时，/superpowers:receiving-code-review）
+第7步 窗口2 → 二次审查（如需）
+第8步 窗口1 → 人工验证（交互式讨论，记录到 verify-discussion-prX.md）
+第9步 窗口1 → 收尾合并（生成PR描述，更新task.md状态）
 ```
+
+详细流程说明见 `执行流程-b.md`。
