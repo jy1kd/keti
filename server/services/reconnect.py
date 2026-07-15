@@ -38,6 +38,12 @@ class ReconnectService:
         """Calculate exponential backoff delay: base_delay * 2^attempt."""
         return self.base_delay * (2 ** attempt)
 
+    def get_current_delay(self) -> float:
+        """Return the backoff delay for the current retry attempt."""
+        if self._retry_count <= 0:
+            return 0.0
+        return self._get_delay(self._retry_count - 1)
+
     def should_retry(self) -> bool:
         """Return True if retry count is within limit."""
         return self._retry_count < self.max_retries

@@ -188,7 +188,7 @@ def test_handler_routes_unsubscribe_message():
 
 
 def test_handler_routes_ping_message():
-    """Client sends ping → handler responds with pong."""
+    """Client sends {"action":"ping"} → handler responds with pong."""
     from ws.handlers import handle_ws
 
     async def _run():
@@ -197,6 +197,27 @@ def test_handler_routes_ping_message():
         task = asyncio.create_task(handle_ws("system", ws_manager, ws))
         await asyncio.sleep(0.05)
         ws.queue_message(json.dumps({"action": "ping"}))
+        await asyncio.sleep(0.1)
+        assert any(msg.get("type") == "pong" for msg in ws.sent)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+    asyncio.run(_run())
+
+
+def test_handler_responds_to_heartbeat_ping():
+    """Server heartbeat sends {"type":"ping"} → handler responds with pong."""
+    from ws.handlers import handle_ws
+
+    async def _run():
+        ws_manager = WebSocketManager()
+        ws = FakeWebSocket()
+        task = asyncio.create_task(handle_ws("system", ws_manager, ws))
+        await asyncio.sleep(0.05)
+        ws.queue_message(json.dumps({"type": "ping"}))
         await asyncio.sleep(0.1)
         assert any(msg.get("type") == "pong" for msg in ws.sent)
         task.cancel()
@@ -245,6 +266,33 @@ def test_handler_sends_ack_on_subscribe():
         await asyncio.sleep(0.1)
         assert any(
             msg.get("type") == "subscribed" and "IF2608" in msg.get("instruments", [])
+            for msg in ws.sent
+        )
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+    asyncio.run(_run())
+
+
+def test_handler_sends_error_on_subscribe_failure():
+    """When subscribe_fn raises, handler sends error response."""
+    from ws.handlers import handle_ws
+
+    async def _run():
+        ws_manager = WebSocketManager()
+        ws = FakeWebSocket()
+        mock_subscribe = AsyncMock(side_effect=Exception("limit exceeded"))
+        task = asyncio.create_task(
+            handle_ws("market", ws_manager, ws, subscribe_fn=mock_subscribe)
+        )
+        await asyncio.sleep(0.05)
+        ws.queue_message(json.dumps({"action": "subscribe", "instruments": ["IF2608"]}))
+        await asyncio.sleep(0.1)
+        assert any(
+            msg.get("type") == "error" and "limit exceeded" in msg.get("message", "")
             for msg in ws.sent
         )
         task.cancel()

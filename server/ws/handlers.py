@@ -44,26 +44,41 @@ async def handle_ws(
                 continue  # ignore invalid JSON
 
             action = msg.get("action")
+            msg_type = msg.get("type")
 
-            if action == "ping":
+            if action == "ping" or msg_type == "ping":
                 await websocket.send_json({"type": "pong"})
 
             elif action == "subscribe" and subscribe_fn is not None:
                 instruments = msg.get("instruments", [])
                 if isinstance(instruments, list):
-                    await subscribe_fn(instruments)
-                    await websocket.send_json({
-                        "type": "subscribed",
-                        "instruments": instruments,
-                    })
+                    try:
+                        await subscribe_fn(instruments)
+                        await websocket.send_json({
+                            "type": "subscribed",
+                            "instruments": instruments,
+                        })
+                    except Exception as e:
+                        await websocket.send_json({
+                            "type": "error",
+                            "action": "subscribe",
+                            "message": str(e),
+                        })
 
             elif action == "unsubscribe" and unsubscribe_fn is not None:
                 instruments = msg.get("instruments", [])
                 if isinstance(instruments, list):
-                    await unsubscribe_fn(instruments)
-                    await websocket.send_json({
-                        "type": "unsubscribed",
-                        "instruments": instruments,
-                    })
+                    try:
+                        await unsubscribe_fn(instruments)
+                        await websocket.send_json({
+                            "type": "unsubscribed",
+                            "instruments": instruments,
+                        })
+                    except Exception as e:
+                        await websocket.send_json({
+                            "type": "error",
+                            "action": "unsubscribe",
+                            "message": str(e),
+                        })
     finally:
         ws_manager.disconnect(endpoint, websocket)

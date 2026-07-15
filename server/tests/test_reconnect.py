@@ -131,3 +131,20 @@ class TestReconnectService:
         svc.update_subscriptions(["IF2608"])
         svc.try_reconnect()
         subscribe_fn.assert_not_called()
+
+    def test_get_current_delay_returns_zero_before_disconnect(self):
+        """get_current_delay returns 0 before any disconnect."""
+        from services.reconnect import ReconnectService
+
+        svc = ReconnectService(connect_fn=MagicMock(), subscribe_fn=MagicMock())
+        assert svc.get_current_delay() == 0.0
+
+    def test_get_current_delay_after_disconnect(self):
+        """get_current_delay returns correct backoff after disconnect."""
+        from services.reconnect import ReconnectService
+
+        svc = ReconnectService(connect_fn=MagicMock(), subscribe_fn=MagicMock())
+        svc.on_disconnect()  # retry_count = 1
+        assert svc.get_current_delay() == 1.0  # 2^0 = 1
+        svc.on_disconnect()  # retry_count = 2
+        assert svc.get_current_delay() == 2.0  # 2^1 = 2

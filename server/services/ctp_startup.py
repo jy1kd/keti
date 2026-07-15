@@ -12,7 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import threading
-from typing import Any, Optional, TYPE_CHECKING
+from typing import Any, List, Optional, TYPE_CHECKING
 
 from services.ctp_bridge import wire_market_data_callback
 
@@ -230,12 +230,6 @@ def _wire_bridge(
         kline_service=kline_service,
     )
 
-    # Wire subscribe/unsubscribe: MarketService → CTP MdUserApi
-    app.state.market_service.set_ctp_hooks(
-        subscribe_fn=md_api.subscribe,
-        unsubscribe_fn=md_api.unsubscribe,
-    )
-
     # Wire OnFrontDisconnected → system broadcast + reconnect
     from services.reconnect import ReconnectService
 
@@ -245,6 +239,20 @@ def _wire_bridge(
     )
     app.state.reconnect_service = reconnect_svc
 
+    # Wire subscribe/unsubscribe: MarketService → CTP MdUserApi
+    # Wrap subscribe to also update ReconnectService subscription tracking
+    _original_subscribe = md_api.subscribe
+
+    def _subscribe_with_tracking(instruments: List[str]) -> None:
+        _original_subscribe(instruments)
+        # Sync full subscription list to ReconnectService after each subscribe
+        reconnect_svc.update_subscriptions(app.state.market_service.get_subscriptions())
+
+    app.state.market_service.set_ctp_hooks(
+        subscribe_fn=_subscribe_with_tracking,
+        unsubscribe_fn=md_api.unsubscribe,
+    )
+
     def _on_front_disconnected(nReason: int) -> None:
         logger.warning("CTP front disconnected (reason=%s)", nReason)
         _broadcast_system("connection_status", {
@@ -253,7 +261,7 @@ def _wire_bridge(
         })
         reconnect_svc.on_disconnect()
         if reconnect_svc.should_retry():
-            delay = reconnect_svc._get_delay(reconnect_svc._retry_count - 1)
+            delay = reconnect_svc.get_current_delay()
             logger.info("reconnect: will attempt in %.1fs", delay)
             # Schedule reconnect after delay
             def _do_reconnect():
@@ -277,12 +285,58 @@ def _wire_bridge(
 
 
 def _attempt_reconnect(app: "FastAPI", md_api: Any) -> bool:
-    """Attempt to reconnect CTP. Returns True on success."""
+    """Attempt to reconnect CTP. Returns True on success.
+
+    Steps:
+    1. Release old CTP API instance (cleanup DLL handles + threads)
+    2. Create new instance and wait for OnFrontConnected
+    3. Login and wait for OnRspUserLogin
+    """
     try:
+        # Release old instance to avoid resource leaks
+        try:
+            md_api.release()
+        except Exception:
+            logger.debug("reconnect: release old instance failed (may already be released)")
+
+        # Reset login status
+        md_api.login_status = "not_logged_in"
+
+        # Events for synchronization
+        front_connected = threading.Event()
+        login_done = threading.Event()
+
+        def _on_front_connected():
+            front_connected.set()
+            try:
+                md_api.login()
+            except Exception:
+                logger.warning("reconnect: login request failed", exc_info=True)
+                login_done.set()
+
+        def _on_rsp_user_login(pRspUserLogin, pRspInfo, nRequestID, bIsLast):
+            if not bIsLast:
+                return
+            if pRspInfo is None or getattr(pRspInfo, "ErrorID", -1) == 0:
+                md_api.login_status = "logged_in"
+            login_done.set()
+
+        # Register temporary handlers for reconnect
+        md_api.spi.on("OnFrontConnected", _on_front_connected)
+        md_api.spi.on("OnRspUserLogin", _on_rsp_user_login)
+
         md_api.create()
-        # Simplified: wait a moment for connection
-        import time
-        time.sleep(2.0)
+
+        # Wait for front connection (up to 15s)
+        if not front_connected.wait(timeout=15.0):
+            logger.warning("reconnect: front connection timeout")
+            return False
+
+        # Wait for login result (up to 15s)
+        if not login_done.wait(timeout=15.0):
+            logger.warning("reconnect: login timeout")
+            return False
+
         return md_api.login_status == "logged_in"
     except Exception as e:
         logger.error("reconnect attempt failed: %s", e)
