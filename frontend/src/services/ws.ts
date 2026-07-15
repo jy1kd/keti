@@ -56,7 +56,10 @@ export class WSManager {
   disconnect(endpoint: WSEndpoint): void {
     const ws = this.connections.get(endpoint)
     if (ws) {
-      ws.close()
+      // 只在连接已建立或正在关闭时调用 close，避免 CONNECTING 状态报错
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CLOSING) {
+        ws.close()
+      }
       this.connections.delete(endpoint)
       this.callbacks.delete(endpoint)
     }
