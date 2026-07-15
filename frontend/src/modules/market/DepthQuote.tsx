@@ -36,7 +36,12 @@ export function DepthQuote({ snapshot }: DepthQuoteProps) {
       <div className="depth-quote__body">
         <div className="depth-quote__asks">
           {asks.map((level, i) => (
-            <div key={`ask-${i}`} className="depth-quote__row depth-quote__row--ask">
+            <div
+              key={`ask-${i}`}
+              className="depth-quote__row depth-quote__row--ask"
+              data-testid={`ask-${i + 1}`}
+              onClick={() => onBuyClick?.(level.price)}
+            >
               <span className="depth-quote__label">卖{i + 1}</span>
               <span className="depth-quote__price">{level.price}</span>
               <span className="depth-quote__volume">{level.volume}</span>
@@ -45,7 +50,12 @@ export function DepthQuote({ snapshot }: DepthQuoteProps) {
         </div>
         <div className="depth-quote__bids">
           {bids.map((level, i) => (
-            <div key={`bid-${i}`} className="depth-quote__row depth-quote__row--bid">
+            <div
+              key={`bid-${i}`}
+              className="depth-quote__row depth-quote__row--bid"
+              data-testid={`bid-${5 - i}`}
+              onClick={() => onSellClick?.(level.price)}
+            >
               <span className="depth-quote__label">买{5 - i}</span>
               <span className="depth-quote__price">{level.price}</span>
               <span className="depth-quote__volume">{level.volume}</span>
