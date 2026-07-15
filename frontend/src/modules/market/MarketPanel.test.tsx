@@ -8,6 +8,13 @@ vi.mock('@/services/api', () => ({
   getInstruments: vi.fn().mockResolvedValue({ instruments: [], count: 0 }),
   subscribeMarket: vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] }),
   getSnapshots: vi.fn().mockResolvedValue({ snapshots: {} }),
+  API_BASE: 'http://localhost:8000',
+}))
+
+// Mock useMarketWs
+const mockUseMarketWs = vi.fn()
+vi.mock('@/hooks/useMarketWs', () => ({
+  useMarketWs: (...args: unknown[]) => mockUseMarketWs(...args),
 }))
 
 // Mock usePointOrder to avoid side effects
@@ -41,5 +48,10 @@ describe('MarketPanel', () => {
     render(<MarketPanel />)
     expect(fetchSpy).toHaveBeenCalled()
     fetchSpy.mockRestore()
+  })
+
+  it('启动时调用 useMarketWs 连接 WebSocket 行情推送', () => {
+    render(<MarketPanel />)
+    expect(mockUseMarketWs).toHaveBeenCalledWith('ws://localhost:8000')
   })
 })

@@ -4,10 +4,15 @@ import { MarketTable } from './MarketTable'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
 import { usePointOrder } from '@/hooks/usePointOrder'
+import { useMarketWs } from '@/hooks/useMarketWs'
+import { API_BASE } from '@/services/api'
 import './styles.css'
 
 export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, fetchInstruments } = useMarketStore()
+
+  // WebSocket 行情推送
+  useMarketWs(API_BASE.replace('http', 'ws'))
 
   useEffect(() => {
     fetchInstruments()
