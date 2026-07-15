@@ -402,7 +402,7 @@ frontend/src/
 | **负责角色** | 角色A |
 | **依赖PR** | PR-3 |
 | **工作量** | 3小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
 
 **提交文件**：
 ```
@@ -413,9 +413,14 @@ server/
 │   └── md_user_api.py          # 行情API封装（完善）
 ├── services/
 │   ├── __init__.py
-│   └── market_service.py       # 行情服务层（新增）
-└── data/
-    └── instruments.json        # 合约列表缓存（新增）
+│   ├── market_service.py       # 行情服务层
+│   ├── field_mapping.py        # CTP字段映射（PascalCase→camelCase）
+│   ├── ctp_bridge.py           # CTP回调桥接
+│   ├── ctp_startup.py          # CTP自动连接
+│   └── kline_service.py        # K线聚合服务
+├── data/
+│   └── instruments.json        # 合约列表缓存
+└── start.py                    # 智能启动脚本（自动选择CTP地址）
 ```
 
 **PR描述**：
@@ -1677,3 +1682,4 @@ PR-1~16,PR-18 ──►PR-17 (联调测试)
 | 2026-07-13 | v1.6 | 更新PR-1/3/4/6状态为已完成（合并后） | ✅ 完成 |
 | 2026-07-10 | v1.5 | 每个PR增加用户手动验证提示 | ✅ 完成 |
 | 2026-07-13 | v1.6 | 前端PR依赖后端API先行，去掉mock数据，直接调用真实接口 | ✅ 完成 |
+| 2026-07-14 | v1.7 | PR-5后端行情API合并，更新PR-5状态+提交文件清单 | ✅ 完成 |
