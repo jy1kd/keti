@@ -204,9 +204,17 @@ def _wire_bridge(
         md_api: The MdUserApi instance.
         loop: The asyncio event loop captured during startup.
     """
+    ws_manager = app.state.ws_manager
+
     def _broadcast_to_ws(data: dict) -> None:
         asyncio.run_coroutine_threadsafe(
-            app.state.ws_manager.broadcast("market", "market_data", data),
+            ws_manager.broadcast("market", "market_data", data),
+            loop,
+        )
+
+    def _broadcast_system(msg_type: str, data: dict) -> None:
+        asyncio.run_coroutine_threadsafe(
+            ws_manager.broadcast("system", msg_type, data),
             loop,
         )
 
@@ -228,4 +236,54 @@ def _wire_bridge(
         unsubscribe_fn=md_api.unsubscribe,
     )
 
-    logger.info("CTP market data bridge wired — snapshots + WebSocket + K-line + subscribe active")
+    # Wire OnFrontDisconnected → system broadcast + reconnect
+    from services.reconnect import ReconnectService
+
+    reconnect_svc = ReconnectService(
+        connect_fn=lambda: _attempt_reconnect(app, md_api),
+        subscribe_fn=md_api.subscribe,
+    )
+    app.state.reconnect_service = reconnect_svc
+
+    def _on_front_disconnected(nReason: int) -> None:
+        logger.warning("CTP front disconnected (reason=%s)", nReason)
+        _broadcast_system("connection_status", {
+            "status": "disconnected",
+            "reason": nReason,
+        })
+        reconnect_svc.on_disconnect()
+        if reconnect_svc.should_retry():
+            delay = reconnect_svc._get_delay(reconnect_svc._retry_count - 1)
+            logger.info("reconnect: will attempt in %.1fs", delay)
+            # Schedule reconnect after delay
+            def _do_reconnect():
+                import time
+                time.sleep(delay)
+                success = reconnect_svc.try_reconnect()
+                if success:
+                    _broadcast_system("connection_status", {
+                        "status": "connected",
+                    })
+                else:
+                    _broadcast_system("connection_status", {
+                        "status": "reconnect_failed",
+                    })
+
+            threading.Thread(target=_do_reconnect, daemon=True).start()
+
+    md_api.spi.on("OnFrontDisconnected", _on_front_disconnected)
+
+    logger.info("CTP market data bridge wired — snapshots + WebSocket + K-line + subscribe + disconnect handling active")
+
+
+def _attempt_reconnect(app: "FastAPI", md_api: Any) -> bool:
+    """Attempt to reconnect CTP. Returns True on success."""
+    try:
+        md_api.create()
+        # Simplified: wait a moment for connection
+        import time
+        time.sleep(2.0)
+        return md_api.login_status == "logged_in"
+    except Exception as e:
+        logger.error("reconnect attempt failed: %s", e)
+        return False
