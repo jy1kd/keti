@@ -19,7 +19,12 @@ export class WSManager {
   connect(endpoint: WSEndpoint, onMessage?: MessageCallback): void {
     // 若已存在同端点连接，先关闭
     if (this.connections.has(endpoint)) {
-      this.connections.get(endpoint)?.close()
+      const old = this.connections.get(endpoint)
+      if (old) {
+        // 移除旧回调防止旧连接触发消息
+        old.onmessage = null
+        old.close()
+      }
       this.connections.delete(endpoint)
     }
 
@@ -56,7 +61,16 @@ export class WSManager {
   disconnect(endpoint: WSEndpoint): void {
     const ws = this.connections.get(endpoint)
     if (ws) {
-      ws.close()
+      // 清除所有回调，防止关闭过程中触发旧消息
+      ws.onmessage = null
+      ws.onerror = null
+      ws.onopen = null
+      ws.onclose = null
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close()
+      }
+      // CONNECTING 状态不调用 close()（浏览器会报 "closed before established"）
+      // 清除回调后它会自然超时关闭，不会触发任何业务逻辑
       this.connections.delete(endpoint)
       this.callbacks.delete(endpoint)
     }
