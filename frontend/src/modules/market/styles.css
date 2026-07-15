@@ -6,6 +6,26 @@
   background: var(--bg-primary);
 }
 
+.market-panel .panel-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.market-panel__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.market-panel__side {
+  width: 200px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+}
+
 .market-table-container {
   flex: 1;
   min-height: 0;
