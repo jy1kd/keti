@@ -74,4 +74,22 @@ describe('DepthQuote', () => {
     render(<DepthQuote snapshot={null} />)
     expect(screen.getByText('--')).toBeInTheDocument()
   })
+
+  it('calls onSellClick when clicking a bid price (买价→卖出方向)', () => {
+    const onSellClick = vi.fn()
+    render(<DepthQuote snapshot={makeSnapshot()} onSellClick={onSellClick} />)
+    // 点击买一价格 4694
+    const bidRow = screen.getByText('4694').closest('.depth-quote__row')!
+    fireEvent.click(bidRow)
+    expect(onSellClick).toHaveBeenCalledWith(4694)
+  })
+
+  it('calls onBuyClick when clicking an ask price (卖价→买入方向)', () => {
+    const onBuyClick = vi.fn()
+    render(<DepthQuote snapshot={makeSnapshot()} onBuyClick={onBuyClick} />)
+    // 点击卖一价格 4696
+    const askRow = screen.getByText('4696').closest('.depth-quote__row')!
+    fireEvent.click(askRow)
+    expect(onBuyClick).toHaveBeenCalledWith(4696)
+  })
 })
