@@ -96,8 +96,7 @@ export function MarketTable({ snapshots, selectedInstrument, onRowClick, onRowDo
     const rowIndex = records.findIndex((r) => r.instrumentID === selectedInstrument)
     if (rowIndex >= 0) {
       tableRef.current.selectRow(rowIndex)
-      // 使用 makeVisible 而非 scrollToCell，避免索引偏移问题
-      tableRef.current.makeVisible({ row: rowIndex, col: 0 })
+      tableRef.current.scrollTo({ row: rowIndex, col: 0 })
     }
   }, [selectedInstrument, snapshots])
 
