@@ -89,7 +89,7 @@ export function MarketTable({ snapshots, selectedInstrument, onRowClick, onRowDo
         scrollStyle: {
           scrollSliderColor: '#30363d',
           scrollRailColor: '#161b22',
-          visible: 'scrolling',
+          visible: 'always',
         },
         frameStyle: {
           borderColor: '#30363d',

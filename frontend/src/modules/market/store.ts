@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { MarketSnapshot } from '@/services/types'
-import { getInstruments, subscribeMarket, getSnapshots } from '@/services/api'
+import { getInstruments, subscribeMarket } from '@/services/api'
 import { useContractsStore } from '@/stores/contracts'
 
 interface MarketStore {
@@ -13,7 +13,7 @@ interface MarketStore {
   subscribeInstruments: (instruments: string[]) => Promise<void>
 }
 
-export const useMarketStore = create<MarketStore>((set, get) => ({
+export const useMarketStore = create<MarketStore>((set) => ({
   selectedInstrument: null,
   setSelectedInstrument: (instrument) => set({ selectedInstrument: instrument }),
   snapshots: new Map(),
@@ -44,16 +44,8 @@ export const useMarketStore = create<MarketStore>((set, get) => ({
   subscribeInstruments: async (instruments: string[]) => {
     try {
       await subscribeMarket(instruments)
-      // 订阅成功后获取初始快照
-      const snapData = await getSnapshots(instruments)
-      if (snapData?.snapshots) {
-        const current = get().snapshots
-        const next = new Map(current)
-        for (const [id, snap] of Object.entries(snapData.snapshots)) {
-          next.set(id, snap as MarketSnapshot)
-        }
-        set({ snapshots: next })
-      }
+      // 不立即 getSnapshots —— CTP 回调尚未推送数据，缓存为空。
+      // 数据将通过 WebSocket market_data 消息自然填充。
     } catch (error) {
       console.warn('[MarketStore] subscribeInstruments failed:', error)
     }
