@@ -1,6 +1,15 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useMarketStore } from './store'
 import type { MarketSnapshot } from '@/services/types'
+
+// Mock api module
+vi.mock('@/services/api', () => ({
+  getInstruments: vi.fn(),
+  subscribeMarket: vi.fn(),
+  getSnapshots: vi.fn(),
+}))
+
+import { getInstruments, subscribeMarket, getSnapshots } from '@/services/api'
 
 describe('MarketStore', () => {
   beforeEach(() => {
@@ -8,6 +17,9 @@ describe('MarketStore', () => {
       selectedInstrument: null,
       snapshots: new Map(),
     })
+    vi.mocked(getInstruments).mockReset()
+    vi.mocked(subscribeMarket).mockReset()
+    vi.mocked(getSnapshots).mockReset()
   })
 
   it('has null selectedInstrument by default', () => {
@@ -100,5 +112,78 @@ describe('MarketStore', () => {
 
     expect(useMarketStore.getState().snapshots.size).toBe(2)
     expect(useMarketStore.getState().snapshots.get('au2508')?.lastPrice).toBe(481.0)
+  })
+})
+
+describe('MarketStore - fetchInstruments', () => {
+  beforeEach(() => {
+    useMarketStore.setState({
+      selectedInstrument: null,
+      snapshots: new Map(),
+    })
+    vi.mocked(getInstruments).mockReset()
+    vi.mocked(subscribeMarket).mockReset()
+    vi.mocked(getSnapshots).mockReset()
+  })
+
+  it('fetchInstruments 调用 API 获取合约列表并更新 contracts store', async () => {
+    vi.mocked(getInstruments).mockResolvedValue({
+      instruments: [
+        { instrumentID: 'IF2608', instrumentName: '沪深300' },
+        { instrumentID: 'IF2609', instrumentName: '沪深300' },
+      ],
+      count: 2,
+    })
+
+    await useMarketStore.getState().fetchInstruments()
+    expect(getInstruments).toHaveBeenCalled()
+  })
+
+  it('fetchInstruments 失败时不影响现有状态', async () => {
+    vi.mocked(getInstruments).mockRejectedValue(new Error('network error'))
+
+    await useMarketStore.getState().fetchInstruments()
+    // snapshots 不受影响
+    expect(useMarketStore.getState().snapshots.size).toBe(0)
+  })
+})
+
+describe('MarketStore - subscribeInstruments', () => {
+  beforeEach(() => {
+    useMarketStore.setState({
+      selectedInstrument: null,
+      snapshots: new Map(),
+    })
+    vi.mocked(getInstruments).mockReset()
+    vi.mocked(subscribeMarket).mockReset()
+    vi.mocked(getSnapshots).mockReset()
+  })
+
+  it('subscribeInstruments 调用 API 订阅行情', async () => {
+    vi.mocked(subscribeMarket).mockResolvedValue({
+      success: true,
+      added: ['IF2608'],
+      alreadySubscribed: [],
+    })
+
+    await useMarketStore.getState().subscribeInstruments(['IF2608'])
+    expect(subscribeMarket).toHaveBeenCalledWith(['IF2608'])
+  })
+
+  it('subscribeInstruments 订阅后获取初始快照', async () => {
+    vi.mocked(subscribeMarket).mockResolvedValue({
+      success: true,
+      added: ['IF2608'],
+      alreadySubscribed: [],
+    })
+    vi.mocked(getSnapshots).mockResolvedValue({
+      snapshots: {
+        IF2608: { instrumentID: 'IF2608', lastPrice: 4120.0 },
+      },
+    })
+
+    await useMarketStore.getState().subscribeInstruments(['IF2608'])
+    expect(getSnapshots).toHaveBeenCalledWith(['IF2608'])
+    expect(useMarketStore.getState().snapshots.get('IF2608')?.lastPrice).toBe(4120.0)
   })
 })
