@@ -37,8 +37,8 @@ export const useMarketStore = create<MarketStore>((set, get) => ({
       if (data?.instruments) {
         useContractsStore.getState().setContracts(data.instruments)
       }
-    } catch {
-      // 网络失败不影响现有状态
+    } catch (error) {
+      console.warn('[MarketStore] fetchInstruments failed:', error)
     }
   },
   subscribeInstruments: async (instruments: string[]) => {
@@ -54,8 +54,8 @@ export const useMarketStore = create<MarketStore>((set, get) => ({
         }
         set({ snapshots: next })
       }
-    } catch {
-      // 网络失败不影响现有状态
+    } catch (error) {
+      console.warn('[MarketStore] subscribeInstruments failed:', error)
     }
   },
 }))

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { ContractSearch } from '@/components/ContractSearch'
 import { MarketTable } from './MarketTable'
 import { useMarketStore } from './store'
@@ -10,12 +10,16 @@ import './styles.css'
 
 export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, fetchInstruments } = useMarketStore()
+  const fetchedRef = useRef(false)
 
   // WebSocket 行情推送
   useMarketWs(API_BASE.replace('http', 'ws'))
 
   useEffect(() => {
-    fetchInstruments()
+    if (!fetchedRef.current) {
+      fetchedRef.current = true
+      fetchInstruments()
+    }
   }, [fetchInstruments])
   const { contracts, addContract } = useContractsStore()
 
