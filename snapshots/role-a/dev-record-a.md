@@ -287,3 +287,90 @@
 | CTP 登录逻辑修复 | pRspInfo=None 不再误判成功 | `e4b2091` |
 
 **最终测试**：241 passed（3 failed 环境相关）
+
+---
+
+## PR-7: 后端WebSocket管理完善
+
+**分支**：`feature/pr-7-websocket-manager`
+**依赖**：PR-5
+**状态**：✅ 开发完成，待合并
+
+### 测试用例列表
+
+| 测试文件 | 测试数 | 覆盖内容 |
+|----------|--------|----------|
+| `tests/test_ws_handlers.py` | 9 | handle_ws 生命周期（connect/disconnect）、消息路由（subscribe/unsubscribe/ping）、异常容错 |
+| `tests/test_ws_heartbeat.py` | 7 | 死连接清理、心跳 ping、start/stop 生命周期、周期性清理 |
+| `tests/test_reconnect.py` | 12 | ReconnectService：指数退避、重试计数、订阅跟踪、try_reconnect |
+| `tests/test_ws_integration.py` | 7 | main.py 路由集成、心跳启动、OnFrontDisconnected 广播、reconnect 集成 |
+| **合计** | **35**（新增） | |
+
+**全量测试**：276 passed，2 failed（预存 test_config），46 skipped（async 缺 pytest-asyncio）
+
+### 实现进度
+
+#### 循环1+2：Handler 生命周期 + 消息路由（9 tests）
+- ✅ `ws/handlers.py` — `handle_ws()` 统一 handler：accept → ws_manager.connect → route → disconnect
+- ✅ 消息路由：subscribe/unsubscribe/ping 三种 action
+- ✅ 订阅确认：{type: subscribed, instruments: [...]}
+- ✅ Pong 响应：{type: pong}
+- ✅ 无效 JSON 容错：静默忽略，不崩溃
+- 📦 Commit: `c370cbc`
+
+#### 循环3：心跳机制（7 tests）
+- ✅ `ws/manager.py` — `_heartbeat_tick()`：ping 所有连接，移除死连接
+- ✅ `start_heartbeat(interval)` / `stop_heartbeat()`：后台任务生命周期
+- ✅ 默认 15 秒间隔
+- 📦 Commit: `05b16a6`
+
+#### 循环4：断线重连服务（12 tests）
+- ✅ `services/reconnect.py` — `ReconnectService`：指数退避（1s/2s/4s/8s/16s）
+- ✅ 最大 5 次重试
+- ✅ `update_subscriptions()`：跟踪已订阅合约，重连后自动重新订阅
+- ✅ `try_reconnect()`：connect_fn 成功后调用 subscribe_fn
+- 📦 Commit: `4f07b9f`
+
+#### 循环5：集成 wiring（7 tests）
+- ✅ `main.py` — 所有 5 个 WS 路由改用 `handle_ws` + `ws_manager`
+- ✅ `main.py` — lifespan 启动心跳（15s）、关闭时停止
+- ✅ `main.py` — market 端点接入 MarketService.subscribe/unsubscribe
+- ✅ `ctp_startup.py` — `OnFrontDisconnected` → system WebSocket 广播 + reconnect
+- ✅ `ws/handlers.py` — 删除旧 placeholder handlers
+- 📦 Commit: `5386563`, `200ab85`
+
+### 关键设计决策
+
+1. **统一 handle_ws 函数**：替代 5 个独立 handler，通过 endpoint 参数区分。subscribe_fn/unsubscribe_fn 可选注入
+2. **心跳 ping 使用 send_json**：发送 `{"type": "ping"}`，与 broadcast 格式一致。客户端需响应 pong
+3. **ReconnectService 纯逻辑**：不包含 threading/asyncio，由调用方决定重连时机和方式
+4. **OnFrontDisconnected 异步重连**：新线程执行 sleep + try_reconnect，不阻塞 CTP 回调线程
+5. **订阅跟踪自动恢复**：MarketService.subscribe 调用时同步更新 ReconnectService 的订阅列表
+
+### 后续 PR 依赖标注
+
+以下功能在 PR-7 中提供了基础设施（handle_ws + ws_manager + broadcast），但数据源依赖后续 PR：
+
+| 缺口 | 依赖 PR | 说明 |
+|------|---------|------|
+| 报单回报 → ws/order 广播 | PR-9 | OnRtnOrder 回调 → ws_manager.broadcast("order", "order_return", data) |
+| 成交回报 → ws/order 广播 | PR-9 | OnRtnTrade 回调 → ws_manager.broadcast("order", "trade_return", data) |
+| 持仓更新 → ws/position 广播 | PR-9 | ReqQryInvestorPosition 结果 → ws_manager.broadcast("position", "position_update", data) |
+| 止损单状态 → ws/stop 广播 | PR-13 | StopOrderService 状态变更 → ws_manager.broadcast("stop", "stop_order_update", data) |
+
+PR-7 已完成的基础设施：
+- `handle_ws()` 统一 handler，支持任意 endpoint + 可选 subscribe_fn/unsubscribe_fn
+- `WebSocketManager.broadcast(endpoint, msg_type, data)` 通用广播
+- `ReconnectService` 断线重连 + 自动重新订阅
+- `OnFrontDisconnected` → system 广播 + reconnect 触发
+
+### Commit 记录
+
+| Commit | 内容 |
+|--------|------|
+| `c370cbc` | feat(PR-7): WebSocket handler lifecycle + message routing — 9 tests |
+| `05b16a6` | feat(PR-7): WebSocket heartbeat — periodic ping + dead connection cleanup — 7 tests |
+| `4f07b9f` | feat(PR-7): CTP reconnect service — exponential backoff + auto-resubscribe — 12 tests |
+| `5386563` | feat(PR-7): WebSocket integration — unified handlers + heartbeat + disconnect handling — 7 tests |
+| `200ab85` | refactor(PR-7): remove unused placeholder handlers from ws/handlers.py |
+| `82ef2e9` | fix(PR-7): review R3 - await同步函数+connection_status状态缺失 |

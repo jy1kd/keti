@@ -9,6 +9,12 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
+
 logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, Request, WebSocket
@@ -24,13 +30,7 @@ from ws.manager import WebSocketManager
 from services.market_service import MarketService
 from services.ctp_bridge import wire_market_data_callback
 from services.ctp_startup import connect_ctp
-from ws.handlers import (
-    handle_market_ws,
-    handle_order_ws,
-    handle_position_ws,
-    handle_stop_ws,
-    handle_system_ws,
-)
+from ws.handlers import handle_ws
 
 
 def create_app() -> FastAPI:
@@ -39,12 +39,26 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         """Startup / shutdown lifecycle."""
+        # Start WebSocket heartbeat
+        await app.state.ws_manager.start_heartbeat(interval=15.0)
+        logger.info("WebSocket heartbeat started (interval=15s)")
+
         cfg = load_config()
+        logger.info("starting CTP connection (broker=%s user=%s)", cfg.broker_id, cfg.user_id)
         result = connect_ctp(app, cfg.broker_id, cfg.user_id, cfg.password, wait=True)
         if not result.get("success"):
             logger.warning("CTP startup login failed: %s", result.get("message"))
+
+        # Startup summary
+        instruments = app.state.market_service.instrument_count
+        logger.info("startup complete — instruments=%d, CTP=%s",
+                     instruments, "connected" if result.get("success") else "failed")
+
         yield
-        # Shutdown: nothing to clean up — daemon threads die with the process
+
+        # Shutdown: stop heartbeat
+        await app.state.ws_manager.stop_heartbeat()
+        logger.info("WebSocket heartbeat stopped")
 
     app = FastAPI(title="Simnow Trader API", version="1.0.0", lifespan=lifespan)
 
@@ -63,26 +77,31 @@ def create_app() -> FastAPI:
     app.include_router(order_router, prefix="/api/order", tags=["order"])
     app.include_router(query_router, prefix="/api/query", tags=["query"])
 
-    # WebSocket endpoints
+    # WebSocket endpoints — all routes use unified handle_ws with ws_manager
     @app.websocket("/ws/market")
     async def ws_market(websocket: WebSocket):
-        await handle_market_ws(websocket)
+        market_svc = app.state.market_service
+        await handle_ws(
+            "market", app.state.ws_manager, websocket,
+            subscribe_fn=market_svc.subscribe,
+            unsubscribe_fn=market_svc.unsubscribe,
+        )
 
     @app.websocket("/ws/order")
     async def ws_order(websocket: WebSocket):
-        await handle_order_ws(websocket)
+        await handle_ws("order", app.state.ws_manager, websocket)
 
     @app.websocket("/ws/position")
     async def ws_position(websocket: WebSocket):
-        await handle_position_ws(websocket)
+        await handle_ws("position", app.state.ws_manager, websocket)
 
     @app.websocket("/ws/stop")
     async def ws_stop(websocket: WebSocket):
-        await handle_stop_ws(websocket)
+        await handle_ws("stop", app.state.ws_manager, websocket)
 
     @app.websocket("/ws/system")
     async def ws_system(websocket: WebSocket):
-        await handle_system_ws(websocket)
+        await handle_ws("system", app.state.ws_manager, websocket)
 
     # Create and store ws_manager and market_service on app state
     ws_manager = WebSocketManager()
