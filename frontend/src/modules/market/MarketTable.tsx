@@ -96,7 +96,7 @@ export function MarketTable({ snapshots, selectedInstrument, onRowClick, onRowDo
     const rowIndex = records.findIndex((r) => r.instrumentID === selectedInstrument)
     if (rowIndex >= 0) {
       tableRef.current.selectRow(rowIndex)
-      tableRef.current.scrollTo({ row: rowIndex, col: 0 })
+      tableRef.current.scrollToCell({ row: rowIndex, col: 0 })
     }
   }, [selectedInstrument, snapshots])
 
