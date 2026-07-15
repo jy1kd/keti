@@ -261,3 +261,88 @@
 - `5326be4` fix(task-6a): review反馈 - MarketPanel集成useMarketWs WebSocket推送
 - `c05b4e1` fix(task-6a): review反馈 - 移除contracts store mock数据
 - `269a0f1` fix(task-6a): review反馈 - 改进建议批量修复
+
+---
+
+## PR-8: 前端五档行情展示
+
+**分支**：`feature/pr-8-depth-quote`
+**开始时间**：2026-07-15
+**状态**：🔄 开发中
+
+---
+
+### TDD 测试用例清单
+
+| # | 模块 | 测试文件 | 测试数 | 状态 |
+|---|------|----------|--------|------|
+| 1 | DepthQuote 组件 | DepthQuote.test.tsx | 7 | ✅ 全部通过 |
+| 2 | SpreadDisplay 组件 | SpreadDisplay.test.tsx | 4 | ✅ 全部通过 |
+| 3 | MarketPanel 集成 | MarketPanel.test.tsx | 6 | ✅ 全部通过 |
+| 4 | store 测试修复 | store.test.ts | 13 | ✅ 全部通过 |
+
+**总计**：137 tests / 21 files 全部通过
+
+---
+
+### TDD 循环记录
+
+**循环 #1：DepthQuote 基础渲染**
+- 红灯：组件不存在 → 测试失败
+- 绿灯：实现 DepthQuote 组件（instrumentID、lastPrice、5档买/卖、placeholder）
+- Commit：`04809be`
+
+**循环 #2：五档行情点价报单**
+- 红灯：onClick 回调未接入 → 测试失败
+- 绿灯：bid 行绑定 onSellClick，ask 行绑定 onBuyClick
+- Commit：`17a444e`
+
+**循环 #3：SpreadDisplay 价差显示**
+- 红灯：组件不存在 → 测试失败
+- 绿灯：实现 SpreadDisplay（ask1-bid1 价差、placeholder）
+- Commit：`fb8182d`
+
+**循环 #4：MarketPanel 集成**
+- 红灯：DepthQuote + SpreadDisplay 未集成 → 测试失败
+- 绿灯：MarketPanel 新增 side panel，集成两个组件
+- Commit：`3c0d640`
+
+**循环 #5：样式 + 布局**
+- 实现 DepthQuote 样式（琥珀主题、涨跌色、hover 效果）
+- 实现 SpreadDisplay 样式
+- MarketPanel 新增 .panel-content flex 布局（main + side）
+- Commit：`c1d53ce`
+
+**修复：store 测试对齐**
+- 修复 subscribeInstruments 测试（不再调用 getSnapshots，依赖 WS 推送）
+- Commit：`b1b5bb4`
+
+---
+
+### 文件变更清单
+
+| 文件 | 变更类型 | 说明 |
+|------|----------|------|
+| `src/modules/market/DepthQuote.tsx` | 新增 | 五档行情组件（5档买/卖、点价回调） |
+| `src/modules/market/DepthQuote.test.tsx` | 新增 | 7 个测试用例 |
+| `src/components/SpreadDisplay/index.tsx` | 新增 | 价差显示组件 |
+| `src/components/SpreadDisplay/SpreadDisplay.test.tsx` | 新增 | 4 个测试用例 |
+| `src/modules/market/MarketPanel.tsx` | 修改 | 集成 DepthQuote + SpreadDisplay 到 side panel |
+| `src/modules/market/MarketPanel.test.tsx` | 修改 | 新增 2 个集成测试 |
+| `src/modules/market/styles.css` | 修改 | 新增 .panel-content flex 布局 |
+| `src/assets/styles/global.css` | 修改 | 新增 DepthQuote + SpreadDisplay 样式 |
+| `src/modules/market/store.test.ts` | 修改 | 修复 subscribeInstruments 测试 |
+
+---
+
+### 提交记录
+
+- `04809be` test(PR-8): DepthQuote component - renders instrument, price, 5 bid/ask levels, placeholder
+- `8356c65` test(PR-8): failing tests for bid/ask click → point order callbacks
+- `17a444e` feat(PR-8): DepthQuote point order - bid rows bind onSellClick, ask rows bind onBuyClick
+- `f80d138` test(PR-8): failing tests for SpreadDisplay - spread calculation, placeholder, negative spread
+- `fb8182d` feat(PR-8): implement SpreadDisplay - ask1-bid1 spread, placeholder for zero prices
+- `b298585` test(PR-8): failing tests for MarketPanel integration - DepthQuote + SpreadDisplay for selected instrument
+- `3c0d640` feat(PR-8): integrate DepthQuote + SpreadDisplay into MarketPanel side panel
+- `c1d53ce` feat(PR-8): DepthQuote + SpreadDisplay styles, MarketPanel side panel layout
+- `b1b5bb4` fix(PR-8): update store test - subscribeInstruments no longer calls getSnapshots (relies on WS push)
