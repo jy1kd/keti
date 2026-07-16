@@ -11,7 +11,16 @@ Wraps CThostFtdcTraderApi for SimNow order management:
 from typing import Optional
 
 from .callback import TraderSpi
-from .types import Direction, OffsetFlag, OrderPriceType
+from .types import (
+    Direction,
+    OffsetFlag,
+    OrderPriceType,
+    TimeCondition,
+    VolumeCondition,
+    CombHedgeFlag,
+    ContingentCondition,
+    ForceCloseReason,
+)
 
 
 class TraderApi:
@@ -66,16 +75,29 @@ class TraderApi:
         price_type: str = OrderPriceType.LIMIT,
         limit_price: float = 0.0,
         volume: int = 1,
+        time_condition: str = TimeCondition.GFD,
+        volume_condition: str = VolumeCondition.AV,
+        hedge_flag: str = CombHedgeFlag.SPECULATION,
+        contingent_condition: str = ContingentCondition.IMMEDIATELY,
+        force_close_reason: str = ForceCloseReason.NOT_FORCE_CLOSE,
+        stop_price: float = 0.0,
     ) -> str:
         """Submit a new order to CTP.
 
         Args:
-            instrument_id: Contract code (e.g. "au2506").
+            instrument_id: Contract code (e.g. "IF2608").
             direction: Direction.BUY ("0") or Direction.SELL ("1").
             offset_flag: OffsetFlag.OPEN ("0"), CLOSE ("1"), or CLOSE_TODAY ("3").
             price_type: OrderPriceType.LIMIT ("2") or ANY ("1").
             limit_price: Limit price (0 for market orders).
             volume: Order quantity.
+            time_condition: TimeCondition.GFD ("1"), FOK ("2"), or FAK ("3").
+            volume_condition: VolumeCondition.AV ("1"), MV ("2"), or CV ("3").
+            hedge_flag: CombHedgeFlag.SPECULATION ("1"), ARBITRAGE ("2"), or HEDGE ("3").
+            contingent_condition: ContingentCondition.IMMEDIATELY ("1"), STOP ("2"),
+                                   STOP_PROFIT ("3"), or PARKED ("4").
+            force_close_reason: ForceCloseReason enum value.
+            stop_price: Stop price for stop orders (0 = not a stop order).
 
         Returns:
             str: Order reference string. Empty on failure.
@@ -93,27 +115,36 @@ class TraderApi:
         order.OrderRef = order_ref
         order.Direction = direction
         order.CombOffsetFlag = offset_flag
-        order.CombHedgeFlag = "1"  # 投机
+        order.CombHedgeFlag = hedge_flag
         order.OrderPriceType = price_type
         order.LimitPrice = limit_price
         order.VolumeTotalOriginal = volume
-        order.TimeCondition = "1"  # GFD (当日有效)
-        order.VolumeCondition = "1"  # AV (任何数量)
+        order.TimeCondition = time_condition
+        order.VolumeCondition = volume_condition
         order.MinVolume = 1
-        order.ContingentCondition = "1"  # 立即
-        order.ForceCloseReason = "0"  # 非强平
+        order.ContingentCondition = contingent_condition
+        order.ForceCloseReason = force_close_reason
+        order.StopPrice = stop_price
         order.IsAutoSuspend = 0
         order.RequestID = self._request_id
 
         result = self._api.ReqOrderInsert(order, self._request_id)
         return order_ref if result == 0 else ""
 
-    def cancel_order(self, order_ref: str = "", order_sys_id: str = "") -> int:
+    def cancel_order(
+        self,
+        order_ref: str = "",
+        order_sys_id: str = "",
+        exchange_id: str = "",
+        instrument_id: str = "",
+    ) -> int:
         """Cancel an existing order.
 
         Args:
             order_ref: Order reference (from insert_order).
             order_sys_id: Exchange order system ID (alternative to order_ref).
+            exchange_id: Exchange ID (e.g. "CFFEX") — recommended for CTP accuracy.
+            instrument_id: Instrument code — recommended for CTP accuracy.
 
         Returns:
             int: 0 on success, negative on error.
@@ -128,6 +159,8 @@ class TraderApi:
         action.UserID = self.config.user_id
         action.OrderRef = order_ref
         action.OrderSysID = order_sys_id
+        action.ExchangeID = exchange_id
+        action.InstrumentID = instrument_id
         action.ActionFlag = "0"  # 0=撤单
         action.RequestID = self._request_id
 

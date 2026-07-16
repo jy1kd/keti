@@ -8,7 +8,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from config import Config
 from ctp_wrapper.trader_api import TraderApi
-from ctp_wrapper.types import Direction, OffsetFlag, OrderPriceType
+from ctp_wrapper.types import (
+    Direction,
+    OffsetFlag,
+    OrderPriceType,
+    TimeCondition,
+    VolumeCondition,
+    CombHedgeFlag,
+    ContingentCondition,
+    ForceCloseReason,
+)
 
 
 # ── Mock ctp module helpers ────────────────────────────────────────────
@@ -210,3 +219,117 @@ class TestTraderApiRelease:
         api = TraderApi(Config())
         api._api = None
         api.release()  # Should not raise
+
+
+# ── Enhanced insert_order tests (PR-9: enum params) ──────────────────────
+
+class TestInsertOrderEnhanced:
+    """Test insert_order with additional parameters (PR-9)."""
+
+    @staticmethod
+    def _make_api():
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqOrderInsert.return_value = 0
+        return api
+
+    def teardown_method(self):
+        _unmock_ctp()
+
+    def test_default_time_condition_is_gfd(self):
+        api = self._make_api()
+        api.insert_order(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN)
+        order = api._api.ReqOrderInsert.call_args[0][0]
+        assert order.TimeCondition == TimeCondition.GFD
+
+    def test_fok_time_condition(self):
+        api = self._make_api()
+        api.insert_order(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN,
+                         time_condition=TimeCondition.FOK)
+        order = api._api.ReqOrderInsert.call_args[0][0]
+        assert order.TimeCondition == TimeCondition.FOK
+
+    def test_fak_time_condition(self):
+        api = self._make_api()
+        api.insert_order(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN,
+                         time_condition=TimeCondition.FAK)
+        order = api._api.ReqOrderInsert.call_args[0][0]
+        assert order.TimeCondition == TimeCondition.FAK
+
+    def test_hedge_flag_param(self):
+        api = self._make_api()
+        api.insert_order(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN,
+                         hedge_flag=CombHedgeFlag.HEDGE)
+        order = api._api.ReqOrderInsert.call_args[0][0]
+        assert order.CombHedgeFlag == CombHedgeFlag.HEDGE
+
+    def test_default_hedge_flag_is_speculation(self):
+        api = self._make_api()
+        api.insert_order(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN)
+        order = api._api.ReqOrderInsert.call_args[0][0]
+        assert order.CombHedgeFlag == CombHedgeFlag.SPECULATION
+
+    def test_contingent_condition_param(self):
+        api = self._make_api()
+        api.insert_order(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN,
+                         contingent_condition=ContingentCondition.STOP)
+        order = api._api.ReqOrderInsert.call_args[0][0]
+        assert order.ContingentCondition == ContingentCondition.STOP
+
+    def test_force_close_reason_param(self):
+        api = self._make_api()
+        api.insert_order(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN,
+                         force_close_reason=ForceCloseReason.LACK_DEPOSIT)
+        order = api._api.ReqOrderInsert.call_args[0][0]
+        assert order.ForceCloseReason == ForceCloseReason.LACK_DEPOSIT
+
+    def test_stop_price_param(self):
+        api = self._make_api()
+        api.insert_order(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN,
+                         stop_price=3850.0)
+        order = api._api.ReqOrderInsert.call_args[0][0]
+        assert order.StopPrice == 3850.0
+
+    def test_various_volume_conditions(self):
+        api = self._make_api()
+        api.insert_order(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN,
+                         volume_condition=VolumeCondition.CV)
+        order = api._api.ReqOrderInsert.call_args[0][0]
+        assert order.VolumeCondition == VolumeCondition.CV
+
+
+class TestCancelOrderEnhanced:
+    """Test cancel_order with additional parameters (PR-9)."""
+
+    def teardown_method(self):
+        _unmock_ctp()
+
+    def test_cancel_with_exchange_id(self):
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqOrderAction.return_value = 0
+        result = api.cancel_order(order_ref="5", exchange_id="CFFEX")
+        assert result == 0
+        action = api._api.ReqOrderAction.call_args[0][0]
+        assert action.ExchangeID == "CFFEX"
+
+    def test_cancel_with_instrument_id(self):
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqOrderAction.return_value = 0
+        result = api.cancel_order(order_ref="5", instrument_id="IF2608")
+        assert result == 0
+        action = api._api.ReqOrderAction.call_args[0][0]
+        assert action.InstrumentID == "IF2608"
