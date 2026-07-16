@@ -101,8 +101,10 @@ async def reverse_position(request: Request, body: ReverseOrderRequest):
 
     Requires position data from query API to determine current holding.
     """
-    om = request.app.state.order_manager
-    return om.reverse(instrument_id=body.instrumentID)
+    raise HTTPException(
+        status_code=501,
+        detail="Not implemented — position data needed (PR-11)",
+    )
 
 
 @router.post("/lock")
@@ -111,5 +113,7 @@ async def lock_position(request: Request, body: LockOrderRequest):
 
     Requires position data from query API to determine current holding.
     """
-    om = request.app.state.order_manager
-    return om.lock(instrument_id=body.instrumentID)
+    raise HTTPException(
+        status_code=501,
+        detail="Not implemented — position data needed (PR-11)",
+    )

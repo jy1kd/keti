@@ -19,6 +19,7 @@ from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ctp_wrapper.trader_api import TraderApi
+from ctp_wrapper.types import OrderStatus
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +135,9 @@ class OrderManager:
     def cancel(self, order_ref: str) -> int:
         """Cancel an active order by its orderRef.
 
+        Extracts exchange_id and instrument_id from the tracked order
+        to pass to CTP for improved cancellation accuracy.
+
         Args:
             order_ref: Order reference from insert().
 
@@ -144,7 +148,11 @@ class OrderManager:
             order = self._orders.get(order_ref)
         if order is None:
             return -1
-        return self._trader.cancel_order(order_ref=order_ref)
+        return self._trader.cancel_order(
+            order_ref=order_ref,
+            exchange_id=order.get("exchangeID", ""),
+            instrument_id=order.get("instrumentID", ""),
+        )
 
     # ── Cancel all ────────────────────────────────────────────────────────
 
@@ -157,7 +165,7 @@ class OrderManager:
         with self._lock:
             active_refs = [
                 ref for ref, o in self._orders.items()
-                if o["orderStatus"] in ("pending", "2", "1")  # pending, no_traded, part_traded
+                if o["orderStatus"] in ("pending", OrderStatus.NO_TRADED, OrderStatus.PART_TRADED)
             ]
         count = 0
         for ref in active_refs:

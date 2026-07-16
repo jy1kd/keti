@@ -284,6 +284,73 @@ class TestOrderManagerCancelAll:
         _unmock_ctp()
 
 
+# ── Broadcast callback ───────────────────────────────────────────────────
+
+class TestOrderManagerBroadcast:
+    """set_broadcast_fn — WebSocket broadcast hook."""
+
+    def test_broadcast_called_on_rtn_order(self):
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        om = OrderManager(trader)
+
+        calls = []
+        om.set_broadcast_fn(lambda msg_type, data: calls.append((msg_type, data)))
+
+        om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                   offset_flag=OffsetFlag.OPEN)
+        om.on_rtn_order({
+            "orderRef": "1",
+            "orderSysID": "SYS999",
+            "orderStatus": "2",
+        })
+        assert len(calls) == 1
+        assert calls[0][0] == "order_return"
+        assert calls[0][1]["orderSysID"] == "SYS999"
+        _unmock_ctp()
+
+    def test_broadcast_called_on_rtn_trade(self):
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        om = OrderManager(trader)
+
+        calls = []
+        om.set_broadcast_fn(lambda msg_type, data: calls.append((msg_type, data)))
+
+        om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                   offset_flag=OffsetFlag.OPEN)
+        om.on_rtn_order({"orderRef": "1", "orderSysID": "SYS999", "orderStatus": "2"})
+
+        om.on_rtn_trade({
+            "tradeID": "T001",
+            "orderRef": "1",
+            "price": 3850.0,
+            "volume": 1,
+        })
+        assert len(calls) == 2
+        assert calls[1][0] == "trade_return"
+        assert calls[1][1]["price"] == 3850.0
+        _unmock_ctp()
+
+    def test_broadcast_not_called_when_not_set(self):
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        om = OrderManager(trader)
+        om.on_rtn_order({"orderRef": "99", "orderStatus": "2"})
+        _unmock_ctp()
+
+
 # ── Thread safety ────────────────────────────────────────────────────────
 
 class TestOrderManagerThreadSafety:

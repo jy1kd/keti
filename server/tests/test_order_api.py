@@ -208,10 +208,7 @@ class TestOrderReverseApi:
             resp = await client.post("/api/order/reverse", json={
                 "instrumentID": "IF2608",
             })
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["success"] is False
-        assert "PR-11" in data["message"]
+        assert resp.status_code == 501
 
 
 # ── Lock (placeholder) ───────────────────────────────────────────────────
@@ -227,7 +224,4 @@ class TestOrderLockApi:
             resp = await client.post("/api/order/lock", json={
                 "instrumentID": "IF2608",
             })
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["success"] is False
-        assert "PR-11" in data["message"]
+        assert resp.status_code == 501
