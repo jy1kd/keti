@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import { ResizeHandle } from '@/components/ResizeHandle'
 import { ContractSearch } from '@/components/ContractSearch'
@@ -11,13 +11,25 @@ import { useContractsStore } from '@/stores/contracts'
 import { usePointOrder } from '@/hooks/usePointOrder'
 import { useMarketWs } from '@/hooks/useMarketWs'
 import { API_BASE, getKlineData } from '@/services/api'
+import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
 import './styles.css'
+
+const savedMarket = loadPanelSizes('market-layout')
+const savedMarketMain = loadPanelSizes('market-main-layout')
 
 export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, fetchInstruments, subscribeInstruments, klineData, setKlineData } = useMarketStore()
   const { contracts, addContract } = useContractsStore()
   const fetchedRef = useRef(false)
   const [period, setPeriod] = useState('5m')
+
+  const onMarketLayout = useCallback((sizes: number[]) => {
+    savePanelSizes('market-layout', { main: sizes[0], side: sizes[1] })
+  }, [])
+
+  const onMarketMainLayout = useCallback((sizes: number[]) => {
+    savePanelSizes('market-main-layout', { table: sizes[0], kline: sizes[1] })
+  }, [])
 
   // WebSocket 行情推送
   useMarketWs(API_BASE.replace('http', 'ws'))
@@ -74,10 +86,10 @@ export function MarketPanel() {
         <h2>行情面板</h2>
         <ContractSearch contracts={contracts} onSelect={handleSelectContract} />
       </div>
-      <Group orientation="horizontal" className="panel-content" autoSaveId="market-layout">
-        <Panel id="market-main" defaultSize={75} minSize={30}>
-          <Group orientation="vertical" className="market-panel__main" autoSaveId="market-main-layout">
-            <Panel id="market-table" defaultSize={50} minSize={15}>
+      <Group orientation="horizontal" className="panel-content" id="market-layout" onLayoutChange={onMarketLayout}>
+        <Panel id="market-main" defaultSize={savedMarket?.main ?? 75} minSize={30}>
+          <Group orientation="vertical" className="market-panel__main" id="market-main-layout" onLayoutChange={onMarketMainLayout}>
+            <Panel id="market-table" defaultSize={savedMarketMain?.table ?? 50} minSize={15}>
               <div style={{ height: '100%' }}>
                 <MarketTable
                   contracts={contracts}
@@ -91,7 +103,7 @@ export function MarketPanel() {
             <Separator>
               <ResizeHandle direction="vertical" />
             </Separator>
-            <Panel id="market-kline" defaultSize={50} minSize={15}>
+            <Panel id="market-kline" defaultSize={savedMarketMain?.kline ?? 50} minSize={15}>
               {selectedInstrument ? (
                 <KLineChart
                   instrument={selectedInstrument}
@@ -108,7 +120,7 @@ export function MarketPanel() {
         <Separator>
           <ResizeHandle direction="horizontal" />
         </Separator>
-        <Panel id="market-side" defaultSize={25} minSize={10}>
+        <Panel id="market-side" defaultSize={savedMarket?.side ?? 25} minSize={10}>
           <div className="market-panel__side">
             <DepthQuote
               snapshot={selectedSnapshot}

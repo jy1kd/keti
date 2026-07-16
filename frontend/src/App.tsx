@@ -1,22 +1,35 @@
+import { useCallback } from 'react'
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import { ConnectionStatus } from '@/components/ConnectionStatus'
 import { ResizeHandle } from '@/components/ResizeHandle'
 import { MarketPanel } from '@/modules/market/MarketPanel'
 import { OrderPanel } from '@/modules/order/OrderPanel'
 import { QueryPanel } from '@/modules/query/QueryPanel'
+import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
 import '@/assets/styles/global.css'
 
+const savedApp = loadPanelSizes('app-layout')
+const savedMain = loadPanelSizes('main-layout')
+
 function App() {
+  const onAppLayout = useCallback((sizes: number[]) => {
+    savePanelSizes('app-layout', { main: sizes[0], query: sizes[1] })
+  }, [])
+
+  const onMainLayout = useCallback((sizes: number[]) => {
+    savePanelSizes('main-layout', { market: sizes[0], order: sizes[1] })
+  }, [])
+
   return (
     <div className="app">
       <header className="status-bar">
         <ConnectionStatus />
         <span className="app-title">SimNow 交易终端</span>
       </header>
-      <Group orientation="vertical" className="main-content" autoSaveId="app-layout">
-        <Panel id="main" defaultSize={75} minSize={30}>
-          <Group orientation="horizontal" autoSaveId="main-layout">
-            <Panel id="market" defaultSize={70} minSize={20}>
+      <Group orientation="vertical" className="main-content" id="app-layout" onLayoutChange={onAppLayout}>
+        <Panel id="main" defaultSize={savedApp?.main ?? 75} minSize={30}>
+          <Group orientation="horizontal" id="main-layout" onLayoutChange={onMainLayout}>
+            <Panel id="market" defaultSize={savedMain?.market ?? 70} minSize={20}>
               <section className="market-area">
                 <MarketPanel />
               </section>
@@ -24,7 +37,7 @@ function App() {
             <Separator>
               <ResizeHandle direction="horizontal" />
             </Separator>
-            <Panel id="order" defaultSize={30} minSize={15}>
+            <Panel id="order" defaultSize={savedMain?.order ?? 30} minSize={15}>
               <section className="order-area">
                 <OrderPanel />
               </section>
@@ -34,7 +47,7 @@ function App() {
         <Separator>
           <ResizeHandle direction="vertical" />
         </Separator>
-        <Panel id="query" defaultSize={25} minSize={10}>
+        <Panel id="query" defaultSize={savedApp?.query ?? 25} minSize={10}>
           <footer className="query-area">
             <QueryPanel />
           </footer>
