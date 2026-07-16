@@ -6,6 +6,10 @@ interface DepthQuoteProps {
   onSellClick?: (price: number) => void
 }
 
+/** CTP 用 DBL_MAX (1.7976931348623157e+308) 表示无效价格 */
+const CTP_INVALID_PRICE = 1.7976931348623157e+308
+const isValidPrice = (price: number) => price > 0 && price < CTP_INVALID_PRICE
+
 export function DepthQuote({ snapshot, onBuyClick, onSellClick }: DepthQuoteProps) {
   if (!snapshot) {
     return <div className="depth-quote depth-quote--empty">--</div>
@@ -38,13 +42,13 @@ export function DepthQuote({ snapshot, onBuyClick, onSellClick }: DepthQuoteProp
           {asks.map((level, i) => (
             <div
               key={`ask-${i}`}
-              className="depth-quote__row depth-quote__row--ask"
+              className={`depth-quote__row depth-quote__row--ask${!isValidPrice(level.price) ? ' depth-quote__row--invalid' : ''}`}
               data-testid={`ask-${i + 1}`}
-              onClick={() => onBuyClick?.(level.price)}
+              onClick={() => isValidPrice(level.price) && onBuyClick?.(level.price)}
             >
               <span className="depth-quote__label">卖{i + 1}</span>
-              <span className="depth-quote__price">{level.price}</span>
-              <span className="depth-quote__volume">{level.volume}</span>
+              <span className="depth-quote__price">{isValidPrice(level.price) ? level.price : '--'}</span>
+              <span className="depth-quote__volume">{isValidPrice(level.price) ? level.volume : '--'}</span>
             </div>
           ))}
         </div>
@@ -52,13 +56,13 @@ export function DepthQuote({ snapshot, onBuyClick, onSellClick }: DepthQuoteProp
           {bids.map((level, i) => (
             <div
               key={`bid-${i}`}
-              className="depth-quote__row depth-quote__row--bid"
+              className={`depth-quote__row depth-quote__row--bid${!isValidPrice(level.price) ? ' depth-quote__row--invalid' : ''}`}
               data-testid={`bid-${5 - i}`}
-              onClick={() => onSellClick?.(level.price)}
+              onClick={() => isValidPrice(level.price) && onSellClick?.(level.price)}
             >
               <span className="depth-quote__label">买{5 - i}</span>
-              <span className="depth-quote__price">{level.price}</span>
-              <span className="depth-quote__volume">{level.volume}</span>
+              <span className="depth-quote__price">{isValidPrice(level.price) ? level.price : '--'}</span>
+              <span className="depth-quote__volume">{isValidPrice(level.price) ? level.volume : '--'}</span>
             </div>
           ))}
         </div>

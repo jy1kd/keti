@@ -315,6 +315,15 @@ input:focus-visible, select:focus-visible {
   color: var(--color-down);
 }
 
+.depth-quote__row--invalid {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.depth-quote__row--invalid:hover {
+  background: transparent;
+}
+
 /* ── SpreadDisplay 价差 ──────────────────────────────────────────────── */
 
 .spread-display {
