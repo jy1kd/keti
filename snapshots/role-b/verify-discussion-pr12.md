@@ -37,3 +37,27 @@ ECharts 初始化的 `useEffect` 依赖为 `[]`（仅执行一次），但组件
 - 已修复
 - Commit：`8b00418`
 - 修改文件：`KLineChart.tsx`、`styles.css`、`KLineChart.test.tsx`、`MarketPanel.test.tsx`
+
+---
+
+## 验证项 #3：图表显示 Invalid Data，1m 和日线图像相同
+
+### 问题描述
+1. 图表显示 "Invalid Data"
+2. 切换 1m 和日线，图像看起来相同
+
+### 分析
+1. **Invalid Data**：后端 K 线服务返回 `time` 字段（字符串 "YYYY-MM-DD HH:MM:SS"），前端 `KLineData` 期望 `timestamp` 字段（数字，毫秒级）。ECharts 无法解析字符串格式的日期。
+2. **1m 和日线相同**：后端 K 线服务只支持 `1m/5m/15m/30m/1h`，不支持 `1d`（日线）。`1d` 请求返回空数组。且数据从服务器启动开始累积，如果服务器刚启动，各周期数据量都很少。
+
+### 解决方案
+在 `getKlineData` 中将后端 `time` 字符串转换为 `timestamp` 毫秒数。
+
+### 处理结果
+- 已修复
+- Commit：`8216a18`
+- 修改文件：`api.ts`
+
+### 待确认
+- 日线（1d）周期：后端不支持，返回空数据，图表显示"暂无K线数据"
+- 数据量：取决于服务器运行时长，刚启动时各周期数据较少
