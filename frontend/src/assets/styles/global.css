@@ -157,25 +157,88 @@ input:focus-visible, select:focus-visible {
 }
 
 .market-area {
-  width: 70%;
+  height: 100%;
   border-right: 1px solid var(--border-color);
   overflow: hidden;
   background: var(--bg-primary);
 }
 
 .order-area {
-  width: 30%;
+  height: 100%;
   overflow: hidden;
   background: var(--bg-primary);
 }
 
 .query-area {
-  height: 250px;
-  min-height: 150px;
+  height: 100%;
   border-top: 1px solid var(--border-color);
-  flex-shrink: 0;
   overflow: hidden;
   background: var(--bg-primary);
+}
+
+/* ── react-resizable-panels 布局修复 ──────────────────────────────────── */
+
+/* Group 需要 flex: 1 才能在 flex 容器中占满剩余空间 */
+[data-panel-group] {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Panel 需要 min-height: 0 才能在嵌套 flex 中正确收缩 */
+[data-panel] {
+  min-height: 0 !important;
+  min-width: 0 !important;
+}
+
+/* ── ResizeHandle 拖拽手柄 ─────────────────────────────────────────── */
+
+.resize-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: background-color 0.15s;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.resize-handle--horizontal {
+  width: 6px;
+  cursor: col-resize;
+}
+
+.resize-handle--vertical {
+  height: 6px;
+  cursor: row-resize;
+}
+
+.resize-handle__indicator {
+  border-radius: 2px;
+  background: var(--border-color);
+  opacity: 0.4;
+  transition: opacity 0.15s, background-color 0.15s;
+}
+
+.resize-handle--horizontal .resize-handle__indicator {
+  width: 2px;
+  height: 24px;
+}
+
+.resize-handle--vertical .resize-handle__indicator {
+  width: 24px;
+  height: 2px;
+}
+
+.resize-handle:hover .resize-handle__indicator {
+  opacity: 1;
+  background: var(--accent);
+}
+
+.resize-handle:active .resize-handle__indicator {
+  opacity: 1;
+  background: var(--accent);
 }
 
 /* 共享 Panel 基础样式 */
@@ -313,6 +376,15 @@ input:focus-visible, select:focus-visible {
 
 .depth-quote__row--ask .depth-quote__price {
   color: var(--color-down);
+}
+
+.depth-quote__row--invalid {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.depth-quote__row--invalid:hover {
+  background: transparent;
 }
 
 /* ── SpreadDisplay 价差 ──────────────────────────────────────────────── */

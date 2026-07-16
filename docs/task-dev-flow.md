@@ -135,9 +135,9 @@ Week 5（联调优化）
 | Week 1 Day 3 | PR-3: FastAPI框架 | PR-4: 布局框架 | ✅ 并行（分别依赖PR-1/PR-2） |
 | Week 1 Day 4-5 | PR-5: 行情API（✅已完成） | PR-6: 行情表格（✅已完成） | ✅ 并行 |
 | Week 2 Day 1 | PR-7: WebSocket管理（✅已完成） | PR-6a: 行情接入真实API（✅已完成） | ✅ 并行 |
-| Week 2 Day 2-3 | PR-9: 交易API | PR-8: 五档行情（依赖PR-7）+ PR-12（依赖PR-5） | ✅ 并行 |
+| Week 2 Day 2-3 | PR-9: 交易API | PR-8: 五档行情（✅已完成）+ PR-12（依赖PR-5）+ PR-21（依赖PR-6a） | ✅ 并行 |
 | Week 2 Day 4-5 | PR-11: 查询API | PR-10: 报单表单（依赖PR-9） | ❌ 角色B等待PR-9 |
-| Week 3 Day 1-2 | PR-13: 止损单服务 + PR-18: 期权API | PR-15: 快捷功能（依赖PR-9+PR-10） | ✅ 并行 |
+| Week 3 Day 1-2 | PR-13: 止损单服务 + PR-18: 期权API | PR-15: 快捷功能（依赖PR-9+PR-10+PR-11） | ✅ 并行 |
 | Week 3 Day 3 | 协助联调 + 编写测试用例 | PR-16: 查询面板（依赖PR-11+PR-13）+ PR-14: 期权T型报价（依赖PR-18） | ⚠️ 角色A协助 |
 | Week 3 Day 5 | PR-17: 联调测试 | PR-17: 联调测试 | ✅ 协作 |
 
@@ -159,11 +159,12 @@ Week 5（联调优化）
 - PR-10 [角色B] → 依赖PR-9（⚠️ 需要后端交易API）
 - PR-11 [角色A] → 依赖PR-9
 - PR-12 [角色B] → 依赖PR-5（K线图需要行情API）
-- PR-14 [角色B] → 依赖PR-5（期权T型报价需要行情API）
+- PR-14 [角色B] → 依赖PR-6 + PR-18（期权T型报价需要行情API和期权API）
 - PR-13 [角色A] → 依赖PR-9
+- PR-21 [角色B] → 依赖PR-6a（手动订阅只需要subscribe/unsubscribe接口）
 
 **多线依赖**：
-- PR-15 [角色B] → 依赖PR-9 + PR-10（一键反向/锁仓需要后端支持）
+- PR-15 [角色B] → 依赖PR-9 + PR-10 + PR-11（一键反向需要查询持仓）
 - PR-16 [角色B] → 依赖PR-11 + PR-13（查询面板需要查询API和止损单服务）
 - PR-17 [角色A+B] → 依赖所有PR
 
@@ -199,13 +200,13 @@ PR-1 [A] → PR-3 [A] → PR-5 [A] → PR-7 [A] → PR-9 [A] → PR-11 [A] → P
 
 ## 3. 当前阶段状态
 
-**当前阶段**：阶段1 - 基础框架（接近完成）
+**当前阶段**：阶段2 - 行情模块（已完成）
 
-**当前状态**：PR-1 ✅ / PR-2 ✅ / PR-3 ✅ / PR-4 ✅ / PR-5 ✅ / PR-6 ✅ / PR-7 ✅
+**当前状态**：PR-1 ✅ / PR-2 ✅ / PR-3 ✅ / PR-4 ✅ / PR-5 ✅ / PR-6 ✅ / PR-6a ✅ / PR-7 ✅ / PR-8 ✅
 
 **下一步行动**：
-- 角色A：准备 PR-9（后端交易API实现，依赖 PR-7）
-- 角色B：开始 PR-6a（行情接入真实API）或 PR-12（K线图）
+- 角色A：开始 PR-9（后端交易API实现，依赖 PR-7）
+- 角色B：开始 PR-12（K线图，依赖 PR-5）或 PR-10（报单表单，依赖 PR-9）
 
 **⚠️ 已知不完善**：
 - 登录逻辑仅实现 MD（行情）连接，TradingDay/BrokerID 等 TD（交易）相关字段需 PR-9 完成后同步完善
@@ -344,7 +345,7 @@ git branch -d feature/pr-<编号>-<描述>
 | PR | 任务 | 依赖 | 状态 | 分支名 |
 |----|------|------|------|--------|
 | PR-5 | 后端行情API实现 | PR-3 | ✅ 已完成 | `feature/pr-5-market-api` |
-| PR-7 | 后端WebSocket管理完善 | PR-5 | ⏳ 待开始 | `feature/pr-7-websocket-manager` |
+| PR-7 | 后端WebSocket管理完善 | PR-5 | ✅ 已完成 | `feature/pr-7-websocket-manager` |
 
 ### 阶段3：交易模块
 
@@ -352,6 +353,7 @@ git branch -d feature/pr-<编号>-<描述>
 |----|------|------|------|--------|
 | PR-9 | 后端交易API实现 | PR-7 | ⏳ 待开始 | `feature/pr-9-trader-api` |
 | PR-11 | 后端查询API实现 | PR-9 | ⏳ 待开始 | `feature/pr-11-query-api` |
+| PR-19 | 后端合约查询API（CTP ReqQryInstrument） | PR-9 | ⏳ 待开始 | `feature/pr-19-instrument-query-api` |
 
 ### 阶段4：高级功能
 
@@ -366,7 +368,7 @@ git branch -d feature/pr-<编号>-<描述>
 |----|------|------|------|--------|
 | PR-17 | 联调测试与Bug修复 | 所有PR | ⏳ 待开始 | `feature/pr-17-integration-test` |
 
-**角色A总计**：8个PR，约21小时工作量
+**角色A总计**：9个PR，约23小时工作量
 
 ---
 
@@ -386,17 +388,19 @@ git branch -d feature/pr-<编号>-<描述>
 | PR-6 | 前端行情表格（vtable） | PR-4 | ✅ 已完成 | `feature/pr-6-market-table` |
 | PR-6a | 前端行情表格接入真实API | PR-5 + PR-6 | ✅ 已完成 | `feature/pr-6a-market-real-api` |
 | PR-8 | 前端五档行情展示 | PR-7（需要WebSocket推送） | ✅ 已完成 | `feature/pr-8-depth-quote` |
-| PR-19 | 后端合约查询API（CTP ReqQryInstrument） | PR-9 | ⏳ 待开始 | `feature/pr-19-instrument-query-api` |
-| PR-20 | 前端合约刷新功能（刷新按钮 + Toast） | PR-19 | ⏳ 待开始 | `feature/pr-20-instrument-refresh-ui` |
-| PR-21 | 手动订阅/退订合约 | PR-20 | ⏳ 待开始 | `feature/pr-21-manual-subscribe` |
 | PR-12 | 前端K线图实现 | PR-5（需要行情API） | ⏳ 待开始 | `feature/pr-12-kline-chart` |
+| PR-21 | 手动订阅/退订合约 | PR-6a | ⏳ 待开始 | `feature/pr-21-manual-subscribe` |
 | PR-14 | 前端期权T型报价实现 | PR-6, PR-18（需要期权API） | ⏳ 待开始 | `feature/pr-14-option-tquote` |
 
 ### 阶段3：交易模块
 
 | PR | 任务 | 依赖 | 状态 | 分支名 |
 |----|------|------|------|--------|
-| PR-10 | 前端报单表单实现 | PR-9（需要后端交易API） | ⏳ 待开始 | `feature/pr-10-order-form` |
+| PR-9 | 后端交易API实现 | PR-7 | ⏳ 待开始 | `feature/pr-9-trader-api` |
+| PR-10 | 前端报单表单实现 | PR-9 | ⏳ 待开始 | `feature/pr-10-order-form` |
+| PR-11 | 后端查询API实现 | PR-9 | ⏳ 待开始 | `feature/pr-11-query-api` |
+| PR-19 | 后端合约查询API（CTP ReqQryInstrument） | PR-9 | ⏳ 待开始 | `feature/pr-19-instrument-query-api` |
+| PR-20 | 前端合约刷新功能（刷新按钮 + Toast） | PR-19 | ⏳ 待开始 | `feature/pr-20-instrument-refresh-ui` |
 
 ### 阶段4：高级功能
 
@@ -547,6 +551,8 @@ Week 3:
 | 2026-07-13 | v1.6 | PR-3 FastAPI框架完成（150 tests，两轮审查通过，WS 403 bug 修复） | ✅ 完成 |
 | 2026-07-13 | v1.7 | 更新当前状态：PR-1/2/3/4/6已完成 | ✅ 完成 |
 | 2026-07-14 | v1.8 | PR-5已合并，更新状态+下一步行动 | ✅ 完成 |
+| 2026-07-15 | v1.9 | 修复PR-7状态错误、PR-21依赖调整、补充AccountQuery组件、同步PR-6a/PR-8状态 | ✅ 完成 |
+| 2026-07-15 | v2.0 | 修复6处遗漏：PR-10报单确认+止损单、PR-15依赖PR-11、PR-16撤单按钮、PR-14波动率、PR-6涨跌幅 | ✅ 完成 |
 
 ---
 

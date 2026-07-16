@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { ApiResponse, ContractInfo, MarketSnapshot } from './types'
+import type { ApiResponse, ContractInfo, MarketSnapshot, KLineData } from './types'
 
 export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
 
@@ -74,5 +74,28 @@ export async function subscribeMarket(instruments: string[]): Promise<SubscribeR
 export async function getSnapshots(instruments?: string[]): Promise<SnapshotsResponse> {
   const params = instruments?.length ? { instruments: instruments.join(',') } : undefined
   const { data } = await api.get<SnapshotsResponse>('/api/market/snapshots', { params })
+  return data
+}
+
+// ── K线 API ────────────────────────────────────────────────────────
+
+interface KlineResponse {
+  instrumentID: string
+  period: string
+  bars: KLineData[]
+}
+
+/** 获取K线数据 */
+export async function getKlineData(instrument: string, period: string, count?: number): Promise<KlineResponse> {
+  const { data } = await api.get<KlineResponse>('/api/market/kline', {
+    params: { instrument, period, count },
+  })
+  // 后端返回 time 字符串，前端需要 timestamp 毫秒数
+  if (data.bars) {
+    data.bars = data.bars.map((bar: KLineData & { time?: string }) => ({
+      ...bar,
+      timestamp: bar.timestamp ?? (bar.time ? new Date(bar.time).getTime() : 0),
+    }))
+  }
   return data
 }

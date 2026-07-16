@@ -354,3 +354,58 @@
 - `3239188` fix(PR-8): review反馈 - destructure onBuyClick/onSellClick in DepthQuote
 - `980047a` fix(PR-8): review反馈 - unused imports, mock types, SpreadDisplay zero-price check
 - `6755460` docs(PR-8): review reply - fix summary and question responses
+
+---
+
+## PR-12: 前端K线图实现
+
+**分支**：`feature/pr-12-kline-chart`
+**开始时间**：2026-07-16
+**状态**：🔄 开发中
+
+---
+
+### TDD 测试用例清单
+
+| # | 模块 | 测试文件 | 测试数 | 状态 |
+|---|------|----------|--------|------|
+| 1 | market store klineData | store.test.ts | 5 | ✅ 全部通过 |
+| 2 | getKlineData API | api.test.ts | 2 | ✅ 全部通过 |
+| 3 | KLineChart 组件 | KLineChart.test.tsx | 11 | ✅ 全部通过 |
+| 4 | KLineChart 样式 | KLineChart.style.test.tsx | 5 | ✅ 全部通过 |
+| 5 | MarketPanel 集成 | MarketPanel.test.tsx | 2 | ✅ 全部通过 |
+
+**总计**：161 passed / 23 files
+
+### TDD 循环记录
+
+| # | 功能 | 红灯 | 绿灯 | Commit |
+|---|------|------|------|--------|
+| 1 | store: klineData + setKlineData + appendKline | ✅ 5 fail | ✅ 19 pass | `2423a6c` |
+| 2 | API: getKlineData | ✅ 2 fail | ✅ 13 pass | `cd09466` |
+| 3 | KLineChart 基础渲染 | ✅ module not found | ✅ 7 pass | `318c63e` |
+| 4 | KLineChart ECharts 渲染 | ✅ 4 fail | ✅ 11 pass | `df57c9e` |
+| 5 | 样式 + MarketPanel 集成 | ✅ 5 fail | ✅ 161 pass | `b0203ef` |
+| 6 | TypeScript 修复 | - | ✅ 157 pass | `df57be6` |
+| 7 | MA 均线指标 | ✅ 1 fail | ✅ 13 pass | `af62b88` |
+| 8 | MACD 指标 | ✅ 3 fail | ✅ 16 pass | `e58cb3b` |
+
+### 文件变更记录
+
+| 文件 | 变更类型 | 说明 |
+|------|----------|------|
+| frontend/src/modules/market/store.ts | 修改 | 新增 klineData state, setKlineData/appendKline actions |
+| frontend/src/modules/market/store.test.ts | 修改 | 新增 5 个 klineData 测试用例 |
+| frontend/src/services/api.ts | 修改 | 新增 getKlineData 函数 |
+| frontend/src/services/api.test.ts | 修改 | 新增 2 个 getKlineData 测试 |
+| frontend/src/modules/market/KLineChart.tsx | 新增 | K线图组件（ECharts candlestick + volume） |
+| frontend/src/modules/market/KLineChart.test.tsx | 新增 | 11 个组件测试 |
+| frontend/src/modules/market/KLineChart.style.test.tsx | 新增 | 5 个样式测试 |
+| frontend/src/modules/market/styles.css | 修改 | 新增 kline-chart 样式 |
+| frontend/src/modules/market/MarketPanel.tsx | 修改 | 集成 KLineChart + 周期切换 + K线数据获取 |
+| frontend/src/modules/market/MarketPanel.test.tsx | 修改 | 新增 getKlineData mock |
+
+### 审查反馈修复
+
+- `dc64da4` fix(PR-12): review反馈 - 日期格式化根据周期(1m/5m/1d)调整
+- `2f50134` fix(PR-12): review反馈 - setOption首次全量替换，后续合并更新

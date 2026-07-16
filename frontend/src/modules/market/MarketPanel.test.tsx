@@ -4,11 +4,28 @@ import { MarketPanel } from './MarketPanel'
 import { useMarketStore } from './store'
 import type { MarketSnapshot } from '@/services/types'
 
+// Mock ResizeObserver (not available in jsdom)
+globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+}))
+
+// Mock react-resizable-panels
+vi.mock('react-resizable-panels', () => ({
+  Group: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div className={className}>{children}</div>
+  ),
+  Panel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Separator: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}))
+
 // Mock api module
 vi.mock('@/services/api', () => ({
   getInstruments: vi.fn().mockResolvedValue({ instruments: [], count: 0 }),
   subscribeMarket: vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] }),
   getSnapshots: vi.fn().mockResolvedValue({ snapshots: {} }),
+  getKlineData: vi.fn().mockResolvedValue({ instrumentID: '', period: '', bars: [] }),
   API_BASE: 'http://localhost:8000',
 }))
 
@@ -24,6 +41,22 @@ vi.mock('@/hooks/usePointOrder', () => ({
     handleClick: vi.fn(),
     handleDoubleClick: vi.fn(),
   }),
+}))
+
+// Mock echarts
+vi.mock('echarts', () => ({
+  init: vi.fn(() => ({
+    setOption: vi.fn(),
+    resize: vi.fn(),
+    dispose: vi.fn(),
+  })),
+  default: {
+    init: vi.fn(() => ({
+      setOption: vi.fn(),
+      resize: vi.fn(),
+      dispose: vi.fn(),
+    })),
+  },
 }))
 
 function makeSnapshot(overrides?: Partial<MarketSnapshot>): MarketSnapshot {
@@ -96,5 +129,11 @@ describe('MarketPanel', () => {
     // SpreadDisplay 应显示价差
     expect(screen.getByText('价差')).toBeInTheDocument()
     expect(screen.getByText('2')).toBeInTheDocument() // 4696 - 4694
+  })
+
+  it('renders resize handle for main/side panel split', () => {
+    render(<MarketPanel />)
+    const handles = document.querySelectorAll('.resize-handle')
+    expect(handles.length).toBeGreaterThanOrEqual(1)
   })
 })

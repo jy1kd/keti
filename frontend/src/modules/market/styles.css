@@ -7,24 +7,30 @@
 }
 
 .market-panel .panel-content {
-  display: flex;
-  flex-direction: row;
   flex: 1;
   min-height: 0;
+  height: 100%;
   overflow: hidden;
 }
 
 .market-panel__main {
-  flex: 1;
+  height: 100%;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
   min-height: 0;
 }
 
+.market-panel__kline-placeholder {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  background: var(--bg-primary);
+}
+
 .market-panel__side {
-  width: 200px;
-  flex-shrink: 0;
+  height: 100%;
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -35,4 +41,73 @@
   flex: 1;
   min-height: 0;
   background: var(--bg-primary);
+}
+
+/* ── K线图 ─────────────────────────────────────────── */
+
+.kline-chart {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: var(--bg-primary);
+}
+
+.kline-chart__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.kline-chart__instrument {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.kline-chart__periods {
+  display: flex;
+  gap: 2px;
+}
+
+.kline-chart__period-btn {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.kline-chart__period-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.kline-chart__period-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.kline-chart__canvas {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.kline-chart__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  pointer-events: none;
 }
