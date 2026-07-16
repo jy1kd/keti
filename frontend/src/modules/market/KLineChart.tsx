@@ -177,6 +177,7 @@ function buildOption(klineData: KLineData[], period: string) {
 export function KLineChart({ instrument, klineData, period, onPeriodChange }: KLineChartProps) {
   const chartRef = useRef<HTMLDivElement>(null)
   const instanceRef = useRef<echarts.ECharts | null>(null)
+  const prevDataLenRef = useRef(0)
 
   useEffect(() => {
     if (!chartRef.current) return
@@ -195,7 +196,10 @@ export function KLineChart({ instrument, klineData, period, onPeriodChange }: KL
 
   useEffect(() => {
     if (instanceRef.current && klineData.length > 0) {
-      instanceRef.current.setOption(buildOption(klineData, period), true)
+      // 首次加载全量替换，后续更新合并模式
+      const isInit = prevDataLenRef.current === 0
+      instanceRef.current.setOption(buildOption(klineData, period), isInit)
+      prevDataLenRef.current = klineData.length
     }
   }, [klineData, period])
 
