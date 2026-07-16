@@ -74,8 +74,8 @@ export function MarketPanel() {
         <h2>行情面板</h2>
         <ContractSearch contracts={contracts} onSelect={handleSelectContract} />
       </div>
-      <Group orientation="horizontal" className="panel-content">
-        <Panel defaultSize={75} minSize={30}>
+      <Group orientation="horizontal" className="panel-content" autoSaveId="market-layout">
+        <Panel id="market-main" defaultSize={75} minSize={30}>
           <div className="market-panel__main">
             <MarketTable
               contracts={contracts}
@@ -97,7 +97,7 @@ export function MarketPanel() {
         <Separator>
           <ResizeHandle direction="horizontal" />
         </Separator>
-        <Panel defaultSize={25} minSize={10}>
+        <Panel id="market-side" defaultSize={25} minSize={10}>
           <div className="market-panel__side">
             <DepthQuote
               snapshot={selectedSnapshot}

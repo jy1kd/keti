@@ -13,10 +13,10 @@ function App() {
         <ConnectionStatus />
         <span className="app-title">SimNow 交易终端</span>
       </header>
-      <Group orientation="vertical" className="main-content">
-        <Panel defaultSize={75} minSize={30}>
-          <Group orientation="horizontal">
-            <Panel defaultSize={70} minSize={20}>
+      <Group orientation="vertical" className="main-content" autoSaveId="app-layout">
+        <Panel id="main" defaultSize={75} minSize={30}>
+          <Group orientation="horizontal" autoSaveId="main-layout">
+            <Panel id="market" defaultSize={70} minSize={20}>
               <section className="market-area">
                 <MarketPanel />
               </section>
@@ -24,7 +24,7 @@ function App() {
             <Separator>
               <ResizeHandle direction="horizontal" />
             </Separator>
-            <Panel defaultSize={30} minSize={15}>
+            <Panel id="order" defaultSize={30} minSize={15}>
               <section className="order-area">
                 <OrderPanel />
               </section>
@@ -34,7 +34,7 @@ function App() {
         <Separator>
           <ResizeHandle direction="vertical" />
         </Separator>
-        <Panel defaultSize={25} minSize={10}>
+        <Panel id="query" defaultSize={25} minSize={10}>
           <footer className="query-area">
             <QueryPanel />
           </footer>
