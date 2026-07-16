@@ -74,7 +74,7 @@ export function MarketPanel() {
         <h2>行情面板</h2>
         <ContractSearch contracts={contracts} onSelect={handleSelectContract} />
       </div>
-      <Group direction="horizontal" className="panel-content">
+      <Group orientation="horizontal" className="panel-content">
         <Panel defaultSize={75} minSize={30}>
           <div className="market-panel__main">
             <MarketTable

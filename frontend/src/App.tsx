@@ -13,9 +13,9 @@ function App() {
         <ConnectionStatus />
         <span className="app-title">SimNow 交易终端</span>
       </header>
-      <Group direction="vertical" className="main-content">
+      <Group orientation="vertical" className="main-content">
         <Panel defaultSize={75} minSize={30}>
-          <Group direction="horizontal">
+          <Group orientation="horizontal">
             <Panel defaultSize={70} minSize={20}>
               <section className="market-area">
                 <MarketPanel />

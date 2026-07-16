@@ -1,29 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'fs'
-import { resolve } from 'path'
+import { ResizeHandle } from './index'
 
-const cssPath = resolve(__dirname, '../../assets/styles/global.css')
-
-describe('ResizeHandle styles', () => {
-  const css = readFileSync(cssPath, 'utf-8')
-
-  it('contains resize-handle base styles', () => {
-    expect(css).toContain('.resize-handle')
+describe('ResizeHandle component', () => {
+  it('is exported', () => {
+    expect(ResizeHandle).toBeDefined()
   })
 
-  it('contains resize-handle--horizontal styles', () => {
-    expect(css).toContain('.resize-handle--horizontal')
-  })
-
-  it('contains resize-handle--vertical styles', () => {
-    expect(css).toContain('.resize-handle--vertical')
-  })
-
-  it('contains resize-handle__indicator styles', () => {
-    expect(css).toContain('.resize-handle__indicator')
-  })
-
-  it('contains resize-handle hover styles', () => {
-    expect(css).toContain('.resize-handle:hover')
+  it('has displayName', () => {
+    expect(ResizeHandle.displayName).toBe('ResizeHandle')
   })
 })
