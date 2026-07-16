@@ -178,6 +178,56 @@ input:focus-visible, select:focus-visible {
   background: var(--bg-primary);
 }
 
+/* ── ResizeHandle 拖拽手柄 ─────────────────────────────────────────── */
+
+.resize-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: background-color 0.15s;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.resize-handle--horizontal {
+  width: 6px;
+  cursor: col-resize;
+}
+
+.resize-handle--vertical {
+  height: 6px;
+  cursor: row-resize;
+}
+
+.resize-handle__indicator {
+  border-radius: 2px;
+  background: var(--border-color);
+  opacity: 0.4;
+  transition: opacity 0.15s, background-color 0.15s;
+}
+
+.resize-handle--horizontal .resize-handle__indicator {
+  width: 2px;
+  height: 24px;
+}
+
+.resize-handle--vertical .resize-handle__indicator {
+  width: 24px;
+  height: 2px;
+}
+
+.resize-handle:hover .resize-handle__indicator {
+  opacity: 1;
+  background: var(--accent);
+}
+
+.resize-handle:active .resize-handle__indicator {
+  opacity: 1;
+  background: var(--accent);
+}
+
 /* 共享 Panel 基础样式 */
 .panel-header {
   display: flex;
