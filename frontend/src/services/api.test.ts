@@ -108,7 +108,9 @@ describe('getKlineData', () => {
 
   it('调用 GET /api/market/kline 并返回K线数据', async () => {
     const mockData = {
-      kline: [
+      instrumentID: 'IF2608',
+      period: '5m',
+      bars: [
         { timestamp: 1000, open: 100, high: 105, low: 98, close: 103, volume: 500, openInterest: 1000 },
       ],
     }
@@ -120,7 +122,7 @@ describe('getKlineData', () => {
   })
 
   it('支持不同周期参数', async () => {
-    const mockData = { kline: [] }
+    const mockData = { instrumentID: 'au2508', period: '1d', bars: [] }
     vi.spyOn(api, 'get').mockResolvedValue({ data: mockData })
 
     await getKlineData('au2508', '1d')

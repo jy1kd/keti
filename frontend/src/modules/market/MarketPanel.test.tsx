@@ -9,7 +9,7 @@ vi.mock('@/services/api', () => ({
   getInstruments: vi.fn().mockResolvedValue({ instruments: [], count: 0 }),
   subscribeMarket: vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] }),
   getSnapshots: vi.fn().mockResolvedValue({ snapshots: {} }),
-  getKlineData: vi.fn().mockResolvedValue({ kline: [] }),
+  getKlineData: vi.fn().mockResolvedValue({ instrumentID: '', period: '', bars: [] }),
   API_BASE: 'http://localhost:8000',
 }))
 

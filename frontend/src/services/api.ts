@@ -80,7 +80,9 @@ export async function getSnapshots(instruments?: string[]): Promise<SnapshotsRes
 // ── K线 API ────────────────────────────────────────────────────────
 
 interface KlineResponse {
-  kline: KLineData[]
+  instrumentID: string
+  period: string
+  bars: KLineData[]
 }
 
 /** 获取K线数据 */

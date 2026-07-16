@@ -56,11 +56,11 @@ export function MarketPanel() {
     if (!selectedInstrument) return
     getKlineData(selectedInstrument, period, 200)
       .then((res) => {
-        if (res.kline?.length) {
-          setKlineData(selectedInstrument, res.kline)
+        if (res.bars?.length) {
+          setKlineData(selectedInstrument, res.bars)
         }
       })
-      .catch(() => { /* API 未实现时静默失败 */ })
+      .catch(() => { /* 静默失败，K线区域显示暂无数据 */ })
   }, [selectedInstrument, period, setKlineData])
 
   const selectedSnapshot = selectedInstrument ? snapshots.get(selectedInstrument) ?? null : null
