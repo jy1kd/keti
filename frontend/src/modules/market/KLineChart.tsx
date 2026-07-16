@@ -219,11 +219,11 @@ export function KLineChart({ instrument, klineData, period, onPeriodChange }: KL
           ))}
         </div>
       </div>
-      {klineData.length === 0 ? (
-        <div className="kline-chart__empty">暂无K线数据</div>
-      ) : (
-        <div className="kline-chart__canvas" data-testid="kline-canvas" ref={chartRef} />
-      )}
+      <div className="kline-chart__canvas" data-testid="kline-canvas" ref={chartRef}>
+        {klineData.length === 0 && (
+          <div className="kline-chart__empty">暂无K线数据</div>
+        )}
+      </div>
     </div>
   )
 }

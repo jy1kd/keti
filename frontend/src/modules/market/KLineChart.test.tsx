@@ -56,6 +56,8 @@ describe('KLineChart', () => {
   it('renders empty state when no data', () => {
     render(<KLineChart instrument="IF2608" klineData={[]} period="5m" />)
     expect(screen.getByText('暂无K线数据')).toBeInTheDocument()
+    // canvas should always be rendered
+    expect(screen.getByTestId('kline-canvas')).toBeInTheDocument()
   })
 
   it('renders instrument name in header', () => {

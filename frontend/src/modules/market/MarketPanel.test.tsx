@@ -4,6 +4,13 @@ import { MarketPanel } from './MarketPanel'
 import { useMarketStore } from './store'
 import type { MarketSnapshot } from '@/services/types'
 
+// Mock ResizeObserver (not available in jsdom)
+globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+}))
+
 // Mock api module
 vi.mock('@/services/api', () => ({
   getInstruments: vi.fn().mockResolvedValue({ instruments: [], count: 0 }),
@@ -25,6 +32,22 @@ vi.mock('@/hooks/usePointOrder', () => ({
     handleClick: vi.fn(),
     handleDoubleClick: vi.fn(),
   }),
+}))
+
+// Mock echarts
+vi.mock('echarts', () => ({
+  init: vi.fn(() => ({
+    setOption: vi.fn(),
+    resize: vi.fn(),
+    dispose: vi.fn(),
+  })),
+  default: {
+    init: vi.fn(() => ({
+      setOption: vi.fn(),
+      resize: vi.fn(),
+      dispose: vi.fn(),
+    })),
+  },
 }))
 
 function makeSnapshot(overrides?: Partial<MarketSnapshot>): MarketSnapshot {
