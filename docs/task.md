@@ -1242,6 +1242,146 @@ server/
 
 ---
 
+#### PR-19: 完整合约查询
+
+| 项目 | 内容 |
+|------|------|
+| **PR编号** | PR-19 |
+| **PR标题** | 完整合约查询（CTP ReqQryInstrument） |
+| **PR分支名** | `feature/pr-19-instrument-query` |
+| **负责角色** | 角色A（后端）+ 角色B（前端） |
+| **依赖PR** | PR-7（需要 WebSocket 推送通知） |
+| **工作量** | 3小时（后端 2h + 前端 1h） |
+| **状态** | ⏳ 待开始 |
+
+**提交文件**：
+```
+server/
+├── ctp_wrapper/
+│   ├── trader_api.py           # 新增 query_instruments() 方法
+│   └── callback.py             # 新增 OnRspQryInstrument 回调
+├── api/
+│   └── market.py               # 新增 POST /api/market/instruments/refresh
+├── services/
+│   └── market_service.py       # 新增 refresh_instruments_from_ctp()
+└── data/
+    └── instruments.json        # 合约缓存文件（查询后自动更新）
+
+frontend/src/
+├── components/
+│   └── Toast/
+│       └── index.tsx            # Toast 提示组件
+├── modules/market/
+│   ├── MarketPanel.tsx          # 新增"刷新合约"按钮
+│   └── store.ts                # 新增 refreshInstruments 方法
+└── hooks/
+    └── useMarketWs.ts          # 监听 instruments_refreshed 消息
+```
+
+**PR描述**：
+从 CTP 查询全量合约列表，用户可手动刷新，结果缓存到 instruments.json。
+
+**实现方式**：
+1. TraderApi 新增 `query_instruments()` 方法
+   - 调用 `ReqQryInstrument(pQryInstrument, nRequestID)`
+   - 回调 `OnRspQryInstrument` 接收数据（`bIsLast=False` 时持续接收）
+   - 收集完整列表后写入 `instruments.json`
+2. callback.py 新增 `OnRspQryInstrument` 回调
+   - TraderSpi 新增 `_td_on_rsp_instrument` 方法
+   - 事件分发 `OnRspQryInstrument`
+3. 新增 `POST /api/market/instruments/refresh` 端点
+   - 调用 `TraderApi.query_instruments()`
+   - 返回 `{ status: "started" }`（异步操作）
+   - 查询完成后 WebSocket `/ws/system` 推送 `instruments_refreshed` 消息
+4. MarketPanel 新增"刷新合约"按钮
+   - 点击调用刷新接口，显示 loading
+   - 监听 WebSocket `instruments_refreshed` 消息
+   - 收到消息后重新 `fetchInstruments()` 更新列表
+   - Toast 提示"已更新 N 个合约"
+5. 新增轻量 Toast 组件
+   - success/error 类型，3 秒自动消失
+
+**验证方法**：
+1. 点击"刷新合约"按钮，确认 loading 状态
+2. 确认 Toast 提示"已更新 N 个合约"
+3. 确认合约列表更新（数量 > 8）
+4. 确认 `instruments.json` 文件已更新
+
+**验收标准**：
+- [ ] 点击"刷新合约"触发 CTP ReqQryInstrument 查询
+- [ ] OnRspQryInstrument 回调正确接收合约数据
+- [ ] instruments.json 缓存文件自动更新
+- [ ] Toast 提示显示更新数量
+- [ ] 合约列表自动刷新
+
+**用户手动验证**：
+1. 启动后端，确认 CTP 登录成功
+2. 浏览器访问行情面板，点击"刷新合约"
+3. 确认 Toast 提示和合约列表更新
+
+---
+
+#### PR-20: 手动订阅/退订合约
+
+| 项目 | 内容 |
+|------|------|
+| **PR编号** | PR-20 |
+| **PR标题** | 手动订阅/退订合约 |
+| **PR分支名** | `feature/pr-20-manual-subscribe` |
+| **负责角色** | 角色B |
+| **依赖PR** | PR-19（需要完整合约列表） |
+| **工作量** | 2小时 |
+| **状态** | ⏳ 待开始 |
+
+**提交文件**：
+```
+frontend/src/
+├── components/
+│   └── ContractSearch/
+│       ├── index.tsx            # 增强：支持输入任意合约 + 订阅/退订按钮
+│       └── styles.css           # 新增订阅按钮样式
+├── modules/market/
+│   ├── MarketPanel.tsx          # 新增已订阅合约标签列表
+│   ├── store.ts                # 新增 subscribedInstruments 状态
+│   └── styles.css              # 已订阅标签样式
+```
+
+**PR描述**：
+用户可在 ContractSearch 中输入任意合约代码进行订阅/退订操作，已订阅合约以标签形式展示。
+
+**实现方式**：
+1. ContractSearch 增强
+   - 搜索框支持输入任意合约代码（不限于已加载列表）
+   - 搜索结果新增"订阅"按钮（已订阅的显示"退订"）
+   - 点击后调用 `/api/market/subscribe` 或 `/api/market/unsubscribe`
+2. MarketStore 扩展
+   - 新增 `subscribedInstruments: Set<string>` 状态
+   - 新增 `subscribeInstrument(id)` / `unsubscribeInstrument(id)` 方法
+3. MarketPanel 已订阅列表
+   - 表格上方显示当前已订阅合约标签
+   - 标签可点击退订（× 按钮）
+   - 订阅/退订后实时更新
+
+**验证方法**：
+1. 在搜索框输入任意合约代码（如 "al2610"），确认能搜索到
+2. 点击"订阅"按钮，确认合约出现在已订阅列表
+3. 点击标签的 × 按钮，确认退订成功
+4. 确认行情表格只显示已订阅合约
+
+**验收标准**：
+- [ ] 搜索框支持输入任意合约代码
+- [ ] 订阅/退订按钮功能正常
+- [ ] 已订阅合约标签列表显示正确
+- [ ] 标签可点击退订
+- [ ] 行情表格只显示已订阅合约
+
+**用户手动验证**：
+1. 启动前端，在搜索框输入 "al2610"
+2. 点击"订阅"，确认标签出现
+3. 点击标签 × 退订，确认标签消失
+
+---
+
 #### PR-14: 前端期权T型报价
 
 | 项目 | 内容 |
@@ -1629,6 +1769,8 @@ PR-2 (前端初始化)  ← 无依赖，可与PR-1/PR-3并行
 PR-3 ──►PR-5 (行情API) ──►PR-4 (前端布局) ──►PR-6 (行情表格)
                                     │
 PR-5 ──►PR-7 (WebSocket) ──►PR-8 (五档行情)
+                           │
+                           └──►PR-19 (合约查询) ──►PR-20 (手动订阅/退订)
                                     │
 PR-5 ──►PR-12 (K线图)              │
 PR-5 ──►PR-18 (期权API) ──►PR-14 (期权T型报价)
@@ -1641,7 +1783,7 @@ PR-9 ──►PR-11 (查询API) ──►PR-16 (查询面板)
 PR-9 ──►PR-13 (止损单)   ──►PR-16 (查询面板)
 
 阶段5: 联调优化
-PR-1~16,PR-18 ──►PR-17 (联调测试)
+PR-1~16,PR-18~20 ──►PR-17 (联调测试)
 ```
 
 **并行开发建议**：
@@ -1654,6 +1796,8 @@ PR-1~16,PR-18 ──►PR-17 (联调测试)
 - PR-10 完成后，PR-15 可以开始（快捷功能依赖报单表单）
 - PR-11 和 PR-13 完成后，PR-16 可以开始（查询面板需要查询API和止损单服务）
 - PR-18 完成后，PR-14 可以开始（期权T型报价依赖期权API）
+- PR-7 完成后，PR-19 可以开始（合约查询需要 WebSocket 通知）
+- PR-19 完成后，PR-20 可以开始（手动订阅依赖完整合约列表）
 
 ---
 
@@ -1665,6 +1809,7 @@ PR-1~16,PR-18 ──►PR-17 (联调测试)
 | **M1** | PR-3, PR-4, PR-5, PR-6 | 框架搭建 + 行情模块启动 | Week 1 Day 3-5 |
 | **M2** | PR-7, PR-8, PR-9, PR-10, PR-11, PR-12 | 行情完善 + 交易模块 | Week 2 |
 | **M3** | PR-13, PR-14, PR-15, PR-16, PR-18 | 高级功能 | Week 3 Day 1-4 |
+| **M3+** | PR-19, PR-20 | 合约查询 + 手动订阅 | Week 3 Day 4-5 |
 | **M4** | PR-17 | 联调测试与Bug修复 | Week 3 Day 5 |
 
 ---
