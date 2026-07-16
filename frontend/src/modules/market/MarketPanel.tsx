@@ -1,19 +1,21 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ContractSearch } from '@/components/ContractSearch'
 import { MarketTable } from './MarketTable'
 import { DepthQuote } from './DepthQuote'
 import { SpreadDisplay } from '@/components/SpreadDisplay'
+import { KLineChart } from './KLineChart'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
 import { usePointOrder } from '@/hooks/usePointOrder'
 import { useMarketWs } from '@/hooks/useMarketWs'
-import { API_BASE } from '@/services/api'
+import { API_BASE, getKlineData } from '@/services/api'
 import './styles.css'
 
 export function MarketPanel() {
-  const { snapshots, selectedInstrument, setSelectedInstrument, fetchInstruments, subscribeInstruments } = useMarketStore()
+  const { snapshots, selectedInstrument, setSelectedInstrument, fetchInstruments, subscribeInstruments, klineData, setKlineData } = useMarketStore()
   const { contracts, addContract } = useContractsStore()
   const fetchedRef = useRef(false)
+  const [period, setPeriod] = useState('5m')
 
   // WebSocket 行情推送
   useMarketWs(API_BASE.replace('http', 'ws'))
@@ -49,7 +51,20 @@ export function MarketPanel() {
     setSelectedInstrument(instrumentID)
   }
 
+  // 获取K线数据
+  useEffect(() => {
+    if (!selectedInstrument) return
+    getKlineData(selectedInstrument, period, 200)
+      .then((res) => {
+        if (res.kline?.length) {
+          setKlineData(selectedInstrument, res.kline)
+        }
+      })
+      .catch(() => { /* API 未实现时静默失败 */ })
+  }, [selectedInstrument, period, setKlineData])
+
   const selectedSnapshot = selectedInstrument ? snapshots.get(selectedInstrument) ?? null : null
+  const selectedKline = selectedInstrument ? klineData.get(selectedInstrument) ?? [] : []
 
   return (
     <section className="market-panel">
@@ -66,6 +81,14 @@ export function MarketPanel() {
             onRowClick={handleClick}
             onRowDoubleClick={handleDoubleClick}
           />
+          {selectedInstrument && (
+            <KLineChart
+              instrument={selectedInstrument}
+              klineData={selectedKline}
+              period={period}
+              onPeriodChange={setPeriod}
+            />
+          )}
         </div>
         <div className="market-panel__side">
           <DepthQuote
