@@ -387,6 +387,8 @@
 | 4 | KLineChart ECharts 渲染 | ✅ 4 fail | ✅ 11 pass | `df57c9e` |
 | 5 | 样式 + MarketPanel 集成 | ✅ 5 fail | ✅ 161 pass | `b0203ef` |
 | 6 | TypeScript 修复 | - | ✅ 157 pass | `df57be6` |
+| 7 | MA 均线指标 | ✅ 1 fail | ✅ 13 pass | `af62b88` |
+| 8 | MACD 指标 | ✅ 3 fail | ✅ 16 pass | `e58cb3b` |
 
 ### 文件变更记录
 
@@ -402,3 +404,8 @@
 | frontend/src/modules/market/styles.css | 修改 | 新增 kline-chart 样式 |
 | frontend/src/modules/market/MarketPanel.tsx | 修改 | 集成 KLineChart + 周期切换 + K线数据获取 |
 | frontend/src/modules/market/MarketPanel.test.tsx | 修改 | 新增 getKlineData mock |
+
+### 审查反馈修复
+
+- `dc64da4` fix(PR-12): review反馈 - 日期格式化根据周期(1m/5m/1d)调整
+- `2f50134` fix(PR-12): review反馈 - setOption首次全量替换，后续合并更新
