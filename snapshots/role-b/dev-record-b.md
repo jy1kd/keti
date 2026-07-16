@@ -386,6 +386,7 @@
 | 3 | KLineChart 基础渲染 | ✅ module not found | ✅ 7 pass | `318c63e` |
 | 4 | KLineChart ECharts 渲染 | ✅ 4 fail | ✅ 11 pass | `df57c9e` |
 | 5 | 样式 + MarketPanel 集成 | ✅ 5 fail | ✅ 161 pass | `b0203ef` |
+| 6 | TypeScript 修复 | - | ✅ 157 pass | `df57be6` |
 
 ### 文件变更记录
 
