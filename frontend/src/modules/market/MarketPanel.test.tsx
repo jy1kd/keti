@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MarketPanel } from './MarketPanel'
 import { useMarketStore } from './store'
+import type { MarketSnapshot } from '@/services/types'
 
 // Mock api module
 vi.mock('@/services/api', () => ({
@@ -24,6 +25,26 @@ vi.mock('@/hooks/usePointOrder', () => ({
     handleDoubleClick: vi.fn(),
   }),
 }))
+
+function makeSnapshot(overrides?: Partial<MarketSnapshot>): MarketSnapshot {
+  return {
+    instrumentID: 'IF2608',
+    lastPrice: 4695,
+    bidPrice1: 4694, bidVolume1: 10,
+    bidPrice2: 4693, bidVolume2: 20,
+    bidPrice3: 4692, bidVolume3: 30,
+    bidPrice4: 4691, bidVolume4: 40,
+    bidPrice5: 4690, bidVolume5: 50,
+    askPrice1: 4696, askVolume1: 15,
+    askPrice2: 4697, askVolume2: 25,
+    askPrice3: 4698, askVolume3: 35,
+    askPrice4: 4699, askVolume4: 45,
+    askPrice5: 4700, askVolume5: 55,
+    volume: 5000,
+    openInterest: 3000,
+    ...overrides,
+  } as MarketSnapshot
+}
 
 describe('MarketPanel', () => {
   beforeEach(() => {
@@ -53,5 +74,27 @@ describe('MarketPanel', () => {
   it('启动时调用 useMarketWs 连接 WebSocket 行情推送', () => {
     render(<MarketPanel />)
     expect(mockUseMarketWs).toHaveBeenCalledWith('ws://localhost:8000')
+  })
+
+  it('renders DepthQuote for selected instrument', () => {
+    useMarketStore.setState({
+      selectedInstrument: 'IF2608',
+      snapshots: new Map([['IF2608', makeSnapshot()]]),
+    })
+    render(<MarketPanel />)
+    // DepthQuote 应显示选中合约的五档行情
+    expect(screen.getByTestId('bid-1')).toBeInTheDocument()
+    expect(screen.getByTestId('ask-1')).toBeInTheDocument()
+  })
+
+  it('renders SpreadDisplay for selected instrument', () => {
+    useMarketStore.setState({
+      selectedInstrument: 'IF2608',
+      snapshots: new Map([['IF2608', makeSnapshot()]]),
+    })
+    render(<MarketPanel />)
+    // SpreadDisplay 应显示价差
+    expect(screen.getByText('价差')).toBeInTheDocument()
+    expect(screen.getByText('2')).toBeInTheDocument() // 4696 - 4694
   })
 })

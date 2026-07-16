@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { ContractSearch } from '@/components/ContractSearch'
 import { MarketTable } from './MarketTable'
+import { DepthQuote } from './DepthQuote'
+import { SpreadDisplay } from '@/components/SpreadDisplay'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
 import { usePointOrder } from '@/hooks/usePointOrder'
@@ -47,6 +49,8 @@ export function MarketPanel() {
     setSelectedInstrument(instrumentID)
   }
 
+  const selectedSnapshot = selectedInstrument ? snapshots.get(selectedInstrument) ?? null : null
+
   return (
     <section className="market-panel">
       <div className="panel-header">
@@ -54,13 +58,36 @@ export function MarketPanel() {
         <ContractSearch contracts={contracts} onSelect={handleSelectContract} />
       </div>
       <div className="panel-content">
-        <MarketTable
-          contracts={contracts}
-          snapshots={snapshots}
-          selectedInstrument={selectedInstrument}
-          onRowClick={handleClick}
-          onRowDoubleClick={handleDoubleClick}
-        />
+        <div className="market-panel__main">
+          <MarketTable
+            contracts={contracts}
+            snapshots={snapshots}
+            selectedInstrument={selectedInstrument}
+            onRowClick={handleClick}
+            onRowDoubleClick={handleDoubleClick}
+          />
+        </div>
+        <div className="market-panel__side">
+          <DepthQuote
+            snapshot={selectedSnapshot}
+            onBuyClick={(price) => {
+              if (selectedInstrument) {
+                // TODO: PR-10 接入报单表单
+                console.log('买入', selectedInstrument, price)
+              }
+            }}
+            onSellClick={(price) => {
+              if (selectedInstrument) {
+                // TODO: PR-10 接入报单表单
+                console.log('卖出', selectedInstrument, price)
+              }
+            }}
+          />
+          <SpreadDisplay
+            bidPrice={selectedSnapshot?.bidPrice1 ?? 0}
+            askPrice={selectedSnapshot?.askPrice1 ?? 0}
+          />
+        </div>
       </div>
     </section>
   )

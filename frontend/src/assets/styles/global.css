@@ -221,3 +221,118 @@ input:focus-visible, select:focus-visible {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
+
+/* ── DepthQuote 五档行情 ─────────────────────────────────────────────── */
+
+.depth-quote {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--bg-secondary);
+}
+
+.depth-quote--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  padding: 20px;
+}
+
+.depth-quote__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 6px 10px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.depth-quote__instrument {
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.depth-quote__last {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.depth-quote__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.depth-quote__asks,
+.depth-quote__bids {
+  display: flex;
+  flex-direction: column;
+}
+
+.depth-quote__asks {
+  flex-direction: column-reverse;
+}
+
+.depth-quote__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+
+.depth-quote__row:hover {
+  background: var(--accent-dim);
+}
+
+.depth-quote__label {
+  width: 24px;
+  color: var(--text-muted);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.depth-quote__price {
+  flex: 1;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.depth-quote__volume {
+  width: 40px;
+  text-align: right;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.depth-quote__row--bid .depth-quote__price {
+  color: var(--color-up);
+}
+
+.depth-quote__row--ask .depth-quote__price {
+  color: var(--color-down);
+}
+
+/* ── SpreadDisplay 价差 ──────────────────────────────────────────────── */
+
+.spread-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 6px 10px;
+  background: var(--bg-panel);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.spread-display__label {
+  color: var(--text-muted);
+}
+
+.spread-display__value {
+  font-weight: 600;
+  color: var(--accent);
+}
