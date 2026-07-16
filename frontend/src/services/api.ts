@@ -90,5 +90,12 @@ export async function getKlineData(instrument: string, period: string, count?: n
   const { data } = await api.get<KlineResponse>('/api/market/kline', {
     params: { instrument, period, count },
   })
+  // 后端返回 time 字符串，前端需要 timestamp 毫秒数
+  if (data.bars) {
+    data.bars = data.bars.map((bar: KLineData & { time?: string }) => ({
+      ...bar,
+      timestamp: bar.timestamp ?? (bar.time ? new Date(bar.time).getTime() : 0),
+    }))
+  }
   return data
 }
