@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { Group, Panel, Separator } from 'react-resizable-panels'
+import { ResizeHandle } from '@/components/ResizeHandle'
 import { ContractSearch } from '@/components/ContractSearch'
 import { MarketTable } from './MarketTable'
 import { DepthQuote } from './DepthQuote'
@@ -72,46 +74,53 @@ export function MarketPanel() {
         <h2>行情面板</h2>
         <ContractSearch contracts={contracts} onSelect={handleSelectContract} />
       </div>
-      <div className="panel-content">
-        <div className="market-panel__main">
-          <MarketTable
-            contracts={contracts}
-            snapshots={snapshots}
-            selectedInstrument={selectedInstrument}
-            onRowClick={handleClick}
-            onRowDoubleClick={handleDoubleClick}
-          />
-          {selectedInstrument && (
-            <KLineChart
-              instrument={selectedInstrument}
-              klineData={selectedKline}
-              period={period}
-              onPeriodChange={setPeriod}
+      <Group direction="horizontal" className="panel-content">
+        <Panel defaultSize={75} minSize={30}>
+          <div className="market-panel__main">
+            <MarketTable
+              contracts={contracts}
+              snapshots={snapshots}
+              selectedInstrument={selectedInstrument}
+              onRowClick={handleClick}
+              onRowDoubleClick={handleDoubleClick}
             />
-          )}
-        </div>
-        <div className="market-panel__side">
-          <DepthQuote
-            snapshot={selectedSnapshot}
-            onBuyClick={(price) => {
-              if (selectedInstrument) {
-                // TODO: PR-10 接入报单表单
-                console.log('买入', selectedInstrument, price)
-              }
-            }}
-            onSellClick={(price) => {
-              if (selectedInstrument) {
-                // TODO: PR-10 接入报单表单
-                console.log('卖出', selectedInstrument, price)
-              }
-            }}
-          />
-          <SpreadDisplay
-            bidPrice={selectedSnapshot?.bidPrice1 ?? 0}
-            askPrice={selectedSnapshot?.askPrice1 ?? 0}
-          />
-        </div>
-      </div>
+            {selectedInstrument && (
+              <KLineChart
+                instrument={selectedInstrument}
+                klineData={selectedKline}
+                period={period}
+                onPeriodChange={setPeriod}
+              />
+            )}
+          </div>
+        </Panel>
+        <Separator>
+          <ResizeHandle direction="horizontal" />
+        </Separator>
+        <Panel defaultSize={25} minSize={10}>
+          <div className="market-panel__side">
+            <DepthQuote
+              snapshot={selectedSnapshot}
+              onBuyClick={(price) => {
+                if (selectedInstrument) {
+                  // TODO: PR-10 接入报单表单
+                  console.log('买入', selectedInstrument, price)
+                }
+              }}
+              onSellClick={(price) => {
+                if (selectedInstrument) {
+                  // TODO: PR-10 接入报单表单
+                  console.log('卖出', selectedInstrument, price)
+                }
+              }}
+            />
+            <SpreadDisplay
+              bidPrice={selectedSnapshot?.bidPrice1 ?? 0}
+              askPrice={selectedSnapshot?.askPrice1 ?? 0}
+            />
+          </div>
+        </Panel>
+      </Group>
     </section>
   )
 }
