@@ -374,3 +374,93 @@ PR-7 已完成的基础设施：
 | `5386563` | feat(PR-7): WebSocket integration — unified handlers + heartbeat + disconnect handling — 7 tests |
 | `200ab85` | refactor(PR-7): remove unused placeholder handlers from ws/handlers.py |
 | `82ef2e9` | fix(PR-7): review R3 - await同步函数+connection_status状态缺失 |
+
+
+---
+
+## PR-9: 后端交易API实现
+
+**分支**：`feature/pr-9-trader-api`
+**依赖**：PR-7
+**状态**：✅ 开发完成，待自验证
+
+### 测试用例列表
+
+| 测试文件 | 测试数 | 覆盖内容 |
+|----------|--------|----------|
+| `tests/test_types.py` | +15 | CombHedgeFlag / ContingentCondition / ForceCloseReason 枚举 |
+| `tests/test_field_mapping.py` | +21 | map_input_order / map_order / map_trade 三种映射函数 |
+| `tests/test_trader_api.py` | +9 | insert_order 新参数 (time_condition/hedge_flag/contingent_condition/stop_price)、cancel_order 新参数 |
+| `tests/test_order_manager.py` | 16 | OrderManager 构造/insert/cancel/on_rtn_order/on_rtn_trade/cancel_all/线程安全 |
+| `tests/test_order_api.py` | 11 | insert/cancel/status/cancel_all/reverse/lock API 端点 + 参数校验 |
+| `tests/test_ctp_startup.py` | +4 | start_ctp_trading_connection / TD状态存储 / daemon线程 |
+| **合计** | **76**（新增） | |
+
+**全量测试**：355 passed，15 failed（4 test_config + 11 trio 环境），46 skipped
+
+### 实现进度
+
+#### 循环1：枚举补充（15 tests）
+- ✅ `ctp_wrapper/types.py` — 新增 CombHedgeFlag / ContingentCondition / ForceCloseReason 三个枚举类
+- 📦 Commit: `b3fbec5`
+
+#### 循环2：字段映射（21 tests）
+- ✅ `services/field_mapping.py` — map_input_order / map_order / map_trade 三种 CTP→camelCase 映射
+- 📦 Commit: `5b7cae2`
+
+#### 循环3：TraderApi 增强（9 tests）
+- ✅ `ctp_wrapper/trader_api.py` — insert_order 新增 time_condition / volume_condition / hedge_flag / contingent_condition / force_close_reason / stop_price 参数，取消硬编码字符串
+- ✅ cancel_order 新增 exchange_id / instrument_id 参数
+- 📦 Commit: `842e772`
+
+#### 循环4：OrderManager 服务（16 tests）
+- ✅ `services/order_manager.py` — 方案B 统一入口，包装 TraderApi
+- ✅ insert → pending record + CTP 调用
+- ✅ cancel / cancel_all / on_rtn_order / on_rtn_trade
+- ✅ WebSocket 广播钩子 (set_broadcast_fn)
+- ✅ 线程安全 (threading.RLock)
+- ✅ reverse / lock 占位（PR-11 完善）
+- 📦 Commit: `cf26d85`
+
+#### 循环5：报单 API 路由（11 tests）
+- ✅ `api/order.py` — 6 个端点：insert / cancel / status / cancel_all / reverse / lock
+- ✅ Pydantic 参数校验（instrumentID 非空、price≥0、volume>0、direction 仅0/1 等）
+- ✅ 404 返回 order not found
+- 📦 Commit: `79a1f3a`
+
+#### 循环6：TD 连接 + WebSocket 接线（4 tests）
+- ✅ `services/ctp_startup.py` — start_ctp_trading_connection()：创建 TraderApi + OrderManager，启动 TD 后台线程
+- ✅ CTP 回调 → 字段映射 → OrderManager → WebSocket 广播完整链路
+- ✅ `api/connection.py` — /status 端点 tdConnected 真实状态
+- ✅ `main.py` — lifespan 启动 TD 连接
+- 📦 Commit: `869d358`
+
+### 关键设计决策
+
+1. **OrderManager 方案 B**：统一入口，包装 TraderApi。API 层只依赖 OrderManager，不直接调 TraderApi
+2. **TD 连接 fire-and-forget**：TD 在后台线程启动，不阻塞 MD 的 startup。tdConnected 状态实时反映连接结果
+3. **reverse / lock 方案 A**：本期只做 API 框架（返回占位消息），实际编排逻辑延期 PR-11
+4. **枚举引用替代硬编码**：insert_order 中所有 CTP 字段使用枚举类引用，消除 magic strings
+5. **字段映射表驱动**：沿用 `field_mapping.py` 的 `[(ctp_attr, json_key, default)]` 模式，与行情映射一致
+
+### 后续 PR 依赖
+
+以下功能在 PR-9 中提供了 OrderManager + WS 广播基础设施，但数据源依赖后续 PR：
+
+| 缺口 | 依赖 PR | 说明 |
+|------|---------|------|
+| 持仓更新 → ws/position 广播 | PR-11 | ReqQryInvestorPosition 结果需要查询 API |
+| reverse 实际逻辑 | PR-11 | 需要查询持仓方向和数量 |
+| lock 实际逻辑 | PR-11 | 需要查询持仓方向和数量 |
+| 报单流水查询 | PR-11 | ReqQryOrder 主动查询 |
+
+### Commit 记录
+
+| Commit | 内容 |
+|--------|------|
+| `b3fbec5` | feat(task-09): add CombHedgeFlag, ContingentCondition, ForceCloseReason enums — 15 tests |
+| `5b7cae2` | feat(task-09): CTP field mapping — map_input_order, map_order, map_trade — 21 tests |
+| `842e772` | feat(task-09): TraderApi增强 — insert_order 新参数 + cancel_order 新参数 — 9 tests |
+| `cf26d85` | feat(task-09): OrderManager服务 — 方案B 统一入口 — 16 tests |
+| `79a1f3a` | feat(task-09): order API路由 — 6 端点 + Pydantic 校验 — 11 tests |
+| `869d358` | feat(task-09): TD连接启动+回调接线+tdConnected 真实状态 — 4 tests |

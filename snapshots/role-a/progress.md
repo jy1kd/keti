@@ -14,7 +14,7 @@
 | PR-3 | 后端FastAPI框架搭建 | ✅ 二次审查完成，待手动验证合并 | 2026-07-13 | 47a5fa1, c545354, 9217d61, 98f705a, 2bb9b69, 1d28ea8, 1bf6c7c |
 | PR-5 | 后端行情API实现 | ✅ 已合并 | 2026-07-14 | 81643c8 (merge), 6f19568~e4b2091 (19 commits) |
 | PR-7 | 后端WebSocket管理完善 | ✅ 人工审查通过，待合并 | 2026-07-15 | c370cbc, 05b16a6, 4f07b9f, 5386563, 200ab85, 0a0e29c, 443a6c5, 89cb00a, 82ef2e9, 4b5bb2e |
-| PR-9 | 后端交易API实现 | ⏳ 待开始 | - | - |
+| PR-9 | 后端交易API实现 | ✅ 开发完成，待审查 | 2026-07-16 | b3fbec5, 5b7cae2, 842e772, cf26d85, 79a1f3a, 869d358 |
 | PR-11 | 后端查询API实现 | ⏳ 待开始 | - | - |
 | PR-13 | 后端止损单服务实现 | ⏳ 待开始 | - | - |
 | PR-17 | 联调测试与Bug修复 | ⏳ 待开始 | - | - |
@@ -217,7 +217,7 @@
 
 ### PR-9: 后端交易API实现
 
-**状态**：⏳ 待开始
+**状态**：✅ 开发完成，待审查
 
 **PR信息**：
 - PR分支名：`feature/pr-9-trader-api`
@@ -225,16 +225,30 @@
 - 工作量：3小时
 
 **完成内容**：
-- 待开发
+- ✅ 枚举补充 — CombHedgeFlag / ContingentCondition / ForceCloseReason
+- ✅ CTP 字段映射 — map_input_order / map_order / map_trade
+- ✅ TraderApi 增强 — insert_order 公开所有 CTP 参数，枚举引用替代硬编码
+- ✅ OrderManager 服务 — 方案B 统一入口，状态跟踪，WebSocket 广播钩子
+- ✅ 报单 API — insert / cancel / status / cancel_all / reverse / lock
+- ✅ Pydantic 参数校验 — 价格/数量/合约格式
+- ✅ TD 连接启动 — background thread + tdConnected 真实状态
+- ✅ WebSocket 广播 — OnRtnOrder → ws/order (order_return)、OnRtnTrade → ws/order (trade_return)
 
 **验证结果**：
-- 待验证
+- ✅ 355 tests passed（+76 新增），15 failed（4 test_config + 11 trio 环境），46 skipped
 
 **提交记录**：
-- 待提交
+- `b3fbec5` feat(task-09): CombHedgeFlag/ContingentCondition/ForceCloseReason 枚举 — 15 tests
+- `5b7cae2` feat(task-09): CTP 字段映射 — 3 mapping functions — 21 tests
+- `842e772` feat(task-09): TraderApi 增强 — 新参数 — 9 tests
+- `cf26d85` feat(task-09): OrderManager 服务 — 16 tests
+- `79a1f3a` feat(task-09): order API 路由 — 11 tests
+- `869d358` feat(task-09): TD 连接+回调接线+tdConnected — 4 tests
 
 **交接说明**：
-- 待交接
+- 持仓 → ws/position 广播（需 PR-11 查询 API 的 ReqQryInvestorPosition）
+- reverse / lock 实际编排逻辑（需 PR-11 获取持仓方向+数量）
+- 报单流水/成交查询（PR-11 实现 ReqQryOrder/ReqQryTrade）
 
 ---
 
