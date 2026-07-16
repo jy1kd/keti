@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { MarketSnapshot } from '@/services/types'
+import type { MarketSnapshot, KLineData } from '@/services/types'
 import { getInstruments, subscribeMarket } from '@/services/api'
 import { useContractsStore } from '@/stores/contracts'
 
@@ -11,6 +11,9 @@ interface MarketStore {
   batchUpdate: (snapshots: MarketSnapshot[]) => void
   fetchInstruments: () => Promise<void>
   subscribeInstruments: (instruments: string[]) => Promise<void>
+  klineData: Map<string, KLineData[]>
+  setKlineData: (instrument: string, data: KLineData[]) => void
+  appendKline: (instrument: string, candle: KLineData) => void
 }
 
 export const useMarketStore = create<MarketStore>((set) => ({
@@ -50,4 +53,24 @@ export const useMarketStore = create<MarketStore>((set) => ({
       console.warn('[MarketStore] subscribeInstruments failed:', error)
     }
   },
+  klineData: new Map(),
+  setKlineData: (instrument, data) =>
+    set((state) => {
+      const next = new Map(state.klineData)
+      next.set(instrument, data)
+      return { klineData: next }
+    }),
+  appendKline: (instrument, candle) =>
+    set((state) => {
+      const next = new Map(state.klineData)
+      const existing = next.get(instrument)
+      if (existing && existing.length > 0 && existing[existing.length - 1].timestamp === candle.timestamp) {
+        // 同一时间戳 → 更新最后一根 K 线
+        existing[existing.length - 1] = candle
+        next.set(instrument, [...existing])
+      } else {
+        next.set(instrument, [...(existing ?? []), candle])
+      }
+      return { klineData: next }
+    }),
 }))

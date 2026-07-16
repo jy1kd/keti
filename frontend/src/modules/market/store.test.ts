@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
-import type { MarketSnapshot } from '@/services/types'
+import type { MarketSnapshot, KLineData } from '@/services/types'
 
 // Mock api module
 vi.mock('@/services/api', () => ({
@@ -186,5 +186,69 @@ describe('MarketStore - subscribeInstruments', () => {
     expect(subscribeMarket).toHaveBeenCalledWith(['IF2608'])
     // 不调用 getSnapshots — 数据通过 WebSocket market_data 消息自然填充
     expect(getSnapshots).not.toHaveBeenCalled()
+  })
+})
+
+describe('MarketStore - klineData', () => {
+  beforeEach(() => {
+    useMarketStore.setState({
+      klineData: new Map(),
+    })
+  })
+
+  it('has empty klineData map by default', () => {
+    expect(useMarketStore.getState().klineData.size).toBe(0)
+  })
+
+  it('setKlineData stores kline array for an instrument', () => {
+    const candles: KLineData[] = [
+      { timestamp: 1000, open: 100, high: 105, low: 98, close: 103, volume: 500, openInterest: 1000 },
+      { timestamp: 2000, open: 103, high: 108, low: 101, close: 106, volume: 600, openInterest: 1100 },
+    ]
+    useMarketStore.getState().setKlineData('IF2608', candles)
+    expect(useMarketStore.getState().klineData.get('IF2608')).toEqual(candles)
+  })
+
+  it('setKlineData replaces existing data for same instrument', () => {
+    const candles1: KLineData[] = [
+      { timestamp: 1000, open: 100, high: 105, low: 98, close: 103, volume: 500, openInterest: 1000 },
+    ]
+    const candles2: KLineData[] = [
+      { timestamp: 2000, open: 103, high: 108, low: 101, close: 106, volume: 600, openInterest: 1100 },
+    ]
+    useMarketStore.getState().setKlineData('IF2608', candles1)
+    useMarketStore.getState().setKlineData('IF2608', candles2)
+    expect(useMarketStore.getState().klineData.get('IF2608')?.length).toBe(1)
+    expect(useMarketStore.getState().klineData.get('IF2608')?.[0].timestamp).toBe(2000)
+  })
+
+  it('appendKline adds a new candle to existing data', () => {
+    const candles: KLineData[] = [
+      { timestamp: 1000, open: 100, high: 105, low: 98, close: 103, volume: 500, openInterest: 1000 },
+    ]
+    useMarketStore.getState().setKlineData('IF2608', candles)
+    const newCandle: KLineData = { timestamp: 2000, open: 103, high: 108, low: 101, close: 106, volume: 600, openInterest: 1100 }
+    useMarketStore.getState().appendKline('IF2608', newCandle)
+    expect(useMarketStore.getState().klineData.get('IF2608')?.length).toBe(2)
+    expect(useMarketStore.getState().klineData.get('IF2608')?.[1]).toEqual(newCandle)
+  })
+
+  it('appendKline updates last candle if timestamp matches', () => {
+    const candles: KLineData[] = [
+      { timestamp: 1000, open: 100, high: 105, low: 98, close: 103, volume: 500, openInterest: 1000 },
+    ]
+    useMarketStore.getState().setKlineData('IF2608', candles)
+    const updated: KLineData = { timestamp: 1000, open: 100, high: 110, low: 96, close: 108, volume: 800, openInterest: 1050 }
+    useMarketStore.getState().appendKline('IF2608', updated)
+    expect(useMarketStore.getState().klineData.get('IF2608')?.length).toBe(1)
+    expect(useMarketStore.getState().klineData.get('IF2608')?.[0].high).toBe(110)
+    expect(useMarketStore.getState().klineData.get('IF2608')?.[0].volume).toBe(800)
+  })
+
+  it('appendKline creates new array if no existing data', () => {
+    const candle: KLineData = { timestamp: 1000, open: 100, high: 105, low: 98, close: 103, volume: 500, openInterest: 1000 }
+    useMarketStore.getState().appendKline('IF2608', candle)
+    expect(useMarketStore.getState().klineData.get('IF2608')?.length).toBe(1)
+    expect(useMarketStore.getState().klineData.get('IF2608')?.[0]).toEqual(candle)
   })
 })
