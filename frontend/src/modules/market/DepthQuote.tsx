@@ -6,7 +6,7 @@ interface DepthQuoteProps {
   onSellClick?: (price: number) => void
 }
 
-export function DepthQuote({ snapshot }: DepthQuoteProps) {
+export function DepthQuote({ snapshot, onBuyClick, onSellClick }: DepthQuoteProps) {
   if (!snapshot) {
     return <div className="depth-quote depth-quote--empty">--</div>
   }
