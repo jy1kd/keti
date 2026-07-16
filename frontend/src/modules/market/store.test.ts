@@ -130,8 +130,8 @@ describe('MarketStore - fetchInstruments', () => {
 
   it('fetchInstruments 调用 API 获取合约列表并同步到 contracts store', async () => {
     const mockInstruments = [
-      { instrumentID: 'IF2608', instrumentName: '沪深300' },
-      { instrumentID: 'IF2609', instrumentName: '沪深300' },
+      { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260821', isTrading: true },
+      { instrumentID: 'IF2609', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260919', isTrading: true },
     ]
     vi.mocked(getInstruments).mockResolvedValue({
       instruments: mockInstruments,

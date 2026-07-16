@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { DepthQuote } from './DepthQuote'
 import type { MarketSnapshot } from '@/services/types'
 
