@@ -8,13 +8,18 @@
 
 .market-panel .panel-content {
   display: flex;
+  flex-direction: row;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .market-panel__main {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .market-panel__side {
