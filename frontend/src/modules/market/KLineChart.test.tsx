@@ -3,19 +3,29 @@ import { render, screen } from '@testing-library/react'
 import { KLineChart } from './KLineChart'
 import type { KLineData } from '@/services/types'
 
-// Mock echarts
-const mockSetOption = vi.fn()
-const mockResize = vi.fn()
-const mockDispose = vi.fn()
+// Mock echarts — must use vi.hoisted so variables exist when vi.mock is hoisted
+const { mockSetOption, mockResize, mockDispose, mockInit } = vi.hoisted(() => {
+  const mockSetOption = vi.fn()
+  const mockResize = vi.fn()
+  const mockDispose = vi.fn()
+  const mockInit = vi.fn(() => ({
+    setOption: mockSetOption,
+    resize: mockResize,
+    dispose: mockDispose,
+  }))
+  return { mockSetOption, mockResize, mockDispose, mockInit }
+})
 
 vi.mock('echarts', () => ({
-  default: {
-    init: vi.fn(() => ({
-      setOption: mockSetOption,
-      resize: mockResize,
-      dispose: mockDispose,
-    })),
-  },
+  init: mockInit,
+  default: { init: mockInit },
+}))
+
+// Mock ResizeObserver
+global.ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
 }))
 
 const sampleData: KLineData[] = [
@@ -68,5 +78,35 @@ describe('KLineChart', () => {
     render(<KLineChart instrument="IF2608" klineData={[]} period="15m" />)
     const btn = screen.getByText('5m')
     expect(btn.className).not.toContain('active')
+  })
+
+  it('initializes echarts when data is provided', () => {
+    render(<KLineChart instrument="IF2608" klineData={sampleData} period="5m" />)
+    expect(mockInit).toHaveBeenCalled()
+  })
+
+  it('sets chart options with candlestick and volume series', async () => {
+    render(<KLineChart instrument="IF2608" klineData={sampleData} period="5m" />)
+    expect(mockSetOption).toHaveBeenCalled()
+    const option = mockSetOption.mock.calls[0][0]
+    // Should have candlestick series
+    expect(option.series.some((s: { type: string }) => s.type === 'candlestick')).toBe(true)
+    // Should have volume bar series
+    expect(option.series.some((s: { type: string }) => s.type === 'bar')).toBe(true)
+  })
+
+  it('passes correct OHLC data to candlestick series', () => {
+    render(<KLineChart instrument="IF2608" klineData={sampleData} period="5m" />)
+    const option = mockSetOption.mock.calls[0][0]
+    const candleSeries = option.series.find((s: { type: string }) => s.type === 'candlestick')
+    // Data should be [open, close, low, high] format for ECharts
+    expect(candleSeries.data).toHaveLength(2)
+    expect(candleSeries.data[0]).toEqual([100, 103, 98, 105])
+  })
+
+  it('disposes chart on unmount', () => {
+    const { unmount } = render(<KLineChart instrument="IF2608" klineData={sampleData} period="5m" />)
+    unmount()
+    expect(mockDispose).toHaveBeenCalled()
   })
 })
