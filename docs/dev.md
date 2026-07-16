@@ -100,6 +100,7 @@ frontend/
 │   │       ├── OrderFlow.tsx      # 报单流水（增量更新、新数据高亮）
 │   │       ├── TradeFlow.tsx      # 成交流水（增量更新、新数据高亮）
 │   │       ├── Position.tsx       # 持仓查询（支持点击平仓）
+│   │       ├── AccountQuery.tsx   # 账户资金查询
 │   │       ├── QuoteQuery.tsx     # 报价查询（五档深度）
 │   │       ├── ContractQuery.tsx  # 合约查询
 │   │       ├── StopOrderList.tsx  # 止损单列表
@@ -135,7 +136,7 @@ server/
 │   ├── order.py               # 报单接口（限价/市价、止损单、撤单、批量撤单、一键反向/锁仓）
 │   ├── query.py               # 查询接口（报单、成交、持仓、资金、合约、报价）
 │   └── connection.py          # 连接接口（登录、登出、状态）
-├── ctp/                       # CTP封装层（使用ctp-python库）
+├── ctp_wrapper/               # CTP封装层（使用ctp-python库，⚠️不能命名为ctp/！）
 │   ├── __init__.py
 │   ├── md_user_api.py         # 行情API封装（基于ctp-python）
 │   ├── trader_api.py          # 交易API封装（基于ctp-python）
@@ -1430,3 +1431,4 @@ feature/pr-3-market-ui
 | 2026-07-10 | v1.8 | openctp-ctp改为ctp-python，与CLAUDE.md统一 | ✅ 完成 |
 | 2026-07-10 | v1.9 | 补充自定义业务接口（OptionChain、OptionQuote、VolatilityData），更新API路由职责 | ✅ 完成 |
 | 2026-07-10 | v1.8 | 更新Section 4.2 CTP封装代码为camelCase字段名，补全五档行情/报单/成交/持仓/资金/合约全部字段 | ✅ 完成 |
+| 2026-07-15 | v2.0 | 修复CTP目录命名（ctp/改为ctp_wrapper/）、补充AccountQuery组件到query模块 | ✅ 完成 |
