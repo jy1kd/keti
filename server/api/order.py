@@ -71,7 +71,7 @@ async def insert_order(request: Request, body: InsertOrderRequest):
 async def cancel_order(request: Request, body: CancelOrderRequest):
     """Cancel an existing order by orderRef."""
     om = request.app.state.order_manager
-    result = om.cancel(order_ref=body.orderRef)
+    result = om.cancel(order_ref=body.orderRef, order_sys_id=body.orderSysID or "")
     if result == 0:
         return {"success": True, "message": "Order cancelled"}
     return {"success": False, "message": "Cancel failed — order not found or already final"}

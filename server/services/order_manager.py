@@ -132,14 +132,17 @@ class OrderManager:
 
     # ── Cancel ────────────────────────────────────────────────────────────
 
-    def cancel(self, order_ref: str) -> int:
+    def cancel(self, order_ref: str, order_sys_id: str = "") -> int:
         """Cancel an active order by its orderRef.
 
-        Extracts exchange_id and instrument_id from the tracked order
-        to pass to CTP for improved cancellation accuracy.
+        Extracts exchange_id, instrument_id, and orderSysID from the
+        tracked order. The tracked order's orderSysID (set by CTP's
+        OnRtnOrder callback) takes priority; the explicit parameter
+        serves as fallback when the callback hasn't arrived yet.
 
         Args:
             order_ref: Order reference from insert().
+            order_sys_id: Fallback order system ID (from frontend).
 
         Returns:
             int: 0 on success, -1 if order not found, or CTP error code.
@@ -148,8 +151,11 @@ class OrderManager:
             order = self._orders.get(order_ref)
         if order is None:
             return -1
+        # Tracked order's orderSysID (from CTP) takes priority
+        sys_id = order.get("orderSysID", "") or order_sys_id
         return self._trader.cancel_order(
             order_ref=order_ref,
+            order_sys_id=sys_id,
             exchange_id=order.get("exchangeID", ""),
             instrument_id=order.get("instrumentID", ""),
         )

@@ -160,6 +160,59 @@ class TestOrderManagerCancel:
         assert om.cancel("nonexistent") == -1
         _unmock_ctp()
 
+    def test_cancel_passes_order_sys_id_from_tracked_order(self):
+        """cancel() extracts orderSysID from tracked order → cancel_order()."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        trader.cancel_order = Mock(return_value=0)
+        om = OrderManager(trader)
+
+        ref = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN)
+        # Simulate OnRtnOrder callback — CTP assigns system ID
+        om.on_rtn_order({
+            "orderRef": ref,
+            "orderSysID": "SYS999",
+            "orderStatus": "2",
+        })
+
+        om.cancel(ref)
+        trader.cancel_order.assert_called_once_with(
+            order_ref=ref,
+            exchange_id="",
+            instrument_id="IF2608",
+            order_sys_id="SYS999",
+        )
+        _unmock_ctp()
+
+    def test_cancel_falls_back_to_passed_order_sys_id(self):
+        """cancel() uses explicit order_sys_id when tracked order has none."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        trader.cancel_order = Mock(return_value=0)
+        om = OrderManager(trader)
+
+        ref = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN)
+        # No on_rtn_order — orderSysID is still ""
+
+        om.cancel(ref, order_sys_id="MANUAL999")
+        trader.cancel_order.assert_called_once_with(
+            order_ref=ref,
+            exchange_id="",
+            instrument_id="IF2608",
+            order_sys_id="MANUAL999",
+        )
+        _unmock_ctp()
+
 
 # ── OnRtnOrder callback ──────────────────────────────────────────────────
 
