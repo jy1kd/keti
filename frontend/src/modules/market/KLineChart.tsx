@@ -181,15 +181,30 @@ export function KLineChart({ instrument, klineData, period, onPeriodChange }: KL
 
   useEffect(() => {
     if (!chartRef.current) return
-    const chart = echarts.init(chartRef.current)
-    instanceRef.current = chart
+    const el = chartRef.current
+    let chart: echarts.ECharts | null = null
+    let disposed = false
 
-    const ro = new ResizeObserver(() => chart.resize())
-    ro.observe(chartRef.current)
+    const tryInit = () => {
+      if (disposed || chart || el.offsetWidth === 0 || el.offsetHeight === 0) return
+      chart = echarts.init(el)
+      instanceRef.current = chart
+    }
+
+    // 先尝试立即初始化
+    tryInit()
+
+    // 如果容器尺寸为 0，等 ResizeObserver 通知有尺寸后再初始化
+    const ro = new ResizeObserver(() => {
+      if (!chart) tryInit()
+      else chart.resize()
+    })
+    ro.observe(el)
 
     return () => {
+      disposed = true
       ro.disconnect()
-      chart.dispose()
+      chart?.dispose()
       instanceRef.current = null
     }
   }, [])

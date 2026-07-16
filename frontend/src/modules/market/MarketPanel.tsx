@@ -90,7 +90,7 @@ export function MarketPanel() {
         <Panel id="market-main" defaultSize={savedMarket?.main ?? 75} minSize={30}>
           <Group orientation="vertical" className="market-panel__main" id="market-main-layout" onLayoutChange={onMarketMainLayout}>
             <Panel id="market-table" defaultSize={savedMarketMain?.table ?? 50} minSize={15}>
-              <div style={{ height: '100%' }}>
+              <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <MarketTable
                   contracts={contracts}
                   snapshots={snapshots}
@@ -104,16 +104,18 @@ export function MarketPanel() {
               <ResizeHandle direction="vertical" />
             </Separator>
             <Panel id="market-kline" defaultSize={savedMarketMain?.kline ?? 50} minSize={15}>
-              {selectedInstrument ? (
-                <KLineChart
-                  instrument={selectedInstrument}
-                  klineData={selectedKline}
-                  period={period}
-                  onPeriodChange={setPeriod}
-                />
-              ) : (
-                <div className="market-panel__kline-placeholder">选择合约查看K线图</div>
-              )}
+              <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                {selectedInstrument ? (
+                  <KLineChart
+                    instrument={selectedInstrument}
+                    klineData={selectedKline}
+                    period={period}
+                    onPeriodChange={setPeriod}
+                  />
+                ) : (
+                  <div className="market-panel__kline-placeholder">选择合约查看K线图</div>
+                )}
+              </div>
             </Panel>
           </Group>
         </Panel>
