@@ -76,23 +76,32 @@ export function MarketPanel() {
       </div>
       <Group orientation="horizontal" className="panel-content" autoSaveId="market-layout">
         <Panel id="market-main" defaultSize={75} minSize={30}>
-          <div className="market-panel__main">
-            <MarketTable
-              contracts={contracts}
-              snapshots={snapshots}
-              selectedInstrument={selectedInstrument}
-              onRowClick={handleClick}
-              onRowDoubleClick={handleDoubleClick}
-            />
-            {selectedInstrument && (
-              <KLineChart
-                instrument={selectedInstrument}
-                klineData={selectedKline}
-                period={period}
-                onPeriodChange={setPeriod}
+          <Group orientation="vertical" className="market-panel__main" autoSaveId="market-main-layout">
+            <Panel id="market-table" defaultSize={50} minSize={15}>
+              <MarketTable
+                contracts={contracts}
+                snapshots={snapshots}
+                selectedInstrument={selectedInstrument}
+                onRowClick={handleClick}
+                onRowDoubleClick={handleDoubleClick}
               />
-            )}
-          </div>
+            </Panel>
+            <Separator>
+              <ResizeHandle direction="vertical" />
+            </Separator>
+            <Panel id="market-kline" defaultSize={50} minSize={15}>
+              {selectedInstrument ? (
+                <KLineChart
+                  instrument={selectedInstrument}
+                  klineData={selectedKline}
+                  period={period}
+                  onPeriodChange={setPeriod}
+                />
+              ) : (
+                <div className="market-panel__kline-placeholder">选择合约查看K线图</div>
+              )}
+            </Panel>
+          </Group>
         </Panel>
         <Separator>
           <ResizeHandle direction="horizontal" />

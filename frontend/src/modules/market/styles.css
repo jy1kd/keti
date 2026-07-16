@@ -7,24 +7,31 @@
 }
 
 .market-panel .panel-content {
-  display: flex;
-  flex-direction: row;
   flex: 1;
   min-height: 0;
   overflow: hidden;
 }
 
 .market-panel__main {
-  flex: 1;
+  height: 100%;
   min-width: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
+.market-panel__kline-placeholder {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  background: var(--bg-primary);
+}
+
 .market-panel__side {
-  width: 200px;
-  flex-shrink: 0;
+  height: 100%;
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
