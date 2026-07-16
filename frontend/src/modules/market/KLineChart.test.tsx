@@ -4,16 +4,16 @@ import { KLineChart } from './KLineChart'
 import type { KLineData } from '@/services/types'
 
 // Mock echarts — must use vi.hoisted so variables exist when vi.mock is hoisted
-const { mockSetOption, mockResize, mockDispose, mockInit } = vi.hoisted(() => {
+const { mockSetOption, mockDispose, mockInit } = vi.hoisted(() => {
   const mockSetOption = vi.fn()
-  const mockResize = vi.fn()
+  const mockResize = vi.fn() // used inside mockInit closure
   const mockDispose = vi.fn()
   const mockInit = vi.fn(() => ({
     setOption: mockSetOption,
     resize: mockResize,
     dispose: mockDispose,
   }))
-  return { mockSetOption, mockResize, mockDispose, mockInit }
+  return { mockSetOption, mockDispose, mockInit }
 })
 
 vi.mock('echarts', () => ({
@@ -22,7 +22,7 @@ vi.mock('echarts', () => ({
 }))
 
 // Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
+globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),

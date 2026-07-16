@@ -22,7 +22,7 @@ function buildOption(klineData: KLineData[]) {
   const dates = klineData.map((d) => new Date(d.timestamp).toLocaleString())
   // ECharts candlestick: [open, close, low, high]
   const ohlc = klineData.map((d) => [d.open, d.close, d.low, d.high])
-  const volumes = klineData.map((d, i) => ({
+  const volumes = klineData.map((d) => ({
     value: d.volume,
     itemStyle: { color: d.close >= d.open ? '#ef5350' : '#26a69a' },
   }))
