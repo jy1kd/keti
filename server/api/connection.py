@@ -83,12 +83,14 @@ async def login(body: LoginRequest, request: Request):
 
 @router.post("/logout", response_model=LoginResponse)
 async def logout(request: Request):
-    """Disconnect both MD and TD connections.
+    """Disconnect the trading connection.
 
-    Releases CTP resources and clears app state.  The frontend
-    should call login again to reconnect.
+    MD (market data) stays connected — it does not require validated
+    credentials and should persist across login/logout cycles.
+
+    The frontend should call /login to reconnect TD.
     """
-    # Disconnect TD
+    # Disconnect TD only
     trader_api = getattr(request.app.state, "trader_api", None)
     if trader_api is not None:
         try:
@@ -98,22 +100,11 @@ async def logout(request: Request):
         request.app.state.trader_api = None
         request.app.state.order_manager = None
 
-    # Disconnect MD
-    md_api = getattr(request.app.state, "md_api", None)
-    if md_api is not None:
-        try:
-            md_api.release()
-        except Exception:
-            pass
-        request.app.state.md_api = None
-
-    # Clear thread references
-    if hasattr(request.app.state, "ctp_thread"):
-        request.app.state.ctp_thread = None
+    # Clear TD thread reference
     if hasattr(request.app.state, "td_thread"):
         request.app.state.td_thread = None
 
-    return {"success": True, "message": "Logged out — MD and TD disconnected"}
+    return {"success": True, "message": "Logged out — TD disconnected, MD still running"}
 
 
 @router.get("/status", response_model=StatusResponse)
