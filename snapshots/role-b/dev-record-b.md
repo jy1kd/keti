@@ -346,3 +346,11 @@
 - `3c0d640` feat(PR-8): integrate DepthQuote + SpreadDisplay into MarketPanel side panel
 - `c1d53ce` feat(PR-8): DepthQuote + SpreadDisplay styles, MarketPanel side panel layout
 - `b1b5bb4` fix(PR-8): update store test - subscribeInstruments no longer calls getSnapshots (relies on WS push)
+
+---
+
+### 审查反馈修复
+
+- `3239188` fix(PR-8): review反馈 - destructure onBuyClick/onSellClick in DepthQuote
+- `980047a` fix(PR-8): review反馈 - unused imports, mock types, SpreadDisplay zero-price check
+- `6755460` docs(PR-8): review reply - fix summary and question responses
