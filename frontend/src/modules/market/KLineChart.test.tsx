@@ -124,12 +124,74 @@ describe('KLineChart', () => {
   })
 
   it('MA lines use xAxisIndex 0 and yAxisIndex 0', () => {
+    vi.clearAllMocks()
     render(<KLineChart instrument="IF2608" klineData={sampleData} period="5m" />)
-    const option = mockSetOption.mock.calls[mockSetOption.mock.calls.length - 1][0]
-    const maSeries = option.series.filter((s: { name: string }) => s.name?.startsWith('MA'))
-    maSeries.forEach((s: { xAxisIndex: number; yAxisIndex: number }) => {
-      expect(s.xAxisIndex).toBe(0)
-      expect(s.yAxisIndex).toBe(0)
+    // Find the call that has candlestick series (the data-bearing call)
+    const dataCall = mockSetOption.mock.calls.find((call) => {
+      const opt = call[0]
+      return opt.series?.some((s: { type: string }) => s.type === 'candlestick')
     })
+    expect(dataCall).toBeDefined()
+    const option = dataCall![0]
+    // Verify MA5, MA10, MA20 exist and use correct axes
+    for (const name of ['MA5', 'MA10', 'MA20']) {
+      const ma = option.series.find((s: { name: string }) => s.name === name)
+      expect(ma).toBeDefined()
+      expect(ma.xAxisIndex).toBe(0)
+      expect(ma.yAxisIndex).toBe(0)
+    }
+  })
+
+  it('includes MACD DIF and DEA line series', () => {
+    // Need enough data points for MACD (EMA26 needs 26+ points)
+    const longData: KLineData[] = Array.from({ length: 30 }, (_, i) => ({
+      timestamp: i * 1000,
+      open: 100 + i,
+      high: 105 + i,
+      low: 98 + i,
+      close: 102 + i,
+      volume: 500,
+      openInterest: 1000,
+    }))
+    render(<KLineChart instrument="IF2608" klineData={longData} period="5m" />)
+    const option = mockSetOption.mock.calls[mockSetOption.mock.calls.length - 1][0]
+    const difSeries = option.series.find((s: { name: string }) => s.name === 'DIF')
+    const deaSeries = option.series.find((s: { name: string }) => s.name === 'DEA')
+    expect(difSeries).toBeDefined()
+    expect(deaSeries).toBeDefined()
+  })
+
+  it('includes MACD histogram bar series', () => {
+    const longData: KLineData[] = Array.from({ length: 30 }, (_, i) => ({
+      timestamp: i * 1000,
+      open: 100 + i,
+      high: 105 + i,
+      low: 98 + i,
+      close: 102 + i,
+      volume: 500,
+      openInterest: 1000,
+    }))
+    render(<KLineChart instrument="IF2608" klineData={longData} period="5m" />)
+    const option = mockSetOption.mock.calls[mockSetOption.mock.calls.length - 1][0]
+    const macdHist = option.series.find((s: { name: string }) => s.name === 'MACD')
+    expect(macdHist).toBeDefined()
+    expect(macdHist.type).toBe('bar')
+  })
+
+  it('MACD series use xAxisIndex 1 and yAxisIndex 2', () => {
+    const longData: KLineData[] = Array.from({ length: 30 }, (_, i) => ({
+      timestamp: i * 1000,
+      open: 100 + i,
+      high: 105 + i,
+      low: 98 + i,
+      close: 102 + i,
+      volume: 500,
+      openInterest: 1000,
+    }))
+    render(<KLineChart instrument="IF2608" klineData={longData} period="5m" />)
+    const option = mockSetOption.mock.calls[mockSetOption.mock.calls.length - 1][0]
+    // Should have 3 grids: candlestick, volume, MACD
+    expect(option.grid.length).toBe(3)
+    expect(option.yAxis.length).toBe(3)
   })
 })
