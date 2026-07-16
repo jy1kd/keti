@@ -399,13 +399,58 @@ def start_ctp_trading_connection(
         data = map_trade(pTrade)
         app.state.order_manager.on_rtn_trade(data)
 
+    # Wire login flow callbacks (mirrors _connect_ctp MD pattern)
+    login_done = threading.Event()
+
+    def _on_front_connected():
+        trader.connection_status = "connected"
+        try:
+            trader.login()
+            logger.info("CTP TD front connected, login sent (user=%s)", config.user_id)
+        except Exception:
+            logger.warning("CTP TD login request failed", exc_info=True)
+            login_done.set()
+
+    def _on_rsp_user_login(pRspUserLogin, pRspInfo, nRequestID, bIsLast):
+        if not bIsLast:
+            return
+        if pRspInfo is None or getattr(pRspInfo, "ErrorID", -1) == 0:
+            trader.login_status = "logged_in"
+            logger.info("CTP TD login successful (user=%s)", config.user_id)
+        else:
+            err_msg = getattr(pRspInfo, "ErrorMsg", "unknown error")
+            logger.warning("CTP TD login failed: %s", err_msg)
+        login_done.set()
+
+    # Wire order response callbacks — forward errors to OrderManager for logging
+    def _on_rsp_order_insert(pInputOrder, pRspInfo, nRequestID, bIsLast):
+        if not bIsLast:
+            return
+        if pRspInfo is not None and getattr(pRspInfo, "ErrorID", -1) != 0:
+            err_msg = getattr(pRspInfo, "ErrorMsg", "unknown error")
+            logger.warning("CTP order insert rejected: %s", err_msg)
+
+    def _on_rsp_order_action(pInputOrderAction, pRspInfo, nRequestID, bIsLast):
+        if not bIsLast:
+            return
+        if pRspInfo is not None and getattr(pRspInfo, "ErrorID", -1) != 0:
+            err_msg = getattr(pRspInfo, "ErrorMsg", "unknown error")
+            logger.warning("CTP order action rejected: %s", err_msg)
+
+    trader.spi.on("OnFrontConnected", _on_front_connected)
+    trader.spi.on("OnRspUserLogin", _on_rsp_user_login)
     trader.spi.on("OnRtnOrder", _on_rtn_order)
     trader.spi.on("OnRtnTrade", _on_rtn_trade)
+    trader.spi.on("OnRspOrderInsert", _on_rsp_order_insert)
+    trader.spi.on("OnRspOrderAction", _on_rsp_order_action)
 
     def _run():
         try:
             trader.create()
             logger.info("CTP trading connection initiated (front=%s)", config.td_front)
+            # Wait for login result with timeout
+            if not login_done.wait(timeout=LOGIN_TIMEOUT):
+                logger.warning("CTP TD login timeout after %.0fs", LOGIN_TIMEOUT)
         except Exception:
             logger.warning("CTP TraderApi.create() failed", exc_info=True)
 
@@ -413,3 +458,9 @@ def start_ctp_trading_connection(
     thread.start()
     app.state.td_thread = thread
     logger.info("CTP trading connection thread started")
+
+    # TODO(PR-17): Add TD reconnect logic.  Currently only MD has
+    # reconnect (via ReconnectService + OnFrontDisconnected handler).
+    # TD is a separate CTP connection — if it drops, orders/trades
+    # stop flowing.  PR-17 should add a similar TD ReconnectService
+    # or extend the existing one to handle both connections.
