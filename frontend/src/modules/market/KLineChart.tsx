@@ -68,8 +68,18 @@ function calcMACD(data: KLineData[]): { dif: number[]; dea: number[]; macd: numb
   return { dif, dea, macd }
 }
 
-function buildOption(klineData: KLineData[]) {
-  const dates = klineData.map((d) => new Date(d.timestamp).toLocaleString())
+const DATE_FORMAT_MAP: Record<string, Intl.DateTimeFormatOptions> = {
+  '1m': { hour: '2-digit', minute: '2-digit' },
+  '5m': { hour: '2-digit', minute: '2-digit' },
+  '15m': { hour: '2-digit', minute: '2-digit' },
+  '30m': { hour: '2-digit', minute: '2-digit' },
+  '1h': { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' },
+  '1d': { month: '2-digit', day: '2-digit' },
+}
+
+function buildOption(klineData: KLineData[], period: string) {
+  const fmt = DATE_FORMAT_MAP[period] ?? { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }
+  const dates = klineData.map((d) => new Date(d.timestamp).toLocaleString(undefined, fmt))
   // ECharts candlestick: [open, close, low, high]
   const ohlc = klineData.map((d) => [d.open, d.close, d.low, d.high])
   const volumes = klineData.map((d) => ({
@@ -185,9 +195,9 @@ export function KLineChart({ instrument, klineData, period, onPeriodChange }: KL
 
   useEffect(() => {
     if (instanceRef.current && klineData.length > 0) {
-      instanceRef.current.setOption(buildOption(klineData), true)
+      instanceRef.current.setOption(buildOption(klineData, period), true)
     }
-  }, [klineData])
+  }, [klineData, period])
 
   return (
     <div className="kline-chart" data-testid="kline-chart">
