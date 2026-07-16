@@ -109,4 +109,27 @@ describe('KLineChart', () => {
     unmount()
     expect(mockDispose).toHaveBeenCalled()
   })
+
+  it('includes MA line series (MA5, MA10, MA20)', () => {
+    render(<KLineChart instrument="IF2608" klineData={sampleData} period="5m" />)
+    const option = mockSetOption.mock.calls[mockSetOption.mock.calls.length - 1][0]
+    const lineSeries = option.series.filter((s: { type: string }) => s.type === 'line')
+    // Should have at least 3 MA lines
+    expect(lineSeries.length).toBeGreaterThanOrEqual(3)
+    // Check MA names
+    const names = lineSeries.map((s: { name: string }) => s.name)
+    expect(names).toContain('MA5')
+    expect(names).toContain('MA10')
+    expect(names).toContain('MA20')
+  })
+
+  it('MA lines use xAxisIndex 0 and yAxisIndex 0', () => {
+    render(<KLineChart instrument="IF2608" klineData={sampleData} period="5m" />)
+    const option = mockSetOption.mock.calls[mockSetOption.mock.calls.length - 1][0]
+    const maSeries = option.series.filter((s: { name: string }) => s.name?.startsWith('MA'))
+    maSeries.forEach((s: { xAxisIndex: number; yAxisIndex: number }) => {
+      expect(s.xAxisIndex).toBe(0)
+      expect(s.yAxisIndex).toBe(0)
+    })
+  })
 })

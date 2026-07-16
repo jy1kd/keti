@@ -18,6 +18,24 @@ const PERIODS = [
   { label: '日线', value: '1d' },
 ]
 
+const MA_PERIODS = [
+  { name: 'MA5', period: 5, color: '#f5c16c' },
+  { name: 'MA10', period: 10, color: '#61caff' },
+  { name: 'MA20', period: 20, color: '#ff6b9d' },
+]
+
+/** 计算移动平均线 */
+function calcMA(data: KLineData[], period: number): (number | null)[] {
+  return data.map((_, i) => {
+    if (i < period - 1) return null
+    let sum = 0
+    for (let j = i - period + 1; j <= i; j++) {
+      sum += data[j].close
+    }
+    return sum / period
+  })
+}
+
 function buildOption(klineData: KLineData[]) {
   const dates = klineData.map((d) => new Date(d.timestamp).toLocaleString())
   // ECharts candlestick: [open, close, low, high]
@@ -57,6 +75,16 @@ function buildOption(klineData: KLineData[]) {
           borderColor0: '#26a69a',
         },
       },
+      ...MA_PERIODS.map((ma) => ({
+        type: 'line' as const,
+        name: ma.name,
+        data: calcMA(klineData, ma.period),
+        xAxisIndex: 0,
+        yAxisIndex: 0,
+        smooth: true,
+        lineStyle: { width: 1, color: ma.color },
+        symbol: 'none',
+      })),
       {
         type: 'bar',
         data: volumes,
