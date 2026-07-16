@@ -3,7 +3,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Request, HTTPException
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 router = APIRouter()
 
@@ -22,6 +22,27 @@ class InsertOrderRequest(BaseModel):
     timeCondition: str = Field(default="1", pattern=r"^[123]$")
     volumeCondition: str = Field(default="1", pattern=r"^[123]$")
     hedgeFlag: str = Field(default="1", pattern=r"^[123]$")
+
+    @model_validator(mode="after")
+    def validate_time_volume_condition(self):
+        """Validate FOK/FAK volume condition constraints.
+
+        CTP convention:
+        - FOK (Fill or Kill, "2") → VolumeCondition CV ("3")
+        - FAK (Fill and Kill, "3") → VolumeCondition AV ("1")
+        - GFD ("1") accepts any volume condition.
+        """
+        tc = self.timeCondition
+        vc = self.volumeCondition
+        if tc == "2" and vc != "3":
+            raise ValueError(
+                "FOK (timeCondition=2) requires volumeCondition=CV (3)"
+            )
+        if tc == "3" and vc != "1":
+            raise ValueError(
+                "FAK (timeCondition=3) requires volumeCondition=AV (1)"
+            )
+        return self
 
 
 class CancelOrderRequest(BaseModel):
