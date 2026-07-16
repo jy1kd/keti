@@ -218,18 +218,18 @@ class _FakeTraderApi:
 class TestStartCtpTradingConnection:
     """TD connection startup (PR-9)."""
 
+    @patch("config.Config")
     @patch("ctp_wrapper.trader_api.TraderApi")
-    def test_function_exists(self, MockTrader):
-        """start_ctp_trading_connection should be importable and callable."""
-        from services.ctp_startup import start_ctp_trading_connection
-        assert callable(start_ctp_trading_connection)
-
-    @patch("ctp_wrapper.trader_api.TraderApi")
-    def test_creates_trader_api(self, MockTrader):
+    def test_creates_trader_api(self, MockTrader, MockConfig):
         """TD startup creates a TraderApi instance."""
         from services.ctp_startup import start_ctp_trading_connection
 
         cfg = MagicMock()
+        cfg.broker_id = "9999"
+        cfg.user_id = "test"
+        cfg.password = "pass"
+        cfg.td_front = "tcp://..."  # needed for log line
+        MockConfig.return_value = cfg
         fake_trader = _FakeTraderApi(config=cfg)
         MockTrader.return_value = fake_trader
         app = _FakeApp()
@@ -239,12 +239,18 @@ class TestStartCtpTradingConnection:
 
         MockTrader.assert_called_once()
 
+    @patch("config.Config")
     @patch("ctp_wrapper.trader_api.TraderApi")
-    def test_stores_on_app_state(self, MockTrader):
+    def test_stores_on_app_state(self, MockTrader, MockConfig):
         """TD startup stores trader_api and order_manager on app.state."""
         from services.ctp_startup import start_ctp_trading_connection
 
         cfg = MagicMock()
+        cfg.broker_id = "9999"
+        cfg.user_id = "test"
+        cfg.password = "pass"
+        cfg.td_front = "tcp://..."
+        MockConfig.return_value = cfg
         fake_trader = _FakeTraderApi(config=cfg)
         MockTrader.return_value = fake_trader
         app = _FakeApp()
@@ -255,12 +261,18 @@ class TestStartCtpTradingConnection:
         assert app.state.trader_api is not None
         assert app.state.order_manager is not None
 
+    @patch("config.Config")
     @patch("ctp_wrapper.trader_api.TraderApi")
-    def test_td_startup_runs_in_thread(self, MockTrader):
+    def test_td_startup_runs_in_thread(self, MockTrader, MockConfig):
         """TD startup runs in a daemon thread."""
         from services.ctp_startup import start_ctp_trading_connection
 
         cfg = MagicMock()
+        cfg.broker_id = "9999"
+        cfg.user_id = "test"
+        cfg.password = "pass"
+        cfg.td_front = "tcp://..."
+        MockConfig.return_value = cfg
         fake_trader = _FakeTraderApi(config=cfg)
         MockTrader.return_value = fake_trader
         app = _FakeApp()

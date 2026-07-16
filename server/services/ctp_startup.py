@@ -14,11 +14,11 @@ import logging
 import threading
 from typing import Any, List, Optional, TYPE_CHECKING
 
+from config import Config
 from services.ctp_bridge import wire_market_data_callback
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
-    from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -75,9 +75,11 @@ def start_ctp_market_connection(
     app: "FastAPI",
     config: "Config",
 ) -> dict:
-    """Start CTP connection at app startup using .env credentials.
+    """Start CTP market data connection at app startup.
 
-    Calls connect_ctp() with wait=True to block until result is known.
+    MD does not require validated credentials — connects in background
+    and returns immediately without blocking.  (Credentials are sent
+    anyway for environments that require them.)
 
     Args:
         app: The FastAPI application instance.
@@ -88,7 +90,7 @@ def start_ctp_market_connection(
     """
     return connect_ctp(
         app, config.broker_id, config.user_id, config.password,
-        wait=True,
+        wait=False,
     )
 
 
@@ -356,26 +358,38 @@ def _attempt_reconnect(app: "FastAPI", md_api: Any, loop: asyncio.AbstractEventL
 def start_ctp_trading_connection(
     app: "FastAPI",
     config: "Config",
+    broker_id: Optional[str] = None,
+    user_id: Optional[str] = None,
+    password: Optional[str] = None,
 ) -> None:
     """Start CTP trading connection in a background thread.
 
     Creates TraderApi + OrderManager, connects to TD front, logs in,
     and wires OnRtnOrder/OnRtnTrade callbacks to OrderManager + WebSocket.
 
-    Unlike MD connection, this function returns immediately (fire-and-forget).
-    The /api/connection/status endpoint reflects the actual TD connection state.
+    If explicit credentials are provided, they override the config values.
+    This allows /api/connection/login to pass user-supplied credentials.
 
     Args:
         app: The FastAPI application instance.
         config: The Config instance with CTP connection parameters.
+        broker_id: Optional override for broker ID.
+        user_id: Optional override for user ID.
+        password: Optional override for password.
     """
     from ctp_wrapper.trader_api import TraderApi
     from services.order_manager import OrderManager
     from services.field_mapping import map_order, map_trade
 
+    # Use explicit credentials if provided, otherwise fall back to config
+    td_broker = broker_id or config.broker_id
+    td_user = user_id or config.user_id
+    td_pass = password or config.password
+
+    td_config = Config(broker_id=td_broker, user_id=td_user, password=td_pass)
     loop = asyncio.get_running_loop()
 
-    trader = TraderApi(config)
+    trader = TraderApi(td_config)
     app.state.trader_api = trader
     app.state.order_manager = OrderManager(trader)
 
@@ -406,7 +420,7 @@ def start_ctp_trading_connection(
         trader.connection_status = "connected"
         try:
             trader.login()
-            logger.info("CTP TD front connected, login sent (user=%s)", config.user_id)
+            logger.info("CTP TD front connected, login sent (user=%s)", td_user)
         except Exception:
             logger.warning("CTP TD login request failed", exc_info=True)
             login_done.set()
@@ -447,7 +461,7 @@ def start_ctp_trading_connection(
     def _run():
         try:
             trader.create()
-            logger.info("CTP trading connection initiated (front=%s)", config.td_front)
+            logger.info("CTP trading connection initiated (front=%s)", td_config.td_front)
             # Wait for login result with timeout
             if not login_done.wait(timeout=LOGIN_TIMEOUT):
                 logger.warning("CTP TD login timeout after %.0fs", LOGIN_TIMEOUT)
@@ -464,3 +478,141 @@ def start_ctp_trading_connection(
     # TD is a separate CTP connection — if it drops, orders/trades
     # stop flowing.  PR-17 should add a similar TD ReconnectService
     # or extend the existing one to handle both connections.
+
+
+def connect_trading(
+    app: "FastAPI",
+    broker_id: str,
+    user_id: str,
+    password: str,
+    wait: bool = False,
+) -> dict:
+    """Start or restart CTP trading connection with explicit credentials.
+
+    Called from POST /api/connection/login.  If a TD connection already
+    exists for the same user, returns success immediately.  If a different
+    user is connected, disconnects the old connection first.
+
+    Args:
+        app: The FastAPI application instance.
+        broker_id: CTP broker ID (e.g. "9999").
+        user_id: CTP user ID.
+        password: CTP password.
+        wait: If True, block until login result is known.
+
+    Returns:
+        dict with keys: success, message, userID.
+    """
+    from ctp_wrapper.trader_api import TraderApi
+
+    # Check existing TD connection
+    existing = getattr(app.state, "trader_api", None)
+    if existing is not None:
+        existing_user = getattr(existing.config, "user_id", None)
+        if existing_user == user_id and existing.login_status == "logged_in":
+            return {"success": True, "message": "Already connected", "userID": user_id}
+        # Different user — disconnect old connection
+        logger.info("Disconnecting old TD session (user=%s) for new user=%s",
+                     existing_user, user_id)
+        try:
+            existing.release()
+        except Exception:
+            pass
+        app.state.trader_api = None
+        app.state.order_manager = None
+
+    # Start new TD connection
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+
+    result: dict = {"success": False, "message": "Connection not started", "userID": user_id}
+    login_done = threading.Event() if wait else None
+
+    # Build config with explicit credentials
+    from config import Config as Cfg
+    td_config = Cfg(broker_id=broker_id, user_id=user_id, password=password)
+
+    from ctp_wrapper.trader_api import TraderApi
+    from services.order_manager import OrderManager
+    from services.field_mapping import map_order, map_trade
+
+    trader = TraderApi(td_config)
+    app.state.trader_api = trader
+    app.state.order_manager = OrderManager(trader)
+
+    # Set up broadcast
+    ws_manager = app.state.ws_manager
+
+    def _broadcast_order(msg_type: str, data: dict) -> None:
+        asyncio.run_coroutine_threadsafe(
+            ws_manager.broadcast("order", msg_type, data),
+            loop,
+        )
+
+    app.state.order_manager.set_broadcast_fn(_broadcast_order)
+
+    # Wire CTP callbacks
+    def _on_rtn_order(pOrder):
+        data = map_order(pOrder)
+        app.state.order_manager.on_rtn_order(data)
+
+    def _on_rtn_trade(pTrade):
+        data = map_trade(pTrade)
+        app.state.order_manager.on_rtn_trade(data)
+
+    front_connected = threading.Event()
+    td_login_done = threading.Event()
+
+    def _on_front_connected():
+        trader.connection_status = "connected"
+        front_connected.set()
+        try:
+            trader.login()
+        except Exception:
+            logger.warning("TD login request failed", exc_info=True)
+            td_login_done.set()
+
+    def _on_rsp_user_login(pRspUserLogin, pRspInfo, nRequestID, bIsLast):
+        if not bIsLast:
+            return
+        if pRspInfo is None or getattr(pRspInfo, "ErrorID", -1) == 0:
+            trader.login_status = "logged_in"
+            result["success"] = True
+            result["message"] = "Login successful"
+            logger.info("CTP TD login successful (user=%s)", user_id)
+        else:
+            err_msg = getattr(pRspInfo, "ErrorMsg", "unknown error")
+            result["success"] = False
+            result["message"] = f"Login failed: {err_msg}"
+            logger.warning("CTP TD login failed: %s", err_msg)
+        td_login_done.set()
+
+    trader.spi.on("OnFrontConnected", _on_front_connected)
+    trader.spi.on("OnRspUserLogin", _on_rsp_user_login)
+    trader.spi.on("OnRtnOrder", _on_rtn_order)
+    trader.spi.on("OnRtnTrade", _on_rtn_trade)
+
+    def _run():
+        try:
+            trader.create()
+            if not front_connected.wait(timeout=LOGIN_TIMEOUT):
+                result["message"] = "TD front connection timeout"
+                td_login_done.set()
+                return
+            if not td_login_done.wait(timeout=LOGIN_TIMEOUT):
+                result["message"] = "TD login timeout"
+        except Exception as exc:
+            result["message"] = f"TD create failed: {exc}"
+            td_login_done.set()
+
+    thread = threading.Thread(target=_run, daemon=True, name="ctp-td-login")
+    thread.start()
+    app.state.td_thread = thread
+
+    if wait:
+        td_login_done.wait(timeout=LOGIN_TIMEOUT * 2)
+        return result
+
+    return {"success": True, "message": "Connection initiated", "userID": user_id}
