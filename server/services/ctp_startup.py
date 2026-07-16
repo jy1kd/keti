@@ -348,3 +348,68 @@ def _attempt_reconnect(app: "FastAPI", md_api: Any, loop: asyncio.AbstractEventL
     except Exception as e:
         logger.error("reconnect attempt failed: %s", e)
         return False
+
+
+# ── Trading (TD) connection (PR-9) ────────────────────────────────────────
+# Mirror of the MD connection flow but for the trading API.
+
+def start_ctp_trading_connection(
+    app: "FastAPI",
+    config: "Config",
+) -> None:
+    """Start CTP trading connection in a background thread.
+
+    Creates TraderApi + OrderManager, connects to TD front, logs in,
+    and wires OnRtnOrder/OnRtnTrade callbacks to OrderManager + WebSocket.
+
+    Unlike MD connection, this function returns immediately (fire-and-forget).
+    The /api/connection/status endpoint reflects the actual TD connection state.
+
+    Args:
+        app: The FastAPI application instance.
+        config: The Config instance with CTP connection parameters.
+    """
+    from ctp_wrapper.trader_api import TraderApi
+    from services.order_manager import OrderManager
+    from services.field_mapping import map_order, map_trade
+
+    loop = asyncio.get_running_loop()
+
+    trader = TraderApi(config)
+    app.state.trader_api = trader
+    app.state.order_manager = OrderManager(trader)
+
+    # Set up broadcast hook for OrderManager
+    ws_manager = app.state.ws_manager
+
+    def _broadcast_order(msg_type: str, data: dict) -> None:
+        asyncio.run_coroutine_threadsafe(
+            ws_manager.broadcast("order", msg_type, data),
+            loop,
+        )
+
+    app.state.order_manager.set_broadcast_fn(_broadcast_order)
+
+    # Wire CTP callbacks → field mapping → OrderManager
+    def _on_rtn_order(pOrder):
+        data = map_order(pOrder)
+        app.state.order_manager.on_rtn_order(data)
+
+    def _on_rtn_trade(pTrade):
+        data = map_trade(pTrade)
+        app.state.order_manager.on_rtn_trade(data)
+
+    trader.spi.on("OnRtnOrder", _on_rtn_order)
+    trader.spi.on("OnRtnTrade", _on_rtn_trade)
+
+    def _run():
+        try:
+            trader.create()
+            logger.info("CTP trading connection initiated (front=%s)", config.td_front)
+        except Exception:
+            logger.warning("CTP TraderApi.create() failed", exc_info=True)
+
+    thread = threading.Thread(target=_run, daemon=True, name="ctp-td-connect")
+    thread.start()
+    app.state.td_thread = thread
+    logger.info("CTP trading connection thread started")

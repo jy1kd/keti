@@ -97,17 +97,24 @@ async def logout(request: Request):
 async def status(request: Request):
     """Return current CTP connection status.
 
-    Reads real connection state from app.state.md_api when available.
+    Reads real connection state from app.state.md_api and app.state.trader_api.
     """
     md_api = getattr(request.app.state, "md_api", None)
+    trader_api = getattr(request.app.state, "trader_api", None)
+
+    logged_in = False
+    md_connected = False
+    td_connected = False
+
     if md_api is not None:
-        return {
-            "loggedIn": md_api.login_status == "logged_in",
-            "mdConnected": md_api.connection_status == "connected",
-            "tdConnected": False,  # TD not started until PR-9
-        }
+        logged_in = md_api.login_status == "logged_in"
+        md_connected = md_api.connection_status == "connected"
+
+    if trader_api is not None:
+        td_connected = trader_api.connection_status == "connected"
+
     return {
-        "loggedIn": False,
-        "mdConnected": False,
-        "tdConnected": False,
+        "loggedIn": logged_in,
+        "mdConnected": md_connected,
+        "tdConnected": td_connected,
     }

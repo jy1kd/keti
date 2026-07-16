@@ -187,3 +187,87 @@ class TestConnectCtpInternal:
 
         assert result["success"] is False
         assert "timeout" in result["message"].lower()
+
+
+# ── TD connection tests (PR-9) ───────────────────────────────────────────
+
+class _FakeTraderApi:
+    """Duck-type of TraderApi for testing TD startup."""
+
+    def __init__(self, config):
+        self.config = config
+        self.spi = _FakeSpi()
+        self.connection_status = "disconnected"
+        self.login_status = "not_logged_in"
+        self._created = False
+        self.order_ref = 0
+
+    def create(self):
+        self._created = True
+        self.connection_status = "connecting"
+
+    def login(self):
+        self.login_status = "logging_in"
+        return 0
+
+    def release(self):
+        self.connection_status = "disconnected"
+        self.login_status = "not_logged_in"
+
+
+class TestStartCtpTradingConnection:
+    """TD connection startup (PR-9)."""
+
+    @patch("ctp_wrapper.trader_api.TraderApi")
+    def test_function_exists(self, MockTrader):
+        """start_ctp_trading_connection should be importable and callable."""
+        from services.ctp_startup import start_ctp_trading_connection
+        assert callable(start_ctp_trading_connection)
+
+    @patch("ctp_wrapper.trader_api.TraderApi")
+    def test_creates_trader_api(self, MockTrader):
+        """TD startup creates a TraderApi instance."""
+        from services.ctp_startup import start_ctp_trading_connection
+
+        cfg = MagicMock()
+        fake_trader = _FakeTraderApi(config=cfg)
+        MockTrader.return_value = fake_trader
+        app = _FakeApp()
+
+        with patch("services.ctp_startup.asyncio.get_running_loop", return_value=MagicMock()):
+            start_ctp_trading_connection(app, cfg)
+
+        MockTrader.assert_called_once()
+
+    @patch("ctp_wrapper.trader_api.TraderApi")
+    def test_stores_on_app_state(self, MockTrader):
+        """TD startup stores trader_api and order_manager on app.state."""
+        from services.ctp_startup import start_ctp_trading_connection
+
+        cfg = MagicMock()
+        fake_trader = _FakeTraderApi(config=cfg)
+        MockTrader.return_value = fake_trader
+        app = _FakeApp()
+
+        with patch("services.ctp_startup.asyncio.get_running_loop", return_value=MagicMock()):
+            start_ctp_trading_connection(app, cfg)
+
+        assert app.state.trader_api is not None
+        assert app.state.order_manager is not None
+
+    @patch("ctp_wrapper.trader_api.TraderApi")
+    def test_td_startup_runs_in_thread(self, MockTrader):
+        """TD startup runs in a daemon thread."""
+        from services.ctp_startup import start_ctp_trading_connection
+
+        cfg = MagicMock()
+        fake_trader = _FakeTraderApi(config=cfg)
+        MockTrader.return_value = fake_trader
+        app = _FakeApp()
+
+        with patch("services.ctp_startup.asyncio.get_running_loop", return_value=MagicMock()):
+            start_ctp_trading_connection(app, cfg)
+
+        td_thread = app.state.td_thread
+        assert td_thread is not None
+        assert td_thread.daemon is True

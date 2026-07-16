@@ -29,7 +29,7 @@ from api.query import router as query_router
 from ws.manager import WebSocketManager
 from services.market_service import MarketService
 from services.ctp_bridge import wire_market_data_callback
-from services.ctp_startup import connect_ctp
+from services.ctp_startup import connect_ctp, start_ctp_trading_connection
 from ws.handlers import handle_ws
 
 
@@ -48,6 +48,10 @@ def create_app() -> FastAPI:
         result = connect_ctp(app, cfg.broker_id, cfg.user_id, cfg.password, wait=True)
         if not result.get("success"):
             logger.warning("CTP startup login failed: %s", result.get("message"))
+
+        # Start TD connection in background (fire-and-forget, non-blocking)
+        logger.info("starting CTP trading connection")
+        start_ctp_trading_connection(app, cfg)
 
         # Startup summary
         instruments = app.state.market_service.instrument_count
