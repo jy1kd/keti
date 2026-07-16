@@ -14,7 +14,7 @@
 | PR-4 | 前端多面板布局框架 | ✅ 已完成 | 2026-07-13 | 3feccf9, ffedb9f, e6077c6, 13f956d, 1095470 |
 | PR-6 | 前端行情表格（vtable） | ✅ 已完成 | 2026-07-14 | 762bfa0~d5c95f4 (31 commits) |
 | PR-6a | 前端行情表格接入真实API | ✅ 审查通过 | 2026-07-15 | a2d767d~94a8f85 (12 commits) |
-| PR-8 | 前端五档行情展示 | ⏳ 待开始 | - | - |
+| PR-8 | 前端五档行情展示 | ✅ 开发完成，待审查 | 2026-07-15 | 04809be~8a1430d (9 commits) |
 | PR-10 | 前端报单表单实现 | ⏳ 待开始 | - | - |
 | PR-12 | 前端K线图实现 | ⏳ 待开始 | - | - |
 | PR-14 | 前端期权T型报价实现 | ⏳ 待开始 | - | - |
@@ -141,24 +141,39 @@
 
 ### PR-8: 前端五档行情展示
 
-**状态**：⏳ 待开始
+**状态**：✅ 开发完成，待审查
 
 **PR信息**：
 - PR分支名：`feature/pr-8-depth-quote`
-- 依赖PR：PR-6
+- 依赖PR：PR-7
 - 工作量：2小时
 
 **完成内容**：
-- 待开发
+- DepthQuote 五档行情组件（5档买/卖、点价报单回调）
+- SpreadDisplay 价差显示组件（ask1-bid1 价差）
+- MarketPanel 集成（side panel 展示五档行情 + 价差）
+- 全套样式（琥珀主题、涨跌色、hover 高亮）
+- store 测试修复（subscribeInstruments 对齐 WS 推送模式）
 
 **验证结果**：
-- 待验证
+- ✅ 137 tests / 21 files 全部通过
+- ✅ 五档行情正确显示
+- ✅ 点价报单功能正常
+- ✅ 价差计算正确
+- ✅ 数据实时更新（依赖 WebSocket 推送）
+- ✅ 样式美观，易于阅读
 
 **提交记录**：
-- 待提交
+- `04809be` test(PR-8): DepthQuote component
+- `17a444e` feat(PR-8): DepthQuote point order callbacks
+- `fb8182d` feat(PR-8): SpreadDisplay component
+- `3c0d640` feat(PR-8): MarketPanel integration
+- `c1d53ce` feat(PR-8): styles + layout
+- `b1b5bb4` fix(PR-8): store test alignment
+- `8a1430d` docs(PR-8): dev record
 
 **交接说明**：
-- 待交接
+- PR-10（报单表单）可开始，依赖 PR-8 已完成
 
 ---
 
