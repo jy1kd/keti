@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { api, API_BASE, getInstruments, subscribeMarket, getSnapshots } from './api'
+import { api, API_BASE, getInstruments, subscribeMarket, getSnapshots, getKlineData } from './api'
 
 describe('api (Axios 实例)', () => {
   it('API_BASE 有值', () => {
@@ -98,5 +98,32 @@ describe('getSnapshots', () => {
 
     await getSnapshots()
     expect(api.get).toHaveBeenCalledWith('/api/market/snapshots', { params: undefined })
+  })
+})
+
+describe('getKlineData', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('调用 GET /api/market/kline 并返回K线数据', async () => {
+    const mockData = {
+      kline: [
+        { timestamp: 1000, open: 100, high: 105, low: 98, close: 103, volume: 500, openInterest: 1000 },
+      ],
+    }
+    vi.spyOn(api, 'get').mockResolvedValue({ data: mockData })
+
+    const result = await getKlineData('IF2608', '5m', 100)
+    expect(api.get).toHaveBeenCalledWith('/api/market/kline', { params: { instrument: 'IF2608', period: '5m', count: 100 } })
+    expect(result).toEqual(mockData)
+  })
+
+  it('支持不同周期参数', async () => {
+    const mockData = { kline: [] }
+    vi.spyOn(api, 'get').mockResolvedValue({ data: mockData })
+
+    await getKlineData('au2508', '1d')
+    expect(api.get).toHaveBeenCalledWith('/api/market/kline', { params: { instrument: 'au2508', period: '1d', count: undefined } })
   })
 })
