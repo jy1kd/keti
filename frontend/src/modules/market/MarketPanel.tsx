@@ -78,13 +78,15 @@ export function MarketPanel() {
         <Panel id="market-main" defaultSize={75} minSize={30}>
           <Group orientation="vertical" className="market-panel__main" autoSaveId="market-main-layout">
             <Panel id="market-table" defaultSize={50} minSize={15}>
-              <MarketTable
-                contracts={contracts}
-                snapshots={snapshots}
-                selectedInstrument={selectedInstrument}
-                onRowClick={handleClick}
-                onRowDoubleClick={handleDoubleClick}
-              />
+              <div style={{ height: '100%' }}>
+                <MarketTable
+                  contracts={contracts}
+                  snapshots={snapshots}
+                  selectedInstrument={selectedInstrument}
+                  onRowClick={handleClick}
+                  onRowDoubleClick={handleDoubleClick}
+                />
+              </div>
             </Panel>
             <Separator>
               <ResizeHandle direction="vertical" />
