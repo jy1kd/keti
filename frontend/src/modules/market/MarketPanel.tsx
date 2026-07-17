@@ -72,10 +72,12 @@ export function MarketPanel() {
       .then((res) => {
         if (res.bars?.length) {
           const periodMs = PERIOD_MS[period] ?? PERIOD_MS['5m']
-          const aligned = res.bars.map((bar) => ({
-            ...bar,
-            timestamp: Math.floor(bar.timestamp / periodMs) * periodMs,
-          }))
+          const aligned = res.bars.map((bar) => {
+            // 只用时分秒，去掉日期部分，与实时数据保持一致
+            const d = new Date(bar.timestamp)
+            const timeMs = ((d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds()) * 1000) + d.getMilliseconds()
+            return { ...bar, timestamp: Math.floor(timeMs / periodMs) * periodMs }
+          })
           setKlineData(selectedInstrument, aligned)
         }
       })

@@ -16,15 +16,16 @@ export const PERIOD_MS: Record<string, number> = {
 
 /**
  * 将行情快照转换为 K 线数据点
+ * 只用时分秒，不用今天的日期，避免与历史数据日期不同导致排序错误。
  * @param periodMs 周期毫秒数，用于将时间戳向下取整到周期边界
  */
 function snapshotToKline(snap: MarketSnapshot, periodMs: number): KLineData {
-  const now = new Date()
   const [h = 0, m = 0, s = 0] = (snap.updateTime ?? '00:00:00').split(':').map(Number)
-  now.setHours(h, m, s, snap.updateMillisec ?? 0)
+  // 只用时分秒毫秒，构造从 epoch 起的偏移量（不含日期）
+  const timeMs = ((h * 3600 + m * 60 + s) * 1000) + (snap.updateMillisec ?? 0)
 
   // 将时间戳向下取整到周期边界
-  const timestamp = Math.floor(now.getTime() / periodMs) * periodMs
+  const timestamp = Math.floor(timeMs / periodMs) * periodMs
 
   return {
     timestamp,
