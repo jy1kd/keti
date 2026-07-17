@@ -1,9 +1,12 @@
 """Order API — submit, cancel, query orders (PR-9)."""
 
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -99,6 +102,8 @@ async def cancel_order(request: Request, body: CancelOrderRequest):
         return {"success": False, "orderRef": body.orderRef, "message": "TD not connected — call /api/connection/login first"}
 
     om = request.app.state.order_manager
+    logger.info("CANCEL orderRef=%s orderSysID=%s client=%s",
+                body.orderRef, body.orderSysID, request.client.host if request.client else "?")
     return om.cancel(order_ref=body.orderRef, order_sys_id=body.orderSysID or "")
 
 
@@ -115,8 +120,10 @@ async def order_status(request: Request, order_ref: str):
 @router.post("/cancel_all")
 async def cancel_all_orders(request: Request):
     """Cancel all active orders."""
+    logger.info("CANCEL_ALL client=%s", request.client.host if request.client else "?")
     om = request.app.state.order_manager
     result = om.cancel_all()
+    logger.info("CANCEL_ALL result=%s", result)
     return {"success": True, **result}
 
 

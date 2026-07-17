@@ -234,6 +234,8 @@ class OrderManager:
 
         # Tracked order's orderSysID (from CTP) takes priority
         sys_id = order.get("orderSysID", "") or order_sys_id
+        logger.info("CANCEL orderRef=%s sysID=%s exchangeID=%s instrumentID=%s",
+                    order_ref, sys_id, order.get("exchangeID", ""), order.get("instrumentID", ""))
         rc = self._trader.cancel_order(
             order_ref=order_ref,
             order_sys_id=sys_id,
@@ -279,6 +281,7 @@ class OrderManager:
                 ref for ref, o in self._orders.items()
                 if o["orderStatus"] in ("pending", OrderStatus.NO_TRADED, OrderStatus.PART_TRADED)
             ]
+        logger.info("CANCEL_ALL active_refs=%s", active_refs)
         succeeded = 0
         failed = []
         for ref in active_refs:
