@@ -1597,6 +1597,84 @@ frontend/src/
 
 ---
 
+#### PR-22: 连接状态指示器完善
+
+| 项目 | 内容 |
+|------|------|
+| **PR编号** | PR-22 |
+| **PR标题** | 连接状态指示器完善（MD/TD状态广播+前端处理） |
+| **PR分支名** | `feature/pr-22-connection-status` |
+| **负责角色** | 角色A + 角色B |
+| **依赖PR** | PR-9（需要TraderApi连接状态） |
+| **工作量** | 1小时 |
+| **状态** | ⏳ 待开始 |
+
+**背景**：
+当前MD/TD指示器使用demo方案（前端通过行情数据推断MD状态），需要改为后端主动广播连接状态。
+
+**角色A（后端）任务**：
+```server/
+├── services/
+│   └── ctp_startup.py           # 修改：连接状态广播
+```
+
+1. 修改 `_on_front_connected` 回调
+   - MD连接成功时广播：`{ type: 'connection_status', data: { status: 'connected', target: 'md' } }`
+   - 不再依赖 `_wire_bridge` 后才广播
+2. 新增 TD 连接状态广播
+   - TD连接成功时广播：`{ type: 'connection_status', data: { status: 'connected', target: 'td' } }`
+   - TD断连时广播：`{ type: 'connection_status', data: { status: 'disconnected', target: 'td' } }`
+3. 初始连接成功后立即广播一次
+   - 解决当前MD指示器红色问题（后端未广播初始状态）
+
+**角色B（前端）任务**：
+```frontend/src/
+├── hooks/
+│   ├── useSystemWs.ts           # 修改：处理target字段
+│   └── useMarketWs.ts           # 修改：移除demo方案
+├── stores/
+│   └── connection.ts            # 修改：添加reset逻辑
+```
+
+1. 修改 `useSystemWs` hook
+   - 解析 `connection_status` 消息的 `target` 字段（'md' | 'td'）
+   - 根据 target 调用 `setMdConnected` 或 `setTdConnected`
+   - 移除当前只处理MD的逻辑
+2. 修改 `useMarketWs` hook
+   - 移除 `setMdConnected(true)` 的demo方案
+   - 连接状态完全由 `useSystemWs` 管理
+3. 连接状态重置
+   - WebSocket断连时自动重置对应状态
+   - 页面刷新时重新建立连接
+
+**消息格式**：
+```typescript
+// 后端推送
+{
+  type: 'connection_status',
+  data: {
+    status: 'connected' | 'disconnected' | 'reconnect_failed',
+    target: 'md' | 'td',  // 新增：区分行情/交易
+    reason?: number        // 断连原因（可选）
+  }
+}
+```
+
+**验证方法**：
+1. 启动后端，确认MD指示器变绿
+2. 启动TD连接（PR-9完成后），确认TD指示器变绿
+3. 断开网络，确认指示器变红
+4. 恢复网络，确认指示器变绿
+
+**验收标准**：
+- [ ] MD连接成功后指示器变绿
+- [ ] TD连接成功后指示器变绿
+- [ ] 断连后指示器变红
+- [ ] 重连后指示器变绿
+- [ ] 消息格式包含target字段
+
+---
+
 #### PR-14: 前端期权T型报价
 
 | 项目 | 内容 |
