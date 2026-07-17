@@ -211,9 +211,26 @@ export function KLineChart({ instrument, klineData, period, onPeriodChange }: KL
 
   useEffect(() => {
     if (instanceRef.current && klineData.length > 0) {
+      const chart = instanceRef.current
       // 首次加载全量替换，后续更新合并模式
       const isInit = prevDataLenRef.current === 0
-      instanceRef.current.setOption(buildOption(klineData, period), isInit)
+
+      // 非首次加载时，保存当前 dataZoom 状态防止跳回
+      let savedZoom: { start?: number; end?: number } | null = null
+      if (!isInit) {
+        const opt = chart.getOption() as any
+        if (opt.dataZoom?.[0]) {
+          savedZoom = { start: opt.dataZoom[0].start, end: opt.dataZoom[0].end }
+        }
+      }
+
+      chart.setOption(buildOption(klineData, period), isInit)
+
+      // 恢复 dataZoom 状态
+      if (savedZoom) {
+        chart.dispatchAction({ type: 'dataZoom', start: savedZoom.start, end: savedZoom.end })
+      }
+
       prevDataLenRef.current = klineData.length
     }
   }, [klineData, period])
