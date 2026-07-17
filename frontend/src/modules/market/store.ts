@@ -57,7 +57,9 @@ export const useMarketStore = create<MarketStore>((set) => ({
   setKlineData: (instrument, data) =>
     set((state) => {
       const next = new Map(state.klineData)
-      next.set(instrument, data)
+      // 按时间戳排序，确保蜡烛顺序正确
+      const sorted = [...data].sort((a, b) => a.timestamp - b.timestamp)
+      next.set(instrument, sorted)
       return { klineData: next }
     }),
   appendKline: (instrument, candle) =>
