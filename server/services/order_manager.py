@@ -78,6 +78,7 @@ class OrderManager:
         limit_price: float = 0.0,
         volume: int = 1,
         time_condition: str = "1",
+        volume_condition: str = "1",
         hedge_flag: str = "1",
         stop_price: float = 0.0,
         wait_response: bool = True,
@@ -100,6 +101,7 @@ class OrderManager:
             limit_price=limit_price,
             volume=volume,
             time_condition=time_condition,
+            volume_condition=volume_condition,
             hedge_flag=hedge_flag,
             stop_price=stop_price,
         )

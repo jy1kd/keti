@@ -81,6 +81,7 @@ async def insert_order(request: Request, body: InsertOrderRequest):
         limit_price=body.limitPrice,
         volume=body.volumeTotalOriginal,
         time_condition=body.timeCondition,
+        volume_condition=body.volumeCondition,
         hedge_flag=body.hedgeFlag,
     )
     return result
