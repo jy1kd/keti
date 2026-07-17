@@ -21,12 +21,24 @@ vi.mock('echarts', () => ({
   default: { init: mockInit },
 }))
 
-// Mock ResizeObserver
-globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
+// Mock ResizeObserver — 触发回调模拟容器有尺寸
+globalThis.ResizeObserver = vi.fn().mockImplementation((callback: ResizeObserverCallback) => {
+  const observer = {
+    observe: vi.fn((target: Element) => {
+      // 模拟容器有尺寸（jsdom 中 offsetWidth/offsetHeight 默认为 0）
+      Object.defineProperty(target, 'offsetWidth', { value: 800, configurable: true })
+      Object.defineProperty(target, 'offsetHeight', { value: 600, configurable: true })
+      const entry = {
+        contentRect: { width: 800, height: 600 },
+        target,
+      } as unknown as ResizeObserverEntry
+      callback([entry], observer as unknown as ResizeObserver)
+    }),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }
+  return observer
+})
 
 const sampleData: KLineData[] = [
   { timestamp: 1000, open: 100, high: 105, low: 98, close: 103, volume: 500, openInterest: 1000 },
