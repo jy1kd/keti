@@ -47,6 +47,7 @@ class OrderManager:
         self._lock = threading.RLock()
         self._broadcast_fn: Optional[Callable[[str, dict], None]] = None
         self._rsp_events: Dict[str, threading.Event] = {}
+        self._rsp_action_results: Dict[str, tuple] = {}
 
     # ── Properties ───────────────────────────────────────────────────────
 
@@ -173,35 +174,81 @@ class OrderManager:
         if event is not None:
             event.set()
 
+    def on_rsp_order_action(self, order_ref: str, error_id: int, error_msg: str) -> None:
+        """Handle OnRspOrderAction from CTP — signal waiting cancel() thread.
+
+        Called from the CTP callback thread.
+        """
+        # Signal the waiting cancel() thread
+        event = self._rsp_events.get(order_ref)
+        if event is not None:
+            # Store result for cancel() to read
+            if error_id != 0:
+                self._rsp_action_results[order_ref] = ("error", error_msg)
+            else:
+                self._rsp_action_results[order_ref] = ("accepted", "")
+            event.set()
+
     # ── Cancel ────────────────────────────────────────────────────────────
 
-    def cancel(self, order_ref: str, order_sys_id: str = "") -> int:
+    def cancel(
+        self,
+        order_ref: str,
+        order_sys_id: str = "",
+        wait_response: bool = True,
+        wait_timeout: float = 3.0,
+    ) -> dict:
         """Cancel an active order by its orderRef.
 
         Extracts exchange_id, instrument_id, and orderSysID from the
         tracked order. The tracked order's orderSysID (set by CTP's
         OnRtnOrder callback) takes priority; the explicit parameter
-        serves as fallback when the callback hasn't arrived yet.
+        serves as fallback.
 
-        Args:
-            order_ref: Order reference from insert().
-            order_sys_id: Fallback order system ID (from frontend).
+        When wait_response=True (default), blocks until OnRspOrderAction
+        arrives from CTP and returns the actual callback result.
 
         Returns:
-            int: 0 on success, -1 if order not found, or CTP error code.
+            dict: {"success": bool, "orderRef": str, "message": str}
         """
         with self._lock:
             order = self._orders.get(order_ref)
         if order is None:
-            return -1
+            return {"success": False, "orderRef": order_ref, "message": "Order not found"}
+
         # Tracked order's orderSysID (from CTP) takes priority
         sys_id = order.get("orderSysID", "") or order_sys_id
-        return self._trader.cancel_order(
+        rc = self._trader.cancel_order(
             order_ref=order_ref,
             order_sys_id=sys_id,
             exchange_id=order.get("exchangeID", ""),
             instrument_id=order.get("instrumentID", ""),
         )
+        if rc != 0:
+            return {"success": False, "orderRef": order_ref, "message": "CTP local reject"}
+
+        if not wait_response:
+            return {"success": True, "orderRef": order_ref, "message": "Submitted"}
+
+        # Wait for OnRspOrderAction callback
+        event = threading.Event()
+        with self._lock:
+            self._rsp_events[order_ref] = event
+
+        received = event.wait(timeout=wait_timeout)
+
+        with self._lock:
+            self._rsp_events.pop(order_ref, None)
+            result = self._rsp_action_results.pop(order_ref, None)
+
+        if not received or result is None:
+            return {"success": True, "orderRef": order_ref, "message": "Submitted (confirmation timeout)"}
+
+        status, msg = result
+        if status == "error":
+            return {"success": False, "orderRef": order_ref, "message": msg or "Cancel rejected"}
+
+        return {"success": True, "orderRef": order_ref, "message": "Accepted"}
 
     # ── Cancel all ────────────────────────────────────────────────────────
 
@@ -219,8 +266,8 @@ class OrderManager:
         succeeded = 0
         failed = []
         for ref in active_refs:
-            result = self.cancel(ref)
-            if result == 0:
+            result = self.cancel(ref, wait_response=False)
+            if result["success"]:
                 succeeded += 1
             else:
                 failed.append(ref)

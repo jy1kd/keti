@@ -451,9 +451,13 @@ def start_ctp_trading_connection(
     def _on_rsp_order_action(pInputOrderAction, pRspInfo, nRequestID, bIsLast):
         if not bIsLast:
             return
-        if pRspInfo is not None and getattr(pRspInfo, "ErrorID", -1) != 0:
-            err_msg = getattr(pRspInfo, "ErrorMsg", "unknown error")
-            logger.warning("CTP order action rejected: %s", err_msg)
+        order_ref = getattr(pInputOrderAction, "OrderRef", "")
+        error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
+        error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
+        if error_id != 0:
+            logger.warning("CTP order action rejected (ref=%s): %s", order_ref, error_msg)
+        if order_manager is not None:
+            order_manager.on_rsp_order_action(order_ref, error_id, error_msg)
 
     trader.spi.on("OnFrontConnected", _on_front_connected)
     trader.spi.on("OnRspUserLogin", _on_rsp_user_login)
