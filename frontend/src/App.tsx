@@ -38,26 +38,29 @@ function App() {
   return (
     <div className="app">
       <header className="status-bar">
-        <ConnectionStatus />
-        <button
-          className="status-bar__btn"
-          onClick={() => setPerfVisible((v) => !v)}
-          title="FPS 监控 (Ctrl+Shift+M)"
-          style={{
-            marginLeft: 12,
-            background: perfVisible ? 'rgba(63,185,80,0.12)' : 'transparent',
-            color: perfVisible ? '#3fb950' : '#8b949e',
-            border: '1px solid #30363d',
-            borderRadius: 4,
-            padding: '2px 8px',
-            cursor: 'pointer',
-            fontSize: 11,
-            fontFamily: 'var(--font-mono)',
-          }}
-        >
-          {perfVisible ? <><PerfMonitor visible /> FPS</> : 'FPS'}
-        </button>
+        <div className="status-bar__left">
+          <ConnectionStatus />
+          <button
+            className="status-bar__btn"
+            onClick={() => setPerfVisible((v) => !v)}
+            title="FPS 监控 (Ctrl+Shift+M)"
+            style={{
+              marginLeft: 12,
+              background: perfVisible ? 'rgba(63,185,80,0.12)' : 'transparent',
+              color: perfVisible ? '#3fb950' : '#8b949e',
+              border: '1px solid #30363d',
+              borderRadius: 4,
+              padding: '2px 8px',
+              cursor: 'pointer',
+              fontSize: 11,
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
+            {perfVisible ? <><PerfMonitor visible /> ⚡FPS</> : '⚡FPS'}
+          </button>
+        </div>
         <span className="app-title">SimNow 交易终端</span>
+        <div className="status-bar__right" />
       </header>
       <Group orientation="vertical" className="main-content" id="app-layout" onLayoutChange={onAppLayout}>
         <Panel id="main" defaultSize={savedApp?.main ?? 75} minSize={30}>
