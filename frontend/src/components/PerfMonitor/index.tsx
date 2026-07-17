@@ -17,7 +17,7 @@ export function PerfMonitor() {
   // Ctrl+P 切换
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === 'p') {
+      if (e.ctrlKey && e.shiftKey && e.key === 'P') {
         e.preventDefault()
         setVisible((v) => !v)
       }

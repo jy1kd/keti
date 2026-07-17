@@ -32,16 +32,16 @@ describe('PerfMonitor', () => {
     expect(screen.queryByText(/FPS/)).not.toBeInTheDocument()
   })
 
-  it('Ctrl+P 切换显示/隐藏', async () => {
+  it('Ctrl+Shift+P 切换显示/隐藏', async () => {
     const user = userEvent.setup()
     render(<PerfMonitor />)
 
     // 按 Ctrl+P 显示
-    await user.keyboard('{Control>}p{/Control}')
+    await user.keyboard('{Control>}{Shift>}P{/Shift}{/Control}')
     expect(screen.getByText(/FPS/)).toBeInTheDocument()
 
     // 再按 Ctrl+P 隐藏
-    await user.keyboard('{Control>}p{/Control}')
+    await user.keyboard('{Control>}{Shift>}P{/Shift}{/Control}')
     expect(screen.queryByText(/FPS/)).not.toBeInTheDocument()
   })
 
@@ -49,7 +49,7 @@ describe('PerfMonitor', () => {
     const user = userEvent.setup()
     render(<PerfMonitor />)
 
-    await user.keyboard('{Control>}p{/Control}')
+    await user.keyboard('{Control>}{Shift>}P{/Shift}{/Control}')
 
     // 触发一帧回调来计算 FPS
     act(() => {
@@ -64,7 +64,7 @@ describe('PerfMonitor', () => {
     const user = userEvent.setup()
     render(<PerfMonitor />)
 
-    await user.keyboard('{Control>}p{/Control}')
+    await user.keyboard('{Control>}{Shift>}P{/Shift}{/Control}')
 
     // 模拟低 FPS：每帧间隔 50ms（20 FPS）
     let timeCounter = 0
@@ -93,7 +93,7 @@ describe('PerfMonitor', () => {
     const { unmount } = render(<PerfMonitor />)
 
     // 先显示组件（启动 rAF 循环）
-    await user.keyboard('{Control>}p{/Control}')
+    await user.keyboard('{Control>}{Shift>}P{/Shift}{/Control}')
 
     unmount()
     expect(cancelSpy).toHaveBeenCalled()
