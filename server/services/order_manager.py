@@ -46,6 +46,7 @@ class OrderManager:
         self._trades: Dict[str, List[dict]] = {}
         self._lock = threading.RLock()
         self._broadcast_fn: Optional[Callable[[str, dict], None]] = None
+        self._rsp_events: Dict[str, threading.Event] = {}
 
     # ── Properties ───────────────────────────────────────────────────────
 
@@ -78,17 +79,19 @@ class OrderManager:
         time_condition: str = "1",
         hedge_flag: str = "1",
         stop_price: float = 0.0,
-    ) -> str:
+        wait_response: bool = True,
+        wait_timeout: float = 3.0,
+    ) -> dict:
         """Submit an order via TraderApi and track it as 'pending'.
 
-        Creates a pending record BEFORE calling CTP so that
-        get_order(ref) returns immediately.
+        When wait_response=True (default), blocks until OnRspOrderInsert
+        arrives from CTP and returns the actual callback result.
 
         Returns:
-            str: Order reference. Empty string on failure.
+            dict: {"success": bool, "orderRef": str, "message": str}
         """
         # Call CTP first to get the real order_ref
-        result = self._trader.insert_order(
+        ref = self._trader.insert_order(
             instrument_id=instrument_id,
             direction=direction,
             offset_flag=offset_flag,
@@ -99,12 +102,12 @@ class OrderManager:
             hedge_flag=hedge_flag,
             stop_price=stop_price,
         )
-        if not result:
-            return ""
+        if not ref:
+            return {"success": False, "orderRef": "", "message": "CTP local reject"}
 
-        # Create pending record with the real order_ref
+        # Create pending record
         pending = {
-            "orderRef": result,
+            "orderRef": ref,
             "orderSysID": "",
             "orderStatus": "pending",
             "orderSubmitStatus": "",
@@ -126,9 +129,49 @@ class OrderManager:
             "brokerID": self._trader.config.broker_id,
             "investorID": self._trader.config.user_id,
         }
+
+        event = threading.Event()
         with self._lock:
-            self._orders[result] = pending
-        return result
+            self._orders[ref] = pending
+            self._rsp_events[ref] = event
+
+        if not wait_response:
+            return {"success": True, "orderRef": ref, "message": "Submitted"}
+
+        # Wait for OnRspOrderInsert callback (fires in CTP thread)
+        received = event.wait(timeout=wait_timeout)
+
+        with self._lock:
+            self._rsp_events.pop(ref, None)
+            order = self._orders.get(ref, {})
+
+        if not received:
+            return {"success": True, "orderRef": ref, "message": "Submitted (confirmation timeout)"}
+
+        submit_status = order.get("orderSubmitStatus", "")
+        if submit_status == "error":
+            return {"success": False, "orderRef": ref, "message": order.get("statusMsg", "Order rejected")}
+
+        return {"success": True, "orderRef": ref, "message": "Accepted"}
+
+    # ── Response callbacks ──────────────────────────────────────────────────
+
+    def on_rsp_order_insert(self, order_ref: str, error_id: int, error_msg: str) -> None:
+        """Handle OnRspOrderInsert from CTP — update order and signal waiter.
+
+        Called from the CTP callback thread. Updates the pending order's
+        orderSubmitStatus and statusMsg, then signals any thread waiting
+        in insert().
+        """
+        with self._lock:
+            order = self._orders.get(order_ref)
+            if order is not None:
+                order["orderSubmitStatus"] = "error" if error_id != 0 else "accepted"
+                order["statusMsg"] = error_msg
+        # Signal the waiting insert() thread
+        event = self._rsp_events.get(order_ref)
+        if event is not None:
+            event.set()
 
     # ── Cancel ────────────────────────────────────────────────────────────
 

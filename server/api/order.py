@@ -73,7 +73,7 @@ async def insert_order(request: Request, body: InsertOrderRequest):
     Validates parameters and delegates to OrderManager.insert().
     """
     om = request.app.state.order_manager
-    ref = om.insert(
+    result = om.insert(
         instrument_id=body.instrumentID,
         direction=body.direction,
         offset_flag=body.offsetFlag,
@@ -83,9 +83,7 @@ async def insert_order(request: Request, body: InsertOrderRequest):
         time_condition=body.timeCondition,
         hedge_flag=body.hedgeFlag,
     )
-    if ref:
-        return {"success": True, "orderRef": ref}
-    return {"success": False, "message": "Order rejected by CTP"}
+    return result
 
 
 @router.post("/cancel")

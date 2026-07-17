@@ -63,7 +63,7 @@ class TestOrderManagerConstruction:
 class TestOrderManagerInsert:
     """insert() — submit order + track in pending state."""
 
-    def test_insert_returns_order_ref(self):
+    def test_insert_returns_dict_on_success(self):
         _mock_ctp_module()
         from services.order_manager import OrderManager
 
@@ -72,12 +72,35 @@ class TestOrderManagerInsert:
         trader._api.ReqOrderInsert.return_value = 0
         om = OrderManager(trader)
 
-        ref = om.insert(
+        result = om.insert(
             instrument_id="IF2608",
             direction=Direction.BUY,
             offset_flag=OffsetFlag.OPEN,
+            wait_response=False,
         )
-        assert ref == "1"
+        assert result["success"] is True
+        assert result["orderRef"] == "1"
+        assert result["message"] == "Submitted"
+        _unmock_ctp()
+
+    def test_insert_ctp_local_reject(self):
+        """ReqOrderInsert returns non-0 → success=False."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = -1  # CTP reject
+        om = OrderManager(trader)
+
+        result = om.insert(
+            instrument_id="IF2608",
+            direction=Direction.BUY,
+            offset_flag=OffsetFlag.OPEN,
+            wait_response=False,
+        )
+        assert result["success"] is False
+        assert result["orderRef"] == ""
         _unmock_ctp()
 
     def test_insert_creates_pending_record(self):
@@ -89,15 +112,123 @@ class TestOrderManagerInsert:
         trader._api.ReqOrderInsert.return_value = 0
         om = OrderManager(trader)
 
-        ref = om.insert(
+        result = om.insert(
             instrument_id="IF2608",
             direction=Direction.BUY,
             offset_flag=OffsetFlag.OPEN,
+            wait_response=False,
         )
-        order = om.get_order(ref)
+        order = om.get_order(result["orderRef"])
         assert order is not None
         assert order["orderStatus"] == "pending"
         assert order["instrumentID"] == "IF2608"
+        _unmock_ctp()
+
+    def test_on_rsp_order_insert_accepted(self):
+        """on_rsp_order_insert(ErrorID=0) → orderSubmitStatus='accepted'."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        om = OrderManager(trader)
+
+        result = om.insert(
+            instrument_id="IF2608",
+            direction=Direction.BUY,
+            offset_flag=OffsetFlag.OPEN,
+            wait_response=False,
+        )
+        om.on_rsp_order_insert(result["orderRef"], 0, "")
+        order = om.get_order(result["orderRef"])
+        assert order["orderSubmitStatus"] == "accepted"
+        assert order["statusMsg"] == ""
+        _unmock_ctp()
+
+    def test_on_rsp_order_insert_rejected(self):
+        """on_rsp_order_insert(ErrorID≠0) → orderSubmitStatus='error'."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        om = OrderManager(trader)
+
+        result = om.insert(
+            instrument_id="IF2608",
+            direction=Direction.BUY,
+            offset_flag=OffsetFlag.OPEN,
+            wait_response=False,
+        )
+        om.on_rsp_order_insert(result["orderRef"], 15, "合约不存在")
+        order = om.get_order(result["orderRef"])
+        assert order["orderSubmitStatus"] == "error"
+        assert order["statusMsg"] == "合约不存在"
+        _unmock_ctp()
+
+    def test_insert_waits_for_rsp_on_success(self):
+        """With wait_response=True, insert blocks until callback."""
+        import threading
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        om = OrderManager(trader)
+
+        # Simulate callback arriving from CTP thread after a short delay
+        def delayed_accept():
+            import time
+            time.sleep(0.05)
+            om.on_rsp_order_insert("1", 0, "")
+        t = threading.Thread(target=delayed_accept, daemon=True)
+
+        # Start delayed callback, then block in insert
+        t.start()
+        result = om.insert(
+            instrument_id="IF2608",
+            direction=Direction.BUY,
+            offset_flag=OffsetFlag.OPEN,
+            wait_response=True,
+            wait_timeout=1.0,
+        )
+        t.join()
+        assert result["success"] is True
+        assert result["orderRef"] == "1"
+        assert result["message"] == "Accepted"
+        _unmock_ctp()
+
+    def test_insert_waits_for_rsp_on_error(self):
+        """With wait_response=True, insert reflects callback error."""
+        import threading
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        om = OrderManager(trader)
+
+        def delayed_reject():
+            import time
+            time.sleep(0.05)
+            om.on_rsp_order_insert("1", 15, "合约不存在")
+        t = threading.Thread(target=delayed_reject, daemon=True)
+
+        t.start()
+        result = om.insert(
+            instrument_id="IF2608",
+            direction=Direction.BUY,
+            offset_flag=OffsetFlag.OPEN,
+            wait_response=True,
+            wait_timeout=1.0,
+        )
+        t.join()
+        assert result["success"] is False
+        assert "合约不存在" in result["message"]
         _unmock_ctp()
 
     def test_get_nonexistent_order_returns_none(self):
@@ -120,9 +251,9 @@ class TestOrderManagerInsert:
         om = OrderManager(trader)
 
         om.insert(instrument_id="IF2608", direction=Direction.BUY,
-                   offset_flag=OffsetFlag.OPEN)
+                   offset_flag=OffsetFlag.OPEN, wait_response=False)
         om.insert(instrument_id="IF2609", direction=Direction.SELL,
-                   offset_flag=OffsetFlag.OPEN)
+                   offset_flag=OffsetFlag.OPEN, wait_response=False)
         all_orders = om.get_all_orders()
         assert len(all_orders) == 2
         _unmock_ctp()
@@ -143,8 +274,9 @@ class TestOrderManagerCancel:
         trader._api.ReqOrderAction.return_value = 0
         om = OrderManager(trader)
 
-        ref = om.insert(instrument_id="IF2608", direction=Direction.BUY,
-                         offset_flag=OffsetFlag.OPEN)
+        res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN, wait_response=False)
+        ref = res["orderRef"]
         result = om.cancel(ref)
         assert result == 0
         trader._api.ReqOrderAction.assert_called_once()
@@ -171,8 +303,9 @@ class TestOrderManagerCancel:
         trader.cancel_order = Mock(return_value=0)
         om = OrderManager(trader)
 
-        ref = om.insert(instrument_id="IF2608", direction=Direction.BUY,
-                         offset_flag=OffsetFlag.OPEN)
+        res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN, wait_response=False)
+        ref = res["orderRef"]
         # Simulate OnRtnOrder callback — CTP assigns system ID
         om.on_rtn_order({
             "orderRef": ref,
@@ -200,8 +333,9 @@ class TestOrderManagerCancel:
         trader.cancel_order = Mock(return_value=0)
         om = OrderManager(trader)
 
-        ref = om.insert(instrument_id="IF2608", direction=Direction.BUY,
-                         offset_flag=OffsetFlag.OPEN)
+        res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN, wait_response=False)
+        ref = res["orderRef"]
         # No on_rtn_order — orderSysID is still ""
 
         om.cancel(ref, order_sys_id="MANUAL999")
@@ -228,8 +362,9 @@ class TestOrderManagerOnRtnOrder:
         trader._api.ReqOrderInsert.return_value = 0
         om = OrderManager(trader)
 
-        ref = om.insert(instrument_id="IF2608", direction=Direction.BUY,
-                         offset_flag=OffsetFlag.OPEN)
+        res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN, wait_response=False)
+        ref = res["orderRef"]
 
         order_data = {
             "orderRef": ref,
@@ -269,8 +404,9 @@ class TestOrderManagerOnRtnTrade:
         trader._api.ReqOrderInsert.return_value = 0
         om = OrderManager(trader)
 
-        ref = om.insert(instrument_id="IF2608", direction=Direction.BUY,
-                         offset_flag=OffsetFlag.OPEN)
+        res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN, wait_response=False)
+        ref = res["orderRef"]
         om.on_rtn_order({
             "orderRef": ref,
             "orderSysID": "SYS999",
@@ -317,9 +453,9 @@ class TestOrderManagerCancelAll:
         om = OrderManager(trader)
 
         om.insert(instrument_id="IF2608", direction=Direction.BUY,
-                   offset_flag=OffsetFlag.OPEN)
+                   offset_flag=OffsetFlag.OPEN, wait_response=False)
         om.insert(instrument_id="IF2609", direction=Direction.SELL,
-                   offset_flag=OffsetFlag.OPEN)
+                   offset_flag=OffsetFlag.OPEN, wait_response=False)
 
         result = om.cancel_all()
         assert isinstance(result, dict)
@@ -340,9 +476,10 @@ class TestOrderManagerCancelAll:
         om = OrderManager(trader)
 
         om.insert(instrument_id="IF2608", direction=Direction.BUY,
-                   offset_flag=OffsetFlag.OPEN)
-        ref2 = om.insert(instrument_id="IF2609", direction=Direction.SELL,
-                          offset_flag=OffsetFlag.OPEN)
+                   offset_flag=OffsetFlag.OPEN, wait_response=False)
+        res2 = om.insert(instrument_id="IF2609", direction=Direction.SELL,
+                          offset_flag=OffsetFlag.OPEN, wait_response=False)
+        ref2 = res2["orderRef"]
 
         # Make cancel() fail for ref2 only
         original_cancel = om.cancel
@@ -389,7 +526,7 @@ class TestOrderManagerBroadcast:
         om.set_broadcast_fn(lambda msg_type, data: calls.append((msg_type, data)))
 
         om.insert(instrument_id="IF2608", direction=Direction.BUY,
-                   offset_flag=OffsetFlag.OPEN)
+                   offset_flag=OffsetFlag.OPEN, wait_response=False)
         om.on_rtn_order({
             "orderRef": "1",
             "orderSysID": "SYS999",
@@ -413,7 +550,7 @@ class TestOrderManagerBroadcast:
         om.set_broadcast_fn(lambda msg_type, data: calls.append((msg_type, data)))
 
         om.insert(instrument_id="IF2608", direction=Direction.BUY,
-                   offset_flag=OffsetFlag.OPEN)
+                   offset_flag=OffsetFlag.OPEN, wait_response=False)
         om.on_rtn_order({"orderRef": "1", "orderSysID": "SYS999", "orderStatus": "2"})
 
         om.on_rtn_trade({
@@ -460,12 +597,13 @@ class TestOrderManagerThreadSafety:
         def insert_many():
             try:
                 for _ in range(50):
-                    ref = om.insert(
+                    res = om.insert(
                         instrument_id="IF2608",
                         direction=Direction.BUY,
                         offset_flag=OffsetFlag.OPEN,
+                        wait_response=False,
                     )
-                    refs.append(ref)
+                    refs.append(res["orderRef"])
             except Exception as e:
                 errors.append(str(e))
 

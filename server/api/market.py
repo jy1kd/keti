@@ -42,7 +42,6 @@ async def get_instruments(request: Request, keyword: str = ""):
 
 
 # ── Subscribe ───────────────────────────────────────────────────────────
-
 @router.post("/subscribe")
 async def subscribe(body: SubscribeRequest, request: Request):
     """Subscribe to market data for a list of instrument IDs.
