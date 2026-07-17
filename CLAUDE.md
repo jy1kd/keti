@@ -25,7 +25,7 @@ keti/
 │   ├── prd.md                # 产品需求文档
 │   ├── design.md             # 技术架构设计（接口、数据模型）
 │   ├── dev.md                # 项目设计稿（代码结构、技术规范）
-│   ├── task.md               # PR 任务拆分（17 个 PR，5 个阶段）
+│   ├── task.md               # PR 任务拆分（21 个 PR，5 个阶段）
 │   ├── task-dev-flow.md      # 开发流程指南
 │   └── ctp-api-structure.txt # CTP 字段探测输出（类型定义参考）
 ├── snapshots/role-a/         # 角色A 快照文件

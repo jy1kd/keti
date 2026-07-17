@@ -179,7 +179,7 @@ PR-1 [A] → PR-3 [A] → PR-5 [A] → PR-7 [A] → PR-9 [A] → PR-11 [A] → P
 
 **并行优化**：
 - 角色B的PR-2、PR-4、PR-6、PR-8、PR-10、PR-12、PR-14可与角色A并行
-- PR-15依赖PR-9和PR-10，需等待PR-9完成后才能开始
+- PR-15依赖PR-9、PR-10和PR-11，需等待PR-9完成后才能开始
 - PR-16依赖PR-11和PR-13，需等待两者都完成后才能开始
 - 实际总工期取决于关键路径 + 角色B的额外工作量
 
@@ -399,7 +399,6 @@ git branch -d feature/pr-<编号>-<描述>
 |----|------|------|------|--------|
 | PR-9 | 后端交易API实现 | PR-7 | ⏳ 待开始 | `feature/pr-9-trader-api` |
 | PR-10 | 前端报单表单实现 | PR-9 | ⏳ 待开始 | `feature/pr-10-order-form` |
-| PR-11 | 后端查询API实现 | PR-9 | ⏳ 待开始 | `feature/pr-11-query-api` |
 | PR-19 | 后端合约查询API（CTP ReqQryInstrument） | PR-9 | ⏳ 待开始 | `feature/pr-19-instrument-query-api` |
 | PR-20 | 前端合约刷新功能（刷新按钮 + Toast） | PR-19 | ⏳ 待开始 | `feature/pr-20-instrument-refresh-ui` |
 

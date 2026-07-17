@@ -358,7 +358,7 @@ app.include_router(query.router, prefix="/api/query", tags=["query"])
 #### 4.2.1 行情API封装
 
 ```python
-# server/ctp/md_user_api.py
+# server/ctp_wrapper/md_user_api.py
 import logging
 import time
 from typing import Callable, Optional
@@ -427,10 +427,8 @@ class MdUserApi:
     def unsubscribe(self, instruments: list[str]) -> bool:
         """退订行情"""
         try:
-            ret = self.api.UnSubscribeMarketData(
-                [i.encode('utf-8') for i in instruments],
-                len(instruments)
-            )
+            # ⚠️ 必须传字符串列表，传bytes会导致堆损坏崩溃（0xC0000374）
+            ret = self.api.UnSubscribeMarketData(instruments)
             if ret == 0:
                 logger.info(f"行情退订成功: {instruments}")
                 return True
@@ -549,7 +547,7 @@ class MdSpi(ctp.CThostFtdcMdSpi):
 #### 4.2.2 交易API封装
 
 ```python
-# server/ctp/trader_api.py
+# server/ctp_wrapper/trader_api.py
 import logging
 import time
 from typing import Callable, Optional
@@ -971,7 +969,7 @@ class TraderSpi(ctp.CThostFtdcTraderSpi):
 #### 4.2.3 回调处理
 
 ```python
-# server/ctp/callback.py
+# server/ctp_wrapper/callback.py
 import logging
 from ws.manager import ws_manager
 from services.market_service import MarketService
@@ -988,7 +986,7 @@ class CallbackHandler:
 
     def on_market_data(self, data: dict):
         """行情回调"""
-        instrument_id = data['instrument_id']
+        instrument_id = data['instrumentID']
         # 1. 更新内存缓存
         self.market_service.update_snapshot(instrument_id, data)
         # 2. 通过WebSocket推送给前端

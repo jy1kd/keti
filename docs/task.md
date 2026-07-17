@@ -464,8 +464,6 @@ server/
 5. 调用快照接口，获取当前行情数据
 6. 调用K线接口，返回K线数据
 7. 调用五档深度接口，返回深度数据
-8. 调用期权接口，返回期权数据
-9. 验证订阅限制（超过500个返回错误）
 
 **验收标准**：
 - [ ] 合约列表查询正常（支持模糊搜索）
@@ -473,9 +471,6 @@ server/
 - [ ] 行情快照获取正常
 - [ ] K线数据获取正常（多周期）
 - [ ] 五档深度数据获取正常
-- [ ] 期权合约列表获取正常
-- [ ] 期权T型报价数据获取正常
-- [ ] 隐含波动率计算正常
 - [ ] WebSocket行情推送正常
 - [ ] 订阅限制生效（500个）
 - [ ] 合约列表缓存正常
@@ -1018,7 +1013,7 @@ frontend/src/
 | **PR标题** | 前端报单表单实现 |
 | **PR分支名** | `feature/pr-10-order-form` |
 | **负责角色** | 角色B |
-| **依赖PR** | PR-8 |
+| **依赖PR** | PR-9（报单表单需要后端交易API） |
 | **工作量** | 3小时 |
 | **状态** | ⏳ 待开始 |
 
@@ -1054,6 +1049,44 @@ frontend/src/
    - 数量输入（支持步进调整）
    - 提交按钮（买入/卖出）
    - 报单确认反馈（Toast提示：成功/失败+orderRef）
+
+**⚠️ 前后端字段映射（重要）**：
+
+前端使用人类可读字符串，后端使用CTP字符码。前端提交报单时需要转换：
+
+| 字段 | 前端格式 | 后端CTP格式 |
+|------|----------|-------------|
+| direction | `'buy'` / `'sell'` | `"0"` / `"1"` |
+| combOffsetFlag | `'open'` / `'close'` / `'close_today'` | `"0"` / `"1"` / `"3"` |
+| orderPriceType | `'limit'` / `'market'` | `"2"` / `"1"` |
+| timeCondition | `'gfd'` / `'fok'` / `'fak'` | `"1"` / `"2"` / `"3"` |
+
+**前端转换方案**（在前端api.ts或store中实现）：
+```typescript
+// 前端提交时转换
+const DIRECTION_MAP = { buy: '0', sell: '1' }
+const OFFSET_MAP = { open: '0', close: '1', close_today: '3' }
+const PRICE_TYPE_MAP = { limit: '2', market: '1' }
+const TIME_CONDITION_MAP = { gfd: '1', fok: '2', fak: '3' }
+
+function convertOrderRequest(form: OrderRequest) {
+  return {
+    ...form,
+    direction: DIRECTION_MAP[form.direction],
+    combOffsetFlag: OFFSET_MAP[form.combOffsetFlag],
+    orderPriceType: PRICE_TYPE_MAP[form.orderPriceType],
+    timeCondition: TIME_CONDITION_MAP[form.timeCondition],
+  }
+}
+```
+
+**后端返回数据转换**（后端返回CTP格式，前端显示时转换）：
+```typescript
+// 后端返回时转换（用于显示）
+const DIRECTION_REVERSE = { '0': 'buy', '1': 'sell' }
+const OFFSET_REVERSE = { '0': 'open', '1': 'close', '3': 'close_today' }
+const ORDER_STATUS_MAP = { '0': 'all_traded', '1': 'partial', '2': 'no_traded', '5': 'canceled' }
+```
 2. 实现价格步进Hook（usePriceStep）
    - 根据合约最小变动价位自动对齐
    - 支持+/-按钮调整
@@ -1189,6 +1222,9 @@ server/
 5. 调用合约信息接口，返回合约数据
 6. 通过WebSocket接收持仓更新
 
+**⚠️ 待修复问题（遗留）**：
+- `server/services/market_service.py` 的 subscribe() 和 unsubscribe() 方法在CTP调用失败时仍返回 `{"success": true}`，应返回失败信息。在PR-11开发时一并修复此错误处理逻辑。
+
 **验收标准**：
 - [ ] 报单流水查询正常
 - [ ] 成交流水查询正常
@@ -1213,7 +1249,7 @@ server/
 | **PR标题** | 前端K线图实现 |
 | **PR分支名** | `feature/pr-12-kline-chart` |
 | **负责角色** | 角色B |
-| **依赖PR** | PR-6 |
+| **依赖PR** | PR-5（K线图需要行情API获取K线数据） |
 | **工作量** | 2小时 |
 | **状态** | ✅ 已完成 |
 
@@ -1621,6 +1657,9 @@ frontend/src/
 4. 隐含波动率列正常显示（调用/api/market/volatility）
 5. 波动率数据随行情实时更新
 6. 点击行权价高亮正常
+
+**⚠️ 待修复问题（遗留）**：
+- `design.md` 中 VolatilityData 定义只有3个字段（instrumentID, impliedVolatility, updateTime），与 `dev.md` 的8个字段不一致。在PR-14开发时统一两个文档的定义（以dev.md的8字段为准，含BS模型参数）。
 
 **验收标准**：
 - [ ] 期权面板正常显示
