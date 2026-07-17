@@ -159,10 +159,11 @@ class OrderManager:
         if submit_status == "error":
             return {"success": False, "orderRef": ref, "message": status_msg or "Order rejected"}
         # OnRtnOrder: CTP OrderSubmitStatus
-        #   '2' = InsertRejected (exchange rejected the order)
-        #   '4' = CancelRejected
-        if submit_status in ("2", "4"):
-            return {"success": False, "orderRef": ref, "message": status_msg or "Order rejected by exchange"}
+        #   '4' = InsertRejected  (exchange rejected the order)
+        #   '5' = CancelRejected
+        #   '6' = ModifyRejected
+        if submit_status in ("4", "5", "6"):
+            return {"success": False, "orderRef": ref, "message": f"CTP:{status_msg}" if status_msg else "Order rejected by exchange"}
         # OnRspOrderInsert accepted (our internal value)
         if submit_status == "accepted":
             return {"success": True, "orderRef": ref, "message": "Accepted"}
