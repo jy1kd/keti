@@ -158,6 +158,9 @@ class OrderManager:
         order_status = order.get("orderStatus", "")
         status_msg = order.get("statusMsg", "")
 
+        logger.info("INSERT result ref=%s submitStatus=%s orderStatus=%s statusMsg=%s",
+                    ref, submit_status, order_status, status_msg)
+
         # OnRspOrderInsert error (our internal value)
         if submit_status == "error":
             return {"success": False, "orderRef": ref, "message": status_msg or "Order rejected"}
