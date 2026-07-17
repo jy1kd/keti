@@ -1,8 +1,9 @@
 """Tests for ctp/trader_api.py — Trading API wrapper."""
 
+import re
 import sys
 import os
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock, MagicMock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -93,12 +94,13 @@ class TestInsertOrder:
 
     def test_insert_order_returns_ref_on_success(self):
         api = self._make_api(req_order_return=0)
-        order_ref = api.insert_order(
-            instrument_id="au2506",
-            direction=Direction.BUY,
-            offset_flag=OffsetFlag.OPEN,
-        )
-        assert order_ref == "1"
+        with patch("time.strftime", return_value="000000"):
+            order_ref = api.insert_order(
+                instrument_id="au2506",
+                direction=Direction.BUY,
+                offset_flag=OffsetFlag.OPEN,
+            )
+        assert order_ref == "000000-1"
         assert api.order_ref == 1
 
     def test_insert_order_returns_empty_on_failure(self):
@@ -122,13 +124,14 @@ class TestInsertOrder:
     def test_next_order_ref_sequence(self):
         api = self._make_api(req_order_return=0)
         refs = []
-        for _ in range(3):
-            refs.append(api.insert_order(
-                instrument_id="au2506",
-                direction=Direction.BUY,
-                offset_flag=OffsetFlag.OPEN,
-            ))
-        assert refs == ["1", "2", "3"]
+        with patch("time.strftime", return_value="000000"):
+            for _ in range(3):
+                refs.append(api.insert_order(
+                    instrument_id="au2506",
+                    direction=Direction.BUY,
+                    offset_flag=OffsetFlag.OPEN,
+                ))
+        assert refs == ["000000-1", "000000-2", "000000-3"]
 
     def test_market_order_uses_any_price_type(self):
         api = self._make_api(req_order_return=0)

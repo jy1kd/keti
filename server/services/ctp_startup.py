@@ -431,7 +431,12 @@ def start_ctp_trading_connection(
             return
         if pRspInfo is None or getattr(pRspInfo, "ErrorID", -1) == 0:
             trader.login_status = "logged_in"
-            logger.info("CTP TD login successful (user=%s), confirming settlement", config.user_id)
+            # Record session identity for stale-callback filtering
+            front_id = getattr(pRspUserLogin, "FrontID", 0)
+            session_id = getattr(pRspUserLogin, "SessionID", 0)
+            order_manager.set_session(front_id, session_id)
+            logger.info("CTP TD login successful (user=%s, front=%s, session=%s), confirming settlement",
+                        config.user_id, front_id, session_id)
             # Confirm settlement — required before placing orders
             try:
                 trader.confirm_settlement()
@@ -597,7 +602,12 @@ def connect_trading(
             trader.login_status = "logged_in"
             result["success"] = True
             result["message"] = "Login successful"
-            logger.info("CTP TD login successful (user=%s), confirming settlement", user_id)
+            # Record session identity for stale-callback filtering
+            front_id = getattr(pRspUserLogin, "FrontID", 0)
+            session_id = getattr(pRspUserLogin, "SessionID", 0)
+            order_manager.set_session(front_id, session_id)
+            logger.info("CTP TD login successful (user=%s, front=%s, session=%s), confirming settlement",
+                        user_id, front_id, session_id)
             try:
                 trader.confirm_settlement()
                 logger.info("CTP settlement confirm sent")

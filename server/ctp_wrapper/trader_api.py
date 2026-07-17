@@ -8,6 +8,7 @@ Wraps CThostFtdcTraderApi for SimNow order management:
 - release: cleanup
 """
 
+import time
 from typing import Optional
 
 from .callback import TraderSpi
@@ -73,9 +74,15 @@ class TraderApi:
         return self._api.ReqSettlementInfoConfirm(field, self._request_id)
 
     def _next_order_ref(self) -> str:
-        """Generate next order reference string."""
+        """Generate next order reference string.
+
+        Uses HHmmss-N format (e.g. "093015-1") to prevent collision with
+        historical orders after a service restart.  CTP OrderRef is char[13]
+        in older CTP versions; 9 chars leaves 4 bytes of headroom.
+        """
         self.order_ref += 1
-        return str(self.order_ref)
+        ts = time.strftime("%H%M%S")
+        return f"{ts}-{self.order_ref}"
 
     def insert_order(
         self,

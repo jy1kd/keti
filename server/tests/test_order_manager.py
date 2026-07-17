@@ -1,8 +1,9 @@
 """Tests for services/order_manager.py — order state tracking and operations."""
 
+import re
 import sys
 import os
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock, MagicMock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -72,14 +73,15 @@ class TestOrderManagerInsert:
         trader._api.ReqOrderInsert.return_value = 0
         om = OrderManager(trader)
 
-        result = om.insert(
-            instrument_id="IF2608",
-            direction=Direction.BUY,
-            offset_flag=OffsetFlag.OPEN,
-            wait_response=False,
-        )
+        with patch("time.strftime", return_value="000000"):
+            result = om.insert(
+                instrument_id="IF2608",
+                direction=Direction.BUY,
+                offset_flag=OffsetFlag.OPEN,
+                wait_response=False,
+            )
         assert result["success"] is True
-        assert result["orderRef"] == "1"
+        assert result["orderRef"] == "000000-1"
         assert result["message"] == "Submitted"
         _unmock_ctp()
 
@@ -183,21 +185,22 @@ class TestOrderManagerInsert:
         def delayed_accept():
             import time
             time.sleep(0.05)
-            om.on_rsp_order_insert("1", 0, "")
+            om.on_rsp_order_insert("000000-1", 0, "")
         t = threading.Thread(target=delayed_accept, daemon=True)
 
         # Start delayed callback, then block in insert
-        t.start()
-        result = om.insert(
-            instrument_id="IF2608",
-            direction=Direction.BUY,
-            offset_flag=OffsetFlag.OPEN,
-            wait_response=True,
-            wait_timeout=1.0,
-        )
+        with patch("time.strftime", return_value="000000"):
+            t.start()
+            result = om.insert(
+                instrument_id="IF2608",
+                direction=Direction.BUY,
+                offset_flag=OffsetFlag.OPEN,
+                wait_response=True,
+                wait_timeout=1.0,
+            )
         t.join()
         assert result["success"] is True
-        assert result["orderRef"] == "1"
+        assert result["orderRef"] == "000000-1"
         assert result["message"] == "Accepted"
         _unmock_ctp()
 
@@ -215,17 +218,18 @@ class TestOrderManagerInsert:
         def delayed_reject():
             import time
             time.sleep(0.05)
-            om.on_rsp_order_insert("1", 15, "合约不存在")
+            om.on_rsp_order_insert("000000-1", 15, "合约不存在")
         t = threading.Thread(target=delayed_reject, daemon=True)
 
-        t.start()
-        result = om.insert(
-            instrument_id="IF2608",
-            direction=Direction.BUY,
-            offset_flag=OffsetFlag.OPEN,
-            wait_response=True,
-            wait_timeout=1.0,
-        )
+        with patch("time.strftime", return_value="000000"):
+            t.start()
+            result = om.insert(
+                instrument_id="IF2608",
+                direction=Direction.BUY,
+                offset_flag=OffsetFlag.OPEN,
+                wait_response=True,
+                wait_timeout=1.0,
+            )
         t.join()
         assert result["success"] is False
         assert "合约不存在" in result["message"]
@@ -247,23 +251,24 @@ class TestOrderManagerInsert:
             import time
             time.sleep(0.05)
             om.on_rtn_order({
-                "orderRef": "1",
+                "orderRef": "000000-1",
                 "orderSysID": "SYS999",
                 "orderStatus": "2",
             })
         t = threading.Thread(target=delayed_rtn, daemon=True)
 
-        t.start()
-        result = om.insert(
-            instrument_id="IF2608",
-            direction=Direction.BUY,
-            offset_flag=OffsetFlag.OPEN,
-            wait_response=True,
-            wait_timeout=1.0,
-        )
+        with patch("time.strftime", return_value="000000"):
+            t.start()
+            result = om.insert(
+                instrument_id="IF2608",
+                direction=Direction.BUY,
+                offset_flag=OffsetFlag.OPEN,
+                wait_response=True,
+                wait_timeout=1.0,
+            )
         t.join()
         assert result["success"] is True
-        assert result["orderRef"] == "1"
+        assert result["orderRef"] == "000000-1"
         assert "Accepted" in result["message"]
         _unmock_ctp()
 
@@ -528,6 +533,112 @@ class TestOrderManagerOnRtnOrder:
         _unmock_ctp()
 
 
+# ── Session filtering ────────────────────────────────────────────────────
+
+class TestOrderManagerSessionFilter:
+    """set_session() + on_rtn_order() stale-callback filtering."""
+
+    def test_set_session_stores_ids(self):
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        om = OrderManager(trader)
+        om.set_session(123, 456)
+        assert om._my_front_id == 123
+        assert om._my_session_id == 456
+        _unmock_ctp()
+
+    def test_on_rtn_order_accepts_stale_when_session_not_set(self):
+        """Before set_session(), all callbacks accepted (defense in depth
+        — no pending orders exist pre-login anyway)."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        om = OrderManager(trader)
+
+        with patch("time.strftime", return_value="000000"):
+            res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                            offset_flag=OffsetFlag.OPEN, wait_response=False)
+        ref = res["orderRef"]
+
+        # Callback arrives with unknown session IDs — accepted
+        om.on_rtn_order({
+            "orderRef": ref,
+            "orderSysID": "SYS111",
+            "orderStatus": "2",
+            "frontID": 999,
+            "sessionID": 888,
+        })
+        order = om.get_order(ref)
+        assert order["orderSysID"] == "SYS111"
+        _unmock_ctp()
+
+    def test_on_rtn_order_rejects_stale_after_session_set(self):
+        """After set_session(), callbacks from different (frontID, sessionID)
+        are silently dropped."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        om = OrderManager(trader)
+
+        om.set_session(100, 200)  # current session
+
+        with patch("time.strftime", return_value="000000"):
+            res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                            offset_flag=OffsetFlag.OPEN, wait_response=False)
+        ref = res["orderRef"]
+
+        # Historical callback from a previous connection
+        om.on_rtn_order({
+            "orderRef": ref,
+            "orderSysID": "SYS_STALE",
+            "orderStatus": "5",
+            "frontID": 999,  # different frontID
+            "sessionID": 888,  # different sessionID
+        })
+        order = om.get_order(ref)
+        # OrderSysID should NOT have been overwritten by the stale callback
+        assert order["orderSysID"] == ""
+        _unmock_ctp()
+
+    def test_on_rtn_order_accepts_matching_session(self):
+        """Callbacks from the current session are accepted normally."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        om = OrderManager(trader)
+
+        om.set_session(100, 200)  # current session
+
+        with patch("time.strftime", return_value="000000"):
+            res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                            offset_flag=OffsetFlag.OPEN, wait_response=False)
+        ref = res["orderRef"]
+
+        # Callback from current session
+        om.on_rtn_order({
+            "orderRef": ref,
+            "orderSysID": "SYS_CURRENT",
+            "orderStatus": "2",
+            "frontID": 100,
+            "sessionID": 200,
+        })
+        order = om.get_order(ref)
+        assert order["orderSysID"] == "SYS_CURRENT"
+        _unmock_ctp()
+
+
 # ── OnRtnTrade callback ──────────────────────────────────────────────────
 
 class TestOrderManagerOnRtnTrade:
@@ -664,10 +775,11 @@ class TestOrderManagerBroadcast:
         calls = []
         om.set_broadcast_fn(lambda msg_type, data: calls.append((msg_type, data)))
 
-        om.insert(instrument_id="IF2608", direction=Direction.BUY,
-                   offset_flag=OffsetFlag.OPEN, wait_response=False)
+        with patch("time.strftime", return_value="000000"):
+            res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                            offset_flag=OffsetFlag.OPEN, wait_response=False)
         om.on_rtn_order({
-            "orderRef": "1",
+            "orderRef": res["orderRef"],
             "orderSysID": "SYS999",
             "orderStatus": "2",
         })
@@ -688,13 +800,15 @@ class TestOrderManagerBroadcast:
         calls = []
         om.set_broadcast_fn(lambda msg_type, data: calls.append((msg_type, data)))
 
-        om.insert(instrument_id="IF2608", direction=Direction.BUY,
-                   offset_flag=OffsetFlag.OPEN, wait_response=False)
-        om.on_rtn_order({"orderRef": "1", "orderSysID": "SYS999", "orderStatus": "2"})
+        with patch("time.strftime", return_value="000000"):
+            res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                            offset_flag=OffsetFlag.OPEN, wait_response=False)
+            ref = res["orderRef"]
+        om.on_rtn_order({"orderRef": ref, "orderSysID": "SYS999", "orderStatus": "2"})
 
         om.on_rtn_trade({
             "tradeID": "T001",
-            "orderRef": "1",
+            "orderRef": ref,
             "price": 3850.0,
             "volume": 1,
         })

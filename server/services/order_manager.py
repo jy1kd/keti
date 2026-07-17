@@ -48,6 +48,10 @@ class OrderManager:
         self._broadcast_fn: Optional[Callable[[str, dict], None]] = None
         self._rsp_events: Dict[str, threading.Event] = {}
         self._rsp_action_results: Dict[str, tuple] = {}
+        # Session identity for filtering historical callbacks after restart.
+        # Set via set_session() from OnRspUserLogin.  -1 = not yet set.
+        self._my_front_id: int = -1
+        self._my_session_id: int = -1
 
     # ── Properties ───────────────────────────────────────────────────────
 
@@ -56,6 +60,25 @@ class OrderManager:
         """Return a snapshot of all tracked orders (thread-safe copy)."""
         with self._lock:
             return dict(self._orders)
+
+    # ── Session identity ──────────────────────────────────────────────────
+
+    def set_session(self, front_id: int, session_id: int) -> None:
+        """Record current CTP session identity for filtering stale callbacks.
+
+        Must be called from OnRspUserLogin with the FrontID / SessionID
+        returned by CTP.  Once set, on_rtn_order() will ignore callbacks
+        whose (frontID, sessionID) do not match — preventing historical
+        orders from a previous connection from overwriting current orders.
+
+        Args:
+            front_id: CTP FrontID from CThostFtdcRspUserLoginField.
+            session_id: CTP SessionID from CThostFtdcRspUserLoginField.
+        """
+        self._my_front_id = front_id
+        self._my_session_id = session_id
+        logger.info("OrderManager session set: frontID=%s sessionID=%s",
+                    front_id, session_id)
 
     # ── Broadcast hook ────────────────────────────────────────────────────
 
@@ -367,17 +390,39 @@ class OrderManager:
 
         Updates the in-memory order record with the latest CTP state.
 
+        After set_session() has been called, callbacks whose
+        (frontID, sessionID) do not match the current session are
+        silently dropped — these are historical orders pushed by CTP
+        after reconnection that would otherwise overwrite active orders.
+
         Args:
             order_data: CamelCase dict from map_order().
         """
         ref = order_data.get("orderRef", "")
         if not ref:
             return
+
         with self._lock:
             existing = self._orders.get(ref)
             if existing is None:
                 # Order from another session — ignore
                 return
+
+            # Once we know our session identity, filter stale callbacks.
+            # Before set_session() is called (_my_front_id == -1), accept
+            # all callbacks — no pending orders exist at that point anyway
+            # because login hasn't completed yet.
+            if self._my_front_id != -1:
+                in_front = order_data.get("frontID", 0)
+                in_session = order_data.get("sessionID", 0)
+                if (in_front, in_session) != (self._my_front_id, self._my_session_id):
+                    logger.warning(
+                        "Stale OnRtnOrder ignored: ref=%s frontID=%s/%s sessionID=%s/%s",
+                        ref, in_front, self._my_front_id,
+                        in_session, self._my_session_id,
+                    )
+                    return
+
             existing.update(order_data)
 
         # Signal any thread waiting in insert() — OnRtnOrder may arrive
