@@ -431,7 +431,13 @@ def start_ctp_trading_connection(
             return
         if pRspInfo is None or getattr(pRspInfo, "ErrorID", -1) == 0:
             trader.login_status = "logged_in"
-            logger.info("CTP TD login successful (user=%s)", config.user_id)
+            logger.info("CTP TD login successful (user=%s), confirming settlement", config.user_id)
+            # Confirm settlement — required before placing orders
+            try:
+                trader.confirm_settlement()
+                logger.info("CTP settlement confirm sent")
+            except Exception:
+                logger.warning("CTP settlement confirm failed", exc_info=True)
         else:
             err_msg = getattr(pRspInfo, "ErrorMsg", "unknown error")
             logger.warning("CTP TD login failed: %s", err_msg)
@@ -591,7 +597,12 @@ def connect_trading(
             trader.login_status = "logged_in"
             result["success"] = True
             result["message"] = "Login successful"
-            logger.info("CTP TD login successful (user=%s)", user_id)
+            logger.info("CTP TD login successful (user=%s), confirming settlement", user_id)
+            try:
+                trader.confirm_settlement()
+                logger.info("CTP settlement confirm sent")
+            except Exception:
+                logger.warning("CTP settlement confirm failed", exc_info=True)
         else:
             err_msg = getattr(pRspInfo, "ErrorMsg", "unknown error")
             result["success"] = False
@@ -599,10 +610,35 @@ def connect_trading(
             logger.warning("CTP TD login failed: %s", err_msg)
         td_login_done.set()
 
+    # Wire order response callbacks — forward to OrderManager for state update
+    def _on_rsp_order_insert(pInputOrder, pRspInfo, nRequestID, bIsLast):
+        if not bIsLast:
+            return
+        order_ref = getattr(pInputOrder, "OrderRef", "")
+        error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
+        error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
+        if error_id != 0:
+            logger.warning("CTP order insert rejected (ref=%s): %s", order_ref, error_msg)
+        if order_manager is not None:
+            order_manager.on_rsp_order_insert(order_ref, error_id, error_msg)
+
+    def _on_rsp_order_action(pInputOrderAction, pRspInfo, nRequestID, bIsLast):
+        if not bIsLast:
+            return
+        order_ref = getattr(pInputOrderAction, "OrderRef", "")
+        error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
+        error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
+        if error_id != 0:
+            logger.warning("CTP order action rejected (ref=%s): %s", order_ref, error_msg)
+        if order_manager is not None:
+            order_manager.on_rsp_order_action(order_ref, error_id, error_msg)
+
     trader.spi.on("OnFrontConnected", _on_front_connected)
     trader.spi.on("OnRspUserLogin", _on_rsp_user_login)
     trader.spi.on("OnRtnOrder", _on_rtn_order)
     trader.spi.on("OnRtnTrade", _on_rtn_trade)
+    trader.spi.on("OnRspOrderInsert", _on_rsp_order_insert)
+    trader.spi.on("OnRspOrderAction", _on_rsp_order_action)
 
     def _run():
         try:

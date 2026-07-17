@@ -62,6 +62,16 @@ class TraderApi:
         self.login_status = "logging_in"
         return self._api.ReqUserLogin(login_field, self._request_id)
 
+    def confirm_settlement(self) -> int:
+        """Confirm settlement info — required before placing orders."""
+        import ctp
+
+        self._request_id += 1
+        field = ctp.CThostFtdcSettlementInfoConfirmField()
+        field.BrokerID = self.config.broker_id
+        field.InvestorID = self.config.user_id
+        return self._api.ReqSettlementInfoConfirm(field, self._request_id)
+
     def _next_order_ref(self) -> str:
         """Generate next order reference string."""
         self.order_ref += 1
