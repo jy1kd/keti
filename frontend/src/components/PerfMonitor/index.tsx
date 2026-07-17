@@ -1,30 +1,25 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useReducer } from 'react'
 
 /** FPS 低于此值显示警告色 */
 const LOW_FPS_THRESHOLD = 30
 
+interface PerfMonitorProps {
+  visible: boolean
+}
+
 /**
  * 性能监控组件
- * Ctrl+P 切换显示/隐藏，实时显示 FPS。
+ * 显示实时 FPS，FPS < 30 时红色警告。
+ * 由父组件通过 visible prop 控制显示/隐藏。
  */
-export function PerfMonitor() {
-  const [visible, setVisible] = useState(false)
-  const [fps, setFps] = useState(0)
+export function PerfMonitor({ visible }: PerfMonitorProps) {
   const frameCountRef = useRef(0)
   const lastTimeRef = useRef(performance.now())
   const rafRef = useRef(0)
+  const fpsRef = useRef(0)
 
-  // Ctrl+P 切换
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'M') {
-        e.preventDefault()
-        setVisible((v) => !v)
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  // 使用 ref + forceUpdate 减少不必要的渲染
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0)
 
   // FPS 计算循环
   const tick = useCallback(() => {
@@ -33,7 +28,8 @@ export function PerfMonitor() {
     const elapsed = now - lastTimeRef.current
 
     if (elapsed >= 1000) {
-      setFps(Math.round((frameCountRef.current * 1000) / elapsed))
+      fpsRef.current = Math.round((frameCountRef.current * 1000) / elapsed)
+      forceUpdate()
       frameCountRef.current = 0
       lastTimeRef.current = now
     }
@@ -54,6 +50,7 @@ export function PerfMonitor() {
 
   if (!visible) return null
 
+  const fps = fpsRef.current
   const isLow = fps < LOW_FPS_THRESHOLD && fps > 0
 
   return (
