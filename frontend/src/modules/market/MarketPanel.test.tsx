@@ -106,7 +106,7 @@ describe('MarketPanel', () => {
 
   it('启动时调用 useMarketWs 连接 WebSocket 行情推送', () => {
     render(<MarketPanel />)
-    expect(mockUseMarketWs).toHaveBeenCalledWith('ws://localhost:8000')
+    expect(mockUseMarketWs).toHaveBeenCalledWith('ws://localhost:8000', '5m')
   })
 
   it('renders DepthQuote for selected instrument', () => {

@@ -31,8 +31,8 @@ export function MarketPanel() {
     savePanelSizes('market-main-layout', { table: layout['market-table'], kline: layout['market-kline'] })
   }, [])
 
-  // WebSocket 行情推送
-  useMarketWs(API_BASE.replace('http', 'ws'))
+  // WebSocket 行情推送（period 影响实时 K 线的时间对齐）
+  useMarketWs(API_BASE.replace('http', 'ws'), period)
 
   useEffect(() => {
     if (!fetchedRef.current) {

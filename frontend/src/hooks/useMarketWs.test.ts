@@ -121,4 +121,37 @@ describe('useMarketWs', () => {
       }),
     )
   })
+
+  it('K 线时间戳按周期向下取整', () => {
+    const appendKline = vi.fn()
+    useMarketStore.setState({ appendKline })
+
+    // 使用 5m 周期
+    renderHook(() => useMarketWs('ws://localhost:8000', '5m'))
+
+    const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
+
+    act(() => {
+      onMessage({
+        type: 'market_data',
+        data: {
+          instrumentID: 'IF2608',
+          lastPrice: 4120.0,
+          volume: 100,
+          openInterest: 500,
+          openPrice: 4100.0,
+          highPrice: 4130.0,
+          lowPrice: 4090.0,
+          updateTime: '14:32:15',
+          updateMillisec: 0,
+        },
+      })
+    })
+
+    // 14:32:15 在 5m 周期应取整到 14:30:00 (即 5分钟边界)
+    const klineArg = appendKline.mock.calls[0][1]
+    const date = new Date(klineArg.timestamp)
+    expect(date.getMinutes() % 5).toBe(0)
+    expect(date.getSeconds()).toBe(0)
+  })
 })
