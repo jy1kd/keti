@@ -42,10 +42,10 @@ function App() {
         <button
           className="status-bar__btn"
           onClick={() => setPerfVisible((v) => !v)}
-          title="性能监控 (Ctrl+Shift+M)"
+          title="FPS 监控 (Ctrl+Shift+M)"
           style={{
             marginLeft: 12,
-            background: perfVisible ? 'rgba(63,185,80,0.15)' : 'transparent',
+            background: perfVisible ? 'rgba(63,185,80,0.12)' : 'transparent',
             color: perfVisible ? '#3fb950' : '#8b949e',
             border: '1px solid #30363d',
             borderRadius: 4,
@@ -55,11 +55,10 @@ function App() {
             fontFamily: 'var(--font-mono)',
           }}
         >
-          ⚡ Perf
+          {perfVisible ? <><PerfMonitor visible /> FPS</> : 'FPS'}
         </button>
         <span className="app-title">SimNow 交易终端</span>
       </header>
-      <PerfMonitor visible={perfVisible} />
       <Group orientation="vertical" className="main-content" id="app-layout" onLayoutChange={onAppLayout}>
         <Panel id="main" defaultSize={savedApp?.main ?? 75} minSize={30}>
           <Group orientation="horizontal" id="main-layout" onLayoutChange={onMainLayout}>
