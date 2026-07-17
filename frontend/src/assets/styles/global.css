@@ -144,16 +144,10 @@ input:focus-visible, select:focus-visible {
 .status-bar__left {
   display: flex;
   align-items: center;
-  gap: 0;
-}
-
-.status-bar__right {
-  flex: 1;
 }
 
 .app-title {
-  flex: 1;
-  text-align: center;
+  margin-left: auto;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.04em;

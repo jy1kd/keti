@@ -60,7 +60,6 @@ function App() {
           </button>
         </div>
         <span className="app-title">SimNow 交易终端</span>
-        <div className="status-bar__right" />
       </header>
       <Group orientation="vertical" className="main-content" id="app-layout" onLayoutChange={onAppLayout}>
         <Panel id="main" defaultSize={savedApp?.main ?? 75} minSize={30}>
