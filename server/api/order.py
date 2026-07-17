@@ -112,8 +112,8 @@ async def order_status(request: Request, order_ref: str):
 async def cancel_all_orders(request: Request):
     """Cancel all active orders."""
     om = request.app.state.order_manager
-    count = om.cancel_all()
-    return {"success": True, "count": count, "message": f"Cancelled {count} orders"}
+    result = om.cancel_all()
+    return {"success": True, **result}
 
 
 @router.post("/reverse")

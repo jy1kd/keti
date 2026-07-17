@@ -275,7 +275,7 @@ class TestOrderCancelAllApi:
     """POST /api/order/cancel_all."""
 
     @pytest.mark.anyio
-    async def test_cancel_all_returns_count(self):
+    async def test_cancel_all_returns_result_dict(self):
         app = _make_app_with_order_manager()
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -283,7 +283,9 @@ class TestOrderCancelAllApi:
         assert resp.status_code == 200
         data = resp.json()
         assert data["success"] is True
-        assert "count" in data
+        assert "attempted" in data
+        assert "succeeded" in data
+        assert "failedRefs" in data
 
 
 # ── Reverse (placeholder) ────────────────────────────────────────────────

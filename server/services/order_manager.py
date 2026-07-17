@@ -162,23 +162,30 @@ class OrderManager:
 
     # ── Cancel all ────────────────────────────────────────────────────────
 
-    def cancel_all(self) -> int:
+    def cancel_all(self) -> dict:
         """Cancel all active (non-final) orders.
 
         Returns:
-            int: Number of orders cancelled.
+            dict: {"attempted": int, "succeeded": int, "failedRefs": [str]}
         """
         with self._lock:
             active_refs = [
                 ref for ref, o in self._orders.items()
                 if o["orderStatus"] in ("pending", OrderStatus.NO_TRADED, OrderStatus.PART_TRADED)
             ]
-        count = 0
+        succeeded = 0
+        failed = []
         for ref in active_refs:
             result = self.cancel(ref)
             if result == 0:
-                count += 1
-        return count
+                succeeded += 1
+            else:
+                failed.append(ref)
+        return {
+            "attempted": len(active_refs),
+            "succeeded": succeeded,
+            "failedRefs": failed,
+        }
 
     # ── Reverse (placeholder — needs PR-11 position data) ────────────────
 

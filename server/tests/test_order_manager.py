@@ -306,7 +306,7 @@ class TestOrderManagerOnRtnTrade:
 class TestOrderManagerCancelAll:
     """cancel_all() — cancel all active orders."""
 
-    def test_cancel_all_calls_cancel_for_each(self):
+    def test_cancel_all_returns_result_dict(self):
         _mock_ctp_module()
         from services.order_manager import OrderManager
 
@@ -321,9 +321,41 @@ class TestOrderManagerCancelAll:
         om.insert(instrument_id="IF2609", direction=Direction.SELL,
                    offset_flag=OffsetFlag.OPEN)
 
-        count = om.cancel_all()
-        assert count == 2
-        assert trader._api.ReqOrderAction.call_count == 2
+        result = om.cancel_all()
+        assert isinstance(result, dict)
+        assert result["attempted"] == 2
+        assert result["succeeded"] == 2
+        assert result["failedRefs"] == []
+        _unmock_ctp()
+
+    def test_cancel_all_failed_refs_excluded_from_succeeded(self):
+        """Orders that fail cancel() go into failedRefs, not succeeded."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        trader._api.ReqOrderAction.return_value = 0
+        om = OrderManager(trader)
+
+        om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                   offset_flag=OffsetFlag.OPEN)
+        ref2 = om.insert(instrument_id="IF2609", direction=Direction.SELL,
+                          offset_flag=OffsetFlag.OPEN)
+
+        # Make cancel() fail for ref2 only
+        original_cancel = om.cancel
+        def fake_cancel(ref, order_sys_id=""):
+            if ref == ref2:
+                return -1
+            return original_cancel(ref, order_sys_id=order_sys_id)
+        om.cancel = fake_cancel
+
+        result = om.cancel_all()
+        assert result["attempted"] == 2
+        assert result["succeeded"] == 1
+        assert result["failedRefs"] == [ref2]
         _unmock_ctp()
 
     def test_cancel_all_empty_returns_zero(self):
@@ -333,7 +365,9 @@ class TestOrderManagerCancelAll:
         trader = TraderApi(Config())
         trader._api = Mock()
         om = OrderManager(trader)
-        assert om.cancel_all() == 0
+        result = om.cancel_all()
+        assert result["attempted"] == 0
+        assert result["succeeded"] == 0
         _unmock_ctp()
 
 
