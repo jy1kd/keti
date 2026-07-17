@@ -390,8 +390,9 @@ def start_ctp_trading_connection(
     loop = asyncio.get_running_loop()
 
     trader = TraderApi(td_config)
+    order_manager = OrderManager(trader)
     app.state.trader_api = trader
-    app.state.order_manager = OrderManager(trader)
+    app.state.order_manager = order_manager
 
     # Set up broadcast hook for OrderManager
     ws_manager = app.state.ws_manager
@@ -547,8 +548,9 @@ def connect_trading(
     from services.field_mapping import map_order, map_trade
 
     trader = TraderApi(td_config)
+    order_manager = OrderManager(trader)
     app.state.trader_api = trader
-    app.state.order_manager = OrderManager(trader)
+    app.state.order_manager = order_manager
 
     # Set up broadcast
     ws_manager = app.state.ws_manager
