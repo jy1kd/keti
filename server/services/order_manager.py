@@ -177,10 +177,9 @@ class OrderManager:
         # OrderStatus '5' = cancelled
         if order_status == OrderStatus.CANCELED:
             return {"success": False, "orderRef": ref, "message": status_msg or "Order cancelled"}
-        # OrderStatus 'a' = unknown/error
-        if order_status == "a":
-            return {"success": False, "orderRef": ref, "message": status_msg or "Order status unknown"}
-        # Any other orderStatus ('0'/'1'/'2') means the order is alive
+        # Any other orderStatus ('0'/'1'/'2'/'a') means the order is alive.
+        # 'a' = CTP initial state (Unknown), transitions to '0'/'1'/'2'/'5'
+        # on subsequent OnRtnOrder callbacks.
         if order_status:
             return {"success": True, "orderRef": ref, "message": "Accepted"}
 
