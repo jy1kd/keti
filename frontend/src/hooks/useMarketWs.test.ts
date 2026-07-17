@@ -84,4 +84,41 @@ describe('useMarketWs', () => {
     expect(result.current).toHaveProperty('reconnectCount')
     expect(result.current).toHaveProperty('isReconnecting')
   })
+
+  it('收到 market_data 时同时更新 K 线数据（appendKline）', () => {
+    const appendKline = vi.fn()
+    useMarketStore.setState({ appendKline })
+
+    renderHook(() => useMarketWs('ws://localhost:8000'))
+
+    const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
+
+    act(() => {
+      onMessage({
+        type: 'market_data',
+        data: {
+          instrumentID: 'IF2608',
+          lastPrice: 4120.0,
+          volume: 100,
+          openInterest: 500,
+          openPrice: 4100.0,
+          highPrice: 4130.0,
+          lowPrice: 4090.0,
+          preClosePrice: 4110.0,
+          preSettlementPrice: 4105.0,
+          updateTime: '14:30:00',
+          updateMillisec: 500,
+        },
+      })
+    })
+
+    // appendKline 应被调用，参数包含 instrumentID 和 KLineData
+    expect(appendKline).toHaveBeenCalledWith(
+      'IF2608',
+      expect.objectContaining({
+        close: 4120.0,
+        volume: 100,
+      }),
+    )
+  })
 })
