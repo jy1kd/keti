@@ -155,17 +155,25 @@ class OrderManager:
         order_status = order.get("orderStatus", "")
         status_msg = order.get("statusMsg", "")
 
-        # OnRspOrderInsert error
+        # OnRspOrderInsert error (our internal value)
         if submit_status == "error":
             return {"success": False, "orderRef": ref, "message": status_msg or "Order rejected"}
-        # OnRspOrderInsert accepted
+        # OnRtnOrder: CTP OrderSubmitStatus
+        #   '2' = InsertRejected (exchange rejected the order)
+        #   '4' = CancelRejected
+        if submit_status in ("2", "4"):
+            return {"success": False, "orderRef": ref, "message": status_msg or "Order rejected by exchange"}
+        # OnRspOrderInsert accepted (our internal value)
         if submit_status == "accepted":
             return {"success": True, "orderRef": ref, "message": "Accepted"}
         # OnRtnOrder arrived (SimNow may skip OnRspOrderInsert)
-        # orderStatus="5" means cancelled/rejected by exchange
+        # OrderStatus '5' = cancelled
         if order_status == OrderStatus.CANCELED:
-            return {"success": False, "orderRef": ref, "message": status_msg or "Order rejected by exchange"}
-        # Any other orderStatus means the order is alive
+            return {"success": False, "orderRef": ref, "message": status_msg or "Order cancelled"}
+        # OrderStatus 'a' = unknown/error
+        if order_status == "a":
+            return {"success": False, "orderRef": ref, "message": status_msg or "Order status unknown"}
+        # Any other orderStatus ('0'/'1'/'2') means the order is alive
         if order_status:
             return {"success": True, "orderRef": ref, "message": "Accepted"}
 
