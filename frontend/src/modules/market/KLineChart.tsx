@@ -219,7 +219,7 @@ export function KLineChart({ instrument, klineData, period, onPeriodChange }: KL
       let savedZoom: { start?: number; end?: number } | null = null
       if (!isInit) {
         const opt = chart.getOption() as any
-        if (opt.dataZoom?.[0]) {
+        if (opt?.dataZoom?.[0]) {
           savedZoom = { start: opt.dataZoom[0].start, end: opt.dataZoom[0].end }
         }
       }
