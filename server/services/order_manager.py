@@ -152,8 +152,22 @@ class OrderManager:
             return {"success": True, "orderRef": ref, "message": "Submitted (confirmation timeout)"}
 
         submit_status = order.get("orderSubmitStatus", "")
+        order_status = order.get("orderStatus", "")
+        status_msg = order.get("statusMsg", "")
+
+        # OnRspOrderInsert error
         if submit_status == "error":
-            return {"success": False, "orderRef": ref, "message": order.get("statusMsg", "Order rejected")}
+            return {"success": False, "orderRef": ref, "message": status_msg or "Order rejected"}
+        # OnRspOrderInsert accepted
+        if submit_status == "accepted":
+            return {"success": True, "orderRef": ref, "message": "Accepted"}
+        # OnRtnOrder arrived (SimNow may skip OnRspOrderInsert)
+        # orderStatus="5" means cancelled/rejected by exchange
+        if order_status == OrderStatus.CANCELED:
+            return {"success": False, "orderRef": ref, "message": status_msg or "Order rejected by exchange"}
+        # Any other orderStatus means the order is alive
+        if order_status:
+            return {"success": True, "orderRef": ref, "message": "Accepted"}
 
         return {"success": True, "orderRef": ref, "message": "Accepted"}
 
@@ -348,6 +362,12 @@ class OrderManager:
                 # Order from another session — ignore
                 return
             existing.update(order_data)
+
+        # Signal any thread waiting in insert() — OnRtnOrder may arrive
+        # without a prior OnRspOrderInsert (SimNow behaviour)
+        event = self._rsp_events.get(ref)
+        if event is not None:
+            event.set()
 
         # Broadcast via WebSocket if configured
         if self._broadcast_fn is not None:

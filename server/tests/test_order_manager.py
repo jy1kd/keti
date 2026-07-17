@@ -231,6 +231,42 @@ class TestOrderManagerInsert:
         assert "合约不存在" in result["message"]
         _unmock_ctp()
 
+    def test_insert_waits_for_rtn_order(self):
+        """With wait_response=True, insert returns when OnRtnOrder arrives
+        (SimNow skips OnRspOrderInsert)."""
+        import threading
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        om = OrderManager(trader)
+
+        def delayed_rtn():
+            import time
+            time.sleep(0.05)
+            om.on_rtn_order({
+                "orderRef": "1",
+                "orderSysID": "SYS999",
+                "orderStatus": "2",
+            })
+        t = threading.Thread(target=delayed_rtn, daemon=True)
+
+        t.start()
+        result = om.insert(
+            instrument_id="IF2608",
+            direction=Direction.BUY,
+            offset_flag=OffsetFlag.OPEN,
+            wait_response=True,
+            wait_timeout=1.0,
+        )
+        t.join()
+        assert result["success"] is True
+        assert result["orderRef"] == "1"
+        assert "Accepted" in result["message"]
+        _unmock_ctp()
+
     def test_get_nonexistent_order_returns_none(self):
         _mock_ctp_module()
         from services.order_manager import OrderManager
