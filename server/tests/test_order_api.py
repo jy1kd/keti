@@ -38,8 +38,10 @@ def _make_app_with_order_manager():
     trader._api = Mock()
     trader._api.ReqOrderInsert.return_value = 0
     trader._api.ReqOrderAction.return_value = 0
+    trader.login_status = "logged_in"  # mock TD as connected
     om = OrderManager(trader)
     app.state.order_manager = om
+    app.state.trader_api = trader
     return app
 
 

@@ -72,6 +72,10 @@ async def insert_order(request: Request, body: InsertOrderRequest):
 
     Validates parameters and delegates to OrderManager.insert().
     """
+    trader_api = request.app.state.trader_api
+    if trader_api is None or trader_api.login_status != "logged_in":
+        return {"success": False, "orderRef": "", "message": "TD not connected — call /api/connection/login first"}
+
     om = request.app.state.order_manager
     result = om.insert(
         instrument_id=body.instrumentID,
@@ -90,6 +94,10 @@ async def insert_order(request: Request, body: InsertOrderRequest):
 @router.post("/cancel")
 async def cancel_order(request: Request, body: CancelOrderRequest):
     """Cancel an existing order by orderRef."""
+    trader_api = request.app.state.trader_api
+    if trader_api is None or trader_api.login_status != "logged_in":
+        return {"success": False, "orderRef": body.orderRef, "message": "TD not connected — call /api/connection/login first"}
+
     om = request.app.state.order_manager
     return om.cancel(order_ref=body.orderRef, order_sys_id=body.orderSysID or "")
 
