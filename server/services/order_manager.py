@@ -175,7 +175,7 @@ class OrderManager:
             ]
         count = 0
         for ref in active_refs:
-            result = self._trader.cancel_order(order_ref=ref)
+            result = self.cancel(ref)
             if result == 0:
                 count += 1
         return count
