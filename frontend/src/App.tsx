@@ -12,12 +12,12 @@ const savedApp = loadPanelSizes('app-layout')
 const savedMain = loadPanelSizes('main-layout')
 
 function App() {
-  const onAppLayout = useCallback((sizes: number[]) => {
-    savePanelSizes('app-layout', { main: sizes[0], query: sizes[1] })
+  const onAppLayout = useCallback((layout: Record<string, number>) => {
+    savePanelSizes('app-layout', { main: layout.main, query: layout.query })
   }, [])
 
-  const onMainLayout = useCallback((sizes: number[]) => {
-    savePanelSizes('main-layout', { market: sizes[0], order: sizes[1] })
+  const onMainLayout = useCallback((layout: Record<string, number>) => {
+    savePanelSizes('main-layout', { market: layout.market, order: layout.order })
   }, [])
 
   return (

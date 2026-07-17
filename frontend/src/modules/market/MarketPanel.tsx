@@ -23,12 +23,12 @@ export function MarketPanel() {
   const fetchedRef = useRef(false)
   const [period, setPeriod] = useState('5m')
 
-  const onMarketLayout = useCallback((sizes: number[]) => {
-    savePanelSizes('market-layout', { main: sizes[0], side: sizes[1] })
+  const onMarketLayout = useCallback((layout: Record<string, number>) => {
+    savePanelSizes('market-layout', { main: layout['market-main'], side: layout['market-side'] })
   }, [])
 
-  const onMarketMainLayout = useCallback((sizes: number[]) => {
-    savePanelSizes('market-main-layout', { table: sizes[0], kline: sizes[1] })
+  const onMarketMainLayout = useCallback((layout: Record<string, number>) => {
+    savePanelSizes('market-main-layout', { table: layout['market-table'], kline: layout['market-kline'] })
   }, [])
 
   // WebSocket 行情推送

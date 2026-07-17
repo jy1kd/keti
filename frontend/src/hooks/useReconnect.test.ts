@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useReconnect } from './useReconnect'
-import type { WSManager, WSEndpoint } from '@/services/ws'
+import type { WSManager } from '@/services/ws'
 
 // Mock WSManager
 function createMockWs(): WSManager {
@@ -40,19 +40,8 @@ describe('useReconnect', () => {
     const ws = createMockWs()
     vi.mocked(ws.isConnected).mockReturnValue(false)
 
-    // 模拟 onclose 回调捕获
-    let closeHandler: (() => void) | null = null
-    const mockWsInstance = {
-      onclose: null as (() => void) | null,
-      onmessage: null,
-      onerror: null,
-      onopen: null,
-      readyState: 1, // OPEN
-      close: vi.fn(),
-    }
-
     // 捕获 connect 调用时设置的 onclose
-    vi.mocked(ws.connect).mockImplementation((_ep, _onMsg) => {
+    vi.mocked(ws.connect).mockImplementation(() => {
       // 模拟 WebSocket 实例的 onclose 被设置
     })
 
@@ -90,7 +79,7 @@ describe('useReconnect', () => {
     const ws = createMockWs()
     vi.mocked(ws.isConnected).mockReturnValue(false)
 
-    const { result } = renderHook(() => useReconnect(ws, 'market'))
+    renderHook(() => useReconnect(ws, 'market'))
 
     // 模拟 5 次重连失败
     // 退避时间: 1s, 2s, 4s, 8s, 16s = 总计 31s
