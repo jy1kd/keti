@@ -409,3 +409,50 @@
 
 - `dc64da4` fix(PR-12): review反馈 - 日期格式化根据周期(1m/5m/1d)调整
 - `2f50134` fix(PR-12): review反馈 - setOption首次全量替换，后续合并更新
+
+---
+
+## PR-12a: 前端补缺补差
+
+**分支**：`feature/pr-12a-frontend-gaps`
+**开始时间**：2026-07-17
+**状态**：✅ 已完成
+
+### 完成内容
+
+| # | 功能 | 说明 |
+|---|------|------|
+| 1 | WebSocket断线重连 | useReconnect hook，指数退避（1s→16s），最多5次 |
+| 2 | 行情WebSocket Hook | useMarketWs集成重连，snapshotToKline时间对齐 |
+| 3 | PerfMonitor | FPS监控，状态栏按钮，低FPS警告 |
+| 4 | K线图修复 | dataZoom保持、getOption空值保护、排序修复 |
+| 5 | 涨跌幅计算修正 | `||` → `??`，结算价优先 |
+| 6 | 合约搜索键盘导航 | ↑↓选择、Enter确认、Escape关闭、循环导航 |
+| 7 | 行情表格修复 | 闭包陷阱、off-by-one、widthMode adaptive |
+| 8 | 布局优化 | 上表格+五档，下K线全宽 |
+
+### 提交记录
+
+| Commit | 类型 | 说明 |
+|--------|------|------|
+| `bccca93` | feat | useReconnect hook |
+| `1c2f665` | feat | useMarketWs集成useReconnect |
+| `d9caa1c` | feat | 实时K线更新 |
+| `7c5f88c` | feat | PerfMonitor组件 |
+| `088554a` | fix | 涨跌幅计算基准修正 |
+| `e531b77` | fix | review反馈修复 |
+| `86c5c10` | fix | PerfMonitor快捷键 |
+| `0c804ef` | feat | PerfMonitor改为状态栏按钮 |
+| `6e2e986` | feat | K线周期对齐 |
+| `15606e4` | fix | K线缩放保持 |
+| `509208f` | fix | getOption空值保护 |
+| `a666393` | fix | 历史K线时间对齐 |
+| `4b165e1` | fix | K线时间戳修复 |
+| `171f429` | fix | appendKline修复 |
+| `f00d066` | fix | setKlineData排序 |
+
+### 测试结果
+
+- 测试文件：28 passed
+- 测试用例：186 passed
+- TypeScript：0 errors

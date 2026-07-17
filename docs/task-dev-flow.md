@@ -388,7 +388,8 @@ git branch -d feature/pr-<编号>-<描述>
 | PR-6 | 前端行情表格（vtable） | PR-4 | ✅ 已完成 | `feature/pr-6-market-table` |
 | PR-6a | 前端行情表格接入真实API | PR-5 + PR-6 | ✅ 已完成 | `feature/pr-6a-market-real-api` |
 | PR-8 | 前端五档行情展示 | PR-7（需要WebSocket推送） | ✅ 已完成 | `feature/pr-8-depth-quote` |
-| PR-12 | 前端K线图实现 | PR-5（需要行情API） | ⏳ 待开始 | `feature/pr-12-kline-chart` |
+| PR-12 | 前端K线图实现 | PR-5（需要行情API） | ✅ 已完成 | `feature/pr-12-kline-chart` |
+| PR-12a | 前端补缺补差 | PR-12 | ✅ 已完成 | `feature/pr-12a-frontend-gaps` |
 | PR-21 | 手动订阅/退订合约 | PR-6a | ⏳ 待开始 | `feature/pr-21-manual-subscribe` |
 | PR-14 | 前端期权T型报价实现 | PR-6, PR-18（需要期权API） | ⏳ 待开始 | `feature/pr-14-option-tquote` |
 

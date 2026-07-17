@@ -61,6 +61,11 @@
   color: var(--accent);
 }
 
+.contract-search .search-result-item--active {
+  background-color: var(--accent-dim);
+  color: var(--accent);
+}
+
 .contract-search .search-no-results {
   padding: 8px 12px;
   font-size: 12px;

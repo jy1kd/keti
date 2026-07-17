@@ -14,8 +14,8 @@ import { API_BASE, getKlineData } from '@/services/api'
 import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
 import './styles.css'
 
+const savedMarketTop = loadPanelSizes('market-top-layout')
 const savedMarket = loadPanelSizes('market-layout')
-const savedMarketMain = loadPanelSizes('market-main-layout')
 
 export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, fetchInstruments, subscribeInstruments, klineData, setKlineData } = useMarketStore()
@@ -23,12 +23,12 @@ export function MarketPanel() {
   const fetchedRef = useRef(false)
   const [period, setPeriod] = useState('5m')
 
-  const onMarketLayout = useCallback((layout: Record<string, number>) => {
-    savePanelSizes('market-layout', { main: layout['market-main'], side: layout['market-side'] })
+  const onMarketTopLayout = useCallback((layout: Record<string, number>) => {
+    savePanelSizes('market-top-layout', { table: layout['market-table'], side: layout['market-side'] })
   }, [])
 
-  const onMarketMainLayout = useCallback((layout: Record<string, number>) => {
-    savePanelSizes('market-main-layout', { table: layout['market-table'], kline: layout['market-kline'] })
+  const onMarketLayout = useCallback((layout: Record<string, number>) => {
+    savePanelSizes('market-layout', { top: layout['market-top'], kline: layout['market-kline'] })
   }, [])
 
   // WebSocket 行情推送（period 影响实时 K 线的时间对齐）
@@ -93,10 +93,11 @@ export function MarketPanel() {
         <h2>行情面板</h2>
         <ContractSearch contracts={contracts} onSelect={handleSelectContract} />
       </div>
-      <Group orientation="horizontal" className="panel-content" id="market-layout" onLayoutChange={onMarketLayout}>
-        <Panel id="market-main" defaultSize={savedMarket?.main ?? 75} minSize={30}>
-          <Group orientation="vertical" className="market-panel__main" id="market-main-layout" onLayoutChange={onMarketMainLayout}>
-            <Panel id="market-table" defaultSize={savedMarketMain?.table ?? 50} minSize={15}>
+      {/* 布局：上半部 [行情表格 | 五档行情]，下半部 [K线图 全宽] */}
+      <Group orientation="vertical" className="panel-content" id="market-layout" onLayoutChange={onMarketLayout}>
+        <Panel id="market-top" defaultSize={savedMarket?.top ?? 50} minSize={20}>
+          <Group orientation="horizontal" className="market-panel__top" id="market-top-layout" onLayoutChange={onMarketTopLayout}>
+            <Panel id="market-table" defaultSize={savedMarketTop?.table ?? 75} minSize={30}>
               <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <MarketTable
                   contracts={contracts}
@@ -108,48 +109,48 @@ export function MarketPanel() {
               </div>
             </Panel>
             <Separator>
-              <ResizeHandle direction="vertical" />
+              <ResizeHandle direction="horizontal" />
             </Separator>
-            <Panel id="market-kline" defaultSize={savedMarketMain?.kline ?? 50} minSize={15}>
-              <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                {selectedInstrument ? (
-                  <KLineChart
-                    instrument={selectedInstrument}
-                    klineData={selectedKline}
-                    period={period}
-                    onPeriodChange={setPeriod}
-                  />
-                ) : (
-                  <div className="market-panel__kline-placeholder">选择合约查看K线图</div>
-                )}
+            <Panel id="market-side" defaultSize={savedMarketTop?.side ?? 25} minSize={10}>
+              <div className="market-panel__side">
+                <DepthQuote
+                  snapshot={selectedSnapshot}
+                  onBuyClick={(price) => {
+                    if (selectedInstrument) {
+                      // TODO: PR-10 接入报单表单
+                      console.log('买入', selectedInstrument, price)
+                    }
+                  }}
+                  onSellClick={(price) => {
+                    if (selectedInstrument) {
+                      // TODO: PR-10 接入报单表单
+                      console.log('卖出', selectedInstrument, price)
+                    }
+                  }}
+                />
+                <SpreadDisplay
+                  bidPrice={selectedSnapshot?.bidPrice1 ?? 0}
+                  askPrice={selectedSnapshot?.askPrice1 ?? 0}
+                />
               </div>
             </Panel>
           </Group>
         </Panel>
         <Separator>
-          <ResizeHandle direction="horizontal" />
+          <ResizeHandle direction="vertical" />
         </Separator>
-        <Panel id="market-side" defaultSize={savedMarket?.side ?? 25} minSize={10}>
-          <div className="market-panel__side">
-            <DepthQuote
-              snapshot={selectedSnapshot}
-              onBuyClick={(price) => {
-                if (selectedInstrument) {
-                  // TODO: PR-10 接入报单表单
-                  console.log('买入', selectedInstrument, price)
-                }
-              }}
-              onSellClick={(price) => {
-                if (selectedInstrument) {
-                  // TODO: PR-10 接入报单表单
-                  console.log('卖出', selectedInstrument, price)
-                }
-              }}
-            />
-            <SpreadDisplay
-              bidPrice={selectedSnapshot?.bidPrice1 ?? 0}
-              askPrice={selectedSnapshot?.askPrice1 ?? 0}
-            />
+        <Panel id="market-kline" defaultSize={savedMarket?.kline ?? 50} minSize={20}>
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {selectedInstrument ? (
+              <KLineChart
+                instrument={selectedInstrument}
+                klineData={selectedKline}
+                period={period}
+                onPeriodChange={setPeriod}
+              />
+            ) : (
+              <div className="market-panel__kline-placeholder">选择合约查看K线图</div>
+            )}
           </div>
         </Panel>
       </Group>

@@ -56,6 +56,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   const tableRef = useRef<ListTable | null>(null)
   const onClickRef = useRef(onRowClick)
   const onDblClickRef = useRef(onRowDoubleClick)
+  const recordsRef = useRef<ReturnType<typeof buildRecord>[]>([])
   const rafRef = useRef<number>(0)
   const pendingRef = useRef<{ contracts: ContractInfo[]; snapshots: Map<string, MarketSnapshot> } | null>(null)
 
@@ -66,10 +67,12 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     if (!containerRef.current) return
 
     const records = contracts.map((c) => buildRecord(c, snapshots.get(c.instrumentID)))
+    recordsRef.current = records
 
     const table = new ListTable(containerRef.current, {
       columns,
       records,
+      widthMode: 'adaptive',
       theme: {
         underlayBackgroundColor: '#0d1117',
         defaultStyle: {
@@ -116,16 +119,20 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     })
 
     table.on('click_cell', (args: any) => {
-      const record = records[args.row]
-      if (record && onClickRef.current && record.lastPrice !== PLACEHOLDER) {
-        onClickRef.current(record.instrumentID, record.lastPrice as number)
+      const rowIndex = args.row - 1 // vtable row 0 = header, row 1 = first data row
+      const record = recordsRef.current[rowIndex]
+      if (record && onClickRef.current) {
+        const price = record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
+        onClickRef.current(record.instrumentID, price)
       }
     })
 
     table.on('dblclick_cell', (args: any) => {
-      const record = records[args.row]
-      if (record && onDblClickRef.current && record.lastPrice !== PLACEHOLDER) {
-        onDblClickRef.current(record.instrumentID, record.lastPrice as number)
+      const rowIndex = args.row - 1
+      const record = recordsRef.current[rowIndex]
+      if (record && onDblClickRef.current) {
+        const price = record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
+        onDblClickRef.current(record.instrumentID, price)
       }
     })
 
@@ -145,6 +152,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       if (!tableRef.current || !pendingRef.current) return
       const { contracts: c, snapshots: s } = pendingRef.current
       const records = c.map((contract) => buildRecord(contract, s.get(contract.instrumentID)))
+      recordsRef.current = records
       tableRef.current.setRecords(records)
     })
     return () => {

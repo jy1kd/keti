@@ -1215,7 +1215,7 @@ server/
 | **负责角色** | 角色B |
 | **依赖PR** | PR-6 |
 | **工作量** | 2小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
 
 **提交文件**：
 ```
@@ -1265,6 +1265,96 @@ frontend/src/
 1. 启动前端，点击行情表格中的合约
 2. 确认K线图正常显示
 3. 切换周期（1m/5m/15m），确认图表更新
+
+---
+
+#### PR-12a: 前端补缺补差
+
+| 项目 | 内容 |
+|------|------|
+| **PR编号** | PR-12a |
+| **PR标题** | 前端补缺补差（WebSocket重连、K线实时更新、PerfMonitor、布局优化） |
+| **PR分支名** | `feature/pr-12a-frontend-gaps` |
+| **负责角色** | 角色B |
+| **依赖PR** | PR-12 |
+| **工作量** | 4小时 |
+| **状态** | ✅ 已完成 |
+
+**提交文件**：
+```
+frontend/src/
+├── hooks/
+│   ├── useReconnect.ts           # WebSocket断线重连Hook
+│   ├── useReconnect.test.ts
+│   ├── useMarketWs.ts            # 行情WebSocket Hook（集成重连）
+│   └── useMarketWs.test.ts
+├── components/
+│   ├── PerfMonitor/              # FPS性能监控组件
+│   │   ├── index.tsx
+│   │   └── index.test.tsx
+│   └── ContractSearch/
+│       ├── index.tsx             # 合约搜索（键盘导航）
+│       └── styles.css
+├── modules/market/
+│   ├── MarketPanel.tsx           # 布局重构（上表格+五档，下K线全宽）
+│   ├── MarketTable.tsx           # 点击修复（闭包陷阱+off-by-one）
+│   ├── KLineChart.tsx            # K线修复（缩放保持、时间对齐、排序）
+│   ├── store.ts                  # appendKline修复（排序、200根限制）
+│   └── styles.css
+└── App.tsx                       # PerfMonitor状态栏按钮集成
+```
+
+**PR描述**：
+补充前端缺失功能和修复已知问题，包括WebSocket断线重连、K线实时更新、性能监控、布局优化等。
+
+**实现方式**：
+1. WebSocket断线重连（useReconnect）
+   - 指数退避策略（1s→2s→4s→8s→16s）
+   - 最大重试5次，超时后停止
+   - 类型安全（MessageHandler类型别名）
+2. 行情WebSocket Hook（useMarketWs）
+   - 集成useReconnect自动重连
+   - snapshotToKline时间对齐（时分秒格式，去掉日期）
+   - PERIOD_MS常量导出（供历史数据对齐使用）
+3. K线图修复
+   - dataZoom缩放状态保持（getOption/setOption）
+   - getOption()空值保护（防止切换合约崩溃）
+   - appendKline排序修复（忽略旧数据、限制200根）
+   - setKlineData时间戳排序
+4. PerfMonitor性能监控
+   - FPS实时监控（requestAnimationFrame计数）
+   - 状态栏UI按钮（⚡FPS）
+   - 低FPS警告（<30显示红色）
+5. 合约搜索键盘导航
+   - ↑↓方向键选择下拉项
+   - Enter确认选中
+   - Escape关闭下拉
+   - 循环导航（首→末→首）
+6. 行情表格修复
+   - 闭包陷阱修复（recordsRef替代闭包变量）
+   - off-by-one修复（vtable row 1-based）
+   - widthMode: 'adaptive'自动撑满宽度
+7. 布局优化
+   - 外层垂直Group：[上半部] | [K线图全宽]
+   - 上半部水平Group：[行情表格] | [五档行情]
+   - K线图撑满底部全宽
+8. 涨跌幅计算修正
+   - `||` → `??` 空值运算符
+   - 结算价优先：preSettlementPrice ?? preClosePrice ?? lastPrice
+
+**验证方法**：
+1. WebSocket断网重连测试
+2. K线图实时更新、缩放保持
+3. 合约搜索键盘操作
+4. 行情表格点击选中
+5. 布局拖拽调整
+
+**验收标准**：
+- [ ] WebSocket断线后自动重连
+- [ ] K线图实时更新正常
+- [ ] 合约搜索键盘导航正常
+- [ ] 行情表格点击选中正常
+- [ ] 布局拖拽正常
 
 ---
 
