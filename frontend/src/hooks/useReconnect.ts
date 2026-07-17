@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import type { WSManager, WSEndpoint } from '@/services/ws'
+import type { WSMessage } from '@/services/types'
+
+type MessageHandler = (message: WSMessage) => void
 
 /** 最大重试次数 */
 const MAX_RETRIES = 5
@@ -17,7 +20,7 @@ const BASE_DELAY = 1000
 export function useReconnect(
   ws: WSManager,
   endpoint: WSEndpoint,
-  onMessage?: (data: unknown) => void,
+  onMessage?: MessageHandler,
 ) {
   const [reconnectCount, setReconnectCount] = useState(0)
   const [isReconnecting, setIsReconnecting] = useState(false)
@@ -43,7 +46,7 @@ export function useReconnect(
         retryCountRef.current = 0
         return
       }
-      ws.connect(endpoint, onMessageRef.current as any)
+      ws.connect(endpoint, onMessageRef.current as MessageHandler)
       // 连接后等待 onclose 事件触发下一次重连
     }, delay)
 
@@ -52,7 +55,7 @@ export function useReconnect(
 
   useEffect(() => {
     // 初始连接
-    ws.connect(endpoint, onMessageRef.current as any)
+    ws.connect(endpoint, onMessageRef.current as MessageHandler)
 
     // 监听连接断开事件（通过轮询检测）
     const checkInterval = setInterval(() => {

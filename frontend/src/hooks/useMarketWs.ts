@@ -12,7 +12,7 @@ import type { MarketSnapshot, KLineData, WSMessage } from '@/services/types'
 /** 将行情快照转换为 K 线数据点 */
 function snapshotToKline(snap: MarketSnapshot): KLineData {
   const now = new Date()
-  const [h, m, s] = (snap.updateTime ?? '00:00:00').split(':').map(Number)
+  const [h = 0, m = 0, s = 0] = (snap.updateTime ?? '00:00:00').split(':').map(Number)
   now.setHours(h, m, s, snap.updateMillisec ?? 0)
 
   return {
@@ -48,7 +48,7 @@ export function useMarketWs(wsBaseUrl: string) {
   }
 
   // 使用 useReconnect 管理连接和重连
-  const { reconnectCount, isReconnecting } = useReconnect(ws, 'market', handleMessage as (data: unknown) => void)
+  const { reconnectCount, isReconnecting } = useReconnect(ws, 'market', handleMessage)
 
   // 组件卸载时断开所有连接
   useEffect(() => {

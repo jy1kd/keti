@@ -36,7 +36,7 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined) {
       openInterest: PLACEHOLDER,
     }
   }
-  const preSettlement = snap.preSettlementPrice || snap.preClosePrice || snap.lastPrice
+  const preSettlement = snap.preSettlementPrice ?? snap.preClosePrice ?? snap.lastPrice
   const change = snap.lastPrice - preSettlement
   const changePercent = preSettlement ? (change / preSettlement) * 100 : 0
   return {
