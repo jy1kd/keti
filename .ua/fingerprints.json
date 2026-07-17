@@ -1,0 +1,6885 @@
+{
+  "version": "1.0.0",
+  "gitCommitHash": "f00d0660e4c63445d2b9a27645c40b2dcc381a64",
+  "generatedAt": "2026-07-17T06:16:30.381Z",
+  "files": {
+    "CLAUDE.md": {
+      "filePath": "CLAUDE.md",
+      "contentHash": "e76dbed26772d163af38edc89a484c23ffe3fdaee97e034f33ec7ce082ad7e79",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 297,
+      "hasStructuralAnalysis": true
+    },
+    "ctp_realtime_demo.py": {
+      "filePath": "ctp_realtime_demo.py",
+      "contentHash": "a2c723379c335213549012375da608bd4b9e47b81186b8c940810f91830e5fbf",
+      "functions": [
+        {
+          "name": "now",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 62
+        }
+      ],
+      "classes": [
+        {
+          "name": "MarketDataSpi",
+          "methods": [
+            "__init__",
+            "OnFrontConnected",
+            "OnFrontDisconnected",
+            "OnRspUserLogin",
+            "OnRspSubMarketData",
+            "OnRtnDepthMarketData"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 96
+        }
+      ],
+      "imports": [
+        {
+          "source": "ctp",
+          "specifiers": [
+            "ctp"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "warnings",
+          "specifiers": [
+            "warnings"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "dotenv",
+          "specifiers": [
+            "load_dotenv"
+          ]
+        }
+      ],
+      "exports": [
+        "MarketDataSpi",
+        "now",
+        "main"
+      ],
+      "totalLines": 196,
+      "hasStructuralAnalysis": true
+    },
+    "demo.py": {
+      "filePath": "demo.py",
+      "contentHash": "7258b9237787abee1dd95a98e525c4df941adfa4d4ad343c120347527953c78c",
+      "functions": [],
+      "classes": [
+        {
+          "name": "MyMdSpi",
+          "methods": [
+            "__init__",
+            "OnFrontConnected",
+            "OnRspUserLogin",
+            "OnRtnDepthMarketData"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 33
+        }
+      ],
+      "imports": [
+        {
+          "source": "ctp",
+          "specifiers": [
+            "ctp"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "dotenv",
+          "specifiers": [
+            "load_dotenv"
+          ]
+        }
+      ],
+      "exports": [
+        "MyMdSpi"
+      ],
+      "totalLines": 74,
+      "hasStructuralAnalysis": true
+    },
+    "docs/ctp-api-structure.txt": {
+      "filePath": "docs/ctp-api-structure.txt",
+      "contentHash": "37cef00a9a537967654c810be49f585c22d4195439ce1f940342350adb0eb032",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 914,
+      "hasStructuralAnalysis": false
+    },
+    "docs/design.md": {
+      "filePath": "docs/design.md",
+      "contentHash": "af4f824ce4adb75962466def99d91d3875ad0a5c512c47676cab4f96588006c3",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 1559,
+      "hasStructuralAnalysis": true
+    },
+    "docs/dev.md": {
+      "filePath": "docs/dev.md",
+      "contentHash": "8af7a1999af051b25c5c8364278ff45904c383d15ef1941f79aa13520abb345e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 1435,
+      "hasStructuralAnalysis": true
+    },
+    "docs/prd.md": {
+      "filePath": "docs/prd.md",
+      "contentHash": "04a9ab5e0b20b3d4f72ba4b3132a729469b1b726ce81b1182ebdf57cd45b66c7",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 294,
+      "hasStructuralAnalysis": true
+    },
+    "docs/task-dev-flow.md": {
+      "filePath": "docs/task-dev-flow.md",
+      "contentHash": "a98d7e8ee0d334f922cad9700747d95ff203518fd47e500b1dbc9d8082c706c1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 641,
+      "hasStructuralAnalysis": true
+    },
+    "docs/task.md": {
+      "filePath": "docs/task.md",
+      "contentHash": "11ab999ffef881f6875d6e9c3a706562d4831af4e3cc612e2ccafab251eeb37a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 1933,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/index.html": {
+      "filePath": "frontend/index.html",
+      "contentHash": "6cca94fbe14387758d6d02a88bea88abc02fbb75ce851cebae880826c7d85957",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 17,
+      "hasStructuralAnalysis": false
+    },
+    "frontend/package.json": {
+      "filePath": "frontend/package.json",
+      "contentHash": "cbad792d637b623906c0d97e7b096eac0fe2fdd0f38721c8e8e5bd458f66914e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 41,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/App.test.tsx": {
+      "filePath": "frontend/src/App.test.tsx",
+      "contentHash": "3d4488ac5a8096c97fb9fbb6d92c9d436a4e27839f4f04fc342f3f5b1c6fd11a",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "beforeEach",
+            "vi"
+          ]
+        },
+        {
+          "source": "@testing-library/react",
+          "specifiers": [
+            "render",
+            "screen"
+          ]
+        },
+        {
+          "source": "./App",
+          "specifiers": [
+            "App"
+          ]
+        },
+        {
+          "source": "@/stores/connection",
+          "specifiers": [
+            "useConnectionStore"
+          ]
+        },
+        {
+          "source": "@/modules/query/store",
+          "specifiers": [
+            "useQueryStore"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 56,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/App.tsx": {
+      "filePath": "frontend/src/App.tsx",
+      "contentHash": "24568cd20e8598ec21ef636a46be09b96c970b8eada0c7570a49aab763034420",
+      "functions": [
+        {
+          "name": "App",
+          "params": [],
+          "exported": false,
+          "lineCount": 79
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useCallback",
+            "useState",
+            "useEffect"
+          ]
+        },
+        {
+          "source": "react-resizable-panels",
+          "specifiers": [
+            "Group",
+            "Panel",
+            "Separator"
+          ]
+        },
+        {
+          "source": "@/components/ConnectionStatus",
+          "specifiers": [
+            "ConnectionStatus"
+          ]
+        },
+        {
+          "source": "@/components/ResizeHandle",
+          "specifiers": [
+            "ResizeHandle"
+          ]
+        },
+        {
+          "source": "@/modules/market/MarketPanel",
+          "specifiers": [
+            "MarketPanel"
+          ]
+        },
+        {
+          "source": "@/modules/order/OrderPanel",
+          "specifiers": [
+            "OrderPanel"
+          ]
+        },
+        {
+          "source": "@/modules/query/QueryPanel",
+          "specifiers": [
+            "QueryPanel"
+          ]
+        },
+        {
+          "source": "@/components/PerfMonitor",
+          "specifiers": [
+            "PerfMonitor"
+          ]
+        },
+        {
+          "source": "@/utils/panelStorage",
+          "specifiers": [
+            "savePanelSizes",
+            "loadPanelSizes"
+          ]
+        },
+        {
+          "source": "@/assets/styles/global.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 96,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/assets/styles/global.css": {
+      "filePath": "frontend/src/assets/styles/global.css",
+      "contentHash": "ae91972386d1d85e996f27502767aefc629025d80ed2d1c38b995f1e40ffc827",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 416,
+      "hasStructuralAnalysis": false
+    },
+    "frontend/src/components/ConnectionStatus/index.test.tsx": {
+      "filePath": "frontend/src/components/ConnectionStatus/index.test.tsx",
+      "contentHash": "dcc1e636c1d091ba96443c28e0551f3f81c685fc7a38bd8c117376cc8783074d",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "beforeEach"
+          ]
+        },
+        {
+          "source": "@testing-library/react",
+          "specifiers": [
+            "render",
+            "screen"
+          ]
+        },
+        {
+          "source": "./index",
+          "specifiers": [
+            "ConnectionStatus"
+          ]
+        },
+        {
+          "source": "@/stores/connection",
+          "specifiers": [
+            "useConnectionStore"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 39,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/components/ConnectionStatus/index.tsx": {
+      "filePath": "frontend/src/components/ConnectionStatus/index.tsx",
+      "contentHash": "950cab746c246a76963cb6c755f4d5dd109b9b93bf6c1cd3b8c56a099bce8c57",
+      "functions": [
+        {
+          "name": "ConnectionStatus",
+          "params": [],
+          "exported": true,
+          "lineCount": 24
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@/stores/connection",
+          "specifiers": [
+            "useConnectionStore"
+          ]
+        },
+        {
+          "source": "./styles.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [
+        "ConnectionStatus"
+      ],
+      "totalLines": 28,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/components/ConnectionStatus/styles.css": {
+      "filePath": "frontend/src/components/ConnectionStatus/styles.css",
+      "contentHash": "3f612c1c1d30d01ee454cd5a653541aab5d7082e31c292fc22b97c6f0d390950",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 35,
+      "hasStructuralAnalysis": false
+    },
+    "frontend/src/components/ContractSearch/index.test.tsx": {
+      "filePath": "frontend/src/components/ContractSearch/index.test.tsx",
+      "contentHash": "52919116360e361ad389bdf24a05e92054c80792b0a060cb3886b47611ecf1a5",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "vi"
+          ]
+        },
+        {
+          "source": "@testing-library/react",
+          "specifiers": [
+            "render",
+            "screen",
+            "fireEvent"
+          ]
+        },
+        {
+          "source": "./index",
+          "specifiers": [
+            "ContractSearch"
+          ]
+        },
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "ContractInfo"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 82,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/components/ContractSearch/index.tsx": {
+      "filePath": "frontend/src/components/ContractSearch/index.tsx",
+      "contentHash": "dad2b04d1526440df8f85865d4b1f8ecfd0f540829b9e5d7940c729fd892c727",
+      "functions": [
+        {
+          "name": "ContractSearch",
+          "params": [
+            "{ contracts, onSelect }"
+          ],
+          "exported": true,
+          "lineCount": 56
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useState",
+            "useMemo"
+          ]
+        },
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "ContractInfo"
+          ]
+        },
+        {
+          "source": "./styles.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [
+        "ContractSearch"
+      ],
+      "totalLines": 66,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/components/ContractSearch/styles.css": {
+      "filePath": "frontend/src/components/ContractSearch/styles.css",
+      "contentHash": "9f6069ece56a3c3faeea0b952d40a414ce9c126b439862a974cef6b64fefbf6a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 69,
+      "hasStructuralAnalysis": false
+    },
+    "frontend/src/components/PerfMonitor/index.test.tsx": {
+      "filePath": "frontend/src/components/PerfMonitor/index.test.tsx",
+      "contentHash": "4b7ac167c423ac6a9465f278d377a9d55170f78ffe4f4a26936f5338a341783e",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "vi",
+            "beforeEach",
+            "afterEach"
+          ]
+        },
+        {
+          "source": "@testing-library/react",
+          "specifiers": [
+            "render",
+            "screen"
+          ]
+        },
+        {
+          "source": "./index",
+          "specifiers": [
+            "PerfMonitor"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 57,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/components/PerfMonitor/index.tsx": {
+      "filePath": "frontend/src/components/PerfMonitor/index.tsx",
+      "contentHash": "641fe3981b18ee1b6bceff484a402dd5d407d844d53c16d40abb5abbf888e4e1",
+      "functions": [
+        {
+          "name": "PerfMonitor",
+          "params": [
+            "{ visible }"
+          ],
+          "exported": true,
+          "lineCount": 42
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useEffect",
+            "useRef",
+            "useCallback",
+            "useState"
+          ]
+        }
+      ],
+      "exports": [
+        "PerfMonitor"
+      ],
+      "totalLines": 57,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/components/ResizeHandle/index.test.tsx": {
+      "filePath": "frontend/src/components/ResizeHandle/index.test.tsx",
+      "contentHash": "ce74303da4163ec73536a9e452c1de2faf5adb9d82302355e7f0dd3d0e4aaef8",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect"
+          ]
+        },
+        {
+          "source": "@testing-library/react",
+          "specifiers": [
+            "render",
+            "screen"
+          ]
+        },
+        {
+          "source": "./index",
+          "specifiers": [
+            "ResizeHandle"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 25,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/components/ResizeHandle/index.tsx": {
+      "filePath": "frontend/src/components/ResizeHandle/index.tsx",
+      "contentHash": "e371af85168547f05204793de071422872b0963fb7b8db816745ad4141099ad4",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "forwardRef"
+          ]
+        },
+        {
+          "source": "react",
+          "specifiers": [
+            "HTMLAttributes"
+          ]
+        }
+      ],
+      "exports": [
+        "ResizeHandle"
+      ],
+      "totalLines": 23,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/components/ResizeHandle/style.test.tsx": {
+      "filePath": "frontend/src/components/ResizeHandle/style.test.tsx",
+      "contentHash": "a9b434da1c6283f841e117ab42a09c4e9ff99e2c38dbeb99b83f3ba560bc9ed8",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect"
+          ]
+        },
+        {
+          "source": "./index",
+          "specifiers": [
+            "ResizeHandle"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 13,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/components/SpreadDisplay/index.tsx": {
+      "filePath": "frontend/src/components/SpreadDisplay/index.tsx",
+      "contentHash": "91e36365bd27e4246a6f24b5b7d6db9b095782b7cc5dcb73695c98ca3a5fb009",
+      "functions": [
+        {
+          "name": "SpreadDisplay",
+          "params": [
+            "{ bidPrice, askPrice }"
+          ],
+          "exported": true,
+          "lineCount": 19
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "SpreadDisplay"
+      ],
+      "totalLines": 25,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/components/SpreadDisplay/SpreadDisplay.test.tsx": {
+      "filePath": "frontend/src/components/SpreadDisplay/SpreadDisplay.test.tsx",
+      "contentHash": "cbf5fc07446303795373a08a4ab5d181f4c3dd1b3010b21cb3c3aac6455f0b37",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect"
+          ]
+        },
+        {
+          "source": "@testing-library/react",
+          "specifiers": [
+            "render",
+            "screen"
+          ]
+        },
+        {
+          "source": "./index",
+          "specifiers": [
+            "SpreadDisplay"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 28,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/hooks/useMarketWs.test.ts": {
+      "filePath": "frontend/src/hooks/useMarketWs.test.ts",
+      "contentHash": "0fd82395a2ca621c7bb6f12273389cb37209eb76c399fcf0fe190a74f76d4ad6",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "vi",
+            "beforeEach",
+            "afterEach"
+          ]
+        },
+        {
+          "source": "@testing-library/react",
+          "specifiers": [
+            "renderHook",
+            "act"
+          ]
+        },
+        {
+          "source": "./useMarketWs",
+          "specifiers": [
+            "useMarketWs"
+          ]
+        },
+        {
+          "source": "@/modules/market/store",
+          "specifiers": [
+            "useMarketStore"
+          ]
+        },
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "MarketSnapshot"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 158,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/hooks/useMarketWs.ts": {
+      "filePath": "frontend/src/hooks/useMarketWs.ts",
+      "contentHash": "b2828c50998d4bb94d7f0b972838470ef967428384b71f3ee871487dd84dc5c5",
+      "functions": [
+        {
+          "name": "snapshotToKline",
+          "params": [
+            "snap",
+            "periodMs"
+          ],
+          "returnType": "KLineData",
+          "exported": false,
+          "lineCount": 18
+        },
+        {
+          "name": "useMarketWs",
+          "params": [
+            "wsBaseUrl",
+            "period"
+          ],
+          "exported": true,
+          "lineCount": 34
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useEffect",
+            "useRef"
+          ]
+        },
+        {
+          "source": "@/services/ws",
+          "specifiers": [
+            "WSManager"
+          ]
+        },
+        {
+          "source": "@/modules/market/store",
+          "specifiers": [
+            "useMarketStore"
+          ]
+        },
+        {
+          "source": "./useReconnect",
+          "specifiers": [
+            "useReconnect"
+          ]
+        },
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "MarketSnapshot",
+            "KLineData",
+            "WSMessage"
+          ]
+        }
+      ],
+      "exports": [
+        "PERIOD_MS",
+        "useMarketWs"
+      ],
+      "totalLines": 83,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/hooks/usePointOrder.test.ts": {
+      "filePath": "frontend/src/hooks/usePointOrder.test.ts",
+      "contentHash": "2fcedc5692e4243e507c461c548f424b56d37575ff2fa7fe2a22c9f29ab61ed5",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "vi"
+          ]
+        },
+        {
+          "source": "@testing-library/react",
+          "specifiers": [
+            "renderHook",
+            "act"
+          ]
+        },
+        {
+          "source": "./usePointOrder",
+          "specifiers": [
+            "usePointOrder"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 55,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/hooks/usePointOrder.ts": {
+      "filePath": "frontend/src/hooks/usePointOrder.ts",
+      "contentHash": "e736a2368fd7d9ed6e3d8ee7bc8a96249a57b946be3212853c40a440091f5f63",
+      "functions": [
+        {
+          "name": "usePointOrder",
+          "params": [
+            "options"
+          ],
+          "exported": true,
+          "lineCount": 11
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "usePointOrder"
+      ],
+      "totalLines": 22,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/hooks/useReconnect.test.ts": {
+      "filePath": "frontend/src/hooks/useReconnect.test.ts",
+      "contentHash": "5f3e9acdfce2ad91f3aeca6b8cc612de4ce4bd153759db16256ba59b58a2c8a2",
+      "functions": [
+        {
+          "name": "createMockWs",
+          "params": [],
+          "returnType": "WSManager",
+          "exported": false,
+          "lineCount": 9
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "vi",
+            "beforeEach",
+            "afterEach"
+          ]
+        },
+        {
+          "source": "@testing-library/react",
+          "specifiers": [
+            "renderHook"
+          ]
+        },
+        {
+          "source": "./useReconnect",
+          "specifiers": [
+            "useReconnect"
+          ]
+        },
+        {
+          "source": "@/services/ws",
+          "specifiers": [
+            "WSManager"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 100,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/hooks/useReconnect.ts": {
+      "filePath": "frontend/src/hooks/useReconnect.ts",
+      "contentHash": "0e791a8de8df9396fa3ca02d5a8fb0f9fcfefccd08659c8367a3e50501389e9b",
+      "functions": [
+        {
+          "name": "useReconnect",
+          "params": [
+            "ws",
+            "endpoint",
+            "onMessage"
+          ],
+          "exported": true,
+          "lineCount": 58
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useEffect",
+            "useRef",
+            "useState",
+            "useCallback"
+          ]
+        },
+        {
+          "source": "@/services/ws",
+          "specifiers": [
+            "WSManager",
+            "WSEndpoint"
+          ]
+        },
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "WSMessage"
+          ]
+        }
+      ],
+      "exports": [
+        "useReconnect"
+      ],
+      "totalLines": 78,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/main.tsx": {
+      "filePath": "frontend/src/main.tsx",
+      "contentHash": "6d0fa6f1d7be7835d6cb178f6ece6de720eaab6d67c613c8eec6b54d22daa15d",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "StrictMode"
+          ]
+        },
+        {
+          "source": "react-dom/client",
+          "specifiers": [
+            "createRoot"
+          ]
+        },
+        {
+          "source": "./App",
+          "specifiers": [
+            "App"
+          ]
+        },
+        {
+          "source": "./assets/styles/global.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [],
+      "totalLines": 11,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/market/DepthQuote.test.tsx": {
+      "filePath": "frontend/src/modules/market/DepthQuote.test.tsx",
+      "contentHash": "15ada8ba27bce13bc352dfde87d53e25f9779001b8708338bba1ffc970ddf783",
+      "functions": [
+        {
+          "name": "makeSnapshot",
+          "params": [
+            "overrides"
+          ],
+          "returnType": "MarketSnapshot",
+          "exported": false,
+          "lineCount": 19
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "vi",
+            "beforeEach"
+          ]
+        },
+        {
+          "source": "@testing-library/react",
+          "specifiers": [
+            "render",
+            "screen"
+          ]
+        },
+        {
+          "source": "./DepthQuote",
+          "specifiers": [
+            "DepthQuote"
+          ]
+        },
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "MarketSnapshot"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 98,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/market/DepthQuote.tsx": {
+      "filePath": "frontend/src/modules/market/DepthQuote.tsx",
+      "contentHash": "cae6c271b91320248e7f3e9c7784acf6dbc29b71e7d0dcaad041586cbf7902e6",
+      "functions": [
+        {
+          "name": "isValidPrice",
+          "params": [
+            "price"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "DepthQuote",
+          "params": [
+            "{ snapshot, onBuyClick, onSellClick }"
+          ],
+          "exported": true,
+          "lineCount": 60
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "MarketSnapshot"
+          ]
+        }
+      ],
+      "exports": [
+        "DepthQuote"
+      ],
+      "totalLines": 73,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/market/KLineChart.style.test.tsx": {
+      "filePath": "frontend/src/modules/market/KLineChart.style.test.tsx",
+      "contentHash": "960feec56fb961302fa25f52887aa5e1df64365f418e8a35ec5365a002afb4f2",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect"
+          ]
+        },
+        {
+          "source": "./KLineChart",
+          "specifiers": [
+            "KLineChart"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 11,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/market/KLineChart.test.tsx": {
+      "filePath": "frontend/src/modules/market/KLineChart.test.tsx",
+      "contentHash": "dc63cdc3b86d859b3bc86b1499b2661204f9515ccb07839583fb0fdd4f879ab9",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "vi",
+            "beforeEach"
+          ]
+        },
+        {
+          "source": "@testing-library/react",
+          "specifiers": [
+            "render",
+            "screen"
+          ]
+        },
+        {
+          "source": "./KLineChart",
+          "specifiers": [
+            "KLineChart"
+          ]
+        },
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "KLineData"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 212,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/market/KLineChart.tsx": {
+      "filePath": "frontend/src/modules/market/KLineChart.tsx",
+      "contentHash": "3a0f9d8bd9b3a1d6303b57842b1eec99708d5da77c127e1f14bb4d1ed5e947f4",
+      "functions": [
+        {
+          "name": "calcMA",
+          "params": [
+            "data",
+            "period"
+          ],
+          "returnType": "(number | null)[]",
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "calcEMA",
+          "params": [
+            "data",
+            "period"
+          ],
+          "returnType": "number[]",
+          "exported": false,
+          "lineCount": 19
+        },
+        {
+          "name": "calcMACD",
+          "params": [
+            "data"
+          ],
+          "returnType": "{ dif: number[]; dea: number[]; macd: number[] }",
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "buildOption",
+          "params": [
+            "klineData",
+            "period"
+          ],
+          "exported": false,
+          "lineCount": 96
+        },
+        {
+          "name": "KLineChart",
+          "params": [
+            "{ instrument, klineData, period, onPeriodChange }"
+          ],
+          "exported": true,
+          "lineCount": 85
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useEffect",
+            "useRef"
+          ]
+        },
+        {
+          "source": "echarts",
+          "specifiers": [
+            "* as echarts"
+          ]
+        },
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "KLineData"
+          ]
+        }
+      ],
+      "exports": [
+        "KLineChart"
+      ],
+      "totalLines": 262,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/market/MarketPanel.test.tsx": {
+      "filePath": "frontend/src/modules/market/MarketPanel.test.tsx",
+      "contentHash": "ee7f00f67463f7398c1de4b9008f7cd7d7ee8872e15b7e284f0e57b8f6cd4f0e",
+      "functions": [
+        {
+          "name": "makeSnapshot",
+          "params": [
+            "overrides"
+          ],
+          "returnType": "MarketSnapshot",
+          "exported": false,
+          "lineCount": 19
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "vi",
+            "beforeEach"
+          ]
+        },
+        {
+          "source": "@testing-library/react",
+          "specifiers": [
+            "render",
+            "screen"
+          ]
+        },
+        {
+          "source": "./MarketPanel",
+          "specifiers": [
+            "MarketPanel"
+          ]
+        },
+        {
+          "source": "./store",
+          "specifiers": [
+            "useMarketStore"
+          ]
+        },
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "MarketSnapshot"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 140,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/market/MarketPanel.tsx": {
+      "filePath": "frontend/src/modules/market/MarketPanel.tsx",
+      "contentHash": "f6902e0c8f088dd36a433f0ceb6e72b15b34a2e2f56e4f4717458680527bc55e",
+      "functions": [
+        {
+          "name": "MarketPanel",
+          "params": [],
+          "exported": true,
+          "lineCount": 139
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useCallback",
+            "useEffect",
+            "useRef",
+            "useState"
+          ]
+        },
+        {
+          "source": "react-resizable-panels",
+          "specifiers": [
+            "Group",
+            "Panel",
+            "Separator"
+          ]
+        },
+        {
+          "source": "@/components/ResizeHandle",
+          "specifiers": [
+            "ResizeHandle"
+          ]
+        },
+        {
+          "source": "@/components/ContractSearch",
+          "specifiers": [
+            "ContractSearch"
+          ]
+        },
+        {
+          "source": "./MarketTable",
+          "specifiers": [
+            "MarketTable"
+          ]
+        },
+        {
+          "source": "./DepthQuote",
+          "specifiers": [
+            "DepthQuote"
+          ]
+        },
+        {
+          "source": "@/components/SpreadDisplay",
+          "specifiers": [
+            "SpreadDisplay"
+          ]
+        },
+        {
+          "source": "./KLineChart",
+          "specifiers": [
+            "KLineChart"
+          ]
+        },
+        {
+          "source": "./store",
+          "specifiers": [
+            "useMarketStore"
+          ]
+        },
+        {
+          "source": "@/stores/contracts",
+          "specifiers": [
+            "useContractsStore"
+          ]
+        },
+        {
+          "source": "@/hooks/usePointOrder",
+          "specifiers": [
+            "usePointOrder"
+          ]
+        },
+        {
+          "source": "@/hooks/useMarketWs",
+          "specifiers": [
+            "useMarketWs",
+            "PERIOD_MS"
+          ]
+        },
+        {
+          "source": "@/services/api",
+          "specifiers": [
+            "API_BASE",
+            "getKlineData"
+          ]
+        },
+        {
+          "source": "@/utils/panelStorage",
+          "specifiers": [
+            "savePanelSizes",
+            "loadPanelSizes"
+          ]
+        },
+        {
+          "source": "./styles.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [
+        "MarketPanel"
+      ],
+      "totalLines": 159,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/market/MarketTable.test.tsx": {
+      "filePath": "frontend/src/modules/market/MarketTable.test.tsx",
+      "contentHash": "21e03eaa1c4bbc3ef956e42926d5e98973a48adae79922aae8edf370e61a642c",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "vi",
+            "beforeEach"
+          ]
+        },
+        {
+          "source": "@testing-library/react",
+          "specifiers": [
+            "render"
+          ]
+        },
+        {
+          "source": "./MarketTable",
+          "specifiers": [
+            "MarketTable"
+          ]
+        },
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "MarketSnapshot",
+            "ContractInfo"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 81,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/market/MarketTable.tsx": {
+      "filePath": "frontend/src/modules/market/MarketTable.tsx",
+      "contentHash": "c0f546fa21e16cbc6d7353c3082355009310c96368d14258b36b4ccd7bb7e863",
+      "functions": [
+        {
+          "name": "buildRecord",
+          "params": [
+            "contract",
+            "snap"
+          ],
+          "exported": false,
+          "lineCount": 27
+        },
+        {
+          "name": "MarketTable",
+          "params": [
+            "{ contracts, snapshots, selectedInstrument, onRowClick, onRowDoubleClick }"
+          ],
+          "exported": true,
+          "lineCount": 117
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useRef",
+            "useEffect"
+          ]
+        },
+        {
+          "source": "@visactor/vtable",
+          "specifiers": [
+            "ListTable"
+          ]
+        },
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "MarketSnapshot",
+            "ContractInfo"
+          ]
+        }
+      ],
+      "exports": [
+        "MarketTable"
+      ],
+      "totalLines": 171,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/market/store.test.ts": {
+      "filePath": "frontend/src/modules/market/store.test.ts",
+      "contentHash": "ac6cb3e0fd50ef4f085dfdac77e935401ac2d29ae758b69726e6bbcc91a4fce3",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "vi",
+            "beforeEach"
+          ]
+        },
+        {
+          "source": "./store",
+          "specifiers": [
+            "useMarketStore"
+          ]
+        },
+        {
+          "source": "@/stores/contracts",
+          "specifiers": [
+            "useContractsStore"
+          ]
+        },
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "MarketSnapshot",
+            "KLineData"
+          ]
+        },
+        {
+          "source": "@/services/api",
+          "specifiers": [
+            "getInstruments",
+            "subscribeMarket",
+            "getSnapshots"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 255,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/market/store.ts": {
+      "filePath": "frontend/src/modules/market/store.ts",
+      "contentHash": "2b6f275f062229cafb568ccad06cc698f29a5eda072151f933dba3a5a4033c96",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "zustand",
+          "specifiers": [
+            "create"
+          ]
+        },
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "MarketSnapshot",
+            "KLineData"
+          ]
+        },
+        {
+          "source": "@/services/api",
+          "specifiers": [
+            "getInstruments",
+            "subscribeMarket"
+          ]
+        },
+        {
+          "source": "@/stores/contracts",
+          "specifiers": [
+            "useContractsStore"
+          ]
+        }
+      ],
+      "exports": [
+        "useMarketStore"
+      ],
+      "totalLines": 93,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/market/styles.css": {
+      "filePath": "frontend/src/modules/market/styles.css",
+      "contentHash": "e8975fa0e4d41853c39bfdce943a4c2bb15c8734be1aba015e2ebcd18a51a10a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 114,
+      "hasStructuralAnalysis": false
+    },
+    "frontend/src/modules/order/OrderPanel.test.tsx": {
+      "filePath": "frontend/src/modules/order/OrderPanel.test.tsx",
+      "contentHash": "2d05b831b16f27d44f7580f76e3f38f26998eb9e92209997e71d8b81a0d75bac",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect"
+          ]
+        },
+        {
+          "source": "@testing-library/react",
+          "specifiers": [
+            "render",
+            "screen"
+          ]
+        },
+        {
+          "source": "./OrderPanel",
+          "specifiers": [
+            "OrderPanel"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 16,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/order/OrderPanel.tsx": {
+      "filePath": "frontend/src/modules/order/OrderPanel.tsx",
+      "contentHash": "dfcd596b3b1987ad172e57ca2d453e392d21705e8d3c135a8c4809cfeb5b38b3",
+      "functions": [
+        {
+          "name": "OrderPanel",
+          "params": [],
+          "exported": true,
+          "lineCount": 12
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "./styles.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [
+        "OrderPanel"
+      ],
+      "totalLines": 15,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/order/store.test.ts": {
+      "filePath": "frontend/src/modules/order/store.test.ts",
+      "contentHash": "335c63ed8bb1cb305e4f1dd13fcfefdf4bfa765a4d63e480ed9e39a3d3500835",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "beforeEach"
+          ]
+        },
+        {
+          "source": "./store",
+          "specifiers": [
+            "useOrderStore"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 18,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/order/store.ts": {
+      "filePath": "frontend/src/modules/order/store.ts",
+      "contentHash": "e7f82a7f9e37c7536b11fac3c41e9b2ad409003ab4c71ac36332e4a2ecb93f26",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "zustand",
+          "specifiers": [
+            "create"
+          ]
+        }
+      ],
+      "exports": [
+        "useOrderStore"
+      ],
+      "totalLines": 12,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/order/styles.css": {
+      "filePath": "frontend/src/modules/order/styles.css",
+      "contentHash": "d22fa542d82389f6c87ffef94ed1ce97a477121d19c605a1049694eff72b2f41",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 8,
+      "hasStructuralAnalysis": false
+    },
+    "frontend/src/modules/query/QueryPanel.test.tsx": {
+      "filePath": "frontend/src/modules/query/QueryPanel.test.tsx",
+      "contentHash": "4a2a5600c184de68e51b02fe19020f29228b19f5d7236e3ed2435d2c111ec4c2",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "beforeEach"
+          ]
+        },
+        {
+          "source": "@testing-library/react",
+          "specifiers": [
+            "render",
+            "screen",
+            "fireEvent"
+          ]
+        },
+        {
+          "source": "./QueryPanel",
+          "specifiers": [
+            "QueryPanel"
+          ]
+        },
+        {
+          "source": "./store",
+          "specifiers": [
+            "useQueryStore"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 41,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/query/QueryPanel.tsx": {
+      "filePath": "frontend/src/modules/query/QueryPanel.tsx",
+      "contentHash": "9d1ea59eec7c2858989705a655a238cd73cb5cae03eb418d876e1ae7284ceaf2",
+      "functions": [
+        {
+          "name": "QueryPanel",
+          "params": [],
+          "exported": true,
+          "lineCount": 25
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "./store",
+          "specifiers": [
+            "useQueryStore"
+          ]
+        },
+        {
+          "source": "./styles.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [
+        "QueryPanel"
+      ],
+      "totalLines": 36,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/query/store.test.ts": {
+      "filePath": "frontend/src/modules/query/store.test.ts",
+      "contentHash": "3adc010009b7aa4fb45600c8217960859a2d260d472c0c14e1e069efa0ef6885",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect"
+          ]
+        },
+        {
+          "source": "./store",
+          "specifiers": [
+            "useQueryStore"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 22,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/query/store.ts": {
+      "filePath": "frontend/src/modules/query/store.ts",
+      "contentHash": "e6c082d6d1655d7d1187d9cdad32019e2a3bdf04c91c085e9b6f0c7b95ef271d",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "zustand",
+          "specifiers": [
+            "create"
+          ]
+        }
+      ],
+      "exports": [
+        "useQueryStore"
+      ],
+      "totalLines": 14,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/query/styles.css": {
+      "filePath": "frontend/src/modules/query/styles.css",
+      "contentHash": "86f118aeebe519fd9d964fb21179bf62543b00f219e30a3a84644a2d8e4a19c7",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 39,
+      "hasStructuralAnalysis": false
+    },
+    "frontend/src/services/api.test.ts": {
+      "filePath": "frontend/src/services/api.test.ts",
+      "contentHash": "3baf86c8929c4cc26f1e54a1f0881e5a87ba98cf4e0d1801af9a377a170b9071",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "vi",
+            "beforeEach"
+          ]
+        },
+        {
+          "source": "./api",
+          "specifiers": [
+            "api",
+            "API_BASE",
+            "getInstruments",
+            "subscribeMarket",
+            "getSnapshots",
+            "getKlineData"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 132,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/services/api.ts": {
+      "filePath": "frontend/src/services/api.ts",
+      "contentHash": "f97fa90070f21bdac0d049f712985c3a369e349fb3d8ff5ce1bf2f1a8fb71f55",
+      "functions": [
+        {
+          "name": "get",
+          "params": [
+            "url",
+            "params"
+          ],
+          "returnType": "Promise<ApiResponse<T>>",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "post",
+          "params": [
+            "url",
+            "body"
+          ],
+          "returnType": "Promise<ApiResponse<T>>",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "getInstruments",
+          "params": [
+            "keyword"
+          ],
+          "returnType": "Promise<InstrumentsResponse>",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "subscribeMarket",
+          "params": [
+            "instruments"
+          ],
+          "returnType": "Promise<SubscribeResponse>",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "getSnapshots",
+          "params": [
+            "instruments"
+          ],
+          "returnType": "Promise<SnapshotsResponse>",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "getKlineData",
+          "params": [
+            "instrument",
+            "period",
+            "count"
+          ],
+          "returnType": "Promise<KlineResponse>",
+          "exported": true,
+          "lineCount": 13
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "axios",
+          "specifiers": [
+            "axios"
+          ]
+        },
+        {
+          "source": "./types",
+          "specifiers": [
+            "ApiResponse",
+            "ContractInfo",
+            "MarketSnapshot",
+            "KLineData"
+          ]
+        }
+      ],
+      "exports": [
+        "API_BASE",
+        "api",
+        "get",
+        "post",
+        "getInstruments",
+        "subscribeMarket",
+        "getSnapshots",
+        "getKlineData"
+      ],
+      "totalLines": 102,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/services/types.ts": {
+      "filePath": "frontend/src/services/types.ts",
+      "contentHash": "3111ab49055ea81057b5a720f5dc43f0079f1c1f6462b804a4e8934f1f6b72a9",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 292,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/services/ws.test.ts": {
+      "filePath": "frontend/src/services/ws.test.ts",
+      "contentHash": "cc17c0081fd546a13cc1e6a396f2dbe1b51cfbc0940cd628eb8a75e911e8d33a",
+      "functions": [],
+      "classes": [
+        {
+          "name": "MockWebSocket",
+          "methods": [
+            "constructor",
+            "close",
+            "send"
+          ],
+          "properties": [
+            "CONNECTING",
+            "OPEN",
+            "CLOSING",
+            "CLOSED",
+            "instances",
+            "onopen",
+            "onclose",
+            "onmessage",
+            "onerror",
+            "readyState",
+            "url"
+          ],
+          "exported": false,
+          "lineCount": 24
+        }
+      ],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "vi",
+            "beforeEach",
+            "afterEach"
+          ]
+        },
+        {
+          "source": "./ws",
+          "specifiers": [
+            "WSManager"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 93,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/services/ws.ts": {
+      "filePath": "frontend/src/services/ws.ts",
+      "contentHash": "d56f34332c802d2a1e894e8852dec32014045475f3ecf46889bbfd1ef6a19341",
+      "functions": [],
+      "classes": [
+        {
+          "name": "WSManager",
+          "methods": [
+            "constructor",
+            "connect",
+            "disconnect",
+            "disconnectAll",
+            "isConnected",
+            "send"
+          ],
+          "properties": [
+            "baseUrl",
+            "connections",
+            "callbacks"
+          ],
+          "exported": true,
+          "lineCount": 99
+        }
+      ],
+      "imports": [
+        {
+          "source": "./types",
+          "specifiers": [
+            "WSMessage"
+          ]
+        }
+      ],
+      "exports": [
+        "WSManager"
+      ],
+      "totalLines": 106,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/setupTests.ts": {
+      "filePath": "frontend/src/setupTests.ts",
+      "contentHash": "f2f8a123a09d08c8b703f6795ebc24cabaf393a4de905374b15d326ef1a70ba7",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@testing-library/jest-dom",
+          "specifiers": []
+        },
+        {
+          "source": "vitest",
+          "specifiers": [
+            "vi"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 15,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/stores/connection.test.ts": {
+      "filePath": "frontend/src/stores/connection.test.ts",
+      "contentHash": "f441cd858a3efc5a298d96da0ea643b406ee05d2462312426330d7b60b80f521",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "beforeEach"
+          ]
+        },
+        {
+          "source": "./connection",
+          "specifiers": [
+            "useConnectionStore"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 32,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/stores/connection.ts": {
+      "filePath": "frontend/src/stores/connection.ts",
+      "contentHash": "8007df9259a0570fcb6ae2dd046f8182f41c08399262f6c3a39c678ad01c7792",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "zustand",
+          "specifiers": [
+            "create"
+          ]
+        }
+      ],
+      "exports": [
+        "useConnectionStore"
+      ],
+      "totalLines": 16,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/stores/contracts.test.ts": {
+      "filePath": "frontend/src/stores/contracts.test.ts",
+      "contentHash": "6ee36dc450736c7d441c2e3d184487fbd507f2163f0f4bb8b726ad7097f35933",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "beforeEach"
+          ]
+        },
+        {
+          "source": "./contracts",
+          "specifiers": [
+            "useContractsStore"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 52,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/stores/contracts.ts": {
+      "filePath": "frontend/src/stores/contracts.ts",
+      "contentHash": "888f60f1eec326f20fcaad441eb98b8da06cc4e43520d8805822f82b7edd2661",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "zustand",
+          "specifiers": [
+            "create"
+          ]
+        },
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "ContractInfo"
+          ]
+        }
+      ],
+      "exports": [
+        "useContractsStore"
+      ],
+      "totalLines": 26,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/stores/contractsMockData.ts": {
+      "filePath": "frontend/src/stores/contractsMockData.ts",
+      "contentHash": "e09fe25362478ae48ab8f0dab00204c04a8be1b1314474647e16b673cf290160",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "ContractInfo"
+          ]
+        }
+      ],
+      "exports": [
+        "MOCK_CONTRACTS"
+      ],
+      "totalLines": 170,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/stores/userPrefs.test.ts": {
+      "filePath": "frontend/src/stores/userPrefs.test.ts",
+      "contentHash": "71bd36a1ec0ccfde1cb9014b1378944ed98f74514ea372504e166e4b377c8483",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "beforeEach"
+          ]
+        },
+        {
+          "source": "./userPrefs",
+          "specifiers": [
+            "useUserPrefsStore",
+            "DEFAULT_HOT_KEYS"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 80,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/stores/userPrefs.ts": {
+      "filePath": "frontend/src/stores/userPrefs.ts",
+      "contentHash": "4869ad7da34307338230353dedb0d4ae14c5ef7728e22baf5f657d93ea4c0a57",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "zustand",
+          "specifiers": [
+            "create"
+          ]
+        },
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "HotKeyConfig"
+          ]
+        }
+      ],
+      "exports": [
+        "DEFAULT_HOT_KEYS",
+        "useUserPrefsStore"
+      ],
+      "totalLines": 64,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/utils/format.test.ts": {
+      "filePath": "frontend/src/utils/format.test.ts",
+      "contentHash": "65dfff732a807b4eeb39abfe032e1b799c422557b1e177b021e7c835da7bdc5c",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect"
+          ]
+        },
+        {
+          "source": "./format",
+          "specifiers": [
+            "formatPrice",
+            "formatVolume",
+            "formatTime",
+            "formatChange",
+            "formatPercent"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 72,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/utils/format.ts": {
+      "filePath": "frontend/src/utils/format.ts",
+      "contentHash": "76c1651146f159344115da4ff856b66e0e1e6bafe3e2aa125309360b803e5fab",
+      "functions": [
+        {
+          "name": "formatPrice",
+          "params": [
+            "price"
+          ],
+          "returnType": "string",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "formatVolume",
+          "params": [
+            "volume"
+          ],
+          "returnType": "string",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "formatTime",
+          "params": [
+            "time"
+          ],
+          "returnType": "string",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "formatChange",
+          "params": [
+            "change"
+          ],
+          "returnType": "string",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "formatPercent",
+          "params": [
+            "percent"
+          ],
+          "returnType": "string",
+          "exported": true,
+          "lineCount": 5
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "formatPrice",
+        "formatVolume",
+        "formatTime",
+        "formatChange",
+        "formatPercent"
+      ],
+      "totalLines": 42,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/utils/panelStorage.test.ts": {
+      "filePath": "frontend/src/utils/panelStorage.test.ts",
+      "contentHash": "fe424775c9eafcf8e77626a17cba111538b573a9e811a368126aee51f83a79ee",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "beforeEach"
+          ]
+        },
+        {
+          "source": "./panelStorage",
+          "specifiers": [
+            "savePanelSizes",
+            "loadPanelSizes"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 35,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/utils/panelStorage.ts": {
+      "filePath": "frontend/src/utils/panelStorage.ts",
+      "contentHash": "1b824673ebdaf83c4e867e9c1fb73535181ad1fa52143b64b30b306915b3342e",
+      "functions": [
+        {
+          "name": "savePanelSizes",
+          "params": [
+            "layoutKey",
+            "sizes"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "loadPanelSizes",
+          "params": [
+            "layoutKey"
+          ],
+          "returnType": "Record<string, number> | null",
+          "exported": true,
+          "lineCount": 9
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "savePanelSizes",
+        "loadPanelSizes"
+      ],
+      "totalLines": 20,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/utils/validators.test.ts": {
+      "filePath": "frontend/src/utils/validators.test.ts",
+      "contentHash": "a7c709e76de9d15f434ac241370e8a96d2f9a702bb053ff03255a474fae0552b",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect"
+          ]
+        },
+        {
+          "source": "./validators",
+          "specifiers": [
+            "validatePrice",
+            "validateVolume",
+            "validateInstrumentId"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 60,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/utils/validators.ts": {
+      "filePath": "frontend/src/utils/validators.ts",
+      "contentHash": "326be5bf47a6adb8fad0a8db57a397e4747eb42c9c36cb2c8b3f1b81f699112d",
+      "functions": [
+        {
+          "name": "validatePrice",
+          "params": [
+            "price"
+          ],
+          "returnType": "string | null",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "validateVolume",
+          "params": [
+            "volume"
+          ],
+          "returnType": "string | null",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "validateInstrumentId",
+          "params": [
+            "instrumentId"
+          ],
+          "returnType": "string | null",
+          "exported": true,
+          "lineCount": 4
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "validatePrice",
+        "validateVolume",
+        "validateInstrumentId"
+      ],
+      "totalLines": 28,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/vite-env.d.ts": {
+      "filePath": "frontend/src/vite-env.d.ts",
+      "contentHash": "424faf9241dd699dda995b367ed36665732da1e6ec1f33b2fd40394488ecac92",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/tsconfig.json": {
+      "filePath": "frontend/tsconfig.json",
+      "contentHash": "f4245209e529cf70d766751781b172877d6aa81de7dec64e126dd33cf3329836",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 26,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/tsconfig.node.json": {
+      "filePath": "frontend/tsconfig.node.json",
+      "contentHash": "6ec602b8aa146888c76f0b41ca3515f91f95919f6e6417a4670decaba8fcb982",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 11,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/vite.config.ts": {
+      "filePath": "frontend/vite.config.ts",
+      "contentHash": "229542ad013653cb2b0b0271cc3d991fd17531bec7901a982a4fed621c0ed9c3",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vite",
+          "specifiers": [
+            "defineConfig"
+          ]
+        },
+        {
+          "source": "@vitejs/plugin-react",
+          "specifiers": [
+            "react"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "path"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 26,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/vitest.config.ts": {
+      "filePath": "frontend/vitest.config.ts",
+      "contentHash": "80ef529f1c0a3e0e8601eed821b5267dbbe0c5713185a5528d3f217cceccaed7",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vitest/config",
+          "specifiers": [
+            "defineConfig"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "path"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 17,
+      "hasStructuralAnalysis": true
+    },
+    "md_demo.py": {
+      "filePath": "md_demo.py",
+      "contentHash": "a20ef41e597ad92148a5ab37296a18eb3b05d6333964a138346582b554b5bbe6",
+      "functions": [
+        {
+          "name": "pascal_to_camel",
+          "params": [
+            "name"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "inspect_ctp_class",
+          "params": [
+            "cls_name"
+          ],
+          "exported": true,
+          "lineCount": 40
+        },
+        {
+          "name": "fields_to_typescript",
+          "params": [
+            "fields",
+            "interface_name"
+          ],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "fields_to_mock",
+          "params": [
+            "fields",
+            "interface_name"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "run_and_save",
+          "params": [],
+          "exported": true,
+          "lineCount": 106
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "ctp",
+          "specifiers": [
+            "ctp"
+          ]
+        },
+        {
+          "source": "warnings",
+          "specifiers": [
+            "warnings"
+          ]
+        }
+      ],
+      "exports": [
+        "pascal_to_camel",
+        "inspect_ctp_class",
+        "fields_to_typescript",
+        "fields_to_mock",
+        "run_and_save"
+      ],
+      "totalLines": 295,
+      "hasStructuralAnalysis": true
+    },
+    "README.md": {
+      "filePath": "README.md",
+      "contentHash": "a820d3617d5fac2af053691d8faa240f82076ee08e59843a611184e74f7a976c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 79,
+      "hasStructuralAnalysis": true
+    },
+    "server/__init__.py": {
+      "filePath": "server/__init__.py",
+      "contentHash": "a607063f058f278275ddea1b38179eda948bc569349bae2572e7865b57b6e400",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 4,
+      "hasStructuralAnalysis": true
+    },
+    "server/.env.sample": {
+      "filePath": "server/.env.sample",
+      "contentHash": "17d16048541b5d0f751bdf30645a30ec161d96a2f72f1413b5912c06a4b73541",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 32,
+      "hasStructuralAnalysis": false
+    },
+    "server/api/__init__.py": {
+      "filePath": "server/api/__init__.py",
+      "contentHash": "faf1bf87b63a3fa2be823d9649f2410120cc3a1509253127aeed80fea9aaeb8f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2,
+      "hasStructuralAnalysis": true
+    },
+    "server/api/connection.py": {
+      "filePath": "server/api/connection.py",
+      "contentHash": "6976dbf56b416504c8a2e01eb441fd2e17936ef48a312673fceda35edf1fdad9",
+      "functions": [
+        {
+          "name": "login",
+          "params": [
+            "body",
+            "request"
+          ],
+          "exported": true,
+          "lineCount": 37
+        },
+        {
+          "name": "logout",
+          "params": [
+            "request"
+          ],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "status",
+          "params": [
+            "request"
+          ],
+          "exported": true,
+          "lineCount": 17
+        }
+      ],
+      "classes": [
+        {
+          "name": "LoginRequest",
+          "methods": [],
+          "properties": [
+            "brokerID",
+            "userID",
+            "password"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "LoginResponse",
+          "methods": [],
+          "properties": [
+            "success",
+            "message",
+            "userID"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "StatusResponse",
+          "methods": [],
+          "properties": [
+            "loggedIn",
+            "mdConnected",
+            "tdConnected"
+          ],
+          "exported": true,
+          "lineCount": 4
+        }
+      ],
+      "imports": [
+        {
+          "source": "fastapi",
+          "specifiers": [
+            "APIRouter",
+            "Request"
+          ]
+        },
+        {
+          "source": "pydantic",
+          "specifiers": [
+            "BaseModel",
+            "Field"
+          ]
+        },
+        {
+          "source": "services.ctp_startup",
+          "specifiers": [
+            "connect_ctp"
+          ]
+        }
+      ],
+      "exports": [
+        "LoginRequest",
+        "LoginResponse",
+        "StatusResponse",
+        "login",
+        "logout",
+        "status"
+      ],
+      "totalLines": 114,
+      "hasStructuralAnalysis": true
+    },
+    "server/api/market.py": {
+      "filePath": "server/api/market.py",
+      "contentHash": "744d94a3f98a7b82e11c277ae6aa20311548f647f7482c9d0147d2cd707cb6d0",
+      "functions": [
+        {
+          "name": "_get_service",
+          "params": [
+            "request"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "get_instruments",
+          "params": [
+            "request",
+            "keyword"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "subscribe",
+          "params": [
+            "body",
+            "request"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "unsubscribe",
+          "params": [
+            "body",
+            "request"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "get_snapshots",
+          "params": [
+            "request",
+            "instruments"
+          ],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "get_kline",
+          "params": [
+            "request",
+            "instrument",
+            "period",
+            "count"
+          ],
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "get_depth",
+          "params": [
+            "request",
+            "instrument"
+          ],
+          "exported": true,
+          "lineCount": 35
+        }
+      ],
+      "classes": [
+        {
+          "name": "SubscribeRequest",
+          "methods": [],
+          "properties": [
+            "instruments"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "UnsubscribeRequest",
+          "methods": [],
+          "properties": [
+            "instruments"
+          ],
+          "exported": true,
+          "lineCount": 2
+        }
+      ],
+      "imports": [
+        {
+          "source": "typing",
+          "specifiers": [
+            "List"
+          ]
+        },
+        {
+          "source": "fastapi",
+          "specifiers": [
+            "APIRouter",
+            "Query",
+            "Request"
+          ]
+        },
+        {
+          "source": "pydantic",
+          "specifiers": [
+            "BaseModel",
+            "Field"
+          ]
+        }
+      ],
+      "exports": [
+        "SubscribeRequest",
+        "UnsubscribeRequest",
+        "_get_service",
+        "get_instruments",
+        "subscribe",
+        "unsubscribe",
+        "get_snapshots",
+        "get_kline",
+        "get_depth"
+      ],
+      "totalLines": 156,
+      "hasStructuralAnalysis": true
+    },
+    "server/api/order.py": {
+      "filePath": "server/api/order.py",
+      "contentHash": "d0d258e9563196181a28705490cacebfc9b7449fd2509ada6264f092e5219b60",
+      "functions": [
+        {
+          "name": "insert_order",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "cancel_order",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "fastapi",
+          "specifiers": [
+            "APIRouter"
+          ]
+        }
+      ],
+      "exports": [
+        "insert_order",
+        "cancel_order"
+      ],
+      "totalLines": 18,
+      "hasStructuralAnalysis": true
+    },
+    "server/api/query.py": {
+      "filePath": "server/api/query.py",
+      "contentHash": "39c43968674a9ecd8c8e6658885fb84e729982a2e794be622e94094f54458a09",
+      "functions": [
+        {
+          "name": "get_positions",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "get_account",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "get_orders",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "fastapi",
+          "specifiers": [
+            "APIRouter"
+          ]
+        }
+      ],
+      "exports": [
+        "get_positions",
+        "get_account",
+        "get_orders"
+      ],
+      "totalLines": 24,
+      "hasStructuralAnalysis": true
+    },
+    "server/config.py": {
+      "filePath": "server/config.py",
+      "contentHash": "e166b152ea48c76ec10b83b69b554556bc231ffd8ab02ba19d5e9c417eb9a451",
+      "functions": [
+        {
+          "name": "load_config",
+          "params": [],
+          "returnType": "Config",
+          "exported": true,
+          "lineCount": 3
+        }
+      ],
+      "classes": [
+        {
+          "name": "Config",
+          "methods": [
+            "__init__",
+            "__repr__"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 31
+        }
+      ],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        }
+      ],
+      "exports": [
+        "Config",
+        "load_config"
+      ],
+      "totalLines": 53,
+      "hasStructuralAnalysis": true
+    },
+    "server/ctp_wrapper/__init__.py": {
+      "filePath": "server/ctp_wrapper/__init__.py",
+      "contentHash": "dba3dce2ae9c316a2e85ea4054a5c93a2a3478c5005a98045bb5a67c986ce123",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2,
+      "hasStructuralAnalysis": true
+    },
+    "server/ctp_wrapper/callback.py": {
+      "filePath": "server/ctp_wrapper/callback.py",
+      "contentHash": "e6284dc76852f50e088ca3edfc9187efdebe1111f37c4b53abe10d3fa228e4ac",
+      "functions": [
+        {
+          "name": "_make_md_spi_class",
+          "params": [],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "_md_init",
+          "params": [
+            "api"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "_md_on_front_connected",
+          "params": [],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "_md_on_front_disconnected",
+          "params": [
+            "nReason"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "_md_on_rsp_user_login",
+          "params": [
+            "pRspUserLogin",
+            "pRspInfo",
+            "nRequestID",
+            "bIsLast"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "_md_on_rsp_sub_market_data",
+          "params": [
+            "pSpecificInstrument",
+            "pRspInfo",
+            "nRequestID",
+            "bIsLast"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "_md_on_rsp_unsub_market_data",
+          "params": [
+            "pSpecificInstrument",
+            "pRspInfo",
+            "nRequestID",
+            "bIsLast"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "_md_on_rtn_depth_market_data",
+          "params": [
+            "pDepthMarketData"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "_md_on_rsp_error",
+          "params": [
+            "pRspInfo",
+            "nRequestID",
+            "bIsLast"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "_make_td_spi_class",
+          "params": [],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "_td_init",
+          "params": [
+            "api"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "_td_on_front_connected",
+          "params": [],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "_td_on_front_disconnected",
+          "params": [
+            "nReason"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "_td_on_rsp_user_login",
+          "params": [
+            "pRspUserLogin",
+            "pRspInfo",
+            "nRequestID",
+            "bIsLast"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "_td_on_rtn_order",
+          "params": [
+            "pOrder"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "_td_on_rtn_trade",
+          "params": [
+            "pTrade"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "_td_on_rsp_order_insert",
+          "params": [
+            "pInputOrder",
+            "pRspInfo",
+            "nRequestID",
+            "bIsLast"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "_td_on_rsp_order_action",
+          "params": [
+            "pInputOrderAction",
+            "pRspInfo",
+            "nRequestID",
+            "bIsLast"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "_td_on_rsp_error",
+          "params": [
+            "pRspInfo",
+            "nRequestID",
+            "bIsLast"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 4
+        }
+      ],
+      "classes": [
+        {
+          "name": "_SpiInfrastructure",
+          "methods": [
+            "_init_spi",
+            "_log",
+            "on",
+            "_dispatch"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 27
+        }
+      ],
+      "imports": [
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Any",
+            "Callable",
+            "List",
+            "Optional"
+          ]
+        }
+      ],
+      "exports": [
+        "_SpiInfrastructure",
+        "_make_md_spi_class",
+        "_md_init",
+        "_md_on_front_connected",
+        "_md_on_front_disconnected",
+        "_md_on_rsp_user_login",
+        "_md_on_rsp_sub_market_data",
+        "_md_on_rsp_unsub_market_data",
+        "_md_on_rtn_depth_market_data",
+        "_md_on_rsp_error",
+        "_make_td_spi_class",
+        "_td_init",
+        "_td_on_front_connected",
+        "_td_on_front_disconnected",
+        "_td_on_rsp_user_login",
+        "_td_on_rtn_order",
+        "_td_on_rtn_trade",
+        "_td_on_rsp_order_insert",
+        "_td_on_rsp_order_action",
+        "_td_on_rsp_error"
+      ],
+      "totalLines": 215,
+      "hasStructuralAnalysis": true
+    },
+    "server/ctp_wrapper/md_user_api.py": {
+      "filePath": "server/ctp_wrapper/md_user_api.py",
+      "contentHash": "4774a4cd450755273f08a72454f7d0a80a59811665dfbdfbe3e36efbb501b808",
+      "functions": [],
+      "classes": [
+        {
+          "name": "MdUserApi",
+          "methods": [
+            "__init__",
+            "create",
+            "login",
+            "subscribe",
+            "unsubscribe",
+            "release"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 111
+        }
+      ],
+      "imports": [
+        {
+          "source": "typing",
+          "specifiers": [
+            "List",
+            "Optional"
+          ]
+        },
+        {
+          "source": ".callback",
+          "specifiers": [
+            "MdSpi"
+          ]
+        }
+      ],
+      "exports": [
+        "MdUserApi"
+      ],
+      "totalLines": 130,
+      "hasStructuralAnalysis": true
+    },
+    "server/ctp_wrapper/trader_api.py": {
+      "filePath": "server/ctp_wrapper/trader_api.py",
+      "contentHash": "0d37eb0569217774207cf31b4b0b9a43d8f49e4fc601e70fd7e070b012b43bb4",
+      "functions": [],
+      "classes": [
+        {
+          "name": "TraderApi",
+          "methods": [
+            "__init__",
+            "create",
+            "login",
+            "_next_order_ref",
+            "insert_order",
+            "cancel_order",
+            "release"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 127
+        }
+      ],
+      "imports": [
+        {
+          "source": "typing",
+          "specifiers": [
+            "Optional"
+          ]
+        },
+        {
+          "source": ".callback",
+          "specifiers": [
+            "TraderSpi"
+          ]
+        },
+        {
+          "source": ".types",
+          "specifiers": [
+            "Direction",
+            "OffsetFlag",
+            "OrderPriceType"
+          ]
+        }
+      ],
+      "exports": [
+        "TraderApi"
+      ],
+      "totalLines": 144,
+      "hasStructuralAnalysis": true
+    },
+    "server/ctp_wrapper/types.py": {
+      "filePath": "server/ctp_wrapper/types.py",
+      "contentHash": "660b0097f3323fd4bcd80742d4aaab7888972ca48e3d11ab5dd16217c4ea75f8",
+      "functions": [],
+      "classes": [
+        {
+          "name": "Direction",
+          "methods": [],
+          "properties": [
+            "BUY",
+            "SELL"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "OffsetFlag",
+          "methods": [],
+          "properties": [
+            "OPEN",
+            "CLOSE",
+            "CLOSE_TODAY"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "OrderPriceType",
+          "methods": [],
+          "properties": [
+            "ANY",
+            "LIMIT"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "TimeCondition",
+          "methods": [],
+          "properties": [
+            "GFD",
+            "FOK",
+            "FAK"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "VolumeCondition",
+          "methods": [],
+          "properties": [
+            "AV",
+            "MV",
+            "CV"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "OrderStatus",
+          "methods": [],
+          "properties": [
+            "ALL_TRADED",
+            "PART_TRADED",
+            "NO_TRADED",
+            "CANCELED"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "PosiDirection",
+          "methods": [],
+          "properties": [
+            "NET",
+            "LONG",
+            "SHORT"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "ProductClass",
+          "methods": [],
+          "properties": [
+            "FUTURES",
+            "OPTIONS",
+            "COMBINATION"
+          ],
+          "exported": true,
+          "lineCount": 5
+        }
+      ],
+      "imports": [],
+      "exports": [
+        "Direction",
+        "OffsetFlag",
+        "OrderPriceType",
+        "TimeCondition",
+        "VolumeCondition",
+        "OrderStatus",
+        "PosiDirection",
+        "ProductClass"
+      ],
+      "totalLines": 61,
+      "hasStructuralAnalysis": true
+    },
+    "server/data/__init__.py": {
+      "filePath": "server/data/__init__.py",
+      "contentHash": "9236fdf3ea41abc34969ceda2d7d5b2e483db306a933fcbdf545265cd2286164",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2,
+      "hasStructuralAnalysis": true
+    },
+    "server/data/instruments.json": {
+      "filePath": "server/data/instruments.json",
+      "contentHash": "fc271653ec6edc39a0559649d85410f59d7cab31feac3ea5999294586858a3f2",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 147,
+      "hasStructuralAnalysis": true
+    },
+    "server/main.py": {
+      "filePath": "server/main.py",
+      "contentHash": "ea0ae1d25cc3831680b952c9407523545ac65a7e323f1dd8d623252e0affcf54",
+      "functions": [
+        {
+          "name": "create_app",
+          "params": [],
+          "returnType": "FastAPI",
+          "exported": true,
+          "lineCount": 95
+        },
+        {
+          "name": "wire_ctp_market_bridge",
+          "params": [
+            "md_api",
+            "app"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 38
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "asyncio",
+          "specifiers": [
+            "asyncio"
+          ]
+        },
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "contextlib",
+          "specifiers": [
+            "asynccontextmanager"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "fastapi",
+          "specifiers": [
+            "FastAPI",
+            "Request",
+            "WebSocket"
+          ]
+        },
+        {
+          "source": "fastapi.middleware.cors",
+          "specifiers": [
+            "CORSMiddleware"
+          ]
+        },
+        {
+          "source": "fastapi.responses",
+          "specifiers": [
+            "JSONResponse"
+          ]
+        },
+        {
+          "source": "config",
+          "specifiers": [
+            "load_config"
+          ]
+        },
+        {
+          "source": "api.connection",
+          "specifiers": [
+            "connection_router"
+          ]
+        },
+        {
+          "source": "api.market",
+          "specifiers": [
+            "market_router"
+          ]
+        },
+        {
+          "source": "api.order",
+          "specifiers": [
+            "order_router"
+          ]
+        },
+        {
+          "source": "api.query",
+          "specifiers": [
+            "query_router"
+          ]
+        },
+        {
+          "source": "ws.manager",
+          "specifiers": [
+            "WebSocketManager"
+          ]
+        },
+        {
+          "source": "services.market_service",
+          "specifiers": [
+            "MarketService"
+          ]
+        },
+        {
+          "source": "services.ctp_bridge",
+          "specifiers": [
+            "wire_market_data_callback"
+          ]
+        },
+        {
+          "source": "services.ctp_startup",
+          "specifiers": [
+            "connect_ctp"
+          ]
+        },
+        {
+          "source": "ws.handlers",
+          "specifiers": [
+            "handle_ws"
+          ]
+        }
+      ],
+      "exports": [
+        "create_app",
+        "wire_ctp_market_bridge"
+      ],
+      "totalLines": 182,
+      "hasStructuralAnalysis": true
+    },
+    "server/models/__init__.py": {
+      "filePath": "server/models/__init__.py",
+      "contentHash": "3848f1424796b4d7a58b7b9a1ec32eed4291c9adad1d3bac6b02a52efbe15bfa",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2,
+      "hasStructuralAnalysis": true
+    },
+    "server/models/account.py": {
+      "filePath": "server/models/account.py",
+      "contentHash": "1431023027b84eb301f546387614fe065242f092fd416b892877547b7dfefaf6",
+      "functions": [],
+      "classes": [
+        {
+          "name": "AccountInfo",
+          "methods": [],
+          "properties": [
+            "accountID",
+            "brokerID",
+            "balance",
+            "available",
+            "frozenMargin",
+            "currMargin",
+            "closeProfit",
+            "positionProfit",
+            "commission",
+            "deposit",
+            "withdraw",
+            "preBalance",
+            "tradingDay"
+          ],
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "PositionInfo",
+          "methods": [],
+          "properties": [
+            "instrumentID",
+            "position",
+            "posiDirection",
+            "hedgeFlag",
+            "positionDate",
+            "ydPosition",
+            "todayPosition",
+            "openCost",
+            "positionCost",
+            "positionProfit",
+            "closeProfit",
+            "useMargin",
+            "exchangeMargin",
+            "brokerID",
+            "investorID",
+            "tradingDay"
+          ],
+          "exported": true,
+          "lineCount": 19
+        }
+      ],
+      "imports": [
+        {
+          "source": "typing",
+          "specifiers": [
+            "Optional"
+          ]
+        },
+        {
+          "source": "pydantic",
+          "specifiers": [
+            "BaseModel",
+            "Field"
+          ]
+        }
+      ],
+      "exports": [
+        "AccountInfo",
+        "PositionInfo"
+      ],
+      "totalLines": 44,
+      "hasStructuralAnalysis": true
+    },
+    "server/models/contract.py": {
+      "filePath": "server/models/contract.py",
+      "contentHash": "b9933d8973e558cde7357cd9a5c812743a6058337cbfd2e46662e8b1d6bf8dd3",
+      "functions": [],
+      "classes": [
+        {
+          "name": "InstrumentInfo",
+          "methods": [],
+          "properties": [
+            "instrumentID",
+            "instrumentName",
+            "exchangeID",
+            "productID",
+            "productClass",
+            "volumeMultiple",
+            "priceTick",
+            "expireDate",
+            "openDate",
+            "isTrading",
+            "longMarginRatio",
+            "shortMarginRatio",
+            "optionsType",
+            "strikePrice",
+            "underlyingInstrID",
+            "underlyingMultiple"
+          ],
+          "exported": true,
+          "lineCount": 21
+        }
+      ],
+      "imports": [
+        {
+          "source": "pydantic",
+          "specifiers": [
+            "BaseModel"
+          ]
+        }
+      ],
+      "exports": [
+        "InstrumentInfo"
+      ],
+      "totalLines": 27,
+      "hasStructuralAnalysis": true
+    },
+    "server/models/market.py": {
+      "filePath": "server/models/market.py",
+      "contentHash": "058cd03e7928cee5f98ca489dde23781bc6224ef7fa29e1267e0160de8fd9beb",
+      "functions": [],
+      "classes": [
+        {
+          "name": "MarketSnapshot",
+          "methods": [],
+          "properties": [
+            "instrumentID",
+            "exchangeID",
+            "tradingDay",
+            "lastPrice",
+            "openPrice",
+            "highestPrice",
+            "lowestPrice",
+            "closePrice",
+            "preClosePrice",
+            "preSettlementPrice",
+            "settlementPrice",
+            "upperLimitPrice",
+            "lowerLimitPrice",
+            "averagePrice",
+            "bidPrice1",
+            "bidPrice2",
+            "bidPrice3",
+            "bidPrice4",
+            "bidPrice5",
+            "bidVolume1",
+            "bidVolume2",
+            "bidVolume3",
+            "bidVolume4",
+            "bidVolume5",
+            "askPrice1",
+            "askPrice2",
+            "askPrice3",
+            "askPrice4",
+            "askPrice5",
+            "askVolume1",
+            "askVolume2",
+            "askVolume3",
+            "askVolume4",
+            "askVolume5",
+            "volume",
+            "turnover",
+            "openInterest",
+            "updateTime",
+            "updateMillisec",
+            "actionDay"
+          ],
+          "exported": true,
+          "lineCount": 54
+        },
+        {
+          "name": "KLineData",
+          "methods": [],
+          "properties": [
+            "instrumentID",
+            "period",
+            "time",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "turnover",
+            "openInterest"
+          ],
+          "exported": true,
+          "lineCount": 13
+        }
+      ],
+      "imports": [
+        {
+          "source": "typing",
+          "specifiers": [
+            "Optional"
+          ]
+        },
+        {
+          "source": "pydantic",
+          "specifiers": [
+            "BaseModel",
+            "Field"
+          ]
+        }
+      ],
+      "exports": [
+        "MarketSnapshot",
+        "KLineData"
+      ],
+      "totalLines": 76,
+      "hasStructuralAnalysis": true
+    },
+    "server/models/order.py": {
+      "filePath": "server/models/order.py",
+      "contentHash": "3b2186b649efc1725da004f56923b9b9ffbb58fe4f154af2fbb1bf541715e531",
+      "functions": [],
+      "classes": [
+        {
+          "name": "OrderRequest",
+          "methods": [],
+          "properties": [
+            "instrumentID",
+            "direction",
+            "offsetFlag",
+            "priceType",
+            "limitPrice",
+            "volumeTotalOriginal",
+            "timeCondition",
+            "volumeCondition",
+            "hedgeFlag"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "OrderReturn",
+          "methods": [],
+          "properties": [
+            "instrumentID",
+            "orderRef",
+            "orderSysID",
+            "orderStatus",
+            "direction",
+            "offsetFlag",
+            "priceType",
+            "limitPrice",
+            "volumeTotalOriginal",
+            "volumeTraded",
+            "volumeTotal",
+            "statusMsg",
+            "insertDate",
+            "insertTime",
+            "exchangeID",
+            "tradingDay",
+            "frontID",
+            "sessionID"
+          ],
+          "exported": true,
+          "lineCount": 21
+        }
+      ],
+      "imports": [
+        {
+          "source": "typing",
+          "specifiers": [
+            "Optional"
+          ]
+        },
+        {
+          "source": "pydantic",
+          "specifiers": [
+            "BaseModel",
+            "Field"
+          ]
+        }
+      ],
+      "exports": [
+        "OrderRequest",
+        "OrderReturn"
+      ],
+      "totalLines": 42,
+      "hasStructuralAnalysis": true
+    },
+    "server/requirements.txt": {
+      "filePath": "server/requirements.txt",
+      "contentHash": "9aaf6c3a19b416d9fb43e2c7fffaa291ce7fe1c55e2a7ad64dae18affba0d26d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 10,
+      "hasStructuralAnalysis": false
+    },
+    "server/services/__init__.py": {
+      "filePath": "server/services/__init__.py",
+      "contentHash": "7dc2886228f4802ed16eb56a8ca981b39b1f956f34573dfad837f22bfdcba0e8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2,
+      "hasStructuralAnalysis": true
+    },
+    "server/services/ctp_bridge.py": {
+      "filePath": "server/services/ctp_bridge.py",
+      "contentHash": "0565fd70d2edf2bdcc674dd248a70c273d6396c6a35f289b54fcfc7f32f869a8",
+      "functions": [
+        {
+          "name": "wire_market_data_callback",
+          "params": [
+            "md_spi",
+            "market_service",
+            "broadcast_fn",
+            "kline_service"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 50
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Any",
+            "Callable",
+            "Optional"
+          ]
+        },
+        {
+          "source": "services.field_mapping",
+          "specifiers": [
+            "map_depth_market_data"
+          ]
+        },
+        {
+          "source": "ctp_wrapper.callback",
+          "specifiers": [
+            "MdSpi"
+          ]
+        },
+        {
+          "source": "services.market_service",
+          "specifiers": [
+            "MarketService"
+          ]
+        },
+        {
+          "source": "services.kline_service",
+          "specifiers": [
+            "KLineService"
+          ]
+        }
+      ],
+      "exports": [
+        "wire_market_data_callback"
+      ],
+      "totalLines": 80,
+      "hasStructuralAnalysis": true
+    },
+    "server/services/ctp_startup.py": {
+      "filePath": "server/services/ctp_startup.py",
+      "contentHash": "cd0acf797eed76ac7ef2044b2f3ec0834d1aebc9e5e1e1738f50bdf51bbe564a",
+      "functions": [
+        {
+          "name": "connect_ctp",
+          "params": [
+            "app",
+            "broker_id",
+            "user_id",
+            "password",
+            "wait"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 44
+        },
+        {
+          "name": "start_ctp_market_connection",
+          "params": [
+            "app",
+            "config"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "_connect_ctp",
+          "params": [
+            "app",
+            "broker_id",
+            "user_id",
+            "password",
+            "loop",
+            "result",
+            "login_done_signal"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 96
+        },
+        {
+          "name": "_wire_bridge",
+          "params": [
+            "app",
+            "md_api",
+            "loop"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 93
+        },
+        {
+          "name": "_attempt_reconnect",
+          "params": [
+            "app",
+            "md_api",
+            "loop"
+          ],
+          "returnType": "bool",
+          "exported": true,
+          "lineCount": 63
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "asyncio",
+          "specifiers": [
+            "asyncio"
+          ]
+        },
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "threading",
+          "specifiers": [
+            "threading"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Any",
+            "List",
+            "Optional",
+            "TYPE_CHECKING"
+          ]
+        },
+        {
+          "source": "services.ctp_bridge",
+          "specifiers": [
+            "wire_market_data_callback"
+          ]
+        }
+      ],
+      "exports": [
+        "connect_ctp",
+        "start_ctp_market_connection",
+        "_connect_ctp",
+        "_wire_bridge",
+        "_attempt_reconnect"
+      ],
+      "totalLines": 351,
+      "hasStructuralAnalysis": true
+    },
+    "server/services/field_mapping.py": {
+      "filePath": "server/services/field_mapping.py",
+      "contentHash": "b25593c7f338e16c47e4a11803534b89c2797e34d89a9a7dc5cddc4384c63e28",
+      "functions": [
+        {
+          "name": "map_depth_market_data",
+          "params": [
+            "ctp_obj"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 14
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "typing",
+          "specifiers": [
+            "Any",
+            "List",
+            "Tuple"
+          ]
+        }
+      ],
+      "exports": [
+        "map_depth_market_data"
+      ],
+      "totalLines": 77,
+      "hasStructuralAnalysis": true
+    },
+    "server/services/kline_service.py": {
+      "filePath": "server/services/kline_service.py",
+      "contentHash": "ef0394fe13c374e4073fdc2b8a0b9fad45fa93be8ce4b109fb4b06c7ce019d7e",
+      "functions": [
+        {
+          "name": "_parse_timestamp",
+          "params": [
+            "action_day",
+            "update_time"
+          ],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 24
+        },
+        {
+          "name": "_format_time",
+          "params": [
+            "timestamp"
+          ],
+          "returnType": "str",
+          "exported": true,
+          "lineCount": 6
+        }
+      ],
+      "classes": [
+        {
+          "name": "KLineService",
+          "methods": [
+            "__init__",
+            "update_tick",
+            "get_klines",
+            "reset"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 118
+        }
+      ],
+      "imports": [
+        {
+          "source": "calendar",
+          "specifiers": [
+            "calendar"
+          ]
+        },
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "threading",
+          "specifiers": [
+            "threading"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "_time"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Dict",
+            "List"
+          ]
+        }
+      ],
+      "exports": [
+        "_parse_timestamp",
+        "_format_time",
+        "KLineService"
+      ],
+      "totalLines": 189,
+      "hasStructuralAnalysis": true
+    },
+    "server/services/market_service.py": {
+      "filePath": "server/services/market_service.py",
+      "contentHash": "f23241698671f4265cca5745cc52b1de6124f6887ef5d93a7ff3f005cfa1ef2e",
+      "functions": [],
+      "classes": [
+        {
+          "name": "MarketService",
+          "methods": [
+            "__init__",
+            "set_ctp_hooks",
+            "instrument_count",
+            "load_instruments",
+            "load_instruments_from_file",
+            "get_instruments",
+            "subscription_count",
+            "get_subscriptions",
+            "subscribe",
+            "unsubscribe",
+            "snapshot_count",
+            "update_snapshot",
+            "get_snapshot",
+            "get_all_snapshots"
+          ],
+          "properties": [
+            "MAX_SUBSCRIPTIONS"
+          ],
+          "exported": true,
+          "lineCount": 202
+        }
+      ],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "threading",
+          "specifiers": [
+            "threading"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Any",
+            "Callable",
+            "Dict",
+            "List",
+            "Optional",
+            "Set"
+          ]
+        }
+      ],
+      "exports": [
+        "MarketService"
+      ],
+      "totalLines": 217,
+      "hasStructuralAnalysis": true
+    },
+    "server/services/reconnect.py": {
+      "filePath": "server/services/reconnect.py",
+      "contentHash": "4b77fcf8fbd0b9daa798d6b947a97103b2f1d17bfac157f931503074f8be33dd",
+      "functions": [],
+      "classes": [
+        {
+          "name": "ReconnectService",
+          "methods": [
+            "__init__",
+            "_get_delay",
+            "get_current_delay",
+            "should_retry",
+            "on_disconnect",
+            "on_success",
+            "reset",
+            "update_subscriptions",
+            "get_subscriptions",
+            "try_reconnect"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 82
+        }
+      ],
+      "imports": [
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Callable",
+            "List"
+          ]
+        }
+      ],
+      "exports": [
+        "ReconnectService"
+      ],
+      "totalLines": 95,
+      "hasStructuralAnalysis": true
+    },
+    "server/start.py": {
+      "filePath": "server/start.py",
+      "contentHash": "31f46d2a845b17d6aa8734965781e9517808f63de76f35e88a04f8bbbf3cc4a8",
+      "functions": [
+        {
+          "name": "_load_env_file",
+          "params": [
+            "env_path"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "select_addresses",
+          "params": [
+            "env"
+          ],
+          "returnType": "tuple",
+          "exported": true,
+          "lineCount": 30
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "_parse_uvicorn_kwargs",
+          "params": [
+            "args"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 16
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        }
+      ],
+      "exports": [
+        "_load_env_file",
+        "select_addresses",
+        "main",
+        "_parse_uvicorn_kwargs"
+      ],
+      "totalLines": 125,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/__init__.py": {
+      "filePath": "server/tests/__init__.py",
+      "contentHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 1,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_callback.py": {
+      "filePath": "server/tests/test_callback.py",
+      "contentHash": "db229239722b8d9ba64bce6ff73e30095d784c669aa4b0522b31538b9f6c6121",
+      "functions": [],
+      "classes": [
+        {
+          "name": "TestMdSpi",
+          "methods": [
+            "test_instantiation",
+            "test_stores_api_reference",
+            "test_on_front_connected_exists",
+            "test_on_front_disconnected_exists",
+            "test_on_rsp_user_login_exists",
+            "test_on_rsp_sub_market_data_exists",
+            "test_on_rtn_depth_market_data_exists",
+            "test_on_rsp_error_exists",
+            "test_on_front_connected_default_behavior"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 59
+        },
+        {
+          "name": "TestTraderSpi",
+          "methods": [
+            "test_instantiation",
+            "test_stores_api_reference",
+            "test_on_front_connected_exists",
+            "test_on_front_disconnected_exists",
+            "test_on_rsp_user_login_exists",
+            "test_on_rtn_order_exists",
+            "test_on_rtn_trade_exists",
+            "test_on_rsp_order_insert_exists",
+            "test_on_rsp_order_action_exists",
+            "test_on_rsp_error_exists",
+            "test_callback_defaults_do_not_crash"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 74
+        },
+        {
+          "name": "TestCallbackLogging",
+          "methods": [
+            "test_md_spi_has_log_events",
+            "test_trader_spi_has_log_events",
+            "test_callback_logs_event",
+            "test_callback_event_has_timestamp"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 24
+        }
+      ],
+      "imports": [
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "ctp_wrapper.callback",
+          "specifiers": [
+            "MdSpi",
+            "TraderSpi"
+          ]
+        }
+      ],
+      "exports": [
+        "TestMdSpi",
+        "TestTraderSpi",
+        "TestCallbackLogging"
+      ],
+      "totalLines": 173,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_config.py": {
+      "filePath": "server/tests/test_config.py",
+      "contentHash": "2dc5479468ea338efc0d89ae6a837954a0ec2c45d715a0454b857f3bce99de2b",
+      "functions": [],
+      "classes": [
+        {
+          "name": "TestConfigDefaults",
+          "methods": [
+            "test_default_broker_id",
+            "test_default_md_front",
+            "test_default_td_front",
+            "test_default_user_id",
+            "test_default_password",
+            "test_default_app_id",
+            "test_default_auth_code"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 30
+        },
+        {
+          "name": "TestConfigFromEnv",
+          "methods": [
+            "test_read_broker_id_from_env",
+            "test_read_md_front_from_env",
+            "test_read_td_front_from_env",
+            "test_read_user_id_from_env",
+            "test_read_password_from_env",
+            "test_read_app_id_from_env",
+            "test_read_all_from_env"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 48
+        },
+        {
+          "name": "TestLoadConfig",
+          "methods": [
+            "test_load_config_returns_config_instance",
+            "test_load_config_from_dotenv",
+            "test_config_repr"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 22
+        }
+      ],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "unittest",
+          "specifiers": [
+            "mock"
+          ]
+        },
+        {
+          "source": "config",
+          "specifiers": [
+            "Config",
+            "load_config"
+          ]
+        }
+      ],
+      "exports": [
+        "TestConfigDefaults",
+        "TestConfigFromEnv",
+        "TestLoadConfig"
+      ],
+      "totalLines": 117,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_connection_api.py": {
+      "filePath": "server/tests/test_connection_api.py",
+      "contentHash": "600e2cdd80251b3797fc6cedc051970065f19845df99f4635322c71f507070d5",
+      "functions": [
+        {
+          "name": "_make_app",
+          "params": [],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "app",
+          "params": [],
+          "exported": true,
+          "lineCount": 2
+        }
+      ],
+      "classes": [
+        {
+          "name": "TestLogin",
+          "methods": [
+            "test_login_returns_success",
+            "test_login_missing_fields_returns_422",
+            "test_login_empty_broker_id_422",
+            "test_login_already_connected_same_user",
+            "test_login_already_connected_different_user",
+            "test_login_rejects_when_thread_running",
+            "test_login_allows_when_thread_dead",
+            "test_login_returns_failure_on_wrong_password",
+            "test_login_disconnected_md_api_allows_retry"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 122
+        },
+        {
+          "name": "TestLogout",
+          "methods": [
+            "test_logout_clears_md_api",
+            "test_logout_clears_thread",
+            "test_logout_without_login",
+            "test_logout_handles_release_error"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 44
+        },
+        {
+          "name": "TestStatus",
+          "methods": [
+            "test_status_returns_fields",
+            "test_status_initial_state",
+            "test_status_with_ctp_connected",
+            "test_status_with_ctp_disconnected"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 50
+        }
+      ],
+      "imports": [
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "unittest.mock",
+          "specifiers": [
+            "patch",
+            "MagicMock"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "httpx",
+          "specifiers": [
+            "AsyncClient",
+            "ASGITransport"
+          ]
+        }
+      ],
+      "exports": [
+        "_make_app",
+        "app",
+        "TestLogin",
+        "TestLogout",
+        "TestStatus"
+      ],
+      "totalLines": 264,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_ctp_bridge.py": {
+      "filePath": "server/tests/test_ctp_bridge.py",
+      "contentHash": "67afd09b3fe1913a30a8b3615d10f937103d46f8a6b7f6fc666c65f7d09baad7",
+      "functions": [],
+      "classes": [
+        {
+          "name": "_FakeCtpDepthData",
+          "methods": [
+            "__init__"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "_BroadcastSpy",
+          "methods": [
+            "__init__",
+            "__call__"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "TestWireMarketDataCallback",
+          "methods": [
+            "test_import",
+            "test_wire_registers_handler_on_spi",
+            "test_ctp_callback_updates_snapshot",
+            "test_ctp_callback_preserves_field_mapping",
+            "test_ctp_callback_broadcasts_data",
+            "test_ctp_callback_missing_instrument_id",
+            "test_ctp_callback_merges_snapshots",
+            "test_wire_without_broadcast_fn"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 139
+        }
+      ],
+      "imports": [
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "services.market_service",
+          "specifiers": [
+            "MarketService"
+          ]
+        },
+        {
+          "source": "ctp_wrapper.callback",
+          "specifiers": [
+            "MdSpi"
+          ]
+        }
+      ],
+      "exports": [
+        "_FakeCtpDepthData",
+        "_BroadcastSpy",
+        "TestWireMarketDataCallback"
+      ],
+      "totalLines": 187,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_ctp_startup.py": {
+      "filePath": "server/tests/test_ctp_startup.py",
+      "contentHash": "baad714d51b4f66a3c0f52a563c9045ddd0e2d5fb24adcdf815493f860201fa3",
+      "functions": [],
+      "classes": [
+        {
+          "name": "_FakeSpi",
+          "methods": [
+            "__init__",
+            "on"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "_FakeMdApi",
+          "methods": [
+            "__init__",
+            "create",
+            "login",
+            "release"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "_FakeApp",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "TestConnectCtp",
+          "methods": [
+            "test_import",
+            "test_function_exists",
+            "test_returns_dict",
+            "test_stores_thread_on_app_state",
+            "test_passes_credentials",
+            "test_wait_blocks_for_result"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 51
+        },
+        {
+          "name": "TestConnectCtpInternal",
+          "methods": [
+            "test_creates_md_api_with_config",
+            "test_stores_md_api_on_app_state",
+            "test_calls_create",
+            "test_registers_callbacks",
+            "test_result_written_on_timeout"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 87
+        }
+      ],
+      "imports": [
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "threading",
+          "specifiers": [
+            "threading"
+          ]
+        },
+        {
+          "source": "unittest.mock",
+          "specifiers": [
+            "patch",
+            "MagicMock"
+          ]
+        },
+        {
+          "source": "services.ctp_startup",
+          "specifiers": [
+            "connect_ctp",
+            "start_ctp_market_connection"
+          ]
+        }
+      ],
+      "exports": [
+        "_FakeSpi",
+        "_FakeMdApi",
+        "_FakeApp",
+        "TestConnectCtp",
+        "TestConnectCtpInternal"
+      ],
+      "totalLines": 190,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_field_mapping.py": {
+      "filePath": "server/tests/test_field_mapping.py",
+      "contentHash": "74c3ceb4e07b928bc64cec9857632da8d8cb68ee13f300026f5f4d772e1150a4",
+      "functions": [],
+      "classes": [
+        {
+          "name": "_MockDepthMarketData",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 54
+        },
+        {
+          "name": "TestMapDepthMarketData",
+          "methods": [
+            "test_import",
+            "test_returns_dict",
+            "test_maps_instrument_id",
+            "test_maps_exchange_id",
+            "test_maps_last_price",
+            "test_maps_open_high_low_close",
+            "test_maps_pre_prices",
+            "test_maps_limit_prices",
+            "test_maps_average_price",
+            "test_maps_bid_prices",
+            "test_maps_bid_volumes",
+            "test_maps_ask_prices",
+            "test_maps_ask_volumes",
+            "test_maps_volume",
+            "test_maps_turnover",
+            "test_maps_open_interest",
+            "test_maps_update_time",
+            "test_maps_update_millisec",
+            "test_maps_action_day",
+            "test_maps_trading_day"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 130
+        },
+        {
+          "name": "TestMapDepthMarketDataEdgeCases",
+          "methods": [
+            "test_zero_prices",
+            "test_missing_attribute_defaults"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 68
+        }
+      ],
+      "imports": [
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "services.field_mapping",
+          "specifiers": [
+            "map_depth_market_data"
+          ]
+        }
+      ],
+      "exports": [
+        "_MockDepthMarketData",
+        "TestMapDepthMarketData",
+        "TestMapDepthMarketDataEdgeCases"
+      ],
+      "totalLines": 265,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_kline_service.py": {
+      "filePath": "server/tests/test_kline_service.py",
+      "contentHash": "089fa7ecf5c1d89584ce3301263d67ff23c51fc490ea0ebdd3eaf07ede7d8020",
+      "functions": [],
+      "classes": [
+        {
+          "name": "TestParseTimestamp",
+          "methods": [
+            "test_normal",
+            "test_empty_action_day",
+            "test_malformed_action_day",
+            "test_invalid_time"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "TestKLineServiceInit",
+          "methods": [
+            "test_import",
+            "test_default_state",
+            "test_max_bars_default",
+            "test_max_bars_custom"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "TestUpdateTick",
+          "methods": [
+            "_make_tick",
+            "test_single_tick_creates_bar",
+            "test_ohlc_correctness",
+            "test_volume_delta",
+            "test_volume_cross_day_reset",
+            "test_multiple_instruments",
+            "test_skip_empty_instrument",
+            "test_skip_invalid_price"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 78
+        },
+        {
+          "name": "TestTimeWindow",
+          "methods": [
+            "_tick",
+            "test_1m_boundary_creates_new_bar",
+            "test_5m_boundary",
+            "test_same_window_merges"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 36
+        },
+        {
+          "name": "TestMultiPeriod",
+          "methods": [
+            "test_all_periods_updated",
+            "test_invalid_period_returns_empty"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 28
+        },
+        {
+          "name": "TestCountLimit",
+          "methods": [
+            "test_count_limits_bars",
+            "test_count_default_100"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "TestMaxBars",
+          "methods": [
+            "test_max_bars_trims_old"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "TestThreadSafety",
+          "methods": [
+            "test_concurrent_update_tick"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 30
+        },
+        {
+          "name": "TestReset",
+          "methods": [
+            "test_reset_clears_bars"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 15
+        }
+      ],
+      "imports": [
+        {
+          "source": "threading",
+          "specifiers": [
+            "threading"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "services.kline_service",
+          "specifiers": [
+            "KLineService",
+            "_parse_timestamp",
+            "PERIOD_SECONDS"
+          ]
+        }
+      ],
+      "exports": [
+        "TestParseTimestamp",
+        "TestKLineServiceInit",
+        "TestUpdateTick",
+        "TestTimeWindow",
+        "TestMultiPeriod",
+        "TestCountLimit",
+        "TestMaxBars",
+        "TestThreadSafety",
+        "TestReset"
+      ],
+      "totalLines": 309,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_market_api.py": {
+      "filePath": "server/tests/test_market_api.py",
+      "contentHash": "8e5e268ca87fd8d4a8aa2645efc80b44c4fcc30a2201b7a10d198fda0bf00ce4",
+      "functions": [
+        {
+          "name": "_make_test_app",
+          "params": [],
+          "returnType": "FastAPI",
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "app",
+          "params": [],
+          "exported": true,
+          "lineCount": 2
+        }
+      ],
+      "classes": [
+        {
+          "name": "TestGetInstruments",
+          "methods": [
+            "test_returns_all_instruments",
+            "test_search_by_keyword",
+            "test_search_no_match",
+            "test_returns_camelcase_fields"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 49
+        },
+        {
+          "name": "TestSubscribe",
+          "methods": [
+            "test_subscribe_success",
+            "test_subscribe_returns_already_subscribed",
+            "test_subscribe_missing_instruments_field",
+            "test_subscribe_empty_list_rejected",
+            "test_subscribe_limit_exceeded"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 64
+        },
+        {
+          "name": "TestUnsubscribe",
+          "methods": [
+            "test_unsubscribe_success",
+            "test_unsubscribe_not_subscribed",
+            "test_unsubscribe_missing_instruments_field"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 36
+        },
+        {
+          "name": "TestGetSnapshots",
+          "methods": [
+            "test_snapshots_empty_by_default",
+            "test_snapshots_filter_by_instruments",
+            "test_snapshots_all"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 46
+        },
+        {
+          "name": "TestGetKline",
+          "methods": [
+            "test_kline_returns_empty_list_initially",
+            "test_kline_missing_params_returns_422"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "TestGetDepth",
+          "methods": [
+            "test_depth_returns_snapshot_depth",
+            "test_depth_unknown_instrument",
+            "test_depth_missing_instrument_returns_422"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 54
+        }
+      ],
+      "imports": [
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "httpx",
+          "specifiers": [
+            "AsyncClient",
+            "ASGITransport"
+          ]
+        },
+        {
+          "source": "fastapi",
+          "specifiers": [
+            "FastAPI"
+          ]
+        },
+        {
+          "source": "api.market",
+          "specifiers": [
+            "market_router"
+          ]
+        },
+        {
+          "source": "services.market_service",
+          "specifiers": [
+            "MarketService"
+          ]
+        }
+      ],
+      "exports": [
+        "_make_test_app",
+        "app",
+        "TestGetInstruments",
+        "TestSubscribe",
+        "TestUnsubscribe",
+        "TestGetSnapshots",
+        "TestGetKline",
+        "TestGetDepth"
+      ],
+      "totalLines": 359,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_market_service.py": {
+      "filePath": "server/tests/test_market_service.py",
+      "contentHash": "76b66ead79dec81eff49cb98d022aac23ba1e44025c5846c03728b6eff5c14dd",
+      "functions": [],
+      "classes": [
+        {
+          "name": "TestMarketServiceInit",
+          "methods": [
+            "test_import",
+            "test_default_state",
+            "test_max_subscriptions",
+            "test_instruments_empty_by_default"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "TestInstrumentCache",
+          "methods": [
+            "test_load_instruments",
+            "test_get_instruments_returns_all",
+            "test_get_instruments_search_by_id",
+            "test_get_instruments_search_by_name",
+            "test_get_instruments_search_by_exchange",
+            "test_get_instruments_search_case_insensitive",
+            "test_get_instruments_no_match",
+            "test_get_instruments_empty_keyword",
+            "test_get_instruments_preserves_all_fields"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 116
+        },
+        {
+          "name": "TestSubscriptionManagement",
+          "methods": [
+            "test_subscribe_adds_instruments",
+            "test_subscribe_returns_added_count",
+            "test_subscribe_dedup",
+            "test_subscribe_returns_already_subscribed",
+            "test_subscribe_empty_list",
+            "test_unsubscribe_removes_instruments",
+            "test_unsubscribe_returns_removed_count",
+            "test_unsubscribe_not_subscribed",
+            "test_unsubscribe_empty_list"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 70
+        },
+        {
+          "name": "TestCtpHooks",
+          "methods": [
+            "test_set_ctp_hooks",
+            "test_subscribe_calls_ctp_fn",
+            "test_subscribe_calls_ctp_fn_only_for_new",
+            "test_unsubscribe_calls_ctp_fn",
+            "test_unsubscribe_calls_ctp_fn_only_for_subscribed",
+            "test_subscribe_without_hooks_no_error",
+            "test_unsubscribe_without_hooks_no_error",
+            "test_subscribe_ctp_fn_exception_does_not_break",
+            "test_unsubscribe_ctp_fn_exception_does_not_break"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 96
+        },
+        {
+          "name": "TestSubscriptionLimit",
+          "methods": [
+            "test_subscribe_within_limit",
+            "test_subscribe_exceeds_limit",
+            "test_subscribe_batch_exceeds_limit"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 30
+        },
+        {
+          "name": "TestSnapshotCache",
+          "methods": [
+            "test_update_snapshot_stores_data",
+            "test_get_snapshot_returns_data",
+            "test_get_snapshot_missing",
+            "test_get_all_snapshots",
+            "test_update_snapshot_overwrites"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 64
+        },
+        {
+          "name": "TestLoadInstrumentsFromFile",
+          "methods": [
+            "test_load_from_file_replaces_cache",
+            "test_load_from_nonexistent_file",
+            "test_load_from_invalid_json",
+            "test_load_from_file_not_a_list",
+            "test_load_real_instruments_file"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 77
+        }
+      ],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "tempfile",
+          "specifiers": [
+            "tempfile"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "services.market_service",
+          "specifiers": [
+            "MarketService"
+          ]
+        }
+      ],
+      "exports": [
+        "TestMarketServiceInit",
+        "TestInstrumentCache",
+        "TestSubscriptionManagement",
+        "TestCtpHooks",
+        "TestSubscriptionLimit",
+        "TestSnapshotCache",
+        "TestLoadInstrumentsFromFile"
+      ],
+      "totalLines": 515,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_md_user_api.py": {
+      "filePath": "server/tests/test_md_user_api.py",
+      "contentHash": "e1eb9c4d56936a6fab8f3f1025c821f38a187b99c9c7cb8bf1446f1f157e2daf",
+      "functions": [],
+      "classes": [
+        {
+          "name": "TestMdUserApiConstruction",
+          "methods": [
+            "test_import_md_user_api",
+            "test_instantiation_stores_config",
+            "test_instantiation_creates_spi",
+            "test_connection_status_defaults",
+            "test_login_status_defaults",
+            "test_subscribed_instruments_defaults",
+            "test_callback_event_recording"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 32
+        },
+        {
+          "name": "TestMdUserApiSubscribe",
+          "methods": [
+            "_make_api",
+            "test_subscribe_adds_to_list_on_success",
+            "test_subscribe_does_not_add_duplicates",
+            "test_subscribe_does_not_add_on_failure",
+            "test_subscribe_empty_list_returns_minus_one",
+            "test_subscribe_forces_str_conversion",
+            "test_subscribe_forces_str_from_int",
+            "test_subscribe_multiple_instruments",
+            "test_unsubscribe_removes_from_list",
+            "test_unsubscribe_does_not_error_on_missing",
+            "test_unsubscribe_empty_list_returns_minus_one"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 72
+        },
+        {
+          "name": "TestMdUserApiRelease",
+          "methods": [
+            "test_release_clears_connection_status",
+            "test_release_clears_login_status",
+            "test_release_clears_subscribed_instruments",
+            "test_release_calls_api_release",
+            "test_release_handles_none_api"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 35
+        }
+      ],
+      "imports": [
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "unittest.mock",
+          "specifiers": [
+            "Mock"
+          ]
+        },
+        {
+          "source": "config",
+          "specifiers": [
+            "Config"
+          ]
+        },
+        {
+          "source": "ctp_wrapper.md_user_api",
+          "specifiers": [
+            "MdUserApi"
+          ]
+        }
+      ],
+      "exports": [
+        "TestMdUserApiConstruction",
+        "TestMdUserApiSubscribe",
+        "TestMdUserApiRelease"
+      ],
+      "totalLines": 156,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_models.py": {
+      "filePath": "server/tests/test_models.py",
+      "contentHash": "630c859e5eaede5859c3edea3c05c1df8e56d48909227d1469a7c1ded936a0f6",
+      "functions": [],
+      "classes": [
+        {
+          "name": "TestMarketSnapshot",
+          "methods": [
+            "test_import",
+            "test_minimal_creation",
+            "test_defaults",
+            "test_full_depth_fields",
+            "test_serializes_to_dict"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 48
+        },
+        {
+          "name": "TestKLineData",
+          "methods": [
+            "test_import",
+            "test_creation"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "TestOrderRequest",
+          "methods": [
+            "test_import",
+            "test_limit_order",
+            "test_market_order"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 32
+        },
+        {
+          "name": "TestOrderReturn",
+          "methods": [
+            "test_import",
+            "test_creation"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "TestAccountInfo",
+          "methods": [
+            "test_import",
+            "test_creation",
+            "test_defaults"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "TestPositionInfo",
+          "methods": [
+            "test_import",
+            "test_creation"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "TestInstrumentInfo",
+          "methods": [
+            "test_import",
+            "test_futures_contract",
+            "test_options_contract"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 37
+        }
+      ],
+      "imports": [
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        }
+      ],
+      "exports": [
+        "TestMarketSnapshot",
+        "TestKLineData",
+        "TestOrderRequest",
+        "TestOrderReturn",
+        "TestAccountInfo",
+        "TestPositionInfo",
+        "TestInstrumentInfo"
+      ],
+      "totalLines": 230,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_reconnect.py": {
+      "filePath": "server/tests/test_reconnect.py",
+      "contentHash": "1bc587f44c3e2de55845f3afbecbb576d4bc46b6daf1640d9a0824de346f95f1",
+      "functions": [],
+      "classes": [
+        {
+          "name": "TestReconnectService",
+          "methods": [
+            "test_create_reconnect_service",
+            "test_exponential_backoff_delays",
+            "test_reset_retry_count",
+            "test_should_retry_within_limit",
+            "test_should_not_retry_at_limit",
+            "test_on_disconnect_increments_count",
+            "test_on_success_resets_count",
+            "test_get_subscriptions_returns_tracked",
+            "test_update_subscriptions_replaces",
+            "test_try_reconnect_calls_connect_fn",
+            "test_try_reconnect_calls_subscribe_fn_with_instruments",
+            "test_try_reconnect_skips_subscribe_on_failure",
+            "test_get_current_delay_returns_zero_before_disconnect",
+            "test_get_current_delay_after_disconnect"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 132
+        }
+      ],
+      "imports": [
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "asyncio",
+          "specifiers": [
+            "asyncio"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "unittest.mock",
+          "specifiers": [
+            "AsyncMock",
+            "MagicMock",
+            "patch"
+          ]
+        }
+      ],
+      "exports": [
+        "TestReconnectService"
+      ],
+      "totalLines": 151,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_trader_api.py": {
+      "filePath": "server/tests/test_trader_api.py",
+      "contentHash": "68e4bcd4047c06571166e8ba5de65cf9ac3fa529e3be06ee98d99bd9019e1f87",
+      "functions": [
+        {
+          "name": "_mock_ctp_module",
+          "params": [],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "_unmock_ctp",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        }
+      ],
+      "classes": [
+        {
+          "name": "TestTraderApiConstruction",
+          "methods": [
+            "test_import_trader_api",
+            "test_instantiation_stores_config",
+            "test_instantiation_creates_spi",
+            "test_connection_status_defaults",
+            "test_login_status_defaults",
+            "test_order_ref_defaults_to_zero",
+            "test_callback_event_recording"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 32
+        },
+        {
+          "name": "TestInsertOrder",
+          "methods": [
+            "_make_api",
+            "teardown_method",
+            "test_insert_order_returns_ref_on_success",
+            "test_insert_order_returns_empty_on_failure",
+            "test_insert_order_increments_order_ref",
+            "test_next_order_ref_sequence",
+            "test_market_order_uses_any_price_type",
+            "test_insert_order_passes_broker_id"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 76
+        },
+        {
+          "name": "TestCancelOrder",
+          "methods": [
+            "teardown_method",
+            "test_cancel_order_by_ref",
+            "test_cancel_order_by_sys_id"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "TestTraderApiRelease",
+          "methods": [
+            "test_release_clears_connection_status",
+            "test_release_clears_login_status",
+            "test_release_resets_order_ref",
+            "test_release_calls_api_release",
+            "test_release_handles_none_api"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 35
+        }
+      ],
+      "imports": [
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "unittest.mock",
+          "specifiers": [
+            "Mock",
+            "MagicMock"
+          ]
+        },
+        {
+          "source": "config",
+          "specifiers": [
+            "Config"
+          ]
+        },
+        {
+          "source": "ctp_wrapper.trader_api",
+          "specifiers": [
+            "TraderApi"
+          ]
+        },
+        {
+          "source": "ctp_wrapper.types",
+          "specifiers": [
+            "Direction",
+            "OffsetFlag",
+            "OrderPriceType"
+          ]
+        }
+      ],
+      "exports": [
+        "_mock_ctp_module",
+        "_unmock_ctp",
+        "TestTraderApiConstruction",
+        "TestInsertOrder",
+        "TestCancelOrder",
+        "TestTraderApiRelease"
+      ],
+      "totalLines": 213,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_types.py": {
+      "filePath": "server/tests/test_types.py",
+      "contentHash": "aeec5d7237371df077350e71605d958509c333cac030aa81c725f93e19c7735c",
+      "functions": [],
+      "classes": [
+        {
+          "name": "TestDirection",
+          "methods": [
+            "test_buy_value",
+            "test_sell_value",
+            "test_values_are_strings"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "TestOffsetFlag",
+          "methods": [
+            "test_open_value",
+            "test_close_value",
+            "test_close_today_value",
+            "test_values_are_strings"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "TestOrderPriceType",
+          "methods": [
+            "test_limit_price_value",
+            "test_any_price_value"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "TestTimeCondition",
+          "methods": [
+            "test_gfd_value",
+            "test_fok_value",
+            "test_fak_value"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "TestVolumeCondition",
+          "methods": [
+            "test_av_value",
+            "test_mv_value",
+            "test_cv_value"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "TestOrderStatus",
+          "methods": [
+            "test_all_traded_value",
+            "test_part_traded_value",
+            "test_no_traded_value",
+            "test_canceled_value"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "TestPosiDirection",
+          "methods": [
+            "test_net_value",
+            "test_long_value",
+            "test_short_value"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "TestProductClass",
+          "methods": [
+            "test_futures_value",
+            "test_options_value",
+            "test_combination_value"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 11
+        }
+      ],
+      "imports": [
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "ctp_wrapper.types",
+          "specifiers": [
+            "Direction",
+            "OffsetFlag",
+            "OrderPriceType",
+            "TimeCondition",
+            "VolumeCondition",
+            "OrderStatus",
+            "PosiDirection",
+            "ProductClass"
+          ]
+        }
+      ],
+      "exports": [
+        "TestDirection",
+        "TestOffsetFlag",
+        "TestOrderPriceType",
+        "TestTimeCondition",
+        "TestVolumeCondition",
+        "TestOrderStatus",
+        "TestPosiDirection",
+        "TestProductClass"
+      ],
+      "totalLines": 127,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_ws_handlers.py": {
+      "filePath": "server/tests/test_ws_handlers.py",
+      "contentHash": "78dedafeaef684e3fae47745ddb0f3b7cc53b6129c1131a5c047bf01d6afd158",
+      "functions": [
+        {
+          "name": "test_handler_registers_connection_in_ws_manager",
+          "params": [],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "test_handler_removes_connection_on_disconnect",
+          "params": [],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "test_handler_accepts_and_registers",
+          "params": [],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "test_handler_works_for_all_endpoints",
+          "params": [],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "test_handler_routes_subscribe_message",
+          "params": [],
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "test_handler_routes_unsubscribe_message",
+          "params": [],
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "test_handler_routes_ping_message",
+          "params": [],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "test_handler_responds_to_heartbeat_ping",
+          "params": [],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "test_handler_ignores_invalid_json",
+          "params": [],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "test_handler_sends_ack_on_subscribe",
+          "params": [],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "test_handler_sends_error_on_subscribe_failure",
+          "params": [],
+          "exported": true,
+          "lineCount": 25
+        }
+      ],
+      "classes": [
+        {
+          "name": "FakeWebSocket",
+          "methods": [
+            "__init__",
+            "accept",
+            "send_json",
+            "receive_text",
+            "queue_message",
+            "close_client",
+            "close"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 30
+        }
+      ],
+      "imports": [
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "asyncio",
+          "specifiers": [
+            "asyncio"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "unittest.mock",
+          "specifiers": [
+            "AsyncMock"
+          ]
+        },
+        {
+          "source": "ws.manager",
+          "specifiers": [
+            "WebSocketManager"
+          ]
+        }
+      ],
+      "exports": [
+        "FakeWebSocket",
+        "test_handler_registers_connection_in_ws_manager",
+        "test_handler_removes_connection_on_disconnect",
+        "test_handler_accepts_and_registers",
+        "test_handler_works_for_all_endpoints",
+        "test_handler_routes_subscribe_message",
+        "test_handler_routes_unsubscribe_message",
+        "test_handler_routes_ping_message",
+        "test_handler_responds_to_heartbeat_ping",
+        "test_handler_ignores_invalid_json",
+        "test_handler_sends_ack_on_subscribe",
+        "test_handler_sends_error_on_subscribe_failure"
+      ],
+      "totalLines": 305,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_ws_heartbeat.py": {
+      "filePath": "server/tests/test_ws_heartbeat.py",
+      "contentHash": "ca1d5d39b1b8cb398a315be00a7bb73cfddd4ea66c5c1d544398c98101ae1ada",
+      "functions": [
+        {
+          "name": "test_heartbeat_removes_dead_connections",
+          "params": [],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "test_heartbeat_sends_ping_to_all_endpoints",
+          "params": [],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "test_heartbeat_does_nothing_when_empty",
+          "params": [],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "test_heartbeat_handles_partial_failure",
+          "params": [],
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "test_start_heartbeat_creates_background_task",
+          "params": [],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "test_stop_heartbeat_cancels_task",
+          "params": [],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "test_heartbeat_periodically_removes_dead",
+          "params": [],
+          "exported": true,
+          "lineCount": 17
+        }
+      ],
+      "classes": [
+        {
+          "name": "FakeWebSocket",
+          "methods": [
+            "__init__",
+            "accept",
+            "send_json",
+            "ping"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 19
+        }
+      ],
+      "imports": [
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "asyncio",
+          "specifiers": [
+            "asyncio"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "unittest.mock",
+          "specifiers": [
+            "AsyncMock",
+            "MagicMock"
+          ]
+        },
+        {
+          "source": "ws.manager",
+          "specifiers": [
+            "WebSocketManager"
+          ]
+        }
+      ],
+      "exports": [
+        "FakeWebSocket",
+        "test_heartbeat_removes_dead_connections",
+        "test_heartbeat_sends_ping_to_all_endpoints",
+        "test_heartbeat_does_nothing_when_empty",
+        "test_heartbeat_handles_partial_failure",
+        "test_start_heartbeat_creates_background_task",
+        "test_stop_heartbeat_cancels_task",
+        "test_heartbeat_periodically_removes_dead"
+      ],
+      "totalLines": 160,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_ws_integration.py": {
+      "filePath": "server/tests/test_ws_integration.py",
+      "contentHash": "37f244c7cc8d31ad6258cc3f83468f3e731f057b6e4562cf3b5e2d454b837f69",
+      "functions": [
+        {
+          "name": "test_main_routes_use_handle_ws",
+          "params": [],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "test_heartbeat_starts_on_startup",
+          "params": [],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "test_ws_manager_has_heartbeat_methods",
+          "params": [],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "test_on_front_disconnected_broadcasts_to_system",
+          "params": [],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "test_on_front_disconnected_with_active_system_ws",
+          "params": [],
+          "exported": true,
+          "lineCount": 28
+        },
+        {
+          "name": "test_reconnect_service_integrates_with_disconnect",
+          "params": [],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "test_handle_ws_accepts_subscribe_fn",
+          "params": [],
+          "exported": true,
+          "lineCount": 9
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "asyncio",
+          "specifiers": [
+            "asyncio"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "unittest.mock",
+          "specifiers": [
+            "AsyncMock",
+            "MagicMock",
+            "patch"
+          ]
+        }
+      ],
+      "exports": [
+        "test_main_routes_use_handle_ws",
+        "test_heartbeat_starts_on_startup",
+        "test_ws_manager_has_heartbeat_methods",
+        "test_on_front_disconnected_broadcasts_to_system",
+        "test_on_front_disconnected_with_active_system_ws",
+        "test_reconnect_service_integrates_with_disconnect",
+        "test_handle_ws_accepts_subscribe_fn"
+      ],
+      "totalLines": 119,
+      "hasStructuralAnalysis": true
+    },
+    "server/tests/test_ws_manager.py": {
+      "filePath": "server/tests/test_ws_manager.py",
+      "contentHash": "1e6300c8577f1ccc65cd2b0ba4b048e349a98e17892f36bad4e6c0d8cffa4945",
+      "functions": [],
+      "classes": [
+        {
+          "name": "TestWebSocketManagerInit",
+          "methods": [
+            "test_instantiation",
+            "test_default_endpoints_are_empty",
+            "test_five_endpoints_registered"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "TestWebSocketManagerConnect",
+          "methods": [
+            "test_connect_adds_to_endpoint",
+            "test_connect_does_not_cross_pollute",
+            "test_disconnect_removes_from_endpoint",
+            "test_disconnect_handles_missing_silently",
+            "test_connect_invalid_endpoint_silently_skipped"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 39
+        },
+        {
+          "name": "TestWebSocketManagerBroadcast",
+          "methods": [
+            "test_broadcast_sends_to_all_in_endpoint",
+            "test_broadcast_does_not_send_to_other_endpoints",
+            "test_broadcast_empty_endpoint_no_error",
+            "test_broadcast_removes_disconnected",
+            "test_broadcast_message_format",
+            "test_broadcast_no_message_key"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 73
+        },
+        {
+          "name": "_FakeWebSocket",
+          "methods": [
+            "__init__",
+            "accept",
+            "send_json"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 15
+        }
+      ],
+      "imports": [
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "ws.manager",
+          "specifiers": [
+            "WebSocketManager"
+          ]
+        }
+      ],
+      "exports": [
+        "TestWebSocketManagerInit",
+        "TestWebSocketManagerConnect",
+        "TestWebSocketManagerBroadcast",
+        "_FakeWebSocket"
+      ],
+      "totalLines": 165,
+      "hasStructuralAnalysis": true
+    },
+    "server/ws/__init__.py": {
+      "filePath": "server/ws/__init__.py",
+      "contentHash": "e71c26e4f6ae25c0f71d1691ab53c8593c838487d9a84dec9cb6a71b2102f595",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2,
+      "hasStructuralAnalysis": true
+    },
+    "server/ws/handlers.py": {
+      "filePath": "server/ws/handlers.py",
+      "contentHash": "5a68889f4a7f792c9f3f9dadb0c4ee0c9cc691c48421c9c9452eaec534f3f63f",
+      "functions": [
+        {
+          "name": "handle_ws",
+          "params": [
+            "endpoint",
+            "ws_manager",
+            "websocket",
+            "subscribe_fn",
+            "unsubscribe_fn"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 71
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "asyncio",
+          "specifiers": [
+            "asyncio"
+          ]
+        },
+        {
+          "source": "inspect",
+          "specifiers": [
+            "inspect"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Any",
+            "Callable",
+            "Coroutine",
+            "List",
+            "Optional"
+          ]
+        },
+        {
+          "source": "fastapi",
+          "specifiers": [
+            "WebSocket"
+          ]
+        },
+        {
+          "source": "ws.manager",
+          "specifiers": [
+            "WebSocketManager"
+          ]
+        }
+      ],
+      "exports": [
+        "handle_ws"
+      ],
+      "totalLines": 91,
+      "hasStructuralAnalysis": true
+    },
+    "server/ws/manager.py": {
+      "filePath": "server/ws/manager.py",
+      "contentHash": "db36de1a9cac3a316b1a239b81215fb833e118bf46507a406ad1227294d4688e",
+      "functions": [],
+      "classes": [
+        {
+          "name": "WebSocketManager",
+          "methods": [
+            "__init__",
+            "start_heartbeat",
+            "stop_heartbeat",
+            "_heartbeat_loop",
+            "connect",
+            "disconnect",
+            "broadcast",
+            "_heartbeat_tick"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 91
+        }
+      ],
+      "imports": [
+        {
+          "source": "asyncio",
+          "specifiers": [
+            "asyncio"
+          ]
+        },
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Any",
+            "Dict",
+            "List",
+            "Optional"
+          ]
+        },
+        {
+          "source": "fastapi",
+          "specifiers": [
+            "WebSocket"
+          ]
+        }
+      ],
+      "exports": [
+        "WebSocketManager"
+      ],
+      "totalLines": 106,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/dev-record-a.md": {
+      "filePath": "snapshots/role-a/dev-record-a.md",
+      "contentHash": "36d91ba061b10286ae9fe203a2478e8ea9a47598b2f558e6573db412fca83225",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 377,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/progress.md": {
+      "filePath": "snapshots/role-a/progress.md",
+      "contentHash": "2acdfade3ca4135823c5c9907e48d8298748c17494478f5ffee5175dca6d929b",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 315,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/review-feedback-a-pr3-r2.md": {
+      "filePath": "snapshots/role-a/review-feedback-a-pr3-r2.md",
+      "contentHash": "ffa7a971594405269ac3b69dff2af6664a5b4f82c099a4a4f6bf0fbb8f8050f9",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 79,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/review-feedback-a-pr3-ws-r2.md": {
+      "filePath": "snapshots/role-a/review-feedback-a-pr3-ws-r2.md",
+      "contentHash": "bf146e4efb07445224de52a4515c4288f9977408288102b0757acdceeb868d4a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 72,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/review-feedback-a-pr3-ws.md": {
+      "filePath": "snapshots/role-a/review-feedback-a-pr3-ws.md",
+      "contentHash": "7767e64cbbf7a703db321c4851d88680569862068946ee9793483fde0c56b2c7",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 206,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/review-feedback-a-pr3.md": {
+      "filePath": "snapshots/role-a/review-feedback-a-pr3.md",
+      "contentHash": "a82d0a81d82c3008b5a1ff4b60fa668531b7ac1e162f998168e9b04d9ee790a7",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 163,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/review-feedback-a-pr5-r2.md": {
+      "filePath": "snapshots/role-a/review-feedback-a-pr5-r2.md",
+      "contentHash": "a94b96934eb445c634570c921ce11404d377a894add3d68b20e60961ece1444f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 96,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/review-feedback-a-pr5-r4.md": {
+      "filePath": "snapshots/role-a/review-feedback-a-pr5-r4.md",
+      "contentHash": "54e4264ba287f210aa824b1d5cf7aa8f9dff9b60ed0aba21fe3ee6a85793fa6d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 121,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/review-feedback-a-pr5-r5.md": {
+      "filePath": "snapshots/role-a/review-feedback-a-pr5-r5.md",
+      "contentHash": "7c468d2e3a6817a39ad82fbfd10c8d644612eb190e64cc75fdfcf2ea0b7258df",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 161,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/review-feedback-a-pr5-r6.md": {
+      "filePath": "snapshots/role-a/review-feedback-a-pr5-r6.md",
+      "contentHash": "c409efc08a1f3fbdd3024dcbcf03d6cb839de8b84beab1eeb2b3a463f7bb0f76",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 107,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/review-feedback-a-pr5.md": {
+      "filePath": "snapshots/role-a/review-feedback-a-pr5.md",
+      "contentHash": "0228bbaaab4d32f631e9a930a2b1a69af893889a01e1108d602d9726fba575ea",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 201,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/review-feedback-a-pr7-final.md": {
+      "filePath": "snapshots/role-a/review-feedback-a-pr7-final.md",
+      "contentHash": "04ec9fbc831c66692a94577cd79cc4bf3a441d391d475b4de6096156c13d7bef",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 73,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/review-feedback-a-pr7-r2.md": {
+      "filePath": "snapshots/role-a/review-feedback-a-pr7-r2.md",
+      "contentHash": "6c4ca770b1ab07c685b20e7d492de1a6d6c5c902771a10f9138a3c690d97a50d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 88,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/review-feedback-a-pr7-r3.md": {
+      "filePath": "snapshots/role-a/review-feedback-a-pr7-r3.md",
+      "contentHash": "6d42303a23407a0a861e1b2cecd5af43fec71b17a67a8a679940aa2ab2f52d7c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 106,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/review-feedback-a-pr7-r4.md": {
+      "filePath": "snapshots/role-a/review-feedback-a-pr7-r4.md",
+      "contentHash": "ab4c9901bcd8338376449dad7d8718eea37b54824de93fdb17228086999d61c0",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 57,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/review-feedback-a-pr7.md": {
+      "filePath": "snapshots/role-a/review-feedback-a-pr7.md",
+      "contentHash": "8e8c688ad6cff3d69e57b9272affcc42d4c58d1e9ca3a9b082ccdeed2db513ec",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 144,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/review-feedback-a.md": {
+      "filePath": "snapshots/role-a/review-feedback-a.md",
+      "contentHash": "1828a18a13fa91055d9b56e642320825a8e0ee68fcb19ea4ad9873f8678f7eab",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 78,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-a/review-reply-a.md": {
+      "filePath": "snapshots/role-a/review-reply-a.md",
+      "contentHash": "e630825ee5be87f5ae36c267b54f68952df99cfd75ef899845ff8f60739fd504",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 353,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/dev-record-b.md": {
+      "filePath": "snapshots/role-b/dev-record-b.md",
+      "contentHash": "94f2a7ec3bc98cfacd9c272c44e8db9a8795eef4f73239fa0672778ea3733da0",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 412,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/progress.md": {
+      "filePath": "snapshots/role-b/progress.md",
+      "contentHash": "829a9e5e302cd077465c7c399da7dade9053e3321bdedef1b13d0990b9b338cb",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 371,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/review-feedback-b-pr12.md": {
+      "filePath": "snapshots/role-b/review-feedback-b-pr12.md",
+      "contentHash": "84988fc1aca24ff010d32e122ee40f3cdb66f9bf62bb3df7c7163c75fe127db1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 194,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/review-feedback-b-pr12a.md": {
+      "filePath": "snapshots/role-b/review-feedback-b-pr12a.md",
+      "contentHash": "7be7265625cd8f7bac01be67e75e6ed87a8756aa046ca9aebdb11127e6b53fc9",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 190,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/review-feedback-b-pr2.md": {
+      "filePath": "snapshots/role-b/review-feedback-b-pr2.md",
+      "contentHash": "452f3b921bc5aa75bb3a83473ae8e3f20f14bccd1f55545f2619768739d9216a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 72,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/review-feedback-b-pr4.md": {
+      "filePath": "snapshots/role-b/review-feedback-b-pr4.md",
+      "contentHash": "ecb69e870925bbb99ab2764941ee4e6f57965c12e12033c1f68d3712eae6f7c3",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 99,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/review-feedback-b-pr6.md": {
+      "filePath": "snapshots/role-b/review-feedback-b-pr6.md",
+      "contentHash": "2c21b7064290962bb8e42f7004cb81ee969ebffb8d95899ebb0b10cdd4c82ce5",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 104,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/review-feedback-b-pr6a.md": {
+      "filePath": "snapshots/role-b/review-feedback-b-pr6a.md",
+      "contentHash": "e5561b45db9c4882e5e9ba443985310d2584c2bb2224dceb6e8165da67cde3b8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 202,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/review-feedback-b-pr8.md": {
+      "filePath": "snapshots/role-b/review-feedback-b-pr8.md",
+      "contentHash": "e668a93556527667d78996d4bca2fd1ee1f500a042b34fb65b8bc83de756eb83",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 199,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/review-feedback-b-resizable.md": {
+      "filePath": "snapshots/role-b/review-feedback-b-resizable.md",
+      "contentHash": "ab1998c6b2faf345dd6a587b402a61cf97c474daa0e6468fe3784fe5716b6258",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 105,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/review-reply-b-pr12.md": {
+      "filePath": "snapshots/role-b/review-reply-b-pr12.md",
+      "contentHash": "9edbb742e15fa28c935acaff3249b4ba4705c7d8f20b21be12fd6397794141fd",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 82,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/review-reply-b-pr12a.md": {
+      "filePath": "snapshots/role-b/review-reply-b-pr12a.md",
+      "contentHash": "646cbb8a11a9f181fa4cfd844fe81da29f07e3a67043270e38dc596bd53b697f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 40,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/review-reply-b-pr6a.md": {
+      "filePath": "snapshots/role-b/review-reply-b-pr6a.md",
+      "contentHash": "cbd49d38df2639e883d1771d62eced08efa634b4ba4d90fbd2bbce8322f5f9d3",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 68,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/review-reply-b-pr8.md": {
+      "filePath": "snapshots/role-b/review-reply-b-pr8.md",
+      "contentHash": "19cff6ac42b2a328adcab96ee84f87b5d5cbeb5b0fa0b39e948f9580459b1a8b",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 56,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/review-reply-b-resizable.md": {
+      "filePath": "snapshots/role-b/review-reply-b-resizable.md",
+      "contentHash": "800b8e981999befbe949e7978be795b467b71a56ccdef753f77cc72138507f18",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 83,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/review-reply-b.md": {
+      "filePath": "snapshots/role-b/review-reply-b.md",
+      "contentHash": "b33535d0abbca00b7407393969c0beeb9b69c0d6b9de85456557ba8a7bae1d0a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 44,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/verify-discussion-pr12.md": {
+      "filePath": "snapshots/role-b/verify-discussion-pr12.md",
+      "contentHash": "f13608a980de6013d404a29b2950107646249ac8b548ee00f75eee1d2f063c48",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 84,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/verify-discussion-pr6a.md": {
+      "filePath": "snapshots/role-b/verify-discussion-pr6a.md",
+      "contentHash": "a971c4051a18644040fa8b9512fc490b679f4bc6364c8271ed2c8a1bd4d0b236",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 78,
+      "hasStructuralAnalysis": true
+    },
+    "snapshots/role-b/verify-discussion-pr8.md": {
+      "filePath": "snapshots/role-b/verify-discussion-pr8.md",
+      "contentHash": "c6606a26ec56a317e509f031639554b9d1f6e87807dc4a16089d96dbac400705",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 53,
+      "hasStructuralAnalysis": true
+    }
+  }
+}
