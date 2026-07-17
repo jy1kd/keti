@@ -91,6 +91,7 @@ class TraderApi:
         contingent_condition: str = ContingentCondition.IMMEDIATELY,
         force_close_reason: str = ForceCloseReason.NOT_FORCE_CLOSE,
         stop_price: float = 0.0,
+        exchange_id: str = "",
     ) -> str:
         """Submit a new order to CTP.
 
@@ -121,6 +122,7 @@ class TraderApi:
         order.BrokerID = self.config.broker_id
         order.InvestorID = self.config.user_id
         order.UserID = self.config.user_id
+        order.ExchangeID = exchange_id
         order.InstrumentID = instrument_id
         order.OrderRef = order_ref
         order.Direction = direction

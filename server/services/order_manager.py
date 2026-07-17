@@ -81,6 +81,7 @@ class OrderManager:
         volume_condition: str = "1",
         hedge_flag: str = "1",
         stop_price: float = 0.0,
+        exchange_id: str = "",
         wait_response: bool = True,
         wait_timeout: float = 3.0,
     ) -> dict:
@@ -95,6 +96,7 @@ class OrderManager:
         # Call CTP first to get the real order_ref
         ref = self._trader.insert_order(
             instrument_id=instrument_id,
+            exchange_id=exchange_id,
             direction=direction,
             offset_flag=offset_flag,
             price_type=price_type,
@@ -115,6 +117,7 @@ class OrderManager:
             "orderStatus": "pending",
             "orderSubmitStatus": "",
             "instrumentID": instrument_id,
+            "exchangeID": exchange_id,
             "direction": direction,
             "combOffsetFlag": offset_flag,
             "orderPriceType": price_type,

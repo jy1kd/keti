@@ -25,6 +25,7 @@ class InsertOrderRequest(BaseModel):
     timeCondition: str = Field(default="1", pattern=r"^[123]$")
     volumeCondition: str = Field(default="1", pattern=r"^[123]$")
     hedgeFlag: str = Field(default="1", pattern=r"^[123]$")
+    exchangeID: str = Field(default="")
 
     @model_validator(mode="after")
     def validate_time_volume_condition(self):
@@ -82,6 +83,7 @@ async def insert_order(request: Request, body: InsertOrderRequest):
     om = request.app.state.order_manager
     result = om.insert(
         instrument_id=body.instrumentID,
+        exchange_id=body.exchangeID,
         direction=body.direction,
         offset_flag=body.offsetFlag,
         price_type=body.priceType,
