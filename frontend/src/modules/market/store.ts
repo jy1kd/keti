@@ -57,20 +57,36 @@ export const useMarketStore = create<MarketStore>((set) => ({
   setKlineData: (instrument, data) =>
     set((state) => {
       const next = new Map(state.klineData)
-      next.set(instrument, data)
+      // 按时间戳排序，确保蜡烛顺序正确
+      const sorted = [...data].sort((a, b) => a.timestamp - b.timestamp)
+      next.set(instrument, sorted)
       return { klineData: next }
     }),
   appendKline: (instrument, candle) =>
     set((state) => {
       const next = new Map(state.klineData)
       const existing = next.get(instrument)
-      if (existing && existing.length > 0 && existing[existing.length - 1].timestamp === candle.timestamp) {
-        // 同一时间戳 → 更新最后一根 K 线
-        existing[existing.length - 1] = candle
-        next.set(instrument, [...existing])
-      } else {
-        next.set(instrument, [...(existing ?? []), candle])
+      if (!existing || existing.length === 0) {
+        next.set(instrument, [candle])
+        return { klineData: next }
       }
+
+      const last = existing[existing.length - 1]
+      let updated: typeof existing
+
+      if (candle.timestamp === last.timestamp) {
+        // 同一周期 → 更新最后一根蜡烛
+        updated = [...existing]
+        updated[updated.length - 1] = candle
+      } else if (candle.timestamp > last.timestamp) {
+        // 新周期 → 追加，保留最近200根
+        updated = [...existing, candle].slice(-200)
+      } else {
+        // 旧数据 → 忽略（避免打乱顺序）
+        return state
+      }
+
+      next.set(instrument, updated)
       return { klineData: next }
     }),
 }))

@@ -52,4 +52,29 @@ describe('MarketTable', () => {
     unmount()
     expect(true).toBe(true)
   })
+
+  it('涨跌幅以 preSettlementPrice 为基准（非 preClosePrice）', async () => {
+    const snapshots = new Map<string, MarketSnapshot>([
+      ['au2508', {
+        instrumentID: 'au2508',
+        lastPrice: 490.0,
+        preSettlementPrice: 480.0,  // 基准：结算价
+        preClosePrice: 485.0,       // 非基准：收盘价
+        bidPrice1: 489.0,
+        askPrice1: 491.0,
+        volume: 1000,
+        openInterest: 5000,
+      } as MarketSnapshot],
+    ])
+
+    render(<MarketTable contracts={mockContracts} snapshots={snapshots} />)
+    const { ListTable } = await import('@visactor/vtable')
+    const options = (ListTable as any).mock.calls[0][1]
+    const record = options.records[0]
+
+    // 涨跌 = 490 - 480 = 10（用 preSettlementPrice）
+    // 不是 490 - 485 = 5（用 preClosePrice）
+    expect(record.change).toBe(10)
+    expect(record.changePercent).toBeCloseTo((10 / 480) * 100)
+  })
 })

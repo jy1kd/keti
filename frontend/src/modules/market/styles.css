@@ -19,6 +19,12 @@
   min-height: 0;
 }
 
+.market-panel__top {
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
 .market-panel__kline-placeholder {
   height: 100%;
   display: flex;
@@ -34,12 +40,15 @@
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
   background: var(--bg-secondary);
 }
 
 .market-table-container {
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
   background: var(--bg-primary);
 }
 

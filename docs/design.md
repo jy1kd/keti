@@ -64,7 +64,7 @@
 
 ### 1.3 CTP API说明
 
-**API版本**：v6.7.13（2026年2月25日发布）
+**API版本**：v6.7.7（ctp-python 6.7.7.post1 包自带）
 
 **Python封装库**：ctp-python
 - 安装命令：`pip install ctp-python`
@@ -191,7 +191,7 @@ server/
 │   ├── order.py          # 报单相关接口（限价/市价、撤单、批量撤单、止损单）
 │   ├── query.py          # 查询相关接口（报单、成交、持仓、资金、合约、报价）
 │   └── connection.py     # 连接管理接口（登录、登出、状态）
-├── ctp/                  # CTP封装层（使用ctp-python库）
+├── ctp_wrapper/          # CTP封装层（使用ctp-python库）⚠️ 不能命名为ctp/！
 │   ├── md_user_api.py    # 行情API封装（基于ctp-python）
 │   ├── trader_api.py     # 交易API封装（基于ctp-python）
 │   ├── callback.py       # 回调处理
@@ -250,6 +250,7 @@ type WSMessageType =
   | 'order_return'       // 报单回报
   | 'trade_return'       // 成交回报
   | 'position_update'    // 持仓更新
+  | 'account_update'     // 账户资金更新
   | 'stop_order_update'  // 止损单状态更新
   | 'connection_status'  // 连接状态变化
   | 'error';             // 错误消息
@@ -663,7 +664,7 @@ function handleNewData(newRecord) {
 
 | 方法 | 路径 | 描述 | 请求体 | 响应 |
 |------|------|------|--------|------|
-| GET | `/api/market/instruments` | 获取合约列表 | `?search=au&exchange=SHFE` | `[{instrument_id, instrument_name, exchange_id}]` |
+| GET | `/api/market/instruments` | 获取合约列表 | `?keyword=au` | `[{instrument_id, instrument_name, exchange_id}]` |
 | POST | `/api/market/subscribe` | 订阅行情 | `{instruments: ["IF2608", "IF2609"]}` | `{success}` |
 | POST | `/api/market/unsubscribe` | 退订行情 | `{instruments: ["IF2608"]}` | `{success}` |
 | GET | `/api/market/snapshots` | 获取行情快照 | `?instruments=IF2608,IF2609` | `{[instrument_id]: MarketSnapshot}` |
@@ -681,7 +682,7 @@ function handleNewData(newRecord) {
 **WebSocket推送**：分端点设计
 - `ws://localhost:8000/ws/market` - 行情推送（market_data）
 - `ws://localhost:8000/ws/order` - 报单回报（order_return, trade_return）
-- `ws://localhost:8000/ws/position` - 持仓更新（position_update）
+- `ws://localhost:8000/ws/position` - 持仓更新（position_update, account_update）
 - `ws://localhost:8000/ws/stop` - 止损单状态更新（stop_order_update）
 - `ws://localhost:8000/ws/system` - 系统消息（connection_status, error）
 - 连接后自动推送已订阅合约的行情更新

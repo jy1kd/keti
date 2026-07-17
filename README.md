@@ -34,6 +34,13 @@ npm run dev       # 开发服务器 → http://localhost:5173
 npm run build     # 生产构建
 ```
 
+### 首次配置
+
+```bash
+# 启用 Git hooks（知识图谱自动更新）
+git config core.hooksPath .githooks
+```
+
 ## 项目结构
 
 ```
