@@ -9,7 +9,7 @@ import { KLineChart } from './KLineChart'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
 import { usePointOrder } from '@/hooks/usePointOrder'
-import { useMarketWs } from '@/hooks/useMarketWs'
+import { useMarketWs, PERIOD_MS } from '@/hooks/useMarketWs'
 import { API_BASE, getKlineData } from '@/services/api'
 import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
 import './styles.css'
@@ -65,13 +65,18 @@ export function MarketPanel() {
     setSelectedInstrument(instrumentID)
   }
 
-  // 获取K线数据
+  // 获取K线数据（时间戳按周期对齐，与实时数据保持一致）
   useEffect(() => {
     if (!selectedInstrument) return
     getKlineData(selectedInstrument, period, 200)
       .then((res) => {
         if (res.bars?.length) {
-          setKlineData(selectedInstrument, res.bars)
+          const periodMs = PERIOD_MS[period] ?? PERIOD_MS['5m']
+          const aligned = res.bars.map((bar) => ({
+            ...bar,
+            timestamp: Math.floor(bar.timestamp / periodMs) * periodMs,
+          }))
+          setKlineData(selectedInstrument, aligned)
         }
       })
       .catch(() => { /* 静默失败，K线区域显示暂无数据 */ })

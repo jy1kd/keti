@@ -5,7 +5,7 @@ import { useReconnect } from './useReconnect'
 import type { MarketSnapshot, KLineData, WSMessage } from '@/services/types'
 
 /** 周期字符串 → 毫秒 */
-const PERIOD_MS: Record<string, number> = {
+export const PERIOD_MS: Record<string, number> = {
   '1m': 60_000,
   '5m': 300_000,
   '15m': 900_000,
