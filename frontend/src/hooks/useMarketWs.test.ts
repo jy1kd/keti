@@ -76,4 +76,12 @@ describe('useMarketWs', () => {
     unmount()
     expect(mockDisconnectAll).toHaveBeenCalled()
   })
+
+  it('使用 useReconnect 实现断线重连', () => {
+    const { result } = renderHook(() => useMarketWs('ws://localhost:8000'))
+
+    // useMarketWs 应返回重连状态信息
+    expect(result.current).toHaveProperty('reconnectCount')
+    expect(result.current).toHaveProperty('isReconnecting')
+  })
 })
