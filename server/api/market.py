@@ -3,6 +3,8 @@
 Uses MarketService from app.state.market_service for business logic.
 """
 
+import asyncio
+from pathlib import Path
 from typing import List
 
 from fastapi import APIRouter, Query, Request
@@ -131,12 +133,10 @@ async def refresh_instruments(request: Request):
         return {"success": False, "message": "TraderApi not available"}
 
     # Build file path for saving results
-    from pathlib import Path
     file_path = str(Path(__file__).parent.parent / "data" / "instruments.json")
 
     # Wire callback: when CTP responds, save to file + notify
     def _on_complete(count: int):
-        import asyncio
         ws_manager = getattr(request.app.state, "ws_manager", None)
         if ws_manager:
             loop = asyncio.get_running_loop()
@@ -147,9 +147,6 @@ async def refresh_instruments(request: Request):
                 loop,
             )
 
-    svc.set_instruments_callback(_on_complete)
-
-    # Monkey-patch on_instruments_result onto the CTP callback
     # The ctp_startup wiring will call on_instruments_result when data arrives
     result = svc.refresh_instruments_from_ctp(
         trader_api,

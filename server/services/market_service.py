@@ -244,7 +244,7 @@ class MarketService:
         if callback is not None:
             self._on_instruments_callback = callback
 
-        self._pending_instruments: List[dict] = []
+        self._pending_instruments = []
 
         result = trader_api.query_instruments()
         if result < 0:
@@ -276,7 +276,7 @@ class MarketService:
                 self._save_instruments_to_file(file_path, self._pending_instruments)
             count = len(self._pending_instruments)
             self._pending_instruments = []
-            if hasattr(self, '_on_instruments_callback') and self._on_instruments_callback:
+            if self._on_instruments_callback:
                 self._on_instruments_callback(count)
 
     def _save_instruments_to_file(self, file_path: str, instruments: List[dict]) -> None:

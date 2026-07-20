@@ -267,15 +267,3 @@ def map_instrument(ctp_obj: Any) -> dict:
     for ctp_attr, json_key, default in _INSTRUMENT_FIELDS:
         result[json_key] = getattr(ctp_obj, ctp_attr, default)
     return result
-    """Map a CTP CThostFtdcTradeField to a camelCase dict.
-
-    Args:
-        ctp_obj: A CTP trade return object (or duck-typed mock).
-
-    Returns:
-        dict with camelCase keys matching the TradeReturn model.
-    """
-    result: dict = {}
-    for ctp_attr, json_key, default in _TRADE_FIELDS:
-        result[json_key] = getattr(ctp_obj, ctp_attr, default)
-    return result
