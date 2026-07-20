@@ -83,3 +83,55 @@
 2. 处理改进建议（🟡 建议）
 3. 确认疑问（🔵 回复后可不改）
 4. 修复完成后切审查窗口进行二次审查
+
+---
+
+## 第 2 轮审查（复审）
+
+审查分支：`feature/pr-19-instrument-query-api`
+审查 commit：`99c8c06`（修复提交）
+审查时间：2026-07-20
+
+### 第 1 轮反馈修复验证
+
+| # | 等级 | 问题 | 修复状态 |
+|---|------|------|----------|
+| 1 | 🔴 | field_mapping.py:192-204 死代码 | ✅ 已删除 12 行死代码 |
+| 2 | 🟡 | market_service.py hasattr 冗余 | ✅ 简化为 `if self._on_instruments_callback:` |
+| 3 | 🟡 | market_service.py 类型注解重声明 | ✅ 改为 `self._pending_instruments = []` |
+| 4 | 🟡 | ctp_startup.py 回调接线重复 | ✅ 提取 `_wire_instrument_query()` 辅助函数，两处复用 |
+| 5 | 🟡 | callback.py 未检查 pRspInfo | ✅ 添加 `error_id` 检查 + warning 日志，仍分发事件 |
+| 6 | 🟡 | api/market.py import asyncio 位置 | ✅ 移至文件顶部 |
+| 7 | 🟡 | api/market.py from pathlib 位置 | ✅ 移至文件顶部 |
+| 8 | 🔵 | 测试回调签名不匹配 | ✅ 确认：实际测试代码签名正确（`lambda count: received.append(count)`），审查时描述有误 |
+| 9 | 🔵 | callback 双重设置 | ✅ 删除 `svc.set_instruments_callback()` 调用，仅保留参数传递 |
+
+### 🔴 阻断性问题（必须修改）
+
+无
+
+### 🟡 改进建议
+
+1. **【ctp_startup.py:33】`from pathlib import Path` 仍在闭包内**
+   - `_wire_instrument_query()` 的内部函数 `_on_rsp_qry_instrument()` 中仍有 `from pathlib import Path`（第 33 行）。
+   - 这是 CTP 回调线程调用的同步代码，import 会被缓存，功能无影响，但与 api/market.py 的修复风格不一致。
+   - 非阻塞，可后续统一。
+
+### 🔵 疑问确认
+
+无
+
+### 测试验证
+
+- PR-19 新增 29 测试：✅ 全部通过
+- 全量测试：454 passed / 14 failed（全部为 pre-existing 失败，与 PR-19 无关）
+
+### 审查结论
+
+✅ **通过**
+
+所有 🔴 阻断性问题已修复，🟡 改进建议全部采纳（1 条残留风格问题非阻塞），🔵 疑问已确认。代码质量达标，功能正确。
+
+### 下一步
+
+请完成人工验证后切回开发窗口生成 PR 描述。

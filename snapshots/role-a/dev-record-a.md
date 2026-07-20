@@ -518,7 +518,7 @@ TDD 完成 + 审查修复后，接入 SimNow 7x24 环境进行实盘测试，发
 
 **分支**：`feature/pr-19-instrument-query-api`
 **依赖**：PR-9
-**状态**：🔄 开发中
+**状态**：🔄 审查修复完成，待二次审查
 
 ### 测试用例列表
 
@@ -563,3 +563,16 @@ TDD 完成 + 审查修复后，接入 SimNow 7x24 环境进行实盘测试，发
 2. **字段映射复用**：map_instrument() 沿用 field_mapping.py 的 `[(ctp_attr, json_key, default)]` 表驱动模式
 3. **回调接线统一**：OnRspQryInstrument 在 start_ctp_trading_connection() 和 connect_trading() 两处都接线，确保 startup 和 /login 两条路径都支持合约查询
 4. **文件保存路径**：默认保存到 `server/data/instruments.json`，与 startup 加载路径一致
+
+### 审查修复记录
+
+**第 1 轮审查**（`review-feedback-a-pr19.md`）：1 🔴 + 6 🟡 + 2 🔵 → 全部修复
+- 🔴 field_mapping.py 死代码（12行粘贴残余）→ 删除
+- 🟡 hasattr 冗余 → 简化
+- 🟡 类型注解冗余 → 移除
+- 🟡 回调接线重复 → 提取 `_wire_instrument_query()` 辅助函数
+- 🟡 OnRspQryInstrument 未检查 pRspInfo → 添加错误日志
+- 🟡 import 位置不规范 → 移至文件顶部
+- 🔵 回调签名不匹配 → 实际代码已匹配，无需修改
+- 🔵 双重 callback 设置 → 删除冗余 `set_instruments_callback` 调用
+- 📦 Commit: `99c8c06`
