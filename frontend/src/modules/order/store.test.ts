@@ -15,7 +15,7 @@ vi.mock('../../components/Toast', () => ({
   },
 }))
 
-import { submitOrder as mockSubmitOrder } from '../../services/api'
+import { submitOrder as mockSubmitOrder, cancelOrder as mockCancelOrder } from '../../services/api'
 import { toast } from '../../components/Toast'
 
 describe('OrderStore', () => {
@@ -155,5 +155,38 @@ describe('OrderStore', () => {
 
     await promise
     expect(useOrderStore.getState().isSubmitting).toBe(false)
+  })
+
+  // --- cancelOrder ---
+
+  it('cancelOrder calls API and shows success toast', async () => {
+    vi.mocked(mockCancelOrder).mockResolvedValue({ success: true })
+
+    const result = await useOrderStore.getState().cancelOrder('ORD-001')
+
+    expect(result).toBe(true)
+    expect(mockCancelOrder).toHaveBeenCalledWith('ORD-001')
+    expect(toast.success).toHaveBeenCalledWith('撤单成功')
+  })
+
+  it('cancelOrder shows error toast on failure', async () => {
+    vi.mocked(mockCancelOrder).mockResolvedValue({
+      success: false,
+      error: '报单状态不允许撤单',
+    })
+
+    const result = await useOrderStore.getState().cancelOrder('ORD-001')
+
+    expect(result).toBe(false)
+    expect(toast.error).toHaveBeenCalledWith('撤单失败：报单状态不允许撤单')
+  })
+
+  it('cancelOrder shows error toast on network error', async () => {
+    vi.mocked(mockCancelOrder).mockRejectedValue(new Error('网络异常'))
+
+    const result = await useOrderStore.getState().cancelOrder('ORD-001')
+
+    expect(result).toBe(false)
+    expect(toast.error).toHaveBeenCalledWith('撤单失败：网络异常')
   })
 })

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { submitOrder as apiSubmitOrder } from '../../services/api'
+import { submitOrder as apiSubmitOrder, cancelOrder as apiCancelOrder } from '../../services/api'
 import { toast } from '../../components/Toast'
 import type { OrderRequestForm } from '../../utils/orderMapping'
 
@@ -21,6 +21,7 @@ interface OrderStore {
   setOrderForm: (partial: Partial<OrderRequestForm>) => void
   resetOrderForm: () => void
   submitOrder: () => Promise<boolean>
+  cancelOrder: (orderRef: string) => Promise<boolean>
 }
 
 export const useOrderStore = create<OrderStore>((set, get) => ({
@@ -60,6 +61,23 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       const message = e instanceof Error ? e.message : '未知错误'
       toast.error(`报单失败：${message}`)
       set({ isSubmitting: false })
+      return false
+    }
+  },
+
+  cancelOrder: async (orderRef) => {
+    try {
+      const result = await apiCancelOrder(orderRef)
+      if (result.success) {
+        toast.success('撤单成功')
+        return true
+      } else {
+        toast.error(`撤单失败：${result.error || '未知错误'}`)
+        return false
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : '未知错误'
+      toast.error(`撤单失败：${message}`)
       return false
     }
   },
