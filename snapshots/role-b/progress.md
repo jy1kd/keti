@@ -15,7 +15,7 @@
 | PR-6 | 前端行情表格（vtable） | ✅ 已完成 | 2026-07-14 | 762bfa0~d5c95f4 (31 commits) |
 | PR-6a | 前端行情表格接入真实API | ✅ 已合并 | 2026-07-15 | a2d767d~94a8f85 (12 commits) |
 | PR-8 | 前端五档行情展示 | ✅ 已合并 | 2026-07-15 | 04809be~f56bd62 (13 commits) |
-| PR-10 | 前端报单表单实现 | ⏳ 待开始 | - | - |
+| PR-10 | 前端报单表单实现 | ✅ 已完成（待审查） | 2026-07-20 | 3f2941c, 26da56c |
 | PR-12 | 前端K线图实现 | ✅ 已合并 | 2026-07-16 | 2423a6c~ea94d85 (12 commits) |
 | PR-12a | 前端补缺补差 | ✅ 已完成 | 2026-07-17 | bccca93~f00d066 (22 commits) |
 | PR-14 | 前端期权T型报价实现 | ⏳ 待开始 | - | - |
@@ -182,7 +182,7 @@
 
 ### PR-10: 前端报单表单实现
 
-**状态**：⏳ 待开始
+**状态**：✅ 已完成（待审查）
 
 **PR信息**：
 - PR分支名：`feature/pr-10-order-form`
@@ -190,16 +190,28 @@
 - 工作量：3小时
 
 **完成内容**：
-- 待开发
+- orderMapping 字段映射（前端字符串↔CTP字符码，9个函数）
+- submitOrder/cancelOrder API 函数（自动字段转换）
+- Toast 提示组件（success/error，3s消失，独立计时）
+- Order Store 增强（orderForm状态、submitOrder、resetOrderForm）
+- usePriceStep Hook（stepUp/stepDown/alignToTick）
+- useHotKeys Hook（B/S/C快捷键，输入框内忽略）
+- OrderForm 组件（方向/开平/限价市价/GFD-FOK-FAK/步进器）
+- StopOrderForm 组件（含止损价输入）
+- OrderPanel 集成（报单/止损单 Tab 切换）
 
 **验证结果**：
-- 待验证
+- ✅ 248 tests / 32 files 通过（新增 62 tests）
+- ✅ TypeScript: 0 new errors
+- ✅ 2 pre-existing failures（react-resizable-panels 未安装）
+- ⚠️ 2 观察项：IOC 有效期（task.md 自身矛盾）、前端提交前校验较基础
 
 **提交记录**：
-- 待提交
+- `3f2941c` feat(task-10): implement PR-10 前端报单表单
+- `26da56c` docs(task-10): update dev-record-b with PR-10 TDD record
 
 **交接说明**：
-- 待交接
+- PR-10 开发完成，待审查。审查通过后可进入 PR-15（快捷功能）或 PR-20（合约刷新）
 
 ---
 
