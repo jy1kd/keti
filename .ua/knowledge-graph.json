@@ -5626,235 +5626,274 @@
       "source": "file:server/models/account.py",
       "target": "class:server/models/account.py:AccountInfo",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/models/account.py",
       "target": "class:server/models/account.py:PositionInfo",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/models/contract.py",
       "target": "class:server/models/contract.py:InstrumentInfo",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/models/market.py",
       "target": "class:server/models/market.py:MarketSnapshot",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/models/market.py",
       "target": "class:server/models/market.py:KLineData",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/models/order.py",
       "target": "class:server/models/order.py:OrderRequest",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/models/order.py",
       "target": "class:server/models/order.py:OrderReturn",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/services/reconnect.py",
       "target": "class:server/services/reconnect.py:ReconnectService",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_connection_api.py",
       "target": "class:server/tests/test_connection_api.py:TestLogin",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_connection_api.py",
       "target": "class:server/tests/test_connection_api.py:TestLogout",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_connection_api.py",
       "target": "class:server/tests/test_connection_api.py:TestStatus",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_models.py",
       "target": "class:server/tests/test_models.py:TestMarketSnapshot",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_models.py",
       "target": "class:server/tests/test_models.py:TestKLineData",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_models.py",
       "target": "class:server/tests/test_models.py:TestOrderRequest",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_models.py",
       "target": "class:server/tests/test_models.py:TestOrderReturn",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_models.py",
       "target": "class:server/tests/test_models.py:TestAccountInfo",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_models.py",
       "target": "class:server/tests/test_models.py:TestPositionInfo",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_models.py",
       "target": "class:server/tests/test_models.py:TestInstrumentInfo",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_reconnect.py",
       "target": "class:server/tests/test_reconnect.py:TestReconnectService",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_ws_integration.py",
       "target": "function:server/tests/test_ws_integration.py:test_main_routes_use_handle_ws",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_ws_integration.py",
       "target": "function:server/tests/test_ws_integration.py:test_heartbeat_starts_on_startup",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_ws_integration.py",
       "target": "function:server/tests/test_ws_integration.py:test_ws_manager_has_heartbeat_methods",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_ws_integration.py",
       "target": "function:server/tests/test_ws_integration.py:test_on_front_disconnected_broadcasts_to_system",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_ws_integration.py",
       "target": "function:server/tests/test_ws_integration.py:test_on_front_disconnected_with_active_system_ws",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_ws_integration.py",
       "target": "function:server/tests/test_ws_integration.py:test_reconnect_service_integrates_with_disconnect",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "file:server/tests/test_ws_integration.py",
       "target": "function:server/tests/test_ws_integration.py:test_handle_ws_accepts_subscribe_fn",
       "type": "contains",
-      "weight": 1
+      "weight": 1,
+      "direction": "forward"
     },
     {
       "source": "document:docs/design.md",
       "target": "file:server/config.py",
       "type": "documents",
-      "weight": 0.5
+      "weight": 0.5,
+      "direction": "forward"
     },
     {
       "source": "document:docs/dev.md",
       "target": "file:server/config.py",
       "type": "documents",
-      "weight": 0.5
+      "weight": 0.5,
+      "direction": "forward"
     },
     {
       "source": "document:docs/dev.md",
       "target": "file:server/main.py",
       "type": "documents",
-      "weight": 0.5
+      "weight": 0.5,
+      "direction": "forward"
     },
     {
       "source": "document:docs/prd.md",
       "target": "file:server/main.py",
       "type": "documents",
-      "weight": 0.5
+      "weight": 0.5,
+      "direction": "forward"
     },
     {
       "source": "document:docs/task.md",
       "target": "file:server/config.py",
       "type": "documents",
-      "weight": 0.5
+      "weight": 0.5,
+      "direction": "forward"
     },
     {
       "source": "document:docs/task.md",
       "target": "file:server/main.py",
       "type": "documents",
-      "weight": 0.5
+      "weight": 0.5,
+      "direction": "forward"
     },
     {
       "source": "document:CLAUDE.md",
       "target": "config:frontend/vite.config.ts",
       "type": "documents",
-      "weight": 0.5
+      "weight": 0.5,
+      "direction": "forward"
     },
     {
       "source": "document:CLAUDE.md",
       "target": "config:frontend/src/setupTests.ts",
       "type": "documents",
-      "weight": 0.5
+      "weight": 0.5,
+      "direction": "forward"
     },
     {
       "source": "document:README.md",
       "target": "file:server/models/account.py",
       "type": "documents",
-      "weight": 0.5
+      "weight": 0.5,
+      "direction": "forward"
     },
     {
       "source": "document:README.md",
       "target": "file:server/models/contract.py",
       "type": "documents",
-      "weight": 0.5
+      "weight": 0.5,
+      "direction": "forward"
     },
     {
       "source": "document:README.md",
       "target": "file:server/models/market.py",
       "type": "documents",
-      "weight": 0.5
+      "weight": 0.5,
+      "direction": "forward"
     },
     {
       "source": "document:README.md",
       "target": "file:server/models/order.py",
       "type": "documents",
-      "weight": 0.5
+      "weight": 0.5,
+      "direction": "forward"
     },
     {
       "source": "document:README.md",
       "target": "file:server/services/reconnect.py",
       "type": "documents",
-      "weight": 0.5
+      "weight": 0.5,
+      "direction": "forward"
     },
     {
       "source": "file:server/main.py",
