@@ -40,10 +40,13 @@ class VolumeCondition:
 
 class OrderStatus:
     """报单状态."""
-    ALL_TRADED: str = "0"   # 全部成交
-    PART_TRADED: str = "1"  # 部分成交
-    NO_TRADED: str = "2"    # 未成交
-    CANCELED: str = "5"     # 已撤销
+    ALL_TRADED: str = "0"            # 全部成交（终态）
+    PART_TRADED: str = "1"           # 部分成交，还在队列中
+    NO_TRADED: str = "2"             # 未成交，还在队列中
+    NO_TRADED_NOT_QUEUING: str = "3"  # 未成交，不在队列中
+    NO_TRADED_QUEUING: str = "4"      # 未成交，在队列中
+    CANCELED: str = "5"              # 已撤销（终态）
+    UNKNOWN: str = "a"               # 未知/初始态（过渡态）
 
 
 class PosiDirection:

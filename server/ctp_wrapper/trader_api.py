@@ -73,7 +73,7 @@ class TraderApi:
         field.InvestorID = self.config.user_id
         return self._api.ReqSettlementInfoConfirm(field, self._request_id)
 
-    def _next_order_ref(self) -> str:
+    def next_order_ref(self) -> str:
         """Generate next order reference string.
 
         Uses HHmmss-N format (e.g. "093015-1") to prevent collision with
@@ -99,6 +99,7 @@ class TraderApi:
         force_close_reason: str = ForceCloseReason.NOT_FORCE_CLOSE,
         stop_price: float = 0.0,
         exchange_id: str = "",
+        order_ref: str = "",
     ) -> str:
         """Submit a new order to CTP.
 
@@ -116,6 +117,8 @@ class TraderApi:
                                    STOP_PROFIT ("3"), or PARKED ("4").
             force_close_reason: ForceCloseReason enum value.
             stop_price: Stop price for stop orders (0 = not a stop order).
+            order_ref: Optional explicit order ref.  When empty, one is
+                       generated via next_order_ref().
 
         Returns:
             str: Order reference string. Empty on failure.
@@ -123,7 +126,8 @@ class TraderApi:
         import ctp
 
         self._request_id += 1
-        order_ref = self._next_order_ref()
+        if not order_ref:
+            order_ref = self.next_order_ref()
 
         order = ctp.CThostFtdcInputOrderField()
         order.BrokerID = self.config.broker_id

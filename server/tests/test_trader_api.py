@@ -157,6 +157,18 @@ class TestInsertOrder:
         order_field = call_args[0]
         assert order_field.BrokerID == "8888"
 
+    def test_insert_order_with_explicit_ref(self):
+        """Explicit order_ref param is used as-is; counter not incremented."""
+        api = self._make_api(req_order_return=0)
+        order_ref = api.insert_order(
+            instrument_id="au2506",
+            direction=Direction.BUY,
+            offset_flag=OffsetFlag.OPEN,
+            order_ref="custom-9",
+        )
+        assert order_ref == "custom-9"
+        assert api.order_ref == 0
+
 
 # ── Cancel order tests ─────────────────────────────────────────────────
 

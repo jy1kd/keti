@@ -122,6 +122,10 @@ async def order_status(request: Request, order_ref: str):
 @router.post("/cancel_all")
 async def cancel_all_orders(request: Request):
     """Cancel all active orders."""
+    trader_api = request.app.state.trader_api
+    if trader_api is None or trader_api.login_status != "logged_in":
+        return {"success": False, "orderRef": "", "message": "TD not connected — call /api/connection/login first"}
+
     logger.info("CANCEL_ALL client=%s", request.client.host if request.client else "?")
     om = request.app.state.order_manager
     result = om.cancel_all()

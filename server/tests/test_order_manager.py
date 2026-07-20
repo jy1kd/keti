@@ -533,6 +533,96 @@ class TestOrderManagerOnRtnOrder:
         _unmock_ctp()
 
 
+# ── Race-condition regression tests (F1) ──────────────────────────────
+
+class TestOrderManagerRaceConditions:
+    """Callbacks arriving DURING the CTP call must not be lost (F1).
+
+    Simulates the CTP callback thread responding before insert()/cancel()
+    has finished its post-call bookkeeping.
+    """
+
+    def test_cancel_callback_during_ctp_call_not_lost(self):
+        """OnRspOrderAction fires inside cancel_order() → rejection still
+        reported, not swallowed as a timeout success."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        trader._api.ReqOrderAction.return_value = 0
+        om = OrderManager(trader)
+
+        res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                        offset_flag=OffsetFlag.OPEN, wait_response=False)
+        ref = res["orderRef"]
+
+        def fire_reject(*args, **kwargs):
+            # CTP thread answers *while* cancel_order() is still executing
+            om.on_rsp_order_action(ref, 15, "撤单被拒绝")
+            return 0
+        trader._api.ReqOrderAction.side_effect = fire_reject
+
+        result = om.cancel(ref, wait_response=True, wait_timeout=0.5)
+        assert result["success"] is False
+        assert "撤单被拒绝" in result["message"]
+        _unmock_ctp()
+
+    def test_insert_callback_during_ctp_call_not_lost(self):
+        """OnRspOrderInsert fires inside insert_order() → rejection still
+        reported."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        om = OrderManager(trader)
+
+        def fire_reject(*args, **kwargs):
+            om.on_rsp_order_insert("000000-1", 15, "合约不存在")
+            return 0
+        trader._api.ReqOrderInsert.side_effect = fire_reject
+
+        with patch("time.strftime", return_value="000000"):
+            result = om.insert(
+                instrument_id="IF2608",
+                direction=Direction.BUY,
+                offset_flag=OffsetFlag.OPEN,
+                wait_response=True,
+                wait_timeout=0.5,
+            )
+        assert result["success"] is False
+        assert "合约不存在" in result["message"]
+        _unmock_ctp()
+
+    def test_insert_rtn_order_during_ctp_call_not_lost(self):
+        """OnRtnOrder fires inside insert_order() → record updated, not
+        dropped as 'unknown ref'."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        om = OrderManager(trader)
+
+        def fire_rtn(*args, **kwargs):
+            om.on_rtn_order({
+                "orderRef": "000000-1",
+                "orderSysID": "SYS999",
+                "orderStatus": "2",
+            })
+            return 0
+        trader._api.ReqOrderInsert.side_effect = fire_rtn
+
+        with patch("time.strftime", return_value="000000"):
+            res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                            offset_flag=OffsetFlag.OPEN, wait_response=False)
+        order = om.get_order(res["orderRef"])
+        assert order["orderSysID"] == "SYS999"
+        _unmock_ctp()
+
+
 # ── Session filtering ────────────────────────────────────────────────────
 
 class TestOrderManagerSessionFilter:

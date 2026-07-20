@@ -34,6 +34,17 @@ class OrderManager:
     - Thread-safe access via RLock
     """
 
+    # Statuses that represent an active (cancel-able) order.
+    # "0" (AllTraded) and "5" (Canceled) are terminal — excluded.
+    _ACTIVE_STATUSES: tuple = (
+        "pending",
+        OrderStatus.UNKNOWN,              # "a" — CTP initial state
+        OrderStatus.NO_TRADED,            # "2"
+        OrderStatus.NO_TRADED_QUEUING,     # "3"
+        OrderStatus.NO_TRADED_NOT_QUEUING, # "4"
+        OrderStatus.PART_TRADED,           # "1"
+    )
+
     def __init__(self, trader_api: "TraderApi") -> None:
         """Initialize with a TraderApi instance.
 
@@ -116,22 +127,10 @@ class OrderManager:
         Returns:
             dict: {"success": bool, "orderRef": str, "message": str}
         """
-        # Call CTP first to get the real order_ref
-        ref = self._trader.insert_order(
-            instrument_id=instrument_id,
-            exchange_id=exchange_id,
-            direction=direction,
-            offset_flag=offset_flag,
-            price_type=price_type,
-            limit_price=limit_price,
-            volume=volume,
-            time_condition=time_condition,
-            volume_condition=volume_condition,
-            hedge_flag=hedge_flag,
-            stop_price=stop_price,
-        )
-        if not ref:
-            return {"success": False, "orderRef": "", "message": "CTP local reject"}
+        # Generate ref and register the pending record + response event
+        # BEFORE the CTP call.  The CTP callback thread can answer while
+        # insert_order() is still executing (F1 race).
+        ref = self._trader.next_order_ref()
 
         # Create pending record
         pending = {
@@ -162,7 +161,35 @@ class OrderManager:
         event = threading.Event()
         with self._lock:
             self._orders[ref] = pending
-            self._rsp_events[ref] = event
+            if wait_response:
+                self._rsp_events[ref] = event
+
+        # Call CTP — callbacks may fire during this call
+        try:
+            ok = self._trader.insert_order(
+                instrument_id=instrument_id,
+                exchange_id=exchange_id,
+                direction=direction,
+                offset_flag=offset_flag,
+                price_type=price_type,
+                limit_price=limit_price,
+                volume=volume,
+                time_condition=time_condition,
+                volume_condition=volume_condition,
+                hedge_flag=hedge_flag,
+                stop_price=stop_price,
+                order_ref=ref,
+            )
+        except Exception:
+            with self._lock:
+                self._orders.pop(ref, None)
+                self._rsp_events.pop(ref, None)
+            raise
+        if not ok:
+            with self._lock:
+                self._orders.pop(ref, None)
+                self._rsp_events.pop(ref, None)
+            return {"success": False, "orderRef": "", "message": "CTP local reject"}
 
         if not wait_response:
             return {"success": True, "orderRef": ref, "message": "Submitted"}
@@ -273,6 +300,14 @@ class OrderManager:
         sys_id = order.get("orderSysID", "") or order_sys_id
         logger.info("CANCEL orderRef=%s sysID=%s exchangeID=%s instrumentID=%s",
                     order_ref, sys_id, order.get("exchangeID", ""), order.get("instrumentID", ""))
+
+        # Register the response event BEFORE the CTP call — the callback
+        # thread can answer while cancel_order() is still executing (F1).
+        event = threading.Event()
+        if wait_response:
+            with self._lock:
+                self._rsp_events[order_ref] = event
+
         rc = self._trader.cancel_order(
             order_ref=order_ref,
             order_sys_id=sys_id,
@@ -280,16 +315,15 @@ class OrderManager:
             instrument_id=order.get("instrumentID", ""),
         )
         if rc != 0:
+            if wait_response:
+                with self._lock:
+                    self._rsp_events.pop(order_ref, None)
             return {"success": False, "orderRef": order_ref, "message": "CTP local reject"}
 
         if not wait_response:
             return {"success": True, "orderRef": order_ref, "message": "Submitted"}
 
         # Wait for OnRspOrderAction callback
-        event = threading.Event()
-        with self._lock:
-            self._rsp_events[order_ref] = event
-
         received = event.wait(timeout=wait_timeout)
 
         with self._lock:
@@ -316,7 +350,7 @@ class OrderManager:
         with self._lock:
             active_refs = [
                 ref for ref, o in self._orders.items()
-                if o["orderStatus"] in ("pending", OrderStatus.NO_TRADED, OrderStatus.PART_TRADED)
+                if o["orderStatus"] in self._ACTIVE_STATUSES
             ]
         logger.info("CANCEL_ALL active_refs=%s", active_refs)
         succeeded = 0
