@@ -200,16 +200,22 @@ PR-1 [A] → PR-3 [A] → PR-5 [A] → PR-7 [A] → PR-9 [A] → PR-11 [A] → P
 
 ## 3. 当前阶段状态
 
-**当前阶段**：阶段2 - 行情模块（已完成）
+**当前阶段**：阶段3 - 交易模块（进行中）
 
-**当前状态**：PR-1 ✅ / PR-2 ✅ / PR-3 ✅ / PR-4 ✅ / PR-5 ✅ / PR-6 ✅ / PR-6a ✅ / PR-7 ✅ / PR-8 ✅
+**当前状态**：PR-1 ✅ / PR-2 ✅ / PR-3 ✅ / PR-4 ✅ / PR-5 ✅ / PR-6 ✅ / PR-6a ✅ / PR-7 ✅ / PR-8 ✅ / PR-9 ✅ / PR-12 ✅ / PR-12a ✅
 
 **下一步行动**：
-- 角色A：开始 PR-9（后端交易API实现，依赖 PR-7）
-- 角色B：开始 PR-12（K线图，依赖 PR-5）或 PR-10（报单表单，依赖 PR-9）
+- 角色A：开始 PR-11（后端查询API实现，依赖 PR-9）或 PR-19（合约查询API，依赖 PR-9）
+- 角色B：开始 PR-10（报单表单，依赖 PR-9）或 PR-21（手动订阅，依赖 PR-6a）
 
 **⚠️ 已知不完善**：
-- 登录逻辑仅实现 MD（行情）连接，TradingDay/BrokerID 等 TD（交易）相关字段需 PR-9 完成后同步完善
+- `GET /instruments` 返回静态硬编码数据（8个合约），需 PR-19 用 ReqQryInstrument 动态替换
+- `averagePrice` 未除以 VolumeMultiple，需 PR-11 获取合约乘数后换算
+- `reverse()`/`lock()` 返回 501 占位，需 PR-11 获取持仓方向+数量后编排实际逻辑
+- `/ws/position` 无持仓广播，需 PR-11 的 ReqQryInvestorPosition
+- 断线重连后报单/成交丢失，需 PR-11 的 ReqQryOrder/ReqQryTrade 恢复
+- `api/query.py` 全占位路由，需 PR-11 实现
+- 登录逻辑 demo 化：startup 时 TD 用 .env 凭证自动连接绕过 `/login`；`ctp_startup.py` 有两套重复 TD 连接代码；需 PR-22 重构为"startup 只连 MD，TD 由 `/login` 触发"
 
 ---
 
@@ -351,7 +357,7 @@ git branch -d feature/pr-<编号>-<描述>
 
 | PR | 任务 | 依赖 | 状态 | 分支名 |
 |----|------|------|------|--------|
-| PR-9 | 后端交易API实现 | PR-7 | ⏳ 待开始 | `feature/pr-9-trader-api` |
+| PR-9 | 后端交易API实现 | PR-7 | ✅ 已完成 | `feature/pr-9-trader-api` |
 | PR-11 | 后端查询API实现 | PR-9 | ⏳ 待开始 | `feature/pr-11-query-api` |
 | PR-19 | 后端合约查询API（CTP ReqQryInstrument） | PR-9 | ⏳ 待开始 | `feature/pr-19-instrument-query-api` |
 

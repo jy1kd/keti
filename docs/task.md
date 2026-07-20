@@ -806,7 +806,7 @@ frontend/src/
 | **负责角色** | 角色A |
 | **依赖PR** | PR-7 |
 | **工作量** | 3小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成（2026-07-20，PR #12，32 commits，391 tests） |
 
 **提交文件**：
 ```
@@ -1611,12 +1611,36 @@ frontend/src/
 
 **背景**：
 当前MD/TD指示器使用demo方案（前端通过行情数据推断MD状态），需要改为后端主动广播连接状态。
+同时，当前登录逻辑存在问题：startup 时 TD 用 `.env` 凭证自动连接，绕过了 `/login` 端点；`ctp_startup.py` 中有两套重复的 TD 连接代码（`start_ctp_trading_connection` 和 `connect_trading`）。
 
 **角色A（后端）任务**：
 ```server/
 ├── services/
-│   └── ctp_startup.py           # 修改：连接状态广播
+│   └── ctp_startup.py           # 修改：连接状态广播 + 登录流程重构
 ```
+
+**任务 1：登录流程重构**
+
+现状问题：
+- `main.py` startup 同时启动 MD 和 TD，TD 绕过 `/login` 端点
+- `ctp_startup.py` 有两套重复的 TD 连接代码：`start_ctp_trading_connection()`（startup 用）和 `connect_trading()`（`/login` 用）
+- `connect_ctp()` 名字误导（只做 MD，不做 TD）
+
+重构方案：
+1. 删除 `start_ctp_trading_connection()`，统一到 `connect_trading()`（唯一 TD 连接入口）
+2. `connect_ctp()` 重命名为 `connect_md()`，只做 MD 连接
+3. `main.py` startup 只调 `connect_md()`，删除 TD 自动连接
+4. `/login` 端点调用 `connect_trading(brokerID, userID, password, wait=True)` 触发 TD 连接
+5. `/logout` 端点增加广播 `connection_status` 到 `/ws/system`（通知前端 TD 断开）
+
+目标流程：
+```
+启动时：MD 自动连接（后台线程），TD 不连接
+POST /api/connection/login → connect_trading() → TD 连接+登录+确认结算 → 返回成功/失败
+POST /api/connection/logout → 释放 TD → MD 保持 → 广播 TD 断开
+```
+
+**任务 2：连接状态广播**
 
 1. 修改 `_on_front_connected` 回调
    - MD连接成功时广播：`{ type: 'connection_status', data: { status: 'connected', target: 'md' } }`
