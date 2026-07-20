@@ -197,6 +197,14 @@ def _td_on_rsp_order_action(self, pInputOrderAction: Any, pRspInfo: Any,
                    nRequestID, bIsLast)
 
 
+def _td_on_err_rtn_order_action(self, pOrderAction: Any, pRspInfo: Any,
+                              nRequestID: int, bIsLast: bool) -> None:
+    self._log("OnErrRtnOrderAction",
+              {"request_id": nRequestID, "is_last": bIsLast})
+    self._dispatch("OnErrRtnOrderAction", pOrderAction, pRspInfo,
+                   nRequestID, bIsLast)
+
+
 def _td_on_rsp_error(self, pRspInfo: Any, nRequestID: int, bIsLast: bool) -> None:
     self._log("OnRspError",
               {"request_id": nRequestID, "is_last": bIsLast})
@@ -211,4 +219,5 @@ TraderSpi.OnRtnOrder = _td_on_rtn_order  # type: ignore
 TraderSpi.OnRtnTrade = _td_on_rtn_trade  # type: ignore
 TraderSpi.OnRspOrderInsert = _td_on_rsp_order_insert  # type: ignore
 TraderSpi.OnRspOrderAction = _td_on_rsp_order_action  # type: ignore
+TraderSpi.OnErrRtnOrderAction = _td_on_err_rtn_order_action  # type: ignore
 TraderSpi.OnRspError = _td_on_rsp_error  # type: ignore

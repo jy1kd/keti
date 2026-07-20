@@ -42,7 +42,6 @@ async def get_instruments(request: Request, keyword: str = ""):
 
 
 # ── Subscribe ───────────────────────────────────────────────────────────
-
 @router.post("/subscribe")
 async def subscribe(body: SubscribeRequest, request: Request):
     """Subscribe to market data for a list of instrument IDs.
@@ -139,14 +138,18 @@ async def get_depth(
     bids = []
     asks = []
     for i in range(1, 6):
-        bids.append({
-            "price": snap.get(f"bidPrice{i}", 0.0),
-            "volume": snap.get(f"bidVolume{i}", 0),
-        })
-        asks.append({
-            "price": snap.get(f"askPrice{i}", 0.0),
-            "volume": snap.get(f"askVolume{i}", 0),
-        })
+        b_vol = snap.get(f"bidVolume{i}", 0)
+        if b_vol > 0:
+            bids.append({
+                "price": snap.get(f"bidPrice{i}", 0.0),
+                "volume": b_vol,
+            })
+        a_vol = snap.get(f"askVolume{i}", 0)
+        if a_vol > 0:
+            asks.append({
+                "price": snap.get(f"askPrice{i}", 0.0),
+                "volume": a_vol,
+            })
 
     return {
         "instrumentID": instrument,

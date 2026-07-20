@@ -293,4 +293,4 @@ CTP 使用 PascalCase 字段名（如 `InstrumentID`, `LastPrice`, `BidPrice1`�
 第9步 窗口1 → 收尾合并（生成PR描述，更新task.md状态）
 ```
 
-详细流程说明见 `执行流程-b.md`。
+详细流程说明见 `执行流程-a.md`。

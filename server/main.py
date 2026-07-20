@@ -29,7 +29,7 @@ from api.query import router as query_router
 from ws.manager import WebSocketManager
 from services.market_service import MarketService
 from services.ctp_bridge import wire_market_data_callback
-from services.ctp_startup import connect_ctp
+from services.ctp_startup import connect_ctp, start_ctp_trading_connection
 from ws.handlers import handle_ws
 
 
@@ -44,15 +44,19 @@ def create_app() -> FastAPI:
         logger.info("WebSocket heartbeat started (interval=15s)")
 
         cfg = load_config()
-        logger.info("starting CTP connection (broker=%s user=%s)", cfg.broker_id, cfg.user_id)
-        result = connect_ctp(app, cfg.broker_id, cfg.user_id, cfg.password, wait=True)
-        if not result.get("success"):
-            logger.warning("CTP startup login failed: %s", result.get("message"))
+
+        # Start MD connection (fire-and-forget — MD does not need validated credentials)
+        logger.info("starting CTP market data connection")
+        connect_ctp(app, cfg.broker_id, cfg.user_id, cfg.password, wait=False)
+
+        # Start TD connection with credentials (fire-and-forget;
+        # /api/connection/status reflects the actual state)
+        logger.info("starting CTP trading connection (user=%s)", cfg.user_id)
+        start_ctp_trading_connection(app, cfg)
 
         # Startup summary
         instruments = app.state.market_service.instrument_count
-        logger.info("startup complete — instruments=%d, CTP=%s",
-                     instruments, "connected" if result.get("success") else "failed")
+        logger.info("startup complete — instruments=%d", instruments)
 
         yield
 

@@ -1,14 +1,21 @@
 """Connection management API — login, logout, status.
 
-POST /api/connection/login  — trigger CTP connection with credentials
-POST /api/connection/logout — disconnect CTP and clear state
-GET  /api/connection/status — real CTP connection status
+POST /api/connection/login  — trigger TD connection with credentials
+POST /api/connection/logout — disconnect both MD and TD
+GET  /api/connection/status — real MD + TD connection status
+
+Design:
+  - MD (market data) does not require validated credentials;
+    it connects at startup and runs regardless.
+  - TD (trading) requires valid credentials.  /login triggers
+    a TD connection and blocks until the result is known.
+  - loggedIn reflects the TD login state (the "real" login).
 """
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
-from services.ctp_startup import connect_ctp
+from services.ctp_startup import connect_trading
 
 router = APIRouter()
 
@@ -33,36 +40,39 @@ class StatusResponse(BaseModel):
 
 @router.post("/login", response_model=LoginResponse)
 async def login(body: LoginRequest, request: Request):
-    """Trigger CTP connection with the provided credentials.
+    """Trigger TD connection with the provided credentials.
 
-    Guards against:
+    MD runs independently — this endpoint only manages the trading
+    connection (the one that actually validates credentials).
+
+    Guards:
     - Already logged in with same user → return success
-    - Already logged in with different user → return error
-    - Connection thread already running → return error (prevent re-entry)
+    - Connection thread already running → prevent re-entry
     """
-    md_api = getattr(request.app.state, "md_api", None)
+    trader_api = getattr(request.app.state, "trader_api", None)
 
     # Already connected — check if same user
-    if md_api is not None and md_api.login_status == "logged_in":
-        connected_user = getattr(md_api, "config", None)
-        if connected_user and getattr(connected_user, "user_id", None) == body.userID:
+    if trader_api is not None and trader_api.login_status == "logged_in":
+        connected_user = getattr(trader_api.config, "user_id", None)
+        if connected_user == body.userID:
             return {"success": True, "message": "Already connected", "userID": body.userID}
+        # Different user — connect_trading handles disconnect internally
         return {
             "success": False,
-            "message": "Already connected as different user. Restart to switch accounts.",
+            "message": "Already connected as different user. Call /logout first.",
         }
 
     # Connection thread already running — prevent re-entry
-    ctp_thread = getattr(request.app.state, "ctp_thread", None)
-    if ctp_thread is not None and ctp_thread.is_alive():
+    td_thread = getattr(request.app.state, "td_thread", None)
+    if td_thread is not None and td_thread.is_alive():
         return {
             "success": False,
             "message": "Connection in progress. Poll /api/connection/status.",
         }
 
-    # Start CTP connection and wait for result
+    # Start TD connection and wait for result
     try:
-        result = connect_ctp(
+        result = connect_trading(
             request.app, body.brokerID, body.userID, body.password,
             wait=True,
         )
@@ -73,41 +83,54 @@ async def login(body: LoginRequest, request: Request):
 
 @router.post("/logout", response_model=LoginResponse)
 async def logout(request: Request):
-    """Disconnect CTP and clear state.
+    """Disconnect the trading connection.
 
-    Releases the CTP API resources and clears app.state.md_api.
-    The frontend should call login again to reconnect.
+    MD (market data) stays connected — it does not require validated
+    credentials and should persist across login/logout cycles.
+
+    The frontend should call /login to reconnect TD.
     """
-    md_api = getattr(request.app.state, "md_api", None)
-    if md_api is not None:
+    # Disconnect TD only
+    trader_api = getattr(request.app.state, "trader_api", None)
+    if trader_api is not None:
         try:
-            md_api.release()
+            trader_api.release()
         except Exception:
             pass
-        request.app.state.md_api = None
+        request.app.state.trader_api = None
+        request.app.state.order_manager = None
 
-    # Clear the thread reference
-    if hasattr(request.app.state, "ctp_thread"):
-        request.app.state.ctp_thread = None
+    # Clear TD thread reference
+    if hasattr(request.app.state, "td_thread"):
+        request.app.state.td_thread = None
 
-    return {"success": True, "message": "Logged out and CTP disconnected"}
+    return {"success": True, "message": "Logged out — TD disconnected, MD still running"}
 
 
 @router.get("/status", response_model=StatusResponse)
 async def status(request: Request):
     """Return current CTP connection status.
 
-    Reads real connection state from app.state.md_api when available.
+    - mdConnected: whether the MD (market data) front is connected
+    - tdConnected: whether the TD (trading) front is connected
+    - loggedIn:    whether TD has authenticated (the real login state)
     """
     md_api = getattr(request.app.state, "md_api", None)
+    trader_api = getattr(request.app.state, "trader_api", None)
+
+    logged_in = False
+    md_connected = False
+    td_connected = False
+
     if md_api is not None:
-        return {
-            "loggedIn": md_api.login_status == "logged_in",
-            "mdConnected": md_api.connection_status == "connected",
-            "tdConnected": False,  # TD not started until PR-9
-        }
+        md_connected = md_api.connection_status == "connected"
+
+    if trader_api is not None:
+        td_connected = trader_api.connection_status == "connected"
+        logged_in = trader_api.login_status == "logged_in"
+
     return {
-        "loggedIn": False,
-        "mdConnected": False,
-        "tdConnected": False,
+        "loggedIn": logged_in,
+        "mdConnected": md_connected,
+        "tdConnected": td_connected,
     }

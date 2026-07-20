@@ -14,6 +14,9 @@ from ctp_wrapper.types import (
     OrderStatus,
     PosiDirection,
     ProductClass,
+    CombHedgeFlag,
+    ContingentCondition,
+    ForceCloseReason,
 )
 
 
@@ -124,3 +127,62 @@ class TestProductClass:
 
     def test_combination_value(self):
         assert ProductClass.COMBINATION == "3"
+
+
+class TestCombHedgeFlag:
+    """Combination hedge flag — speculation/arbitrage/hedge."""
+
+    def test_speculation_value(self):
+        assert CombHedgeFlag.SPECULATION == "1"
+
+    def test_arbitrage_value(self):
+        assert CombHedgeFlag.ARBITRAGE == "2"
+
+    def test_hedge_value(self):
+        assert CombHedgeFlag.HEDGE == "3"
+
+    def test_values_are_strings(self):
+        for v in [CombHedgeFlag.SPECULATION, CombHedgeFlag.ARBITRAGE, CombHedgeFlag.HEDGE]:
+            assert isinstance(v, str)
+
+
+class TestContingentCondition:
+    """Contingent condition — immediately/stop/stop_profit/parked."""
+
+    def test_immediately_value(self):
+        assert ContingentCondition.IMMEDIATELY == "1"
+
+    def test_stop_value(self):
+        assert ContingentCondition.STOP == "2"
+
+    def test_stop_profit_value(self):
+        assert ContingentCondition.STOP_PROFIT == "3"
+
+    def test_parked_value(self):
+        assert ContingentCondition.PARKED == "4"
+
+    def test_values_are_strings(self):
+        for v in [ContingentCondition.IMMEDIATELY, ContingentCondition.STOP,
+                   ContingentCondition.STOP_PROFIT, ContingentCondition.PARKED]:
+            assert isinstance(v, str)
+
+
+class TestForceCloseReason:
+    """Force close reason — not_force_close/lack_deposit/client_over_position etc."""
+
+    def test_not_force_close_value(self):
+        assert ForceCloseReason.NOT_FORCE_CLOSE == "0"
+
+    def test_lack_deposit_value(self):
+        assert ForceCloseReason.LACK_DEPOSIT == "1"
+
+    def test_client_over_position_value(self):
+        assert ForceCloseReason.CLIENT_OVER_POSITION == "2"
+
+    def test_member_over_position_value(self):
+        assert ForceCloseReason.MEMBER_OVER_POSITION == "3"
+
+    def test_values_are_strings(self):
+        for v in [ForceCloseReason.NOT_FORCE_CLOSE, ForceCloseReason.LACK_DEPOSIT,
+                   ForceCloseReason.CLIENT_OVER_POSITION, ForceCloseReason.MEMBER_OVER_POSITION]:
+            assert isinstance(v, str)

@@ -1,7 +1,12 @@
 """Tests for services/field_mapping.py — CTP PascalCase to camelCase mapping."""
 
 import pytest
-from services.field_mapping import map_depth_market_data
+from services.field_mapping import (
+    map_depth_market_data,
+    map_input_order,
+    map_order,
+    map_trade,
+)
 
 
 # ── Mock CTP depth market data object ──────────────────────────────────
@@ -262,3 +267,234 @@ class TestMapDepthMarketDataEdgeCases:
         assert result["openPrice"] == 0.0
         assert result["volume"] == 0
         assert result["updateTime"] == ""
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# InputOrder / Order / Trade field mapping tests (PR-9)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class _MockInputOrder:
+    """Duck-type of CThostFtdcInputOrderField."""
+
+    InstrumentID = "IF2608"
+    ExchangeID = "CFFEX"
+    BrokerID = "9999"
+    InvestorID = "user001"
+    UserID = "user001"
+    OrderRef = "12"
+    Direction = "0"
+    CombOffsetFlag = "0"
+    CombHedgeFlag = "1"
+    OrderPriceType = "2"
+    LimitPrice = 3850.0
+    VolumeTotalOriginal = 5
+    TimeCondition = "1"
+    VolumeCondition = "1"
+    MinVolume = 1
+    ContingentCondition = "1"
+    ForceCloseReason = "0"
+    StopPrice = 0.0
+    IsAutoSuspend = 0
+    RequestID = 1
+
+
+class _MockOrder:
+    """Duck-type of CThostFtdcOrderField."""
+
+    InstrumentID = "IF2608"
+    ExchangeID = "CFFEX"
+    OrderRef = "12"
+    OrderSysID = "SYS12345"
+    OrderStatus = "2"
+    OrderSubmitStatus = "0"
+    Direction = "0"
+    CombOffsetFlag = "0"
+    OrderPriceType = "2"
+    LimitPrice = 3850.0
+    VolumeTotalOriginal = 5
+    VolumeTraded = 3
+    VolumeTotal = 5
+    StatusMsg = ""
+    InsertDate = "20260716"
+    InsertTime = "10:30:15"
+    TradingDay = "20260716"
+    FrontID = 1
+    SessionID = 100
+    BrokerID = "9999"
+    InvestorID = "user001"
+    UserID = "user001"
+    CombHedgeFlag = "1"
+    TimeCondition = "1"
+    VolumeCondition = "1"
+    CancelTime = ""
+    UpdateTime = "10:30:16"
+
+
+class _MockTrade:
+    """Duck-type of CThostFtdcTradeField."""
+
+    InstrumentID = "IF2608"
+    ExchangeID = "CFFEX"
+    TradeID = "T20260716001"
+    OrderRef = "12"
+    OrderSysID = "SYS12345"
+    Direction = "0"
+    OffsetFlag = "0"
+    HedgeFlag = "1"
+    Price = 3850.0
+    Volume = 3
+    TradeDate = "20260716"
+    TradeTime = "10:30:15"
+    TradingDay = "20260716"
+    BrokerID = "9999"
+    InvestorID = "user001"
+    UserID = "user001"
+
+
+class TestMapInputOrder:
+    """map_input_order: CThostFtdcInputOrderField → camelCase dict."""
+
+    def test_import(self):
+        assert map_input_order is not None
+
+    def test_returns_dict(self):
+        result = map_input_order(_MockInputOrder())
+        assert isinstance(result, dict)
+
+    def test_maps_core_fields(self):
+        result = map_input_order(_MockInputOrder())
+        assert result["instrumentID"] == "IF2608"
+        assert result["direction"] == "0"
+        assert result["combOffsetFlag"] == "0"
+        assert result["combHedgeFlag"] == "1"
+        assert result["orderPriceType"] == "2"
+        assert result["limitPrice"] == 3850.0
+        assert result["volumeTotalOriginal"] == 5
+
+    def test_maps_condition_fields(self):
+        result = map_input_order(_MockInputOrder())
+        assert result["timeCondition"] == "1"
+        assert result["volumeCondition"] == "1"
+        assert result["contingentCondition"] == "1"
+        assert result["forceCloseReason"] == "0"
+
+    def test_maps_broker_fields(self):
+        result = map_input_order(_MockInputOrder())
+        assert result["brokerID"] == "9999"
+        assert result["investorID"] == "user001"
+        assert result["orderRef"] == "12"
+
+    def test_has_stop_price(self):
+        result = map_input_order(_MockInputOrder())
+        assert result["stopPrice"] == 0.0
+
+
+class TestMapOrder:
+    """map_order: CThostFtdcOrderField → camelCase dict."""
+
+    def test_import(self):
+        assert map_order is not None
+
+    def test_returns_dict(self):
+        result = map_order(_MockOrder())
+        assert isinstance(result, dict)
+
+    def test_maps_identity_fields(self):
+        result = map_order(_MockOrder())
+        assert result["orderRef"] == "12"
+        assert result["orderSysID"] == "SYS12345"
+        assert result["frontID"] == 1
+        assert result["sessionID"] == 100
+
+    def test_maps_status_fields(self):
+        result = map_order(_MockOrder())
+        assert result["orderStatus"] == "2"
+        assert result["orderSubmitStatus"] == "0"
+        assert result["statusMsg"] == ""
+
+    def test_maps_trade_fields(self):
+        result = map_order(_MockOrder())
+        assert result["limitPrice"] == 3850.0
+        assert result["volumeTotalOriginal"] == 5
+        assert result["volumeTraded"] == 3
+        assert result["volumeTotal"] == 5
+
+    def test_maps_time_fields(self):
+        result = map_order(_MockOrder())
+        assert result["insertDate"] == "20260716"
+        assert result["insertTime"] == "10:30:15"
+        assert result["updateTime"] == "10:30:16"
+        assert result["tradingDay"] == "20260716"
+
+    def test_maps_direction_offset(self):
+        result = map_order(_MockOrder())
+        assert result["direction"] == "0"
+        assert result["combOffsetFlag"] == "0"
+
+
+class TestMapTrade:
+    """map_trade: CThostFtdcTradeField → camelCase dict."""
+
+    def test_import(self):
+        assert map_trade is not None
+
+    def test_returns_dict(self):
+        result = map_trade(_MockTrade())
+        assert isinstance(result, dict)
+
+    def test_maps_core_fields(self):
+        result = map_trade(_MockTrade())
+        assert result["tradeID"] == "T20260716001"
+        assert result["instrumentID"] == "IF2608"
+        assert result["price"] == 3850.0
+        assert result["volume"] == 3
+
+    def test_maps_order_ref_fields(self):
+        result = map_trade(_MockTrade())
+        assert result["orderRef"] == "12"
+        assert result["orderSysID"] == "SYS12345"
+
+    def test_maps_direction_offset(self):
+        result = map_trade(_MockTrade())
+        assert result["direction"] == "0"
+        assert result["offsetFlag"] == "0"
+        assert result["hedgeFlag"] == "1"
+
+    def test_maps_time_fields(self):
+        result = map_trade(_MockTrade())
+        assert result["tradeDate"] == "20260716"
+        assert result["tradeTime"] == "10:30:15"
+        assert result["tradingDay"] == "20260716"
+
+
+class TestOrderMappingEdgeCases:
+    """Edge cases for order/trade field mapping."""
+
+    def test_missing_attributes_default_order(self):
+        """Missing CTP attributes on order get defaults."""
+
+        class MinimalOrder:
+            InstrumentID = "IF2608"
+            OrderRef = "1"
+            OrderSysID = ""
+
+        result = map_order(MinimalOrder())
+        assert result["instrumentID"] == "IF2608"
+        assert result["orderStatus"] == ""
+        assert result["statusMsg"] == ""
+        assert result["limitPrice"] == 0.0
+        assert result["volumeTraded"] == 0
+
+    def test_missing_attributes_default_trade(self):
+        """Missing CTP attributes on trade get defaults."""
+
+        class MinimalTrade:
+            InstrumentID = "IF2608"
+            TradeID = ""
+
+        result = map_trade(MinimalTrade())
+        assert result["instrumentID"] == "IF2608"
+        assert result["tradeID"] == ""
+        assert result["price"] == 0.0
+        assert result["volume"] == 0

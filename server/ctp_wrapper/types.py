@@ -40,10 +40,13 @@ class VolumeCondition:
 
 class OrderStatus:
     """报单状态."""
-    ALL_TRADED: str = "0"   # 全部成交
-    PART_TRADED: str = "1"  # 部分成交
-    NO_TRADED: str = "2"    # 未成交
-    CANCELED: str = "5"     # 已撤销
+    ALL_TRADED: str = "0"            # 全部成交（终态）
+    PART_TRADED: str = "1"           # 部分成交，还在队列中
+    NO_TRADED: str = "2"             # 未成交，还在队列中
+    NO_TRADED_NOT_QUEUING: str = "3"  # 未成交，不在队列中
+    NO_TRADED_QUEUING: str = "4"      # 未成交，在队列中
+    CANCELED: str = "5"              # 已撤销（终态）
+    UNKNOWN: str = "a"               # 未知/初始态（过渡态）
 
 
 class PosiDirection:
@@ -58,3 +61,26 @@ class ProductClass:
     FUTURES: str = "1"     # 期货
     OPTIONS: str = "2"     # 期权
     COMBINATION: str = "3"  # 组合
+
+
+class CombHedgeFlag:
+    """组合投机套保标志."""
+    SPECULATION: str = "1"  # 投机
+    ARBITRAGE: str = "2"    # 套利
+    HEDGE: str = "3"        # 套保
+
+
+class ContingentCondition:
+    """触发条件."""
+    IMMEDIATELY: str = "1"     # 立即
+    STOP: str = "2"            # 止损
+    STOP_PROFIT: str = "3"     # 止盈
+    PARKED: str = "4"          # 预埋单
+
+
+class ForceCloseReason:
+    """强平原因."""
+    NOT_FORCE_CLOSE: str = "0"            # 非强平
+    LACK_DEPOSIT: str = "1"               # 资金不足
+    CLIENT_OVER_POSITION: str = "2"        # 客户超仓
+    MEMBER_OVER_POSITION: str = "3"        # 会员超仓
