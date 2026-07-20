@@ -14,7 +14,7 @@
 | PR-3 | 后端FastAPI框架搭建 | ✅ 二次审查完成，待手动验证合并 | 2026-07-13 | 47a5fa1, c545354, 9217d61, 98f705a, 2bb9b69, 1d28ea8, 1bf6c7c |
 | PR-5 | 后端行情API实现 | ✅ 已合并 | 2026-07-14 | 81643c8 (merge), 6f19568~e4b2091 (19 commits) |
 | PR-7 | 后端WebSocket管理完善 | ✅ 人工审查通过，待合并 | 2026-07-15 | c370cbc, 05b16a6, 4f07b9f, 5386563, 200ab85, 0a0e29c, 443a6c5, 89cb00a, 82ef2e9, 4b5bb2e |
-| PR-9 | 后端交易API实现 | ✅ 开发完成，待审查 | 2026-07-16 | b3fbec5, 5b7cae2, 842e772, cf26d85, 79a1f3a, 869d358 |
+| PR-9 | 后端交易API实现 | ✅ 已合并 | 2026-07-20 | 07a08d9~77fbe3b (25 commits) |
 | PR-11 | 后端查询API实现 | ⏳ 待开始 | - | - |
 | PR-13 | 后端止损单服务实现 | ⏳ 待开始 | - | - |
 | PR-17 | 联调测试与Bug修复 | ⏳ 待开始 | - | - |
@@ -217,27 +217,35 @@
 
 ### PR-9: 后端交易API实现
 
-**状态**：✅ 开发完成，待审查
+**状态**：✅ 已合并（PR #12，2026-07-20）
 
 **PR信息**：
 - PR分支名：`feature/pr-9-trader-api`
 - 依赖PR：PR-7
-- 工作量：3小时
+- 工作量：3 小时开发 + 调试（SimNow 实盘测试、CTP 回调链路、状态机修正）
 
 **完成内容**：
-- ✅ 枚举补充 — CombHedgeFlag / ContingentCondition / ForceCloseReason
-- ✅ CTP 字段映射 — map_input_order / map_order / map_trade
-- ✅ TraderApi 增强 — insert_order 公开所有 CTP 参数，枚举引用替代硬编码
-- ✅ OrderManager 服务 — 方案B 统一入口，状态跟踪，WebSocket 广播钩子
-- ✅ 报单 API — insert / cancel / status / cancel_all / reverse / lock
-- ✅ Pydantic 参数校验 — 价格/数量/合约格式
-- ✅ TD 连接启动 — background thread + tdConnected 真实状态
-- ✅ WebSocket 广播 — OnRtnOrder → ws/order (order_return)、OnRtnTrade → ws/order (trade_return)
+- ✅ 枚举补充 — OrderStatus(7值) / CombHedgeFlag / ContingentCondition / ForceCloseReason
+- ✅ CTP 字段映射 — map_input_order / map_order / map_trade（PascalCase→camelCase）
+- ✅ TraderApi 增强 — insert_order 全参数公开，枚举替换硬编码，next_order_ref(HHmmss-N格式)
+- ✅ OrderManager 服务（方案B）— 统一入口，状态跟踪，threading.Event 回调同步，SessionID 过滤历史回调
+- ✅ 报单 API — POST insert/cancel/cancel_all、GET /status/{orderRef}、POST reverse/lock (501占位)
+- ✅ Pydantic 参数校验 — FOK→CV / FAK→AV 约束验证（422）
+- ✅ TD 连接启动 — background thread，OnFrontConnected→login→settlement confirm 完整流程
+- ✅ WebSocket 广播 — OnRtnOrder→ws/order(order_return)、OnRtnTrade→ws/order(trade_return)
+- ✅ insert/cancel 回调同步 — 等待 OnRspOrderInsert/OnRspOrderAction 返回真实结果（不再假成功）
+- ✅ 登录后自动确认结算单（ReqSettlementInfoConfirm）
+- ✅ orderRef 跨重启防碰撞 — 时间戳前缀 + SessionID 双层过滤
+- ✅ DBL_MAX 行情哨兵值过滤 — snapshots/depth 端点不再暴露 ~1.8e308
+- ✅ depth 端点跳过零量档位
+- ✅ cancel_all 登录检查 + 活单筛选（含 UNKNOWN/NoTradeQueueing）
 
 **验证结果**：
-- ✅ 355 tests passed（+76 新增），15 failed（4 test_config + 11 trio 环境），46 skipped
+- ✅ 391 tests passed（含回归），2 failed（test_config 预存 .env 问题），46 skipped，16 trio 环境跳过
 
-**提交记录**：
+**提交记录**（共 32 commits，含 TDD 红绿循环 + 审查修复 + SimNow 调试）：
+
+**TDD 开发（6 commits）**：
 - `b3fbec5` feat(task-09): CombHedgeFlag/ContingentCondition/ForceCloseReason 枚举 — 15 tests
 - `5b7cae2` feat(task-09): CTP 字段映射 — 3 mapping functions — 21 tests
 - `842e772` feat(task-09): TraderApi 增强 — 新参数 — 9 tests
@@ -245,10 +253,49 @@
 - `79a1f3a` feat(task-09): order API 路由 — 11 tests
 - `869d358` feat(task-09): TD 连接+回调接线+tdConnected — 4 tests
 
+**审查修复 — 第1轮（3 commits，R1: 1🔴+6🟡 全部修复）**：
+- `1769162` fix(task-09): TD login流程补齐
+- `de381d0` fix(task-09): cancel/cancel_all/order_status修复
+- `e5ee0f7` fix(task-09): reverse/lock 501 + broadcast测试 + TODO(PR-17)
+
+**SimNow 实盘调试 + 状态机修正（17 commits）**：
+- `07a08d9` fix(task-09): 登录逻辑修正
+- `a39e65a` fix(task-09): logout只断开TD不碰MD
+- `cb89b37` docs(task-09): 人工验证完成
+- `3be4063` fix(task-09): cancel流程传递orderSysID
+- `33e6d57` fix(task-09): FOK/FAK volumeCondition校验
+- `9edf803`~`5a0de68` fix: cancel_all重构 + 返回result dict
+- `fc12f66` fix(task-09): insert等待OnRspOrderInsert回调
+- `cdf793e` fix(task-09): cancel等待OnRspOrderAction回调
+- `1d71367` fix(task-09): volumeCondition透传
+- `c483437` fix(task-09): insert/cancel前置检查TD登录状态
+- `a90b1ed` fix(task-09): insert同时等待OnRtnOrder回调(SimNow跳过OnRspOrderInsert)
+- `d7b8295` fix(task-09): order_manager闭包变量NameError
+- `ec631c2` feat(task-09): 登录后自动确认结算单
+- `e0d4eea` feat(task-09): cancel/cancel_all增加日志
+- `c36f021`~`a28ff81` fix: OrderSubmitStatus/'a'初始态判断修正
+- `3455648` feat(task-09): insert增加exchangeID参数
+- `fd35195` fix(task-09): OrderStatus='a'是CTP初始态非错误
+
+**审查修复 — 第2轮（4 commits，R2: 0🔴+2🟡，审查通过）**：
+- `660354c` fix(task-09): orderRef跨重启碰撞 — 双层防护（HHmmss-N + SessionID过滤）
+- `bf64fa0` fix(task-09): cancel_all补齐登录检查 + OrderStatus枚举补全 + 活单判断统一
+- `6af36a3` fix(task-09): 行情快照过滤CTP DBL_MAX哨兵值 + depth跳过零量档位
+- `5eb781a` fix(task-09): 修正DBL_MAX过滤 — bidPrice/askPrice后缀是数字非Price
+
+**合并前收尾（1 commit）**：
+- `77fbe3b` fix(task-09): cancel_order补FrontID/SessionID + OrderSysID strip/rjust规范化
+
+**审查记录**：
+- 一次审查（`review-feedback-a-pr9.md` R1）：1 🔴 + 6 🟡 → 全部修复
+- 二次审查（`review-feedback-a-pr9.md` R2）：0 🔴 + 2 🟡 (S7/S8非阻塞) → 审查通过
+- SimNow 实盘验证：10项全部通过（`review-reply-a-pr9.md`）
+
 **交接说明**：
-- 持仓 → ws/position 广播（需 PR-11 查询 API 的 ReqQryInvestorPosition）
+- 持仓 → ws/position 广播（需 PR-11 的 ReqQryInvestorPosition）
 - reverse / lock 实际编排逻辑（需 PR-11 获取持仓方向+数量）
 - 报单流水/成交查询（PR-11 实现 ReqQryOrder/ReqQryTrade）
+- ⚠️ SimNow 7x24 环境会自动撤销未成交 GFD 挂单（非代码 bug），真实柜台不会
 
 ---
 
@@ -325,4 +372,4 @@
 
 | 日期 | 内容 | 状态 |
 |------|------|------|
-| 2026-07-08 | 初始化progress.md | ✅ 完成 |
+| 2026-07-20 | PR-9 合并 (PR #12)，32 commits，391 tests passed | ✅ 完成 |
