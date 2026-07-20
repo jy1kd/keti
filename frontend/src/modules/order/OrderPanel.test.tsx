@@ -66,4 +66,20 @@ describe('OrderPanel', () => {
     // StopOrderForm has the 止损价 label and 止损买入 button text
     expect(screen.getByText('止损价')).toBeInTheDocument()
   })
+
+  it('triggers setOrderForm(direction=buy) on B key press', () => {
+    render(<OrderPanel />)
+
+    fireEvent.keyDown(window, { key: 'b' })
+
+    expect(mockState.setOrderForm).toHaveBeenCalledWith({ direction: 'buy' })
+  })
+
+  it('triggers setOrderForm(direction=sell) on S key press', () => {
+    render(<OrderPanel />)
+
+    fireEvent.keyDown(window, { key: 's' })
+
+    expect(mockState.setOrderForm).toHaveBeenCalledWith({ direction: 'sell' })
+  })
 })

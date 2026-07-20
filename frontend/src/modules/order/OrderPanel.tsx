@@ -1,12 +1,25 @@
 import { useState } from 'react'
 import { OrderForm } from './OrderForm'
 import { StopOrderForm } from './StopOrderForm'
+import { useOrderStore } from './store'
+import { useHotKeys } from '../../hooks/useHotKeys'
+import { toast } from '../../components/Toast'
 import './styles.css'
 
 type TabKey = 'order' | 'stop'
 
 export function OrderPanel() {
   const [tab, setTab] = useState<TabKey>('order')
+  const setOrderForm = useOrderStore((s) => s.setOrderForm)
+
+  useHotKeys({
+    enabled: true,
+    onBuy: () => setOrderForm({ direction: 'buy' }),
+    onSell: () => setOrderForm({ direction: 'sell' }),
+    onCancelAll: () => {
+      toast.error('请使用查询面板撤单')
+    },
+  })
 
   return (
     <section className="order-panel">
