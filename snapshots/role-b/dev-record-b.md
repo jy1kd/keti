@@ -463,7 +463,7 @@
 
 **分支**：`feature/pr-10-order-form`
 **开始时间**：2026-07-20
-**状态**：✅ 自验证通过，待审查
+**状态**：✅ 审查反馈修复完成，待二次审查
 
 ---
 
@@ -531,3 +531,10 @@
 ### 提交记录
 
 - `3f2941c` feat(task-10): implement PR-10 前端报单表单 — 20 files, 248 tests
+- `26da56c` docs(task-10): update dev-record-b with PR-10 TDD record
+- `423fadc` docs(task-10): 自验证通过 — 更新progress.md和dev-record-b状态
+- `ba2c6d7` fix(task-10): review反馈 - stopPrice透传到CtpOrderRequest
+- `6346c79` fix(task-10): review反馈 - cancelOrder接入Store
+- `6ba0262` fix(task-10): review反馈 - useHotKeys集成到OrderPanel
+- `fb20393` fix(task-10): review反馈 - usePriceStep集成到表单组件
+- `a7caf33` fix(task-10): review反馈 - 前端校验+注释补充
