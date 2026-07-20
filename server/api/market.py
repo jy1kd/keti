@@ -135,11 +135,13 @@ async def refresh_instruments(request: Request):
     # Build file path for saving results
     file_path = str(Path(__file__).parent.parent / "data" / "instruments.json")
 
+    # Capture event loop in async context (callback runs in CTP thread)
+    loop = asyncio.get_running_loop()
+
     # Wire callback: when CTP responds, save to file + notify
     def _on_complete(count: int):
         ws_manager = getattr(request.app.state, "ws_manager", None)
         if ws_manager:
-            loop = asyncio.get_running_loop()
             asyncio.run_coroutine_threadsafe(
                 ws_manager.broadcast("system", "instruments_refreshed", {
                     "count": count,
