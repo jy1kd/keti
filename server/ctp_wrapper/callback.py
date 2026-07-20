@@ -221,3 +221,14 @@ TraderSpi.OnRspOrderInsert = _td_on_rsp_order_insert  # type: ignore
 TraderSpi.OnRspOrderAction = _td_on_rsp_order_action  # type: ignore
 TraderSpi.OnErrRtnOrderAction = _td_on_err_rtn_order_action  # type: ignore
 TraderSpi.OnRspError = _td_on_rsp_error  # type: ignore
+
+
+def _td_on_rsp_qry_instrument(self, pInstrument: Any, pRspInfo: Any,
+                              nRequestID: int, bIsLast: bool) -> None:
+    self._log("OnRspQryInstrument",
+              {"request_id": nRequestID, "is_last": bIsLast})
+    self._dispatch("OnRspQryInstrument", pInstrument, pRspInfo,
+                   nRequestID, bIsLast)
+
+
+TraderSpi.OnRspQryInstrument = _td_on_rsp_qry_instrument  # type: ignore
