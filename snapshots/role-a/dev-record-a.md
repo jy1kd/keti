@@ -9,7 +9,7 @@
 
 **分支**：`feature/pr-1-ctp-verify`
 **依赖**：无
-**状态**：✅ 开发完成，待审查
+**状态**：✅ 已合并
 
 ### 测试用例列表
 
@@ -70,7 +70,7 @@
 
 **分支**：`feature/pr-3-fastapi-framework`
 **依赖**：PR-1
-**状态**：✅ 开发完成，待审查
+**状态**：✅ 已合并
 
 ### 测试用例列表
 
@@ -135,7 +135,7 @@
 
 **分支**：`feature/pr-5-market-api`
 **依赖**：PR-3
-**状态**：✅ 开发完成，待合并
+**状态**：✅ 已合并
 
 ### 测试用例列表
 
@@ -294,7 +294,7 @@
 
 **分支**：`feature/pr-7-websocket-manager`
 **依赖**：PR-5
-**状态**：✅ 开发完成，待合并
+**状态**：✅ 已合并
 
 ### 测试用例列表
 
@@ -353,9 +353,9 @@
 
 | 缺口 | 依赖 PR | 说明 |
 |------|---------|------|
-| 报单回报 → ws/order 广播 | PR-9 | OnRtnOrder 回调 → ws_manager.broadcast("order", "order_return", data) |
-| 成交回报 → ws/order 广播 | PR-9 | OnRtnTrade 回调 → ws_manager.broadcast("order", "trade_return", data) |
-| 持仓更新 → ws/position 广播 | PR-9 | ReqQryInvestorPosition 结果 → ws_manager.broadcast("position", "position_update", data) |
+| ✅ 报单回报 → ws/order 广播 | PR-9 | 已完成：OnRtnOrder → ws_manager.broadcast("order", "order_return", data) |
+| ✅ 成交回报 → ws/order 广播 | PR-9 | 已完成：OnRtnTrade → ws_manager.broadcast("order", "trade_return", data) |
+| ⏳ 持仓更新 → ws/position 广播 | **PR-11** | ReqQryInvestorPosition 结果需要查询 API |
 | 止损单状态 → ws/stop 广播 | PR-13 | StopOrderService 状态变更 → ws_manager.broadcast("stop", "stop_order_update", data) |
 
 PR-7 已完成的基础设施：
@@ -382,7 +382,7 @@ PR-7 已完成的基础设施：
 
 **分支**：`feature/pr-9-trader-api`
 **依赖**：PR-7
-**状态**：✅ 开发完成，待自验证
+**状态**：✅ 已合并（PR #12，2026-07-20）
 
 ### 测试用例列表
 
@@ -396,7 +396,7 @@ PR-7 已完成的基础设施：
 | `tests/test_ctp_startup.py` | +4 | start_ctp_trading_connection / TD状态存储 / daemon线程 |
 | **合计** | **76**（新增） | |
 
-**全量测试**：355 passed，15 failed（4 test_config + 11 trio 环境），46 skipped
+**全量测试**：391 passed，2 failed（预存 test_config .env 问题），46 skipped（16 trio 环境）
 
 ### 实现进度
 
@@ -454,13 +454,60 @@ PR-7 已完成的基础设施：
 | lock 实际逻辑 | PR-11 | 需要查询持仓方向和数量 |
 | 报单流水查询 | PR-11 | ReqQryOrder 主动查询 |
 
+### 审查反馈修复（R1：1🔴+6🟡，R2：0🔴+2🟡 → 审查通过）
+
+审查文件：`review-feedback-a-pr9.md`
+
+| # | 轮次 | 严重度 | 问题 | 处理 |
+|---|:---:|--------|------|------|
+| B1 | R1 | 🔴 | TD login 流程不完整（状态永远 "connecting"） | ✅ 补齐 OnFrontConnected→login→OnRspUserLogin 回调链路 |
+| S1 | R1 | 🟡 | cancel_all 活单判断硬编码 | ✅ 使用 OrderStatus 常量；后升级为 _ACTIVE_STATUSES 类常量 |
+| S2 | R1 | 🟡 | cancel() 未传 exchange/instrument | ✅ 从 tracked order 提取透传 |
+| S3 | R1 | 🟡 | reverse/lock 占位返回 200 | ✅ 改为 HTTPException(501) |
+| S4 | R1 | 🟡 | broadcast 回调无测试 | ✅ 新增 3 个 TestOrderManagerBroadcast 测试 |
+| S5 | R1 | 🟡 | _attempt_reconnect 仅 MD | ✅ 添加 TODO(PR-17) |
+| S6 | R1 | 🟡 | OnRspOrderInsert/OnRspOrderAction 未接线 | ✅ 已接线+logger.warning 记录错误 |
+| S7 | R2 | 🟡 | progress.md 未更新 | ✅ 已更新 |
+| S8 | R2 | 🟡 | 工作区不干净 | ✅ 全部 commit |
+
+### SimNow 实盘调试记录（17 commits）
+
+TDD 完成 + 审查修复后，接入 SimNow 7x24 环境进行实盘测试，发现以下问题：
+
+| # | 问题 | 根因 | 修复 Commit |
+|---|------|------|-------------|
+| 1 | insert 返回假成功 | `ReqOrderInsert` 返回 0 = 消息已入队，不等回调 | `fc12f66` |
+| 2 | cancel 返回假成功 | 同上，不等 `OnRspOrderAction` | `cdf793e` |
+| 3 | 回调永不触发（3s 超时） | `order_manager` 闭包变量 NameError | `d7b8295` |
+| 4 | insert 仍超时 | SimNow 可能不发 `OnRspOrderInsert`，只发 `OnRtnOrder` | `a90b1ed` |
+| 5 | "结算结果未确认" 拒单 | 登录后未调 `ReqSettlementInfoConfirm` | `ec631c2` |
+| 6 | "无效的 ExchangeID" 拒单 | `CThostFtdcInputOrderField.ExchangeID` 为空 | `3455648` |
+| 7 | OrderSubmitStatus 判断错误 | 把 "2"(ModifySubmitted) 当 InsertRejected | `a28ff81` |
+| 8 | OrderStatus="a" 被判失败 | "a" = Unknown 是 CTP 初始态，不是错误 | `fd35195` |
+| 9 | volumeCondition 被丢弃 | API 校验了但没传给 CTP | `1d71367` |
+| 10 | FOK/FAK 约束未校验 | 非法组合被 CTP 静默拒绝 | `33e6d57` |
+| 11 | cancel 无法定位报单 | orderSysID 未从 tracked order 提取透传 | `3be4063` |
+| 12 | cancel_all 掩盖失败 | 只返回数量，不区分 attempted/succeeded/failed | `5a0de68` |
+| 13 | login/logout 流程 | MD 非阻塞 + TD 凭证接管 + logout 只断 TD | `07a08d9` `a39e65a` |
+| 14 | orderRef 跨重启碰撞 | order_ref 复位 + 不校验 SessionID | `660354c` |
+| 15 | snapshots 返回 DBL_MAX | CTP ~1.8e308 哨兵未经过滤 | `6af36a3` `5eb781a` |
+| 16 | cancel_all 漏登录检查 + 活单漏 "a"/"3" | 3 个端点不一致 + OrderStatus 枚举不完整 | `bf64fa0` |
+| 17 | cancel_order 缺 FrontID/SessionID + OrderSysID 空格 | CTP 撤单比对的会话标识缺失 | `77fbe3b` |
+
 ### Commit 记录
 
 | Commit | 内容 |
 |--------|------|
-| `b3fbec5` | feat(task-09): add CombHedgeFlag, ContingentCondition, ForceCloseReason enums — 15 tests |
-| `5b7cae2` | feat(task-09): CTP field mapping — map_input_order, map_order, map_trade — 21 tests |
-| `842e772` | feat(task-09): TraderApi增强 — insert_order 新参数 + cancel_order 新参数 — 9 tests |
-| `cf26d85` | feat(task-09): OrderManager服务 — 方案B 统一入口 — 16 tests |
-| `79a1f3a` | feat(task-09): order API路由 — 6 端点 + Pydantic 校验 — 11 tests |
-| `869d358` | feat(task-09): TD连接启动+回调接线+tdConnected 真实状态 — 4 tests |
+| `b3fbec5` | feat(task-09): CombHedgeFlag, ContingentCondition, ForceCloseReason 枚举 — 15 tests |
+| `5b7cae2` | feat(task-09): CTP 字段映射 — map_input_order, map_order, map_trade — 21 tests |
+| `842e772` | feat(task-09): TraderApi 增强 — insert_order/cancel_order 新参数 — 9 tests |
+| `cf26d85` | feat(task-09): OrderManager 服务 — 方案B 统一入口 — 16 tests |
+| `79a1f3a` | feat(task-09): order API 路由 — 6 端点 + Pydantic 校验 — 11 tests |
+| `869d358` | feat(task-09): TD 连接启动+回调接线+tdConnected — 4 tests |
+| `c58651e` | fix(task-09): R1 审查修复 — TD login + cancel/cancel_all/status + reverse/lock 501 + broadcast 测试 |
+| `fc12f66`~`fd35195` | fix(task-09): insert/cancel 回调同步 + 闭包修复 + 状态机修正（13 commits） |
+| `660354c` | fix(task-09): orderRef 跨重启碰撞 — 双层防护 |
+| `bf64fa0` | fix(task-09): R2 审查修复 — cancel_all 登录检查 + OrderStatus 枚举补全 |
+| `6af36a3` `5eb781a` | fix(task-09): DBL_MAX 哨兵值过滤 |
+| `77fbe3b` | fix(task-09): cancel_order FrontID/SessionID + OrderSysID 规范化 |
+| `bc80cfd` | docs(task-09): 更新 progress.md — PR-9 已合并，32 commits 391 tests |
