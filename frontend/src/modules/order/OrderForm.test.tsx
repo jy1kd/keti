@@ -115,4 +115,37 @@ describe('OrderForm', () => {
     const btn = screen.getByRole('button', { name: /提交中/ })
     expect(btn).toBeDisabled()
   })
+
+  it('calls setOrderForm with stepped-up price on + click', () => {
+    render(<OrderForm />)
+    const plusBtns = screen.getAllByText('+')
+    fireEvent.click(plusBtns[0]) // price stepper
+    expect(mockState.setOrderForm).toHaveBeenCalledWith({ limitPrice: 4800.2 })
+  })
+
+  it('calls setOrderForm with stepped-down price on − click', () => {
+    render(<OrderForm />)
+    const minusBtns = screen.getAllByText('−')
+    fireEvent.click(minusBtns[0]) // price stepper
+    expect(mockState.setOrderForm).toHaveBeenCalledWith({ limitPrice: 4799.8 })
+  })
+
+  it('uses custom priceTick prop for step size', () => {
+    setMockState({
+      orderForm: {
+        instrumentID: 'au2508',
+        direction: 'buy',
+        combOffsetFlag: 'open',
+        orderPriceType: 'limit',
+        timeCondition: 'gfd',
+        limitPrice: 500.0,
+        volumeTotalOriginal: 1,
+      },
+    })
+
+    render(<OrderForm priceTick={0.02} />)
+    const plusBtns = screen.getAllByText('+')
+    fireEvent.click(plusBtns[0]) // price stepper
+    expect(mockState.setOrderForm).toHaveBeenCalledWith({ limitPrice: 500.02 })
+  })
 })

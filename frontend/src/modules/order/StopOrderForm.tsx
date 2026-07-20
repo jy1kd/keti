@@ -1,12 +1,35 @@
 import { useOrderStore } from './store'
+import { usePriceStep } from '../../hooks/usePriceStep'
+import { useEffect } from 'react'
 
-export function StopOrderForm() {
+interface StopOrderFormProps {
+  priceTick?: number
+}
+
+export function StopOrderForm({ priceTick = 0.2 }: StopOrderFormProps) {
   const orderForm = useOrderStore((s) => s.orderForm)
   const isSubmitting = useOrderStore((s) => s.isSubmitting)
   const setOrderForm = useOrderStore((s) => s.setOrderForm)
   const submitOrder = useOrderStore((s) => s.submitOrder)
 
   const isBuy = orderForm.direction === 'buy'
+
+  const { price, stepUp, stepDown } = usePriceStep(orderForm.limitPrice, priceTick)
+  const { price: stopPrice, stepUp: stopStepUp, stepDown: stopStepDown } =
+    usePriceStep(orderForm.stopPrice ?? 0, priceTick)
+
+  // Sync hook state → store
+  useEffect(() => {
+    if (price !== orderForm.limitPrice) {
+      setOrderForm({ limitPrice: price })
+    }
+  }, [price])
+
+  useEffect(() => {
+    if (stopPrice !== (orderForm.stopPrice ?? 0)) {
+      setOrderForm({ stopPrice })
+    }
+  }, [stopPrice])
 
   return (
     <div className="order-form">
@@ -52,15 +75,7 @@ export function StopOrderForm() {
       <div className="form-row">
         <label>价格</label>
         <div className="stepper-group">
-          <button
-            type="button"
-            className="stepper-btn"
-            onClick={() =>
-              setOrderForm({
-                limitPrice: Math.max(0, Math.round((orderForm.limitPrice - 0.2) * 100) / 100),
-              })
-            }
-          >
+          <button type="button" className="stepper-btn" onClick={stepDown}>
             −
           </button>
           <input
@@ -69,17 +84,9 @@ export function StopOrderForm() {
             value={orderForm.limitPrice}
             onChange={(e) => setOrderForm({ limitPrice: Number(e.target.value) })}
             min={0}
-            step={0.2}
+            step={priceTick}
           />
-          <button
-            type="button"
-            className="stepper-btn"
-            onClick={() =>
-              setOrderForm({
-                limitPrice: Math.round((orderForm.limitPrice + 0.2) * 100) / 100,
-              })
-            }
-          >
+          <button type="button" className="stepper-btn" onClick={stepUp}>
             +
           </button>
         </div>
@@ -122,15 +129,7 @@ export function StopOrderForm() {
       <div className="form-row">
         <label>止损价</label>
         <div className="stepper-group">
-          <button
-            type="button"
-            className="stepper-btn"
-            onClick={() =>
-              setOrderForm({
-                stopPrice: Math.max(0, Math.round(((orderForm.stopPrice ?? 0) - 0.2) * 100) / 100),
-              })
-            }
-          >
+          <button type="button" className="stepper-btn" onClick={stopStepDown}>
             −
           </button>
           <input
@@ -139,17 +138,9 @@ export function StopOrderForm() {
             value={orderForm.stopPrice ?? 0}
             onChange={(e) => setOrderForm({ stopPrice: Number(e.target.value) })}
             min={0}
-            step={0.2}
+            step={priceTick}
           />
-          <button
-            type="button"
-            className="stepper-btn"
-            onClick={() =>
-              setOrderForm({
-                stopPrice: Math.round(((orderForm.stopPrice ?? 0) + 0.2) * 100) / 100,
-              })
-            }
-          >
+          <button type="button" className="stepper-btn" onClick={stopStepUp}>
             +
           </button>
         </div>

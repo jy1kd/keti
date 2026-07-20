@@ -1,6 +1,12 @@
 import { useOrderStore } from './store'
+import { usePriceStep } from '../../hooks/usePriceStep'
+import { useEffect } from 'react'
 
-export function OrderForm() {
+interface OrderFormProps {
+  priceTick?: number
+}
+
+export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
   const orderForm = useOrderStore((s) => s.orderForm)
   const isSubmitting = useOrderStore((s) => s.isSubmitting)
   const setOrderForm = useOrderStore((s) => s.setOrderForm)
@@ -9,6 +15,15 @@ export function OrderForm() {
   const { direction, combOffsetFlag, orderPriceType, timeCondition } = orderForm
   const isBuy = direction === 'buy'
   const isMarket = orderPriceType === 'market'
+
+  const { price, stepUp, stepDown } = usePriceStep(orderForm.limitPrice, priceTick)
+
+  // Sync hook state → store
+  useEffect(() => {
+    if (price !== orderForm.limitPrice) {
+      setOrderForm({ limitPrice: price })
+    }
+  }, [price])
 
   return (
     <div className="order-form">
@@ -118,11 +133,7 @@ export function OrderForm() {
             <button
               type="button"
               className="stepper-btn"
-              onClick={() => {
-                const tick = 0.2
-                const next = Math.round((orderForm.limitPrice - tick) * 100) / 100
-                setOrderForm({ limitPrice: Math.max(0, next) })
-              }}
+              onClick={stepDown}
             >
               −
             </button>
@@ -132,16 +143,12 @@ export function OrderForm() {
               value={orderForm.limitPrice}
               onChange={(e) => setOrderForm({ limitPrice: Number(e.target.value) })}
               min={0}
-              step={0.2}
+              step={priceTick}
             />
             <button
               type="button"
               className="stepper-btn"
-              onClick={() => {
-                const tick = 0.2
-                const next = Math.round((orderForm.limitPrice + tick) * 100) / 100
-                setOrderForm({ limitPrice: next })
-              }}
+              onClick={stepUp}
             >
               +
             </button>
