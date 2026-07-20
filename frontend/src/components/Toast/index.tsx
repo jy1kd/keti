@@ -7,6 +7,10 @@ interface ToastItem {
   type: 'success' | 'error'
 }
 
+// NOTE: 使用模块级可变状态实现 imperative toast API。
+// 假设当前为单例渲染（单一 ToastContainer），不适用于 React 18 Concurrent Features。
+// 长期可考虑迁移到 React Context + Portal 标准模式。
+
 let toastId = 0
 const listeners: Array<() => void> = []
 let toasts: ToastItem[] = []

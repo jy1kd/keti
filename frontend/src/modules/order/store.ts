@@ -29,6 +29,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   orderForm: { ...DEFAULT_ORDER_FORM },
   isSubmitting: false,
 
+  // 选中合约时仅更新 instrumentID，保留用户已选择的方向/开平设置
   setSelectedInstrument: (instrument) => {
     set({
       selectedInstrument: instrument,
@@ -45,6 +46,18 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   },
 
   submitOrder: async () => {
+    const form = get().orderForm
+
+    // Client-side validation
+    if (!form.instrumentID) {
+      toast.error('报单失败：请选择合约')
+      return false
+    }
+    if (form.orderPriceType === 'limit' && form.limitPrice <= 0) {
+      toast.error('报单失败：请输入有效价格')
+      return false
+    }
+
     set({ isSubmitting: true })
     try {
       const result = await apiSubmitOrder(get().orderForm)

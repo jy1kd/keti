@@ -149,12 +149,41 @@ describe('OrderStore', () => {
   it('sets isSubmitting to true during submit and resets after', async () => {
     vi.mocked(mockSubmitOrder).mockResolvedValue({ success: true, orderRef: 'X' })
 
+    useOrderStore.getState().setOrderForm({
+      instrumentID: 'IF2608',
+      limitPrice: 4800,
+    })
+
     const state = useOrderStore.getState()
     const promise = state.submitOrder()
     expect(useOrderStore.getState().isSubmitting).toBe(true)
 
     await promise
     expect(useOrderStore.getState().isSubmitting).toBe(false)
+  })
+
+  // --- submitOrder validation ---
+
+  it('submitOrder shows error when instrumentID is empty', async () => {
+    // reset to defaults (instrumentID is '') then submit
+    useOrderStore.getState().resetOrderForm()
+    const result = await useOrderStore.getState().submitOrder()
+
+    expect(result).toBe(false)
+    expect(toast.error).toHaveBeenCalledWith('报单失败：请选择合约')
+    expect(mockSubmitOrder).not.toHaveBeenCalled()
+  })
+
+  it('submitOrder shows error when limit order has zero price', async () => {
+    // Reset to get limitPrice=0, orderPriceType='limit', then set valid instrumentID
+    useOrderStore.getState().resetOrderForm()
+    useOrderStore.getState().setOrderForm({ instrumentID: 'IF2608' })
+
+    const result = await useOrderStore.getState().submitOrder()
+
+    expect(result).toBe(false)
+    expect(toast.error).toHaveBeenCalledWith('报单失败：请输入有效价格')
+    expect(mockSubmitOrder).not.toHaveBeenCalled()
   })
 
   // --- cancelOrder ---
