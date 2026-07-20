@@ -498,3 +498,99 @@ class TestOrderMappingEdgeCases:
         assert result["tradeID"] == ""
         assert result["price"] == 0.0
         assert result["volume"] == 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Instrument field mapping tests (PR-19)
+# ═══════════════════════════════════════════════════════════════════════════
+
+from services.field_mapping import map_instrument
+
+
+class _MockInstrument:
+    """Duck-type of CThostFtdcInstrumentField."""
+
+    InstrumentID = "IF2608"
+    InstrumentName = "沪深300指数期货2608"
+    ExchangeID = "CFFEX"
+    ProductID = "IF"
+    ProductClass = "1"
+    VolumeMultiple = 300
+    PriceTick = 0.2
+    ExpireDate = "20260821"
+    OptionsType = ""
+    StrikePrice = 0.0
+    UnderlyingInstrID = ""
+    IsTrading = 1
+
+
+class TestMapInstrument:
+    """map_instrument: CThostFtdcInstrumentField → camelCase dict."""
+
+    def test_import(self):
+        assert map_instrument is not None
+
+    def test_returns_dict(self):
+        result = map_instrument(_MockInstrument())
+        assert isinstance(result, dict)
+
+    def test_maps_core_fields(self):
+        result = map_instrument(_MockInstrument())
+        assert result["instrumentID"] == "IF2608"
+        assert result["instrumentName"] == "沪深300指数期货2608"
+        assert result["exchangeID"] == "CFFEX"
+        assert result["productID"] == "IF"
+
+    def test_maps_product_class(self):
+        result = map_instrument(_MockInstrument())
+        assert result["productClass"] == "1"
+
+    def test_maps_contract_details(self):
+        result = map_instrument(_MockInstrument())
+        assert result["volumeMultiple"] == 300
+        assert result["priceTick"] == 0.2
+        assert result["expireDate"] == "20260821"
+
+    def test_maps_options_fields(self):
+        """Options-related fields should be included."""
+
+        class OptionInstrument:
+            InstrumentID = "IO2608-C-4000"
+            InstrumentName = "沪深300指数期权2608-C-4000"
+            ExchangeID = "CFFEX"
+            ProductID = "IO"
+            ProductClass = "1"
+            VolumeMultiple = 100
+            PriceTick = 0.1
+            ExpireDate = "20260821"
+            OptionsType = "1"
+            StrikePrice = 4000.0
+            UnderlyingInstrID = "IF2608"
+            IsTrading = 1
+
+        result = map_instrument(OptionInstrument())
+        assert result["optionsType"] == "1"
+        assert result["strikePrice"] == 4000.0
+        assert result["underlyingInstrID"] == "IF2608"
+
+    def test_maps_is_trading(self):
+        result = map_instrument(_MockInstrument())
+        assert result["isTrading"] == 1
+
+    def test_missing_attributes_default(self):
+        """Missing CTP attributes get defaults."""
+
+        class MinimalInstrument:
+            InstrumentID = "IF2608"
+
+        result = map_instrument(MinimalInstrument())
+        assert result["instrumentID"] == "IF2608"
+        assert result["instrumentName"] == ""
+        assert result["exchangeID"] == ""
+        assert result["volumeMultiple"] == 0
+        assert result["priceTick"] == 0.0
+        assert result["productClass"] == ""
+        assert result["optionsType"] == ""
+        assert result["strikePrice"] == 0.0
+        assert result["underlyingInstrID"] == ""
+        assert result["isTrading"] == 0
