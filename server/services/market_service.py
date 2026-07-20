@@ -31,6 +31,9 @@ class MarketService:
         # CTP callback hooks — set via set_ctp_hooks() after CTP connects
         self._subscribe_fn: Optional[Callable[[List[str]], Any]] = None
         self._unsubscribe_fn: Optional[Callable[[List[str]], Any]] = None
+        # Instrument refresh state (PR-19)
+        self._pending_instruments: List[dict] = []
+        self._on_instruments_callback: Optional[Callable] = None
 
     def set_ctp_hooks(
         self,
@@ -214,3 +217,74 @@ class MarketService:
     def get_all_snapshots(self) -> List[dict]:
         """Return all cached snapshots as a list."""
         return list(self._snapshots.values())
+
+    # ── Instrument refresh from CTP (PR-19) ──────────────────────────────
+
+    def set_instruments_callback(self, callback) -> None:
+        """Register a callback for when instruments refresh completes.
+
+        Args:
+            callback: Callable receiving the count of instruments loaded.
+        """
+        self._on_instruments_callback = callback
+
+    def refresh_instruments_from_ctp(self, trader_api, callback=None) -> dict:
+        """Start instrument query from CTP.
+
+        Args:
+            trader_api: TraderApi instance (must be logged in).
+            callback: Optional callable(count) when refresh completes.
+
+        Returns:
+            dict with keys: success, message.
+        """
+        if trader_api.login_status != "logged_in":
+            return {"success": False, "message": "TraderApi not logged in"}
+
+        if callback is not None:
+            self._on_instruments_callback = callback
+
+        self._pending_instruments: List[dict] = []
+
+        result = trader_api.query_instruments()
+        if result < 0:
+            return {"success": False, "message": "Query failed"}
+
+        return {"success": True, "message": "Query started"}
+
+    def on_instruments_result(self, instruments, is_last: bool, file_path: str = "") -> None:
+        """Handle OnRspQryInstrument callback data.
+
+        Args:
+            instruments: List of CTP instrument objects (or dicts).
+            is_last: True if this is the final batch.
+            file_path: Path to save instruments.json. Empty = skip file write.
+        """
+        from services.field_mapping import map_instrument
+
+        # Map each instrument (handles both CTP objects and plain dicts)
+        for inst in instruments:
+            if isinstance(inst, dict):
+                self._pending_instruments.append(inst)
+            else:
+                self._pending_instruments.append(map_instrument(inst))
+
+        if is_last:
+            # Save to cache and file
+            self.load_instruments(self._pending_instruments)
+            if file_path:
+                self._save_instruments_to_file(file_path, self._pending_instruments)
+            count = len(self._pending_instruments)
+            self._pending_instruments = []
+            if hasattr(self, '_on_instruments_callback') and self._on_instruments_callback:
+                self._on_instruments_callback(count)
+
+    def _save_instruments_to_file(self, file_path: str, instruments: List[dict]) -> None:
+        """Save instrument list to a JSON file."""
+        import json
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(instruments, f, ensure_ascii=False, indent=2)
+            logger.info("Saved %d instruments to %s", len(instruments), file_path)
+        except OSError as exc:
+            logger.warning("Failed to save instruments to %s: %s", file_path, exc)
