@@ -96,10 +96,11 @@ export interface CtpOrderRequest {
   timeCondition: string
   limitPrice: number
   volumeTotalOriginal: number
+  stopPrice?: number
 }
 
 export function convertOrderRequest(form: OrderRequestForm): CtpOrderRequest {
-  return {
+  const result: CtpOrderRequest = {
     instrumentID: form.instrumentID,
     direction: toCtpDirection(form.direction),
     combOffsetFlag: toCtpOffsetFlag(form.combOffsetFlag),
@@ -108,4 +109,8 @@ export function convertOrderRequest(form: OrderRequestForm): CtpOrderRequest {
     limitPrice: form.limitPrice,
     volumeTotalOriginal: form.volumeTotalOriginal,
   }
+  if (form.stopPrice !== undefined) {
+    result.stopPrice = form.stopPrice
+  }
+  return result
 }

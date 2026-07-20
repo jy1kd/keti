@@ -125,6 +125,39 @@ describe('convertOrderRequest', () => {
     })
   })
 
+  it('passes through stopPrice when present (stop order)', () => {
+    const form = {
+      instrumentID: 'IF2608',
+      direction: 'sell' as const,
+      combOffsetFlag: 'open' as const,
+      orderPriceType: 'limit' as const,
+      timeCondition: 'gfd' as const,
+      limitPrice: 4790.0,
+      volumeTotalOriginal: 1,
+      stopPrice: 4780.0,
+    }
+
+    const result = convertOrderRequest(form)
+
+    expect(result.stopPrice).toBe(4780.0)
+  })
+
+  it('omit stopPrice when not present (normal order)', () => {
+    const form = {
+      instrumentID: 'IF2608',
+      direction: 'buy' as const,
+      combOffsetFlag: 'open' as const,
+      orderPriceType: 'limit' as const,
+      timeCondition: 'gfd' as const,
+      limitPrice: 4800.0,
+      volumeTotalOriginal: 1,
+    }
+
+    const result = convertOrderRequest(form)
+
+    expect(result).not.toHaveProperty('stopPrice')
+  })
+
   it('converts a sell+fok market order correctly', () => {
     const form = {
       instrumentID: 'au2508',
