@@ -471,12 +471,24 @@ def start_ctp_trading_connection(
         if order_manager is not None:
             order_manager.on_rsp_order_action(order_ref, error_id, error_msg)
 
+    def _on_err_rtn_order_action(pOrderAction, pRspInfo, nRequestID, bIsLast):
+        if not bIsLast:
+            return
+        order_ref = getattr(pOrderAction, "OrderRef", "")
+        error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
+        error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
+        if error_id != 0:
+            logger.warning("CTP order action exchange rejected (ref=%s): %s", order_ref, error_msg)
+        if order_manager is not None:
+            order_manager.on_err_rtn_order_action(order_ref, error_id, error_msg)
+
     trader.spi.on("OnFrontConnected", _on_front_connected)
     trader.spi.on("OnRspUserLogin", _on_rsp_user_login)
     trader.spi.on("OnRtnOrder", _on_rtn_order)
     trader.spi.on("OnRtnTrade", _on_rtn_trade)
     trader.spi.on("OnRspOrderInsert", _on_rsp_order_insert)
     trader.spi.on("OnRspOrderAction", _on_rsp_order_action)
+    trader.spi.on("OnErrRtnOrderAction", _on_err_rtn_order_action)
 
     def _run():
         try:
@@ -643,12 +655,24 @@ def connect_trading(
         if order_manager is not None:
             order_manager.on_rsp_order_action(order_ref, error_id, error_msg)
 
+    def _on_err_rtn_order_action(pOrderAction, pRspInfo, nRequestID, bIsLast):
+        if not bIsLast:
+            return
+        order_ref = getattr(pOrderAction, "OrderRef", "")
+        error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
+        error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
+        if error_id != 0:
+            logger.warning("CTP order action exchange rejected (ref=%s): %s", order_ref, error_msg)
+        if order_manager is not None:
+            order_manager.on_err_rtn_order_action(order_ref, error_id, error_msg)
+
     trader.spi.on("OnFrontConnected", _on_front_connected)
     trader.spi.on("OnRspUserLogin", _on_rsp_user_login)
     trader.spi.on("OnRtnOrder", _on_rtn_order)
     trader.spi.on("OnRtnTrade", _on_rtn_trade)
     trader.spi.on("OnRspOrderInsert", _on_rsp_order_insert)
     trader.spi.on("OnRspOrderAction", _on_rsp_order_action)
+    trader.spi.on("OnErrRtnOrderAction", _on_err_rtn_order_action)
 
     def _run():
         try:

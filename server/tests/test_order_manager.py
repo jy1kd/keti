@@ -382,8 +382,9 @@ class TestOrderManagerCancel:
             exchange_id="",
             instrument_id="IF2608",
             order_sys_id="SYS999",
+            front_id=0,
+            session_id=0,
         )
-        _unmock_ctp()
 
     def test_cancel_falls_back_to_passed_order_sys_id(self):
         """cancel() uses explicit order_sys_id when tracked order has none."""
@@ -407,6 +408,43 @@ class TestOrderManagerCancel:
             exchange_id="",
             instrument_id="IF2608",
             order_sys_id="MANUAL999",
+            front_id=0,
+            session_id=0,
+        )
+        _unmock_ctp()
+
+    def test_cancel_passes_front_and_session_id(self):
+        """cancel() extracts frontID/sessionID from tracked order."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        trader._api.ReqOrderAction.return_value = 0
+        trader.cancel_order = Mock(return_value=0)
+        om = OrderManager(trader)
+
+        res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN, wait_response=False)
+        ref = res["orderRef"]
+        # Simulate OnRtnOrder with frontID/sessionID set
+        om.on_rtn_order({
+            "orderRef": ref,
+            "orderSysID": "SYS111",
+            "orderStatus": "2",
+            "frontID": 123,
+            "sessionID": 456,
+        })
+
+        om.cancel(ref, wait_response=False)
+        trader.cancel_order.assert_called_once_with(
+            order_ref=ref,
+            exchange_id="",
+            instrument_id="IF2608",
+            order_sys_id="SYS111",
+            front_id=123,
+            session_id=456,
         )
         _unmock_ctp()
 
@@ -488,6 +526,61 @@ class TestOrderManagerCancel:
         t.join()
         assert result["success"] is False
         assert "撤单被拒绝" in result["message"]
+        _unmock_ctp()
+
+
+# ── OnErrRtnOrderAction callback ─────────────────────────────────────────
+
+class TestOrderManagerOnErrRtnOrderAction:
+    """on_err_rtn_order_action() — exchange-level cancel rejection (F1)."""
+
+    def test_err_rtn_order_action_signals_waiting_cancel(self):
+        """OnErrRtnOrderAction with error → cancel() reports failure."""
+        import threading
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        trader._api.ReqOrderAction.return_value = 0
+        om = OrderManager(trader)
+
+        res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN, wait_response=False)
+        ref = res["orderRef"]
+
+        def delayed_err():
+            import time
+            time.sleep(0.05)
+            om.on_err_rtn_order_action(ref, 15, "交易所: 报单已经全部成交")
+        t = threading.Thread(target=delayed_err, daemon=True)
+
+        t.start()
+        result = om.cancel(ref, wait_response=True, wait_timeout=1.0)
+        t.join()
+        assert result["success"] is False
+        assert "报单已经全部成交" in result["message"]
+        _unmock_ctp()
+
+    def test_err_rtn_order_action_updates_order_status_msg(self):
+        """OnErrRtnOrderAction also writes the error into the order record."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        trader._api.ReqOrderAction.return_value = 0
+        om = OrderManager(trader)
+
+        res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN, wait_response=False)
+        ref = res["orderRef"]
+
+        om.on_err_rtn_order_action(ref, 11, "交易所: 撤单找不到相应报单")
+        order = om.get_order(ref)
+        assert order["statusMsg"] == "交易所: 撤单找不到相应报单"
         _unmock_ctp()
 
 
@@ -781,22 +874,39 @@ class TestOrderManagerOnRtnTrade:
 class TestOrderManagerCancelAll:
     """cancel_all() — cancel all active orders."""
 
-    def test_cancel_all_returns_result_dict(self):
+    @staticmethod
+    def _make_cancel_all_setup(wait_timeout=0.1):
+        """Shared setup: TraderApi + 2 inserted orders with callbacks wired.
+
+        ReqOrderAction fires on_rsp_order_action synchronously so that
+        cancel_all's wait_response=True completes without a timeout.
+        """
         _mock_ctp_module()
         from services.order_manager import OrderManager
 
         trader = TraderApi(Config())
         trader._api = Mock()
         trader._api.ReqOrderInsert.return_value = 0
-        trader._api.ReqOrderAction.return_value = 0
         om = OrderManager(trader)
 
-        om.insert(instrument_id="IF2608", direction=Direction.BUY,
-                   offset_flag=OffsetFlag.OPEN, wait_response=False)
-        om.insert(instrument_id="IF2609", direction=Direction.SELL,
-                   offset_flag=OffsetFlag.OPEN, wait_response=False)
+        # Insert 2 orders — they are "pending" (no OnRtnOrder yet)
+        res1 = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN, wait_response=False)
+        res2 = om.insert(instrument_id="IF2609", direction=Direction.SELL,
+                         offset_flag=OffsetFlag.OPEN, wait_response=False)
 
-        result = om.cancel_all()
+        # Wire ReqOrderAction to simulate instant CTP acceptance
+        def _accept_cancel(action_field, request_id):
+            order_ref = getattr(action_field, "OrderRef", "")
+            om.on_rsp_order_action(order_ref, 0, "")
+            return 0
+        trader._api.ReqOrderAction.side_effect = _accept_cancel
+
+        return om, res1["orderRef"], res2["orderRef"], wait_timeout
+
+    def test_cancel_all_returns_result_dict(self):
+        om, ref1, ref2, wt = self._make_cancel_all_setup()
+        result = om.cancel_all(wait_timeout=wt)
         assert isinstance(result, dict)
         assert result["attempted"] == 2
         assert result["succeeded"] == 2
@@ -804,32 +914,22 @@ class TestOrderManagerCancelAll:
         _unmock_ctp()
 
     def test_cancel_all_failed_refs_excluded_from_succeeded(self):
-        """Orders that fail cancel() go into failedRefs, not succeeded."""
-        _mock_ctp_module()
-        from services.order_manager import OrderManager
+        """Orders whose cancel() returns success=False → failedRefs."""
+        om, ref1, ref2, wt = self._make_cancel_all_setup()
 
-        trader = TraderApi(Config())
-        trader._api = Mock()
-        trader._api.ReqOrderInsert.return_value = 0
-        trader._api.ReqOrderAction.return_value = 0
-        om = OrderManager(trader)
+        # Make ref2's cancel fail: fire OnRspOrderAction with error
+        _original_side_effect = om._trader._api.ReqOrderAction.side_effect
 
-        om.insert(instrument_id="IF2608", direction=Direction.BUY,
-                   offset_flag=OffsetFlag.OPEN, wait_response=False)
-        res2 = om.insert(instrument_id="IF2609", direction=Direction.SELL,
-                          offset_flag=OffsetFlag.OPEN, wait_response=False)
-        ref2 = res2["orderRef"]
+        def _reject_ref2(action_field, request_id):
+            order_ref = getattr(action_field, "OrderRef", "")
+            if order_ref == ref2:
+                om.on_rsp_order_action(order_ref, 15, "撤单被拒绝")
+            else:
+                om.on_rsp_order_action(order_ref, 0, "")
+            return 0
+        om._trader._api.ReqOrderAction.side_effect = _reject_ref2
 
-        # Make cancel() fail for ref2 only
-        original_cancel = om.cancel
-        def fake_cancel(ref, order_sys_id="", wait_response=True, wait_timeout=3.0):
-            if ref == ref2:
-                return {"success": False, "orderRef": ref, "message": "CTP local reject"}
-            return original_cancel(ref, order_sys_id=order_sys_id,
-                                   wait_response=wait_response, wait_timeout=wait_timeout)
-        om.cancel = fake_cancel
-
-        result = om.cancel_all()
+        result = om.cancel_all(wait_timeout=wt)
         assert result["attempted"] == 2
         assert result["succeeded"] == 1
         assert result["failedRefs"] == [ref2]
@@ -842,7 +942,7 @@ class TestOrderManagerCancelAll:
         trader = TraderApi(Config())
         trader._api = Mock()
         om = OrderManager(trader)
-        result = om.cancel_all()
+        result = om.cancel_all(wait_timeout=0.05)
         assert result["attempted"] == 0
         assert result["succeeded"] == 0
         _unmock_ctp()

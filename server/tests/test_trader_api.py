@@ -348,3 +348,37 @@ class TestCancelOrderEnhanced:
         assert result == 0
         action = api._api.ReqOrderAction.call_args[0][0]
         assert action.InstrumentID == "IF2608"
+
+    def test_cancel_passes_front_and_session_id(self):
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqOrderAction.return_value = 0
+        result = api.cancel_order(
+            order_ref="5", front_id=123, session_id=456,
+        )
+        assert result == 0
+        action = api._api.ReqOrderAction.call_args[0][0]
+        assert action.FrontID == 123
+        assert action.SessionID == 456
+
+    def test_cancel_pads_ordersysid_right_aligned(self):
+        """OrderSysID is rjust(20) for CTP's right-aligned char[21] field."""
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqOrderAction.return_value = 0
+        api.cancel_order(order_sys_id="121")
+        action = api._api.ReqOrderAction.call_args[0][0]
+        # "121" → 17 spaces + "121" = 20 chars
+        assert action.OrderSysID == " " * 17 + "121"
+
+    def test_cancel_ordersysid_empty_stays_empty(self):
+        """Empty OrderSysID is not padded."""
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqOrderAction.return_value = 0
+        api.cancel_order(order_sys_id="")
+        action = api._api.ReqOrderAction.call_args[0][0]
+        assert action.OrderSysID == ""

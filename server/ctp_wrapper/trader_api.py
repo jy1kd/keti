@@ -160,14 +160,25 @@ class TraderApi:
         order_sys_id: str = "",
         exchange_id: str = "",
         instrument_id: str = "",
+        front_id: int = 0,
+        session_id: int = 0,
     ) -> int:
         """Cancel an existing order.
+
+        CTP identifies the target order via two methods (both supported):
+          1. ExchangeID + OrderSysID (official recommendation)
+          2. FrontID + SessionID + OrderRef + InstrumentID
+
+        Both are passed so CTP can fall back to method 2 when OrderSysID
+        is empty (e.g. order just submitted, OnRtnOrder not yet arrived).
 
         Args:
             order_ref: Order reference (from insert_order).
             order_sys_id: Exchange order system ID (alternative to order_ref).
             exchange_id: Exchange ID (e.g. "CFFEX") — recommended for CTP accuracy.
             instrument_id: Instrument code — recommended for CTP accuracy.
+            front_id: CTP FrontID of current session (for method 2).
+            session_id: CTP SessionID of current session (for method 2).
 
         Returns:
             int: 0 on success, negative on error.
@@ -176,14 +187,24 @@ class TraderApi:
 
         self._request_id += 1
 
+        # Normalise OrderSysID: CTP uses a right-aligned char[21] field.
+        # Strip and re-pad for deterministic behaviour regardless of
+        # whether the stored value came from a raw CTP callback or was
+        # round-tripped through JSON serialisation.
+        _sys_id = (order_sys_id or "").strip()
+        if _sys_id:
+            _sys_id = _sys_id.rjust(20)
+
         action = ctp.CThostFtdcInputOrderActionField()
         action.BrokerID = self.config.broker_id
         action.InvestorID = self.config.user_id
         action.UserID = self.config.user_id
         action.OrderRef = order_ref
-        action.OrderSysID = order_sys_id
+        action.OrderSysID = _sys_id
         action.ExchangeID = exchange_id
         action.InstrumentID = instrument_id
+        action.FrontID = front_id
+        action.SessionID = session_id
         action.ActionFlag = "0"  # 0=撤单
         action.RequestID = self._request_id
 

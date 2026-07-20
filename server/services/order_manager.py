@@ -269,6 +269,30 @@ class OrderManager:
                 self._rsp_action_results[order_ref] = ("accepted", "")
             event.set()
 
+    def on_err_rtn_order_action(self, order_ref: str, error_id: int, error_msg: str) -> None:
+        """Handle OnErrRtnOrderAction from CTP — exchange-level rejection.
+
+        Fires when CTP accepted the cancel/action request but the exchange
+        rejected it (e.g. order already fully traded).  Unlike
+        OnRspOrderAction (CTP-level reply), this callback delivers the
+        exchange's refusal after CTP has already returned success.
+
+        Called from the CTP callback thread.  Updates the order's statusMsg
+        and signals any thread waiting in cancel().
+        """
+        if error_id != 0:
+            logger.warning("CTP err-rtn order action (ref=%s): %s", order_ref, error_msg)
+            with self._lock:
+                order = self._orders.get(order_ref)
+                if order is not None:
+                    order["statusMsg"] = error_msg
+
+        # Signal the waiting cancel() thread — store the error result
+        event = self._rsp_events.get(order_ref)
+        if event is not None:
+            self._rsp_action_results[order_ref] = ("error", error_msg)
+            event.set()
+
     # ── Cancel ────────────────────────────────────────────────────────────
 
     def cancel(
@@ -313,6 +337,8 @@ class OrderManager:
             order_sys_id=sys_id,
             exchange_id=order.get("exchangeID", ""),
             instrument_id=order.get("instrumentID", ""),
+            front_id=order.get("frontID", 0),
+            session_id=order.get("sessionID", 0),
         )
         if rc != 0:
             if wait_response:
@@ -341,8 +367,14 @@ class OrderManager:
 
     # ── Cancel all ────────────────────────────────────────────────────────
 
-    def cancel_all(self) -> dict:
+    def cancel_all(self, wait_timeout: float = 1.0) -> dict:
         """Cancel all active (non-final) orders.
+
+        Unlike the earlier fire-and-forget implementation, this now waits
+        for each cancel to receive a CTP response (OnRspOrderAction or
+        OnErrRtnOrderAction) before counting it as succeeded or failed.
+        A shorter default timeout (1.0 s vs the single-cancel 3.0 s)
+        keeps the all-in latency bounded.
 
         Returns:
             dict: {"attempted": int, "succeeded": int, "failedRefs": [str]}
@@ -356,11 +388,16 @@ class OrderManager:
         succeeded = 0
         failed = []
         for ref in active_refs:
-            result = self.cancel(ref, wait_response=False)
+            result = self.cancel(ref, wait_response=True, wait_timeout=wait_timeout)
             if result["success"]:
                 succeeded += 1
             else:
                 failed.append(ref)
+                logger.warning(
+                    "CANCEL_ALL ref=%s failed: %s", ref, result.get("message", "?")
+                )
+        logger.info("CANCEL_ALL done: attempted=%d succeeded=%d failed=%s",
+                     len(active_refs), succeeded, failed)
         return {
             "attempted": len(active_refs),
             "succeeded": succeeded,
