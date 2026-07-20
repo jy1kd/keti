@@ -490,6 +490,20 @@ def start_ctp_trading_connection(
     trader.spi.on("OnRspOrderAction", _on_rsp_order_action)
     trader.spi.on("OnErrRtnOrderAction", _on_err_rtn_order_action)
 
+    # Wire OnRspQryInstrument → MarketService.on_instruments_result (PR-19)
+    def _on_rsp_qry_instrument(pInstrument, pRspInfo, nRequestID, bIsLast):
+        market_svc = getattr(app.state, "market_service", None)
+        if market_svc is not None:
+            from pathlib import Path
+            file_path = str(Path(__file__).parent.parent / "data" / "instruments.json")
+            market_svc.on_instruments_result(
+                [pInstrument] if pInstrument is not None else [],
+                is_last=bIsLast,
+                file_path=file_path if bIsLast else "",
+            )
+
+    trader.spi.on("OnRspQryInstrument", _on_rsp_qry_instrument)
+
     def _run():
         try:
             trader.create()
@@ -673,6 +687,20 @@ def connect_trading(
     trader.spi.on("OnRspOrderInsert", _on_rsp_order_insert)
     trader.spi.on("OnRspOrderAction", _on_rsp_order_action)
     trader.spi.on("OnErrRtnOrderAction", _on_err_rtn_order_action)
+
+    # Wire OnRspQryInstrument → MarketService.on_instruments_result (PR-19)
+    def _on_rsp_qry_instrument(pInstrument, pRspInfo, nRequestID, bIsLast):
+        market_svc = getattr(app.state, "market_service", None)
+        if market_svc is not None:
+            from pathlib import Path
+            file_path = str(Path(__file__).parent.parent / "data" / "instruments.json")
+            market_svc.on_instruments_result(
+                [pInstrument] if pInstrument is not None else [],
+                is_last=bIsLast,
+                file_path=file_path if bIsLast else "",
+            )
+
+    trader.spi.on("OnRspQryInstrument", _on_rsp_qry_instrument)
 
     def _run():
         try:

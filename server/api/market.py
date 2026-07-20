@@ -116,6 +116,52 @@ async def get_kline(
 
 # ── Depth (5-level order book) ──────────────────────────────────────────
 
+@router.post("/instruments/refresh")
+async def refresh_instruments(request: Request):
+    """Trigger instrument list refresh from CTP.
+
+    Starts an async query to CTP ReqQryInstrument. Results arrive via
+    OnRspQryInstrument callback and are saved to instruments.json.
+    Returns immediately with {status: "started"} on success.
+    """
+    svc = _get_service(request)
+    trader_api = getattr(request.app.state, "trader_api", None)
+
+    if trader_api is None:
+        return {"success": False, "message": "TraderApi not available"}
+
+    # Build file path for saving results
+    from pathlib import Path
+    file_path = str(Path(__file__).parent.parent / "data" / "instruments.json")
+
+    # Wire callback: when CTP responds, save to file + notify
+    def _on_complete(count: int):
+        import asyncio
+        ws_manager = getattr(request.app.state, "ws_manager", None)
+        if ws_manager:
+            loop = asyncio.get_running_loop()
+            asyncio.run_coroutine_threadsafe(
+                ws_manager.broadcast("system", "instruments_refreshed", {
+                    "count": count,
+                }),
+                loop,
+            )
+
+    svc.set_instruments_callback(_on_complete)
+
+    # Monkey-patch on_instruments_result onto the CTP callback
+    # The ctp_startup wiring will call on_instruments_result when data arrives
+    result = svc.refresh_instruments_from_ctp(
+        trader_api,
+        callback=_on_complete,
+    )
+
+    if not result["success"]:
+        return result
+
+    return {"status": "started"}
+
+
 @router.get("/depth")
 async def get_depth(
     request: Request,

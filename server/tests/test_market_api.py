@@ -356,3 +356,83 @@ class TestGetDepth:
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             resp = await client.get("/api/market/depth")
         assert resp.status_code == 422
+
+
+# ── Instruments refresh endpoint (PR-19) ───────────────────────────────
+
+def _make_app_with_trader(trader_api=None) -> FastAPI:
+    """Build a test FastAPI app with market router and optional trader_api."""
+    app = FastAPI()
+    app.include_router(market_router, prefix="/api/market")
+    market_service = MarketService()
+    market_service.load_instruments(SAMPLE_INSTRUMENTS)
+    app.state.market_service = market_service
+    if trader_api is not None:
+        app.state.trader_api = trader_api
+    return app
+
+
+class TestInstrumentsRefresh:
+    """POST /api/market/instruments/refresh"""
+
+    @pytest.mark.asyncio
+    async def test_refresh_returns_started(self):
+        """Refresh returns {status: 'started'} when trader is logged in."""
+        class MockTraderApi:
+            login_status = "logged_in"
+            connection_status = "connected"
+            def query_instruments(self):
+                return 0
+
+        app = _make_app_with_trader(MockTraderApi())
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/market/instruments/refresh")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "started"
+
+    @pytest.mark.asyncio
+    async def test_refresh_fails_without_trader(self):
+        """Refresh fails when trader_api is not available."""
+        app = _make_app_with_trader()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/market/instruments/refresh")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_refresh_fails_when_not_logged_in(self):
+        """Refresh fails when trader is not logged in."""
+        class MockTraderApi:
+            login_status = "not_logged_in"
+            connection_status = "connected"
+
+        app = _make_app_with_trader(MockTraderApi())
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/market/instruments/refresh")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is False
+        assert "not logged in" in data["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_refresh_fails_when_query_fails(self):
+        """Refresh fails when query_instruments returns negative."""
+        class MockTraderApi:
+            login_status = "logged_in"
+            connection_status = "connected"
+            def query_instruments(self):
+                return -1
+
+        app = _make_app_with_trader(MockTraderApi())
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/market/instruments/refresh")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is False
+        assert "query failed" in data["message"].lower()
