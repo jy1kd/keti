@@ -382,3 +382,67 @@ class TestCancelOrderEnhanced:
         api.cancel_order(order_sys_id="")
         action = api._api.ReqOrderAction.call_args[0][0]
         assert action.OrderSysID == ""
+
+
+# ── Query instruments tests (PR-19) ────────────────────────────────────
+
+class TestQueryInstruments:
+    """Test query_instruments with mocked ctp module."""
+
+    def teardown_method(self):
+        _unmock_ctp()
+
+    def test_query_instruments_calls_ReqQryInstrument(self):
+        """query_instruments() should call CTP ReqQryInstrument."""
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqQryInstrument.return_value = 0
+        result = api.query_instruments()
+        assert result == 0
+        api._api.ReqQryInstrument.assert_called_once()
+
+    def test_query_instruments_returns_negative_on_failure(self):
+        """query_instruments() returns negative when CTP call fails."""
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqQryInstrument.return_value = -1
+        result = api.query_instruments()
+        assert result == -1
+
+    def test_query_instruments_sets_broker_id(self):
+        """query_instruments() sets BrokerID on the query field."""
+        cfg = Config()
+        cfg.broker_id = "8888"
+        _mock_ctp_module()
+        api = TraderApi(cfg)
+        api._api = Mock()
+        api._api.ReqQryInstrument.return_value = 0
+        api.query_instruments()
+        call_args = api._api.ReqQryInstrument.call_args[0]
+        field = call_args[0]
+        assert field.BrokerID == "8888"
+
+    def test_query_instruments_sets_investor_id(self):
+        """query_instruments() sets InvestorID on the query field."""
+        cfg = Config()
+        cfg.user_id = "test_user"
+        _mock_ctp_module()
+        api = TraderApi(cfg)
+        api._api = Mock()
+        api._api.ReqQryInstrument.return_value = 0
+        api.query_instruments()
+        call_args = api._api.ReqQryInstrument.call_args[0]
+        field = call_args[0]
+        assert field.InvestorID == "test_user"
+
+    def test_query_instruments_increments_request_id(self):
+        """query_instruments() increments request ID."""
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqQryInstrument.return_value = 0
+        initial_id = api._request_id
+        api.query_instruments()
+        assert api._request_id == initial_id + 1

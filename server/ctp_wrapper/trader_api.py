@@ -210,6 +210,24 @@ class TraderApi:
 
         return self._api.ReqOrderAction(action, self._request_id)
 
+    def query_instruments(self) -> int:
+        """Query all instruments from CTP.
+
+        Sends ReqQryInstrument to retrieve the full instrument list.
+        Results arrive via OnRspQryInstrument callback (multiple calls,
+        bIsLast=True on the final one).
+
+        Returns:
+            int: 0 on success, negative on error.
+        """
+        import ctp
+
+        self._request_id += 1
+        field = ctp.CThostFtdcQryInstrumentField()
+        field.BrokerID = self.config.broker_id
+        field.InvestorID = self.config.user_id
+        return self._api.ReqQryInstrument(field, self._request_id)
+
     def release(self) -> None:
         """Release the CTP API instance and cleanup."""
         if self._api is not None:
