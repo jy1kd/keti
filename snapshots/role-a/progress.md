@@ -10,11 +10,11 @@
 
 | PR | 标题 | 状态 | 完成时间 | 提交记录 |
 |----|------|------|----------|----------|
-| PR-1 | 后端CTP连接验证（技术Spike） | ✅ 审查通过，待人工验证合并 | 2026-07-10 | ce44db8, 282ecaf, fa0a872, e6bc245, 2e7f11a, d399fd1, 34c5c9d, 6ddf795, b081b50 |
-| PR-3 | 后端FastAPI框架搭建 | ✅ 二次审查完成，待手动验证合并 | 2026-07-13 | 47a5fa1, c545354, 9217d61, 98f705a, 2bb9b69, 1d28ea8, 1bf6c7c |
+| PR-1 | 后端CTP连接验证（技术Spike） | ✅ 已合并 | 2026-07-10 | ce44db8, 282ecaf, fa0a872, e6bc245, 2e7f11a, d399fd1, 34c5c9d, 6ddf795, b081b50 |
+| PR-3 | 后端FastAPI框架搭建 | ✅ 已合并 | 2026-07-13 | 47a5fa1, c545354, 9217d61, 98f705a, 2bb9b69, 1d28ea8, 1bf6c7c |
 | PR-5 | 后端行情API实现 | ✅ 已合并 | 2026-07-14 | 81643c8 (merge), 6f19568~e4b2091 (19 commits) |
-| PR-7 | 后端WebSocket管理完善 | ✅ 人工审查通过，待合并 | 2026-07-15 | c370cbc, 05b16a6, 4f07b9f, 5386563, 200ab85, 0a0e29c, 443a6c5, 89cb00a, 82ef2e9, 4b5bb2e |
-| PR-9 | 后端交易API实现 | ✅ 已合并 | 2026-07-20 | 07a08d9~77fbe3b (25 commits) |
+| PR-7 | 后端WebSocket管理完善 | ✅ 已合并 | 2026-07-15 | c370cbc, 05b16a6, 4f07b9f, 5386563, 200ab85, 0a0e29c, 443a6c5, 89cb00a, 82ef2e9, 4b5bb2e |
+| PR-9 | 后端交易API实现 | ✅ 已合并 | 2026-07-20 | 07a08d9~77fbe3b (32 commits) |
 | PR-11 | 后端查询API实现 | ⏳ 待开始 | - | - |
 | PR-13 | 后端止损单服务实现 | ⏳ 待开始 | - | - |
 | PR-17 | 联调测试与Bug修复 | ⏳ 待开始 | - | - |
@@ -27,7 +27,7 @@
 
 ### PR-1: 后端CTP连接验证（技术Spike）
 
-**状态**：✅ 审查通过，待人工验证合并
+**状态**：✅ 已合并
 
 **PR信息**：
 - PR分支名：`feature/pr-1-ctp-verify`
@@ -63,7 +63,7 @@
 
 ### PR-3: 后端FastAPI框架搭建
 
-**状态**：✅ 二次审查完成，待手动验证合并
+**状态**：✅ 已合并
 
 **PR信息**：
 - PR分支名：`feature/pr-3-fastapi-framework`
@@ -101,8 +101,10 @@
 - `1bf6c7c` docs(task-03): review二次审查 — 回复记录更新
 
 **交接说明**：
-- PR-7 需将 handler 接入 WebSocketManager
-- PR-5/PR-9/PR-11 需实现占位路由
+- ✅ PR-7 已将 handler 接入 WebSocketManager
+- ✅ PR-5 已实现 `api/market.py` 占位路由
+- ✅ PR-9 已实现 `api/order.py` 占位路由
+- ⏳ `api/query.py` 占位路由 → **PR-11**
 - WS 路由参数须加 `WebSocket` 类型注解（否则 Starlette 返回 403）
 
 ---
@@ -172,11 +174,20 @@
 - WS 推送已桥接：`asyncio.run_coroutine_threadsafe` 跨线程安全
 - 地址自动切换：`start.py` 根据时间选择 Primary/Secondary 地址
 
+**⚠️ 依赖后续 PR 的未完成项**：
+
+| 问题 | 位置 | 阻塞 PR | 说明 |
+|------|------|:------:|------|
+| `GET /instruments` 返回静态硬编码数据 | `main.py:116` → `data/instruments.json` | **PR-11** | 启动时从 8 个硬编码合约 JSON 加载，不反映 CTP 真实合约列表。PR-11 需实现 `ReqQryInstrument` 动态查询并替换 |
+| `averagePrice` 未除以 `VolumeMultiple` | `api/market.py` snapshots/depth | **PR-11** | CTP 的 AveragePrice = Turnover/Volume，不除以合约乘数（IF=300），需从 `ReqQryInstrument` 获取 `VolumeMultiple` 做换算 |
+| 无期权链/波动率端点 | `api/market.py` | **PR-11** | 期权相关查询需合约信息（OptionsType、StrikePrice），依赖 ReqQryInstrument |
+| 无 instrument detail（乘数/最小变动价位） | 全局 | **PR-11** | 前端需要 `PriceTick`、`VolumeMultiple` 做精度处理，需合约查询数据 |
+
 ---
 
 ### PR-7: 后端WebSocket管理完善
 
-**状态**：✅ 人工审查通过，待合并
+**状态**：✅ 已合并
 
 **PR信息**：
 - PR分支名：`feature/pr-7-websocket-manager`
@@ -207,11 +218,19 @@
 - `89cb00a` fix(PR-7): review反馈 — reconnect资源泄漏+订阅同步+错误响应
 
 **交接说明**：
-- PR-9 接入时，需在 `_wire_bridge` 中添加 OnRtnOrder → ws/order 广播
-- PR-13 接入时，需添加 StopOrderService → ws/stop 广播
+- ✅ PR-9 已在 `ctp_startup.py` 中添加 OnRtnOrder/OnRtnTrade → ws/order 广播
+- ⏳ OnRtnOrder→ws/position 广播 → **PR-11**
+- ⏳ StopOrderService→ws/stop 广播 → **PR-13**
 - 心跳间隔 15 秒（可在 `start_heartbeat(interval=N)` 调整）
-- ⚠️ 登录逻辑依赖 TD（TraderApi）连接，目前仅实现 MD（行情）连接。TradingDay/BrokerID 等字段需 PR-9 完善后同步更新 login 流程
+- ✅ PR-9 已完成 TD 连接 + login 流程，TradingDay/BrokerID 等字段现在可用
 - ReconnectService 最大 5 次重试，指数退避 1s/2s/4s/8s/16s
+
+**⚠️ 依赖后续 PR 的未完成项**：
+
+| 问题 | 位置 | 阻塞 PR | 说明 |
+|------|------|:------:|------|
+| TD 断线无自动重连 | `ctp_startup.py:508-511` | **PR-17** | 当前仅 MD（行情）有 ReconnectService。TD（交易）是独立 CTP 连接，断线后报单/成交回调丢失。代码中有 TODO(PR-17) 标记 |
+| 断开重连后订阅恢复不完整 | `services/reconnect.py` | **PR-11** | 当前仅恢复行情订阅；断线期间产生的报单/成交回报会丢失，需 `ReqQryOrder/ReqQryTrade` 恢复 |
 
 ---
 
@@ -295,6 +314,37 @@
 - 持仓 → ws/position 广播（需 PR-11 的 ReqQryInvestorPosition）
 - reverse / lock 实际编排逻辑（需 PR-11 获取持仓方向+数量）
 - 报单流水/成交查询（PR-11 实现 ReqQryOrder/ReqQryTrade）
+
+---
+
+## 跨 PR 依赖跟踪
+
+关键功能按**阻塞 PR** 分类：
+
+### 依赖 PR-11（查询API）— 最高优先级
+
+| # | 涉及 PR | 当前状态 | 需要做的事 |
+|---|:------:|----------|-----------|
+| 1 | PR-5 | `GET /instruments` 返回 `data/instruments.json` 硬编码 8 个合约 | 用 `ReqQryInstrument` 动态替换，支持期权、跨交易所、乘数/最小变动价位 |
+| 2 | PR-5 | `averagePrice` 未除 `VolumeMultiple`（CTP 原始值） | 合约查询获取乘数后换算 |
+| 3 | PR-9 | `reverse()`/`lock()` 返回 501 | `ReqQryInvestorPosition` 获取持仓方向+数量后编排实际逻辑 |
+| 4 | PR-9 | `/ws/position` 无广播 | `OnRtnOrder` 成交后需要实时推送持仓变更 |
+| 5 | PR-7 | 断线重连后报单/成交丢失 | `ReqQryOrder/ReqQryTrade` 恢复断线期间状态 |
+| 6 | PR-3 | `api/query.py` 全占位路由 | 实现所有查询端点 |
+
+### 依赖 PR-13（止损单）— 次优先级
+
+| # | 涉及 PR | 当前状态 | 需要做的事 |
+|---|:------:|----------|-----------|
+| 7 | PR-7 | `ws/stop` 端点无广播 | StopOrderService → WebSocket 推送 |
+| 8 | PR-9 | 无止损单触发逻辑 | 在 OrderManager 中增加条件单监控（复用行情数据流） |
+
+### 依赖 PR-17（联调测试）
+
+| # | 涉及 PR | 当前状态 | 需要做的事 |
+|---|:------:|----------|-----------|
+| 9 | PR-7 | TD 断线无自动重连 | 参照 MD ReconnectService 实现 TD 重连 |
+| 10 | 全部 | 无端到端集成测试 | 完整生命周期测试、异常恢复测试、性能基准 |
 - ⚠️ SimNow 7x24 环境会自动撤销未成交 GFD 挂单（非代码 bug），真实柜台不会
 
 ---
