@@ -88,9 +88,11 @@ def map_depth_market_data(ctp_obj: Any) -> dict:
         result[json_key] = getattr(ctp_obj, ctp_attr, default)
 
     # Sanitize: replace CTP DBL_MAX sentinel values with 0.0.
-    # All price-like fields (*Price) participate; volumes are never DBL_MAX.
+    # All price-like fields participate; volumes are never DBL_MAX.
+    # Use "Price" in key (not endswith) — bidPrice1-5 / askPrice1-5 have
+    # digit suffixes and would be missed by endswith.
     for key in list(result):
-        if key.endswith("Price") and isinstance(result[key], float):
+        if "Price" in key and isinstance(result[key], float):
             result[key] = _sanitize_price(result[key], 0.0)
 
     return result
