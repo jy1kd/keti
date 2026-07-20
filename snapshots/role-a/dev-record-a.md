@@ -511,3 +511,55 @@ TDD 完成 + 审查修复后，接入 SimNow 7x24 环境进行实盘测试，发
 | `6af36a3` `5eb781a` | fix(task-09): DBL_MAX 哨兵值过滤 |
 | `77fbe3b` | fix(task-09): cancel_order FrontID/SessionID + OrderSysID 规范化 |
 | `bc80cfd` | docs(task-09): 更新 progress.md — PR-9 已合并，32 commits 391 tests |
+
+---
+
+## PR-19: 后端合约查询API
+
+**分支**：`feature/pr-19-instrument-query-api`
+**依赖**：PR-9
+**状态**：🔄 开发中
+
+### 测试用例列表
+
+| 测试文件 | 测试数 | 覆盖内容 |
+|----------|--------|----------|
+| `tests/test_trader_api.py` | +5 | query_instruments() 调用 ReqQryInstrument、BrokerID/InvestorID 设置、返回值处理 |
+| `tests/test_callback.py` | +4 | OnRspQryInstrument 事件日志、handler 分发、默认不崩溃 |
+| `tests/test_field_mapping.py` | +8 | map_instrument() CTP→camelCase 映射（核心字段、期权字段、默认值） |
+| `tests/test_market_service.py` | +8 | refresh_instruments_from_ctp() 查询触发、状态校验、结果累积、文件保存、回调通知 |
+| `tests/test_market_api.py` | +4 | POST /api/market/instruments/refresh 端点（成功、无trader、未登录、查询失败） |
+| **合计** | **29**（新增） | |
+
+### 实现进度
+
+#### 循环1：TraderApi.query_instruments()（5 tests）
+- ✅ `ctp_wrapper/trader_api.py` — query_instruments() 方法，调用 ReqQryInstrument
+- 📦 Commit: `a4686a3`
+
+#### 循环2：OnRspQryInstrument 回调（4 tests）
+- ✅ `ctp_wrapper/callback.py` — _td_on_rsp_qry_instrument 事件日志+handler 分发
+- 📦 Commit: `96df302`
+
+#### 循环3：map_instrument() 字段映射（8 tests）
+- ✅ `services/field_mapping.py` — map_instrument() CTP→camelCase，12 字段含期权字段
+- 📦 Commit: `131aaf8`
+
+#### 循环4：MarketService.refresh_instruments_from_ctp()（8 tests）
+- ✅ `services/market_service.py` — refresh_instruments_from_ctp()、on_instruments_result()、set_instruments_callback()
+- ✅ 支持增量累积（bIsLast=False 时暂存，bIsLast=True 时保存+回调）
+- ✅ CTP 对象自动映射为 camelCase dict
+- 📦 Commit: `b48555f`
+
+#### 循环5：REST 端点 + CTP 回调接线（4 tests）
+- ✅ `api/market.py` — POST /api/market/instruments/refresh 端点
+- ✅ `services/ctp_startup.py` — OnRspQryInstrument → MarketService.on_instruments_result 接线
+- ✅ `tests/conftest.py` — pytest-asyncio 配置
+- 📦 Commit: `5d48258`
+
+### 关键设计决策
+
+1. **增量累积模式**：CTP 的 OnRspQryInstrument 会多次调用（bIsLast=False），最后一次 bIsLast=True。MarketService 在内存中累积，最后一次才写入文件
+2. **字段映射复用**：map_instrument() 沿用 field_mapping.py 的 `[(ctp_attr, json_key, default)]` 表驱动模式
+3. **回调接线统一**：OnRspQryInstrument 在 start_ctp_trading_connection() 和 connect_trading() 两处都接线，确保 startup 和 /login 两条路径都支持合约查询
+4. **文件保存路径**：默认保存到 `server/data/instruments.json`，与 startup 加载路径一致
