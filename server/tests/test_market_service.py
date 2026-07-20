@@ -512,3 +512,168 @@ class TestLoadInstrumentsFromFile:
         for inst in svc.get_instruments():
             assert "instrumentID" in inst
             assert "instrumentName" in inst
+
+
+# ── Instrument refresh from CTP (PR-19) ────────────────────────────────
+
+class TestRefreshInstrumentsFromCtp:
+    """refresh_instruments_from_ctp: collect CTP results and save to file."""
+
+    def test_refresh_calls_query_instruments(self):
+        """refresh should call query_instruments on the TraderApi."""
+        svc = MarketService()
+        query_calls = []
+
+        class MockTraderApi:
+            login_status = "logged_in"
+            connection_status = "connected"
+
+            def query_instruments(self):
+                query_calls.append(1)
+                return 0
+
+        svc.refresh_instruments_from_ctp(MockTraderApi(), callback=None)
+        assert len(query_calls) == 1
+
+    def test_refresh_returns_error_when_not_logged_in(self):
+        """refresh should fail if TraderApi is not logged in."""
+        svc = MarketService()
+
+        class MockTraderApi:
+            login_status = "not_logged_in"
+            connection_status = "connected"
+
+        result = svc.refresh_instruments_from_ctp(MockTraderApi(), callback=None)
+        assert result["success"] is False
+        assert "not logged in" in result["message"].lower()
+
+    def test_refresh_returns_error_when_query_fails(self):
+        """refresh should fail if query_instruments returns negative."""
+        svc = MarketService()
+
+        class MockTraderApi:
+            login_status = "logged_in"
+            connection_status = "connected"
+
+            def query_instruments(self):
+                return -1
+
+        result = svc.refresh_instruments_from_ctp(MockTraderApi(), callback=None)
+        assert result["success"] is False
+        assert "query failed" in result["message"].lower()
+
+    def test_refresh_stores_instruments_callback(self):
+        """refresh should store the on_instruments callback for later use."""
+        svc = MarketService()
+
+        class MockTraderApi:
+            login_status = "logged_in"
+            connection_status = "connected"
+
+            def query_instruments(self):
+                return 0
+
+        received = []
+        svc.refresh_instruments_from_ctp(
+            MockTraderApi(),
+            callback=lambda instruments: received.extend(instruments),
+        )
+        # The callback should be stored for use when CTP responds
+        assert svc._on_instruments_callback is not None
+
+    def test_on_instruments_result_saves_to_file(self):
+        """on_instruments_result should save instruments to JSON file."""
+        svc = MarketService()
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as f:
+            tmp_path = f.name
+
+        try:
+            instruments = [
+                {"instrumentID": "IF2608", "instrumentName": "IF2608"},
+                {"instrumentID": "IF2609", "instrumentName": "IF2609"},
+            ]
+            svc.on_instruments_result(instruments, is_last=True, file_path=tmp_path)
+            assert svc.instrument_count == 2
+            # Verify file was written
+            with open(tmp_path, "r") as f:
+                saved = json.load(f)
+            assert len(saved) == 2
+        finally:
+            os.unlink(tmp_path)
+
+    def test_on_instruments_result_accumulates(self):
+        """on_instruments_result should accumulate until is_last=True."""
+        svc = MarketService()
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as f:
+            tmp_path = f.name
+
+        try:
+            svc.on_instruments_result(
+                [{"instrumentID": "IF2608"}], is_last=False, file_path=tmp_path,
+            )
+            assert svc.instrument_count == 0  # not saved yet
+
+            svc.on_instruments_result(
+                [{"instrumentID": "IF2609"}], is_last=True, file_path=tmp_path,
+            )
+            assert svc.instrument_count == 2  # both saved
+        finally:
+            os.unlink(tmp_path)
+
+    def test_on_instruments_result_calls_callback(self):
+        """on_instruments_result should call the callback with count."""
+        svc = MarketService()
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as f:
+            tmp_path = f.name
+
+        try:
+            received = []
+            svc.set_instruments_callback(lambda count: received.append(count))
+            svc.on_instruments_result(
+                [{"instrumentID": "IF2608"}, {"instrumentID": "IF2609"}],
+                is_last=True,
+                file_path=tmp_path,
+            )
+            assert received == [2]
+        finally:
+            os.unlink(tmp_path)
+
+    def test_on_instruments_result_maps_ctp_fields(self):
+        """on_instruments_result should map CTP PascalCase to camelCase."""
+        svc = MarketService()
+
+        class MockInstrument:
+            InstrumentID = "IF2608"
+            InstrumentName = "沪深300"
+            ExchangeID = "CFFEX"
+            ProductID = "IF"
+            ProductClass = "1"
+            VolumeMultiple = 300
+            PriceTick = 0.2
+            ExpireDate = "20260821"
+            OptionsType = ""
+            StrikePrice = 0.0
+            UnderlyingInstrID = ""
+            IsTrading = 1
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as f:
+            tmp_path = f.name
+
+        try:
+            svc.on_instruments_result(
+                [MockInstrument()], is_last=True, file_path=tmp_path,
+            )
+            result = svc.get_instruments()
+            assert len(result) == 1
+            assert result[0]["instrumentID"] == "IF2608"
+            assert result[0]["volumeMultiple"] == 300
+        finally:
+            os.unlink(tmp_path)

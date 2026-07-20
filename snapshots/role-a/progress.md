@@ -15,11 +15,12 @@
 | PR-5 | 后端行情API实现 | ✅ 已合并 | 2026-07-14 | 81643c8 (merge), 6f19568~e4b2091 (19 commits) |
 | PR-7 | 后端WebSocket管理完善 | ✅ 已合并 | 2026-07-15 | c370cbc, 05b16a6, 4f07b9f, 5386563, 200ab85, 0a0e29c, 443a6c5, 89cb00a, 82ef2e9, 4b5bb2e |
 | PR-9 | 后端交易API实现 | ✅ 已合并 | 2026-07-20 | 07a08d9~77fbe3b (32 commits) |
+| PR-19 | 后端合约查询API | 🔄 审查修复完成，待二次审查 | 2026-07-20 | a4686a3~99c8c06 (7 commits, 29 tests) |
 | PR-11 | 后端查询API实现 | ⏳ 待开始 | - | - |
 | PR-13 | 后端止损单服务实现 | ⏳ 待开始 | - | - |
 | PR-17 | 联调测试与Bug修复 | ⏳ 待开始 | - | - |
 
-**总计**：7个PR + 1个联调PR = 8个PR
+**总计**：8个PR + 1个联调PR = 9个PR
 
 ---
 
@@ -349,6 +350,46 @@
 
 ---
 
+### PR-19: 后端合约查询API
+
+**状态**：🔄 审查修复完成，待二次审查
+
+**PR信息**：
+- PR分支名：`feature/pr-19-instrument-query-api`
+- 依赖PR：PR-9
+- 工作量：2小时
+
+**完成内容**：
+- ✅ `ctp_wrapper/trader_api.py` — query_instruments() 方法，调用 ReqQryInstrument
+- ✅ `ctp_wrapper/callback.py` — OnRspQryInstrument 回调（事件日志 + handler 分发）
+- ✅ `services/field_mapping.py` — map_instrument() CTP→camelCase 字段映射（12字段含期权字段）
+- ✅ `services/market_service.py` — refresh_instruments_from_ctp()、on_instruments_result() 增量累积
+- ✅ `api/market.py` — POST /api/market/instruments/refresh 端点（返回 {status: "started"}）
+- ✅ `services/ctp_startup.py` — OnRspQryInstrument 回调接线（startup + /login 两条路径）
+- ✅ `tests/conftest.py` — pytest-asyncio 配置
+- ✅ 29 个新增单元测试（5 个测试文件）
+
+**验证结果**：
+- ✅ 29 新增测试全部通过，全量 194 passed / 1 failed（pre-existing depth 测试）
+- ✅ 代码范围正确（仅 server/ + snapshots/）
+- ✅ 无调试代码残留
+
+**提交记录**：
+- `a4686a3` test(task-19): TraderApi.query_instruments() — 5 tests pass
+- `96df302` feat(task-19): TraderSpi.OnRspQryInstrument callback — 4 tests pass
+- `131aaf8` feat(task-19): map_instrument() CTP字段映射 — 8 tests pass
+- `b48555f` feat(task-19): MarketService.refresh_instruments_from_ctp() — 8 tests pass
+- `5d48258` feat(task-19): POST /api/market/instruments/refresh 端点 + OnRspQryInstrument 回调接线 — 4 tests pass
+- `ab386a0` docs(task-19): 开发记录 — 5次TDD循环，29 tests pass
+
+**交接说明**：
+- 合约缓存 → `server/data/instruments.json`（查询后自动更新）
+- `GET /api/market/instruments` 已支持从文件加载（PR-5 实现）
+- WebSocket `/ws/system` 推送 `instruments_refreshed` 消息（含 count 字段）
+- PR-20（前端刷新UI）可直接对接 `POST /api/market/instruments/refresh`
+
+---
+
 ### PR-11: 后端查询API实现
 
 **状态**：⏳ 待开始
@@ -423,3 +464,5 @@
 | 日期 | 内容 | 状态 |
 |------|------|------|
 | 2026-07-20 | PR-9 合并 (PR #12)，32 commits，391 tests passed | ✅ 完成 |
+| 2026-07-20 | PR-19 开发完成，6 commits，29 tests passed，待审查 | 🔄 待审查 |
+| 2026-07-20 | PR-19 审查修复（1🔴+6🟡+2🔵），7 commits | 🔄 待二次审查 |

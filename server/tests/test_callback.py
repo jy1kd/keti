@@ -135,6 +135,7 @@ class TestTraderSpi:
             ("OnRspOrderInsert", (None, None, 0, True)),
             ("OnRspOrderAction", (None, None, 0, True)),
             ("OnRspError", (None, 0, True)),
+            ("OnRspQryInstrument", (None, None, 0, True)),
         ]
         for method_name, args in call_map:
             method = getattr(spi, method_name)
@@ -170,3 +171,42 @@ class TestCallbackLogging:
         spi = MdSpi(api=None)
         spi.OnFrontConnected()
         assert "timestamp" in spi.events[-1]
+
+
+# ── OnRspQryInstrument callback tests (PR-19) ──────────────────────────
+
+class TestTraderSpiQryInstrument:
+    """Test OnRspQryInstrument callback on TraderSpi."""
+
+    def test_on_rsp_qry_instrument_exists(self):
+        """OnRspQryInstrument should be a callable method."""
+        spi = TraderSpi(api=None)
+        assert hasattr(spi, "OnRspQryInstrument")
+        assert callable(spi.OnRspQryInstrument)
+
+    def test_on_rsp_qry_instrument_logs_event(self):
+        """OnRspQryInstrument should log the event."""
+        spi = TraderSpi(api=None)
+        spi.OnRspQryInstrument(None, None, 0, True)
+        assert len(spi.events) > 0
+        assert spi.events[-1]["type"] == "OnRspQryInstrument"
+
+    def test_on_rsp_qry_instrument_dispatches_handler(self):
+        """OnRspQryInstrument should dispatch to registered handler."""
+        spi = TraderSpi(api=None)
+        received = []
+        spi.on("OnRspQryInstrument", lambda *args: received.append(args))
+        mock_instrument = {"InstrumentID": "IF2608"}
+        spi.OnRspQryInstrument(mock_instrument, None, 1, True)
+        assert len(received) == 1
+        assert received[0] == (mock_instrument, None, 1, True)
+
+    def test_on_rsp_qry_instrument_default_does_not_crash(self):
+        """Default OnRspQryInstrument should not raise."""
+        spi = TraderSpi(api=None)
+        try:
+            spi.OnRspQryInstrument(None, None, 0, True)
+            ok = True
+        except Exception:
+            ok = False
+        assert ok

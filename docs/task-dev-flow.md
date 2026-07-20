@@ -10,7 +10,7 @@
 |------|--------|------|------|
 | **阶段1：基础框架** | PR-1 ~ PR-4 | ✅ 已完成 | CTP验证 ✅ / 前端初始化 ✅ / FastAPI框架 ✅ / 布局 ✅ |
 | **阶段2：行情模块** | PR-5 ~ PR-8, PR-6a | ✅ 已完成 | 行情API ✅ / 行情表格 ✅ / 行情接入 ✅ / WebSocket管理 ✅ / 五档行情 ✅ |
-| **阶段2+：合约管理** | PR-19, PR-20 | ⏳ 待开始 | 合约查询 ⏳ / 手动订阅 ⏳ |
+| **阶段2+：合约管理** | PR-19, PR-20 | 🔄 进行中 | 合约查询 ✅ / 合约刷新UI ⏳ |
 | **阶段3：交易模块** | PR-9 ~ PR-12 | ⏳ 待开始 | 交易API、报单表单、K线图 |
 | **阶段4：高级功能** | PR-13 ~ PR-16 | ⏳ 待开始 | 止损单、期权、快捷功能、查询 |
 | **阶段5：联调优化** | PR-17 | ⏳ 待开始 | 联调测试、Bug修复 |
@@ -206,10 +206,10 @@ PR-1 [A] → PR-3 [A] → PR-5 [A] → PR-7 [A] → PR-9 [A] → PR-11 [A] → P
 
 **下一步行动**：
 - 角色A：开始 PR-11（后端查询API实现，依赖 PR-9）或 PR-19（合约查询API，依赖 PR-9）
-- 角色B：开始 PR-10（报单表单，依赖 PR-9）或 PR-21（手动订阅，依赖 PR-6a）
+- 角色B：开始 PR-10（报单表单，依赖 PR-9）或 PR-20（合约刷新UI，依赖 PR-19）或 PR-21（手动订阅，依赖 PR-6a）
 
 **⚠️ 已知不完善**：
-- `GET /instruments` 返回静态硬编码数据（8个合约），需 PR-19 用 ReqQryInstrument 动态替换
+- `GET /instruments` 返回 `data/instruments.json`（PR-19 已支持动态刷新，17348 合约）
 - `averagePrice` 未除以 VolumeMultiple，需 PR-11 获取合约乘数后换算
 - `reverse()`/`lock()` 返回 501 占位，需 PR-11 获取持仓方向+数量后编排实际逻辑
 - `/ws/position` 无持仓广播，需 PR-11 的 ReqQryInvestorPosition
@@ -359,7 +359,7 @@ git branch -d feature/pr-<编号>-<描述>
 |----|------|------|------|--------|
 | PR-9 | 后端交易API实现 | PR-7 | ✅ 已完成 | `feature/pr-9-trader-api` |
 | PR-11 | 后端查询API实现 | PR-9 | ⏳ 待开始 | `feature/pr-11-query-api` |
-| PR-19 | 后端合约查询API（CTP ReqQryInstrument） | PR-9 | ⏳ 待开始 | `feature/pr-19-instrument-query-api` |
+| PR-19 | 后端合约查询API（CTP ReqQryInstrument） | PR-9 | ✅ 已完成 | `feature/pr-19-instrument-query-api` |
 
 ### 阶段4：高级功能
 
@@ -405,7 +405,7 @@ git branch -d feature/pr-<编号>-<描述>
 |----|------|------|------|--------|
 | PR-9 | 后端交易API实现 | PR-7 | ⏳ 待开始 | `feature/pr-9-trader-api` |
 | PR-10 | 前端报单表单实现 | PR-9 | ⏳ 待开始 | `feature/pr-10-order-form` |
-| PR-19 | 后端合约查询API（CTP ReqQryInstrument） | PR-9 | ⏳ 待开始 | `feature/pr-19-instrument-query-api` |
+| PR-19 | 后端合约查询API（CTP ReqQryInstrument） | PR-9 | ✅ 已完成 | `feature/pr-19-instrument-query-api` |
 | PR-20 | 前端合约刷新功能（刷新按钮 + Toast） | PR-19 | ⏳ 待开始 | `feature/pr-20-instrument-refresh-ui` |
 
 ### 阶段4：高级功能
