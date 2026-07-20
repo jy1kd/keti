@@ -4,7 +4,20 @@ All mapping functions use getattr() with sensible defaults so they work
 with both real CTP objects (when DLL is available) and mock objects (tests).
 """
 
+import math
 from typing import Any, List, Tuple
+
+# CTP uses DBL_MAX (~1.8e308) as a sentinel for "no data available".
+# Fields like closePrice (mid-day), settlementPrice (before settlement),
+# and bid/ask depth levels 2-5 (when fewer than 5 levels exist) carry
+# this value.  We replace it with a reasonable default so the frontend
+# never sees raw sentinel values.
+_DBL_MAX = 1.7976931348623157e308
+
+
+def _sanitize_price(value: float, default: float = 0.0) -> float:
+    """Return default if value is CTP's DBL_MAX sentinel."""
+    return default if (math.isinf(value) or value >= _DBL_MAX * 0.99) else value
 
 
 # ── Depth market data (OnRtnDepthMarketData) ───────────────────────────
@@ -73,6 +86,13 @@ def map_depth_market_data(ctp_obj: Any) -> dict:
     result: dict = {}
     for ctp_attr, json_key, default in _DEPTH_MARKET_DATA_FIELDS:
         result[json_key] = getattr(ctp_obj, ctp_attr, default)
+
+    # Sanitize: replace CTP DBL_MAX sentinel values with 0.0.
+    # All price-like fields (*Price) participate; volumes are never DBL_MAX.
+    for key in list(result):
+        if key.endswith("Price") and isinstance(result[key], float):
+            result[key] = _sanitize_price(result[key], 0.0)
+
     return result
 
 
