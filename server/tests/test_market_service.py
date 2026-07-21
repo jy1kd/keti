@@ -785,10 +785,15 @@ class TestPresetInstruments:
             {"instrumentID": "IF2609", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260918", "isTrading": 1},
             {"instrumentID": "au2608", "exchangeID": "SHFE", "productID": "au", "expireDate": "20260815", "isTrading": 1},
         ])
-        result = svc.refresh_preset_instruments()
-        assert result["success"] is True
-        # IF2608 expires sooner, au2608 is the only au
-        assert set(result["instruments"]) == {"IF2608", "au2608"}
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            tmp_path = f.name
+        try:
+            result = svc.refresh_preset_instruments(file_path=tmp_path)
+            assert result["success"] is True
+            # IF2608 expires sooner, au2608 is the only au
+            assert set(result["instruments"]) == {"IF2608", "au2608"}
+        finally:
+            os.unlink(tmp_path)
 
     def test_refresh_preset_skips_non_trading(self):
         svc = MarketService()
@@ -796,9 +801,14 @@ class TestPresetInstruments:
             {"instrumentID": "IF2608", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260821", "isTrading": 0},
             {"instrumentID": "IF2609", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260918", "isTrading": 1},
         ])
-        result = svc.refresh_preset_instruments()
-        assert "IF2608" not in result["instruments"]
-        assert "IF2609" in result["instruments"]
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            tmp_path = f.name
+        try:
+            result = svc.refresh_preset_instruments(file_path=tmp_path)
+            assert "IF2608" not in result["instruments"]
+            assert "IF2609" in result["instruments"]
+        finally:
+            os.unlink(tmp_path)
 
     def test_refresh_preset_saves_to_file(self):
         import tempfile, os
