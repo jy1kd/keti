@@ -238,3 +238,27 @@ def _td_on_rsp_qry_instrument(self, pInstrument: Any, pRspInfo: Any,
 
 
 TraderSpi.OnRspQryInstrument = _td_on_rsp_qry_instrument  # type: ignore
+
+
+# ── Query callbacks (PR-11) ─────────────────────────────────────────────
+
+def _make_qry_callback(event_name: str):
+    """Factory: build a query callback that logs, checks errors, and dispatches."""
+    def _on_rsp_qry(self, pData: Any, pRspInfo: Any,
+                    nRequestID: int, bIsLast: bool) -> None:
+        error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo else 0
+        self._log(event_name,
+                  {"request_id": nRequestID, "is_last": bIsLast,
+                   "error_id": error_id})
+        if error_id != 0:
+            error_msg = getattr(pRspInfo, "ErrorMsg", "")
+            self._log(f"{event_name}_error",
+                      {"error_id": error_id, "error_msg": error_msg})
+        self._dispatch(event_name, pData, pRspInfo, nRequestID, bIsLast)
+    return _on_rsp_qry
+
+
+TraderSpi.OnRspQryOrder = _make_qry_callback("OnRspQryOrder")  # type: ignore
+TraderSpi.OnRspQryTrade = _make_qry_callback("OnRspQryTrade")  # type: ignore
+TraderSpi.OnRspQryInvestorPosition = _make_qry_callback("OnRspQryInvestorPosition")  # type: ignore
+TraderSpi.OnRspQryTradingAccount = _make_qry_callback("OnRspQryTradingAccount")  # type: ignore

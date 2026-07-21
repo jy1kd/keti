@@ -267,3 +267,75 @@ def map_instrument(ctp_obj: Any) -> dict:
     for ctp_attr, json_key, default in _INSTRUMENT_FIELDS:
         result[json_key] = getattr(ctp_obj, ctp_attr, default)
     return result
+
+
+# ── Position (CThostFtdcInvestorPositionField) ───────────────────────────
+
+_POSITION_FIELDS: List[Tuple[str, str, object]] = [
+    ("InstrumentID", "instrumentID", ""),
+    ("BrokerID", "brokerID", ""),
+    ("InvestorID", "investorID", ""),
+    ("ExchangeID", "exchangeID", ""),
+    ("PosiDirection", "posiDirection", ""),
+    ("HedgeFlag", "hedgeFlag", ""),
+    ("PositionDate", "positionDate", ""),
+    ("Position", "position", 0),
+    ("YdPosition", "ydPosition", 0),
+    ("TodayPosition", "todayPosition", 0),
+    ("OpenCost", "openCost", 0.0),
+    ("PositionCost", "positionCost", 0.0),
+    ("PositionProfit", "positionProfit", 0.0),
+    ("CloseProfit", "closeProfit", 0.0),
+    ("UseMargin", "useMargin", 0.0),
+    ("ExchangeMargin", "exchangeMargin", 0.0),
+    ("TradingDay", "tradingDay", ""),
+]
+
+
+def map_position(ctp_obj: Any) -> dict:
+    """Map a CTP CThostFtdcInvestorPositionField to a camelCase dict.
+
+    Args:
+        ctp_obj: A CTP position object (or duck-typed mock).
+
+    Returns:
+        dict with camelCase keys matching the PositionInfo model.
+    """
+    result: dict = {}
+    for ctp_attr, json_key, default in _POSITION_FIELDS:
+        result[json_key] = getattr(ctp_obj, ctp_attr, default)
+    return result
+
+
+# ── Account (CThostFtdcTradingAccountField) ─────────────────────────────
+
+_ACCOUNT_FIELDS: List[Tuple[str, str, object]] = [
+    ("AccountID", "accountID", ""),
+    ("BrokerID", "brokerID", ""),
+    ("Balance", "balance", 0.0),
+    ("Available", "available", 0.0),
+    ("FrozenMargin", "frozenMargin", 0.0),
+    ("CurrMargin", "currMargin", 0.0),
+    ("CloseProfit", "closeProfit", 0.0),
+    ("PositionProfit", "positionProfit", 0.0),
+    ("Commission", "commission", 0.0),
+    ("Deposit", "deposit", 0.0),
+    ("Withdraw", "withdraw", 0.0),
+    ("PreBalance", "preBalance", 0.0),
+    ("TradingDay", "tradingDay", ""),
+]
+
+
+def map_account(ctp_obj: Any) -> dict:
+    """Map a CTP CThostFtdcTradingAccountField to a camelCase dict.
+
+    Args:
+        ctp_obj: A CTP account object (or duck-typed mock).
+
+    Returns:
+        dict with camelCase keys matching the AccountInfo model.
+    """
+    result: dict = {}
+    for ctp_attr, json_key, default in _ACCOUNT_FIELDS:
+        result[json_key] = getattr(ctp_obj, ctp_attr, default)
+    return result

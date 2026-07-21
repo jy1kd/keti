@@ -1,16 +1,26 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "f00d0660e4c63445d2b9a27645c40b2dcc381a64",
-  "generatedAt": "2026-07-17T06:16:30.381Z",
+  "gitCommitHash": "d853f76f5015071a218a5a55c86b41ff2b18b9c6",
+  "generatedAt": "2026-07-21T03:16:38.723Z",
   "files": {
     "CLAUDE.md": {
       "filePath": "CLAUDE.md",
-      "contentHash": "e76dbed26772d163af38edc89a484c23ffe3fdaee97e034f33ec7ce082ad7e79",
+      "contentHash": "3f790d7deb44d83ef310b73eec837077f0edc23998d5300a55274a886377be3d",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
       "totalLines": 297,
+      "hasStructuralAnalysis": true
+    },
+    "README.md": {
+      "filePath": "README.md",
+      "contentHash": "23e00c6bf2687209d96f2b4b264e1d494b4f3c633b0cc6b7ef84de8dac883af9",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 86,
       "hasStructuralAnalysis": true
     },
     "ctp_realtime_demo.py": {
@@ -164,26 +174,6 @@
       "totalLines": 914,
       "hasStructuralAnalysis": false
     },
-    "docs/design.md": {
-      "filePath": "docs/design.md",
-      "contentHash": "af4f824ce4adb75962466def99d91d3875ad0a5c512c47676cab4f96588006c3",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 1559,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev.md": {
-      "filePath": "docs/dev.md",
-      "contentHash": "8af7a1999af051b25c5c8364278ff45904c383d15ef1941f79aa13520abb345e",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 1435,
-      "hasStructuralAnalysis": true
-    },
     "docs/prd.md": {
       "filePath": "docs/prd.md",
       "contentHash": "04a9ab5e0b20b3d4f72ba4b3132a729469b1b726ce81b1182ebdf57cd45b66c7",
@@ -194,24 +184,24 @@
       "totalLines": 294,
       "hasStructuralAnalysis": true
     },
-    "docs/task-dev-flow.md": {
-      "filePath": "docs/task-dev-flow.md",
-      "contentHash": "a98d7e8ee0d334f922cad9700747d95ff203518fd47e500b1dbc9d8082c706c1",
+    "frontend/.env": {
+      "filePath": "frontend/.env",
+      "contentHash": "70ea329bd85542369c0bcba6c7887d9363177987ecf4b01f467885a2120ef60e",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 641,
+      "totalLines": 9,
       "hasStructuralAnalysis": true
     },
-    "docs/task.md": {
-      "filePath": "docs/task.md",
-      "contentHash": "11ab999ffef881f6875d6e9c3a706562d4831af4e3cc612e2ccafab251eeb37a",
+    "frontend/.eslintrc.cjs": {
+      "filePath": "frontend/.eslintrc.cjs",
+      "contentHash": "ca657cd6203afeec547c8887b665f2eb8e1903e4a599e8ec0a29ba8d8ea70f09",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 1933,
+      "totalLines": 20,
       "hasStructuralAnalysis": true
     },
     "frontend/index.html": {
@@ -223,6 +213,16 @@
       "exports": [],
       "totalLines": 17,
       "hasStructuralAnalysis": false
+    },
+    "frontend/package-lock.json": {
+      "filePath": "frontend/package-lock.json",
+      "contentHash": "b39131d052ac87b6add3b19c4c76cc014bcda75f56d91d3dae656fda51214f7f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 5854,
+      "hasStructuralAnalysis": true
     },
     "frontend/package.json": {
       "filePath": "frontend/package.json",
@@ -282,7 +282,7 @@
     },
     "frontend/src/App.tsx": {
       "filePath": "frontend/src/App.tsx",
-      "contentHash": "24568cd20e8598ec21ef636a46be09b96c970b8eada0c7570a49aab763034420",
+      "contentHash": "34a66af7d55c628970cc218cb0475a5ec895eda173b58df5b0653a7ef86041ab",
       "functions": [
         {
           "name": "App",
@@ -371,75 +371,6 @@
       "totalLines": 416,
       "hasStructuralAnalysis": false
     },
-    "frontend/src/components/ConnectionStatus/index.test.tsx": {
-      "filePath": "frontend/src/components/ConnectionStatus/index.test.tsx",
-      "contentHash": "dcc1e636c1d091ba96443c28e0551f3f81c685fc7a38bd8c117376cc8783074d",
-      "functions": [],
-      "classes": [],
-      "imports": [
-        {
-          "source": "vitest",
-          "specifiers": [
-            "describe",
-            "it",
-            "expect",
-            "beforeEach"
-          ]
-        },
-        {
-          "source": "@testing-library/react",
-          "specifiers": [
-            "render",
-            "screen"
-          ]
-        },
-        {
-          "source": "./index",
-          "specifiers": [
-            "ConnectionStatus"
-          ]
-        },
-        {
-          "source": "@/stores/connection",
-          "specifiers": [
-            "useConnectionStore"
-          ]
-        }
-      ],
-      "exports": [],
-      "totalLines": 39,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/src/components/ConnectionStatus/index.tsx": {
-      "filePath": "frontend/src/components/ConnectionStatus/index.tsx",
-      "contentHash": "950cab746c246a76963cb6c755f4d5dd109b9b93bf6c1cd3b8c56a099bce8c57",
-      "functions": [
-        {
-          "name": "ConnectionStatus",
-          "params": [],
-          "exported": true,
-          "lineCount": 24
-        }
-      ],
-      "classes": [],
-      "imports": [
-        {
-          "source": "@/stores/connection",
-          "specifiers": [
-            "useConnectionStore"
-          ]
-        },
-        {
-          "source": "./styles.css",
-          "specifiers": []
-        }
-      ],
-      "exports": [
-        "ConnectionStatus"
-      ],
-      "totalLines": 28,
-      "hasStructuralAnalysis": true
-    },
     "frontend/src/components/ConnectionStatus/styles.css": {
       "filePath": "frontend/src/components/ConnectionStatus/styles.css",
       "contentHash": "3f612c1c1d30d01ee454cd5a653541aab5d7082e31c292fc22b97c6f0d390950",
@@ -492,7 +423,7 @@
     },
     "frontend/src/components/ContractSearch/index.tsx": {
       "filePath": "frontend/src/components/ContractSearch/index.tsx",
-      "contentHash": "dad2b04d1526440df8f85865d4b1f8ecfd0f540829b9e5d7940c729fd892c727",
+      "contentHash": "ce706c27adb316718874847107741f4883161e9fbbebf09b663e708b9e01c502",
       "functions": [
         {
           "name": "ContractSearch",
@@ -500,7 +431,7 @@
             "{ contracts, onSelect }"
           ],
           "exported": true,
-          "lineCount": 56
+          "lineCount": 117
         }
       ],
       "classes": [],
@@ -509,7 +440,10 @@
           "source": "react",
           "specifiers": [
             "useState",
-            "useMemo"
+            "useMemo",
+            "useRef",
+            "useEffect",
+            "useCallback"
           ]
         },
         {
@@ -526,22 +460,22 @@
       "exports": [
         "ContractSearch"
       ],
-      "totalLines": 66,
+      "totalLines": 127,
       "hasStructuralAnalysis": true
     },
     "frontend/src/components/ContractSearch/styles.css": {
       "filePath": "frontend/src/components/ContractSearch/styles.css",
-      "contentHash": "9f6069ece56a3c3faeea0b952d40a414ce9c126b439862a974cef6b64fefbf6a",
+      "contentHash": "937b9c2e269b0e93cef2748583eb2e643489b2478a9b36c2f122683b702d5ce9",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 69,
+      "totalLines": 74,
       "hasStructuralAnalysis": false
     },
     "frontend/src/components/PerfMonitor/index.test.tsx": {
       "filePath": "frontend/src/components/PerfMonitor/index.test.tsx",
-      "contentHash": "4b7ac167c423ac6a9465f278d377a9d55170f78ffe4f4a26936f5338a341783e",
+      "contentHash": "36258e22f44d6553a051443e08c76b8b56394602312fe22dde156d9c40d09fde",
       "functions": [],
       "classes": [],
       "imports": [
@@ -576,7 +510,7 @@
     },
     "frontend/src/components/PerfMonitor/index.tsx": {
       "filePath": "frontend/src/components/PerfMonitor/index.tsx",
-      "contentHash": "641fe3981b18ee1b6bceff484a402dd5d407d844d53c16d40abb5abbf888e4e1",
+      "contentHash": "48d947899781a4d0b706fc11aa54f8ecbe8ec51a87617ea4639673ceb42cd14f",
       "functions": [
         {
           "name": "PerfMonitor",
@@ -603,109 +537,6 @@
         "PerfMonitor"
       ],
       "totalLines": 57,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/src/components/ResizeHandle/index.test.tsx": {
-      "filePath": "frontend/src/components/ResizeHandle/index.test.tsx",
-      "contentHash": "ce74303da4163ec73536a9e452c1de2faf5adb9d82302355e7f0dd3d0e4aaef8",
-      "functions": [],
-      "classes": [],
-      "imports": [
-        {
-          "source": "vitest",
-          "specifiers": [
-            "describe",
-            "it",
-            "expect"
-          ]
-        },
-        {
-          "source": "@testing-library/react",
-          "specifiers": [
-            "render",
-            "screen"
-          ]
-        },
-        {
-          "source": "./index",
-          "specifiers": [
-            "ResizeHandle"
-          ]
-        }
-      ],
-      "exports": [],
-      "totalLines": 25,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/src/components/ResizeHandle/index.tsx": {
-      "filePath": "frontend/src/components/ResizeHandle/index.tsx",
-      "contentHash": "e371af85168547f05204793de071422872b0963fb7b8db816745ad4141099ad4",
-      "functions": [],
-      "classes": [],
-      "imports": [
-        {
-          "source": "react",
-          "specifiers": [
-            "forwardRef"
-          ]
-        },
-        {
-          "source": "react",
-          "specifiers": [
-            "HTMLAttributes"
-          ]
-        }
-      ],
-      "exports": [
-        "ResizeHandle"
-      ],
-      "totalLines": 23,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/src/components/ResizeHandle/style.test.tsx": {
-      "filePath": "frontend/src/components/ResizeHandle/style.test.tsx",
-      "contentHash": "a9b434da1c6283f841e117ab42a09c4e9ff99e2c38dbeb99b83f3ba560bc9ed8",
-      "functions": [],
-      "classes": [],
-      "imports": [
-        {
-          "source": "vitest",
-          "specifiers": [
-            "describe",
-            "it",
-            "expect"
-          ]
-        },
-        {
-          "source": "./index",
-          "specifiers": [
-            "ResizeHandle"
-          ]
-        }
-      ],
-      "exports": [],
-      "totalLines": 13,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/src/components/SpreadDisplay/index.tsx": {
-      "filePath": "frontend/src/components/SpreadDisplay/index.tsx",
-      "contentHash": "91e36365bd27e4246a6f24b5b7d6db9b095782b7cc5dcb73695c98ca3a5fb009",
-      "functions": [
-        {
-          "name": "SpreadDisplay",
-          "params": [
-            "{ bidPrice, askPrice }"
-          ],
-          "exported": true,
-          "lineCount": 19
-        }
-      ],
-      "classes": [],
-      "imports": [],
-      "exports": [
-        "SpreadDisplay"
-      ],
-      "totalLines": 25,
       "hasStructuralAnalysis": true
     },
     "frontend/src/components/SpreadDisplay/SpreadDisplay.test.tsx": {
@@ -738,6 +569,27 @@
       ],
       "exports": [],
       "totalLines": 28,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/components/SpreadDisplay/index.tsx": {
+      "filePath": "frontend/src/components/SpreadDisplay/index.tsx",
+      "contentHash": "91e36365bd27e4246a6f24b5b7d6db9b095782b7cc5dcb73695c98ca3a5fb009",
+      "functions": [
+        {
+          "name": "SpreadDisplay",
+          "params": [
+            "{ bidPrice, askPrice }"
+          ],
+          "exported": true,
+          "lineCount": 19
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "SpreadDisplay"
+      ],
+      "totalLines": 25,
       "hasStructuralAnalysis": true
     },
     "frontend/src/hooks/useMarketWs.test.ts": {
@@ -789,7 +641,7 @@
     },
     "frontend/src/hooks/useMarketWs.ts": {
       "filePath": "frontend/src/hooks/useMarketWs.ts",
-      "contentHash": "b2828c50998d4bb94d7f0b972838470ef967428384b71f3ee871487dd84dc5c5",
+      "contentHash": "4af1b19953c75e6748f9339366acf7156dd7e242f0e78c5fef1accc5e92fefc6",
       "functions": [
         {
           "name": "snapshotToKline",
@@ -808,7 +660,7 @@
             "period"
           ],
           "exported": true,
-          "lineCount": 34
+          "lineCount": 37
         }
       ],
       "classes": [],
@@ -833,6 +685,12 @@
           ]
         },
         {
+          "source": "@/stores/connection",
+          "specifiers": [
+            "useConnectionStore"
+          ]
+        },
+        {
           "source": "./useReconnect",
           "specifiers": [
             "useReconnect"
@@ -851,7 +709,7 @@
         "PERIOD_MS",
         "useMarketWs"
       ],
-      "totalLines": 83,
+      "totalLines": 87,
       "hasStructuralAnalysis": true
     },
     "frontend/src/hooks/usePointOrder.test.ts": {
@@ -910,7 +768,7 @@
     },
     "frontend/src/hooks/useReconnect.test.ts": {
       "filePath": "frontend/src/hooks/useReconnect.test.ts",
-      "contentHash": "5f3e9acdfce2ad91f3aeca6b8cc612de4ce4bd153759db16256ba59b58a2c8a2",
+      "contentHash": "564f52063eaad284d41bd284d6c1aca112721cbe81cf586a68132d335298e4a9",
       "functions": [
         {
           "name": "createMockWs",
@@ -958,7 +816,7 @@
     },
     "frontend/src/hooks/useReconnect.ts": {
       "filePath": "frontend/src/hooks/useReconnect.ts",
-      "contentHash": "0e791a8de8df9396fa3ca02d5a8fb0f9fcfefccd08659c8367a3e50501389e9b",
+      "contentHash": "74a73c9a8a247b445e3c78569bfb6141165126bcf8079ad1b6489af64c7c6f4b",
       "functions": [
         {
           "name": "useReconnect",
@@ -1119,31 +977,6 @@
         "DepthQuote"
       ],
       "totalLines": 73,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/src/modules/market/KLineChart.style.test.tsx": {
-      "filePath": "frontend/src/modules/market/KLineChart.style.test.tsx",
-      "contentHash": "960feec56fb961302fa25f52887aa5e1df64365f418e8a35ec5365a002afb4f2",
-      "functions": [],
-      "classes": [],
-      "imports": [
-        {
-          "source": "vitest",
-          "specifiers": [
-            "describe",
-            "it",
-            "expect"
-          ]
-        },
-        {
-          "source": "./KLineChart",
-          "specifiers": [
-            "KLineChart"
-          ]
-        }
-      ],
-      "exports": [],
-      "totalLines": 11,
       "hasStructuralAnalysis": true
     },
     "frontend/src/modules/market/KLineChart.test.tsx": {
@@ -1323,13 +1156,13 @@
     },
     "frontend/src/modules/market/MarketPanel.tsx": {
       "filePath": "frontend/src/modules/market/MarketPanel.tsx",
-      "contentHash": "f6902e0c8f088dd36a433f0ceb6e72b15b34a2e2f56e4f4717458680527bc55e",
+      "contentHash": "b35de25103392273ad134e5d413476a02e2891d09e657e3689f3e6d40096cbe1",
       "functions": [
         {
           "name": "MarketPanel",
           "params": [],
           "exported": true,
-          "lineCount": 139
+          "lineCount": 140
         }
       ],
       "classes": [],
@@ -1434,7 +1267,7 @@
       "exports": [
         "MarketPanel"
       ],
-      "totalLines": 159,
+      "totalLines": 160,
       "hasStructuralAnalysis": true
     },
     "frontend/src/modules/market/MarketTable.test.tsx": {
@@ -1479,7 +1312,7 @@
     },
     "frontend/src/modules/market/MarketTable.tsx": {
       "filePath": "frontend/src/modules/market/MarketTable.tsx",
-      "contentHash": "c0f546fa21e16cbc6d7353c3082355009310c96368d14258b36b4ccd7bb7e863",
+      "contentHash": "a17fabecab1db051a02d444e8f03174a50874ec1d2c9937024aee18c0d169aed",
       "functions": [
         {
           "name": "buildRecord",
@@ -1496,7 +1329,7 @@
             "{ contracts, snapshots, selectedInstrument, onRowClick, onRowDoubleClick }"
           ],
           "exported": true,
-          "lineCount": 117
+          "lineCount": 125
         }
       ],
       "classes": [],
@@ -1525,7 +1358,7 @@
       "exports": [
         "MarketTable"
       ],
-      "totalLines": 171,
+      "totalLines": 179,
       "hasStructuralAnalysis": true
     },
     "frontend/src/modules/market/store.test.ts": {
@@ -1617,69 +1450,13 @@
     },
     "frontend/src/modules/market/styles.css": {
       "filePath": "frontend/src/modules/market/styles.css",
-      "contentHash": "e8975fa0e4d41853c39bfdce943a4c2bb15c8734be1aba015e2ebcd18a51a10a",
+      "contentHash": "12370d0c4b058df2f050f32ab33806011cb8deffeca1638019f845d07acc53a9",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 114,
+      "totalLines": 123,
       "hasStructuralAnalysis": false
-    },
-    "frontend/src/modules/order/OrderPanel.test.tsx": {
-      "filePath": "frontend/src/modules/order/OrderPanel.test.tsx",
-      "contentHash": "2d05b831b16f27d44f7580f76e3f38f26998eb9e92209997e71d8b81a0d75bac",
-      "functions": [],
-      "classes": [],
-      "imports": [
-        {
-          "source": "vitest",
-          "specifiers": [
-            "describe",
-            "it",
-            "expect"
-          ]
-        },
-        {
-          "source": "@testing-library/react",
-          "specifiers": [
-            "render",
-            "screen"
-          ]
-        },
-        {
-          "source": "./OrderPanel",
-          "specifiers": [
-            "OrderPanel"
-          ]
-        }
-      ],
-      "exports": [],
-      "totalLines": 16,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/src/modules/order/OrderPanel.tsx": {
-      "filePath": "frontend/src/modules/order/OrderPanel.tsx",
-      "contentHash": "dfcd596b3b1987ad172e57ca2d453e392d21705e8d3c135a8c4809cfeb5b38b3",
-      "functions": [
-        {
-          "name": "OrderPanel",
-          "params": [],
-          "exported": true,
-          "lineCount": 12
-        }
-      ],
-      "classes": [],
-      "imports": [
-        {
-          "source": "./styles.css",
-          "specifiers": []
-        }
-      ],
-      "exports": [
-        "OrderPanel"
-      ],
-      "totalLines": 15,
-      "hasStructuralAnalysis": true
     },
     "frontend/src/modules/order/store.test.ts": {
       "filePath": "frontend/src/modules/order/store.test.ts",
@@ -1988,102 +1765,12 @@
     },
     "frontend/src/services/types.ts": {
       "filePath": "frontend/src/services/types.ts",
-      "contentHash": "3111ab49055ea81057b5a720f5dc43f0079f1c1f6462b804a4e8934f1f6b72a9",
+      "contentHash": "7ed6ec8e77d4a98c92e558fb785ab61999eb9d9875e1e26296132da4d7d07b95",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
       "totalLines": 292,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/src/services/ws.test.ts": {
-      "filePath": "frontend/src/services/ws.test.ts",
-      "contentHash": "cc17c0081fd546a13cc1e6a396f2dbe1b51cfbc0940cd628eb8a75e911e8d33a",
-      "functions": [],
-      "classes": [
-        {
-          "name": "MockWebSocket",
-          "methods": [
-            "constructor",
-            "close",
-            "send"
-          ],
-          "properties": [
-            "CONNECTING",
-            "OPEN",
-            "CLOSING",
-            "CLOSED",
-            "instances",
-            "onopen",
-            "onclose",
-            "onmessage",
-            "onerror",
-            "readyState",
-            "url"
-          ],
-          "exported": false,
-          "lineCount": 24
-        }
-      ],
-      "imports": [
-        {
-          "source": "vitest",
-          "specifiers": [
-            "describe",
-            "it",
-            "expect",
-            "vi",
-            "beforeEach",
-            "afterEach"
-          ]
-        },
-        {
-          "source": "./ws",
-          "specifiers": [
-            "WSManager"
-          ]
-        }
-      ],
-      "exports": [],
-      "totalLines": 93,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/src/services/ws.ts": {
-      "filePath": "frontend/src/services/ws.ts",
-      "contentHash": "d56f34332c802d2a1e894e8852dec32014045475f3ecf46889bbfd1ef6a19341",
-      "functions": [],
-      "classes": [
-        {
-          "name": "WSManager",
-          "methods": [
-            "constructor",
-            "connect",
-            "disconnect",
-            "disconnectAll",
-            "isConnected",
-            "send"
-          ],
-          "properties": [
-            "baseUrl",
-            "connections",
-            "callbacks"
-          ],
-          "exported": true,
-          "lineCount": 99
-        }
-      ],
-      "imports": [
-        {
-          "source": "./types",
-          "specifiers": [
-            "WSMessage"
-          ]
-        }
-      ],
-      "exports": [
-        "WSManager"
-      ],
-      "totalLines": 106,
       "hasStructuralAnalysis": true
     },
     "frontend/src/setupTests.ts": {
@@ -2105,121 +1792,6 @@
       ],
       "exports": [],
       "totalLines": 15,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/src/stores/connection.test.ts": {
-      "filePath": "frontend/src/stores/connection.test.ts",
-      "contentHash": "f441cd858a3efc5a298d96da0ea643b406ee05d2462312426330d7b60b80f521",
-      "functions": [],
-      "classes": [],
-      "imports": [
-        {
-          "source": "vitest",
-          "specifiers": [
-            "describe",
-            "it",
-            "expect",
-            "beforeEach"
-          ]
-        },
-        {
-          "source": "./connection",
-          "specifiers": [
-            "useConnectionStore"
-          ]
-        }
-      ],
-      "exports": [],
-      "totalLines": 32,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/src/stores/connection.ts": {
-      "filePath": "frontend/src/stores/connection.ts",
-      "contentHash": "8007df9259a0570fcb6ae2dd046f8182f41c08399262f6c3a39c678ad01c7792",
-      "functions": [],
-      "classes": [],
-      "imports": [
-        {
-          "source": "zustand",
-          "specifiers": [
-            "create"
-          ]
-        }
-      ],
-      "exports": [
-        "useConnectionStore"
-      ],
-      "totalLines": 16,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/src/stores/contracts.test.ts": {
-      "filePath": "frontend/src/stores/contracts.test.ts",
-      "contentHash": "6ee36dc450736c7d441c2e3d184487fbd507f2163f0f4bb8b726ad7097f35933",
-      "functions": [],
-      "classes": [],
-      "imports": [
-        {
-          "source": "vitest",
-          "specifiers": [
-            "describe",
-            "it",
-            "expect",
-            "beforeEach"
-          ]
-        },
-        {
-          "source": "./contracts",
-          "specifiers": [
-            "useContractsStore"
-          ]
-        }
-      ],
-      "exports": [],
-      "totalLines": 52,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/src/stores/contracts.ts": {
-      "filePath": "frontend/src/stores/contracts.ts",
-      "contentHash": "888f60f1eec326f20fcaad441eb98b8da06cc4e43520d8805822f82b7edd2661",
-      "functions": [],
-      "classes": [],
-      "imports": [
-        {
-          "source": "zustand",
-          "specifiers": [
-            "create"
-          ]
-        },
-        {
-          "source": "@/services/types",
-          "specifiers": [
-            "ContractInfo"
-          ]
-        }
-      ],
-      "exports": [
-        "useContractsStore"
-      ],
-      "totalLines": 26,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/src/stores/contractsMockData.ts": {
-      "filePath": "frontend/src/stores/contractsMockData.ts",
-      "contentHash": "e09fe25362478ae48ab8f0dab00204c04a8be1b1314474647e16b673cf290160",
-      "functions": [],
-      "classes": [],
-      "imports": [
-        {
-          "source": "@/services/types",
-          "specifiers": [
-            "ContractInfo"
-          ]
-        }
-      ],
-      "exports": [
-        "MOCK_CONTRACTS"
-      ],
-      "totalLines": 170,
       "hasStructuralAnalysis": true
     },
     "frontend/src/stores/userPrefs.test.ts": {
@@ -2364,66 +1936,6 @@
         "formatPercent"
       ],
       "totalLines": 42,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/src/utils/panelStorage.test.ts": {
-      "filePath": "frontend/src/utils/panelStorage.test.ts",
-      "contentHash": "fe424775c9eafcf8e77626a17cba111538b573a9e811a368126aee51f83a79ee",
-      "functions": [],
-      "classes": [],
-      "imports": [
-        {
-          "source": "vitest",
-          "specifiers": [
-            "describe",
-            "it",
-            "expect",
-            "beforeEach"
-          ]
-        },
-        {
-          "source": "./panelStorage",
-          "specifiers": [
-            "savePanelSizes",
-            "loadPanelSizes"
-          ]
-        }
-      ],
-      "exports": [],
-      "totalLines": 35,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/src/utils/panelStorage.ts": {
-      "filePath": "frontend/src/utils/panelStorage.ts",
-      "contentHash": "1b824673ebdaf83c4e867e9c1fb73535181ad1fa52143b64b30b306915b3342e",
-      "functions": [
-        {
-          "name": "savePanelSizes",
-          "params": [
-            "layoutKey",
-            "sizes"
-          ],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 7
-        },
-        {
-          "name": "loadPanelSizes",
-          "params": [
-            "layoutKey"
-          ],
-          "returnType": "Record<string, number> | null",
-          "exported": true,
-          "lineCount": 9
-        }
-      ],
-      "classes": [],
-      "imports": [],
-      "exports": [
-        "savePanelSizes",
-        "loadPanelSizes"
-      ],
-      "totalLines": 20,
       "hasStructuralAnalysis": true
     },
     "frontend/src/utils/validators.test.ts": {
@@ -2647,15 +2159,15 @@
       "totalLines": 295,
       "hasStructuralAnalysis": true
     },
-    "README.md": {
-      "filePath": "README.md",
-      "contentHash": "a820d3617d5fac2af053691d8faa240f82076ee08e59843a611184e74f7a976c",
+    "server/.env.sample": {
+      "filePath": "server/.env.sample",
+      "contentHash": "17d16048541b5d0f751bdf30645a30ec161d96a2f72f1413b5912c06a4b73541",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 79,
-      "hasStructuralAnalysis": true
+      "totalLines": 32,
+      "hasStructuralAnalysis": false
     },
     "server/__init__.py": {
       "filePath": "server/__init__.py",
@@ -2666,16 +2178,6 @@
       "exports": [],
       "totalLines": 4,
       "hasStructuralAnalysis": true
-    },
-    "server/.env.sample": {
-      "filePath": "server/.env.sample",
-      "contentHash": "17d16048541b5d0f751bdf30645a30ec161d96a2f72f1413b5912c06a4b73541",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 32,
-      "hasStructuralAnalysis": false
     },
     "server/api/__init__.py": {
       "filePath": "server/api/__init__.py",
@@ -2689,7 +2191,7 @@
     },
     "server/api/connection.py": {
       "filePath": "server/api/connection.py",
-      "contentHash": "6976dbf56b416504c8a2e01eb441fd2e17936ef48a312673fceda35edf1fdad9",
+      "contentHash": "569b56ab19db24b5c7f528cdd686afffbd1a3d09493bb31b818ac5b7dd1d9aa1",
       "functions": [
         {
           "name": "login",
@@ -2698,7 +2200,7 @@
             "request"
           ],
           "exported": true,
-          "lineCount": 37
+          "lineCount": 40
         },
         {
           "name": "logout",
@@ -2706,7 +2208,7 @@
             "request"
           ],
           "exported": true,
-          "lineCount": 19
+          "lineCount": 23
         },
         {
           "name": "status",
@@ -2714,7 +2216,7 @@
             "request"
           ],
           "exported": true,
-          "lineCount": 17
+          "lineCount": 26
         }
       ],
       "classes": [
@@ -2770,7 +2272,7 @@
         {
           "source": "services.ctp_startup",
           "specifiers": [
-            "connect_ctp"
+            "connect_trading"
           ]
         }
       ],
@@ -2782,12 +2284,12 @@
         "logout",
         "status"
       ],
-      "totalLines": 114,
+      "totalLines": 137,
       "hasStructuralAnalysis": true
     },
     "server/api/market.py": {
       "filePath": "server/api/market.py",
-      "contentHash": "744d94a3f98a7b82e11c277ae6aa20311548f647f7482c9d0147d2cd707cb6d0",
+      "contentHash": "bf9971ee2cd7eae636dbeff7bee8d5d38221216f4334e592afe6b042f74f419e",
       "functions": [
         {
           "name": "_get_service",
@@ -2845,13 +2347,21 @@
           "lineCount": 22
         },
         {
+          "name": "refresh_instruments",
+          "params": [
+            "request"
+          ],
+          "exported": true,
+          "lineCount": 40
+        },
+        {
           "name": "get_depth",
           "params": [
             "request",
             "instrument"
           ],
           "exported": true,
-          "lineCount": 35
+          "lineCount": 39
         }
       ],
       "classes": [
@@ -2875,6 +2385,18 @@
         }
       ],
       "imports": [
+        {
+          "source": "asyncio",
+          "specifiers": [
+            "asyncio"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
         {
           "source": "typing",
           "specifiers": [
@@ -2906,82 +2428,311 @@
         "unsubscribe",
         "get_snapshots",
         "get_kline",
+        "refresh_instruments",
         "get_depth"
       ],
-      "totalLines": 156,
+      "totalLines": 204,
       "hasStructuralAnalysis": true
     },
     "server/api/order.py": {
       "filePath": "server/api/order.py",
-      "contentHash": "d0d258e9563196181a28705490cacebfc9b7449fd2509ada6264f092e5219b60",
+      "contentHash": "50dade7472f6e07358c3a6ead71c8976188473cd057056ced1bc8198ada3063c",
       "functions": [
         {
           "name": "insert_order",
-          "params": [],
+          "params": [
+            "request",
+            "body"
+          ],
           "exported": true,
-          "lineCount": 3
+          "lineCount": 23
         },
         {
           "name": "cancel_order",
-          "params": [],
+          "params": [
+            "request",
+            "body"
+          ],
           "exported": true,
-          "lineCount": 3
+          "lineCount": 10
+        },
+        {
+          "name": "order_status",
+          "params": [
+            "request",
+            "order_ref"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "cancel_all_orders",
+          "params": [
+            "request"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "reverse_position",
+          "params": [
+            "request",
+            "body"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "lock_position",
+          "params": [
+            "request",
+            "body"
+          ],
+          "exported": true,
+          "lineCount": 9
         }
       ],
-      "classes": [],
+      "classes": [
+        {
+          "name": "InsertOrderRequest",
+          "methods": [
+            "validate_time_volume_condition"
+          ],
+          "properties": [
+            "instrumentID",
+            "direction",
+            "offsetFlag",
+            "priceType",
+            "limitPrice",
+            "volumeTotalOriginal",
+            "timeCondition",
+            "volumeCondition",
+            "hedgeFlag",
+            "exchangeID"
+          ],
+          "exported": true,
+          "lineCount": 34
+        },
+        {
+          "name": "CancelOrderRequest",
+          "methods": [],
+          "properties": [
+            "orderRef",
+            "orderSysID"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "ReverseOrderRequest",
+          "methods": [],
+          "properties": [
+            "instrumentID"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "LockOrderRequest",
+          "methods": [],
+          "properties": [
+            "instrumentID"
+          ],
+          "exported": true,
+          "lineCount": 4
+        }
+      ],
       "imports": [
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Optional"
+          ]
+        },
         {
           "source": "fastapi",
           "specifiers": [
-            "APIRouter"
+            "APIRouter",
+            "Request",
+            "HTTPException"
+          ]
+        },
+        {
+          "source": "pydantic",
+          "specifiers": [
+            "BaseModel",
+            "Field",
+            "field_validator",
+            "model_validator"
           ]
         }
       ],
       "exports": [
+        "InsertOrderRequest",
+        "CancelOrderRequest",
+        "ReverseOrderRequest",
+        "LockOrderRequest",
         "insert_order",
-        "cancel_order"
+        "cancel_order",
+        "order_status",
+        "cancel_all_orders",
+        "reverse_position",
+        "lock_position"
       ],
-      "totalLines": 18,
+      "totalLines": 158,
       "hasStructuralAnalysis": true
     },
     "server/api/query.py": {
       "filePath": "server/api/query.py",
-      "contentHash": "39c43968674a9ecd8c8e6658885fb84e729982a2e794be622e94094f54458a09",
+      "contentHash": "77b292f824e5f93723b495f835a7cc00350d7783958f680ca3975ef973befa22",
       "functions": [
         {
-          "name": "get_positions",
-          "params": [],
+          "name": "_get_query_service",
+          "params": [
+            "request"
+          ],
           "exported": true,
           "lineCount": 3
+        },
+        {
+          "name": "_get_market_service",
+          "params": [
+            "request"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "_get_trader_api",
+          "params": [
+            "request"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "get_positions",
+          "params": [
+            "request"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "refresh_positions",
+          "params": [
+            "request"
+          ],
+          "exported": true,
+          "lineCount": 26
         },
         {
           "name": "get_account",
-          "params": [],
+          "params": [
+            "request"
+          ],
           "exported": true,
-          "lineCount": 3
+          "lineCount": 9
+        },
+        {
+          "name": "refresh_account",
+          "params": [
+            "request"
+          ],
+          "exported": true,
+          "lineCount": 17
         },
         {
           "name": "get_orders",
-          "params": [],
+          "params": [
+            "request"
+          ],
           "exported": true,
-          "lineCount": 3
+          "lineCount": 9
+        },
+        {
+          "name": "refresh_orders",
+          "params": [
+            "request"
+          ],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "get_trades",
+          "params": [
+            "request"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "refresh_trades",
+          "params": [
+            "request"
+          ],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "get_contracts",
+          "params": [
+            "request",
+            "keyword"
+          ],
+          "exported": true,
+          "lineCount": 10
         }
       ],
       "classes": [],
       "imports": [
         {
+          "source": "asyncio",
+          "specifiers": [
+            "asyncio"
+          ]
+        },
+        {
+          "source": "logging",
+          "specifiers": [
+            "logging"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Optional"
+          ]
+        },
+        {
           "source": "fastapi",
           "specifiers": [
-            "APIRouter"
+            "APIRouter",
+            "Request"
           ]
         }
       ],
       "exports": [
+        "_get_query_service",
+        "_get_market_service",
+        "_get_trader_api",
         "get_positions",
+        "refresh_positions",
         "get_account",
-        "get_orders"
+        "refresh_account",
+        "get_orders",
+        "refresh_orders",
+        "get_trades",
+        "refresh_trades",
+        "get_contracts"
       ],
-      "totalLines": 24,
+      "totalLines": 193,
       "hasStructuralAnalysis": true
     },
     "server/config.py": {
@@ -3041,7 +2792,7 @@
     },
     "server/ctp_wrapper/callback.py": {
       "filePath": "server/ctp_wrapper/callback.py",
-      "contentHash": "e6284dc76852f50e088ca3edfc9187efdebe1111f37c4b53abe10d3fa228e4ac",
+      "contentHash": "260a11c225af46aceb18b09356f28b11442d78e2f9b4d832a11161ce72229987",
       "functions": [
         {
           "name": "_make_md_spi_class",
@@ -3216,6 +2967,18 @@
           "lineCount": 6
         },
         {
+          "name": "_td_on_err_rtn_order_action",
+          "params": [
+            "pOrderAction",
+            "pRspInfo",
+            "nRequestID",
+            "bIsLast"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
           "name": "_td_on_rsp_error",
           "params": [
             "pRspInfo",
@@ -3225,6 +2988,26 @@
           "returnType": "None",
           "exported": true,
           "lineCount": 4
+        },
+        {
+          "name": "_td_on_rsp_qry_instrument",
+          "params": [
+            "pInstrument",
+            "pRspInfo",
+            "nRequestID",
+            "bIsLast"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "_make_qry_callback",
+          "params": [
+            "event_name"
+          ],
+          "exported": true,
+          "lineCount": 14
         }
       ],
       "classes": [
@@ -3284,9 +3067,12 @@
         "_td_on_rtn_trade",
         "_td_on_rsp_order_insert",
         "_td_on_rsp_order_action",
-        "_td_on_rsp_error"
+        "_td_on_err_rtn_order_action",
+        "_td_on_rsp_error",
+        "_td_on_rsp_qry_instrument",
+        "_make_qry_callback"
       ],
-      "totalLines": 215,
+      "totalLines": 265,
       "hasStructuralAnalysis": true
     },
     "server/ctp_wrapper/md_user_api.py": {
@@ -3332,7 +3118,7 @@
     },
     "server/ctp_wrapper/trader_api.py": {
       "filePath": "server/ctp_wrapper/trader_api.py",
-      "contentHash": "0d37eb0569217774207cf31b4b0b9a43d8f49e4fc601e70fd7e070b012b43bb4",
+      "contentHash": "25b89946a69a51d83f0be91dc84c543d1a0686277bab19c56ccd7d0545d41ea1",
       "functions": [],
       "classes": [
         {
@@ -3341,17 +3127,29 @@
             "__init__",
             "create",
             "login",
-            "_next_order_ref",
+            "confirm_settlement",
+            "next_order_ref",
             "insert_order",
             "cancel_order",
+            "query_instruments",
+            "query_orders",
+            "query_trades",
+            "query_positions",
+            "query_account",
             "release"
           ],
           "properties": [],
           "exported": true,
-          "lineCount": 127
+          "lineCount": 283
         }
       ],
       "imports": [
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
         {
           "source": "typing",
           "specifiers": [
@@ -3369,19 +3167,24 @@
           "specifiers": [
             "Direction",
             "OffsetFlag",
-            "OrderPriceType"
+            "OrderPriceType",
+            "TimeCondition",
+            "VolumeCondition",
+            "CombHedgeFlag",
+            "ContingentCondition",
+            "ForceCloseReason"
           ]
         }
       ],
       "exports": [
         "TraderApi"
       ],
-      "totalLines": 144,
+      "totalLines": 310,
       "hasStructuralAnalysis": true
     },
     "server/ctp_wrapper/types.py": {
       "filePath": "server/ctp_wrapper/types.py",
-      "contentHash": "660b0097f3323fd4bcd80742d4aaab7888972ca48e3d11ab5dd16217c4ea75f8",
+      "contentHash": "1f99c7890ed18fb33cd4255095c9f82138b28df9d5e67602c2227689ed7866d5",
       "functions": [],
       "classes": [
         {
@@ -3444,10 +3247,13 @@
             "ALL_TRADED",
             "PART_TRADED",
             "NO_TRADED",
-            "CANCELED"
+            "NO_TRADED_NOT_QUEUING",
+            "NO_TRADED_QUEUING",
+            "CANCELED",
+            "UNKNOWN"
           ],
           "exported": true,
-          "lineCount": 6
+          "lineCount": 9
         },
         {
           "name": "PosiDirection",
@@ -3470,6 +3276,41 @@
           ],
           "exported": true,
           "lineCount": 5
+        },
+        {
+          "name": "CombHedgeFlag",
+          "methods": [],
+          "properties": [
+            "SPECULATION",
+            "ARBITRAGE",
+            "HEDGE"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "ContingentCondition",
+          "methods": [],
+          "properties": [
+            "IMMEDIATELY",
+            "STOP",
+            "STOP_PROFIT",
+            "PARKED"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "ForceCloseReason",
+          "methods": [],
+          "properties": [
+            "NOT_FORCE_CLOSE",
+            "LACK_DEPOSIT",
+            "CLIENT_OVER_POSITION",
+            "MEMBER_OVER_POSITION"
+          ],
+          "exported": true,
+          "lineCount": 6
         }
       ],
       "imports": [],
@@ -3481,9 +3322,12 @@
         "VolumeCondition",
         "OrderStatus",
         "PosiDirection",
-        "ProductClass"
+        "ProductClass",
+        "CombHedgeFlag",
+        "ContingentCondition",
+        "ForceCloseReason"
       ],
-      "totalLines": 61,
+      "totalLines": 87,
       "hasStructuralAnalysis": true
     },
     "server/data/__init__.py": {
@@ -3498,7 +3342,7 @@
     },
     "server/data/instruments.json": {
       "filePath": "server/data/instruments.json",
-      "contentHash": "fc271653ec6edc39a0559649d85410f59d7cab31feac3ea5999294586858a3f2",
+      "contentHash": "7a1d63af1c828f3355034f229c8dbdd029b59f5708975c7ecb4ed76ca28d6b89",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -3508,14 +3352,14 @@
     },
     "server/main.py": {
       "filePath": "server/main.py",
-      "contentHash": "ea0ae1d25cc3831680b952c9407523545ac65a7e323f1dd8d623252e0affcf54",
+      "contentHash": "8ca0e783b5e72d7e0e5bffd038c8a9fc9316141454f327b62d7839c2099b8ea6",
       "functions": [
         {
           "name": "create_app",
           "params": [],
           "returnType": "FastAPI",
           "exported": true,
-          "lineCount": 95
+          "lineCount": 102
         },
         {
           "name": "wire_ctp_market_bridge",
@@ -3617,6 +3461,12 @@
           ]
         },
         {
+          "source": "services.query_service",
+          "specifiers": [
+            "QueryService"
+          ]
+        },
+        {
           "source": "services.ctp_bridge",
           "specifiers": [
             "wire_market_data_callback"
@@ -3625,7 +3475,8 @@
         {
           "source": "services.ctp_startup",
           "specifiers": [
-            "connect_ctp"
+            "connect_ctp",
+            "start_ctp_trading_connection"
           ]
         },
         {
@@ -3639,7 +3490,7 @@
         "create_app",
         "wire_ctp_market_bridge"
       ],
-      "totalLines": 182,
+      "totalLines": 190,
       "hasStructuralAnalysis": true
     },
     "server/models/__init__.py": {
@@ -3954,74 +3805,30 @@
       "totalLines": 2,
       "hasStructuralAnalysis": true
     },
-    "server/services/ctp_bridge.py": {
-      "filePath": "server/services/ctp_bridge.py",
-      "contentHash": "0565fd70d2edf2bdcc674dd248a70c273d6396c6a35f289b54fcfc7f32f869a8",
+    "server/services/ctp_startup.py": {
+      "filePath": "server/services/ctp_startup.py",
+      "contentHash": "e498f3f9ca6fd0098362a8858bc65fc81401f47215aa2428ef52b8d87040c1ef",
       "functions": [
         {
-          "name": "wire_market_data_callback",
+          "name": "_wire_instrument_query",
           "params": [
-            "md_spi",
-            "market_service",
-            "broadcast_fn",
-            "kline_service"
+            "app",
+            "trader_spi"
           ],
           "returnType": "None",
           "exported": true,
-          "lineCount": 50
-        }
-      ],
-      "classes": [],
-      "imports": [
-        {
-          "source": "logging",
-          "specifiers": [
-            "logging"
-          ]
+          "lineCount": 20
         },
         {
-          "source": "typing",
-          "specifiers": [
-            "Any",
-            "Callable",
-            "Optional"
-          ]
+          "name": "_wire_query_callbacks",
+          "params": [
+            "app",
+            "trader_spi"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 29
         },
-        {
-          "source": "services.field_mapping",
-          "specifiers": [
-            "map_depth_market_data"
-          ]
-        },
-        {
-          "source": "ctp_wrapper.callback",
-          "specifiers": [
-            "MdSpi"
-          ]
-        },
-        {
-          "source": "services.market_service",
-          "specifiers": [
-            "MarketService"
-          ]
-        },
-        {
-          "source": "services.kline_service",
-          "specifiers": [
-            "KLineService"
-          ]
-        }
-      ],
-      "exports": [
-        "wire_market_data_callback"
-      ],
-      "totalLines": 80,
-      "hasStructuralAnalysis": true
-    },
-    "server/services/ctp_startup.py": {
-      "filePath": "server/services/ctp_startup.py",
-      "contentHash": "cd0acf797eed76ac7ef2044b2f3ec0834d1aebc9e5e1e1738f50bdf51bbe564a",
-      "functions": [
         {
           "name": "connect_ctp",
           "params": [
@@ -4043,7 +3850,7 @@
           ],
           "returnType": "dict",
           "exported": true,
-          "lineCount": 19
+          "lineCount": 21
         },
         {
           "name": "_connect_ctp",
@@ -4081,6 +3888,32 @@
           "returnType": "bool",
           "exported": true,
           "lineCount": 63
+        },
+        {
+          "name": "start_ctp_trading_connection",
+          "params": [
+            "app",
+            "config",
+            "broker_id",
+            "user_id",
+            "password"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 161
+        },
+        {
+          "name": "connect_trading",
+          "params": [
+            "app",
+            "broker_id",
+            "user_id",
+            "password",
+            "wait"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 190
         }
       ],
       "classes": [],
@@ -4113,6 +3946,12 @@
           ]
         },
         {
+          "source": "config",
+          "specifiers": [
+            "Config"
+          ]
+        },
+        {
           "source": "services.ctp_bridge",
           "specifiers": [
             "wire_market_data_callback"
@@ -4120,19 +3959,33 @@
         }
       ],
       "exports": [
+        "_wire_instrument_query",
+        "_wire_query_callbacks",
         "connect_ctp",
         "start_ctp_market_connection",
         "_connect_ctp",
         "_wire_bridge",
-        "_attempt_reconnect"
+        "_attempt_reconnect",
+        "start_ctp_trading_connection",
+        "connect_trading"
       ],
-      "totalLines": 351,
+      "totalLines": 764,
       "hasStructuralAnalysis": true
     },
     "server/services/field_mapping.py": {
       "filePath": "server/services/field_mapping.py",
-      "contentHash": "b25593c7f338e16c47e4a11803534b89c2797e34d89a9a7dc5cddc4384c63e28",
+      "contentHash": "ac063bf58cbe4802bd2b600f9dff5db3d9eef496a8c43b53c1b86b50f9280e11",
       "functions": [
+        {
+          "name": "_sanitize_price",
+          "params": [
+            "value",
+            "default"
+          ],
+          "returnType": "float",
+          "exported": true,
+          "lineCount": 3
+        },
         {
           "name": "map_depth_market_data",
           "params": [
@@ -4140,11 +3993,71 @@
           ],
           "returnType": "dict",
           "exported": true,
-          "lineCount": 14
+          "lineCount": 23
+        },
+        {
+          "name": "map_input_order",
+          "params": [
+            "ctp_obj"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "map_order",
+          "params": [
+            "ctp_obj"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "map_trade",
+          "params": [
+            "ctp_obj"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "map_instrument",
+          "params": [
+            "ctp_obj"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "map_position",
+          "params": [
+            "ctp_obj"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "map_account",
+          "params": [
+            "ctp_obj"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 13
         }
       ],
       "classes": [],
       "imports": [
+        {
+          "source": "math",
+          "specifiers": [
+            "math"
+          ]
+        },
         {
           "source": "typing",
           "specifiers": [
@@ -4155,93 +4068,21 @@
         }
       ],
       "exports": [
-        "map_depth_market_data"
+        "_sanitize_price",
+        "map_depth_market_data",
+        "map_input_order",
+        "map_order",
+        "map_trade",
+        "map_instrument",
+        "map_position",
+        "map_account"
       ],
-      "totalLines": 77,
-      "hasStructuralAnalysis": true
-    },
-    "server/services/kline_service.py": {
-      "filePath": "server/services/kline_service.py",
-      "contentHash": "ef0394fe13c374e4073fdc2b8a0b9fad45fa93be8ce4b109fb4b06c7ce019d7e",
-      "functions": [
-        {
-          "name": "_parse_timestamp",
-          "params": [
-            "action_day",
-            "update_time"
-          ],
-          "returnType": "int",
-          "exported": true,
-          "lineCount": 24
-        },
-        {
-          "name": "_format_time",
-          "params": [
-            "timestamp"
-          ],
-          "returnType": "str",
-          "exported": true,
-          "lineCount": 6
-        }
-      ],
-      "classes": [
-        {
-          "name": "KLineService",
-          "methods": [
-            "__init__",
-            "update_tick",
-            "get_klines",
-            "reset"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 118
-        }
-      ],
-      "imports": [
-        {
-          "source": "calendar",
-          "specifiers": [
-            "calendar"
-          ]
-        },
-        {
-          "source": "logging",
-          "specifiers": [
-            "logging"
-          ]
-        },
-        {
-          "source": "threading",
-          "specifiers": [
-            "threading"
-          ]
-        },
-        {
-          "source": "time",
-          "specifiers": [
-            "_time"
-          ]
-        },
-        {
-          "source": "typing",
-          "specifiers": [
-            "Dict",
-            "List"
-          ]
-        }
-      ],
-      "exports": [
-        "_parse_timestamp",
-        "_format_time",
-        "KLineService"
-      ],
-      "totalLines": 189,
+      "totalLines": 342,
       "hasStructuralAnalysis": true
     },
     "server/services/market_service.py": {
       "filePath": "server/services/market_service.py",
-      "contentHash": "f23241698671f4265cca5745cc52b1de6124f6887ef5d93a7ff3f005cfa1ef2e",
+      "contentHash": "c08393e1a75fffe1525ac91c45d989ff0723195f6b9fa0c08235ff5f268b64b8",
       "functions": [],
       "classes": [
         {
@@ -4260,13 +4101,17 @@
             "snapshot_count",
             "update_snapshot",
             "get_snapshot",
-            "get_all_snapshots"
+            "get_all_snapshots",
+            "set_instruments_callback",
+            "refresh_instruments_from_ctp",
+            "on_instruments_result",
+            "_save_instruments_to_file"
           ],
           "properties": [
             "MAX_SUBSCRIPTIONS"
           ],
           "exported": true,
-          "lineCount": 202
+          "lineCount": 287
         }
       ],
       "imports": [
@@ -4303,7 +4148,7 @@
       "exports": [
         "MarketService"
       ],
-      "totalLines": 217,
+      "totalLines": 302,
       "hasStructuralAnalysis": true
     },
     "server/services/reconnect.py": {
@@ -4437,7 +4282,7 @@
     },
     "server/tests/test_callback.py": {
       "filePath": "server/tests/test_callback.py",
-      "contentHash": "db229239722b8d9ba64bce6ff73e30095d784c669aa4b0522b31538b9f6c6121",
+      "contentHash": "53bb554d09430b7153d7954bd351e5f64ec808ba0a0ffa4aaaaa48610c81f355",
       "functions": [],
       "classes": [
         {
@@ -4474,7 +4319,7 @@
           ],
           "properties": [],
           "exported": true,
-          "lineCount": 74
+          "lineCount": 75
         },
         {
           "name": "TestCallbackLogging",
@@ -4487,6 +4332,39 @@
           "properties": [],
           "exported": true,
           "lineCount": 24
+        },
+        {
+          "name": "TestTraderSpiQryInstrument",
+          "methods": [
+            "test_on_rsp_qry_instrument_exists",
+            "test_on_rsp_qry_instrument_logs_event",
+            "test_on_rsp_qry_instrument_dispatches_handler",
+            "test_on_rsp_qry_instrument_default_does_not_crash"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 35
+        },
+        {
+          "name": "TestTraderSpiQueryCallbacks",
+          "methods": [
+            "test_on_rsp_qry_order_exists",
+            "test_on_rsp_qry_trade_exists",
+            "test_on_rsp_qry_position_exists",
+            "test_on_rsp_qry_account_exists",
+            "test_on_rsp_qry_order_logs_event",
+            "test_on_rsp_qry_trade_logs_event",
+            "test_on_rsp_qry_position_logs_event",
+            "test_on_rsp_qry_account_logs_event",
+            "test_on_rsp_qry_order_dispatches_handler",
+            "test_on_rsp_qry_trade_dispatches_handler",
+            "test_on_rsp_qry_position_dispatches_handler",
+            "test_on_rsp_qry_account_dispatches_handler",
+            "test_query_callbacks_in_defaults_do_not_crash"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 97
         }
       ],
       "imports": [
@@ -4519,97 +4397,11 @@
       "exports": [
         "TestMdSpi",
         "TestTraderSpi",
-        "TestCallbackLogging"
+        "TestCallbackLogging",
+        "TestTraderSpiQryInstrument",
+        "TestTraderSpiQueryCallbacks"
       ],
-      "totalLines": 173,
-      "hasStructuralAnalysis": true
-    },
-    "server/tests/test_config.py": {
-      "filePath": "server/tests/test_config.py",
-      "contentHash": "2dc5479468ea338efc0d89ae6a837954a0ec2c45d715a0454b857f3bce99de2b",
-      "functions": [],
-      "classes": [
-        {
-          "name": "TestConfigDefaults",
-          "methods": [
-            "test_default_broker_id",
-            "test_default_md_front",
-            "test_default_td_front",
-            "test_default_user_id",
-            "test_default_password",
-            "test_default_app_id",
-            "test_default_auth_code"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 30
-        },
-        {
-          "name": "TestConfigFromEnv",
-          "methods": [
-            "test_read_broker_id_from_env",
-            "test_read_md_front_from_env",
-            "test_read_td_front_from_env",
-            "test_read_user_id_from_env",
-            "test_read_password_from_env",
-            "test_read_app_id_from_env",
-            "test_read_all_from_env"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 48
-        },
-        {
-          "name": "TestLoadConfig",
-          "methods": [
-            "test_load_config_returns_config_instance",
-            "test_load_config_from_dotenv",
-            "test_config_repr"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 22
-        }
-      ],
-      "imports": [
-        {
-          "source": "os",
-          "specifiers": [
-            "os"
-          ]
-        },
-        {
-          "source": "sys",
-          "specifiers": [
-            "sys"
-          ]
-        },
-        {
-          "source": "pytest",
-          "specifiers": [
-            "pytest"
-          ]
-        },
-        {
-          "source": "unittest",
-          "specifiers": [
-            "mock"
-          ]
-        },
-        {
-          "source": "config",
-          "specifiers": [
-            "Config",
-            "load_config"
-          ]
-        }
-      ],
-      "exports": [
-        "TestConfigDefaults",
-        "TestConfigFromEnv",
-        "TestLoadConfig"
-      ],
-      "totalLines": 117,
+      "totalLines": 315,
       "hasStructuralAnalysis": true
     },
     "server/tests/test_connection_api.py": {
@@ -4716,78 +4508,9 @@
       "totalLines": 264,
       "hasStructuralAnalysis": true
     },
-    "server/tests/test_ctp_bridge.py": {
-      "filePath": "server/tests/test_ctp_bridge.py",
-      "contentHash": "67afd09b3fe1913a30a8b3615d10f937103d46f8a6b7f6fc666c65f7d09baad7",
-      "functions": [],
-      "classes": [
-        {
-          "name": "_FakeCtpDepthData",
-          "methods": [
-            "__init__"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 21
-        },
-        {
-          "name": "_BroadcastSpy",
-          "methods": [
-            "__init__",
-            "__call__"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 8
-        },
-        {
-          "name": "TestWireMarketDataCallback",
-          "methods": [
-            "test_import",
-            "test_wire_registers_handler_on_spi",
-            "test_ctp_callback_updates_snapshot",
-            "test_ctp_callback_preserves_field_mapping",
-            "test_ctp_callback_broadcasts_data",
-            "test_ctp_callback_missing_instrument_id",
-            "test_ctp_callback_merges_snapshots",
-            "test_wire_without_broadcast_fn"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 139
-        }
-      ],
-      "imports": [
-        {
-          "source": "pytest",
-          "specifiers": [
-            "pytest"
-          ]
-        },
-        {
-          "source": "services.market_service",
-          "specifiers": [
-            "MarketService"
-          ]
-        },
-        {
-          "source": "ctp_wrapper.callback",
-          "specifiers": [
-            "MdSpi"
-          ]
-        }
-      ],
-      "exports": [
-        "_FakeCtpDepthData",
-        "_BroadcastSpy",
-        "TestWireMarketDataCallback"
-      ],
-      "totalLines": 187,
-      "hasStructuralAnalysis": true
-    },
     "server/tests/test_ctp_startup.py": {
       "filePath": "server/tests/test_ctp_startup.py",
-      "contentHash": "baad714d51b4f66a3c0f52a563c9045ddd0e2d5fb24adcdf815493f860201fa3",
+      "contentHash": "629fae9dabe75c956ddb9b5484b26839d337169555756b999c56a9fad95fd069",
       "functions": [],
       "classes": [
         {
@@ -4845,6 +4568,29 @@
           "properties": [],
           "exported": true,
           "lineCount": 87
+        },
+        {
+          "name": "_FakeTraderApi",
+          "methods": [
+            "__init__",
+            "create",
+            "login",
+            "release"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "TestStartCtpTradingConnection",
+          "methods": [
+            "test_creates_trader_api",
+            "test_stores_on_app_state",
+            "test_td_startup_runs_in_thread"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 68
         }
       ],
       "imports": [
@@ -4880,14 +4626,16 @@
         "_FakeMdApi",
         "_FakeApp",
         "TestConnectCtp",
-        "TestConnectCtpInternal"
+        "TestConnectCtpInternal",
+        "_FakeTraderApi",
+        "TestStartCtpTradingConnection"
       ],
-      "totalLines": 190,
+      "totalLines": 286,
       "hasStructuralAnalysis": true
     },
     "server/tests/test_field_mapping.py": {
       "filePath": "server/tests/test_field_mapping.py",
-      "contentHash": "74c3ceb4e07b928bc64cec9857632da8d8cb68ee13f300026f5f4d772e1150a4",
+      "contentHash": "406a2e24ac4cfc216811275766e15b201c104fdeee6960bfd865a667e2ca144b",
       "functions": [],
       "classes": [
         {
@@ -4934,6 +4682,154 @@
           "properties": [],
           "exported": true,
           "lineCount": 68
+        },
+        {
+          "name": "_MockInputOrder",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "_MockOrder",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 30
+        },
+        {
+          "name": "_MockTrade",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "TestMapInputOrder",
+          "methods": [
+            "test_import",
+            "test_returns_dict",
+            "test_maps_core_fields",
+            "test_maps_condition_fields",
+            "test_maps_broker_fields",
+            "test_has_stop_price"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 36
+        },
+        {
+          "name": "TestMapOrder",
+          "methods": [
+            "test_import",
+            "test_returns_dict",
+            "test_maps_identity_fields",
+            "test_maps_status_fields",
+            "test_maps_trade_fields",
+            "test_maps_time_fields",
+            "test_maps_direction_offset"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 41
+        },
+        {
+          "name": "TestMapTrade",
+          "methods": [
+            "test_import",
+            "test_returns_dict",
+            "test_maps_core_fields",
+            "test_maps_order_ref_fields",
+            "test_maps_direction_offset",
+            "test_maps_time_fields"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 33
+        },
+        {
+          "name": "TestOrderMappingEdgeCases",
+          "methods": [
+            "test_missing_attributes_default_order",
+            "test_missing_attributes_default_trade"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 30
+        },
+        {
+          "name": "_MockInstrument",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "TestMapInstrument",
+          "methods": [
+            "test_import",
+            "test_returns_dict",
+            "test_maps_core_fields",
+            "test_maps_product_class",
+            "test_maps_contract_details",
+            "test_maps_options_fields",
+            "test_maps_is_trading",
+            "test_missing_attributes_default"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 70
+        },
+        {
+          "name": "_MockPosition",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "TestMapPosition",
+          "methods": [
+            "test_import",
+            "test_returns_dict",
+            "test_maps_instrument",
+            "test_maps_direction",
+            "test_maps_position_quantities",
+            "test_maps_cost_and_profit",
+            "test_maps_margin",
+            "test_maps_broker_fields",
+            "test_maps_hedge_flag",
+            "test_maps_trading_day",
+            "test_missing_attributes_default"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 62
+        },
+        {
+          "name": "_MockAccount",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "TestMapAccount",
+          "methods": [
+            "test_import",
+            "test_returns_dict",
+            "test_maps_identity",
+            "test_maps_balance",
+            "test_maps_margin",
+            "test_maps_profit",
+            "test_maps_fees",
+            "test_maps_pre_balance",
+            "test_maps_trading_day",
+            "test_missing_attributes_default"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 55
         }
       ],
       "imports": [
@@ -4946,162 +4842,45 @@
         {
           "source": "services.field_mapping",
           "specifiers": [
-            "map_depth_market_data"
+            "map_depth_market_data",
+            "map_input_order",
+            "map_order",
+            "map_trade",
+            "map_position",
+            "map_account"
+          ]
+        },
+        {
+          "source": "services.field_mapping",
+          "specifiers": [
+            "map_instrument"
           ]
         }
       ],
       "exports": [
         "_MockDepthMarketData",
         "TestMapDepthMarketData",
-        "TestMapDepthMarketDataEdgeCases"
+        "TestMapDepthMarketDataEdgeCases",
+        "_MockInputOrder",
+        "_MockOrder",
+        "_MockTrade",
+        "TestMapInputOrder",
+        "TestMapOrder",
+        "TestMapTrade",
+        "TestOrderMappingEdgeCases",
+        "_MockInstrument",
+        "TestMapInstrument",
+        "_MockPosition",
+        "TestMapPosition",
+        "_MockAccount",
+        "TestMapAccount"
       ],
-      "totalLines": 265,
-      "hasStructuralAnalysis": true
-    },
-    "server/tests/test_kline_service.py": {
-      "filePath": "server/tests/test_kline_service.py",
-      "contentHash": "089fa7ecf5c1d89584ce3301263d67ff23c51fc490ea0ebdd3eaf07ede7d8020",
-      "functions": [],
-      "classes": [
-        {
-          "name": "TestParseTimestamp",
-          "methods": [
-            "test_normal",
-            "test_empty_action_day",
-            "test_malformed_action_day",
-            "test_invalid_time"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 20
-        },
-        {
-          "name": "TestKLineServiceInit",
-          "methods": [
-            "test_import",
-            "test_default_state",
-            "test_max_bars_default",
-            "test_max_bars_custom"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 17
-        },
-        {
-          "name": "TestUpdateTick",
-          "methods": [
-            "_make_tick",
-            "test_single_tick_creates_bar",
-            "test_ohlc_correctness",
-            "test_volume_delta",
-            "test_volume_cross_day_reset",
-            "test_multiple_instruments",
-            "test_skip_empty_instrument",
-            "test_skip_invalid_price"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 78
-        },
-        {
-          "name": "TestTimeWindow",
-          "methods": [
-            "_tick",
-            "test_1m_boundary_creates_new_bar",
-            "test_5m_boundary",
-            "test_same_window_merges"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 36
-        },
-        {
-          "name": "TestMultiPeriod",
-          "methods": [
-            "test_all_periods_updated",
-            "test_invalid_period_returns_empty"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 28
-        },
-        {
-          "name": "TestCountLimit",
-          "methods": [
-            "test_count_limits_bars",
-            "test_count_default_100"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 22
-        },
-        {
-          "name": "TestMaxBars",
-          "methods": [
-            "test_max_bars_trims_old"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 20
-        },
-        {
-          "name": "TestThreadSafety",
-          "methods": [
-            "test_concurrent_update_tick"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 30
-        },
-        {
-          "name": "TestReset",
-          "methods": [
-            "test_reset_clears_bars"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 15
-        }
-      ],
-      "imports": [
-        {
-          "source": "threading",
-          "specifiers": [
-            "threading"
-          ]
-        },
-        {
-          "source": "pytest",
-          "specifiers": [
-            "pytest"
-          ]
-        },
-        {
-          "source": "services.kline_service",
-          "specifiers": [
-            "KLineService",
-            "_parse_timestamp",
-            "PERIOD_SECONDS"
-          ]
-        }
-      ],
-      "exports": [
-        "TestParseTimestamp",
-        "TestKLineServiceInit",
-        "TestUpdateTick",
-        "TestTimeWindow",
-        "TestMultiPeriod",
-        "TestCountLimit",
-        "TestMaxBars",
-        "TestThreadSafety",
-        "TestReset"
-      ],
-      "totalLines": 309,
+      "totalLines": 770,
       "hasStructuralAnalysis": true
     },
     "server/tests/test_market_api.py": {
       "filePath": "server/tests/test_market_api.py",
-      "contentHash": "8e5e268ca87fd8d4a8aa2645efc80b44c4fcc30a2201b7a10d198fda0bf00ce4",
+      "contentHash": "b685b29c6aec06d12b27bb67ec64613a5f286baf42353207dbe607247af9036b",
       "functions": [
         {
           "name": "_make_test_app",
@@ -5115,6 +4894,15 @@
           "params": [],
           "exported": true,
           "lineCount": 2
+        },
+        {
+          "name": "_make_app_with_trader",
+          "params": [
+            "trader_api"
+          ],
+          "returnType": "FastAPI",
+          "exported": true,
+          "lineCount": 10
         }
       ],
       "classes": [
@@ -5185,6 +4973,18 @@
           "properties": [],
           "exported": true,
           "lineCount": 54
+        },
+        {
+          "name": "TestInstrumentsRefresh",
+          "methods": [
+            "test_refresh_returns_started",
+            "test_refresh_fails_without_trader",
+            "test_refresh_fails_when_not_logged_in",
+            "test_refresh_fails_when_query_fails"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 64
         }
       ],
       "imports": [
@@ -5228,14 +5028,16 @@
         "TestUnsubscribe",
         "TestGetSnapshots",
         "TestGetKline",
-        "TestGetDepth"
+        "TestGetDepth",
+        "_make_app_with_trader",
+        "TestInstrumentsRefresh"
       ],
-      "totalLines": 359,
+      "totalLines": 439,
       "hasStructuralAnalysis": true
     },
     "server/tests/test_market_service.py": {
       "filePath": "server/tests/test_market_service.py",
-      "contentHash": "76b66ead79dec81eff49cb98d022aac23ba1e44025c5846c03728b6eff5c14dd",
+      "contentHash": "e96738cabb8068ad2b99fcbe74934228c8756231169f48b9af8ed7ad4d46c907",
       "functions": [],
       "classes": [
         {
@@ -5294,12 +5096,12 @@
             "test_unsubscribe_calls_ctp_fn_only_for_subscribed",
             "test_subscribe_without_hooks_no_error",
             "test_unsubscribe_without_hooks_no_error",
-            "test_subscribe_ctp_fn_exception_does_not_break",
-            "test_unsubscribe_ctp_fn_exception_does_not_break"
+            "test_subscribe_ctp_fn_exception_returns_failure",
+            "test_unsubscribe_ctp_fn_exception_returns_failure"
           ],
           "properties": [],
           "exported": true,
-          "lineCount": 96
+          "lineCount": 100
         },
         {
           "name": "TestSubscriptionLimit",
@@ -5337,6 +5139,22 @@
           "properties": [],
           "exported": true,
           "lineCount": 77
+        },
+        {
+          "name": "TestRefreshInstrumentsFromCtp",
+          "methods": [
+            "test_refresh_calls_query_instruments",
+            "test_refresh_returns_error_when_not_logged_in",
+            "test_refresh_returns_error_when_query_fails",
+            "test_refresh_stores_instruments_callback",
+            "test_on_instruments_result_saves_to_file",
+            "test_on_instruments_result_accumulates",
+            "test_on_instruments_result_calls_callback",
+            "test_on_instruments_result_maps_ctp_fields"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 161
         }
       ],
       "imports": [
@@ -5378,102 +5196,10 @@
         "TestCtpHooks",
         "TestSubscriptionLimit",
         "TestSnapshotCache",
-        "TestLoadInstrumentsFromFile"
+        "TestLoadInstrumentsFromFile",
+        "TestRefreshInstrumentsFromCtp"
       ],
-      "totalLines": 515,
-      "hasStructuralAnalysis": true
-    },
-    "server/tests/test_md_user_api.py": {
-      "filePath": "server/tests/test_md_user_api.py",
-      "contentHash": "e1eb9c4d56936a6fab8f3f1025c821f38a187b99c9c7cb8bf1446f1f157e2daf",
-      "functions": [],
-      "classes": [
-        {
-          "name": "TestMdUserApiConstruction",
-          "methods": [
-            "test_import_md_user_api",
-            "test_instantiation_stores_config",
-            "test_instantiation_creates_spi",
-            "test_connection_status_defaults",
-            "test_login_status_defaults",
-            "test_subscribed_instruments_defaults",
-            "test_callback_event_recording"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 32
-        },
-        {
-          "name": "TestMdUserApiSubscribe",
-          "methods": [
-            "_make_api",
-            "test_subscribe_adds_to_list_on_success",
-            "test_subscribe_does_not_add_duplicates",
-            "test_subscribe_does_not_add_on_failure",
-            "test_subscribe_empty_list_returns_minus_one",
-            "test_subscribe_forces_str_conversion",
-            "test_subscribe_forces_str_from_int",
-            "test_subscribe_multiple_instruments",
-            "test_unsubscribe_removes_from_list",
-            "test_unsubscribe_does_not_error_on_missing",
-            "test_unsubscribe_empty_list_returns_minus_one"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 72
-        },
-        {
-          "name": "TestMdUserApiRelease",
-          "methods": [
-            "test_release_clears_connection_status",
-            "test_release_clears_login_status",
-            "test_release_clears_subscribed_instruments",
-            "test_release_calls_api_release",
-            "test_release_handles_none_api"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 35
-        }
-      ],
-      "imports": [
-        {
-          "source": "sys",
-          "specifiers": [
-            "sys"
-          ]
-        },
-        {
-          "source": "os",
-          "specifiers": [
-            "os"
-          ]
-        },
-        {
-          "source": "unittest.mock",
-          "specifiers": [
-            "Mock"
-          ]
-        },
-        {
-          "source": "config",
-          "specifiers": [
-            "Config"
-          ]
-        },
-        {
-          "source": "ctp_wrapper.md_user_api",
-          "specifiers": [
-            "MdUserApi"
-          ]
-        }
-      ],
-      "exports": [
-        "TestMdUserApiConstruction",
-        "TestMdUserApiSubscribe",
-        "TestMdUserApiRelease"
-      ],
-      "totalLines": 156,
+      "totalLines": 684,
       "hasStructuralAnalysis": true
     },
     "server/tests/test_models.py": {
@@ -5660,13 +5386,13 @@
     },
     "server/tests/test_trader_api.py": {
       "filePath": "server/tests/test_trader_api.py",
-      "contentHash": "68e4bcd4047c06571166e8ba5de65cf9ac3fa529e3be06ee98d99bd9019e1f87",
+      "contentHash": "da8847e5a7dd8341f150a4c85642c7616e64be48dfd07b2bbf91affbe4d67d9d",
       "functions": [
         {
           "name": "_mock_ctp_module",
           "params": [],
           "exported": true,
-          "lineCount": 10
+          "lineCount": 15
         },
         {
           "name": "_unmock_ctp",
@@ -5701,11 +5427,12 @@
             "test_insert_order_increments_order_ref",
             "test_next_order_ref_sequence",
             "test_market_order_uses_any_price_type",
-            "test_insert_order_passes_broker_id"
+            "test_insert_order_passes_broker_id",
+            "test_insert_order_with_explicit_ref"
           ],
           "properties": [],
           "exported": true,
-          "lineCount": 76
+          "lineCount": 90
         },
         {
           "name": "TestCancelOrder",
@@ -5730,9 +5457,113 @@
           "properties": [],
           "exported": true,
           "lineCount": 35
+        },
+        {
+          "name": "TestInsertOrderEnhanced",
+          "methods": [
+            "_make_api",
+            "teardown_method",
+            "test_default_time_condition_is_gfd",
+            "test_fok_time_condition",
+            "test_fak_time_condition",
+            "test_hedge_flag_param",
+            "test_default_hedge_flag_is_speculation",
+            "test_contingent_condition_param",
+            "test_force_close_reason_param",
+            "test_stop_price_param",
+            "test_various_volume_conditions"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 83
+        },
+        {
+          "name": "TestCancelOrderEnhanced",
+          "methods": [
+            "teardown_method",
+            "test_cancel_with_exchange_id",
+            "test_cancel_with_instrument_id",
+            "test_cancel_passes_front_and_session_id",
+            "test_cancel_pads_ordersysid_right_aligned",
+            "test_cancel_ordersysid_empty_stays_empty"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 59
+        },
+        {
+          "name": "TestQueryInstruments",
+          "methods": [
+            "teardown_method",
+            "test_query_instruments_calls_ReqQryInstrument",
+            "test_query_instruments_returns_negative_on_failure",
+            "test_query_instruments_sets_broker_id",
+            "test_query_instruments_sets_investor_id",
+            "test_query_instruments_increments_request_id"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 60
+        },
+        {
+          "name": "TestQueryOrders",
+          "methods": [
+            "teardown_method",
+            "test_query_orders_calls_ReqQryOrder",
+            "test_query_orders_returns_negative_on_failure",
+            "test_query_orders_sets_broker_id",
+            "test_query_orders_sets_investor_id",
+            "test_query_orders_increments_request_id"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 55
+        },
+        {
+          "name": "TestQueryTrades",
+          "methods": [
+            "teardown_method",
+            "test_query_trades_calls_ReqQryTrade",
+            "test_query_trades_returns_negative_on_failure",
+            "test_query_trades_sets_broker_id"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 34
+        },
+        {
+          "name": "TestQueryPositions",
+          "methods": [
+            "teardown_method",
+            "test_query_positions_calls_ReqQryInvestorPosition",
+            "test_query_positions_returns_negative_on_failure",
+            "test_query_positions_sets_broker_id"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 34
+        },
+        {
+          "name": "TestQueryAccount",
+          "methods": [
+            "teardown_method",
+            "test_query_account_calls_ReqQryTradingAccount",
+            "test_query_account_returns_negative_on_failure",
+            "test_query_account_sets_broker_id",
+            "test_query_account_sets_investor_id"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 46
         }
       ],
       "imports": [
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
         {
           "source": "sys",
           "specifiers": [
@@ -5749,7 +5580,8 @@
           "source": "unittest.mock",
           "specifiers": [
             "Mock",
-            "MagicMock"
+            "MagicMock",
+            "patch"
           ]
         },
         {
@@ -5769,7 +5601,12 @@
           "specifiers": [
             "Direction",
             "OffsetFlag",
-            "OrderPriceType"
+            "OrderPriceType",
+            "TimeCondition",
+            "VolumeCondition",
+            "CombHedgeFlag",
+            "ContingentCondition",
+            "ForceCloseReason"
           ]
         }
       ],
@@ -5779,14 +5616,21 @@
         "TestTraderApiConstruction",
         "TestInsertOrder",
         "TestCancelOrder",
-        "TestTraderApiRelease"
+        "TestTraderApiRelease",
+        "TestInsertOrderEnhanced",
+        "TestCancelOrderEnhanced",
+        "TestQueryInstruments",
+        "TestQueryOrders",
+        "TestQueryTrades",
+        "TestQueryPositions",
+        "TestQueryAccount"
       ],
-      "totalLines": 213,
+      "totalLines": 634,
       "hasStructuralAnalysis": true
     },
     "server/tests/test_types.py": {
       "filePath": "server/tests/test_types.py",
-      "contentHash": "aeec5d7237371df077350e71605d958509c333cac030aa81c725f93e19c7735c",
+      "contentHash": "8ecc263f8b17736f2208d3528f0d689a7feeacb8d2a126139fd965d187316082",
       "functions": [],
       "classes": [
         {
@@ -5877,6 +5721,44 @@
           "properties": [],
           "exported": true,
           "lineCount": 11
+        },
+        {
+          "name": "TestCombHedgeFlag",
+          "methods": [
+            "test_speculation_value",
+            "test_arbitrage_value",
+            "test_hedge_value",
+            "test_values_are_strings"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "TestContingentCondition",
+          "methods": [
+            "test_immediately_value",
+            "test_stop_value",
+            "test_stop_profit_value",
+            "test_parked_value",
+            "test_values_are_strings"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "TestForceCloseReason",
+          "methods": [
+            "test_not_force_close_value",
+            "test_lack_deposit_value",
+            "test_client_over_position_value",
+            "test_member_over_position_value",
+            "test_values_are_strings"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 19
         }
       ],
       "imports": [
@@ -5902,7 +5784,10 @@
             "VolumeCondition",
             "OrderStatus",
             "PosiDirection",
-            "ProductClass"
+            "ProductClass",
+            "CombHedgeFlag",
+            "ContingentCondition",
+            "ForceCloseReason"
           ]
         }
       ],
@@ -5914,271 +5799,12 @@
         "TestVolumeCondition",
         "TestOrderStatus",
         "TestPosiDirection",
-        "TestProductClass"
+        "TestProductClass",
+        "TestCombHedgeFlag",
+        "TestContingentCondition",
+        "TestForceCloseReason"
       ],
-      "totalLines": 127,
-      "hasStructuralAnalysis": true
-    },
-    "server/tests/test_ws_handlers.py": {
-      "filePath": "server/tests/test_ws_handlers.py",
-      "contentHash": "78dedafeaef684e3fae47745ddb0f3b7cc53b6129c1131a5c047bf01d6afd158",
-      "functions": [
-        {
-          "name": "test_handler_registers_connection_in_ws_manager",
-          "params": [],
-          "exported": true,
-          "lineCount": 18
-        },
-        {
-          "name": "test_handler_removes_connection_on_disconnect",
-          "params": [],
-          "exported": true,
-          "lineCount": 20
-        },
-        {
-          "name": "test_handler_accepts_and_registers",
-          "params": [],
-          "exported": true,
-          "lineCount": 18
-        },
-        {
-          "name": "test_handler_works_for_all_endpoints",
-          "params": [],
-          "exported": true,
-          "lineCount": 18
-        },
-        {
-          "name": "test_handler_routes_subscribe_message",
-          "params": [],
-          "exported": true,
-          "lineCount": 22
-        },
-        {
-          "name": "test_handler_routes_unsubscribe_message",
-          "params": [],
-          "exported": true,
-          "lineCount": 22
-        },
-        {
-          "name": "test_handler_routes_ping_message",
-          "params": [],
-          "exported": true,
-          "lineCount": 19
-        },
-        {
-          "name": "test_handler_responds_to_heartbeat_ping",
-          "params": [],
-          "exported": true,
-          "lineCount": 19
-        },
-        {
-          "name": "test_handler_ignores_invalid_json",
-          "params": [],
-          "exported": true,
-          "lineCount": 19
-        },
-        {
-          "name": "test_handler_sends_ack_on_subscribe",
-          "params": [],
-          "exported": true,
-          "lineCount": 25
-        },
-        {
-          "name": "test_handler_sends_error_on_subscribe_failure",
-          "params": [],
-          "exported": true,
-          "lineCount": 25
-        }
-      ],
-      "classes": [
-        {
-          "name": "FakeWebSocket",
-          "methods": [
-            "__init__",
-            "accept",
-            "send_json",
-            "receive_text",
-            "queue_message",
-            "close_client",
-            "close"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 30
-        }
-      ],
-      "imports": [
-        {
-          "source": "sys",
-          "specifiers": [
-            "sys"
-          ]
-        },
-        {
-          "source": "os",
-          "specifiers": [
-            "os"
-          ]
-        },
-        {
-          "source": "asyncio",
-          "specifiers": [
-            "asyncio"
-          ]
-        },
-        {
-          "source": "json",
-          "specifiers": [
-            "json"
-          ]
-        },
-        {
-          "source": "pytest",
-          "specifiers": [
-            "pytest"
-          ]
-        },
-        {
-          "source": "unittest.mock",
-          "specifiers": [
-            "AsyncMock"
-          ]
-        },
-        {
-          "source": "ws.manager",
-          "specifiers": [
-            "WebSocketManager"
-          ]
-        }
-      ],
-      "exports": [
-        "FakeWebSocket",
-        "test_handler_registers_connection_in_ws_manager",
-        "test_handler_removes_connection_on_disconnect",
-        "test_handler_accepts_and_registers",
-        "test_handler_works_for_all_endpoints",
-        "test_handler_routes_subscribe_message",
-        "test_handler_routes_unsubscribe_message",
-        "test_handler_routes_ping_message",
-        "test_handler_responds_to_heartbeat_ping",
-        "test_handler_ignores_invalid_json",
-        "test_handler_sends_ack_on_subscribe",
-        "test_handler_sends_error_on_subscribe_failure"
-      ],
-      "totalLines": 305,
-      "hasStructuralAnalysis": true
-    },
-    "server/tests/test_ws_heartbeat.py": {
-      "filePath": "server/tests/test_ws_heartbeat.py",
-      "contentHash": "ca1d5d39b1b8cb398a315be00a7bb73cfddd4ea66c5c1d544398c98101ae1ada",
-      "functions": [
-        {
-          "name": "test_heartbeat_removes_dead_connections",
-          "params": [],
-          "exported": true,
-          "lineCount": 20
-        },
-        {
-          "name": "test_heartbeat_sends_ping_to_all_endpoints",
-          "params": [],
-          "exported": true,
-          "lineCount": 15
-        },
-        {
-          "name": "test_heartbeat_does_nothing_when_empty",
-          "params": [],
-          "exported": true,
-          "lineCount": 10
-        },
-        {
-          "name": "test_heartbeat_handles_partial_failure",
-          "params": [],
-          "exported": true,
-          "lineCount": 22
-        },
-        {
-          "name": "test_start_heartbeat_creates_background_task",
-          "params": [],
-          "exported": true,
-          "lineCount": 12
-        },
-        {
-          "name": "test_stop_heartbeat_cancels_task",
-          "params": [],
-          "exported": true,
-          "lineCount": 11
-        },
-        {
-          "name": "test_heartbeat_periodically_removes_dead",
-          "params": [],
-          "exported": true,
-          "lineCount": 17
-        }
-      ],
-      "classes": [
-        {
-          "name": "FakeWebSocket",
-          "methods": [
-            "__init__",
-            "accept",
-            "send_json",
-            "ping"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 19
-        }
-      ],
-      "imports": [
-        {
-          "source": "sys",
-          "specifiers": [
-            "sys"
-          ]
-        },
-        {
-          "source": "os",
-          "specifiers": [
-            "os"
-          ]
-        },
-        {
-          "source": "asyncio",
-          "specifiers": [
-            "asyncio"
-          ]
-        },
-        {
-          "source": "pytest",
-          "specifiers": [
-            "pytest"
-          ]
-        },
-        {
-          "source": "unittest.mock",
-          "specifiers": [
-            "AsyncMock",
-            "MagicMock"
-          ]
-        },
-        {
-          "source": "ws.manager",
-          "specifiers": [
-            "WebSocketManager"
-          ]
-        }
-      ],
-      "exports": [
-        "FakeWebSocket",
-        "test_heartbeat_removes_dead_connections",
-        "test_heartbeat_sends_ping_to_all_endpoints",
-        "test_heartbeat_does_nothing_when_empty",
-        "test_heartbeat_handles_partial_failure",
-        "test_start_heartbeat_creates_background_task",
-        "test_stop_heartbeat_cancels_task",
-        "test_heartbeat_periodically_removes_dead"
-      ],
-      "totalLines": 160,
+      "totalLines": 189,
       "hasStructuralAnalysis": true
     },
     "server/tests/test_ws_integration.py": {
@@ -6281,96 +5907,6 @@
       "totalLines": 119,
       "hasStructuralAnalysis": true
     },
-    "server/tests/test_ws_manager.py": {
-      "filePath": "server/tests/test_ws_manager.py",
-      "contentHash": "1e6300c8577f1ccc65cd2b0ba4b048e349a98e17892f36bad4e6c0d8cffa4945",
-      "functions": [],
-      "classes": [
-        {
-          "name": "TestWebSocketManagerInit",
-          "methods": [
-            "test_instantiation",
-            "test_default_endpoints_are_empty",
-            "test_five_endpoints_registered"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 18
-        },
-        {
-          "name": "TestWebSocketManagerConnect",
-          "methods": [
-            "test_connect_adds_to_endpoint",
-            "test_connect_does_not_cross_pollute",
-            "test_disconnect_removes_from_endpoint",
-            "test_disconnect_handles_missing_silently",
-            "test_connect_invalid_endpoint_silently_skipped"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 39
-        },
-        {
-          "name": "TestWebSocketManagerBroadcast",
-          "methods": [
-            "test_broadcast_sends_to_all_in_endpoint",
-            "test_broadcast_does_not_send_to_other_endpoints",
-            "test_broadcast_empty_endpoint_no_error",
-            "test_broadcast_removes_disconnected",
-            "test_broadcast_message_format",
-            "test_broadcast_no_message_key"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 73
-        },
-        {
-          "name": "_FakeWebSocket",
-          "methods": [
-            "__init__",
-            "accept",
-            "send_json"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 15
-        }
-      ],
-      "imports": [
-        {
-          "source": "sys",
-          "specifiers": [
-            "sys"
-          ]
-        },
-        {
-          "source": "os",
-          "specifiers": [
-            "os"
-          ]
-        },
-        {
-          "source": "pytest",
-          "specifiers": [
-            "pytest"
-          ]
-        },
-        {
-          "source": "ws.manager",
-          "specifiers": [
-            "WebSocketManager"
-          ]
-        }
-      ],
-      "exports": [
-        "TestWebSocketManagerInit",
-        "TestWebSocketManagerConnect",
-        "TestWebSocketManagerBroadcast",
-        "_FakeWebSocket"
-      ],
-      "totalLines": 165,
-      "hasStructuralAnalysis": true
-    },
     "server/ws/__init__.py": {
       "filePath": "server/ws/__init__.py",
       "contentHash": "e71c26e4f6ae25c0f71d1691ab53c8593c838487d9a84dec9cb6a71b2102f595",
@@ -6381,154 +5917,24 @@
       "totalLines": 2,
       "hasStructuralAnalysis": true
     },
-    "server/ws/handlers.py": {
-      "filePath": "server/ws/handlers.py",
-      "contentHash": "5a68889f4a7f792c9f3f9dadb0c4ee0c9cc691c48421c9c9452eaec534f3f63f",
-      "functions": [
-        {
-          "name": "handle_ws",
-          "params": [
-            "endpoint",
-            "ws_manager",
-            "websocket",
-            "subscribe_fn",
-            "unsubscribe_fn"
-          ],
-          "returnType": "None",
-          "exported": true,
-          "lineCount": 71
-        }
-      ],
-      "classes": [],
-      "imports": [
-        {
-          "source": "asyncio",
-          "specifiers": [
-            "asyncio"
-          ]
-        },
-        {
-          "source": "inspect",
-          "specifiers": [
-            "inspect"
-          ]
-        },
-        {
-          "source": "json",
-          "specifiers": [
-            "json"
-          ]
-        },
-        {
-          "source": "logging",
-          "specifiers": [
-            "logging"
-          ]
-        },
-        {
-          "source": "typing",
-          "specifiers": [
-            "Any",
-            "Callable",
-            "Coroutine",
-            "List",
-            "Optional"
-          ]
-        },
-        {
-          "source": "fastapi",
-          "specifiers": [
-            "WebSocket"
-          ]
-        },
-        {
-          "source": "ws.manager",
-          "specifiers": [
-            "WebSocketManager"
-          ]
-        }
-      ],
-      "exports": [
-        "handle_ws"
-      ],
-      "totalLines": 91,
-      "hasStructuralAnalysis": true
-    },
-    "server/ws/manager.py": {
-      "filePath": "server/ws/manager.py",
-      "contentHash": "db36de1a9cac3a316b1a239b81215fb833e118bf46507a406ad1227294d4688e",
-      "functions": [],
-      "classes": [
-        {
-          "name": "WebSocketManager",
-          "methods": [
-            "__init__",
-            "start_heartbeat",
-            "stop_heartbeat",
-            "_heartbeat_loop",
-            "connect",
-            "disconnect",
-            "broadcast",
-            "_heartbeat_tick"
-          ],
-          "properties": [],
-          "exported": true,
-          "lineCount": 91
-        }
-      ],
-      "imports": [
-        {
-          "source": "asyncio",
-          "specifiers": [
-            "asyncio"
-          ]
-        },
-        {
-          "source": "logging",
-          "specifiers": [
-            "logging"
-          ]
-        },
-        {
-          "source": "typing",
-          "specifiers": [
-            "Any",
-            "Dict",
-            "List",
-            "Optional"
-          ]
-        },
-        {
-          "source": "fastapi",
-          "specifiers": [
-            "WebSocket"
-          ]
-        }
-      ],
-      "exports": [
-        "WebSocketManager"
-      ],
-      "totalLines": 106,
-      "hasStructuralAnalysis": true
-    },
     "snapshots/role-a/dev-record-a.md": {
       "filePath": "snapshots/role-a/dev-record-a.md",
-      "contentHash": "36d91ba061b10286ae9fe203a2478e8ea9a47598b2f558e6573db412fca83225",
+      "contentHash": "e1e5fff549f8c220fe4341a0c4874a613af5db573ffb0cb8412c289a2073f879",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 377,
+      "totalLines": 629,
       "hasStructuralAnalysis": true
     },
     "snapshots/role-a/progress.md": {
       "filePath": "snapshots/role-a/progress.md",
-      "contentHash": "2acdfade3ca4135823c5c9907e48d8298748c17494478f5ffee5175dca6d929b",
+      "contentHash": "befab9303151f57b695111bd215cc3a141e1c3e68e8f80ecb2adce6e6d82979c",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 315,
+      "totalLines": 469,
       "hasStructuralAnalysis": true
     },
     "snapshots/role-a/review-feedback-a-pr3-r2.md": {
@@ -6693,22 +6099,22 @@
     },
     "snapshots/role-b/dev-record-b.md": {
       "filePath": "snapshots/role-b/dev-record-b.md",
-      "contentHash": "94f2a7ec3bc98cfacd9c272c44e8db9a8795eef4f73239fa0672778ea3733da0",
+      "contentHash": "efaf340a5da9f27d6c1f15b9020a941b938d809378b6ca247aa476755e8a3c03",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 412,
+      "totalLines": 459,
       "hasStructuralAnalysis": true
     },
     "snapshots/role-b/progress.md": {
       "filePath": "snapshots/role-b/progress.md",
-      "contentHash": "829a9e5e302cd077465c7c399da7dade9053e3321bdedef1b13d0990b9b338cb",
+      "contentHash": "7ee2f6b046f9f39aace77d23ccf7a6c3f726687ce685b4cb17d2d355724f0f43",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 371,
+      "totalLines": 375,
       "hasStructuralAnalysis": true
     },
     "snapshots/role-b/review-feedback-b-pr12.md": {
@@ -6723,7 +6129,7 @@
     },
     "snapshots/role-b/review-feedback-b-pr12a.md": {
       "filePath": "snapshots/role-b/review-feedback-b-pr12a.md",
-      "contentHash": "7be7265625cd8f7bac01be67e75e6ed87a8756aa046ca9aebdb11127e6b53fc9",
+      "contentHash": "44faf56c2f9dd2e16d262b41997a6babfe4854ea866a76966863b11640c07a09",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -6803,7 +6209,7 @@
     },
     "snapshots/role-b/review-reply-b-pr12a.md": {
       "filePath": "snapshots/role-b/review-reply-b-pr12a.md",
-      "contentHash": "646cbb8a11a9f181fa4cfd844fe81da29f07e3a67043270e38dc596bd53b697f",
+      "contentHash": "1f5d14ee1a0ec7b69a39585a1e1f55cefab0644f74897db233b14b75dfc742c1",
       "functions": [],
       "classes": [],
       "imports": [],

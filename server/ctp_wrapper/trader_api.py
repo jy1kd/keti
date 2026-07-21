@@ -228,6 +228,77 @@ class TraderApi:
         field.InvestorID = self.config.user_id
         return self._api.ReqQryInstrument(field, self._request_id)
 
+    def query_orders(self) -> int:
+        """Query order list from CTP.
+
+        Sends ReqQryOrder to retrieve all orders for the current session.
+        Results arrive via OnRspQryOrder callback (multiple calls,
+        bIsLast=True on the final one).
+
+        Returns:
+            int: 0 on success, negative on error.
+        """
+        import ctp
+
+        self._request_id += 1
+        field = ctp.CThostFtdcQryOrderField()
+        field.BrokerID = self.config.broker_id
+        field.InvestorID = self.config.user_id
+        return self._api.ReqQryOrder(field, self._request_id)
+
+    def query_trades(self) -> int:
+        """Query trade list from CTP.
+
+        Sends ReqQryTrade to retrieve all trades for the current session.
+        Results arrive via OnRspQryTrade callback (multiple calls,
+        bIsLast=True on the final one).
+
+        Returns:
+            int: 0 on success, negative on error.
+        """
+        import ctp
+
+        self._request_id += 1
+        field = ctp.CThostFtdcQryTradeField()
+        field.BrokerID = self.config.broker_id
+        field.InvestorID = self.config.user_id
+        return self._api.ReqQryTrade(field, self._request_id)
+
+    def query_positions(self) -> int:
+        """Query investor positions from CTP.
+
+        Sends ReqQryInvestorPosition to retrieve all positions.
+        Results arrive via OnRspQryInvestorPosition callback (multiple calls,
+        bIsLast=True on the final one).
+
+        Returns:
+            int: 0 on success, negative on error.
+        """
+        import ctp
+
+        self._request_id += 1
+        field = ctp.CThostFtdcQryInvestorPositionField()
+        field.BrokerID = self.config.broker_id
+        field.InvestorID = self.config.user_id
+        return self._api.ReqQryInvestorPosition(field, self._request_id)
+
+    def query_account(self) -> int:
+        """Query trading account funds from CTP.
+
+        Sends ReqQryTradingAccount to retrieve account balance info.
+        Results arrive via OnRspQryTradingAccount callback.
+
+        Returns:
+            int: 0 on success, negative on error.
+        """
+        import ctp
+
+        self._request_id += 1
+        field = ctp.CThostFtdcQryTradingAccountField()
+        field.BrokerID = self.config.broker_id
+        field.InvestorID = self.config.user_id
+        return self._api.ReqQryTradingAccount(field, self._request_id)
+
     def release(self) -> None:
         """Release the CTP API instance and cleanup."""
         if self._api is not None:

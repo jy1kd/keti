@@ -6,6 +6,8 @@ from services.field_mapping import (
     map_input_order,
     map_order,
     map_trade,
+    map_position,
+    map_account,
 )
 
 
@@ -594,3 +596,174 @@ class TestMapInstrument:
         assert result["strikePrice"] == 0.0
         assert result["underlyingInstrID"] == ""
         assert result["isTrading"] == 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Position field mapping tests (PR-11)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class _MockPosition:
+    """Duck-type of CThostFtdcInvestorPositionField."""
+
+    InstrumentID = "IF2608"
+    BrokerID = "9999"
+    InvestorID = "user001"
+    ExchangeID = "CFFEX"
+    PosiDirection = "2"  # long
+    HedgeFlag = "1"
+    PositionDate = "1"  # today
+    Position = 5
+    YdPosition = 2
+    TodayPosition = 3
+    OpenCost = 5775000.0
+    PositionCost = 5775000.0
+    PositionProfit = 1500.0
+    CloseProfit = 0.0
+    UseMargin = 577500.0
+    ExchangeMargin = 570000.0
+    TradingDay = "20260721"
+
+
+class TestMapPosition:
+    """map_position: CThostFtdcInvestorPositionField → camelCase dict."""
+
+    def test_import(self):
+        assert map_position is not None
+
+    def test_returns_dict(self):
+        result = map_position(_MockPosition())
+        assert isinstance(result, dict)
+
+    def test_maps_instrument(self):
+        result = map_position(_MockPosition())
+        assert result["instrumentID"] == "IF2608"
+
+    def test_maps_direction(self):
+        result = map_position(_MockPosition())
+        assert result["posiDirection"] == "2"
+
+    def test_maps_position_quantities(self):
+        result = map_position(_MockPosition())
+        assert result["position"] == 5
+        assert result["ydPosition"] == 2
+        assert result["todayPosition"] == 3
+
+    def test_maps_cost_and_profit(self):
+        result = map_position(_MockPosition())
+        assert result["openCost"] == 5775000.0
+        assert result["positionCost"] == 5775000.0
+        assert result["positionProfit"] == 1500.0
+        assert result["closeProfit"] == 0.0
+
+    def test_maps_margin(self):
+        result = map_position(_MockPosition())
+        assert result["useMargin"] == 577500.0
+        assert result["exchangeMargin"] == 570000.0
+
+    def test_maps_broker_fields(self):
+        result = map_position(_MockPosition())
+        assert result["brokerID"] == "9999"
+        assert result["investorID"] == "user001"
+        assert result["exchangeID"] == "CFFEX"
+
+    def test_maps_hedge_flag(self):
+        result = map_position(_MockPosition())
+        assert result["hedgeFlag"] == "1"
+
+    def test_maps_trading_day(self):
+        result = map_position(_MockPosition())
+        assert result["tradingDay"] == "20260721"
+
+    def test_missing_attributes_default(self):
+        """Missing CTP attributes get defaults."""
+
+        class MinimalPosition:
+            InstrumentID = "IF2608"
+
+        result = map_position(MinimalPosition())
+        assert result["instrumentID"] == "IF2608"
+        assert result["position"] == 0
+        assert result["posiDirection"] == ""
+        assert result["openCost"] == 0.0
+        assert result["useMargin"] == 0.0
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Account field mapping tests (PR-11)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class _MockAccount:
+    """Duck-type of CThostFtdcTradingAccountField."""
+
+    AccountID = "user001"
+    BrokerID = "9999"
+    Balance = 1000000.0
+    Available = 500000.0
+    FrozenMargin = 100000.0
+    CurrMargin = 400000.0
+    CloseProfit = 5000.0
+    PositionProfit = 3000.0
+    Commission = 200.0
+    Deposit = 0.0
+    Withdraw = 0.0
+    PreBalance = 995000.0
+    TradingDay = "20260721"
+
+
+class TestMapAccount:
+    """map_account: CThostFtdcTradingAccountField → camelCase dict."""
+
+    def test_import(self):
+        assert map_account is not None
+
+    def test_returns_dict(self):
+        result = map_account(_MockAccount())
+        assert isinstance(result, dict)
+
+    def test_maps_identity(self):
+        result = map_account(_MockAccount())
+        assert result["accountID"] == "user001"
+        assert result["brokerID"] == "9999"
+
+    def test_maps_balance(self):
+        result = map_account(_MockAccount())
+        assert result["balance"] == 1000000.0
+        assert result["available"] == 500000.0
+
+    def test_maps_margin(self):
+        result = map_account(_MockAccount())
+        assert result["frozenMargin"] == 100000.0
+        assert result["currMargin"] == 400000.0
+
+    def test_maps_profit(self):
+        result = map_account(_MockAccount())
+        assert result["closeProfit"] == 5000.0
+        assert result["positionProfit"] == 3000.0
+
+    def test_maps_fees(self):
+        result = map_account(_MockAccount())
+        assert result["commission"] == 200.0
+        assert result["deposit"] == 0.0
+        assert result["withdraw"] == 0.0
+
+    def test_maps_pre_balance(self):
+        result = map_account(_MockAccount())
+        assert result["preBalance"] == 995000.0
+
+    def test_maps_trading_day(self):
+        result = map_account(_MockAccount())
+        assert result["tradingDay"] == "20260721"
+
+    def test_missing_attributes_default(self):
+        """Missing CTP attributes get defaults."""
+
+        class MinimalAccount:
+            AccountID = "user001"
+
+        result = map_account(MinimalAccount())
+        assert result["accountID"] == "user001"
+        assert result["balance"] == 0.0
+        assert result["available"] == 0.0
+        assert result["frozenMargin"] == 0.0

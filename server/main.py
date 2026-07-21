@@ -28,6 +28,7 @@ from api.order import router as order_router
 from api.query import router as query_router
 from ws.manager import WebSocketManager
 from services.market_service import MarketService
+from services.query_service import QueryService
 from services.ctp_bridge import wire_market_data_callback
 from services.ctp_startup import connect_ctp, start_ctp_trading_connection
 from ws.handlers import handle_ws
@@ -116,6 +117,9 @@ def create_app() -> FastAPI:
     _instruments_path = Path(__file__).parent / "data" / "instruments.json"
     market_service.load_instruments_from_file(str(_instruments_path))
     app.state.market_service = market_service
+
+    query_service = QueryService()
+    app.state.query_service = query_service
 
     # Global exception handler
     @app.exception_handler(Exception)
