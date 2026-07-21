@@ -542,3 +542,60 @@
 - `6c11ef9` fix(task-10): CtpOrderRequest字段重命名(combOffsetFlag→offsetFlag, orderPriceType→priceType) + volumeCondition映射
 - `cb31c1d` fix(task-10): 集成接入 — ToastContainer挂载 + MarketPanel报单联动 + StopOrderForm有效期切换
 - `b75561c` chore(task-10): add pnpm lock and workspace files
+
+---
+
+## PR-20: 前端合约刷新功能
+
+**分支**：`feature/pr-20-instrument-refresh-ui`
+**开始时间**：2026-07-21
+**状态**：✅ 已完成（开发完成，待自验证）
+
+---
+
+### TDD 测试用例清单
+
+| # | 模块 | 测试文件 | 测试数 | 状态 |
+|---|------|----------|--------|------|
+| 1 | refreshInstruments API | services/api.test.ts | 17 (+2) | ✅ 全部通过 |
+| 2 | store refreshInstruments | market/store.test.ts | 23 (+4) | ✅ 全部通过 |
+| 3 | useMarketWs instruments_refreshed | hooks/useMarketWs.test.ts | 10 (+3) | ✅ 全部通过 |
+| 4 | MarketPanel 刷新按钮 | market/MarketPanel.test.tsx | 11 (+4) | ✅ 全部通过 |
+
+**总计**：287 tests / 34 files 通过（新增 13 tests），0 failures
+
+---
+
+### TDD 循环记录
+
+| # | 功能 | 红灯 | 绿灯 | Commit |
+|---|------|------|------|--------|
+| 1 | refreshInstruments API 函数 | ✅ 2 fail | ✅ 17 pass | `2a4d682` |
+| 2 | store refreshInstruments + isRefreshing | ✅ 3 fail | ✅ 23 pass | `8e9bc8a` |
+| 3 | useMarketWs instruments_refreshed 消息处理 | ✅ 3 fail → 1 fix | ✅ 10 pass | `ac84927` |
+| 4 | MarketPanel 刷新按钮集成 | ✅ 4 fail | ✅ 11 pass | `51ae660` |
+
+---
+
+### 文件变更清单
+
+| 文件 | 变更类型 | 说明 |
+|------|----------|------|
+| `src/services/api.ts` | 修改 | 新增 refreshInstruments() → POST /api/market/instruments/refresh |
+| `src/services/api.test.ts` | 修改 | 新增 2 个测试用例 |
+| `src/modules/market/store.ts` | 修改 | 新增 isRefreshing 状态 + refreshInstruments 方法 |
+| `src/modules/market/store.test.ts` | 修改 | 新增 4 个测试用例 |
+| `src/hooks/useMarketWs.ts` | 修改 | 新增 instruments_refreshed 消息处理 → fetchInstruments + toast |
+| `src/hooks/useMarketWs.test.ts` | 修改 | 新增 3 个测试用例 + mock toast |
+| `src/modules/market/MarketPanel.tsx` | 修改 | 新增"刷新合约"按钮（loading 状态 + disabled） |
+| `src/modules/market/MarketPanel.test.tsx` | 修改 | 新增 4 个测试用例 + mock refreshInstruments |
+| `src/modules/market/styles.css` | 修改 | 新增 .btn-refresh-instruments + .panel-header__actions 样式 |
+
+---
+
+### 提交记录
+
+- `2a4d682` feat(task-20): implement refreshInstruments API function
+- `8e9bc8a` feat(task-20): add refreshInstruments + isRefreshing to market store
+- `ac84927` feat(task-20): handle instruments_refreshed WS message with toast + refetch
+- `51ae660` feat(task-20): add refresh contracts button to MarketPanel with loading state
