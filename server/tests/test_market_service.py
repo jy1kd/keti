@@ -307,19 +307,21 @@ class TestCtpHooks:
         assert result["success"] is True
         assert svc.subscription_count == 0
 
-    def test_subscribe_ctp_fn_exception_does_not_break(self):
-        """If CTP subscribe raises, local bookkeeping still succeeds."""
+    def test_subscribe_ctp_fn_exception_returns_failure(self):
+        """If CTP subscribe raises, returns success=False with error message."""
         svc = MarketService()
         svc.set_ctp_hooks(
             subscribe_fn=lambda insts: (_ for _ in ()).throw(RuntimeError("CTP error")),
             unsubscribe_fn=lambda insts: None,
         )
         result = svc.subscribe(["IF2608"])
-        assert result["success"] is True
+        assert result["success"] is False
+        assert "message" in result
+        assert "CTP error" in result["message"]
         assert svc.subscription_count == 1  # local state preserved
 
-    def test_unsubscribe_ctp_fn_exception_does_not_break(self):
-        """If CTP unsubscribe raises, local bookkeeping still succeeds."""
+    def test_unsubscribe_ctp_fn_exception_returns_failure(self):
+        """If CTP unsubscribe raises, returns success=False with error message."""
         svc = MarketService()
         svc.set_ctp_hooks(
             subscribe_fn=lambda insts: None,
@@ -327,8 +329,10 @@ class TestCtpHooks:
         )
         svc.subscribe(["IF2608"])
         result = svc.unsubscribe(["IF2608"])
-        assert result["success"] is True
-        assert svc.subscription_count == 0
+        assert result["success"] is False
+        assert "message" in result
+        assert "CTP error" in result["message"]
+        assert svc.subscription_count == 0  # local state preserved
 
 
 # ── Subscription limit ─────────────────────────────────────────────────

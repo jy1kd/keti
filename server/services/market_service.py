@@ -152,8 +152,14 @@ class MarketService:
         if new_instruments and self._subscribe_fn is not None:
             try:
                 self._subscribe_fn(new_instruments)
-            except Exception:
+            except Exception as exc:
                 logger.warning("CTP subscribe failed for %s", new_instruments, exc_info=True)
+                return {
+                    "success": False,
+                    "added": 0,
+                    "alreadySubscribed": already,
+                    "message": f"CTP subscribe failed: {exc}",
+                }
 
         return {
             "success": True,
@@ -180,8 +186,13 @@ class MarketService:
         if removed_instruments and self._unsubscribe_fn is not None:
             try:
                 self._unsubscribe_fn(removed_instruments)
-            except Exception:
+            except Exception as exc:
                 logger.warning("CTP unsubscribe failed for %s", removed_instruments, exc_info=True)
+                return {
+                    "success": False,
+                    "removed": 0,
+                    "message": f"CTP unsubscribe failed: {exc}",
+                }
 
         return {"success": True, "removed": len(removed_instruments)}
 
