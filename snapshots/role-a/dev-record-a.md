@@ -576,3 +576,53 @@ TDD 完成 + 审查修复后，接入 SimNow 7x24 环境进行实盘测试，发
 - 🔵 回调签名不匹配 → 实际代码已匹配，无需修改
 - 🔵 双重 callback 设置 → 删除冗余 `set_instruments_callback` 调用
 - 📦 Commit: `99c8c06`
+
+---
+
+## PR-11: 后端查询API实现
+
+**分支**：`feature/pr-11-query-api`
+**依赖**：PR-9
+**状态**：🔄 开发中
+
+### TDD 循环记录
+
+| 循环 | 功能点 | 测试文件 | 新增测试 | 状态 |
+|------|--------|----------|----------|------|
+| #1 | map_position() + map_account() 字段映射 | test_field_mapping.py | 26 | ✅ |
+| #2 | TraderSpi 查询回调 | test_callback.py | 15 | ✅ |
+| #3 | TraderApi 查询方法 | test_trader_api.py | 15 | ✅ |
+| #4 | QueryService 查询服务层 | test_query_service.py | 22 | ✅ |
+| #5 | 查询 API 端点 | test_query_api.py | 9 | ✅ |
+| #6 | QueryService 接线（ctp_startup） | — | — | ✅ |
+
+### Commit 记录
+
+| Commit | 类型 | 描述 |
+|--------|------|------|
+| b883764 | test | map_position() + map_account() — 26 new tests |
+| 69f1e7b | feat | TraderSpi query callbacks — OnRspQryOrder/Trade/Position/Account |
+| 27b5b0a | feat | TraderApi query methods — query_orders/trades/positions/account |
+| 93ea36a | feat | QueryService — query orchestration with CTP callback accumulation |
+| 1e9e786 | feat | query API endpoints — GET + POST /refresh |
+| 16172b5 | feat | wire QueryService into ctp_startup |
+
+### 关键设计决策
+
+1. **QueryService 同步等待模式**：CTP 回调在 CTP 线程，API 在 asyncio 线程。使用 `threading.Event` 做线程间同步，`run_in_executor` 在 API 层异步化
+2. **字段映射复用**：map_position() 和 map_account() 沿用 field_mapping.py 的 `[(ctp_attr, json_key, default)]` 表驱动模式
+3. **缓存 + 刷新分离**：GET 端点返回缓存数据（快速），POST /refresh 端点触发 CTP 查询（阻塞）
+4. **回调接线统一**：`_wire_query_callbacks()` 在 start_ctp_trading_connection() 和 connect_trading() 两处都接线
+
+### 审查修复记录
+
+**第 1 轮审查**（`review-feedback-a-pr11.md`）：0 🔴 + 6 🟡 + 2 🔵 → 全部处理
+- 🟡 GET 端点访问私有成员 → 添加公开属性（orders/trades/positions/account）
+- 🟡 refresh 端点未检查登录状态 → 4 个端点添加 login_status 检查
+- 🟡 import ctp 重复 → 保留（测试模式要求，与现有代码一致）
+- 🟡 缺少 refresh 端点测试 → 新增 9 个测试
+- 🟡 查询回调高度重复 → 提取 `_make_qry_callback()` 工厂函数
+- 🟡 pending 列表线程安全 → 添加 docstring 标注线程模型
+- 🔵 subscribe/unsubscribe 语义 → 有意为之（本地状态=用户意图，CTP 失败不回滚）
+- 🔵 account 返回格式 → 有意为之（单一对象 vs 列表，与 CTP 数据模型一致）
+- 📦 Commit: `d6eb313`

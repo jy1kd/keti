@@ -47,6 +47,37 @@ def _wire_instrument_query(app: "FastAPI", trader_spi: Any) -> None:
     trader_spi.on("OnRspQryInstrument", _on_rsp_qry_instrument)
 
 
+def _wire_query_callbacks(app: "FastAPI", trader_spi: Any) -> None:
+    """Wire OnRspQryOrder/Trade/Position/Account → QueryService.
+
+    Shared by start_ctp_trading_connection() and connect_trading().
+    """
+    def _on_rsp_qry_order(pOrder, pRspInfo, nRequestID, bIsLast):
+        query_svc = getattr(app.state, "query_service", None)
+        if query_svc is not None:
+            query_svc.on_order_result(pOrder, pRspInfo, nRequestID, bIsLast)
+
+    def _on_rsp_qry_trade(pTrade, pRspInfo, nRequestID, bIsLast):
+        query_svc = getattr(app.state, "query_service", None)
+        if query_svc is not None:
+            query_svc.on_trade_result(pTrade, pRspInfo, nRequestID, bIsLast)
+
+    def _on_rsp_qry_position(pPosition, pRspInfo, nRequestID, bIsLast):
+        query_svc = getattr(app.state, "query_service", None)
+        if query_svc is not None:
+            query_svc.on_position_result(pPosition, pRspInfo, nRequestID, bIsLast)
+
+    def _on_rsp_qry_account(pAccount, pRspInfo, nRequestID, bIsLast):
+        query_svc = getattr(app.state, "query_service", None)
+        if query_svc is not None:
+            query_svc.on_account_result(pAccount, pRspInfo, nRequestID, bIsLast)
+
+    trader_spi.on("OnRspQryOrder", _on_rsp_qry_order)
+    trader_spi.on("OnRspQryTrade", _on_rsp_qry_trade)
+    trader_spi.on("OnRspQryInvestorPosition", _on_rsp_qry_position)
+    trader_spi.on("OnRspQryTradingAccount", _on_rsp_qry_account)
+
+
 def connect_ctp(
     app: "FastAPI",
     broker_id: str,
@@ -515,6 +546,9 @@ def start_ctp_trading_connection(
     # Wire OnRspQryInstrument → MarketService.on_instruments_result (PR-19)
     _wire_instrument_query(app, trader.spi)
 
+    # Wire query callbacks → QueryService (PR-11)
+    _wire_query_callbacks(app, trader.spi)
+
     def _run():
         try:
             trader.create()
@@ -701,6 +735,9 @@ def connect_trading(
 
     # Wire OnRspQryInstrument → MarketService.on_instruments_result (PR-19)
     _wire_instrument_query(app, trader.spi)
+
+    # Wire query callbacks → QueryService (PR-11)
+    _wire_query_callbacks(app, trader.spi)
 
     def _run():
         try:

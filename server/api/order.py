@@ -16,16 +16,25 @@ router = APIRouter()
 class InsertOrderRequest(BaseModel):
     """Submit order request body."""
 
-    instrumentID: str = Field(..., min_length=1)
-    direction: str = Field(default="0", pattern=r"^[01]$")
-    offsetFlag: str = Field(default="0", pattern=r"^[013]$")
-    priceType: str = Field(default="2", pattern=r"^[12]$")
-    limitPrice: float = Field(default=0.0, ge=0.0)
+    instrumentID: str = Field(..., min_length=1,
+                              json_schema_extra={"examples": ["IF2608"]})
+    direction: str = Field(default="0", pattern=r"^[01]$",
+                           description="0=买, 1=卖")
+    offsetFlag: str = Field(default="0", pattern=r"^[013]$",
+                            description="0=开仓, 1=平仓, 3=平今")
+    priceType: str = Field(default="2", pattern=r"^[12]$",
+                           description="1=市价, 2=限价")
+    limitPrice: float = Field(default=4100.0, ge=0.0,
+                              description="限价（priceType=2时必填）")
     volumeTotalOriginal: int = Field(default=1, gt=0)
-    timeCondition: str = Field(default="1", pattern=r"^[123]$")
-    volumeCondition: str = Field(default="1", pattern=r"^[123]$")
-    hedgeFlag: str = Field(default="1", pattern=r"^[123]$")
-    exchangeID: str = Field(default="")
+    timeCondition: str = Field(default="1", pattern=r"^[123]$",
+                               description="1=当日有效GFD, 2=即时FOK, 3=即时FAK")
+    volumeCondition: str = Field(default="1", pattern=r"^[123]$",
+                                 description="1=任意数量, 2=最小数量, 3=全部数量")
+    hedgeFlag: str = Field(default="1", pattern=r"^[123]$",
+                           description="1=投机, 2=套利, 3=套保")
+    exchangeID: str = Field(default="CFFEX",
+                            description="交易所（CFFEX/SHFE/CZCE/DCE/INE/GFEX）")
 
     @model_validator(mode="after")
     def validate_time_volume_condition(self):
