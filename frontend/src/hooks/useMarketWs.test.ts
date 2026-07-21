@@ -18,12 +18,11 @@ vi.mock('@/services/ws', () => ({
   })),
 }))
 
-// Mock API to prevent real network calls from fetchInstruments
+// Mock API to prevent real network calls
 vi.mock('@/services/api', () => ({
   getInstruments: vi.fn().mockResolvedValue({ instruments: [], count: 0 }),
   subscribeMarket: vi.fn(),
   getSnapshots: vi.fn(),
-  refreshInstruments: vi.fn(),
 }))
 
 // Mock toast

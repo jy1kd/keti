@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import type { MarketSnapshot, KLineData } from '@/services/types'
-import { getInstruments, subscribeMarket, refreshInstruments as refreshApi } from '@/services/api'
-import { useContractsStore } from '@/stores/contracts'
+import { subscribeMarket } from '@/services/api'
 
 interface MarketStore {
   selectedInstrument: string | null
@@ -9,10 +8,7 @@ interface MarketStore {
   snapshots: Map<string, MarketSnapshot>
   updateSnapshot: (snapshot: MarketSnapshot) => void
   batchUpdate: (snapshots: MarketSnapshot[]) => void
-  fetchInstruments: () => Promise<void>
   subscribeInstruments: (instruments: string[]) => Promise<void>
-  isRefreshing: boolean
-  refreshInstruments: () => Promise<{ status: string }>
   klineData: Map<string, KLineData[]>
   setKlineData: (instrument: string, data: KLineData[]) => void
   appendKline: (instrument: string, candle: KLineData) => void
@@ -36,16 +32,6 @@ export const useMarketStore = create<MarketStore>((set) => ({
       }
       return { snapshots: next }
     }),
-  fetchInstruments: async () => {
-    try {
-      const data = await getInstruments()
-      if (data?.instruments) {
-        useContractsStore.getState().setContracts(data.instruments)
-      }
-    } catch (error) {
-      console.warn('[MarketStore] fetchInstruments failed:', error)
-    }
-  },
   subscribeInstruments: async (instruments: string[]) => {
     try {
       await subscribeMarket(instruments)
@@ -53,19 +39,6 @@ export const useMarketStore = create<MarketStore>((set) => ({
       // 数据将通过 WebSocket market_data 消息自然填充。
     } catch (error) {
       console.warn('[MarketStore] subscribeInstruments failed:', error)
-    }
-  },
-  isRefreshing: false,
-  refreshInstruments: async () => {
-    set({ isRefreshing: true })
-    try {
-      const result = await refreshApi()
-      return result
-    } catch (error) {
-      console.warn('[MarketStore] refreshInstruments failed:', error)
-      return { status: 'error' }
-    } finally {
-      set({ isRefreshing: false })
     }
   },
   klineData: new Map(),
