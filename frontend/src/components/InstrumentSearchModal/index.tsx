@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { ContractInfo } from '@/services/types'
-import { getExchanges, getProducts, searchInstruments, subscribeMarket } from '@/services/api'
+import { getExchanges, getProducts, searchInstruments } from '@/services/api'
 import './index.css'
 
 interface Props {
@@ -76,17 +76,8 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, subscribed
     }
   }
 
-  const handleSubscribe = async (inst: ContractInfo) => {
-    try {
-      const result = await subscribeMarket([inst.instrumentID])
-      if (result.success) {
-        onSubscribe(inst)
-      } else {
-        setError('订阅失败')
-      }
-    } catch {
-      setError('订阅请求失败')
-    }
+  const handleSubscribe = (inst: ContractInfo) => {
+    onSubscribe(inst)
   }
 
   if (!isOpen) return null

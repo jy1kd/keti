@@ -5,7 +5,6 @@ import { useConnectionStore } from '@/stores/connection'
 import { useContractsStore } from '@/stores/contracts'
 import { useReconnect } from './useReconnect'
 import { toast } from '@/components/Toast'
-import { getInstruments } from '@/services/api'
 import type { MarketSnapshot, KLineData, WSMessage } from '@/services/types'
 
 /** 周期字符串 → 毫秒 */
@@ -74,11 +73,8 @@ export function useMarketWs(wsBaseUrl: string, period = '5m') {
       setMdConnected(true)
     } else if (message.type === 'instruments_refreshed') {
       const data = message.data as { count: number }
-      getInstruments()
-        .then((result) => {
-          if (result?.instruments) {
-            useContractsStore.getState().setContracts(result.instruments)
-          }
+      useContractsStore.getState().loadSubscribedContracts()
+        .then(() => {
           if (data.count > 0) {
             toast.success(`已更新 ${data.count} 个合约`)
           }
