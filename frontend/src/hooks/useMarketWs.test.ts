@@ -222,7 +222,7 @@ describe('useMarketWs - instruments_refreshed', () => {
     vi.useRealTimers()
   })
 
-  it('忽略非 instruments_refreshed 消息中的未知字段', () => {
+  it('不响应非 instruments_refreshed 类型的 WS 消息', () => {
     vi.useFakeTimers()
     renderHook(() => useMarketWs('ws://localhost:8000'))
 
@@ -231,6 +231,24 @@ describe('useMarketWs - instruments_refreshed', () => {
     act(() => {
       // connection_status 不应触发 toast
       onMessage({ type: 'connection_status', data: { status: 'connected', target: 'md' } })
+    })
+
+    expect(mockToastSuccess).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('count=0 时不显示 toast', async () => {
+    vi.useFakeTimers()
+    renderHook(() => useMarketWs('ws://localhost:8000'))
+
+    const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
+
+    act(() => {
+      onMessage({ type: 'instruments_refreshed', data: { count: 0 } })
+    })
+
+    await act(async () => {
+      await Promise.resolve()
     })
 
     expect(mockToastSuccess).not.toHaveBeenCalled()

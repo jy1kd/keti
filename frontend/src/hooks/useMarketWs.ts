@@ -52,6 +52,7 @@ export function useMarketWs(wsBaseUrl: string, period = '5m') {
   const wsRef = useRef<WSManager | null>(null)
   const updateSnapshot = useMarketStore((s) => s.updateSnapshot)
   const appendKline = useMarketStore((s) => s.appendKline)
+  const fetchInstruments = useMarketStore((s) => s.fetchInstruments)
   const setMdConnected = useConnectionStore((s) => s.setMdConnected)
 
   // 创建 WSManager 实例（仅创建一次）
@@ -61,7 +62,6 @@ export function useMarketWs(wsBaseUrl: string, period = '5m') {
 
   const ws = wsRef.current
   const periodMs = PERIOD_MS[period] ?? PERIOD_MS['5m']
-  const fetchInstruments = useMarketStore((s) => s.fetchInstruments)
 
   // 消息处理回调
   const handleMessage = (message: WSMessage) => {
@@ -74,7 +74,9 @@ export function useMarketWs(wsBaseUrl: string, period = '5m') {
     } else if (message.type === 'instruments_refreshed') {
       const data = message.data as { count: number }
       fetchInstruments().then(() => {
-        toast.success(`已更新 ${data.count} 个合约`)
+        if (data.count > 0) {
+          toast.success(`已更新 ${data.count} 个合约`)
+        }
       })
     }
   }
