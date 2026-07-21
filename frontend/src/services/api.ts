@@ -126,3 +126,15 @@ export async function cancelOrder(orderRef: string): Promise<CancelResponse> {
   const { data } = await api.post<CancelResponse>('/api/order/cancel', { orderRef })
   return data
 }
+
+// ── 合约查询 API ──────────────────────────────────────────────────────
+
+interface RefreshResponse {
+  status: string
+}
+
+/** 触发后端从 CTP 刷新全量合约列表 */
+export async function refreshInstruments(): Promise<RefreshResponse> {
+  const { data } = await api.post<RefreshResponse>('/api/market/instruments/refresh')
+  return data
+}
