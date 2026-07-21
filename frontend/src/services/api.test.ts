@@ -158,6 +158,7 @@ describe('submitOrder', () => {
       priceType: '2',
       timeCondition: '1',
       volumeCondition: '1',
+      hedgeFlag: '1',
       limitPrice: 4800.0,
       volumeTotalOriginal: 1,
     })
