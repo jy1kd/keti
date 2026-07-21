@@ -64,3 +64,4 @@ docs/superpowers/
 !.ua/knowledge-graph.json
 !.ua/meta.json
 !.ua/fingerprints.json
+server/data/instruments.json
