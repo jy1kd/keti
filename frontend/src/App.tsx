@@ -6,6 +6,7 @@ import { MarketPanel } from '@/modules/market/MarketPanel'
 import { OrderPanel } from '@/modules/order/OrderPanel'
 import { QueryPanel } from '@/modules/query/QueryPanel'
 import { PerfMonitor } from '@/components/PerfMonitor'
+import { ToastContainer } from '@/components/Toast'
 import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
 import '@/assets/styles/global.css'
 
@@ -37,6 +38,7 @@ function App() {
 
   return (
     <div className="app">
+      <ToastContainer />
       <header className="status-bar">
         <div className="status-bar__left">
           <ConnectionStatus />

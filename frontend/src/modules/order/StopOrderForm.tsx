@@ -13,6 +13,7 @@ export function StopOrderForm({ priceTick = 0.2 }: StopOrderFormProps) {
   const submitOrder = useOrderStore((s) => s.submitOrder)
 
   const isBuy = orderForm.direction === 'buy'
+  const timeCondition = orderForm.timeCondition
 
   const { price, stepUp, stepDown } = usePriceStep(orderForm.limitPrice, priceTick)
   const { price: stopPrice, stepUp: stopStepUp, stepDown: stopStepDown } =
@@ -68,6 +69,34 @@ export function StopOrderForm({ priceTick = 0.2 }: StopOrderFormProps) {
               {{ open: '开', close: '平', close_today: '平今' }[val]}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Time condition toggle */}
+      <div className="form-row">
+        <label>有效期</label>
+        <div className="toggle-group triple">
+          <button
+            type="button"
+            className={`toggle-btn ${timeCondition === 'gfd' ? 'active' : ''}`}
+            onClick={() => setOrderForm({ timeCondition: 'gfd' })}
+          >
+            GFD
+          </button>
+          <button
+            type="button"
+            className={`toggle-btn ${timeCondition === 'fok' ? 'active' : ''}`}
+            onClick={() => setOrderForm({ timeCondition: 'fok' })}
+          >
+            FOK
+          </button>
+          <button
+            type="button"
+            className={`toggle-btn ${timeCondition === 'fak' ? 'active' : ''}`}
+            onClick={() => setOrderForm({ timeCondition: 'fak' })}
+          >
+            FAK
+          </button>
         </div>
       </div>
 
