@@ -18,6 +18,25 @@ vi.mock('@/services/ws', () => ({
   })),
 }))
 
+// Mock API to prevent real network calls from fetchInstruments
+vi.mock('@/services/api', () => ({
+  getInstruments: vi.fn().mockResolvedValue({ instruments: [], count: 0 }),
+  subscribeMarket: vi.fn(),
+  getSnapshots: vi.fn(),
+  refreshInstruments: vi.fn(),
+}))
+
+// Mock toast
+const mockToastSuccess = vi.fn()
+vi.mock('@/components/Toast', () => ({
+  toast: {
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+    error: vi.fn(),
+    _clearAll: vi.fn(),
+  },
+  ToastContainer: () => null,
+}))
+
 describe('useMarketWs', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -153,5 +172,86 @@ describe('useMarketWs', () => {
     const date = new Date(klineArg.timestamp)
     expect(date.getMinutes() % 5).toBe(0)
     expect(date.getSeconds()).toBe(0)
+  })
+})
+
+describe('useMarketWs - instruments_refreshed', () => {
+  beforeEach(() => {
+    useMarketStore.setState({ snapshots: new Map() })
+    mockConnect.mockClear()
+    mockToastSuccess.mockClear()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('收到 instruments_refreshed 时显示 toast 提示合约数量', async () => {
+    vi.useFakeTimers()
+    renderHook(() => useMarketWs('ws://localhost:8000'))
+
+    const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
+
+    act(() => {
+      onMessage({ type: 'instruments_refreshed', data: { count: 17348 } })
+    })
+
+    // fetchInstruments() 是异步的，toast 在 .then() 中调用，需要刷新微任务队列
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(mockToastSuccess).toHaveBeenCalledWith('已更新 17348 个合约')
+    vi.useRealTimers()
+  })
+
+  it('收到 instruments_refreshed 消息后重新加载合约列表', async () => {
+    const { getInstruments } = await import('@/services/api')
+
+    vi.useFakeTimers()
+    renderHook(() => useMarketWs('ws://localhost:8000'))
+
+    const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
+
+    act(() => {
+      onMessage({ type: 'instruments_refreshed', data: { count: 5 } })
+    })
+
+    // 合约刷新后应调用 getInstruments 重新加载
+    expect(getInstruments).toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('不响应非 instruments_refreshed 类型的 WS 消息', () => {
+    vi.useFakeTimers()
+    renderHook(() => useMarketWs('ws://localhost:8000'))
+
+    const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
+
+    act(() => {
+      // connection_status 不应触发 toast
+      onMessage({ type: 'connection_status', data: { status: 'connected', target: 'md' } })
+    })
+
+    expect(mockToastSuccess).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('count=0 时不显示 toast', async () => {
+    vi.useFakeTimers()
+    renderHook(() => useMarketWs('ws://localhost:8000'))
+
+    const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
+
+    act(() => {
+      onMessage({ type: 'instruments_refreshed', data: { count: 0 } })
+    })
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(mockToastSuccess).not.toHaveBeenCalled()
+    vi.useRealTimers()
   })
 })

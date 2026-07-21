@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { StopOrderForm } from './StopOrderForm'
 
 let mockState: Record<string, unknown> = {}
@@ -72,5 +72,19 @@ describe('StopOrderForm', () => {
     render(<StopOrderForm />)
     const btn = screen.getByRole('button', { name: /止损买入/ })
     expect(btn).toBeInTheDocument()
+  })
+
+  it('renders hedge flag toggle (投机/套保/套利)', () => {
+    render(<StopOrderForm />)
+    expect(screen.getByText('投机')).toBeInTheDocument()
+    expect(screen.getByText('套保')).toBeInTheDocument()
+    expect(screen.getByText('套利')).toBeInTheDocument()
+  })
+
+  it('calls setOrderForm with combHedgeFlag when hedge toggle clicked', () => {
+    render(<StopOrderForm />)
+    const arbitrageBtn = screen.getByText('套利')
+    fireEvent.click(arbitrageBtn)
+    expect(mockState.setOrderForm).toHaveBeenCalledWith({ combHedgeFlag: 'arbitrage' })
   })
 })

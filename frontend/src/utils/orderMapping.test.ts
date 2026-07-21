@@ -4,6 +4,7 @@ import {
   toCtpOffsetFlag,
   toCtpPriceType,
   toCtpTimeCondition,
+  toCtpHedgeFlag,
   fromCtpDirection,
   fromCtpOffsetFlag,
   fromCtpOrderStatus,
@@ -55,6 +56,20 @@ describe('toCtpTimeCondition', () => {
 
   it("converts 'fak' to '3'", () => {
     expect(toCtpTimeCondition('fak')).toBe('3')
+  })
+})
+
+describe('toCtpHedgeFlag', () => {
+  it("converts 'speculation' to '1'", () => {
+    expect(toCtpHedgeFlag('speculation')).toBe('1')
+  })
+
+  it("converts 'arbitrage' to '2'", () => {
+    expect(toCtpHedgeFlag('arbitrage')).toBe('2')
+  })
+
+  it("converts 'hedge' to '3'", () => {
+    expect(toCtpHedgeFlag('hedge')).toBe('3')
   })
 })
 
@@ -121,9 +136,41 @@ describe('convertOrderRequest', () => {
       priceType: '2',
       timeCondition: '1',
       volumeCondition: '1',
+      hedgeFlag: '1',
       limitPrice: 4800.0,
       volumeTotalOriginal: 1,
     })
+  })
+
+  it('maps combHedgeFlag to hedgeFlag in CTP output', () => {
+    const form = {
+      instrumentID: 'IF2608',
+      direction: 'buy' as const,
+      combOffsetFlag: 'open' as const,
+      orderPriceType: 'limit' as const,
+      timeCondition: 'gfd' as const,
+      combHedgeFlag: 'hedge' as const,
+      limitPrice: 4800.0,
+      volumeTotalOriginal: 1,
+    }
+
+    const result = convertOrderRequest(form)
+    expect(result.hedgeFlag).toBe('3')
+  })
+
+  it('defaults hedgeFlag to 1 (speculation) when combHedgeFlag is not provided', () => {
+    const form = {
+      instrumentID: 'IF2608',
+      direction: 'buy' as const,
+      combOffsetFlag: 'open' as const,
+      orderPriceType: 'limit' as const,
+      timeCondition: 'gfd' as const,
+      limitPrice: 4800.0,
+      volumeTotalOriginal: 1,
+    }
+
+    const result = convertOrderRequest(form)
+    expect(result.hedgeFlag).toBe('1')
   })
 
   it('passes through stopPrice when present (stop order)', () => {
@@ -217,6 +264,7 @@ describe('convertOrderRequest', () => {
       priceType: '1',
       timeCondition: '2',
       volumeCondition: '3',
+      hedgeFlag: '1',
       limitPrice: 0,
       volumeTotalOriginal: 3,
     })

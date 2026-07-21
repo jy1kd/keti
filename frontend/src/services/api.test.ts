@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { api, API_BASE, getInstruments, subscribeMarket, getSnapshots, getKlineData, submitOrder, cancelOrder } from './api'
+import { api, API_BASE, getInstruments, subscribeMarket, getSnapshots, getKlineData, submitOrder, cancelOrder, refreshInstruments } from './api'
 
 describe('api (Axios 实例)', () => {
   it('API_BASE 有值', () => {
@@ -158,6 +158,7 @@ describe('submitOrder', () => {
       priceType: '2',
       timeCondition: '1',
       volumeCondition: '1',
+      hedgeFlag: '1',
       limitPrice: 4800.0,
       volumeTotalOriginal: 1,
     })
@@ -178,5 +179,30 @@ describe('cancelOrder', () => {
 
     expect(api.post).toHaveBeenCalledWith('/api/order/cancel', { orderRef: 'ORD-001' })
     expect(result).toEqual(mockData)
+  })
+})
+
+describe('refreshInstruments', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('calls POST /api/market/instruments/refresh and returns started status', async () => {
+    const mockData = { status: 'started' }
+    vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
+
+    const result = await refreshInstruments()
+
+    expect(api.post).toHaveBeenCalledWith('/api/market/instruments/refresh')
+    expect(result).toEqual(mockData)
+  })
+
+  it('returns the status string when API responds', async () => {
+    const mockData = { status: 'already_running' }
+    vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
+
+    const result = await refreshInstruments()
+
+    expect(result.status).toBe('already_running')
   })
 })

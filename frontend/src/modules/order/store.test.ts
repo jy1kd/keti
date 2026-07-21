@@ -48,6 +48,7 @@ describe('OrderStore', () => {
     expect(form.combOffsetFlag).toBe('open')
     expect(form.orderPriceType).toBe('limit')
     expect(form.timeCondition).toBe('gfd')
+    expect(form.combHedgeFlag).toBe('speculation')
     expect(form.limitPrice).toBe(0)
     expect(form.volumeTotalOriginal).toBe(1)
   })

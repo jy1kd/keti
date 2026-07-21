@@ -125,6 +125,34 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
         </div>
       </div>
 
+      {/* Hedge flag toggle */}
+      <div className="form-row">
+        <label>投保</label>
+        <div className="toggle-group triple">
+          <button
+            type="button"
+            className={`toggle-btn ${orderForm.combHedgeFlag === 'speculation' || !orderForm.combHedgeFlag ? 'active' : ''}`}
+            onClick={() => setOrderForm({ combHedgeFlag: 'speculation' })}
+          >
+            投机
+          </button>
+          <button
+            type="button"
+            className={`toggle-btn ${orderForm.combHedgeFlag === 'arbitrage' ? 'active' : ''}`}
+            onClick={() => setOrderForm({ combHedgeFlag: 'arbitrage' })}
+          >
+            套利
+          </button>
+          <button
+            type="button"
+            className={`toggle-btn ${orderForm.combHedgeFlag === 'hedge' ? 'active' : ''}`}
+            onClick={() => setOrderForm({ combHedgeFlag: 'hedge' })}
+          >
+            套保
+          </button>
+        </div>
+      </div>
+
       {/* Price input (hidden for market orders) */}
       {!isMarket && (
         <div className="form-row">

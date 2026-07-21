@@ -542,3 +542,154 @@
 - `6c11ef9` fix(task-10): CtpOrderRequest字段重命名(combOffsetFlag→offsetFlag, orderPriceType→priceType) + volumeCondition映射
 - `cb31c1d` fix(task-10): 集成接入 — ToastContainer挂载 + MarketPanel报单联动 + StopOrderForm有效期切换
 - `b75561c` chore(task-10): add pnpm lock and workspace files
+
+---
+
+## PR-20: 前端合约刷新功能
+
+**分支**：`feature/pr-20-instrument-refresh-ui`
+**开始时间**：2026-07-21
+**状态**：✅ 已完成（审查通过，待合并）
+
+---
+
+### TDD 测试用例清单
+
+| # | 模块 | 测试文件 | 测试数 | 状态 |
+|---|------|----------|--------|------|
+| 1 | refreshInstruments API | services/api.test.ts | 17 (+2) | ✅ 全部通过 |
+| 2 | store refreshInstruments | market/store.test.ts | 23 (+4) | ✅ 全部通过 |
+| 3 | useMarketWs instruments_refreshed | hooks/useMarketWs.test.ts | 10 (+3) | ✅ 全部通过 |
+| 4 | MarketPanel 刷新按钮 | market/MarketPanel.test.tsx | 11 (+4) | ✅ 全部通过 |
+
+**总计**：287 tests / 34 files 通过（新增 13 tests），0 failures
+
+---
+
+### TDD 循环记录
+
+| # | 功能 | 红灯 | 绿灯 | Commit |
+|---|------|------|------|--------|
+| 1 | refreshInstruments API 函数 | ✅ 2 fail | ✅ 17 pass | `2a4d682` |
+| 2 | store refreshInstruments + isRefreshing | ✅ 3 fail | ✅ 23 pass | `8e9bc8a` |
+| 3 | useMarketWs instruments_refreshed 消息处理 | ✅ 3 fail → 1 fix | ✅ 10 pass | `ac84927` |
+| 4 | MarketPanel 刷新按钮集成 | ✅ 4 fail | ✅ 11 pass | `51ae660` |
+
+---
+
+### 文件变更清单
+
+| 文件 | 变更类型 | 说明 |
+|------|----------|------|
+| `src/services/api.ts` | 修改 | 新增 refreshInstruments() → POST /api/market/instruments/refresh |
+| `src/services/api.test.ts` | 修改 | 新增 2 个测试用例 |
+| `src/modules/market/store.ts` | 修改 | 新增 isRefreshing 状态 + refreshInstruments 方法 |
+| `src/modules/market/store.test.ts` | 修改 | 新增 4 个测试用例 |
+| `src/hooks/useMarketWs.ts` | 修改 | 新增 instruments_refreshed 消息处理 → fetchInstruments + toast |
+| `src/hooks/useMarketWs.test.ts` | 修改 | 新增 3 个测试用例 + mock toast |
+| `src/modules/market/MarketPanel.tsx` | 修改 | 新增"刷新合约"按钮（loading 状态 + disabled） |
+| `src/modules/market/MarketPanel.test.tsx` | 修改 | 新增 4 个测试用例 + mock refreshInstruments |
+| `src/modules/market/styles.css` | 修改 | 新增 .btn-refresh-instruments + .panel-header__actions 样式 |
+
+---
+
+### 提交记录
+
+- `2a4d682` feat(task-20): implement refreshInstruments API function
+- `8e9bc8a` feat(task-20): add refreshInstruments + isRefreshing to market store
+- `ac84927` feat(task-20): handle instruments_refreshed WS message with toast + refetch
+- `51ae660` feat(task-20): add refresh contracts button to MarketPanel with loading state
+- `52cc723` docs(task-20): update dev-record-b with PR-20 TDD records
+- `0106342` docs(task-20): update progress.md — PR-20 开发完成，待审查
+- `736b1ea` fix(task-20): review反馈 - selector位置统一 + count=0防御 + 测试重命名 + 旧条目清理
+
+---
+
+### 审查反馈修复（第 1 轮）
+
+| # | 类型 | 内容 | 处理 |
+|---|------|------|------|
+| 🟡1 | 改进建议 | progress.md PR-20 旧条目未清理 | 删除旧"⏳ 待开始"条目 |
+| 🟡2 | 改进建议 | fetchInstruments selector 位置不一致 | 移至第 55 行与其他 selector 统一 |
+| 🔵1 | 疑问确认 | 测试命名"未知字段"误导 | 重命名为"不响应非 instruments_refreshed 类型的 WS 消息" |
+| 🔵2 | 疑问确认 | count=0 时 toast 尴尬 | 添加 `if (data.count > 0)` 防御 + 测试 |
+
+**Commit**：`736b1ea`
+
+---
+
+### 人工验证
+
+**验证时间**：2026-07-21
+**验证结果**：✅ 通过
+
+**讨论要点**：
+- 前端行情数据链路梳理：确认刷新按钮依赖 TD 连接，`instruments.json` 缺失会导致启动无数据
+- 自动订阅策略讨论：对比无限易方案，确认当前 300 自动 + 200 手动订阅方案合理，但需确保后端 `ReqQryInstrument` 能正确返回全量合约
+- 类型修复：`WSMessageType` 遗漏 `instruments_refreshed`，已在 `8ebaf1f` 修复
+
+**后续待定**：
+- `ReqQryInstrument` 空查询是否能返回全量合约需实际验证
+- 启动时自动订阅策略（300 主力合约）取决于后端合约查询结果
+- 建议 PR-21 实现自选列表驱动订阅，模仿无限易模式
+
+---
+
+## 投机/套保/套利 — 前端报单表单投保选择
+
+**分支**：`feature/pr-20-hedge-flag`
+**开始时间**：2026-07-21
+**状态**：✅ 已完成
+
+---
+
+### TDD 测试用例清单
+
+| # | 模块 | 测试文件 | 测试数 | 状态 |
+|---|------|----------|--------|------|
+| 1 | orderMapping hedge flag | utils/orderMapping.test.ts | 29 (+8) | ✅ 全部通过 |
+| 2 | store default combHedgeFlag | order/store.test.ts | 16 (+1) | ✅ 全部通过 |
+| 3 | OrderForm hedge toggle | order/OrderForm.test.tsx | 15 (+2) | ✅ 全部通过 |
+| 4 | StopOrderForm hedge toggle | order/StopOrderForm.test.tsx | 9 (+2) | ✅ 全部通过 |
+| 5 | api.test expected hedgeFlag | api.test.ts | 17 (1 更新) | ✅ 全部通过 |
+
+**总计**：297 tests / 34 files 通过（新增 9 tests），0 failures
+
+---
+
+### TDD 循环记录
+
+| # | 功能 | 红灯 | 绿灯 | Commit |
+|---|------|------|------|--------|
+| 1 | orderMapping: COMB_HEDGE_TO_CTP + toCtpHedgeFlag + convertOrderRequest | ✅ 7 fail | ✅ 29 pass | `805b420` |
+| 2 | store: DEFAULT_ORDER_FORM.combHedgeFlag = 'speculation' | ✅ 1 fail | ✅ 16 pass | `2155c3c` |
+| 3 | OrderForm: 投机/套保/套利 三选一切换 | ✅ 2 fail | ✅ 15 pass | `79bba22` |
+| 4 | StopOrderForm: 同上切换 | ✅ 2 fail | ✅ 9 pass | `ff68c78` |
+| 5 | types.ts + api.test 同步 | - | ✅ 297 pass | `892d419` |
+
+---
+
+### 文件变更清单
+
+| 文件 | 变更类型 | 说明 |
+|------|----------|------|
+| `src/utils/orderMapping.ts` | 修改 | 新增 COMB_HEDGE_TO_CTP 映射、toCtpHedgeFlag 函数、OrderRequestForm/CtpOrderRequest 新增 hedge flag 字段、convertOrderRequest 默认输出 hedgeFlag: '1' |
+| `src/utils/orderMapping.test.ts` | 修改 | 新增 5 个 toCtpHedgeFlag 测试 + 更新 4 个 convertOrderRequest 测试 |
+| `src/modules/order/store.ts` | 修改 | DEFAULT_ORDER_FORM 新增 combHedgeFlag: 'speculation' |
+| `src/modules/order/store.test.ts` | 修改 | 新增 1 个默认值断言 |
+| `src/modules/order/OrderForm.tsx` | 修改 | 新增"投保"行，投机/套保/套利 三选一切换按钮 |
+| `src/modules/order/OrderForm.test.tsx` | 修改 | 新增 2 个测试（渲染 + 点击交互） |
+| `src/modules/order/StopOrderForm.tsx` | 修改 | 同上 |
+| `src/modules/order/StopOrderForm.test.tsx` | 修改 | 新增 2 个测试 + fireEvent import |
+| `src/services/types.ts` | 修改 | OrderRequest 和 StopOrderRequest 新增 combHedgeFlag? 可选字段 |
+| `src/services/api.test.ts` | 修改 | submitOrder 期待值新增 hedgeFlag: '1' |
+
+---
+
+### 提交记录
+
+- `805b420` feat(hedge-flag): add combHedgeFlag mapping + toCtpHedgeFlag + convertOrderRequest hedgeFlag output
+- `2155c3c` feat(hedge-flag): add combHedgeFlag 'speculation' to DEFAULT_ORDER_FORM
+- `79bba22` feat(hedge-flag): add hedge flag toggle (投机/套保/套利) to OrderForm
+- `ff68c78` feat(hedge-flag): add hedge flag toggle (投机/套保/套利) to StopOrderForm
+- `892d419` fix(hedge-flag): update api.test expected hedgeFlag + types.ts OrderRequest/StopOrderRequest combHedgeFlag

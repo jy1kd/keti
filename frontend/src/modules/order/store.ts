@@ -9,6 +9,7 @@ export const DEFAULT_ORDER_FORM: OrderRequestForm = {
   combOffsetFlag: 'open',
   orderPriceType: 'limit',
   timeCondition: 'gfd',
+  combHedgeFlag: 'speculation',
   limitPrice: 0,
   volumeTotalOriginal: 1,
 }

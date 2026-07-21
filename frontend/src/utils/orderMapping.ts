@@ -27,6 +27,12 @@ const TIME_CONDITION_TO_CTP: Record<string, string> = {
   fak: '3',
 }
 
+const COMB_HEDGE_TO_CTP: Record<string, string> = {
+  speculation: '1',
+  arbitrage: '2',
+  hedge: '3',
+}
+
 // --- CTP → 前端 ---
 
 const DIRECTION_FROM_CTP: Record<string, string> = {
@@ -65,6 +71,10 @@ export function toCtpTimeCondition(timeCondition: string): string {
   return TIME_CONDITION_TO_CTP[timeCondition]
 }
 
+export function toCtpHedgeFlag(combHedgeFlag: string): string {
+  return COMB_HEDGE_TO_CTP[combHedgeFlag] ?? '1'
+}
+
 export function fromCtpDirection(ctpDirection: string): string {
   return DIRECTION_FROM_CTP[ctpDirection]
 }
@@ -83,6 +93,7 @@ export interface OrderRequestForm {
   combOffsetFlag: 'open' | 'close' | 'close_today'
   orderPriceType: 'limit' | 'market'
   timeCondition: 'gfd' | 'fok' | 'fak'
+  combHedgeFlag?: 'speculation' | 'arbitrage' | 'hedge'
   limitPrice: number
   volumeTotalOriginal: number
   stopPrice?: number
@@ -95,6 +106,7 @@ export interface CtpOrderRequest {
   priceType: string
   timeCondition: string
   volumeCondition: string
+  hedgeFlag: string
   limitPrice: number
   volumeTotalOriginal: number
   stopPrice?: number
@@ -112,6 +124,7 @@ export function convertOrderRequest(form: OrderRequestForm): CtpOrderRequest {
     priceType: toCtpPriceType(form.orderPriceType),
     timeCondition,
     volumeCondition,
+    hedgeFlag: toCtpHedgeFlag(form.combHedgeFlag ?? 'speculation'),
     limitPrice: form.limitPrice,
     volumeTotalOriginal: form.volumeTotalOriginal,
   }

@@ -21,11 +21,13 @@ vi.mock('react-resizable-panels', () => ({
 }))
 
 // Mock api module
+const mockRefreshInstruments = vi.fn().mockResolvedValue({ status: 'started' })
 vi.mock('@/services/api', () => ({
   getInstruments: vi.fn().mockResolvedValue({ instruments: [], count: 0 }),
   subscribeMarket: vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] }),
   getSnapshots: vi.fn().mockResolvedValue({ snapshots: {} }),
   getKlineData: vi.fn().mockResolvedValue({ instrumentID: '', period: '', bars: [] }),
+  refreshInstruments: (...args: unknown[]) => mockRefreshInstruments(...args),
   API_BASE: 'http://localhost:8000',
 }))
 
@@ -135,5 +137,30 @@ describe('MarketPanel', () => {
     render(<MarketPanel />)
     const handles = document.querySelectorAll('.resize-handle')
     expect(handles.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('renders refresh contracts button', () => {
+    render(<MarketPanel />)
+    expect(screen.getByText('刷新合约')).toBeInTheDocument()
+  })
+
+  it('refresh button calls refreshInstruments on click', () => {
+    render(<MarketPanel />)
+    const btn = screen.getByText('刷新合约')
+    btn.click()
+    expect(mockRefreshInstruments).toHaveBeenCalled()
+  })
+
+  it('refresh button shows loading text when refreshing', () => {
+    useMarketStore.setState({ isRefreshing: true })
+    render(<MarketPanel />)
+    expect(screen.getByText('刷新中...')).toBeInTheDocument()
+  })
+
+  it('refresh button is disabled while refreshing', () => {
+    useMarketStore.setState({ isRefreshing: true })
+    render(<MarketPanel />)
+    const btn = screen.getByText('刷新中...')
+    expect(btn).toBeDisabled()
   })
 })
