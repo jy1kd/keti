@@ -23,9 +23,11 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, subscribed
   // Load exchanges on open
   useEffect(() => {
     if (!isOpen) return
+    let ignore = false
     getExchanges()
-      .then((res) => setExchanges(res.exchanges))
-      .catch(() => setError('加载交易所列表失败'))
+      .then((res) => { if (!ignore) setExchanges(res.exchanges) })
+      .catch(() => { if (!ignore) setError('加载交易所列表失败') })
+    return () => { ignore = true }
   }, [isOpen])
 
   // Load products when exchange changes
@@ -36,28 +38,35 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, subscribed
       setInstruments([])
       return
     }
+    let ignore = false
     getProducts(selectedExchange)
       .then((res) => {
-        setProducts(res.products)
-        setSelectedProduct('')
-        setInstruments([])
+        if (!ignore) {
+          setProducts(res.products)
+          setSelectedProduct('')
+          setInstruments([])
+        }
       })
-      .catch(() => setError('加载品种列表失败'))
+      .catch(() => { if (!ignore) setError('加载品种列表失败') })
+    return () => { ignore = true }
   }, [selectedExchange])
 
-  // Load instruments when product changes
-  const loadInstruments = useCallback(() => {
+  // Load instruments (shared by product change, button click, Enter key)
+  const loadInstruments = useCallback((onCleanup?: () => boolean) => {
     if (!selectedExchange || !selectedProduct) return
     setLoading(true)
     setError('')
     searchInstruments(selectedExchange, selectedProduct, keyword || undefined)
-      .then((res) => setInstruments(res.instruments))
-      .catch(() => setError('加载合约列表失败'))
-      .finally(() => setLoading(false))
+      .then((res) => { if (!onCleanup?.()) setInstruments(res.instruments) })
+      .catch(() => { if (!onCleanup?.()) setError('加载合约列表失败') })
+      .finally(() => { if (!onCleanup?.()) setLoading(false) })
   }, [selectedExchange, selectedProduct, keyword])
 
+  // Load instruments when product changes (with cleanup)
   useEffect(() => {
-    loadInstruments()
+    let ignore = false
+    loadInstruments(() => ignore)
+    return () => { ignore = true }
   }, [selectedExchange, selectedProduct]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Search on Enter key
@@ -121,7 +130,7 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, subscribed
             disabled={!selectedProduct}
           />
 
-          <button onClick={loadInstruments} disabled={!selectedProduct || loading}>
+          <button onClick={() => loadInstruments()} disabled={!selectedProduct || loading}>
             搜索
           </button>
         </div>
