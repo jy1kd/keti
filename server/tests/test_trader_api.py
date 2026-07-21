@@ -31,6 +31,11 @@ def _mock_ctp_module():
     ctp_mock.CThostFtdcReqUserLoginField.return_value = Mock()
     ctp_mock.CThostFtdcInputOrderField.return_value = Mock()
     ctp_mock.CThostFtdcInputOrderActionField.return_value = Mock()
+    ctp_mock.CThostFtdcQryInstrumentField.return_value = Mock()
+    ctp_mock.CThostFtdcQryOrderField.return_value = Mock()
+    ctp_mock.CThostFtdcQryTradeField.return_value = Mock()
+    ctp_mock.CThostFtdcQryInvestorPositionField.return_value = Mock()
+    ctp_mock.CThostFtdcQryTradingAccountField.return_value = Mock()
     sys.modules["ctp"] = ctp_mock
     return ctp_mock
 
@@ -446,3 +451,183 @@ class TestQueryInstruments:
         initial_id = api._request_id
         api.query_instruments()
         assert api._request_id == initial_id + 1
+
+
+# ── Query methods tests (PR-11) ─────────────────────────────────────────
+
+
+class TestQueryOrders:
+    """Test query_orders with mocked ctp module."""
+
+    def teardown_method(self):
+        _unmock_ctp()
+
+    def test_query_orders_calls_ReqQryOrder(self):
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqQryOrder.return_value = 0
+        result = api.query_orders()
+        assert result == 0
+        api._api.ReqQryOrder.assert_called_once()
+
+    def test_query_orders_returns_negative_on_failure(self):
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqQryOrder.return_value = -1
+        result = api.query_orders()
+        assert result == -1
+
+    def test_query_orders_sets_broker_id(self):
+        cfg = Config()
+        cfg.broker_id = "8888"
+        _mock_ctp_module()
+        api = TraderApi(cfg)
+        api._api = Mock()
+        api._api.ReqQryOrder.return_value = 0
+        api.query_orders()
+        call_args = api._api.ReqQryOrder.call_args[0]
+        field = call_args[0]
+        assert field.BrokerID == "8888"
+
+    def test_query_orders_sets_investor_id(self):
+        cfg = Config()
+        cfg.user_id = "test_user"
+        _mock_ctp_module()
+        api = TraderApi(cfg)
+        api._api = Mock()
+        api._api.ReqQryOrder.return_value = 0
+        api.query_orders()
+        call_args = api._api.ReqQryOrder.call_args[0]
+        field = call_args[0]
+        assert field.InvestorID == "test_user"
+
+    def test_query_orders_increments_request_id(self):
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqQryOrder.return_value = 0
+        initial_id = api._request_id
+        api.query_orders()
+        assert api._request_id == initial_id + 1
+
+
+class TestQueryTrades:
+    """Test query_trades with mocked ctp module."""
+
+    def teardown_method(self):
+        _unmock_ctp()
+
+    def test_query_trades_calls_ReqQryTrade(self):
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqQryTrade.return_value = 0
+        result = api.query_trades()
+        assert result == 0
+        api._api.ReqQryTrade.assert_called_once()
+
+    def test_query_trades_returns_negative_on_failure(self):
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqQryTrade.return_value = -1
+        result = api.query_trades()
+        assert result == -1
+
+    def test_query_trades_sets_broker_id(self):
+        cfg = Config()
+        cfg.broker_id = "8888"
+        _mock_ctp_module()
+        api = TraderApi(cfg)
+        api._api = Mock()
+        api._api.ReqQryTrade.return_value = 0
+        api.query_trades()
+        call_args = api._api.ReqQryTrade.call_args[0]
+        field = call_args[0]
+        assert field.BrokerID == "8888"
+
+
+class TestQueryPositions:
+    """Test query_positions with mocked ctp module."""
+
+    def teardown_method(self):
+        _unmock_ctp()
+
+    def test_query_positions_calls_ReqQryInvestorPosition(self):
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqQryInvestorPosition.return_value = 0
+        result = api.query_positions()
+        assert result == 0
+        api._api.ReqQryInvestorPosition.assert_called_once()
+
+    def test_query_positions_returns_negative_on_failure(self):
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqQryInvestorPosition.return_value = -1
+        result = api.query_positions()
+        assert result == -1
+
+    def test_query_positions_sets_broker_id(self):
+        cfg = Config()
+        cfg.broker_id = "8888"
+        _mock_ctp_module()
+        api = TraderApi(cfg)
+        api._api = Mock()
+        api._api.ReqQryInvestorPosition.return_value = 0
+        api.query_positions()
+        call_args = api._api.ReqQryInvestorPosition.call_args[0]
+        field = call_args[0]
+        assert field.BrokerID == "8888"
+
+
+class TestQueryAccount:
+    """Test query_account with mocked ctp module."""
+
+    def teardown_method(self):
+        _unmock_ctp()
+
+    def test_query_account_calls_ReqQryTradingAccount(self):
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqQryTradingAccount.return_value = 0
+        result = api.query_account()
+        assert result == 0
+        api._api.ReqQryTradingAccount.assert_called_once()
+
+    def test_query_account_returns_negative_on_failure(self):
+        _mock_ctp_module()
+        api = TraderApi(Config())
+        api._api = Mock()
+        api._api.ReqQryTradingAccount.return_value = -1
+        result = api.query_account()
+        assert result == -1
+
+    def test_query_account_sets_broker_id(self):
+        cfg = Config()
+        cfg.broker_id = "8888"
+        _mock_ctp_module()
+        api = TraderApi(cfg)
+        api._api = Mock()
+        api._api.ReqQryTradingAccount.return_value = 0
+        api.query_account()
+        call_args = api._api.ReqQryTradingAccount.call_args[0]
+        field = call_args[0]
+        assert field.BrokerID == "8888"
+
+    def test_query_account_sets_investor_id(self):
+        cfg = Config()
+        cfg.user_id = "test_user"
+        _mock_ctp_module()
+        api = TraderApi(cfg)
+        api._api = Mock()
+        api._api.ReqQryTradingAccount.return_value = 0
+        api.query_account()
+        call_args = api._api.ReqQryTradingAccount.call_args[0]
+        field = call_args[0]
+        assert field.InvestorID == "test_user"
