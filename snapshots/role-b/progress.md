@@ -22,7 +22,7 @@
 | PR-15 | 前端快捷功能实现 | ⏳ 待开始 | - | - |
 | PR-16 | 前端查询面板实现 | ⏳ 待开始 | - | - |
 | PR-17 | 联调测试与Bug修复 | ⏳ 待开始 | - | - |
-| PR-20 | 前端合约刷新功能（刷新按钮 + Toast） | ⏳ 待开始 | - | - |
+| PR-20 | 前端合约刷新功能（刷新按钮 + Toast） | ✅ 已完成 | 2026-07-21 | 2a4d682~52cc723 (5 commits) |
 | PR-21 | 手动订阅/退订合约 | ⏳ 待开始 | - | - |
 
 **总计**：12个PR + 1个联调PR = 13个PR
@@ -379,8 +379,42 @@
 
 ---
 
+---
+
+### PR-20: 前端合约刷新功能
+
+**状态**：✅ 已完成（待审查）
+
+**PR信息**：
+- PR分支名：`feature/pr-20-instrument-refresh-ui`
+- 依赖PR：PR-19
+- 工作量：1小时
+
+**完成内容**：
+- refreshInstruments API 函数（POST /api/market/instruments/refresh）
+- Store 扩展（isRefreshing 状态 + refreshInstruments 方法）
+- useMarketWs 监听 instruments_refreshed → toast + fetchInstruments
+- MarketPanel "刷新合约"按钮（loading 状态、disabled）
+
+**验证结果**：
+- ✅ 287 tests / 34 files 通过（新增 13 tests）
+- ✅ TypeScript 编译无错误
+
+**提交记录**：
+- `2a4d682` feat(task-20): implement refreshInstruments API function
+- `8e9bc8a` feat(task-20): add refreshInstruments + isRefreshing to market store
+- `ac84927` feat(task-20): handle instruments_refreshed WS message with toast + refetch
+- `51ae660` feat(task-20): add refresh contracts button to MarketPanel with loading state
+- `52cc723` docs(task-20): update dev-record-b with PR-20 TDD records
+
+**交接说明**：
+- 开发完成，待审查。审查通过后可进入 PR-21（手动订阅）
+
+---
+
 ## 开发日志
 
 | 日期 | 内容 | 状态 |
 |------|------|------|
 | 2026-07-08 | 初始化progress.md | ✅ 完成 |
+| 2026-07-21 | PR-20 合约刷新功能完成 | ✅ 完成 |
