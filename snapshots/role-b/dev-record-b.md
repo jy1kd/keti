@@ -549,7 +549,7 @@
 
 **分支**：`feature/pr-20-instrument-refresh-ui`
 **开始时间**：2026-07-21
-**状态**：✅ 已完成（开发完成，待自验证）
+**状态**：✅ 已完成（审查通过，审查反馈已修复）
 
 ---
 
@@ -599,3 +599,19 @@
 - `8e9bc8a` feat(task-20): add refreshInstruments + isRefreshing to market store
 - `ac84927` feat(task-20): handle instruments_refreshed WS message with toast + refetch
 - `51ae660` feat(task-20): add refresh contracts button to MarketPanel with loading state
+- `52cc723` docs(task-20): update dev-record-b with PR-20 TDD records
+- `0106342` docs(task-20): update progress.md — PR-20 开发完成，待审查
+- `736b1ea` fix(task-20): review反馈 - selector位置统一 + count=0防御 + 测试重命名 + 旧条目清理
+
+---
+
+### 审查反馈修复（第 1 轮）
+
+| # | 类型 | 内容 | 处理 |
+|---|------|------|------|
+| 🟡1 | 改进建议 | progress.md PR-20 旧条目未清理 | 删除旧"⏳ 待开始"条目 |
+| 🟡2 | 改进建议 | fetchInstruments selector 位置不一致 | 移至第 55 行与其他 selector 统一 |
+| 🔵1 | 疑问确认 | 测试命名"未知字段"误导 | 重命名为"不响应非 instruments_refreshed 类型的 WS 消息" |
+| 🔵2 | 疑问确认 | count=0 时 toast 尴尬 | 添加 `if (data.count > 0)` 防御 + 测试 |
+
+**Commit**：`736b1ea`
