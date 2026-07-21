@@ -210,3 +210,105 @@ class TestTraderSpiQryInstrument:
         except Exception:
             ok = False
         assert ok
+
+
+# ── Query callback tests (PR-11) ────────────────────────────────────────
+
+
+class TestTraderSpiQueryCallbacks:
+    """Test OnRspQryOrder, OnRspQryTrade, OnRspQryInvestorPosition,
+    OnRspQryTradingAccount callbacks on TraderSpi."""
+
+    def test_on_rsp_qry_order_exists(self):
+        spi = TraderSpi(api=None)
+        assert hasattr(spi, "OnRspQryOrder")
+        assert callable(spi.OnRspQryOrder)
+
+    def test_on_rsp_qry_trade_exists(self):
+        spi = TraderSpi(api=None)
+        assert hasattr(spi, "OnRspQryTrade")
+        assert callable(spi.OnRspQryTrade)
+
+    def test_on_rsp_qry_position_exists(self):
+        spi = TraderSpi(api=None)
+        assert hasattr(spi, "OnRspQryInvestorPosition")
+        assert callable(spi.OnRspQryInvestorPosition)
+
+    def test_on_rsp_qry_account_exists(self):
+        spi = TraderSpi(api=None)
+        assert hasattr(spi, "OnRspQryTradingAccount")
+        assert callable(spi.OnRspQryTradingAccount)
+
+    def test_on_rsp_qry_order_logs_event(self):
+        spi = TraderSpi(api=None)
+        spi.OnRspQryOrder(None, None, 0, True)
+        assert any(e["type"] == "OnRspQryOrder" for e in spi.events)
+
+    def test_on_rsp_qry_trade_logs_event(self):
+        spi = TraderSpi(api=None)
+        spi.OnRspQryTrade(None, None, 0, True)
+        assert any(e["type"] == "OnRspQryTrade" for e in spi.events)
+
+    def test_on_rsp_qry_position_logs_event(self):
+        spi = TraderSpi(api=None)
+        spi.OnRspQryInvestorPosition(None, None, 0, True)
+        assert any(e["type"] == "OnRspQryInvestorPosition" for e in spi.events)
+
+    def test_on_rsp_qry_account_logs_event(self):
+        spi = TraderSpi(api=None)
+        spi.OnRspQryTradingAccount(None, None, 0, True)
+        assert any(e["type"] == "OnRspQryTradingAccount" for e in spi.events)
+
+    def test_on_rsp_qry_order_dispatches_handler(self):
+        spi = TraderSpi(api=None)
+        received = []
+        spi.on("OnRspQryOrder", lambda *args: received.append(args))
+        mock_order = {"OrderRef": "1"}
+        spi.OnRspQryOrder(mock_order, None, 1, True)
+        assert len(received) == 1
+        assert received[0] == (mock_order, None, 1, True)
+
+    def test_on_rsp_qry_trade_dispatches_handler(self):
+        spi = TraderSpi(api=None)
+        received = []
+        spi.on("OnRspQryTrade", lambda *args: received.append(args))
+        mock_trade = {"TradeID": "T1"}
+        spi.OnRspQryTrade(mock_trade, None, 1, True)
+        assert len(received) == 1
+        assert received[0] == (mock_trade, None, 1, True)
+
+    def test_on_rsp_qry_position_dispatches_handler(self):
+        spi = TraderSpi(api=None)
+        received = []
+        spi.on("OnRspQryInvestorPosition", lambda *args: received.append(args))
+        mock_pos = {"InstrumentID": "IF2608"}
+        spi.OnRspQryInvestorPosition(mock_pos, None, 1, True)
+        assert len(received) == 1
+        assert received[0] == (mock_pos, None, 1, True)
+
+    def test_on_rsp_qry_account_dispatches_handler(self):
+        spi = TraderSpi(api=None)
+        received = []
+        spi.on("OnRspQryTradingAccount", lambda *args: received.append(args))
+        mock_acc = {"AccountID": "user001"}
+        spi.OnRspQryTradingAccount(mock_acc, None, 1, True)
+        assert len(received) == 1
+        assert received[0] == (mock_acc, None, 1, True)
+
+    def test_query_callbacks_in_defaults_do_not_crash(self):
+        """All query callbacks should be safe to call with defaults."""
+        spi = TraderSpi(api=None)
+        call_map = [
+            ("OnRspQryOrder", (None, None, 0, True)),
+            ("OnRspQryTrade", (None, None, 0, True)),
+            ("OnRspQryInvestorPosition", (None, None, 0, True)),
+            ("OnRspQryTradingAccount", (None, None, 0, True)),
+        ]
+        for method_name, args in call_map:
+            method = getattr(spi, method_name)
+            try:
+                method(*args)
+                ok = True
+            except Exception:
+                ok = False
+            assert ok, f"{method_name}{args} should not raise"
