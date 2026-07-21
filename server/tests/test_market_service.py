@@ -766,3 +766,54 @@ class TestInstrumentSearch:
         svc = MarketService()
         svc.load_instruments(self.SAMPLE)
         assert svc.get_instruments_by_ids([]) == []
+
+
+# ── Preset instruments ───────────────────────────────────────────────
+
+class TestPresetInstruments:
+    """get_preset_instruments and refresh_preset_instruments."""
+
+    def test_get_preset_returns_empty_initially(self):
+        svc = MarketService()
+        result = svc.get_preset_instruments()
+        assert result["instruments"] == []
+
+    def test_refresh_preset_detects_front_month(self):
+        svc = MarketService()
+        svc.load_instruments([
+            {"instrumentID": "IF2608", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260821", "isTrading": 1},
+            {"instrumentID": "IF2609", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260918", "isTrading": 1},
+            {"instrumentID": "au2608", "exchangeID": "SHFE", "productID": "au", "expireDate": "20260815", "isTrading": 1},
+        ])
+        result = svc.refresh_preset_instruments()
+        assert result["success"] is True
+        # IF2608 expires sooner, au2608 is the only au
+        assert set(result["instruments"]) == {"IF2608", "au2608"}
+
+    def test_refresh_preset_skips_non_trading(self):
+        svc = MarketService()
+        svc.load_instruments([
+            {"instrumentID": "IF2608", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260821", "isTrading": 0},
+            {"instrumentID": "IF2609", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260918", "isTrading": 1},
+        ])
+        result = svc.refresh_preset_instruments()
+        assert "IF2608" not in result["instruments"]
+        assert "IF2609" in result["instruments"]
+
+    def test_refresh_preset_saves_to_file(self):
+        import tempfile, os
+        svc = MarketService()
+        svc.load_instruments([
+            {"instrumentID": "IF2608", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260821", "isTrading": 1},
+        ])
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            tmp_path = f.name
+        try:
+            result = svc.refresh_preset_instruments(file_path=tmp_path)
+            assert result["success"] is True
+            import json
+            with open(tmp_path, "r") as f:
+                saved = json.load(f)
+            assert "IF2608" in saved["instruments"]
+        finally:
+            os.unlink(tmp_path)

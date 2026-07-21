@@ -526,3 +526,28 @@ class TestGetInstrumentsByIds:
         assert resp.status_code == 200
         data = resp.json()
         assert data["count"] == 3
+
+
+# ── Preset endpoints ─────────────────────────────────────────────────
+
+class TestPreset:
+    """GET /api/market/preset and POST /api/market/preset/refresh"""
+
+    @pytest.mark.asyncio
+    async def test_get_preset_returns_empty_initially(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/preset")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "instruments" in data
+
+    @pytest.mark.asyncio
+    async def test_refresh_preset(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/market/preset/refresh")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+        assert isinstance(data["instruments"], list)

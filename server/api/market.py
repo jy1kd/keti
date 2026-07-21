@@ -76,6 +76,23 @@ async def search_instruments(
     return {"instruments": instruments, "count": len(instruments)}
 
 
+# ── Preset instruments ─────────────────────────────────────────────────
+
+@router.get("/preset")
+async def get_preset(request: Request):
+    """Return preset instrument list."""
+    svc = _get_service(request)
+    return svc.get_preset_instruments()
+
+
+@router.post("/preset/refresh")
+async def refresh_preset(request: Request):
+    """Auto-detect front-month contracts and update preset list."""
+    svc = _get_service(request)
+    result = svc.refresh_preset_instruments()
+    return result
+
+
 # ── Subscribe ───────────────────────────────────────────────────────────
 @router.post("/subscribe")
 async def subscribe(body: SubscribeRequest, request: Request):
