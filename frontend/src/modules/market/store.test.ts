@@ -8,9 +8,10 @@ vi.mock('@/services/api', () => ({
   getInstruments: vi.fn(),
   subscribeMarket: vi.fn(),
   getSnapshots: vi.fn(),
+  refreshInstruments: vi.fn(),
 }))
 
-import { getInstruments, subscribeMarket, getSnapshots } from '@/services/api'
+import { getInstruments, subscribeMarket, getSnapshots, refreshInstruments } from '@/services/api'
 
 describe('MarketStore', () => {
   beforeEach(() => {
@@ -250,5 +251,49 @@ describe('MarketStore - klineData', () => {
     useMarketStore.getState().appendKline('IF2608', candle)
     expect(useMarketStore.getState().klineData.get('IF2608')?.length).toBe(1)
     expect(useMarketStore.getState().klineData.get('IF2608')?.[0]).toEqual(candle)
+  })
+})
+
+describe('MarketStore - refreshInstruments', () => {
+  beforeEach(() => {
+    useMarketStore.setState({
+      isRefreshing: false,
+    })
+    vi.mocked(refreshInstruments).mockReset()
+  })
+
+  it('isRefreshing defaults to false', () => {
+    expect(useMarketStore.getState().isRefreshing).toBe(false)
+  })
+
+  it('refreshInstruments sets isRefreshing=true while calling API', async () => {
+    vi.mocked(refreshInstruments).mockResolvedValue({ status: 'started' })
+
+    const promise = useMarketStore.getState().refreshInstruments()
+
+    // 同步检查：API 调用期间 isRefreshing 应为 true
+    expect(useMarketStore.getState().isRefreshing).toBe(true)
+
+    await promise
+
+    // 完成后应恢复为 false
+    expect(useMarketStore.getState().isRefreshing).toBe(false)
+  })
+
+  it('refreshInstruments calls the API and returns status', async () => {
+    vi.mocked(refreshInstruments).mockResolvedValue({ status: 'started' })
+
+    const result = await useMarketStore.getState().refreshInstruments()
+
+    expect(refreshInstruments).toHaveBeenCalled()
+    expect(result).toEqual({ status: 'started' })
+  })
+
+  it('refreshInstruments resets isRefreshing even if API fails', async () => {
+    vi.mocked(refreshInstruments).mockRejectedValue(new Error('network error'))
+
+    await useMarketStore.getState().refreshInstruments()
+
+    expect(useMarketStore.getState().isRefreshing).toBe(false)
   })
 })
