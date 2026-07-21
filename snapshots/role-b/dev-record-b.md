@@ -463,7 +463,7 @@
 
 **分支**：`feature/pr-10-order-form`
 **开始时间**：2026-07-20
-**状态**：✅ 审查反馈修复完成，待二次审查
+**状态**：✅ 已完成（待合并）
 
 ---
 
@@ -481,7 +481,7 @@
 | 8 | StopOrderForm 组件 | order/StopOrderForm.test.tsx | 7 | ✅ 全部通过 |
 | 9 | OrderPanel 集成 | order/OrderPanel.test.tsx | 5 (+3) | ✅ 全部通过 |
 
-**总计**：248 tests / 32 files 通过（新增 62 tests），2 pre-existing failures (react-resizable-panels)
+**总计**：274 tests / 34 files 通过（新增 88 tests），0 failures
 
 ---
 
@@ -538,3 +538,7 @@
 - `6ba0262` fix(task-10): review反馈 - useHotKeys集成到OrderPanel
 - `fb20393` fix(task-10): review反馈 - usePriceStep集成到表单组件
 - `a7caf33` fix(task-10): review反馈 - 前端校验+注释补充
+- `dcf38ce` docs(task-10): review回复 — 修复记录+状态更新
+- `6c11ef9` fix(task-10): CtpOrderRequest字段重命名(combOffsetFlag→offsetFlag, orderPriceType→priceType) + volumeCondition映射
+- `cb31c1d` fix(task-10): 集成接入 — ToastContainer挂载 + MarketPanel报单联动 + StopOrderForm有效期切换
+- `b75561c` chore(task-10): add pnpm lock and workspace files
