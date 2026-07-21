@@ -456,3 +456,89 @@
 - 测试文件：28 passed
 - 测试用例：186 passed
 - TypeScript：0 errors
+
+---
+
+## PR-10: 前端报单表单实现
+
+**分支**：`feature/pr-10-order-form`
+**开始时间**：2026-07-20
+**状态**：✅ 已完成（待合并）
+
+---
+
+### TDD 测试用例清单
+
+| # | 模块 | 测试文件 | 测试数 | 状态 |
+|---|------|----------|--------|------|
+| 1 | orderMapping 字段映射 | utils/orderMapping.test.ts | 21 | ✅ 全部通过 |
+| 2 | Order API 函数 | services/api.test.ts | 15 (+2) | ✅ 全部通过 |
+| 3 | Toast 提示组件 | components/Toast/index.test.tsx | 6 | ✅ 全部通过 |
+| 4 | Order Store 增强 | order/store.test.ts | 11 (+9) | ✅ 全部通过 |
+| 5 | usePriceStep Hook | hooks/usePriceStep.test.ts | 8 | ✅ 全部通过 |
+| 6 | useHotKeys Hook | hooks/useHotKeys.test.ts | 9 | ✅ 全部通过 |
+| 7 | OrderForm 组件 | order/OrderForm.test.tsx | 10 | ✅ 全部通过 |
+| 8 | StopOrderForm 组件 | order/StopOrderForm.test.tsx | 7 | ✅ 全部通过 |
+| 9 | OrderPanel 集成 | order/OrderPanel.test.tsx | 5 (+3) | ✅ 全部通过 |
+
+**总计**：274 tests / 34 files 通过（新增 88 tests），0 failures
+
+---
+
+### TDD 循环记录
+
+| # | 功能 | 红灯 | 绿灯 | Commit |
+|---|------|------|------|--------|
+| 1 | 字段映射工具 orderMapping.ts | ✅ 21 fail | ✅ 21 pass | `3f2941c` |
+| 2 | Order API submitOrder/cancelOrder | ✅ 2 fail | ✅ 15 pass | `3f2941c` |
+| 3 | Toast 组件 | ✅ 6 fail | ✅ 6 pass | `3f2941c` |
+| 4 | Order Store 增强 | ✅ 9 fail | ✅ 11 pass | `3f2941c` |
+| 5 | usePriceStep Hook | ✅ 8 fail | ✅ 8 pass | `3f2941c` |
+| 6 | useHotKeys Hook | ✅ 9 fail → 1 logic fail | ✅ 9 pass | `3f2941c` |
+| 7 | OrderForm 组件 | ✅ 10 fail | ✅ 10 pass | `3f2941c` |
+| 8 | StopOrderForm 组件 | ✅ 7 fail | ✅ 7 pass | `3f2941c` |
+| 9 | OrderPanel Tab 集成 | ✅ 3 fail | ✅ 5 pass | `3f2941c` |
+
+---
+
+### 文件变更清单
+
+| 文件 | 变更类型 | 说明 |
+|------|----------|------|
+| `src/utils/orderMapping.ts` | 新增 | 前端字符串↔CTP字符码映射（direction/offset/priceType/timeCondition/orderStatus） |
+| `src/utils/orderMapping.test.ts` | 新增 | 21 个测试用例 |
+| `src/services/api.ts` | 修改 | 新增 submitOrder（自动转换字段）、cancelOrder |
+| `src/services/api.test.ts` | 修改 | 新增 submitOrder/cancelOrder 测试 |
+| `src/components/Toast/index.tsx` | 新增 | 轻量 Toast 组件（success/error，3秒消失，独立计时） |
+| `src/components/Toast/index.test.tsx` | 新增 | 6 个测试用例 |
+| `src/components/Toast/styles.css` | 新增 | Toast 样式 |
+| `src/hooks/usePriceStep.ts` | 新增 | 价格步进 Hook（stepUp/stepDown/alignToTick） |
+| `src/hooks/usePriceStep.test.ts` | 新增 | 8 个测试用例 |
+| `src/hooks/useHotKeys.ts` | 新增 | 快捷键 Hook（B/S/C，仅报单面板焦点时生效） |
+| `src/hooks/useHotKeys.test.ts` | 新增 | 9 个测试用例 |
+| `src/modules/order/store.ts` | 修改 | 新增 orderForm 状态、setOrderForm、submitOrder、resetOrderForm |
+| `src/modules/order/store.test.ts` | 修改 | 新增 9 个测试用例 |
+| `src/modules/order/OrderForm.tsx` | 新增 | 报单表单组件（方向/开平/限价市价/有效期切换、步进器） |
+| `src/modules/order/OrderForm.test.tsx` | 新增 | 10 个测试用例 |
+| `src/modules/order/StopOrderForm.tsx` | 新增 | 止损单表单组件（含止损价输入） |
+| `src/modules/order/StopOrderForm.test.tsx` | 新增 | 7 个测试用例 |
+| `src/modules/order/OrderPanel.tsx` | 修改 | 集成 OrderForm/StopOrderForm Tab 切换 |
+| `src/modules/order/OrderPanel.test.tsx` | 修改 | 新增 3 个集成测试 |
+| `src/modules/order/styles.css` | 修改 | 新增表单、步进器、提交按钮样式 |
+
+---
+
+### 提交记录
+
+- `3f2941c` feat(task-10): implement PR-10 前端报单表单 — 20 files, 248 tests
+- `26da56c` docs(task-10): update dev-record-b with PR-10 TDD record
+- `423fadc` docs(task-10): 自验证通过 — 更新progress.md和dev-record-b状态
+- `ba2c6d7` fix(task-10): review反馈 - stopPrice透传到CtpOrderRequest
+- `6346c79` fix(task-10): review反馈 - cancelOrder接入Store
+- `6ba0262` fix(task-10): review反馈 - useHotKeys集成到OrderPanel
+- `fb20393` fix(task-10): review反馈 - usePriceStep集成到表单组件
+- `a7caf33` fix(task-10): review反馈 - 前端校验+注释补充
+- `dcf38ce` docs(task-10): review回复 — 修复记录+状态更新
+- `6c11ef9` fix(task-10): CtpOrderRequest字段重命名(combOffsetFlag→offsetFlag, orderPriceType→priceType) + volumeCondition映射
+- `cb31c1d` fix(task-10): 集成接入 — ToastContainer挂载 + MarketPanel报单联动 + StopOrderForm有效期切换
+- `b75561c` chore(task-10): add pnpm lock and workspace files
