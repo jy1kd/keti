@@ -3,6 +3,7 @@ import { WSManager } from '@/services/ws'
 import { useMarketStore } from '@/modules/market/store'
 import { useConnectionStore } from '@/stores/connection'
 import { useReconnect } from './useReconnect'
+import { toast } from '@/components/Toast'
 import type { MarketSnapshot, KLineData, WSMessage } from '@/services/types'
 
 /** 周期字符串 → 毫秒 */
@@ -60,6 +61,7 @@ export function useMarketWs(wsBaseUrl: string, period = '5m') {
 
   const ws = wsRef.current
   const periodMs = PERIOD_MS[period] ?? PERIOD_MS['5m']
+  const fetchInstruments = useMarketStore((s) => s.fetchInstruments)
 
   // 消息处理回调
   const handleMessage = (message: WSMessage) => {
@@ -69,6 +71,11 @@ export function useMarketWs(wsBaseUrl: string, period = '5m') {
       appendKline(snap.instrumentID, snapshotToKline(snap, periodMs))
       // 收到行情数据说明 MD 已连接
       setMdConnected(true)
+    } else if (message.type === 'instruments_refreshed') {
+      const data = message.data as { count: number }
+      fetchInstruments().then(() => {
+        toast.success(`已更新 ${data.count} 个合约`)
+      })
     }
   }
 
