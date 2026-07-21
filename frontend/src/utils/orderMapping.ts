@@ -91,21 +91,27 @@ export interface OrderRequestForm {
 export interface CtpOrderRequest {
   instrumentID: string
   direction: string
-  combOffsetFlag: string
-  orderPriceType: string
+  offsetFlag: string
+  priceType: string
   timeCondition: string
+  volumeCondition: string
   limitPrice: number
   volumeTotalOriginal: number
   stopPrice?: number
 }
 
 export function convertOrderRequest(form: OrderRequestForm): CtpOrderRequest {
+  const timeCondition = toCtpTimeCondition(form.timeCondition)
+  // volumeCondition: FOK → CV ("3"), FAK / GFD → AV ("1")
+  const volumeCondition = timeCondition === '2' ? '3' : '1'
+
   const result: CtpOrderRequest = {
     instrumentID: form.instrumentID,
     direction: toCtpDirection(form.direction),
-    combOffsetFlag: toCtpOffsetFlag(form.combOffsetFlag),
-    orderPriceType: toCtpPriceType(form.orderPriceType),
-    timeCondition: toCtpTimeCondition(form.timeCondition),
+    offsetFlag: toCtpOffsetFlag(form.combOffsetFlag),
+    priceType: toCtpPriceType(form.orderPriceType),
+    timeCondition,
+    volumeCondition,
     limitPrice: form.limitPrice,
     volumeTotalOriginal: form.volumeTotalOriginal,
   }

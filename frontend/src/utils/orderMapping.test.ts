@@ -117,9 +117,10 @@ describe('convertOrderRequest', () => {
     expect(result).toEqual({
       instrumentID: 'IF2608',
       direction: '0',
-      combOffsetFlag: '0',
-      orderPriceType: '2',
+      offsetFlag: '0',
+      priceType: '2',
       timeCondition: '1',
+      volumeCondition: '1',
       limitPrice: 4800.0,
       volumeTotalOriginal: 1,
     })
@@ -158,6 +159,44 @@ describe('convertOrderRequest', () => {
     expect(result).not.toHaveProperty('stopPrice')
   })
 
+  it('sets volumeCondition=CV(3) for FOK and AV(1) for FAK/GFD', () => {
+    // FOK → CV
+    const fok = convertOrderRequest({
+      instrumentID: 'IF2608',
+      direction: 'buy' as const,
+      combOffsetFlag: 'open' as const,
+      orderPriceType: 'limit' as const,
+      timeCondition: 'fok' as const,
+      limitPrice: 4800,
+      volumeTotalOriginal: 1,
+    })
+    expect(fok.volumeCondition).toBe('3')
+
+    // FAK → AV
+    const fak = convertOrderRequest({
+      instrumentID: 'IF2608',
+      direction: 'buy' as const,
+      combOffsetFlag: 'open' as const,
+      orderPriceType: 'limit' as const,
+      timeCondition: 'fak' as const,
+      limitPrice: 4800,
+      volumeTotalOriginal: 1,
+    })
+    expect(fak.volumeCondition).toBe('1')
+
+    // GFD → AV
+    const gfd = convertOrderRequest({
+      instrumentID: 'IF2608',
+      direction: 'buy' as const,
+      combOffsetFlag: 'open' as const,
+      orderPriceType: 'limit' as const,
+      timeCondition: 'gfd' as const,
+      limitPrice: 4800,
+      volumeTotalOriginal: 1,
+    })
+    expect(gfd.volumeCondition).toBe('1')
+  })
+
   it('converts a sell+fok market order correctly', () => {
     const form = {
       instrumentID: 'au2508',
@@ -174,9 +213,10 @@ describe('convertOrderRequest', () => {
     expect(result).toEqual({
       instrumentID: 'au2508',
       direction: '1',
-      combOffsetFlag: '3',
-      orderPriceType: '1',
+      offsetFlag: '3',
+      priceType: '1',
       timeCondition: '2',
+      volumeCondition: '3',
       limitPrice: 0,
       volumeTotalOriginal: 3,
     })

@@ -154,9 +154,10 @@ describe('submitOrder', () => {
     expect(api.post).toHaveBeenCalledWith('/api/order/insert', {
       instrumentID: 'IF2608',
       direction: '0',
-      combOffsetFlag: '0',
-      orderPriceType: '2',
+      offsetFlag: '0',
+      priceType: '2',
       timeCondition: '1',
+      volumeCondition: '1',
       limitPrice: 4800.0,
       volumeTotalOriginal: 1,
     })
