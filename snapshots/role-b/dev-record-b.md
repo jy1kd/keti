@@ -632,3 +632,64 @@
 - `ReqQryInstrument` 空查询是否能返回全量合约需实际验证
 - 启动时自动订阅策略（300 主力合约）取决于后端合约查询结果
 - 建议 PR-21 实现自选列表驱动订阅，模仿无限易模式
+
+---
+
+## 投机/套保/套利 — 前端报单表单投保选择
+
+**分支**：`feature/pr-20-hedge-flag`
+**开始时间**：2026-07-21
+**状态**：✅ 已完成
+
+---
+
+### TDD 测试用例清单
+
+| # | 模块 | 测试文件 | 测试数 | 状态 |
+|---|------|----------|--------|------|
+| 1 | orderMapping hedge flag | utils/orderMapping.test.ts | 29 (+8) | ✅ 全部通过 |
+| 2 | store default combHedgeFlag | order/store.test.ts | 16 (+1) | ✅ 全部通过 |
+| 3 | OrderForm hedge toggle | order/OrderForm.test.tsx | 15 (+2) | ✅ 全部通过 |
+| 4 | StopOrderForm hedge toggle | order/StopOrderForm.test.tsx | 9 (+2) | ✅ 全部通过 |
+| 5 | api.test expected hedgeFlag | api.test.ts | 17 (1 更新) | ✅ 全部通过 |
+
+**总计**：297 tests / 34 files 通过（新增 9 tests），0 failures
+
+---
+
+### TDD 循环记录
+
+| # | 功能 | 红灯 | 绿灯 | Commit |
+|---|------|------|------|--------|
+| 1 | orderMapping: COMB_HEDGE_TO_CTP + toCtpHedgeFlag + convertOrderRequest | ✅ 7 fail | ✅ 29 pass | `805b420` |
+| 2 | store: DEFAULT_ORDER_FORM.combHedgeFlag = 'speculation' | ✅ 1 fail | ✅ 16 pass | `2155c3c` |
+| 3 | OrderForm: 投机/套保/套利 三选一切换 | ✅ 2 fail | ✅ 15 pass | `79bba22` |
+| 4 | StopOrderForm: 同上切换 | ✅ 2 fail | ✅ 9 pass | `ff68c78` |
+| 5 | types.ts + api.test 同步 | - | ✅ 297 pass | `892d419` |
+
+---
+
+### 文件变更清单
+
+| 文件 | 变更类型 | 说明 |
+|------|----------|------|
+| `src/utils/orderMapping.ts` | 修改 | 新增 COMB_HEDGE_TO_CTP 映射、toCtpHedgeFlag 函数、OrderRequestForm/CtpOrderRequest 新增 hedge flag 字段、convertOrderRequest 默认输出 hedgeFlag: '1' |
+| `src/utils/orderMapping.test.ts` | 修改 | 新增 5 个 toCtpHedgeFlag 测试 + 更新 4 个 convertOrderRequest 测试 |
+| `src/modules/order/store.ts` | 修改 | DEFAULT_ORDER_FORM 新增 combHedgeFlag: 'speculation' |
+| `src/modules/order/store.test.ts` | 修改 | 新增 1 个默认值断言 |
+| `src/modules/order/OrderForm.tsx` | 修改 | 新增"投保"行，投机/套保/套利 三选一切换按钮 |
+| `src/modules/order/OrderForm.test.tsx` | 修改 | 新增 2 个测试（渲染 + 点击交互） |
+| `src/modules/order/StopOrderForm.tsx` | 修改 | 同上 |
+| `src/modules/order/StopOrderForm.test.tsx` | 修改 | 新增 2 个测试 + fireEvent import |
+| `src/services/types.ts` | 修改 | OrderRequest 和 StopOrderRequest 新增 combHedgeFlag? 可选字段 |
+| `src/services/api.test.ts` | 修改 | submitOrder 期待值新增 hedgeFlag: '1' |
+
+---
+
+### 提交记录
+
+- `805b420` feat(hedge-flag): add combHedgeFlag mapping + toCtpHedgeFlag + convertOrderRequest hedgeFlag output
+- `2155c3c` feat(hedge-flag): add combHedgeFlag 'speculation' to DEFAULT_ORDER_FORM
+- `79bba22` feat(hedge-flag): add hedge flag toggle (投机/套保/套利) to OrderForm
+- `ff68c78` feat(hedge-flag): add hedge flag toggle (投机/套保/套利) to StopOrderForm
+- `892d419` fix(hedge-flag): update api.test expected hedgeFlag + types.ts OrderRequest/StopOrderRequest combHedgeFlag
