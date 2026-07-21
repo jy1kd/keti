@@ -242,63 +242,23 @@ TraderSpi.OnRspQryInstrument = _td_on_rsp_qry_instrument  # type: ignore
 
 # ── Query callbacks (PR-11) ─────────────────────────────────────────────
 
-def _td_on_rsp_qry_order(self, pOrder: Any, pRspInfo: Any,
-                         nRequestID: int, bIsLast: bool) -> None:
-    error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo else 0
-    self._log("OnRspQryOrder",
-              {"request_id": nRequestID, "is_last": bIsLast,
-               "error_id": error_id})
-    if error_id != 0:
-        error_msg = getattr(pRspInfo, "ErrorMsg", "")
-        self._log("OnRspQryOrder_error",
-                  {"error_id": error_id, "error_msg": error_msg})
-    self._dispatch("OnRspQryOrder", pOrder, pRspInfo, nRequestID, bIsLast)
+def _make_qry_callback(event_name: str):
+    """Factory: build a query callback that logs, checks errors, and dispatches."""
+    def _on_rsp_qry(self, pData: Any, pRspInfo: Any,
+                    nRequestID: int, bIsLast: bool) -> None:
+        error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo else 0
+        self._log(event_name,
+                  {"request_id": nRequestID, "is_last": bIsLast,
+                   "error_id": error_id})
+        if error_id != 0:
+            error_msg = getattr(pRspInfo, "ErrorMsg", "")
+            self._log(f"{event_name}_error",
+                      {"error_id": error_id, "error_msg": error_msg})
+        self._dispatch(event_name, pData, pRspInfo, nRequestID, bIsLast)
+    return _on_rsp_qry
 
 
-def _td_on_rsp_qry_trade(self, pTrade: Any, pRspInfo: Any,
-                         nRequestID: int, bIsLast: bool) -> None:
-    error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo else 0
-    self._log("OnRspQryTrade",
-              {"request_id": nRequestID, "is_last": bIsLast,
-               "error_id": error_id})
-    if error_id != 0:
-        error_msg = getattr(pRspInfo, "ErrorMsg", "")
-        self._log("OnRspQryTrade_error",
-                  {"error_id": error_id, "error_msg": error_msg})
-    self._dispatch("OnRspQryTrade", pTrade, pRspInfo, nRequestID, bIsLast)
-
-
-def _td_on_rsp_qry_investor_position(self, pInvestorPosition: Any,
-                                     pRspInfo: Any, nRequestID: int,
-                                     bIsLast: bool) -> None:
-    error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo else 0
-    self._log("OnRspQryInvestorPosition",
-              {"request_id": nRequestID, "is_last": bIsLast,
-               "error_id": error_id})
-    if error_id != 0:
-        error_msg = getattr(pRspInfo, "ErrorMsg", "")
-        self._log("OnRspQryInvestorPosition_error",
-                  {"error_id": error_id, "error_msg": error_msg})
-    self._dispatch("OnRspQryInvestorPosition", pInvestorPosition,
-                   pRspInfo, nRequestID, bIsLast)
-
-
-def _td_on_rsp_qry_trading_account(self, pTradingAccount: Any,
-                                   pRspInfo: Any, nRequestID: int,
-                                   bIsLast: bool) -> None:
-    error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo else 0
-    self._log("OnRspQryTradingAccount",
-              {"request_id": nRequestID, "is_last": bIsLast,
-               "error_id": error_id})
-    if error_id != 0:
-        error_msg = getattr(pRspInfo, "ErrorMsg", "")
-        self._log("OnRspQryTradingAccount_error",
-                  {"error_id": error_id, "error_msg": error_msg})
-    self._dispatch("OnRspQryTradingAccount", pTradingAccount,
-                   pRspInfo, nRequestID, bIsLast)
-
-
-TraderSpi.OnRspQryOrder = _td_on_rsp_qry_order  # type: ignore
-TraderSpi.OnRspQryTrade = _td_on_rsp_qry_trade  # type: ignore
-TraderSpi.OnRspQryInvestorPosition = _td_on_rsp_qry_investor_position  # type: ignore
-TraderSpi.OnRspQryTradingAccount = _td_on_rsp_qry_trading_account  # type: ignore
+TraderSpi.OnRspQryOrder = _make_qry_callback("OnRspQryOrder")  # type: ignore
+TraderSpi.OnRspQryTrade = _make_qry_callback("OnRspQryTrade")  # type: ignore
+TraderSpi.OnRspQryInvestorPosition = _make_qry_callback("OnRspQryInvestorPosition")  # type: ignore
+TraderSpi.OnRspQryTradingAccount = _make_qry_callback("OnRspQryTradingAccount")  # type: ignore

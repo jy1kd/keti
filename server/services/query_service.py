@@ -27,6 +27,18 @@ class QueryService:
     - Result accumulation from CTP callbacks (bIsLast pattern)
     - Thread-safe synchronization (CTP callbacks run in CTP thread)
     - Result caching (latest query results)
+
+    Thread model:
+    - CTP callbacks (on_*_result) run in the CTP worker thread.
+      They append to _pending_* lists and set threading.Event on bIsLast.
+    - Query methods (query_*) run in the asyncio thread pool (via
+      run_in_executor). They clear the event, trigger the CTP query,
+      then wait on the event.
+    - Python GIL guarantees atomic list.append/clear, but the sequence
+      clear → query → wait has a window where CTP may fire before
+      wait() is called. This is safe because event.set() before wait()
+      causes wait() to return immediately.
+    - 10s timeout in query methods prevents indefinite blocking.
     """
 
     def __init__(self) -> None:
@@ -63,6 +75,26 @@ class QueryService:
 
     @property
     def account_info(self) -> Optional[dict]:
+        return self._account
+
+    @property
+    def orders(self) -> List[dict]:
+        """Cached order list from last query."""
+        return list(self._orders)
+
+    @property
+    def trades(self) -> List[dict]:
+        """Cached trade list from last query."""
+        return list(self._trades)
+
+    @property
+    def positions(self) -> List[dict]:
+        """Cached position list from last query."""
+        return list(self._positions)
+
+    @property
+    def account(self) -> Optional[dict]:
+        """Cached account info from last query."""
         return self._account
 
     # ── Callback handlers (called from CTP thread) ──────────────────────

@@ -194,3 +194,152 @@ class TestGetContracts:
         data = resp.json()
         assert data["count"] == 1
         assert data["contracts"][0]["instrumentID"] == "IF2608"
+
+
+# ── POST refresh endpoints ──────────────────────────────────────────────
+
+
+class TestRefreshPositions:
+    """POST /api/query/positions/refresh."""
+
+    @pytest.mark.anyio
+    async def test_refresh_returns_success(self):
+        app = _make_app()
+        # Simulate CTP callback: on_position_result sets event
+        qs = app.state.query_service
+        trader = app.state.trader_api
+
+        def simulate_query():
+            qs.on_position_result({"instrumentID": "IF2608", "position": 5}, None, 1, True)
+            return 0
+
+        trader.query_positions = simulate_query
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/query/positions/refresh")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["count"] == 1
+        assert data["positions"][0]["instrumentID"] == "IF2608"
+
+    @pytest.mark.anyio
+    async def test_refresh_fails_when_not_logged_in(self):
+        app = _make_app()
+        app.state.trader_api.login_status = "not_logged_in"
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/query/positions/refresh")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is False
+        assert "not logged in" in data["message"]
+
+    @pytest.mark.anyio
+    async def test_refresh_fails_when_no_trader(self):
+        app = _make_app()
+        app.state.trader_api = None
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/query/positions/refresh")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is False
+
+
+class TestRefreshAccount:
+    """POST /api/query/account/refresh."""
+
+    @pytest.mark.anyio
+    async def test_refresh_returns_account(self):
+        app = _make_app()
+        qs = app.state.query_service
+        trader = app.state.trader_api
+
+        def simulate_query():
+            qs.on_account_result({"accountID": "user001", "balance": 1000000.0}, None, 1, True)
+            return 0
+
+        trader.query_account = simulate_query
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/query/account/refresh")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["balance"] == 1000000.0
+
+    @pytest.mark.anyio
+    async def test_refresh_fails_when_not_logged_in(self):
+        app = _make_app()
+        app.state.trader_api.login_status = "not_logged_in"
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/query/account/refresh")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is False
+
+
+class TestRefreshOrders:
+    """POST /api/query/orders/refresh."""
+
+    @pytest.mark.anyio
+    async def test_refresh_returns_orders(self):
+        app = _make_app()
+        qs = app.state.query_service
+        trader = app.state.trader_api
+
+        def simulate_query():
+            qs.on_order_result({"orderRef": "1", "instrumentID": "IF2608"}, None, 1, True)
+            return 0
+
+        trader.query_orders = simulate_query
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/query/orders/refresh")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["count"] == 1
+
+    @pytest.mark.anyio
+    async def test_refresh_fails_when_not_logged_in(self):
+        app = _make_app()
+        app.state.trader_api.login_status = "not_logged_in"
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/query/orders/refresh")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is False
+
+
+class TestRefreshTrades:
+    """POST /api/query/trades/refresh."""
+
+    @pytest.mark.anyio
+    async def test_refresh_returns_trades(self):
+        app = _make_app()
+        qs = app.state.query_service
+        trader = app.state.trader_api
+
+        def simulate_query():
+            qs.on_trade_result({"tradeID": "T1", "instrumentID": "IF2608"}, None, 1, True)
+            return 0
+
+        trader.query_trades = simulate_query
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/query/trades/refresh")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["count"] == 1
+
+    @pytest.mark.anyio
+    async def test_refresh_fails_when_not_logged_in(self):
+        app = _make_app()
+        app.state.trader_api.login_status = "not_logged_in"
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/query/trades/refresh")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is False

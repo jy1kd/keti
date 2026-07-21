@@ -42,7 +42,8 @@ async def get_positions(request: Request):
     to trigger a new CTP query.
     """
     svc = _get_query_service(request)
-    return {"positions": svc._positions, "count": len(svc._positions)}
+    positions = svc.positions
+    return {"positions": positions, "count": len(positions)}
 
 
 @router.post("/positions/refresh")
@@ -54,6 +55,8 @@ async def refresh_positions(request: Request):
     trader = _get_trader_api(request)
     if trader is None:
         return {"success": False, "message": "TraderApi not available"}
+    if trader.login_status != "logged_in":
+        return {"success": False, "message": "TraderApi not logged in"}
 
     svc = _get_query_service(request)
     loop = asyncio.get_running_loop()
@@ -82,8 +85,8 @@ async def get_account(request: Request):
     to trigger a new CTP query.
     """
     svc = _get_query_service(request)
-    account = svc._account or {"balance": 0.0, "available": 0.0}
-    return account
+    account = svc.account
+    return account or {"balance": 0.0, "available": 0.0}
 
 
 @router.post("/account/refresh")
@@ -95,6 +98,8 @@ async def refresh_account(request: Request):
     trader = _get_trader_api(request)
     if trader is None:
         return {"success": False, "message": "TraderApi not available"}
+    if trader.login_status != "logged_in":
+        return {"success": False, "message": "TraderApi not logged in"}
 
     svc = _get_query_service(request)
     loop = asyncio.get_running_loop()
@@ -114,7 +119,8 @@ async def get_orders(request: Request):
     to trigger a new CTP query.
     """
     svc = _get_query_service(request)
-    return {"orders": svc._orders, "count": len(svc._orders)}
+    orders = svc.orders
+    return {"orders": orders, "count": len(orders)}
 
 
 @router.post("/orders/refresh")
@@ -126,6 +132,8 @@ async def refresh_orders(request: Request):
     trader = _get_trader_api(request)
     if trader is None:
         return {"success": False, "message": "TraderApi not available"}
+    if trader.login_status != "logged_in":
+        return {"success": False, "message": "TraderApi not logged in"}
 
     svc = _get_query_service(request)
     loop = asyncio.get_running_loop()
@@ -145,7 +153,8 @@ async def get_trades(request: Request):
     to trigger a new CTP query.
     """
     svc = _get_query_service(request)
-    return {"trades": svc._trades, "count": len(svc._trades)}
+    trades = svc.trades
+    return {"trades": trades, "count": len(trades)}
 
 
 @router.post("/trades/refresh")
@@ -157,6 +166,8 @@ async def refresh_trades(request: Request):
     trader = _get_trader_api(request)
     if trader is None:
         return {"success": False, "message": "TraderApi not available"}
+    if trader.login_status != "logged_in":
+        return {"success": False, "message": "TraderApi not logged in"}
 
     svc = _get_query_service(request)
     loop = asyncio.get_running_loop()
