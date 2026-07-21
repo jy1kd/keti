@@ -18,12 +18,20 @@ vi.mock('@/services/ws', () => ({
   })),
 }))
 
-// Mock API to prevent real network calls from fetchInstruments
+// Mock API to prevent real network calls
 vi.mock('@/services/api', () => ({
-  getInstruments: vi.fn().mockResolvedValue({ instruments: [], count: 0 }),
   subscribeMarket: vi.fn(),
   getSnapshots: vi.fn(),
-  refreshInstruments: vi.fn(),
+}))
+
+// Mock contracts store
+const mockLoadSubscribedContracts = vi.fn().mockResolvedValue(undefined)
+vi.mock('@/stores/contracts', () => ({
+  useContractsStore: {
+    getState: vi.fn(() => ({
+      loadSubscribedContracts: mockLoadSubscribedContracts,
+    })),
+  },
 }))
 
 // Mock toast
@@ -44,6 +52,7 @@ describe('useMarketWs', () => {
     mockConnect.mockClear()
     mockDisconnect.mockClear()
     mockDisconnectAll.mockClear()
+    mockLoadSubscribedContracts.mockClear()
   })
 
   afterEach(() => {
@@ -206,8 +215,6 @@ describe('useMarketWs - instruments_refreshed', () => {
   })
 
   it('收到 instruments_refreshed 消息后重新加载合约列表', async () => {
-    const { getInstruments } = await import('@/services/api')
-
     vi.useFakeTimers()
     renderHook(() => useMarketWs('ws://localhost:8000'))
 
@@ -217,8 +224,8 @@ describe('useMarketWs - instruments_refreshed', () => {
       onMessage({ type: 'instruments_refreshed', data: { count: 5 } })
     })
 
-    // 合约刷新后应调用 getInstruments 重新加载
-    expect(getInstruments).toHaveBeenCalled()
+    // 合约刷新后应调用 loadSubscribedContracts 重新加载（而非 getInstruments）
+    expect(mockLoadSubscribedContracts).toHaveBeenCalled()
     vi.useRealTimers()
   })
 

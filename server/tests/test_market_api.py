@@ -1,5 +1,9 @@
 """Integration tests for api/market.py — market data REST API."""
 
+import tempfile
+import os
+from unittest.mock import patch
+
 import pytest
 from httpx import AsyncClient, ASGITransport
 from fastapi import FastAPI
@@ -20,6 +24,7 @@ SAMPLE_INSTRUMENTS = [
         "volumeMultiple": 300,
         "priceTick": 0.2,
         "expireDate": "20260821",
+        "isTrading": 1,
     },
     {
         "instrumentID": "IF2609",
@@ -30,6 +35,7 @@ SAMPLE_INSTRUMENTS = [
         "volumeMultiple": 300,
         "priceTick": 0.2,
         "expireDate": "20260918",
+        "isTrading": 1,
     },
     {
         "instrumentID": "au2608",
@@ -40,6 +46,7 @@ SAMPLE_INSTRUMENTS = [
         "volumeMultiple": 1000,
         "priceTick": 0.02,
         "expireDate": "20260815",
+        "isTrading": 1,
     },
 ]
 
@@ -436,3 +443,158 @@ class TestInstrumentsRefresh:
         data = resp.json()
         assert data["success"] is False
         assert "query failed" in data["message"].lower()
+
+
+# ── Instrument search endpoints ──────────────────────────────────────
+
+class TestGetExchanges:
+    """GET /api/market/instruments/exchanges"""
+
+    @pytest.mark.asyncio
+    async def test_returns_exchanges(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/instruments/exchanges")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert set(data["exchanges"]) == {"CFFEX", "SHFE"}
+
+
+class TestGetProducts:
+    """GET /api/market/instruments/products"""
+
+    @pytest.mark.asyncio
+    async def test_returns_products_for_exchange(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/instruments/products", params={"exchange": "CFFEX"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "IF" in data["products"]
+
+    @pytest.mark.asyncio
+    async def test_missing_exchange_returns_422(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/instruments/products")
+        assert resp.status_code == 422
+
+
+class TestSearchInstruments:
+    """GET /api/market/instruments/search"""
+
+    @pytest.mark.asyncio
+    async def test_search_by_exchange_and_product(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/instruments/search", params={"exchange": "CFFEX", "product": "IF"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["count"] == 2
+
+    @pytest.mark.asyncio
+    async def test_search_with_keyword(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/instruments/search", params={"exchange": "CFFEX", "product": "IF", "keyword": "2608"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["count"] == 1
+        assert data["instruments"][0]["instrumentID"] == "IF2608"
+
+    @pytest.mark.asyncio
+    async def test_missing_params_returns_422(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/instruments/search")
+        assert resp.status_code == 422
+
+
+class TestGetInstrumentsByIds:
+    """GET /api/market/instruments?ids=X,Y,Z"""
+
+    @pytest.mark.asyncio
+    async def test_returns_matching_instruments(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/instruments", params={"ids": "IF2608,au2608"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["count"] == 2
+        ids = {inst["instrumentID"] for inst in data["instruments"]}
+        assert ids == {"IF2608", "au2608"}
+
+    @pytest.mark.asyncio
+    async def test_ids_empty_string_returns_all(self, app):
+        """Without ids param, returns all instruments (existing behavior)."""
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/instruments")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["count"] == 3
+
+
+# ── Preset endpoints ─────────────────────────────────────────────────
+
+class TestPreset:
+    """GET /api/market/preset and POST /api/market/preset/refresh"""
+
+    @pytest.fixture(autouse=True)
+    def _isolate_preset_file(self):
+        """Redirect preset_instruments.json writes to a temp directory."""
+        from pathlib import Path as RealPath
+
+        tmp_dir = tempfile.mkdtemp()
+        tmp_data = os.path.join(tmp_dir, "server", "data")
+        os.makedirs(tmp_data, exist_ok=True)
+
+        _PathType = type(RealPath("."))
+
+        class _FakePath(_PathType):
+            """Path subclass that redirects preset_instruments.json to temp dir."""
+
+            def __new__(cls, *args, **kwargs):
+                return _PathType.__new__(cls, *args, **kwargs)
+
+            def __init__(self, *args, **kwargs):
+                pass  # skip Path.__init__ signature check
+
+            @property
+            def parent(self):
+                return self  # no-op; all .parent chains return self
+
+            def __truediv__(self, key):
+                if key == "preset_instruments.json":
+                    return RealPath(tmp_data) / key
+                return super().__truediv__(key)
+
+        def _make_path(*args, **kwargs):
+            return _FakePath(*args, **kwargs)
+
+        p = patch("services.market_service.Path", side_effect=_make_path)
+        p.start()
+        yield
+        p.stop()
+
+    @pytest.mark.asyncio
+    async def test_get_preset_returns_empty_initially(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/preset")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "instruments" in data
+
+    @pytest.mark.asyncio
+    async def test_refresh_preset(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/market/preset/refresh")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+        assert isinstance(data["instruments"], list)
+        assert len(data["instruments"]) == 2
+        # IF2608 (front-month for IF, nearest expireDate) and au2608 (only au)
+        assert set(data["instruments"]) == {"IF2608", "au2608"}

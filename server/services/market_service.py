@@ -7,6 +7,9 @@ all CTP-dependent operations accept the MdUserApi as an optional dependency.
 import json
 import logging
 import threading
+from collections import defaultdict
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
@@ -102,6 +105,92 @@ class MarketService:
             if kw in searchable:
                 results.append(inst)
         return results
+
+    def get_exchanges(self) -> List[str]:
+        """Return deduplicated list of exchange IDs."""
+        return sorted({inst.get("exchangeID", "") for inst in self._instruments if inst.get("exchangeID")})
+
+    def get_products(self, exchange: str) -> List[str]:
+        """Return product IDs for a given exchange."""
+        return sorted({
+            inst.get("productID", "")
+            for inst in self._instruments
+            if inst.get("exchangeID") == exchange and inst.get("productID")
+        })
+
+    def search_instruments(
+        self, exchange: str, product: str, keyword: str = None
+    ) -> List[dict]:
+        """Filter instruments by exchange + product, with optional keyword."""
+        results = [
+            inst for inst in self._instruments
+            if inst.get("exchangeID") == exchange and inst.get("productID") == product
+        ]
+        if keyword:
+            kw = keyword.lower()
+            results = [
+                inst for inst in results
+                if kw in str(inst.get("instrumentID", "")).lower()
+                or kw in str(inst.get("instrumentName", "")).lower()
+            ]
+        return results
+
+    def get_instruments_by_ids(self, ids: List[str]) -> List[dict]:
+        """Return instruments matching the given IDs."""
+        if not ids:
+            return []
+        id_set = set(ids)
+        return [inst for inst in self._instruments if inst.get("instrumentID") in id_set]
+
+    # ── Preset instruments ─────────────────────────────────────────────
+
+    def get_preset_instruments(self) -> dict:
+        """Read preset instruments from config file."""
+        file_path = str(Path(__file__).parent.parent / "data" / "preset_instruments.json")
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return {"instruments": data.get("instruments", []), "updatedAt": data.get("updatedAt")}
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            return {"instruments": [], "updatedAt": None}
+
+    def refresh_preset_instruments(self, file_path: str = "") -> dict:
+        """Auto-detect front-month contracts per product and save preset list.
+
+        Logic: group by productID, filter isTrading==1, pick nearest expireDate.
+        """
+        if not file_path:
+            file_path = str(Path(__file__).parent.parent / "data" / "preset_instruments.json")
+
+        # Group trading instruments by productID
+        by_product: Dict[str, List[dict]] = defaultdict(list)
+        for inst in self._instruments:
+            if inst.get("isTrading") == 1 and inst.get("productID"):
+                by_product[inst["productID"]].append(inst)
+
+        # Pick front-month (nearest expireDate) per product
+        today = datetime.now().strftime("%Y%m%d")
+        preset: List[str] = []
+        for product, instruments in by_product.items():
+            # Filter to future or current expiries
+            valid = [i for i in instruments if i.get("expireDate", "99999999") >= today]
+            if not valid:
+                valid = instruments  # fallback: use all if none are future
+            valid.sort(key=lambda i: i.get("expireDate", "99999999"))
+            preset.append(valid[0]["instrumentID"])
+
+        preset.sort()
+
+        # Save to file
+        data = {"instruments": preset, "updatedAt": datetime.now().isoformat()}
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except OSError as exc:
+            logger.warning("Failed to save preset to %s: %s", file_path, exc)
+            return {"success": False, "message": str(exc)}
+
+        return {"success": True, "instruments": preset}
 
     # ── Subscription management ───────────────────────────────────────
 

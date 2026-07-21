@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MarketPanel } from './MarketPanel'
 import { useMarketStore } from './store'
+import { useContractsStore } from '@/stores/contracts'
 import type { MarketSnapshot } from '@/services/types'
 
 // Mock ResizeObserver (not available in jsdom)
@@ -21,13 +23,12 @@ vi.mock('react-resizable-panels', () => ({
 }))
 
 // Mock api module
-const mockRefreshInstruments = vi.fn().mockResolvedValue({ status: 'started' })
+const mockSubscribeMarket = vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] })
 vi.mock('@/services/api', () => ({
   getInstruments: vi.fn().mockResolvedValue({ instruments: [], count: 0 }),
-  subscribeMarket: vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] }),
+  subscribeMarket: (...args: unknown[]) => mockSubscribeMarket(...args),
   getSnapshots: vi.fn().mockResolvedValue({ snapshots: {} }),
   getKlineData: vi.fn().mockResolvedValue({ instrumentID: '', period: '', bars: [] }),
-  refreshInstruments: (...args: unknown[]) => mockRefreshInstruments(...args),
   API_BASE: 'http://localhost:8000',
 }))
 
@@ -35,6 +36,7 @@ vi.mock('@/services/api', () => ({
 const mockUseMarketWs = vi.fn()
 vi.mock('@/hooks/useMarketWs', () => ({
   useMarketWs: (...args: unknown[]) => mockUseMarketWs(...args),
+  PERIOD_MS: { '5m': 300000 },
 }))
 
 // Mock usePointOrder to avoid side effects
@@ -43,6 +45,16 @@ vi.mock('@/hooks/usePointOrder', () => ({
     handleClick: vi.fn(),
     handleDoubleClick: vi.fn(),
   }),
+}))
+
+// Mock InstrumentSearchModal
+vi.mock('@/components/InstrumentSearchModal', () => ({
+  InstrumentSearchModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void; onSubscribe: (inst: unknown) => void; subscribedIds: Set<string> }) =>
+    isOpen ? (
+      <div data-testid="instrument-search-modal">
+        <button onClick={onClose}>关闭</button>
+      </div>
+    ) : null,
 }))
 
 // Mock echarts
@@ -87,6 +99,8 @@ describe('MarketPanel', () => {
       selectedInstrument: null,
       snapshots: new Map(),
     })
+    useContractsStore.setState({ contracts: [] })
+    vi.clearAllMocks()
   })
 
   it('renders panel title', () => {
@@ -99,11 +113,11 @@ describe('MarketPanel', () => {
     expect(container.firstChild).toHaveClass('market-panel')
   })
 
-  it('启动时调用 fetchInstruments 获取合约列表', () => {
-    const fetchSpy = vi.spyOn(useMarketStore.getState(), 'fetchInstruments')
+  it('启动时调用 loadSubscribedContracts 加载订阅合约', () => {
+    const loadSpy = vi.spyOn(useContractsStore.getState(), 'loadSubscribedContracts').mockResolvedValue(undefined)
     render(<MarketPanel />)
-    expect(fetchSpy).toHaveBeenCalled()
-    fetchSpy.mockRestore()
+    expect(loadSpy).toHaveBeenCalled()
+    loadSpy.mockRestore()
   })
 
   it('启动时调用 useMarketWs 连接 WebSocket 行情推送', () => {
@@ -139,28 +153,28 @@ describe('MarketPanel', () => {
     expect(handles.length).toBeGreaterThanOrEqual(1)
   })
 
-  it('renders refresh contracts button', () => {
+  it('renders 搜索合约 and 退订 buttons', () => {
     render(<MarketPanel />)
-    expect(screen.getByText('刷新合约')).toBeInTheDocument()
+    expect(screen.getByText('搜索合约')).toBeInTheDocument()
+    expect(screen.getByText('退订')).toBeInTheDocument()
   })
 
-  it('refresh button calls refreshInstruments on click', () => {
+  it('点击 搜索合约 按钮打开搜索弹窗', async () => {
+    const user = userEvent.setup()
     render(<MarketPanel />)
-    const btn = screen.getByText('刷新合约')
-    btn.click()
-    expect(mockRefreshInstruments).toHaveBeenCalled()
+    expect(screen.queryByTestId('instrument-search-modal')).not.toBeInTheDocument()
+    await user.click(screen.getByText('搜索合约'))
+    expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
   })
 
-  it('refresh button shows loading text when refreshing', () => {
-    useMarketStore.setState({ isRefreshing: true })
+  it('退订 button is disabled when no instrument is selected', () => {
     render(<MarketPanel />)
-    expect(screen.getByText('刷新中...')).toBeInTheDocument()
+    expect(screen.getByText('退订')).toBeDisabled()
   })
 
-  it('refresh button is disabled while refreshing', () => {
-    useMarketStore.setState({ isRefreshing: true })
+  it('退订 button is enabled when an instrument is selected', () => {
+    useMarketStore.setState({ selectedInstrument: 'IF2608' })
     render(<MarketPanel />)
-    const btn = screen.getByText('刷新中...')
-    expect(btn).toBeDisabled()
+    expect(screen.getByText('退订')).toBeEnabled()
   })
 })

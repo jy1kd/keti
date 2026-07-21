@@ -33,14 +33,64 @@ def _get_service(request: Request):
 # ── Instruments ─────────────────────────────────────────────────────────
 
 @router.get("/instruments")
-async def get_instruments(request: Request, keyword: str = ""):
-    """Query contract list, optionally filtered by keyword (fuzzy search).
+async def get_instruments(request: Request, keyword: str = "", ids: str = ""):
+    """Query contract list.
 
-    Searches across instrumentID, instrumentName, exchangeID, productID.
+    Supports two modes:
+    - ids: comma-separated instrument IDs (batch lookup)
+    - keyword: fuzzy search across instrumentID, instrumentName, exchangeID, productID
     """
     svc = _get_service(request)
-    instruments = svc.get_instruments(keyword=keyword)
+    if ids:
+        id_list = [i.strip() for i in ids.split(",") if i.strip()]
+        instruments = svc.get_instruments_by_ids(id_list)
+    else:
+        instruments = svc.get_instruments(keyword=keyword)
     return {"instruments": instruments, "count": len(instruments)}
+
+
+@router.get("/instruments/exchanges")
+async def get_exchanges(request: Request):
+    """Return deduplicated list of exchange IDs."""
+    svc = _get_service(request)
+    return {"exchanges": svc.get_exchanges()}
+
+
+@router.get("/instruments/products")
+async def get_products(request: Request, exchange: str = Query(..., min_length=1)):
+    """Return product IDs for a given exchange."""
+    svc = _get_service(request)
+    return {"products": svc.get_products(exchange)}
+
+
+@router.get("/instruments/search")
+async def search_instruments(
+    request: Request,
+    exchange: str = Query(..., min_length=1),
+    product: str = Query(..., min_length=1),
+    keyword: str = Query(""),
+):
+    """Search instruments by exchange + product, with optional keyword filter."""
+    svc = _get_service(request)
+    instruments = svc.search_instruments(exchange, product, keyword=keyword or None)
+    return {"instruments": instruments, "count": len(instruments)}
+
+
+# ── Preset instruments ─────────────────────────────────────────────────
+
+@router.get("/preset")
+async def get_preset(request: Request):
+    """Return preset instrument list."""
+    svc = _get_service(request)
+    return svc.get_preset_instruments()
+
+
+@router.post("/preset/refresh")
+async def refresh_preset(request: Request):
+    """Auto-detect front-month contracts and update preset list."""
+    svc = _get_service(request)
+    result = svc.refresh_preset_instruments()
+    return result
 
 
 # ── Subscribe ───────────────────────────────────────────────────────────

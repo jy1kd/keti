@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import { ResizeHandle } from '@/components/ResizeHandle'
 import { ContractSearch } from '@/components/ContractSearch'
+import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
 import { MarketTable } from './MarketTable'
 import { DepthQuote } from './DepthQuote'
 import { SpreadDisplay } from '@/components/SpreadDisplay'
@@ -11,7 +12,7 @@ import { useContractsStore } from '@/stores/contracts'
 import { usePointOrder } from '@/hooks/usePointOrder'
 import { useOrderStore } from '@/modules/order/store'
 import { useMarketWs, PERIOD_MS } from '@/hooks/useMarketWs'
-import { API_BASE, getKlineData } from '@/services/api'
+import { API_BASE, getKlineData, subscribeMarket } from '@/services/api'
 import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
 import './styles.css'
 
@@ -19,11 +20,18 @@ const savedMarketTop = loadPanelSizes('market-top-layout')
 const savedMarket = loadPanelSizes('market-layout')
 
 export function MarketPanel() {
-  const { snapshots, selectedInstrument, setSelectedInstrument, fetchInstruments, subscribeInstruments, klineData, setKlineData, refreshInstruments, isRefreshing } = useMarketStore()
+  const { snapshots, selectedInstrument, setSelectedInstrument, klineData, setKlineData } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
-  const { contracts, addContract } = useContractsStore()
-  const fetchedRef = useRef(false)
+  const { contracts, addContractInfo, removeContractById } = useContractsStore()
   const [period, setPeriod] = useState('5m')
+  const [searchModalOpen, setSearchModalOpen] = useState(false)
+  const loadedRef = useRef(false)
+
+  // Subscribed instrument IDs set (for modal to show "已订阅")
+  const subscribedIds = useMemo(
+    () => new Set(contracts.map((c) => c.instrumentID)),
+    [contracts]
+  )
 
   const onMarketTopLayout = useCallback((layout: Record<string, number>) => {
     savePanelSizes('market-top-layout', { table: layout['market-table'], side: layout['market-side'] })
@@ -33,21 +41,21 @@ export function MarketPanel() {
     savePanelSizes('market-layout', { top: layout['market-top'], kline: layout['market-kline'] })
   }, [])
 
-  // WebSocket 行情推送（period 影响实时 K 线的时间对齐）
+  // WebSocket 行情推送
   useMarketWs(API_BASE.replace('http', 'ws'), period)
 
+  // 启动时加载预设合约 + 用户订阅
   useEffect(() => {
-    if (!fetchedRef.current) {
-      fetchedRef.current = true
-      // 获取合约列表后，订阅所有合约的行情
-      fetchInstruments().then(() => {
-        const allContracts = useContractsStore.getState().contracts
-        if (allContracts.length > 0) {
-          subscribeInstruments(allContracts.map(c => c.instrumentID))
+    if (!loadedRef.current) {
+      loadedRef.current = true
+      useContractsStore.getState().loadSubscribedContracts().then(() => {
+        const loaded = useContractsStore.getState().contracts
+        if (loaded.length > 0) {
+          subscribeMarket(loaded.map((c) => c.instrumentID)).catch(() => {})
         }
       })
     }
-  }, [fetchInstruments, subscribeInstruments])
+  }, [])
 
   const { handleClick, handleDoubleClick } = usePointOrder({
     onOrder: ({ instrumentID, price }) => {
@@ -63,12 +71,23 @@ export function MarketPanel() {
   })
 
   const handleSelectContract = (instrumentID: string) => {
-    addContract(instrumentID)
     setSelectedInstrument(instrumentID)
     setOrderInstrument(instrumentID)
   }
 
-  // 获取K线数据（时间戳按周期对齐，与实时数据保持一致）
+  const handleUnsubscribe = async () => {
+    if (!selectedInstrument) return
+    await removeContractById(selectedInstrument)
+    setSelectedInstrument(null)
+  }
+
+  const handleSubscribeFromModal = (inst: import('@/services/types').ContractInfo) => {
+    addContractInfo(inst)
+    // Subscribe to CTP market data
+    subscribeMarket([inst.instrumentID]).catch(() => {})
+  }
+
+  // 获取K线数据
   useEffect(() => {
     if (!selectedInstrument) return
     getKlineData(selectedInstrument, period, 200)
@@ -76,7 +95,6 @@ export function MarketPanel() {
         if (res.bars?.length) {
           const periodMs = PERIOD_MS[period] ?? PERIOD_MS['5m']
           const aligned = res.bars.map((bar) => {
-            // 只用时分秒，去掉日期部分，与实时数据保持一致
             const d = new Date(bar.timestamp)
             const timeMs = ((d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds()) * 1000) + d.getMilliseconds()
             return { ...bar, timestamp: Math.floor(timeMs / periodMs) * periodMs }
@@ -84,7 +102,7 @@ export function MarketPanel() {
           setKlineData(selectedInstrument, aligned)
         }
       })
-      .catch(() => { /* 静默失败，K线区域显示暂无数据 */ })
+      .catch(() => { /* 静默失败 */ })
   }, [selectedInstrument, period, setKlineData])
 
   const selectedSnapshot = selectedInstrument ? snapshots.get(selectedInstrument) ?? null : null
@@ -97,15 +115,21 @@ export function MarketPanel() {
         <div className="panel-header__actions">
           <ContractSearch contracts={contracts} onSelect={handleSelectContract} />
           <button
-            className="btn-refresh-instruments"
-            disabled={isRefreshing}
-            onClick={() => refreshInstruments()}
+            className="btn-search-instruments"
+            onClick={() => setSearchModalOpen(true)}
           >
-            {isRefreshing ? '刷新中...' : '刷新合约'}
+            搜索合约
+          </button>
+          <button
+            className="btn-unsubscribe"
+            disabled={!selectedInstrument}
+            onClick={handleUnsubscribe}
+          >
+            退订
           </button>
         </div>
       </div>
-      {/* 布局：上半部 [行情表格 | 五档行情]，下半部 [K线图 全宽] */}
+
       <Group orientation="vertical" className="panel-content" id="market-layout" onLayoutChange={onMarketLayout}>
         <Panel id="market-top" defaultSize={savedMarket?.top ?? 50} minSize={20}>
           <Group orientation="horizontal" className="market-panel__top" id="market-top-layout" onLayoutChange={onMarketTopLayout}>
@@ -166,6 +190,13 @@ export function MarketPanel() {
           </div>
         </Panel>
       </Group>
+
+      <InstrumentSearchModal
+        isOpen={searchModalOpen}
+        onClose={() => setSearchModalOpen(false)}
+        onSubscribe={handleSubscribeFromModal}
+        subscribedIds={subscribedIds}
+      />
     </section>
   )
 }

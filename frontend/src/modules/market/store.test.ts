@@ -1,17 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useMarketStore } from './store'
-import { useContractsStore } from '@/stores/contracts'
 import type { MarketSnapshot, KLineData } from '@/services/types'
 
 // Mock api module
 vi.mock('@/services/api', () => ({
-  getInstruments: vi.fn(),
   subscribeMarket: vi.fn(),
   getSnapshots: vi.fn(),
-  refreshInstruments: vi.fn(),
 }))
 
-import { getInstruments, subscribeMarket, getSnapshots, refreshInstruments } from '@/services/api'
+import { subscribeMarket, getSnapshots } from '@/services/api'
 
 describe('MarketStore', () => {
   beforeEach(() => {
@@ -19,7 +16,6 @@ describe('MarketStore', () => {
       selectedInstrument: null,
       snapshots: new Map(),
     })
-    vi.mocked(getInstruments).mockReset()
     vi.mocked(subscribeMarket).mockReset()
     vi.mocked(getSnapshots).mockReset()
   })
@@ -117,50 +113,12 @@ describe('MarketStore', () => {
   })
 })
 
-describe('MarketStore - fetchInstruments', () => {
-  beforeEach(() => {
-    useMarketStore.setState({
-      selectedInstrument: null,
-      snapshots: new Map(),
-    })
-    useContractsStore.setState({ contracts: [] })
-    vi.mocked(getInstruments).mockReset()
-    vi.mocked(subscribeMarket).mockReset()
-    vi.mocked(getSnapshots).mockReset()
-  })
-
-  it('fetchInstruments 调用 API 获取合约列表并同步到 contracts store', async () => {
-    const mockInstruments = [
-      { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260821', isTrading: true },
-      { instrumentID: 'IF2609', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260919', isTrading: true },
-    ]
-    vi.mocked(getInstruments).mockResolvedValue({
-      instruments: mockInstruments,
-      count: 2,
-    })
-
-    await useMarketStore.getState().fetchInstruments()
-    expect(getInstruments).toHaveBeenCalled()
-    // 验证同步到 contracts store
-    expect(useContractsStore.getState().contracts).toEqual(mockInstruments)
-  })
-
-  it('fetchInstruments 失败时不影响现有状态', async () => {
-    vi.mocked(getInstruments).mockRejectedValue(new Error('network error'))
-
-    await useMarketStore.getState().fetchInstruments()
-    // snapshots 不受影响
-    expect(useMarketStore.getState().snapshots.size).toBe(0)
-  })
-})
-
 describe('MarketStore - subscribeInstruments', () => {
   beforeEach(() => {
     useMarketStore.setState({
       selectedInstrument: null,
       snapshots: new Map(),
     })
-    vi.mocked(getInstruments).mockReset()
     vi.mocked(subscribeMarket).mockReset()
     vi.mocked(getSnapshots).mockReset()
   })
@@ -254,46 +212,3 @@ describe('MarketStore - klineData', () => {
   })
 })
 
-describe('MarketStore - refreshInstruments', () => {
-  beforeEach(() => {
-    useMarketStore.setState({
-      isRefreshing: false,
-    })
-    vi.mocked(refreshInstruments).mockReset()
-  })
-
-  it('isRefreshing defaults to false', () => {
-    expect(useMarketStore.getState().isRefreshing).toBe(false)
-  })
-
-  it('refreshInstruments sets isRefreshing=true while calling API', async () => {
-    vi.mocked(refreshInstruments).mockResolvedValue({ status: 'started' })
-
-    const promise = useMarketStore.getState().refreshInstruments()
-
-    // 同步检查：API 调用期间 isRefreshing 应为 true
-    expect(useMarketStore.getState().isRefreshing).toBe(true)
-
-    await promise
-
-    // 完成后应恢复为 false
-    expect(useMarketStore.getState().isRefreshing).toBe(false)
-  })
-
-  it('refreshInstruments calls the API and returns status', async () => {
-    vi.mocked(refreshInstruments).mockResolvedValue({ status: 'started' })
-
-    const result = await useMarketStore.getState().refreshInstruments()
-
-    expect(refreshInstruments).toHaveBeenCalled()
-    expect(result).toEqual({ status: 'started' })
-  })
-
-  it('refreshInstruments resets isRefreshing even if API fails', async () => {
-    vi.mocked(refreshInstruments).mockRejectedValue(new Error('network error'))
-
-    await useMarketStore.getState().refreshInstruments()
-
-    expect(useMarketStore.getState().isRefreshing).toBe(false)
-  })
-})
