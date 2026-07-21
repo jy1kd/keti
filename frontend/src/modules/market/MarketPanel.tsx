@@ -19,7 +19,7 @@ const savedMarketTop = loadPanelSizes('market-top-layout')
 const savedMarket = loadPanelSizes('market-layout')
 
 export function MarketPanel() {
-  const { snapshots, selectedInstrument, setSelectedInstrument, fetchInstruments, subscribeInstruments, klineData, setKlineData } = useMarketStore()
+  const { snapshots, selectedInstrument, setSelectedInstrument, fetchInstruments, subscribeInstruments, klineData, setKlineData, refreshInstruments, isRefreshing } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, addContract } = useContractsStore()
   const fetchedRef = useRef(false)
@@ -94,7 +94,16 @@ export function MarketPanel() {
     <section className="market-panel">
       <div className="panel-header">
         <h2>行情面板</h2>
-        <ContractSearch contracts={contracts} onSelect={handleSelectContract} />
+        <div className="panel-header__actions">
+          <ContractSearch contracts={contracts} onSelect={handleSelectContract} />
+          <button
+            className="btn-refresh-instruments"
+            disabled={isRefreshing}
+            onClick={() => refreshInstruments()}
+          >
+            {isRefreshing ? '刷新中...' : '刷新合约'}
+          </button>
+        </div>
       </div>
       {/* 布局：上半部 [行情表格 | 五档行情]，下半部 [K线图 全宽] */}
       <Group orientation="vertical" className="panel-content" id="market-layout" onLayoutChange={onMarketLayout}>
