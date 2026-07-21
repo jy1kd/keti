@@ -436,3 +436,93 @@ class TestInstrumentsRefresh:
         data = resp.json()
         assert data["success"] is False
         assert "query failed" in data["message"].lower()
+
+
+# ── Instrument search endpoints ──────────────────────────────────────
+
+class TestGetExchanges:
+    """GET /api/market/instruments/exchanges"""
+
+    @pytest.mark.asyncio
+    async def test_returns_exchanges(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/instruments/exchanges")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert set(data["exchanges"]) == {"CFFEX", "SHFE"}
+
+
+class TestGetProducts:
+    """GET /api/market/instruments/products"""
+
+    @pytest.mark.asyncio
+    async def test_returns_products_for_exchange(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/instruments/products", params={"exchange": "CFFEX"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "IF" in data["products"]
+
+    @pytest.mark.asyncio
+    async def test_missing_exchange_returns_422(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/instruments/products")
+        assert resp.status_code == 422
+
+
+class TestSearchInstruments:
+    """GET /api/market/instruments/search"""
+
+    @pytest.mark.asyncio
+    async def test_search_by_exchange_and_product(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/instruments/search", params={"exchange": "CFFEX", "product": "IF"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["count"] == 2
+
+    @pytest.mark.asyncio
+    async def test_search_with_keyword(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/instruments/search", params={"exchange": "CFFEX", "product": "IF", "keyword": "2608"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["count"] == 1
+        assert data["instruments"][0]["instrumentID"] == "IF2608"
+
+    @pytest.mark.asyncio
+    async def test_missing_params_returns_422(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/instruments/search")
+        assert resp.status_code == 422
+
+
+class TestGetInstrumentsByIds:
+    """GET /api/market/instruments?ids=X,Y,Z"""
+
+    @pytest.mark.asyncio
+    async def test_returns_matching_instruments(self, app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/instruments", params={"ids": "IF2608,au2608"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["count"] == 2
+        ids = {inst["instrumentID"] for inst in data["instruments"]}
+        assert ids == {"IF2608", "au2608"}
+
+    @pytest.mark.asyncio
+    async def test_ids_empty_string_returns_all(self, app):
+        """Without ids param, returns all instruments (existing behavior)."""
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/market/instruments")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["count"] == 3
