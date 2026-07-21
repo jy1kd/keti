@@ -15,14 +15,14 @@
 | PR-6 | 前端行情表格（vtable） | ✅ 已完成 | 2026-07-14 | 762bfa0~d5c95f4 (31 commits) |
 | PR-6a | 前端行情表格接入真实API | ✅ 已合并 | 2026-07-15 | a2d767d~94a8f85 (12 commits) |
 | PR-8 | 前端五档行情展示 | ✅ 已合并 | 2026-07-15 | 04809be~f56bd62 (13 commits) |
-| PR-10 | 前端报单表单实现 | ⏳ 待开始 | - | - |
+| PR-10 | 前端报单表单实现 | ✅ 已完成 | 2026-07-20 | 3f2941c~cb31c1d (12 commits) |
 | PR-12 | 前端K线图实现 | ✅ 已合并 | 2026-07-16 | 2423a6c~ea94d85 (12 commits) |
 | PR-12a | 前端补缺补差 | ✅ 已完成 | 2026-07-17 | bccca93~f00d066 (22 commits) |
 | PR-14 | 前端期权T型报价实现 | ⏳ 待开始 | - | - |
 | PR-15 | 前端快捷功能实现 | ⏳ 待开始 | - | - |
 | PR-16 | 前端查询面板实现 | ⏳ 待开始 | - | - |
 | PR-17 | 联调测试与Bug修复 | ⏳ 待开始 | - | - |
-| PR-20 | 前端合约刷新功能（刷新按钮 + Toast） | ⏳ 待开始 | - | - |
+| PR-20 | 前端合约刷新功能（刷新按钮 + Toast） | ✅ 已完成 | 2026-07-21 | 2a4d682~8ebaf1f (9 commits) |
 | PR-21 | 手动订阅/退订合约 | ⏳ 待开始 | - | - |
 
 **总计**：12个PR + 1个联调PR = 13个PR
@@ -182,7 +182,7 @@
 
 ### PR-10: 前端报单表单实现
 
-**状态**：⏳ 待开始
+**状态**：✅ 已完成（待审查）
 
 **PR信息**：
 - PR分支名：`feature/pr-10-order-form`
@@ -190,16 +190,28 @@
 - 工作量：3小时
 
 **完成内容**：
-- 待开发
+- orderMapping 字段映射（前端字符串↔CTP字符码，9个函数）
+- submitOrder/cancelOrder API 函数（自动字段转换）
+- Toast 提示组件（success/error，3s消失，独立计时）
+- Order Store 增强（orderForm状态、submitOrder、resetOrderForm）
+- usePriceStep Hook（stepUp/stepDown/alignToTick）
+- useHotKeys Hook（B/S/C快捷键，输入框内忽略）
+- OrderForm 组件（方向/开平/限价市价/GFD-FOK-FAK/步进器）
+- StopOrderForm 组件（含止损价输入）
+- OrderPanel 集成（报单/止损单 Tab 切换）
 
 **验证结果**：
-- 待验证
+- ✅ 248 tests / 32 files 通过（新增 62 tests）
+- ✅ TypeScript: 0 new errors
+- ✅ 2 pre-existing failures（react-resizable-panels 未安装）
+- ⚠️ 2 观察项：IOC 有效期（task.md 自身矛盾）、前端提交前校验较基础
 
 **提交记录**：
-- 待提交
+- `3f2941c` feat(task-10): implement PR-10 前端报单表单
+- `26da56c` docs(task-10): update dev-record-b with PR-10 TDD record
 
 **交接说明**：
-- 待交接
+- PR-10 开发完成，待审查。审查通过后可进入 PR-15（快捷功能）或 PR-20（合约刷新）
 
 ---
 
@@ -321,29 +333,6 @@
 
 ---
 
-### PR-20: 前端合约刷新功能
-
-**状态**：⏳ 待开始
-
-**PR信息**：
-- PR分支名：`feature/pr-20-instrument-refresh-ui`
-- 依赖PR：PR-19
-- 工作量：1小时
-
-**完成内容**：
-- 待开发
-
-**验证结果**：
-- 待验证
-
-**提交记录**：
-- 待提交
-
-**交接说明**：
-- 待交接
-
----
-
 ### PR-21: 手动订阅/退订合约
 
 **状态**：⏳ 待开始
@@ -367,8 +356,60 @@
 
 ---
 
+---
+
+### PR-20: 前端合约刷新功能
+
+**状态**：✅ 已完成（审查通过，待合并）
+
+**PR信息**：
+- PR分支名：`feature/pr-20-instrument-refresh-ui`
+- 依赖PR：PR-19
+- 工作量：1小时
+
+**完成内容**：
+- refreshInstruments API 函数（POST /api/market/instruments/refresh）
+- Store 扩展（isRefreshing 状态 + refreshInstruments 方法 + 错误处理）
+- useMarketWs 监听 instruments_refreshed → fetchInstruments + toast
+- WSMessageType 类型补充 instruments_refreshed
+- MarketPanel "刷新合约"按钮（loading 状态、disabled）
+- count=0 防御不显示 toast
+
+**验证结果**：
+- ✅ 288 tests / 34 files 通过（新增 14 tests）
+- ✅ 审查反馈已全部修复
+- ✅ 人工验证通过
+
+**提交记录**：
+- `2a4d682` feat(task-20): implement refreshInstruments API function
+- `8e9bc8a` feat(task-20): add refreshInstruments + isRefreshing to market store
+- `ac84927` feat(task-20): handle instruments_refreshed WS message with toast + refetch
+- `51ae660` feat(task-20): add refresh contracts button to MarketPanel with loading state
+- `52cc723` docs(task-20): update dev-record-b with PR-20 TDD records
+- `0106342` docs(task-20): update progress.md — PR-20 开发完成，待审查
+- `736b1ea` fix(task-20): review反馈 - selector位置统一 + count=0防御 + 测试重命名 + 旧条目清理
+- `0a067b3` docs(task-20): review reply + 更新 dev-record 和 progress 状态
+- `8ebaf1f` fix(task-20): add instruments_refreshed to WSMessageType union
+
+**交接说明**：
+- PR-20 完成，可合并。审查无阻断问题，2 个建议 + 2 个疑问已全部处理。
+- ✅ TypeScript 编译无错误
+
+**提交记录**：
+- `2a4d682` feat(task-20): implement refreshInstruments API function
+- `8e9bc8a` feat(task-20): add refreshInstruments + isRefreshing to market store
+- `ac84927` feat(task-20): handle instruments_refreshed WS message with toast + refetch
+- `51ae660` feat(task-20): add refresh contracts button to MarketPanel with loading state
+- `52cc723` docs(task-20): update dev-record-b with PR-20 TDD records
+
+**交接说明**：
+- 开发完成，待审查。审查通过后可进入 PR-21（手动订阅）
+
+---
+
 ## 开发日志
 
 | 日期 | 内容 | 状态 |
 |------|------|------|
 | 2026-07-08 | 初始化progress.md | ✅ 完成 |
+| 2026-07-21 | PR-20 合约刷新功能完成 | ✅ 完成 |

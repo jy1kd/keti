@@ -1,5 +1,7 @@
 import axios from 'axios'
 import type { ApiResponse, ContractInfo, MarketSnapshot, KLineData } from './types'
+import { convertOrderRequest } from '../utils/orderMapping'
+import type { OrderRequestForm } from '../utils/orderMapping'
 
 export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
 
@@ -97,5 +99,42 @@ export async function getKlineData(instrument: string, period: string, count?: n
       timestamp: bar.timestamp ?? (bar.time ? new Date(bar.time).getTime() : 0),
     }))
   }
+  return data
+}
+
+// ── 报单 API ────────────────────────────────────────────────────────
+
+interface OrderSubmitResponse {
+  success: boolean
+  orderRef: string
+  error?: string
+}
+
+interface CancelResponse {
+  success: boolean
+}
+
+/** 提交报单，自动转换前端字段 → CTP 字段 */
+export async function submitOrder(order: OrderRequestForm): Promise<OrderSubmitResponse> {
+  const ctpOrder = convertOrderRequest(order)
+  const { data } = await api.post<OrderSubmitResponse>('/api/order/insert', ctpOrder)
+  return data
+}
+
+/** 撤单 */
+export async function cancelOrder(orderRef: string): Promise<CancelResponse> {
+  const { data } = await api.post<CancelResponse>('/api/order/cancel', { orderRef })
+  return data
+}
+
+// ── 合约查询 API ──────────────────────────────────────────────────────
+
+interface RefreshResponse {
+  status: string
+}
+
+/** 触发后端从 CTP 刷新全量合约列表 */
+export async function refreshInstruments(): Promise<RefreshResponse> {
+  const { data } = await api.post<RefreshResponse>('/api/market/instruments/refresh')
   return data
 }

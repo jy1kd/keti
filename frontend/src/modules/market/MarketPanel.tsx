@@ -9,6 +9,7 @@ import { KLineChart } from './KLineChart'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
 import { usePointOrder } from '@/hooks/usePointOrder'
+import { useOrderStore } from '@/modules/order/store'
 import { useMarketWs, PERIOD_MS } from '@/hooks/useMarketWs'
 import { API_BASE, getKlineData } from '@/services/api'
 import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
@@ -18,7 +19,8 @@ const savedMarketTop = loadPanelSizes('market-top-layout')
 const savedMarket = loadPanelSizes('market-layout')
 
 export function MarketPanel() {
-  const { snapshots, selectedInstrument, setSelectedInstrument, fetchInstruments, subscribeInstruments, klineData, setKlineData } = useMarketStore()
+  const { snapshots, selectedInstrument, setSelectedInstrument, fetchInstruments, subscribeInstruments, klineData, setKlineData, refreshInstruments, isRefreshing } = useMarketStore()
+  const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, addContract } = useContractsStore()
   const fetchedRef = useRef(false)
   const [period, setPeriod] = useState('5m')
@@ -50,19 +52,20 @@ export function MarketPanel() {
   const { handleClick, handleDoubleClick } = usePointOrder({
     onOrder: ({ instrumentID, price }) => {
       setSelectedInstrument(instrumentID)
-      // TODO: PR-10 接入报单表单
-      console.log('点价报单:', instrumentID, price)
+      setOrderInstrument(instrumentID)
+      setOrderForm({ limitPrice: price })
     },
     onFill: ({ instrumentID, price }) => {
       setSelectedInstrument(instrumentID)
-      // TODO: PR-10 填充报单面板
-      console.log('填充报单:', instrumentID, price)
+      setOrderInstrument(instrumentID)
+      setOrderForm({ limitPrice: price })
     },
   })
 
   const handleSelectContract = (instrumentID: string) => {
     addContract(instrumentID)
     setSelectedInstrument(instrumentID)
+    setOrderInstrument(instrumentID)
   }
 
   // 获取K线数据（时间戳按周期对齐，与实时数据保持一致）
@@ -91,7 +94,16 @@ export function MarketPanel() {
     <section className="market-panel">
       <div className="panel-header">
         <h2>行情面板</h2>
-        <ContractSearch contracts={contracts} onSelect={handleSelectContract} />
+        <div className="panel-header__actions">
+          <ContractSearch contracts={contracts} onSelect={handleSelectContract} />
+          <button
+            className="btn-refresh-instruments"
+            disabled={isRefreshing}
+            onClick={() => refreshInstruments()}
+          >
+            {isRefreshing ? '刷新中...' : '刷新合约'}
+          </button>
+        </div>
       </div>
       {/* 布局：上半部 [行情表格 | 五档行情]，下半部 [K线图 全宽] */}
       <Group orientation="vertical" className="panel-content" id="market-layout" onLayoutChange={onMarketLayout}>
@@ -117,14 +129,14 @@ export function MarketPanel() {
                   snapshot={selectedSnapshot}
                   onBuyClick={(price) => {
                     if (selectedInstrument) {
-                      // TODO: PR-10 接入报单表单
-                      console.log('买入', selectedInstrument, price)
+                      setOrderInstrument(selectedInstrument)
+                      setOrderForm({ direction: 'buy', limitPrice: price })
                     }
                   }}
                   onSellClick={(price) => {
                     if (selectedInstrument) {
-                      // TODO: PR-10 接入报单表单
-                      console.log('卖出', selectedInstrument, price)
+                      setOrderInstrument(selectedInstrument)
+                      setOrderForm({ direction: 'sell', limitPrice: price })
                     }
                   }}
                 />

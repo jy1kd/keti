@@ -82,6 +82,7 @@ export interface OrderRequest {
   instrumentID: string
   direction: 'buy' | 'sell'
   combOffsetFlag: 'open' | 'close' | 'close_today'
+  combHedgeFlag?: 'speculation' | 'arbitrage' | 'hedge'
   limitPrice: number
   volumeTotalOriginal: number
   orderPriceType: 'limit' | 'market'
@@ -119,6 +120,7 @@ export interface StopOrderRequest {
   instrumentID: string
   direction: 'buy' | 'sell'
   combOffsetFlag: 'open' | 'close' | 'close_today'
+  combHedgeFlag?: 'speculation' | 'arbitrage' | 'hedge'
   limitPrice: number
   volumeTotalOriginal: number
   stopPrice: number
@@ -244,6 +246,7 @@ export type WSMessageType =
   | 'position_update'
   | 'stop_order_update'
   | 'connection_status'
+  | 'instruments_refreshed'
   | 'error'
 
 export interface WSMessage<T = unknown> {

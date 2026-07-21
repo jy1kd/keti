@@ -1015,7 +1015,7 @@ frontend/src/
 | **负责角色** | 角色B |
 | **依赖PR** | PR-9（报单表单需要后端交易API） |
 | **工作量** | 3小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成（2026-07-20，PR #16，12 commits，274 tests） |
 
 **提交文件**：
 ```
@@ -1023,7 +1023,7 @@ frontend/src/
 ├── modules/
 │   └── order/
 │       ├── OrderForm.tsx       # 报单表单组件
-│       ├── StopOrderForm.tsx   # 止损单表单组件（基础框架）
+│       ├── StopOrderForm.tsx   # 止损单表单组件（完整实现）
 │       ├── OrderPanel.tsx      # 报单面板（完善）
 │       └── store.ts            # 报单Store（完善）
 ├── components/

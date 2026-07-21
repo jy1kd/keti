@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { api, API_BASE, getInstruments, subscribeMarket, getSnapshots, getKlineData } from './api'
+import { api, API_BASE, getInstruments, subscribeMarket, getSnapshots, getKlineData, submitOrder, cancelOrder, refreshInstruments } from './api'
 
 describe('api (Axios 实例)', () => {
   it('API_BASE 有值', () => {
@@ -127,5 +127,82 @@ describe('getKlineData', () => {
 
     await getKlineData('au2508', '1d')
     expect(api.get).toHaveBeenCalledWith('/api/market/kline', { params: { instrument: 'au2508', period: '1d', count: undefined } })
+  })
+})
+
+describe('submitOrder', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('calls POST /api/order/insert with converted CTP fields', async () => {
+    const mockData = { success: true, orderRef: 'ORD-001' }
+    vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
+
+    const order = {
+      instrumentID: 'IF2608',
+      direction: 'buy' as const,
+      combOffsetFlag: 'open' as const,
+      orderPriceType: 'limit' as const,
+      timeCondition: 'gfd' as const,
+      limitPrice: 4800.0,
+      volumeTotalOriginal: 1,
+    }
+
+    const result = await submitOrder(order)
+
+    expect(api.post).toHaveBeenCalledWith('/api/order/insert', {
+      instrumentID: 'IF2608',
+      direction: '0',
+      offsetFlag: '0',
+      priceType: '2',
+      timeCondition: '1',
+      volumeCondition: '1',
+      hedgeFlag: '1',
+      limitPrice: 4800.0,
+      volumeTotalOriginal: 1,
+    })
+    expect(result).toEqual(mockData)
+  })
+})
+
+describe('cancelOrder', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('calls POST /api/order/cancel with orderRef', async () => {
+    const mockData = { success: true }
+    vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
+
+    const result = await cancelOrder('ORD-001')
+
+    expect(api.post).toHaveBeenCalledWith('/api/order/cancel', { orderRef: 'ORD-001' })
+    expect(result).toEqual(mockData)
+  })
+})
+
+describe('refreshInstruments', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('calls POST /api/market/instruments/refresh and returns started status', async () => {
+    const mockData = { status: 'started' }
+    vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
+
+    const result = await refreshInstruments()
+
+    expect(api.post).toHaveBeenCalledWith('/api/market/instruments/refresh')
+    expect(result).toEqual(mockData)
+  })
+
+  it('returns the status string when API responds', async () => {
+    const mockData = { status: 'already_running' }
+    vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
+
+    const result = await refreshInstruments()
+
+    expect(result.status).toBe('already_running')
   })
 })
