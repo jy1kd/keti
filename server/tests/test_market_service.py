@@ -681,3 +681,88 @@ class TestRefreshInstrumentsFromCtp:
             assert result[0]["volumeMultiple"] == 300
         finally:
             os.unlink(tmp_path)
+
+
+# ── Instrument search (筛选) ─────────────────────────────────────────
+
+class TestInstrumentSearch:
+    """get_exchanges, get_products, search_instruments, get_instruments_by_ids."""
+
+    SAMPLE = [
+        {"instrumentID": "IF2608", "instrumentName": "沪深300", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260821", "isTrading": 1},
+        {"instrumentID": "IF2609", "instrumentName": "沪深300", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260918", "isTrading": 1},
+        {"instrumentID": "IC2608", "instrumentName": "中证500", "exchangeID": "CFFEX", "productID": "IC", "expireDate": "20260821", "isTrading": 1},
+        {"instrumentID": "au2608", "instrumentName": "黄金", "exchangeID": "SHFE", "productID": "au", "expireDate": "20260815", "isTrading": 1},
+        {"instrumentID": "cu2608", "instrumentName": "铜", "exchangeID": "SHFE", "productID": "cu", "expireDate": "20260815", "isTrading": 0},
+    ]
+
+    def test_get_exchanges_returns_unique_list(self):
+        svc = MarketService()
+        svc.load_instruments(self.SAMPLE)
+        result = svc.get_exchanges()
+        assert set(result) == {"CFFEX", "SHFE"}
+
+    def test_get_exchanges_empty_when_no_data(self):
+        svc = MarketService()
+        assert svc.get_exchanges() == []
+
+    def test_get_products_returns_filtered_list(self):
+        svc = MarketService()
+        svc.load_instruments(self.SAMPLE)
+        result = svc.get_products("CFFEX")
+        assert set(result) == {"IF", "IC"}
+
+    def test_get_products_empty_exchange(self):
+        svc = MarketService()
+        svc.load_instruments(self.SAMPLE)
+        assert svc.get_products("ZZZZZ") == []
+
+    def test_search_instruments_by_exchange_and_product(self):
+        svc = MarketService()
+        svc.load_instruments(self.SAMPLE)
+        result = svc.search_instruments("CFFEX", "IF")
+        assert len(result) == 2
+        ids = {r["instrumentID"] for r in result}
+        assert ids == {"IF2608", "IF2609"}
+
+    def test_search_instruments_with_keyword(self):
+        svc = MarketService()
+        svc.load_instruments(self.SAMPLE)
+        result = svc.search_instruments("CFFEX", "IF", keyword="2608")
+        assert len(result) == 1
+        assert result[0]["instrumentID"] == "IF2608"
+
+    def test_search_instruments_no_match(self):
+        svc = MarketService()
+        svc.load_instruments(self.SAMPLE)
+        result = svc.search_instruments("SHFE", "IF")
+        assert result == []
+
+    def test_search_instruments_returns_all_fields(self):
+        svc = MarketService()
+        svc.load_instruments(self.SAMPLE)
+        result = svc.search_instruments("CFFEX", "IF")
+        inst = result[0]
+        assert "instrumentID" in inst
+        assert "expireDate" in inst
+        assert "isTrading" in inst
+
+    def test_get_instruments_by_ids(self):
+        svc = MarketService()
+        svc.load_instruments(self.SAMPLE)
+        result = svc.get_instruments_by_ids(["IF2608", "au2608"])
+        assert len(result) == 2
+        ids = {r["instrumentID"] for r in result}
+        assert ids == {"IF2608", "au2608"}
+
+    def test_get_instruments_by_ids_partial_match(self):
+        svc = MarketService()
+        svc.load_instruments(self.SAMPLE)
+        result = svc.get_instruments_by_ids(["IF2608", "ZZZZZ"])
+        assert len(result) == 1
+        assert result[0]["instrumentID"] == "IF2608"
+
+    def test_get_instruments_by_ids_empty(self):
+        svc = MarketService()
+        svc.load_instruments(self.SAMPLE)
+        assert svc.get_instruments_by_ids([]) == []

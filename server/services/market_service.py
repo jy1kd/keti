@@ -103,6 +103,42 @@ class MarketService:
                 results.append(inst)
         return results
 
+    def get_exchanges(self) -> List[str]:
+        """Return deduplicated list of exchange IDs."""
+        return sorted({inst.get("exchangeID", "") for inst in self._instruments if inst.get("exchangeID")})
+
+    def get_products(self, exchange: str) -> List[str]:
+        """Return product IDs for a given exchange."""
+        return sorted({
+            inst.get("productID", "")
+            for inst in self._instruments
+            if inst.get("exchangeID") == exchange and inst.get("productID")
+        })
+
+    def search_instruments(
+        self, exchange: str, product: str, keyword: str = None
+    ) -> List[dict]:
+        """Filter instruments by exchange + product, with optional keyword."""
+        results = [
+            inst for inst in self._instruments
+            if inst.get("exchangeID") == exchange and inst.get("productID") == product
+        ]
+        if keyword:
+            kw = keyword.lower()
+            results = [
+                inst for inst in results
+                if kw in str(inst.get("instrumentID", "")).lower()
+                or kw in str(inst.get("instrumentName", "")).lower()
+            ]
+        return results
+
+    def get_instruments_by_ids(self, ids: List[str]) -> List[dict]:
+        """Return instruments matching the given IDs."""
+        if not ids:
+            return []
+        id_set = set(ids)
+        return [inst for inst in self._instruments if inst.get("instrumentID") in id_set]
+
     # ── Subscription management ───────────────────────────────────────
 
     @property
