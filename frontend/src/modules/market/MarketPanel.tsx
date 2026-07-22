@@ -23,7 +23,7 @@ const savedMarket = loadPanelSizes('market-layout')
 export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, klineData, setKlineData } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
-  const { contracts, showSubscribedOnly, addContractInfo, removeContractById, toggleShowSubscribedOnly } = useContractsStore()
+  const { contracts, showSubscribedOnly, presetIds, addContractInfo, removeContractById, toggleShowSubscribedOnly } = useContractsStore()
   const { selectedContracts } = useUserPrefsStore()
   const [period, setPeriod] = useState('5m')
   const [searchModalOpen, setSearchModalOpen] = useState(false)
@@ -36,10 +36,20 @@ export function MarketPanel() {
     return contracts.filter((c) => selectedSet.has(c.instrumentID))
   }, [contracts, showSubscribedOnly, selectedContracts])
 
-  // Subscribed instrument IDs set (for modal to show "已订阅")
-  const subscribedIds = useMemo(
-    () => new Set(contracts.map((c) => c.instrumentID)),
-    [contracts]
+  // User-subscribed IDs only (for modal "已订阅" badge)
+  const userSubscribedIds = useMemo(
+    () => new Set(selectedContracts),
+    [selectedContracts]
+  )
+  // Preset IDs set (for modal "订阅(预设)" button)
+  const presetIdsSet = useMemo(
+    () => new Set(presetIds),
+    [presetIds]
+  )
+  // Whether selected instrument is a preset (not yet user-subscribed)
+  const isSelectedPreset = useMemo(
+    () => selectedInstrument != null && presetIdsSet.has(selectedInstrument) && !userSubscribedIds.has(selectedInstrument),
+    [selectedInstrument, presetIdsSet, userSubscribedIds]
   )
 
   const onMarketTopLayout = useCallback((layout: Record<string, number>) => {
@@ -88,6 +98,15 @@ export function MarketPanel() {
     if (!selectedInstrument) return
     await removeContractById(selectedInstrument)
     setSelectedInstrument(null)
+  }
+
+  const handleSubscribeSelected = () => {
+    if (!selectedInstrument) return
+    const inst = contracts.find((c) => c.instrumentID === selectedInstrument)
+    if (inst) {
+      addContractInfo(inst)
+      subscribeMarket([inst.instrumentID]).catch(() => {})
+    }
   }
 
   const handleSubscribeFromModal = (inst: import('@/services/types').ContractInfo) => {
@@ -141,6 +160,13 @@ export function MarketPanel() {
             onClick={handleUnsubscribe}
           >
             退订
+          </button>
+          <button
+            className="btn-subscribe-selected"
+            disabled={!isSelectedPreset}
+            onClick={handleSubscribeSelected}
+          >
+            订阅
           </button>
         </div>
       </div>
@@ -210,7 +236,8 @@ export function MarketPanel() {
         isOpen={searchModalOpen}
         onClose={() => setSearchModalOpen(false)}
         onSubscribe={handleSubscribeFromModal}
-        subscribedIds={subscribedIds}
+        userSubscribedIds={userSubscribedIds}
+        presetIds={presetIdsSet}
       />
     </section>
   )

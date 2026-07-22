@@ -139,4 +139,12 @@
   border-top: 1px solid var(--border-color, #333);
   font-size: 12px;
   color: var(--text-secondary, #999);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-footer__buttons {
+  display: flex;
+  gap: 12px;
 }

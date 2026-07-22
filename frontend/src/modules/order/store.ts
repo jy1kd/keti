@@ -86,7 +86,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
         toast.success('撤单成功')
         return true
       } else {
-        toast.error(`撤单失败：${result.error || '未知错误'}`)
+        toast.error(`撤单失败：${result.message || '未知错误'}`)
         return false
       }
     } catch (e) {

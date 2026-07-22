@@ -202,7 +202,7 @@ describe('OrderStore', () => {
   it('cancelOrder shows error toast on failure', async () => {
     vi.mocked(mockCancelOrder).mockResolvedValue({
       success: false,
-      error: '报单状态不允许撤单',
+      message: '报单状态不允许撤单',
     })
 
     const result = await useOrderStore.getState().cancelOrder('ORD-001')

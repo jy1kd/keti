@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { WSManager } from '@/services/ws'
 import { useConnectionStore } from '@/stores/connection'
+import { useContractsStore } from '@/stores/contracts'
 import { useReconnect } from './useReconnect'
+import { toast } from '@/components/Toast'
 import type { WSMessage } from '@/services/types'
 
 /** 心跳超时（毫秒）— 后端每 5s 推送一次，超过 15s 未收到视为断线 */
@@ -60,6 +62,19 @@ export function useSystemWs(wsBaseUrl: string) {
         setMdPhase('disconnected', `断线原因: ${data.reason}`)
         setTdPhase('disconnected', `断线原因: ${data.reason}`)
       }
+    } else if (message.type === 'instruments_refreshed') {
+      const data = message.data as { count: number }
+      useContractsStore.getState().loadSubscribedContracts()
+        .then(() => {
+          if (data.count > 0) {
+            toast.success(`已更新 ${data.count} 个合约`)
+          }
+          // 通知监听者 CTP 刷新完成
+          window.dispatchEvent(new CustomEvent('instruments_refreshed', { detail: { count: data.count } }))
+        })
+        .catch((err) => {
+          console.warn('[useSystemWs] refresh instruments failed:', err)
+        })
     } else if (message.type === 'ping') {
       // 心跳响应 — 心跳定时器已在上面重置
     }

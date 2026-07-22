@@ -77,7 +77,7 @@ describe('useMarketWs', () => {
   it('收到 market_data 消息时批量更新 store', () => {
     renderHook(() => useMarketWs('ws://localhost:8000'))
 
-    const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: MarketSnapshot }) => void
+    const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
 
     const snapshot: MarketSnapshot = {
       instrumentID: 'IF2608',

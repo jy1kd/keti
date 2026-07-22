@@ -10,6 +10,8 @@ import {
 interface ContractsStore {
   contracts: ContractInfo[]
   selectedContracts: string[]
+  /** Preset instrument IDs (auto-detected front-month contracts) */
+  presetIds: string[]
   showSubscribedOnly: boolean
   setContracts: (contracts: ContractInfo[]) => void
   addContract: (instrumentId: string) => void
@@ -27,6 +29,7 @@ interface ContractsStore {
 export const useContractsStore = create<ContractsStore>((set) => ({
   contracts: [],
   selectedContracts: [],
+  presetIds: [],
   showSubscribedOnly: false,
 
   setContracts: (contracts) => set({ contracts }),
@@ -86,13 +89,16 @@ export const useContractsStore = create<ContractsStore>((set) => ({
     // 3. Merge and deduplicate
     const allIds = [...new Set([...presetIds, ...userSelected])]
 
-    if (allIds.length === 0) return
+    if (allIds.length === 0) {
+      set({ presetIds })
+      return
+    }
 
     // 4. Get contract details
     try {
       const result = await getInstrumentsByIds(allIds)
       if (result.instruments?.length) {
-        set({ contracts: result.instruments })
+        set({ contracts: result.instruments, presetIds })
       }
     } catch {
       console.warn('[ContractsStore] Failed to load contract details')
