@@ -67,7 +67,8 @@ export const useContractsStore = create<ContractsStore>((set) => ({
     // 1. Load user prefs from localStorage
     const prefs = useUserPrefsStore.getState()
     prefs.loadFromLocalStorage()
-    const userSelected = prefs.selectedContracts
+    // Re-read after loadFromLocalStorage updates the store
+    const userSelected = useUserPrefsStore.getState().selectedContracts
 
     // 2. Get preset instruments
     let presetIds: string[] = []

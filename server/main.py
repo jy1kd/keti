@@ -55,6 +55,10 @@ def create_app() -> FastAPI:
         logger.info("starting CTP trading connection (user=%s)", cfg.user_id)
         start_ctp_trading_connection(app, cfg)
 
+        # Refresh preset instruments (auto-detect front-month per product)
+        app.state.market_service.refresh_preset_instruments()
+        logger.info("preset instruments refreshed")
+
         # Startup summary
         instruments = app.state.market_service.instrument_count
         logger.info("startup complete — instruments=%d", instruments)
