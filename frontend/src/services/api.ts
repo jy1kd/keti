@@ -112,6 +112,7 @@ interface OrderSubmitResponse {
 
 interface CancelResponse {
   success: boolean
+  message?: string
 }
 
 /** 提交报单，自动转换前端字段 → CTP 字段 */

@@ -45,7 +45,7 @@ function transitionState(
   return next
 }
 
-export const useConnectionStore = create<ConnectionStore>((set, get) => ({
+export const useConnectionStore = create<ConnectionStore>((set) => ({
   md: {
     phase: 'disconnected',
     lastConnectedAt: null,
