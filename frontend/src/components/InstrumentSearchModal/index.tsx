@@ -1,16 +1,20 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { ContractInfo } from '@/services/types'
-import { getExchanges, getProducts, searchInstruments, refreshInstruments, refreshPresetInstruments } from '@/services/api'
+import { getExchanges, getProducts, getInstruments, searchInstruments, refreshInstruments, refreshPresetInstruments } from '@/services/api'
+import { toast } from '@/components/Toast'
 import './index.css'
 
 interface Props {
   isOpen: boolean
   onClose: () => void
   onSubscribe: (instrument: ContractInfo) => void
-  subscribedIds: Set<string>
+  /** User-subscribed IDs (show "已订阅" badge, cannot re-subscribe) */
+  userSubscribedIds: Set<string>
+  /** Preset IDs (show "预设" badge, can still subscribe) */
+  presetIds: Set<string>
 }
 
-export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, subscribedIds }: Props) {
+export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, userSubscribedIds, presetIds }: Props) {
   const [exchanges, setExchanges] = useState<string[]>([])
   const [products, setProducts] = useState<string[]>([])
   const [instruments, setInstruments] = useState<ContractInfo[]>([])
@@ -55,7 +59,18 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, subscribed
 
   // Load instruments (shared by product change, button click, Enter key)
   const loadInstruments = useCallback((onCleanup?: () => boolean) => {
-    if (!selectedExchange || !selectedProduct) return
+    // Global keyword search when no exchange/product selected
+    if (!selectedExchange || !selectedProduct) {
+      if (!keyword.trim()) return
+      setLoading(true)
+      setError('')
+      getInstruments(keyword.trim())
+        .then((res) => { if (!onCleanup?.()) setInstruments(res.instruments) })
+        .catch(() => { if (!onCleanup?.()) setError('加载合约列表失败') })
+        .finally(() => { if (!onCleanup?.()) setLoading(false) })
+      return
+    }
+    // Filtered search by exchange + product
     setLoading(true)
     setError('')
     searchInstruments(selectedExchange, selectedProduct, keyword || undefined)
@@ -120,10 +135,9 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, subscribed
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             onKeyDown={handleKeywordKeyDown}
-            disabled={!selectedProduct}
           />
 
-          <button onClick={() => loadInstruments()} disabled={!selectedProduct || loading}>
+          <button onClick={() => loadInstruments()} disabled={loading || (!selectedProduct && !keyword.trim())}>
             搜索
           </button>
         </div>
@@ -135,7 +149,7 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, subscribed
             <div className="modal-loading">加载中...</div>
           ) : instruments.length === 0 ? (
             <div className="modal-empty">
-              {selectedProduct ? '无匹配合约' : '请选择交易所和品种'}
+              {selectedProduct ? '无匹配合约' : '输入关键词搜索，或选择交易所和品种'}
             </div>
           ) : (
             <table className="modal-table">
@@ -156,14 +170,14 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, subscribed
                     <td>{inst.expireDate}</td>
                     <td>{inst.isTrading ? '交易中' : '已停牌'}</td>
                     <td>
-                      {subscribedIds.has(inst.instrumentID) ? (
+                      {userSubscribedIds.has(inst.instrumentID) ? (
                         <span className="subscribed-badge">已订阅</span>
                       ) : (
                         <button
                           className="btn-subscribe"
                           onClick={() => handleSubscribe(inst)}
                         >
-                          订阅
+                          {presetIds.has(inst.instrumentID) ? '订阅(预设)' : '订阅'}
                         </button>
                       )}
                     </td>
@@ -201,7 +215,10 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, subscribed
                 setRefreshing(true)
                 setError('')
                 try {
-                  await refreshPresetInstruments()
+                  const result = await refreshPresetInstruments()
+                  if (result.success && result.instruments) {
+                    toast.success(`已更新 ${result.instruments.length} 个预设合约`)
+                  }
                 } catch {
                   setError('刷新预设合约失败')
                 } finally {
