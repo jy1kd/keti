@@ -110,7 +110,25 @@ def create_app() -> FastAPI:
 
     @app.websocket("/ws/system")
     async def ws_system(websocket: WebSocket):
-        await handle_ws("system", app.state.ws_manager, websocket)
+        async def _push_initial_status():
+            """Push current CTP connection state to late-joining clients.
+
+            Without this, a client that connects after TD/MD is already
+            connected would never receive a connection_status broadcast
+            and would remain stuck in 'connecting' state.
+            """
+            md_api = getattr(app.state, "md_api", None)
+            trader_api = getattr(app.state, "trader_api", None)
+            await websocket.send_json({
+                "type": "connection_status",
+                "data": {
+                    "mdConnected": md_api is not None and md_api.connection_status == "connected",
+                    "tdConnected": trader_api is not None and trader_api.connection_status == "connected",
+                },
+            })
+
+        await handle_ws("system", app.state.ws_manager, websocket,
+                        on_connect=_push_initial_status)
 
     # Create and store ws_manager and market_service on app state
     ws_manager = WebSocketManager()

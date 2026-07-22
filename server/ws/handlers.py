@@ -23,15 +23,25 @@ async def handle_ws(
     websocket: WebSocket,
     subscribe_fn: Optional[Callable[[List[str]], Coroutine]] = None,
     unsubscribe_fn: Optional[Callable[[List[str]], Coroutine]] = None,
+    on_connect: Optional[Callable[[], Coroutine]] = None,
 ) -> None:
     """Generic WebSocket handler — lifecycle + message routing.
 
     Manages:
     1. Accept and register in ws_manager connection pool
-    2. Route incoming messages (subscribe/unsubscribe/ping)
-    3. Unregister on disconnect
+    2. Call on_connect (if provided) to push initial state to late joiners
+    3. Route incoming messages (subscribe/unsubscribe/ping)
+    4. Unregister on disconnect
     """
     await ws_manager.connect(endpoint, websocket)
+
+    # Push initial state for late-joining clients (e.g. connection status)
+    if on_connect is not None:
+        try:
+            await on_connect()
+        except Exception:
+            logger.warning("on_connect handler raised", exc_info=True)
+
     try:
         while True:
             try:

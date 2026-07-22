@@ -8,6 +8,7 @@ import { QueryPanel } from '@/modules/query/QueryPanel'
 import { PerfMonitor } from '@/components/PerfMonitor'
 import { ToastContainer } from '@/components/Toast'
 import { useSystemWs } from '@/hooks/useSystemWs'
+import { useConnectionPoll } from '@/hooks/useConnectionPoll'
 import { API_BASE } from '@/services/api'
 import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
 import '@/assets/styles/global.css'
@@ -18,8 +19,11 @@ const savedMain = loadPanelSizes('main-layout')
 function App() {
   const [perfVisible, setPerfVisible] = useState(false)
 
-  // System WebSocket — 监听 MD/TD 连接状态
+  // System WebSocket — 监听 MD/TD 连接状态即时推送
   useSystemWs(API_BASE.replace('http', 'ws'))
+
+  // 轮询 /api/connection/status — MD/TD 状态的权威来源
+  useConnectionPoll()
 
   // Ctrl+Shift+M 切换性能监控
   useEffect(() => {

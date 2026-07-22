@@ -38,6 +38,13 @@ export class WSManager {
     ws.onmessage = (event) => {
       try {
         const message: WSMessage = JSON.parse(event.data)
+
+        // 服务端 heartbeat ping → 自动回复 pong，不传给业务回调
+        if (message.type === 'ping') {
+          ws.send(JSON.stringify({ type: 'pong' }))
+          return
+        }
+
         const cb = this.callbacks.get(endpoint)
         if (cb) cb(message)
       } catch {

@@ -128,6 +128,20 @@ export async function cancelOrder(orderRef: string): Promise<CancelResponse> {
   return data
 }
 
+// ── 连接状态 API ────────────────────────────────────────────────────────
+
+export interface ConnectionStatusResponse {
+  loggedIn: boolean
+  mdConnected: boolean
+  tdConnected: boolean
+}
+
+/** 查询 CTP 连接状态（MD/TD 独立） */
+export async function getConnectionStatus(): Promise<ConnectionStatusResponse> {
+  const { data } = await api.get<ConnectionStatusResponse>('/api/connection/status')
+  return data
+}
+
 // ── 合约查询 API ──────────────────────────────────────────────────────
 
 interface RefreshResponse {
