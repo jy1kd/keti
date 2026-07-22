@@ -51,6 +51,7 @@ docs/superpowers/
 
 # Claude config
 # CLAUDE.md is now tracked (needed for AI guidance)
+.claude/skills/
 
 # Understand Anything — 只保留知识图谱核心文件
 !.ua/config.json
