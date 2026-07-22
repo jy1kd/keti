@@ -12,7 +12,7 @@ import { useContractsStore } from '@/stores/contracts'
 import { usePointOrder } from '@/hooks/usePointOrder'
 import { useOrderStore } from '@/modules/order/store'
 import { useMarketWs, PERIOD_MS } from '@/hooks/useMarketWs'
-import { API_BASE, getKlineData, subscribeMarket, refreshInstruments } from '@/services/api'
+import { API_BASE, getKlineData, subscribeMarket } from '@/services/api'
 import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
 import './styles.css'
 
@@ -25,7 +25,6 @@ export function MarketPanel() {
   const { contracts, addContractInfo, removeContractById } = useContractsStore()
   const [period, setPeriod] = useState('5m')
   const [searchModalOpen, setSearchModalOpen] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
   const loadedRef = useRef(false)
 
   // Subscribed instrument IDs set (for modal to show "已订阅")
@@ -120,19 +119,6 @@ export function MarketPanel() {
             onClick={() => setSearchModalOpen(true)}
           >
             搜索合约
-          </button>
-          <button
-            className="btn-refresh-instruments"
-            disabled={isRefreshing}
-            onClick={async () => {
-              setIsRefreshing(true)
-              try {
-                await refreshInstruments()
-              } catch { /* 静默失败 */ }
-              setIsRefreshing(false)
-            }}
-          >
-            {isRefreshing ? '刷新中...' : '刷新合约'}
           </button>
           <button
             className="btn-unsubscribe"

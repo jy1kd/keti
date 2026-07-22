@@ -65,3 +65,4 @@ docs/superpowers/
 !.ua/meta.json
 !.ua/fingerprints.json
 server/data/instruments.json
+server/data/preset_instruments.json
