@@ -9,6 +9,7 @@ import { SpreadDisplay } from '@/components/SpreadDisplay'
 import { KLineChart } from './KLineChart'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
+import { useUserPrefsStore } from '@/stores/userPrefs'
 import { usePointOrder } from '@/hooks/usePointOrder'
 import { useOrderStore } from '@/modules/order/store'
 import { useMarketWs, PERIOD_MS } from '@/hooks/useMarketWs'
@@ -22,10 +23,18 @@ const savedMarket = loadPanelSizes('market-layout')
 export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, klineData, setKlineData } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
-  const { contracts, addContractInfo, removeContractById } = useContractsStore()
+  const { contracts, showSubscribedOnly, addContractInfo, removeContractById, toggleShowSubscribedOnly } = useContractsStore()
+  const { selectedContracts } = useUserPrefsStore()
   const [period, setPeriod] = useState('5m')
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const loadedRef = useRef(false)
+
+  // Filter contracts when "已订阅" toggle is active
+  const displayContracts = useMemo(() => {
+    if (!showSubscribedOnly) return contracts
+    const selectedSet = new Set(selectedContracts)
+    return contracts.filter((c) => selectedSet.has(c.instrumentID))
+  }, [contracts, showSubscribedOnly, selectedContracts])
 
   // Subscribed instrument IDs set (for modal to show "已订阅")
   const subscribedIds = useMemo(
@@ -121,6 +130,12 @@ export function MarketPanel() {
             搜索合约
           </button>
           <button
+            className={`btn-subscribed-toggle${showSubscribedOnly ? ' active' : ''}`}
+            onClick={toggleShowSubscribedOnly}
+          >
+            已订阅
+          </button>
+          <button
             className="btn-unsubscribe"
             disabled={!selectedInstrument}
             onClick={handleUnsubscribe}
@@ -136,7 +151,7 @@ export function MarketPanel() {
             <Panel id="market-table" defaultSize={savedMarketTop?.table ?? 75} minSize={30}>
               <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <MarketTable
-                  contracts={contracts}
+                  contracts={displayContracts}
                   snapshots={snapshots}
                   selectedInstrument={selectedInstrument}
                   onRowClick={handleClick}

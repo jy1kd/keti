@@ -10,6 +10,7 @@ import {
 interface ContractsStore {
   contracts: ContractInfo[]
   selectedContracts: string[]
+  showSubscribedOnly: boolean
   setContracts: (contracts: ContractInfo[]) => void
   addContract: (instrumentId: string) => void
   removeContract: (instrumentId: string) => void
@@ -19,11 +20,14 @@ interface ContractsStore {
   removeContractById: (instrumentId: string) => Promise<void>
   /** Load preset + user subscriptions from localStorage and subscribe */
   loadSubscribedContracts: () => Promise<void>
+  /** Toggle table filter: show only subscribed contracts vs all */
+  toggleShowSubscribedOnly: () => void
 }
 
 export const useContractsStore = create<ContractsStore>((set) => ({
   contracts: [],
   selectedContracts: [],
+  showSubscribedOnly: false,
 
   setContracts: (contracts) => set({ contracts }),
 
@@ -67,7 +71,8 @@ export const useContractsStore = create<ContractsStore>((set) => ({
     // 1. Load user prefs from localStorage
     const prefs = useUserPrefsStore.getState()
     prefs.loadFromLocalStorage()
-    const userSelected = prefs.selectedContracts
+    // Re-read after loadFromLocalStorage updates the store
+    const userSelected = useUserPrefsStore.getState().selectedContracts
 
     // 2. Get preset instruments
     let presetIds: string[] = []
@@ -93,4 +98,7 @@ export const useContractsStore = create<ContractsStore>((set) => ({
       console.warn('[ContractsStore] Failed to load contract details')
     }
   },
+
+  toggleShowSubscribedOnly: () =>
+    set((state) => ({ showSubscribedOnly: !state.showSubscribedOnly })),
 }))

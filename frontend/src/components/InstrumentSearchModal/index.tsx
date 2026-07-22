@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { ContractInfo } from '@/services/types'
-import { getExchanges, getProducts, searchInstruments } from '@/services/api'
+import { getExchanges, getProducts, searchInstruments, refreshInstruments, refreshPresetInstruments } from '@/services/api'
 import './index.css'
 
 interface Props {
@@ -18,6 +18,8 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, subscribed
   const [selectedProduct, setSelectedProduct] = useState('')
   const [keyword, setKeyword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshingInstruments, setRefreshingInstruments] = useState(false)
   const [error, setError] = useState('')
 
   // Load exchanges on open
@@ -174,6 +176,42 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, subscribed
 
         <div className="modal-footer">
           <span>共 {instruments.length} 个合约</span>
+          <div className="modal-footer__buttons">
+            <button
+              className="btn-refresh-instruments"
+              disabled={refreshingInstruments}
+              onClick={async () => {
+                setRefreshingInstruments(true)
+                setError('')
+                try {
+                  await refreshInstruments()
+                } catch {
+                  setError('从CTP刷新合约失败')
+                } finally {
+                  setRefreshingInstruments(false)
+                }
+              }}
+            >
+              {refreshingInstruments ? '刷新中...' : '刷新合约(CTP)'}
+            </button>
+            <button
+              className="btn-refresh"
+              disabled={refreshing}
+              onClick={async () => {
+                setRefreshing(true)
+                setError('')
+                try {
+                  await refreshPresetInstruments()
+                } catch {
+                  setError('刷新预设合约失败')
+                } finally {
+                  setRefreshing(false)
+                }
+              }}
+            >
+              {refreshing ? '刷新中...' : '刷新预设合约'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

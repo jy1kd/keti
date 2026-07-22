@@ -45,6 +45,16 @@ vi.mock('@/components/Toast', () => ({
   ToastContainer: () => null,
 }))
 
+/** 推送一条消息并刷新批量缓冲区（前进 100ms） */
+function pushAndFlush(act: (fn: () => void) => void, onMessage: (msg: { type: string; data: unknown }) => void, msg: { type: string; data: unknown }) {
+  act(() => {
+    onMessage(msg)
+  })
+  act(() => {
+    vi.advanceTimersByTime(110)
+  })
+}
+
 describe('useMarketWs', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -64,10 +74,9 @@ describe('useMarketWs', () => {
     expect(mockConnect).toHaveBeenCalledWith('market', expect.any(Function))
   })
 
-  it('收到 market_data 消息时更新 store', () => {
+  it('收到 market_data 消息时批量更新 store', () => {
     renderHook(() => useMarketWs('ws://localhost:8000'))
 
-    // 获取 connect 调用时注册的回调
     const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: MarketSnapshot }) => void
 
     const snapshot: MarketSnapshot = {
@@ -79,9 +88,7 @@ describe('useMarketWs', () => {
       openInterest: 5000,
     } as MarketSnapshot
 
-    act(() => {
-      onMessage({ type: 'market_data', data: snapshot })
-    })
+    pushAndFlush(act, onMessage, { type: 'market_data', data: snapshot })
 
     expect(useMarketStore.getState().snapshots.get('IF2608')).toEqual(snapshot)
   })
@@ -91,9 +98,7 @@ describe('useMarketWs', () => {
 
     const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
 
-    act(() => {
-      onMessage({ type: 'connection_status', data: { mdConnected: true } })
-    })
+    pushAndFlush(act, onMessage, { type: 'connection_status', data: { mdConnected: true } })
 
     expect(useMarketStore.getState().snapshots.size).toBe(0)
   })
@@ -108,12 +113,11 @@ describe('useMarketWs', () => {
   it('使用 useReconnect 实现断线重连', () => {
     const { result } = renderHook(() => useMarketWs('ws://localhost:8000'))
 
-    // useMarketWs 应返回重连状态信息
     expect(result.current).toHaveProperty('reconnectCount')
     expect(result.current).toHaveProperty('isReconnecting')
   })
 
-  it('收到 market_data 时同时更新 K 线数据（appendKline）', () => {
+  it('收到 market_data 时批量更新 K 线数据（appendKline）', () => {
     const appendKline = vi.fn()
     useMarketStore.setState({ appendKline })
 
@@ -121,26 +125,23 @@ describe('useMarketWs', () => {
 
     const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
 
-    act(() => {
-      onMessage({
-        type: 'market_data',
-        data: {
-          instrumentID: 'IF2608',
-          lastPrice: 4120.0,
-          volume: 100,
-          openInterest: 500,
-          openPrice: 4100.0,
-          highPrice: 4130.0,
-          lowPrice: 4090.0,
-          preClosePrice: 4110.0,
-          preSettlementPrice: 4105.0,
-          updateTime: '14:30:00',
-          updateMillisec: 500,
-        },
-      })
+    pushAndFlush(act, onMessage, {
+      type: 'market_data',
+      data: {
+        instrumentID: 'IF2608',
+        lastPrice: 4120.0,
+        volume: 100,
+        openInterest: 500,
+        openPrice: 4100.0,
+        highPrice: 4130.0,
+        lowPrice: 4090.0,
+        preClosePrice: 4110.0,
+        preSettlementPrice: 4105.0,
+        updateTime: '14:30:00',
+        updateMillisec: 500,
+      },
     })
 
-    // appendKline 应被调用，参数包含 instrumentID 和 KLineData
     expect(appendKline).toHaveBeenCalledWith(
       'IF2608',
       expect.objectContaining({
@@ -154,33 +155,63 @@ describe('useMarketWs', () => {
     const appendKline = vi.fn()
     useMarketStore.setState({ appendKline })
 
-    // 使用 5m 周期
     renderHook(() => useMarketWs('ws://localhost:8000', '5m'))
 
     const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
 
-    act(() => {
-      onMessage({
-        type: 'market_data',
-        data: {
-          instrumentID: 'IF2608',
-          lastPrice: 4120.0,
-          volume: 100,
-          openInterest: 500,
-          openPrice: 4100.0,
-          highPrice: 4130.0,
-          lowPrice: 4090.0,
-          updateTime: '14:32:15',
-          updateMillisec: 0,
-        },
-      })
+    pushAndFlush(act, onMessage, {
+      type: 'market_data',
+      data: {
+        instrumentID: 'IF2608',
+        lastPrice: 4120.0,
+        volume: 100,
+        openInterest: 500,
+        openPrice: 4100.0,
+        highPrice: 4130.0,
+        lowPrice: 4090.0,
+        updateTime: '14:32:15',
+        updateMillisec: 0,
+      },
     })
 
-    // 14:32:15 在 5m 周期应取整到 14:30:00 (即 5分钟边界)
     const klineArg = appendKline.mock.calls[0][1]
     const date = new Date(klineArg.timestamp)
     expect(date.getMinutes() % 5).toBe(0)
     expect(date.getSeconds()).toBe(0)
+  })
+
+  it('短时间内多条消息合并为一次更新', () => {
+    const batchUpdate = vi.fn()
+    useMarketStore.setState({ batchUpdate })
+
+    renderHook(() => useMarketWs('ws://localhost:8000'))
+
+    const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
+
+    // 连续发送 3 条消息（不刷新定时器）
+    act(() => {
+      onMessage({ type: 'market_data', data: { instrumentID: 'IF2608', lastPrice: 4100 } })
+      onMessage({ type: 'market_data', data: { instrumentID: 'au2510', lastPrice: 600 } })
+      onMessage({ type: 'market_data', data: { instrumentID: 'rb2510', lastPrice: 3500 } })
+    })
+
+    // 此时 batchUpdate 不应被调用（还在缓冲区）
+    expect(batchUpdate).not.toHaveBeenCalled()
+
+    // 刷新定时器
+    act(() => {
+      vi.advanceTimersByTime(110)
+    })
+
+    // 应该一次性更新所有 3 个快照
+    expect(batchUpdate).toHaveBeenCalledTimes(1)
+    expect(batchUpdate).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ instrumentID: 'IF2608' }),
+        expect.objectContaining({ instrumentID: 'au2510' }),
+        expect.objectContaining({ instrumentID: 'rb2510' }),
+      ]),
+    )
   })
 })
 
@@ -205,7 +236,6 @@ describe('useMarketWs - instruments_refreshed', () => {
       onMessage({ type: 'instruments_refreshed', data: { count: 17348 } })
     })
 
-    // fetchInstruments() 是异步的，toast 在 .then() 中调用，需要刷新微任务队列
     await act(async () => {
       await Promise.resolve()
     })
@@ -224,7 +254,6 @@ describe('useMarketWs - instruments_refreshed', () => {
       onMessage({ type: 'instruments_refreshed', data: { count: 5 } })
     })
 
-    // 合约刷新后应调用 loadSubscribedContracts 重新加载（而非 getInstruments）
     expect(mockLoadSubscribedContracts).toHaveBeenCalled()
     vi.useRealTimers()
   })
@@ -236,7 +265,6 @@ describe('useMarketWs - instruments_refreshed', () => {
     const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
 
     act(() => {
-      // connection_status 不应触发 toast
       onMessage({ type: 'connection_status', data: { status: 'connected', target: 'md' } })
     })
 

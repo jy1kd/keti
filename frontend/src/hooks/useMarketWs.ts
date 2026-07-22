@@ -41,19 +41,27 @@ function snapshotToKline(snap: MarketSnapshot, periodMs: number): KLineData {
   }
 }
 
+/** 批量刷新间隔（毫秒）— 100ms 内的所有行情消息合并为一次状态更新 */
+const FLUSH_INTERVAL_MS = 100
+
 /**
  * WebSocket 行情推送 Hook
  * 连接 ws/market 端点，收到 market_data 消息时更新行情 store。
  * 内置断线重连（指数退避，最多 5 次）。
+ *
+ * 使用批量更新策略：将短时间内的多条消息缓冲，每 100ms 合并为一次状态更新，
+ * 减少 React 重渲染次数（50 个合约从 50 次/秒降至 10 次/秒）。
  *
  * @param wsBaseUrl WebSocket 基础地址
  * @param period K 线周期（如 '1m', '5m', '1h'），影响实时 K 线的时间对齐
  */
 export function useMarketWs(wsBaseUrl: string, period = '5m') {
   const wsRef = useRef<WSManager | null>(null)
-  const updateSnapshot = useMarketStore((s) => s.updateSnapshot)
+  const snapshotBufferRef = useRef<MarketSnapshot[]>([])
+  const klineBufferRef = useRef<Map<string, KLineData>>(new Map())
+  const batchUpdate = useMarketStore((s) => s.batchUpdate)
   const appendKline = useMarketStore((s) => s.appendKline)
-  const setMdConnected = useConnectionStore((s) => s.setMdConnected)
+  const setMdPhase = useConnectionStore((s) => s.setMdPhase)
 
   // 创建 WSManager 实例（仅创建一次）
   if (!wsRef.current) {
@@ -63,14 +71,40 @@ export function useMarketWs(wsBaseUrl: string, period = '5m') {
   const ws = wsRef.current
   const periodMs = PERIOD_MS[period] ?? PERIOD_MS['5m']
 
-  // 消息处理回调
+  // 定时刷新缓冲区
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const snaps = snapshotBufferRef.current
+      const klines = klineBufferRef.current
+
+      if (snaps.length === 0 && klines.size === 0) return
+
+      // 批量更新快照（一次 set 触发一次重渲染）
+      if (snaps.length > 0) {
+        batchUpdate(snaps)
+        snapshotBufferRef.current = []
+      }
+
+      // 逐个更新 K 线（每个合约取最新一根，appendKline 内部处理去重）
+      for (const [instrument, candle] of klines) {
+        appendKline(instrument, candle)
+      }
+      klineBufferRef.current = new Map()
+    }, FLUSH_INTERVAL_MS)
+
+    return () => clearInterval(timer)
+  }, [batchUpdate, appendKline])
+
+  // 消息处理回调 — 只缓冲，不立即更新状态
   const handleMessage = (message: WSMessage) => {
     if (message.type === 'market_data') {
       const snap = message.data as MarketSnapshot
-      updateSnapshot(snap)
-      appendKline(snap.instrumentID, snapshotToKline(snap, periodMs))
+      // 缓冲快照
+      snapshotBufferRef.current.push(snap)
+      // 缓冲 K 线（同一合约多次更新只保留最新）
+      klineBufferRef.current.set(snap.instrumentID, snapshotToKline(snap, periodMs))
       // 收到行情数据说明 MD 已连接
-      setMdConnected(true)
+      setMdPhase('connected')
     } else if (message.type === 'instruments_refreshed') {
       const data = message.data as { count: number }
       useContractsStore.getState().loadSubscribedContracts()
