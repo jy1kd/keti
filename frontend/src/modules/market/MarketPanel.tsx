@@ -3,6 +3,7 @@ import { Group, Panel, Separator } from 'react-resizable-panels'
 import { ResizeHandle } from '@/components/ResizeHandle'
 import { ContractSearch } from '@/components/ContractSearch'
 import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { MarketTable } from './MarketTable'
 import { DepthQuote } from './DepthQuote'
 import { SpreadDisplay } from '@/components/SpreadDisplay'
@@ -176,13 +177,15 @@ export function MarketPanel() {
           <Group orientation="horizontal" className="market-panel__top" id="market-top-layout" onLayoutChange={onMarketTopLayout}>
             <Panel id="market-table" defaultSize={savedMarketTop?.table ?? 75} minSize={30}>
               <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <MarketTable
-                  contracts={displayContracts}
-                  snapshots={snapshots}
-                  selectedInstrument={selectedInstrument}
-                  onRowClick={handleClick}
-                  onRowDoubleClick={handleDoubleClick}
-                />
+                <ErrorBoundary>
+                  <MarketTable
+                    contracts={displayContracts}
+                    snapshots={snapshots}
+                    selectedInstrument={selectedInstrument}
+                    onRowClick={handleClick}
+                    onRowDoubleClick={handleDoubleClick}
+                  />
+                </ErrorBoundary>
               </div>
             </Panel>
             <Separator>
@@ -219,12 +222,14 @@ export function MarketPanel() {
         <Panel id="market-kline" defaultSize={savedMarket?.kline ?? 50} minSize={20}>
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             {selectedInstrument ? (
-              <KLineChart
-                instrument={selectedInstrument}
-                klineData={selectedKline}
-                period={period}
-                onPeriodChange={setPeriod}
-              />
+              <ErrorBoundary>
+                <KLineChart
+                  instrument={selectedInstrument}
+                  klineData={selectedKline}
+                  period={period}
+                  onPeriodChange={setPeriod}
+                />
+              </ErrorBoundary>
             ) : (
               <div className="market-panel__kline-placeholder">选择合约查看K线图</div>
             )}

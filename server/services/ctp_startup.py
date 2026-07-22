@@ -463,6 +463,9 @@ def start_ctp_trading_connection(
     order_manager = OrderManager(trader)
     app.state.trader_api = trader
     app.state.order_manager = order_manager
+    # Store config for TD reconnect
+    app.state.td_config = td_config
+    app.state.td_loop = loop
 
     # Set up broadcast hook for OrderManager
     ws_manager = app.state.ws_manager
@@ -574,6 +577,44 @@ def start_ctp_trading_connection(
     trader.spi.on("OnRspOrderAction", _on_rsp_order_action)
     trader.spi.on("OnErrRtnOrderAction", _on_err_rtn_order_action)
 
+    # Create TD ReconnectService — mirrors MD reconnect pattern
+    from services.reconnect import ReconnectService as TDReconnectService
+
+    td_reconnect_svc = TDReconnectService(
+        connect_fn=lambda: _attempt_reconnect_td(app),
+        subscribe_fn=lambda _instruments: None,  # TD has no subscriptions to restore
+    )
+    app.state.td_reconnect_service = td_reconnect_svc
+
+    def _on_td_front_disconnected(nReason: int) -> None:
+        logger.warning("CTP TD front disconnected (reason=%s)", nReason)
+        trader.login_status = "not_logged_in"
+        trader.connection_status = "disconnected"
+        _broadcast_system("connection_status", {
+            "tdConnected": False,
+            "reason": nReason,
+        })
+        td_reconnect_svc.on_disconnect()
+        if td_reconnect_svc.should_retry():
+            delay = td_reconnect_svc.get_current_delay()
+            logger.info("reconnect td: will attempt in %.1fs", delay)
+            def _do_reconnect():
+                import time
+                time.sleep(delay)
+                success = td_reconnect_svc.try_reconnect()
+                if success:
+                    _broadcast_system("connection_status", {
+                        "tdConnected": True,
+                    })
+                else:
+                    _broadcast_system("connection_status", {
+                        "tdConnected": False,
+                    })
+
+            threading.Thread(target=_do_reconnect, daemon=True).start()
+
+    trader.spi.on("OnFrontDisconnected", _on_td_front_disconnected)
+
     # Wire OnRspQryInstrument → MarketService.on_instruments_result (PR-19)
     _wire_instrument_query(app, trader.spi)
 
@@ -595,11 +636,197 @@ def start_ctp_trading_connection(
     app.state.td_thread = thread
     logger.info("CTP trading connection thread started")
 
-    # TODO(PR-17): Add TD reconnect logic.  Currently only MD has
-    # reconnect (via ReconnectService + OnFrontDisconnected handler).
-    # TD is a separate CTP connection — if it drops, orders/trades
-    # stop flowing.  PR-17 should add a similar TD ReconnectService
-    # or extend the existing one to handle both connections.
+
+def _attempt_reconnect_td(app: "FastAPI") -> bool:
+    """Attempt to reconnect TD CTP connection. Returns True on success.
+
+    Mirrors _attempt_reconnect for MD: releases old TraderApi, creates
+    a new instance, waits for OnFrontConnected → login →
+    OnRspUserLogin, confirms settlement, and re-wires all callbacks.
+
+    Called by ReconnectService.try_reconnect() after OnFrontDisconnected.
+    """
+    from ctp_wrapper.trader_api import TraderApi
+    from services.order_manager import OrderManager
+    from services.field_mapping import map_order, map_trade
+
+    td_config = getattr(app.state, "td_config", None)
+    loop = getattr(app.state, "td_loop", None)
+    if td_config is None or loop is None:
+        logger.error("reconnect td: missing config or loop on app.state")
+        return False
+
+    ws_manager = app.state.ws_manager
+
+    old_trader = getattr(app.state, "trader_api", None)
+
+    # Release old instance to avoid resource leaks
+    if old_trader is not None:
+        try:
+            old_trader.release()
+        except Exception:
+            logger.debug("reconnect td: release old instance failed (may already be released)")
+
+    # Broadcast helpers
+    def _broadcast_order(msg_type: str, data: dict) -> None:
+        asyncio.run_coroutine_threadsafe(
+            ws_manager.broadcast("order", msg_type, data),
+            loop,
+        )
+
+    def _broadcast_system(msg_type: str, data: dict) -> None:
+        asyncio.run_coroutine_threadsafe(
+            ws_manager.broadcast("system", msg_type, data),
+            loop,
+        )
+
+    # Create new trader and order manager
+    trader = TraderApi(td_config)
+    order_manager = OrderManager(trader)
+    app.state.trader_api = trader
+    app.state.order_manager = order_manager
+    order_manager.set_broadcast_fn(_broadcast_order)
+
+    # ── Login flow callbacks (one-shot, mirrors initial connect) ─────────
+
+    front_connected = threading.Event()
+    login_done = threading.Event()
+
+    def _on_front_connected():
+        trader.connection_status = "connected"
+        front_connected.set()
+        try:
+            trader.login()
+            logger.info("reconnect td: login sent (user=%s)", td_config.user_id)
+        except Exception:
+            logger.warning("reconnect td: login request failed", exc_info=True)
+            login_done.set()
+
+    def _on_rsp_user_login(pRspUserLogin, pRspInfo, nRequestID, bIsLast):
+        if not bIsLast:
+            return
+        if pRspInfo is None or getattr(pRspInfo, "ErrorID", -1) == 0:
+            trader.login_status = "logged_in"
+            front_id = getattr(pRspUserLogin, "FrontID", 0)
+            session_id = getattr(pRspUserLogin, "SessionID", 0)
+            order_manager.set_session(front_id, session_id)
+            logger.info("reconnect td: login successful (user=%s, front=%s, session=%s)",
+                        td_config.user_id, front_id, session_id)
+            _broadcast_system("connection_status", {"tdConnected": True})
+            try:
+                trader.confirm_settlement()
+                logger.info("reconnect td: settlement confirm sent")
+            except Exception:
+                logger.warning("reconnect td: settlement confirm failed", exc_info=True)
+        else:
+            err_msg = getattr(pRspInfo, "ErrorMsg", "unknown error")
+            logger.warning("reconnect td: login failed: %s", err_msg)
+            _broadcast_system("connection_status", {"tdConnected": False})
+        login_done.set()
+
+    # ── Business callbacks (same as initial wiring) ──────────────────────
+
+    def _on_rtn_order(pOrder):
+        data = map_order(pOrder)
+        order_manager.on_rtn_order(data)
+
+    def _on_rtn_trade(pTrade):
+        data = map_trade(pTrade)
+        order_manager.on_rtn_trade(data)
+
+    def _on_rsp_order_insert(pInputOrder, pRspInfo, nRequestID, bIsLast):
+        if not bIsLast:
+            return
+        order_ref = getattr(pInputOrder, "OrderRef", "")
+        error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
+        error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
+        if error_id != 0:
+            logger.warning("CTP order insert rejected (ref=%s): %s", order_ref, error_msg)
+        order_manager.on_rsp_order_insert(order_ref, error_id, error_msg)
+
+    def _on_rsp_order_action(pInputOrderAction, pRspInfo, nRequestID, bIsLast):
+        if not bIsLast:
+            return
+        order_ref = getattr(pInputOrderAction, "OrderRef", "")
+        error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
+        error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
+        if error_id != 0:
+            logger.warning("CTP order action rejected (ref=%s): %s", order_ref, error_msg)
+        order_manager.on_rsp_order_action(order_ref, error_id, error_msg)
+
+    def _on_err_rtn_order_action(pOrderAction, pRspInfo, nRequestID, bIsLast):
+        if not bIsLast:
+            return
+        order_ref = getattr(pOrderAction, "OrderRef", "")
+        error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
+        error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
+        if error_id != 0:
+            logger.warning("CTP order action exchange rejected (ref=%s): %s", order_ref, error_msg)
+        order_manager.on_err_rtn_order_action(order_ref, error_id, error_msg)
+
+    # ── OnFrontDisconnected handler for the reconnected session ──────────
+    # Re-fetch the reconnect service (it's the same one, re-stored on state)
+    td_reconnect_svc = getattr(app.state, "td_reconnect_service", None)
+
+    def _on_td_front_disconnected(nReason: int) -> None:
+        logger.warning("CTP TD front disconnected (reason=%s)", nReason)
+        trader.login_status = "not_logged_in"
+        trader.connection_status = "disconnected"
+        _broadcast_system("connection_status", {
+            "tdConnected": False,
+            "reason": nReason,
+        })
+        if td_reconnect_svc is not None:
+            td_reconnect_svc.on_disconnect()
+            if td_reconnect_svc.should_retry():
+                delay = td_reconnect_svc.get_current_delay()
+                logger.info("reconnect td: will attempt in %.1fs", delay)
+
+                def _do_reconnect():
+                    import time
+                    time.sleep(delay)
+                    success = td_reconnect_svc.try_reconnect()
+                    if success:
+                        _broadcast_system("connection_status", {"tdConnected": True})
+                    else:
+                        _broadcast_system("connection_status", {"tdConnected": False})
+
+                threading.Thread(target=_do_reconnect, daemon=True).start()
+
+    # ── Register all callbacks on the new trader ─────────────────────────
+
+    trader.spi.on("OnFrontConnected", _on_front_connected)
+    trader.spi.on("OnRspUserLogin", _on_rsp_user_login)
+    trader.spi.on("OnRtnOrder", _on_rtn_order)
+    trader.spi.on("OnRtnTrade", _on_rtn_trade)
+    trader.spi.on("OnRspOrderInsert", _on_rsp_order_insert)
+    trader.spi.on("OnRspOrderAction", _on_rsp_order_action)
+    trader.spi.on("OnErrRtnOrderAction", _on_err_rtn_order_action)
+    trader.spi.on("OnFrontDisconnected", _on_td_front_disconnected)
+    _wire_instrument_query(app, trader.spi)
+    _wire_query_callbacks(app, trader.spi)
+
+    # ── Connect and wait for login ───────────────────────────────────────
+
+    try:
+        trader.create()
+    except Exception:
+        logger.warning("reconnect td: TraderApi.create() failed", exc_info=True)
+        return False
+
+    if not front_connected.wait(timeout=15.0):
+        logger.warning("reconnect td: front connection timeout")
+        return False
+
+    if not login_done.wait(timeout=15.0):
+        logger.warning("reconnect td: login timeout")
+        return False
+
+    if trader.login_status != "logged_in":
+        return False
+
+    logger.info("reconnect td: success (user=%s)", td_config.user_id)
+    return True
 
 
 def connect_trading(
@@ -655,6 +882,9 @@ def connect_trading(
     # Build config with explicit credentials
     from config import Config as Cfg
     td_config = Cfg(broker_id=broker_id, user_id=user_id, password=password)
+    # Update stored config so reconnect uses the right credentials
+    app.state.td_config = td_config
+    app.state.td_loop = loop
 
     from ctp_wrapper.trader_api import TraderApi
     from services.order_manager import OrderManager
@@ -664,6 +894,11 @@ def connect_trading(
     order_manager = OrderManager(trader)
     app.state.trader_api = trader
     app.state.order_manager = order_manager
+
+    # Reset TD reconnect service retry count on fresh manual connect
+    td_reconnect_svc = getattr(app.state, "td_reconnect_service", None)
+    if td_reconnect_svc is not None:
+        td_reconnect_svc.reset()
 
     # Set up broadcast
     ws_manager = app.state.ws_manager
@@ -763,6 +998,40 @@ def connect_trading(
     trader.spi.on("OnRspOrderInsert", _on_rsp_order_insert)
     trader.spi.on("OnRspOrderAction", _on_rsp_order_action)
     trader.spi.on("OnErrRtnOrderAction", _on_err_rtn_order_action)
+
+    # Wire OnFrontDisconnected → reset state + trigger reconnect
+    def _broadcast_system(msg_type: str, data: dict) -> None:
+        asyncio.run_coroutine_threadsafe(
+            ws_manager.broadcast("system", msg_type, data),
+            loop,
+        )
+
+    def _on_td_front_disconnected(nReason: int) -> None:
+        logger.warning("CTP TD front disconnected (reason=%s)", nReason)
+        trader.login_status = "not_logged_in"
+        trader.connection_status = "disconnected"
+        _broadcast_system("connection_status", {
+            "tdConnected": False,
+            "reason": nReason,
+        })
+        if td_reconnect_svc is not None:
+            td_reconnect_svc.on_disconnect()
+            if td_reconnect_svc.should_retry():
+                delay = td_reconnect_svc.get_current_delay()
+                logger.info("reconnect td: will attempt in %.1fs", delay)
+
+                def _do_reconnect():
+                    import time
+                    time.sleep(delay)
+                    success = td_reconnect_svc.try_reconnect()
+                    if success:
+                        _broadcast_system("connection_status", {"tdConnected": True})
+                    else:
+                        _broadcast_system("connection_status", {"tdConnected": False})
+
+                threading.Thread(target=_do_reconnect, daemon=True).start()
+
+    trader.spi.on("OnFrontDisconnected", _on_td_front_disconnected)
 
     # Wire OnRspQryInstrument → MarketService.on_instruments_result (PR-19)
     _wire_instrument_query(app, trader.spi)

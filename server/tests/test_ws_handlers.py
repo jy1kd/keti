@@ -302,3 +302,66 @@ def test_handler_sends_error_on_subscribe_failure():
             pass
 
     asyncio.run(_run())
+
+
+def test_handler_calls_on_connect_after_accept():
+    """on_connect callback fires after accept, before message loop."""
+    from ws.handlers import handle_ws
+
+    async def _run():
+        ws_manager = WebSocketManager()
+        ws = FakeWebSocket()
+        connect_called = False
+
+        async def _on_connect():
+            nonlocal connect_called
+            connect_called = True
+            # ws should already be in pool and accepted
+            assert ws.accepted
+            await ws.send_json({"type": "connection_status", "data": {"tdConnected": True}})
+
+        task = asyncio.create_task(
+            handle_ws("system", ws_manager, ws, on_connect=_on_connect)
+        )
+        await asyncio.sleep(0.05)
+        assert connect_called
+        # Initial status should be the first message sent
+        status_msgs = [m for m in ws.sent if m.get("type") == "connection_status"]
+        assert len(status_msgs) == 1
+        assert status_msgs[0]["data"]["tdConnected"] is True
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+    asyncio.run(_run())
+
+
+def test_handler_on_connect_failure_does_not_crash():
+    """If on_connect raises, the handler continues normally."""
+    from ws.handlers import handle_ws
+
+    async def _run():
+        ws_manager = WebSocketManager()
+        ws = FakeWebSocket()
+
+        async def _bad_connect():
+            raise RuntimeError("oops")
+
+        task = asyncio.create_task(
+            handle_ws("system", ws_manager, ws, on_connect=_bad_connect)
+        )
+        await asyncio.sleep(0.05)
+        # Handler should still be running — can still route messages
+        assert ws in ws_manager.connections["system"]
+        ws.queue_message(json.dumps({"action": "ping"}))
+        await asyncio.sleep(0.1)
+        assert any(msg.get("type") == "pong" for msg in ws.sent)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+    asyncio.run(_run())
