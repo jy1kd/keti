@@ -173,6 +173,15 @@ def _connect_ctp(
     login_done = threading.Event()
     error_message = ""
 
+    # Get ws_manager for broadcasting connection status
+    ws_manager = app.state.ws_manager
+
+    def _broadcast_system(msg_type: str, data: dict) -> None:
+        asyncio.run_coroutine_threadsafe(
+            ws_manager.broadcast("system", msg_type, data),
+            loop,
+        )
+
     def _on_front_connected() -> None:
         md_api.connection_status = "connected"
         front_connected.set()
@@ -195,12 +204,20 @@ def _connect_ctp(
         if pRspInfo is None or getattr(pRspInfo, "ErrorID", -1) == 0:
             md_api.login_status = "logged_in"
             logger.info("CTP login successful (user=%s)", user_id)
+            # Broadcast MD connected status to frontend
+            _broadcast_system("connection_status", {
+                "mdConnected": True,
+            })
             _wire_bridge(app, md_api, loop)
             login_done.set()
             return
 
         error_message = getattr(pRspInfo, "ErrorMsg", "unknown error")
         logger.warning("CTP login failed: %s", error_message)
+        # Broadcast MD failed status
+        _broadcast_system("connection_status", {
+            "mdConnected": False,
+        })
         login_done.set()
 
     md_api.spi.on("OnFrontConnected", _on_front_connected)
@@ -456,6 +473,12 @@ def start_ctp_trading_connection(
             loop,
         )
 
+    def _broadcast_system(msg_type: str, data: dict) -> None:
+        asyncio.run_coroutine_threadsafe(
+            ws_manager.broadcast("system", msg_type, data),
+            loop,
+        )
+
     app.state.order_manager.set_broadcast_fn(_broadcast_order)
 
     # Wire CTP callbacks → field mapping → OrderManager
@@ -490,6 +513,10 @@ def start_ctp_trading_connection(
             order_manager.set_session(front_id, session_id)
             logger.info("CTP TD login successful (user=%s, front=%s, session=%s), confirming settlement",
                         config.user_id, front_id, session_id)
+            # Broadcast TD connected status to frontend
+            _broadcast_system("connection_status", {
+                "tdConnected": True,
+            })
             # Confirm settlement — required before placing orders
             try:
                 trader.confirm_settlement()
@@ -499,6 +526,10 @@ def start_ctp_trading_connection(
         else:
             err_msg = getattr(pRspInfo, "ErrorMsg", "unknown error")
             logger.warning("CTP TD login failed: %s", err_msg)
+            # Broadcast TD failed status
+            _broadcast_system("connection_status", {
+                "tdConnected": False,
+            })
         login_done.set()
 
     # Wire order response callbacks — forward to OrderManager for state update
