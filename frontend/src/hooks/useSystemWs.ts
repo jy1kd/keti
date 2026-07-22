@@ -69,6 +69,8 @@ export function useSystemWs(wsBaseUrl: string) {
           if (data.count > 0) {
             toast.success(`已更新 ${data.count} 个合约`)
           }
+          // 通知监听者 CTP 刷新完成
+          window.dispatchEvent(new CustomEvent('instruments_refreshed', { detail: { count: data.count } }))
         })
         .catch((err) => {
           console.warn('[useSystemWs] refresh instruments failed:', err)

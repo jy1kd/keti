@@ -26,6 +26,20 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, userSubscr
   const [refreshingInstruments, setRefreshingInstruments] = useState(false)
   const [error, setError] = useState('')
 
+  // Listen for CTP refresh completion (dispatched by useSystemWs)
+  useEffect(() => {
+    const handler = () => setRefreshingInstruments(false)
+    window.addEventListener('instruments_refreshed', handler)
+    return () => window.removeEventListener('instruments_refreshed', handler)
+  }, [])
+
+  // Safety timeout: reset loading after 60s if WS event never arrives
+  useEffect(() => {
+    if (!refreshingInstruments) return
+    const timer = setTimeout(() => setRefreshingInstruments(false), 60_000)
+    return () => clearTimeout(timer)
+  }, [refreshingInstruments])
+
   // Load exchanges on open
   useEffect(() => {
     if (!isOpen) return
@@ -201,9 +215,9 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, userSubscr
                   await refreshInstruments()
                 } catch {
                   setError('从CTP刷新合约失败')
-                } finally {
                   setRefreshingInstruments(false)
                 }
+                // 成功时保持 loading，等待 instruments_refreshed WS 事件重置
               }}
             >
               {refreshingInstruments ? '刷新中...' : '刷新合约(CTP)'}
