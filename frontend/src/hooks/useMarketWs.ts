@@ -61,7 +61,7 @@ export function useMarketWs(wsBaseUrl: string, period = '5m') {
   const klineBufferRef = useRef<Map<string, KLineData>>(new Map())
   const batchUpdate = useMarketStore((s) => s.batchUpdate)
   const appendKline = useMarketStore((s) => s.appendKline)
-  const setMdConnected = useConnectionStore((s) => s.setMdConnected)
+  const setMdPhase = useConnectionStore((s) => s.setMdPhase)
 
   // 创建 WSManager 实例（仅创建一次）
   if (!wsRef.current) {
@@ -104,7 +104,7 @@ export function useMarketWs(wsBaseUrl: string, period = '5m') {
       // 缓冲 K 线（同一合约多次更新只保留最新）
       klineBufferRef.current.set(snap.instrumentID, snapshotToKline(snap, periodMs))
       // 收到行情数据说明 MD 已连接
-      setMdConnected(true)
+      setMdPhase('connected')
     } else if (message.type === 'instruments_refreshed') {
       const data = message.data as { count: number }
       useContractsStore.getState().loadSubscribedContracts()

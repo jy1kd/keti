@@ -1,11 +1,24 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ConnectionStatus } from './index'
-import { useConnectionStore } from '@/stores/connection'
+import { useConnectionStore, type ConnectionState } from '@/stores/connection'
+
+const defaultConnState: ConnectionState = {
+  phase: 'disconnected',
+  lastConnectedAt: null,
+  lastDisconnectedAt: null,
+  reconnectCount: 0,
+  error: null,
+}
 
 describe('ConnectionStatus', () => {
   beforeEach(() => {
-    useConnectionStore.setState({ mdConnected: false, tdConnected: false })
+    useConnectionStore.setState({
+      md: { ...defaultConnState },
+      td: { ...defaultConnState },
+      mdConnected: false,
+      tdConnected: false,
+    })
   })
 
   it('renders MD and TD labels', () => {
@@ -23,16 +36,38 @@ describe('ConnectionStatus', () => {
   })
 
   it('shows connected state when store updated', () => {
-    useConnectionStore.setState({ mdConnected: true, tdConnected: true })
+    useConnectionStore.setState({
+      md: { ...defaultConnState, phase: 'connected' },
+      td: { ...defaultConnState, phase: 'connected' },
+      mdConnected: true,
+      tdConnected: true,
+    })
     render(<ConnectionStatus />)
     expect(screen.getByTestId('md-indicator')).toHaveClass('connected')
     expect(screen.getByTestId('td-indicator')).toHaveClass('connected')
   })
 
   it('shows mixed state independently', () => {
-    useConnectionStore.setState({ mdConnected: true, tdConnected: false })
+    useConnectionStore.setState({
+      md: { ...defaultConnState, phase: 'connected' },
+      td: { ...defaultConnState, phase: 'disconnected' },
+      mdConnected: true,
+      tdConnected: false,
+    })
     render(<ConnectionStatus />)
     expect(screen.getByTestId('md-indicator')).toHaveClass('connected')
     expect(screen.getByTestId('td-indicator')).toHaveClass('disconnected')
+  })
+
+  it('shows connecting state with pulse animation', () => {
+    useConnectionStore.setState({
+      md: { ...defaultConnState, phase: 'connecting' },
+      td: { ...defaultConnState, phase: 'error', error: '连接超时' },
+      mdConnected: false,
+      tdConnected: false,
+    })
+    render(<ConnectionStatus />)
+    expect(screen.getByTestId('md-indicator')).toHaveClass('connecting')
+    expect(screen.getByTestId('td-indicator')).toHaveClass('error')
   })
 })

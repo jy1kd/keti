@@ -8,6 +8,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  cursor: default;
 }
 
 .connection-item .label {
@@ -21,14 +22,36 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
+  transition: background-color 0.3s, box-shadow 0.3s;
 }
 
+/* 已连接 — 绿色常亮 */
 .connection-item .indicator.connected {
   background-color: var(--color-success);
   box-shadow: 0 0 6px var(--color-success);
 }
 
+/* 未连接 — 红色常亮 */
 .connection-item .indicator.disconnected {
   background-color: var(--color-error);
   box-shadow: 0 0 6px var(--color-error);
+}
+
+/* 连接中 — 黄色闪烁 */
+.connection-item .indicator.connecting {
+  background-color: var(--color-warning, #f0a020);
+  box-shadow: 0 0 6px var(--color-warning, #f0a020);
+  animation: pulse-blink 1.2s ease-in-out infinite;
+}
+
+/* 连接错误 — 红色快闪 */
+.connection-item .indicator.error {
+  background-color: var(--color-error);
+  box-shadow: 0 0 6px var(--color-error);
+  animation: pulse-blink 0.6s ease-in-out infinite;
+}
+
+@keyframes pulse-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
