@@ -247,6 +247,7 @@ export type WSMessageType =
   | 'stop_order_update'
   | 'connection_status'
   | 'instruments_refreshed'
+  | 'ping'
   | 'error'
 
 export interface WSMessage<T = unknown> {

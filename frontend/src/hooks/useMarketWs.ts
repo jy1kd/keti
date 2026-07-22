@@ -2,9 +2,7 @@ import { useEffect, useRef } from 'react'
 import { WSManager } from '@/services/ws'
 import { useMarketStore } from '@/modules/market/store'
 import { useConnectionStore } from '@/stores/connection'
-import { useContractsStore } from '@/stores/contracts'
 import { useReconnect } from './useReconnect'
-import { toast } from '@/components/Toast'
 import type { MarketSnapshot, KLineData, WSMessage } from '@/services/types'
 
 /** 周期字符串 → 毫秒 */
@@ -105,17 +103,6 @@ export function useMarketWs(wsBaseUrl: string, period = '5m') {
       klineBufferRef.current.set(snap.instrumentID, snapshotToKline(snap, periodMs))
       // 收到行情数据说明 MD 已连接
       setMdPhase('connected')
-    } else if (message.type === 'instruments_refreshed') {
-      const data = message.data as { count: number }
-      useContractsStore.getState().loadSubscribedContracts()
-        .then(() => {
-          if (data.count > 0) {
-            toast.success(`已更新 ${data.count} 个合约`)
-          }
-        })
-        .catch((err) => {
-          console.warn('[useMarketWs] refresh instruments failed:', err)
-        })
     }
   }
 
