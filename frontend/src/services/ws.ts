@@ -45,6 +45,14 @@ export class WSManager {
       }
     }
 
+    ws.onopen = () => {
+      console.log(`[WS] ${endpoint} connected`)
+    }
+
+    ws.onclose = (event) => {
+      console.log(`[WS] ${endpoint} closed (code=${event.code})`)
+    }
+
     ws.onerror = () => {
       console.error(`[WS] ${endpoint} 连接错误`)
     }

@@ -95,6 +95,7 @@ export function useMarketWs(wsBaseUrl: string, period = '5m') {
 
   // 消息处理回调 — 只缓冲，不立即更新状态
   const handleMessage = (message: WSMessage) => {
+    console.log('[useMarketWs] received:', message.type, message.data)
     if (message.type === 'market_data') {
       const snap = message.data as MarketSnapshot
       // 缓冲快照
