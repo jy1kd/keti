@@ -1,23 +1,21 @@
 {
   "version": "1.0.0",
   "project": {
-    "name": "上期所 SimNow 模拟交易终端",
+    "name": "SimNow Trading Terminal",
     "languages": [
-      "python",
       "typescript",
-      "css",
-      "markdown",
-      "json"
+      "python",
+      "markdown"
     ],
     "frameworks": [
       "React",
       "FastAPI",
-      "Vite",
-      "Zustand"
+      "Zustand",
+      "Vite"
     ],
-    "description": "浏览器 Web 应用，对接 SimNow 模拟柜台，实现行情接入、交易接入、手动报单等功能",
-    "analyzedAt": "2026-07-21T03:15:05.691898+00:00",
-    "gitCommitHash": "d853f76f5015071a218a5a55c86b41ff2b18b9c6"
+    "description": "期货模拟交易终端 — 对接 SimNow 模拟柜台，实现行情接入、交易接入、手动报单等功能",
+    "analyzedAt": "2026-07-22T10:38:35.678998",
+    "gitCommitHash": "9682ed0d6b44a9d6829f6e201a15eb004c7c4d6c"
   },
   "nodes": [
     {
@@ -30,42 +28,11 @@
         "component",
         "search",
         "autocomplete",
-        "keyboard-navigation"
+        "keyboard-navigation",
+        "tested"
       ],
       "complexity": "moderate",
       "filePath": "frontend/src/components/ContractSearch/index.tsx"
-    },
-    {
-      "id": "file:frontend/src/hooks/useMarketWs.ts",
-      "type": "file",
-      "name": "useMarketWs.ts",
-      "summary": "WebSocket 行情推送 Hook，连接 ws/market 端点接收 market_data 消息，将行情快照更新到 market store 并追加 K 线数据点，同时标记 MD 连接状态。内置断线重连机制（指数退避，最多 5 次）。导出 PERIOD_MS 周期映射常量和 snapshotToKline 转换函数。",
-      "tags": [
-        "react",
-        "hook",
-        "websocket",
-        "market-data",
-        "kline",
-        "reconnect"
-      ],
-      "complexity": "moderate",
-      "filePath": "frontend/src/hooks/useMarketWs.ts"
-    },
-    {
-      "id": "file:frontend/src/modules/market/MarketPanel.tsx",
-      "type": "file",
-      "name": "MarketPanel.tsx",
-      "summary": "行情面板主模块组件，编排可调整大小的面板布局（上半部行情表格+五档行情，下半部K线图）。启动时获取合约列表并批量订阅行情，集成 WebSocket 推送、合约搜索、点价报单交互。支持面板尺寸持久化存储。",
-      "tags": [
-        "react",
-        "component",
-        "module",
-        "market",
-        "layout",
-        "resizable-panels"
-      ],
-      "complexity": "moderate",
-      "filePath": "frontend/src/modules/market/MarketPanel.tsx"
     },
     {
       "id": "file:frontend/src/modules/market/MarketTable.tsx",
@@ -79,7 +46,8 @@
         "vtable",
         "virtual-scroll",
         "market-data",
-        "performance"
+        "performance",
+        "tested"
       ],
       "complexity": "moderate",
       "filePath": "frontend/src/modules/market/MarketTable.tsx"
@@ -114,21 +82,6 @@
       ],
       "complexity": "moderate",
       "filePath": "frontend/src/components/ContractSearch/styles.css"
-    },
-    {
-      "id": "file:frontend/src/modules/market/styles.css",
-      "type": "file",
-      "name": "styles.css",
-      "summary": "行情面板模块的CSS样式，包含面板布局、K线图组件和周期切换按钮样式",
-      "tags": [
-        "行情面板",
-        "K线图",
-        "周期切换",
-        "侧边栏",
-        "表格容器"
-      ],
-      "complexity": "moderate",
-      "filePath": "frontend/src/modules/market/styles.css"
     },
     {
       "id": "file:README.md",
@@ -263,28 +216,6 @@
       "filePath": "server/api/connection.py"
     },
     {
-      "id": "file:server/api/market.py",
-      "type": "file",
-      "name": "market.py",
-      "summary": "行情数据 API 路由模块，提供合约查询、订阅/退订、行情快照、K线数据、五档深度和合约刷新等 REST 端点。通过 MarketService 处理业务逻辑。",
-      "tags": [
-        "untagged"
-      ],
-      "complexity": "moderate",
-      "filePath": "server/api/market.py"
-    },
-    {
-      "id": "file:server/api/order.py",
-      "type": "file",
-      "name": "order.py",
-      "summary": "报单 API 路由模块，提供下单、撤单、批量撤单、反手和锁仓等 REST 端点。包含 InsertOrderRequest 等 Pydantic 模型，支持 FOK/FAK/GFD 三种时效类型验证。",
-      "tags": [
-        "untagged"
-      ],
-      "complexity": "moderate",
-      "filePath": "server/api/order.py"
-    },
-    {
       "id": "file:server/api/query.py",
       "type": "file",
       "name": "query.py",
@@ -294,17 +225,6 @@
       ],
       "complexity": "moderate",
       "filePath": "server/api/query.py"
-    },
-    {
-      "id": "file:server/main.py",
-      "type": "file",
-      "name": "main.py",
-      "summary": "FastAPI 应用入口文件。通过 create_app() 工厂函数组装应用：配置 CORS 中间件、注册4个 REST 路由（connection/market/order/query）、5个 WebSocket 端点（market/order/position/stop/system）、初始化 MarketService/QueryService/WebSocketManager。lifespan 管理启动时自动连接MD和TD。",
-      "tags": [
-        "untagged"
-      ],
-      "complexity": "moderate",
-      "filePath": "server/main.py"
     },
     {
       "id": "file:server/services/ctp_startup.py",
@@ -329,17 +249,6 @@
       "filePath": "server/services/field_mapping.py"
     },
     {
-      "id": "file:server/services/market_service.py",
-      "type": "file",
-      "name": "market_service.py",
-      "summary": "行情数据核心服务模块，管理合约列表缓存、行情快照缓存和订阅跟踪。线程安全设计（threading.Lock），支持500合约订阅上限。提供 CTP 回调钩子注入（set_ctp_hooks），实现 subscribe/unsubscribe 时自动调用 CTP API。包含合约刷新功能（从CTP查询并保存到JSON文件）。",
-      "tags": [
-        "untagged"
-      ],
-      "complexity": "moderate",
-      "filePath": "server/services/market_service.py"
-    },
-    {
       "id": "file:server/tests/test_ctp_startup.py",
       "type": "file",
       "name": "test_ctp_startup.py",
@@ -360,28 +269,6 @@
       ],
       "complexity": "moderate",
       "filePath": "server/tests/test_field_mapping.py"
-    },
-    {
-      "id": "file:server/tests/test_market_api.py",
-      "type": "file",
-      "name": "test_market_api.py",
-      "summary": "market API 的集成测试，使用 httpx AsyncClient + ASGITransport 测试所有行情 REST 端点。覆盖合约查询（全部/关键字搜索/无匹配/camelCase字段）、订阅（成功/重复/缺失字段/空列表/超限）、退订（成功/未订阅/缺失字段）、快照（空/过滤/全部）、K线（空/缺失参数）、五档深度（正常/未知合约/缺失参数）、合约刷新（成功/无Trader/未登录/查询失败）。",
-      "tags": [
-        "untagged"
-      ],
-      "complexity": "moderate",
-      "filePath": "server/tests/test_market_api.py"
-    },
-    {
-      "id": "file:server/tests/test_market_service.py",
-      "type": "file",
-      "name": "test_market_service.py",
-      "summary": "MarketService 核心逻辑的全面单元测试。覆盖初始化（默认状态）、合约缓存（加载/搜索/大小写不敏感/字段保留）、订阅管理（添加/去重/退订/空列表）、CTP钩子（注册/调用/异常处理）、订阅限制（500上限/批量超限）、快照缓存（存储/检索/覆盖合并）、文件加载（正常/不存在/无效JSON/非数组/真实文件）、合约刷新（调用/未登录/查询失败/回调/累积/CTP字段映射）。",
-      "tags": [
-        "untagged"
-      ],
-      "complexity": "moderate",
-      "filePath": "server/tests/test_market_service.py"
     },
     {
       "id": "file:server/ctp_wrapper/callback.py",
@@ -479,39 +366,6 @@
       "filePath": "snapshots/role-a/progress.md"
     },
     {
-      "id": "file:snapshots/role-b/dev-record-b.md",
-      "type": "file",
-      "name": "dev-record-b.md",
-      "summary": "角色B（前端开发）的详细开发记录文档，按PR编号记录每个PR的TDD测试用例清单、实现文件清单、提交记录、遇到的问题与解决方案、以及审查反馈修复记录。涵盖PR-2（前端项目初始化）、PR-4（多面板布局框架）、PR-6（行情表格）、PR-6a（接入真实API）、PR-8（五档行情）、PR-12（K线图）、PR-12a（补缺补差）等已完成PR的完整开发过程。",
-      "tags": [
-        "untagged"
-      ],
-      "complexity": "moderate",
-      "filePath": "snapshots/role-b/dev-record-b.md"
-    },
-    {
-      "id": "file:snapshots/role-b/progress.md",
-      "type": "file",
-      "name": "progress.md",
-      "summary": "角色B的PR完成状态总览和详细记录文档。以表格形式展示13个PR的完成状态（8个已完成/已合并，5个待开始），每个PR包含PR信息（分支名、依赖PR、工作量）、完成内容、验证结果、提交记录和交接说明。",
-      "tags": [
-        "untagged"
-      ],
-      "complexity": "moderate",
-      "filePath": "snapshots/role-b/progress.md"
-    },
-    {
-      "id": "file::PR-21: 手动订阅/退订合约",
-      "type": "file",
-      "name": "PR-21: 手动订阅/退订合约",
-      "summary": "PR-21手动订阅/退订合约的待开发记录。分支feature/pr-21-manual-subscribe，依赖PR-20，预计工作量2小时，当前状态为待开始。",
-      "tags": [
-        "untagged"
-      ],
-      "complexity": "moderate",
-      "filePath": "snapshots/role-b/progress.md"
-    },
-    {
       "id": "file:frontend/src/components/ContractSearch/index.test.tsx",
       "type": "file",
       "name": "index.test.tsx",
@@ -523,19 +377,6 @@
       ],
       "complexity": "simple",
       "filePath": "frontend/src/components/ContractSearch/index.test.tsx"
-    },
-    {
-      "id": "file:frontend/src/hooks/useMarketWs.test.ts",
-      "type": "file",
-      "name": "useMarketWs.test.ts",
-      "summary": "useMarketWs 自定义 Hook 的单元测试，验证 WebSocket 连接、market_data 消息处理、断线重连及 K 线时间戳对齐逻辑。",
-      "tags": [
-        "test",
-        "hook",
-        "websocket"
-      ],
-      "complexity": "moderate",
-      "filePath": "frontend/src/hooks/useMarketWs.test.ts"
     },
     {
       "id": "file:frontend/src/modules/market/DepthQuote.test.tsx",
@@ -596,20 +437,6 @@
       "filePath": "frontend/src/modules/market/KLineChart.tsx"
     },
     {
-      "id": "file:frontend/src/modules/market/MarketPanel.test.tsx",
-      "type": "file",
-      "name": "MarketPanel.test.tsx",
-      "summary": "MarketPanel 主行情面板的单元测试，验证合约订阅流程、K 线数据获取、面板布局持久化及子组件集成。",
-      "tags": [
-        "test",
-        "component",
-        "market-panel",
-        "integration"
-      ],
-      "complexity": "moderate",
-      "filePath": "frontend/src/modules/market/MarketPanel.test.tsx"
-    },
-    {
       "id": "file:frontend/src/modules/market/MarketTable.test.tsx",
       "type": "file",
       "name": "MarketTable.test.tsx",
@@ -622,77 +449,6 @@
       ],
       "complexity": "moderate",
       "filePath": "frontend/src/modules/market/MarketTable.test.tsx"
-    },
-    {
-      "id": "file:frontend/src/modules/market/store.test.ts",
-      "type": "file",
-      "name": "store.test.ts",
-      "summary": "市场 Zustand store 的单元测试，验证行情快照的单条/批量更新、K 线数据的追加/合并逻辑、合约获取及订阅流程。",
-      "tags": [
-        "test",
-        "store",
-        "zustand",
-        "state-management"
-      ],
-      "complexity": "moderate",
-      "filePath": "frontend/src/modules/market/store.test.ts"
-    },
-    {
-      "id": "file:frontend/src/modules/market/store.ts",
-      "type": "file",
-      "name": "store.ts",
-      "summary": "行情模块 Zustand store，管理选中合约、行情快照 Map、K 线数据 Map 等状态，提供合约获取/订阅、快照更新、K 线追加（同周期更新/新周期追加/旧数据忽略）等操作。",
-      "tags": [
-        "store",
-        "zustand",
-        "state-management",
-        "market-data",
-        "tested"
-      ],
-      "complexity": "moderate",
-      "filePath": "frontend/src/modules/market/store.ts"
-    },
-    {
-      "id": "file:frontend/src/services/api.test.ts",
-      "type": "file",
-      "name": "api.test.ts",
-      "summary": "API 服务层的单元测试，验证 REST 请求封装、合约获取、行情订阅、快照获取及 K 线数据接口的正确性。",
-      "tags": [
-        "test",
-        "api",
-        "service"
-      ],
-      "complexity": "moderate",
-      "filePath": "frontend/src/services/api.test.ts"
-    },
-    {
-      "id": "file:frontend/src/services/api.ts",
-      "type": "file",
-      "name": "api.ts",
-      "summary": "REST API 服务层，基于 axios 封装通用 GET/POST 请求，提供合约列表获取、行情订阅、快照获取、K 线数据获取等接口，含统一错误拦截器。",
-      "tags": [
-        "api",
-        "service",
-        "http-client",
-        "axios",
-        "tested"
-      ],
-      "complexity": "moderate",
-      "filePath": "frontend/src/services/api.ts"
-    },
-    {
-      "id": "file:frontend/src/services/types.ts",
-      "type": "file",
-      "name": "types.ts",
-      "summary": "项目核心 TypeScript 类型定义文件，包含行情快照、K 线数据、深度报价、报单请求/回报、持仓、资金账户、合约信息、期权、WebSocket 消息、API 响应等全部数据模型，字段命名与 CTP 回调数据一致。",
-      "tags": [
-        "type-definition",
-        "data-model",
-        "ctp-types",
-        "shared-types"
-      ],
-      "complexity": "complex",
-      "filePath": "frontend/src/services/types.ts"
     },
     {
       "id": "file:frontend/src/vite-env.d.ts",
@@ -810,108 +566,6 @@
       "lineRange": [
         177,
         261
-      ]
-    },
-    {
-      "id": "function:frontend/src/services/api.ts:get",
-      "type": "function",
-      "name": "get",
-      "summary": "通用 GET 请求封装，调用 axios 实例发起请求并返回 ApiResponse 类型数据。",
-      "tags": [
-        "api",
-        "http-client",
-        "utility"
-      ],
-      "complexity": "simple",
-      "filePath": "frontend/src/services/api.ts",
-      "lineRange": [
-        30,
-        33
-      ]
-    },
-    {
-      "id": "function:frontend/src/services/api.ts:post",
-      "type": "function",
-      "name": "post",
-      "summary": "通用 POST 请求封装，调用 axios 实例发起请求并返回 ApiResponse 类型数据。",
-      "tags": [
-        "api",
-        "http-client",
-        "utility"
-      ],
-      "complexity": "simple",
-      "filePath": "frontend/src/services/api.ts",
-      "lineRange": [
-        38,
-        41
-      ]
-    },
-    {
-      "id": "function:frontend/src/services/api.ts:getInstruments",
-      "type": "function",
-      "name": "getInstruments",
-      "summary": "获取合约列表接口，支持 keyword 参数进行模糊搜索，返回 ContractInfo 数组。",
-      "tags": [
-        "api",
-        "market",
-        "contract"
-      ],
-      "complexity": "simple",
-      "filePath": "frontend/src/services/api.ts",
-      "lineRange": [
-        61,
-        65
-      ]
-    },
-    {
-      "id": "function:frontend/src/services/api.ts:subscribeMarket",
-      "type": "function",
-      "name": "subscribeMarket",
-      "summary": "订阅行情接口，向后端发送合约 ID 列表进行行情订阅。",
-      "tags": [
-        "api",
-        "market",
-        "subscription"
-      ],
-      "complexity": "simple",
-      "filePath": "frontend/src/services/api.ts",
-      "lineRange": [
-        68,
-        71
-      ]
-    },
-    {
-      "id": "function:frontend/src/services/api.ts:getSnapshots",
-      "type": "function",
-      "name": "getSnapshots",
-      "summary": "获取行情快照接口，支持按合约 ID 列表过滤，返回 MarketSnapshot 字典。",
-      "tags": [
-        "api",
-        "market",
-        "snapshot"
-      ],
-      "complexity": "simple",
-      "filePath": "frontend/src/services/api.ts",
-      "lineRange": [
-        74,
-        78
-      ]
-    },
-    {
-      "id": "function:frontend/src/services/api.ts:getKlineData",
-      "type": "function",
-      "name": "getKlineData",
-      "summary": "获取 K 线历史数据接口，按合约、周期和数量查询，将后端 time 字符串转换为 timestamp 毫秒数。",
-      "tags": [
-        "api",
-        "market",
-        "kline"
-      ],
-      "complexity": "simple",
-      "filePath": "frontend/src/services/api.ts",
-      "lineRange": [
-        89,
-        101
       ]
     },
     {
@@ -1059,62 +713,6 @@
       ],
       "complexity": "simple",
       "filePath": "frontend/src/modules/connection/store.test.ts"
-    },
-    {
-      "id": "file:frontend/src/modules/order/OrderForm.tsx",
-      "type": "file",
-      "name": "OrderForm.tsx",
-      "summary": "报单表单组件（待实现），提供合约选择、买卖方向、开平标志、价格输入等交易报单界面。",
-      "tags": [
-        "component",
-        "order",
-        "form",
-        "trading",
-        "tested"
-      ],
-      "complexity": "complex",
-      "filePath": "frontend/src/modules/order/OrderForm.tsx"
-    },
-    {
-      "id": "file:frontend/src/modules/order/OrderForm.test.tsx",
-      "type": "file",
-      "name": "OrderForm.test.tsx",
-      "summary": "OrderForm 组件的单元测试（待实现），验证表单输入、报单提交和参数校验。",
-      "tags": [
-        "test",
-        "component",
-        "order",
-        "form"
-      ],
-      "complexity": "complex",
-      "filePath": "frontend/src/modules/order/OrderForm.test.tsx"
-    },
-    {
-      "id": "file:frontend/src/modules/order/store.ts",
-      "type": "file",
-      "name": "store.ts",
-      "summary": "订单模块 Zustand store，管理当前选中的交易合约状态，供报单表单组件使用。",
-      "tags": [
-        "state-management",
-        "order",
-        "zustand",
-        "tested"
-      ],
-      "complexity": "simple",
-      "filePath": "frontend/src/modules/order/store.ts"
-    },
-    {
-      "id": "file:frontend/src/modules/order/store.test.ts",
-      "type": "file",
-      "name": "store.test.ts",
-      "summary": "Order store 的单元测试，验证选中合约状态的设置和清除逻辑。",
-      "tags": [
-        "test",
-        "state-management",
-        "order"
-      ],
-      "complexity": "simple",
-      "filePath": "frontend/src/modules/order/store.test.ts"
     },
     {
       "id": "file:frontend/src/modules/position/PositionPanel.tsx",
@@ -1281,38 +879,6 @@
       ],
       "complexity": "simple",
       "filePath": "frontend/src/main.tsx"
-    },
-    {
-      "id": "file:frontend/src/App.tsx",
-      "type": "file",
-      "name": "App.tsx",
-      "summary": "应用主组件，使用 react-resizable-panels 实现可调整的三栏布局（行情面板、报单面板、查询面板），支持面板尺寸 localStorage 持久化、性能监控面板切换（Ctrl+Shift+M）。",
-      "tags": [
-        "entry-point",
-        "component",
-        "layout",
-        "resizable-panels",
-        "tested"
-      ],
-      "complexity": "moderate",
-      "filePath": "frontend/src/App.tsx"
-    },
-    {
-      "id": "function:frontend/src/App.tsx:App",
-      "type": "function",
-      "name": "App",
-      "summary": "应用根组件，管理性能监控面板显隐状态（Ctrl+Shift+M 快捷键），通过 useCallback 回调保存面板布局尺寸到 localStorage，渲染包含行情、报单、查询三个可调整面板的主界面。",
-      "tags": [
-        "component",
-        "layout",
-        "state-management"
-      ],
-      "complexity": "moderate",
-      "filePath": "frontend/src/App.tsx",
-      "lineRange": [
-        15,
-        93
-      ]
     },
     {
       "id": "file:frontend/src/App.test.tsx",
@@ -2040,18 +1606,6 @@
       "filePath": "demo.py"
     },
     {
-      "id": "file:frontend/src/components/ConnectionStatus/styles.css",
-      "type": "file",
-      "name": "styles.css",
-      "summary": "ConnectionStatus 组件样式，定义连接状态指示器的布局和视觉样式。",
-      "tags": [
-        "styling",
-        "component"
-      ],
-      "complexity": "simple",
-      "filePath": "frontend/src/components/ConnectionStatus/styles.css"
-    },
-    {
       "id": "file:frontend/src/components/SpreadDisplay/index.tsx",
       "type": "file",
       "name": "index.tsx",
@@ -2102,19 +1656,6 @@
       ],
       "complexity": "simple",
       "filePath": "frontend/src/hooks/usePointOrder.ts"
-    },
-    {
-      "id": "file:frontend/src/modules/order/styles.css",
-      "type": "file",
-      "name": "styles.css",
-      "summary": "订单模块样式表，定义报单表单的布局和视觉样式。",
-      "tags": [
-        "styling",
-        "module",
-        "order"
-      ],
-      "complexity": "simple",
-      "filePath": "frontend/src/modules/order/styles.css"
     },
     {
       "id": "file:frontend/src/modules/query/styles.css",
@@ -3323,117 +2864,1439 @@
       ],
       "complexity": "simple",
       "filePath": "server/config.py"
+    },
+    {
+      "id": "file:frontend/src/hooks/useMarketWs.test.ts",
+      "type": "test",
+      "summary": "useMarketWs 自定义 Hook 的单元测试。验证 WebSocket 行情推送连接、market_data 消息批量更新 store、K 线数据追加、时间戳周期取整、短时间多消息合并策略、组件卸载断开连接、instruments_refreshed 消息触发合约刷新和 toast 提示。",
+      "tags": [
+        "测试",
+        "vitest",
+        "WebSocket",
+        "Hook",
+        "行情推送",
+        "批量更新"
+      ],
+      "exportedSymbols": [],
+      "metrics": {
+        "totalLines": 292,
+        "nonEmptyLines": 233,
+        "functionCount": 1,
+        "classCount": 0,
+        "importCount": 1,
+        "exportCount": 0
+      },
+      "complexity": "moderate",
+      "name": "useMarketWs.test.ts"
+    },
+    {
+      "id": "module:frontend/src/hooks/useMarketWs.ts",
+      "type": "module",
+      "summary": "WebSocket 行情推送 Hook。连接 ws/market 端点，接收 market_data 消息并采用批量缓冲策略（每 100ms 合并一次状态更新）减少 React 重渲染。支持 K 线数据实时追加（按周期向下取整时间戳）、instruments_refreshed 消息处理（刷新合约列表+toast 通知）。内置断线重连机制（通过 useReconnect），导出 PERIOD_MS 周期映射和 useMarketWs Hook。",
+      "tags": [
+        "Hook",
+        "WebSocket",
+        "行情推送",
+        "批量更新",
+        "K线",
+        "断线重连",
+        "Zustand"
+      ],
+      "exportedSymbols": [
+        "PERIOD_MS",
+        "useMarketWs"
+      ],
+      "metrics": {
+        "totalLines": 133,
+        "nonEmptyLines": 116,
+        "functionCount": 2,
+        "classCount": 0,
+        "importCount": 1,
+        "exportCount": 2
+      },
+      "complexity": "moderate",
+      "name": "useMarketWs.ts"
+    },
+    {
+      "id": "file:frontend/src/modules/market/MarketPanel.test.tsx",
+      "type": "test",
+      "summary": "MarketPanel 组件的单元测试。验证面板标题渲染、CSS 类名、启动时加载订阅合约、WebSocket 连接参数、选中合约的五档行情和价差显示、搜索合约弹窗交互、退订按钮状态、面板布局组件。",
+      "tags": [
+        "测试",
+        "vitest",
+        "React Testing Library",
+        "组件测试",
+        "行情面板"
+      ],
+      "exportedSymbols": [],
+      "metrics": {
+        "totalLines": 180,
+        "nonEmptyLines": 160,
+        "functionCount": 1,
+        "classCount": 0,
+        "importCount": 2,
+        "exportCount": 0
+      },
+      "complexity": "moderate",
+      "name": "MarketPanel.test.tsx"
+    },
+    {
+      "id": "module:frontend/src/modules/market/MarketPanel.tsx",
+      "type": "module",
+      "summary": "行情面板主组件。整合 MarketTable（合约表格）、DepthQuote（五档行情）、SpreadDisplay（价差显示）、KLineChart（K线图）、ContractSearch（合约搜索）、InstrumentSearchModal（搜索弹窗）等子组件。管理 WebSocket 行情推送、合约订阅/退订、K 线数据获取、面板布局持久化。使用 react-resizable-panels 实现可拖拽分栏布局。",
+      "tags": [
+        "组件",
+        "React",
+        "行情面板",
+        "WebSocket",
+        "K线图",
+        "五档行情",
+        "合约管理",
+        "面板布局"
+      ],
+      "exportedSymbols": [
+        "MarketPanel"
+      ],
+      "metrics": {
+        "totalLines": 217,
+        "nonEmptyLines": 200,
+        "functionCount": 1,
+        "classCount": 0,
+        "importCount": 5,
+        "exportCount": 1
+      },
+      "complexity": "moderate",
+      "name": "MarketPanel.tsx"
+    },
+    {
+      "id": "file:frontend/src/modules/market/store.test.ts",
+      "type": "test",
+      "summary": "行情 Zustand Store 的单元测试。验证 selectedInstrument 选择/清除、单个快照更新、多合约存储、批量更新（batchUpdate）、subscribeInstruments API 调用（不立即获取快照，依赖 WebSocket 推送）、K 线数据存储/替换/追加/同周期更新/新周期追加。",
+      "tags": [
+        "测试",
+        "vitest",
+        "Zustand",
+        "Store",
+        "行情数据",
+        "K线"
+      ],
+      "exportedSymbols": [],
+      "metrics": {
+        "totalLines": 214,
+        "nonEmptyLines": 182,
+        "functionCount": 0,
+        "classCount": 0,
+        "importCount": 1,
+        "exportCount": 0
+      },
+      "complexity": "moderate",
+      "name": "store.test.ts"
+    },
+    {
+      "id": "module:frontend/src/modules/market/store.ts",
+      "type": "module",
+      "summary": "行情 Zustand Store。管理选中合约（selectedInstrument）、行情快照 Map（snapshots，支持单个更新和批量更新）、K 线数据 Map（klineData，支持设置/追加/同周期合并，保留最近 200 根蜡烛）。提供 subscribeInstruments 方法调用 API 订阅行情（数据通过 WebSocket 自然填充）。",
+      "tags": [
+        "Store",
+        "Zustand",
+        "行情快照",
+        "K线数据",
+        "状态管理"
+      ],
+      "exportedSymbols": [
+        "useMarketStore"
+      ],
+      "metrics": {
+        "totalLines": 80,
+        "nonEmptyLines": 75,
+        "functionCount": 0,
+        "classCount": 0,
+        "importCount": 0,
+        "exportCount": 1
+      },
+      "complexity": "moderate",
+      "name": "store.ts"
+    },
+    {
+      "id": "file:frontend/src/services/api.test.ts",
+      "type": "test",
+      "summary": "API 服务层的单元测试。验证 Axios 实例配置（baseURL、timeout、headers）、getInstruments 合约查询（支持 keyword 模糊搜索）、subscribeMarket 行情订阅、getSnapshots 快照获取（多合约逗号分隔）、getKlineData K 线数据（支持不同周期）、submitOrder 报单提交（前端字段→CTP 字段转换）、cancelOrder 撤单、refreshInstruments 合约刷新。",
+      "tags": [
+        "测试",
+        "vitest",
+        "Axios",
+        "REST API",
+        "行情",
+        "报单"
+      ],
+      "exportedSymbols": [],
+      "metrics": {
+        "totalLines": 208,
+        "nonEmptyLines": 167,
+        "functionCount": 0,
+        "classCount": 0,
+        "importCount": 1,
+        "exportCount": 0
+      },
+      "complexity": "moderate",
+      "name": "api.test.ts"
+    },
+    {
+      "id": "module:frontend/src/services/api.ts",
+      "type": "module",
+      "summary": "前端 API 服务层。基于 Axios 封装 REST 请求，包含统一错误拦截器。提供行情 API（getInstruments、subscribeMarket、getSnapshots、getKlineData、unsubscribeMarket、refreshInstruments）、报单 API（submitOrder 自动转换前端字段→CTP 字段、cancelOrder）、合约搜索 API（getExchanges、getProducts、searchInstruments、getPresetInstruments、getInstrumentsByIds、refreshPresetInstruments）。",
+      "tags": [
+        "API",
+        "Axios",
+        "REST",
+        "行情",
+        "报单",
+        "合约搜索",
+        "服务层"
+      ],
+      "exportedSymbols": [
+        "API_BASE",
+        "api",
+        "get",
+        "post",
+        "getInstruments",
+        "subscribeMarket",
+        "getSnapshots",
+        "getKlineData",
+        "submitOrder",
+        "cancelOrder",
+        "refreshInstruments",
+        "getExchanges",
+        "getProducts",
+        "searchInstruments",
+        "getPresetInstruments",
+        "getInstrumentsByIds",
+        "refreshPresetInstruments",
+        "unsubscribeMarket"
+      ],
+      "metrics": {
+        "totalLines": 214,
+        "nonEmptyLines": 178,
+        "functionCount": 16,
+        "classCount": 0,
+        "importCount": 3,
+        "exportCount": 18
+      },
+      "complexity": "moderate",
+      "name": "api.ts"
+    },
+    {
+      "id": "module:frontend/src/services/types.ts",
+      "type": "module",
+      "summary": "前端数据模型类型定义文件。定义所有核心接口：行情（MarketSnapshot 五档行情快照、KLineData K 线、DepthData 深度、VolatilityData 波动率）、报单（OrderRequest、OrderRecord、OrderStatus、StopOrderRequest、StopOrder）、成交/持仓/账户（TradeRecord、PositionRecord、AccountInfo）、合约/报价（ContractInfo、QuoteDepth）、期权（OptionContract、OptionQuote、OptionChain）、WebSocket 消息（WSMessage、ConnectionStatusData、ErrorData）、API 响应（ApiResponse）、用户偏好（HotKeyConfig、UserPreferences）。",
+      "tags": [
+        "类型定义",
+        "TypeScript",
+        "接口",
+        "数据模型",
+        "CTP",
+        "行情",
+        "报单",
+        "期权"
+      ],
+      "exportedSymbols": [
+        "MarketSnapshot",
+        "KLineData",
+        "DepthData",
+        "VolatilityData",
+        "OrderRequest",
+        "OrderRecord",
+        "OrderStatus",
+        "StopOrderRequest",
+        "StopOrder",
+        "TradeRecord",
+        "PositionRecord",
+        "AccountInfo",
+        "ContractInfo",
+        "QuoteDepth",
+        "OptionContract",
+        "OptionQuote",
+        "OptionChain",
+        "WSMessageType",
+        "WSMessage",
+        "ConnectionStatusData",
+        "ErrorData",
+        "ApiResponse",
+        "HotKeyConfig",
+        "UserPreferences"
+      ],
+      "metrics": {
+        "totalLines": 294,
+        "nonEmptyLines": 262,
+        "functionCount": 0,
+        "classCount": 0,
+        "importCount": 0,
+        "exportCount": 0
+      },
+      "complexity": "moderate",
+      "name": "types.ts"
+    },
+    {
+      "id": "file:frontend/src/stores/contracts.test.ts",
+      "type": "test",
+      "summary": "合约管理 Zustand Store 的单元测试。验证合约列表初始状态、addContract 添加/去重/多合约、removeContract 移除/不存在不报错、setContracts 批量设置、addContractInfo 完整信息添加/去重/持久化到 userPrefs、removeContractById 退订+移除+同步 userPrefs、loadSubscribedContracts 合并预设和用户自选合约（预设失败仍加载用户自选）。",
+      "tags": [
+        "测试",
+        "vitest",
+        "Zustand",
+        "Store",
+        "合约管理",
+        "持久化"
+      ],
+      "exportedSymbols": [],
+      "metrics": {
+        "totalLines": 160,
+        "nonEmptyLines": 130,
+        "functionCount": 0,
+        "classCount": 0,
+        "importCount": 2,
+        "exportCount": 0
+      },
+      "complexity": "moderate",
+      "name": "contracts.test.ts"
+    },
+    {
+      "id": "module:frontend/src/stores/contracts.ts",
+      "type": "module",
+      "summary": "合约管理 Zustand Store。管理已订阅合约列表（contracts）、自选合约 ID 列表（selectedContracts）、是否仅显示已订阅（showSubscribedOnly）。提供 addContractInfo（添加完整合约信息+持久化 userPrefs）、removeContractById（退订 CTP+移除+同步 userPrefs）、loadSubscribedContracts（合并预设合约+用户自选→批量获取详情）。",
+      "tags": [
+        "Store",
+        "Zustand",
+        "合约管理",
+        "状态管理",
+        "持久化",
+        "CTP"
+      ],
+      "exportedSymbols": [
+        "useContractsStore"
+      ],
+      "metrics": {
+        "totalLines": 104,
+        "nonEmptyLines": 91,
+        "functionCount": 0,
+        "classCount": 0,
+        "importCount": 1,
+        "exportCount": 1
+      },
+      "complexity": "moderate",
+      "name": "contracts.ts"
+    },
+    {
+      "id": "file:docs/task-dev-flow.md",
+      "filePath": "docs/task-dev-flow.md",
+      "name": "task-dev-flow.md",
+      "kind": "file",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "summary": "项目开发流程指南文档，定义了双角色（角色A后端/角色B前端）并行开发的完整工作流程。包含5个开发阶段（基础框架、行情模块、交易模块、高级功能、联调优化）、21个PR的依赖关系和关键路径分析、提交规范、分支合并策略、交接规范、CTP连接验证记录等。是团队协作和AI接手开发的核心流程参考文档。",
+      "tags": [
+        "开发流程",
+        "项目管理",
+        "PR依赖",
+        "并行开发",
+        "角色分工",
+        "提交规范",
+        "分支策略",
+        "CTP验证"
+      ],
+      "sections": [
+        {
+          "heading": "Task开发流程指南",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "1. 项目阶段概览",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "2. 开发流程图",
+          "level": 2,
+          "line": 20
+        },
+        {
+          "heading": "2.1 完整流程图",
+          "level": 3,
+          "line": 22
+        },
+        {
+          "heading": "2.2 并行开发对照表",
+          "level": 3,
+          "line": 128
+        },
+        {
+          "heading": "2.3 依赖关系详解",
+          "level": 3,
+          "line": 144
+        },
+        {
+          "heading": "2.4 关键路径",
+          "level": 3,
+          "line": 171
+        },
+        {
+          "heading": "2.5 阻塞风险点",
+          "level": 3,
+          "line": 188
+        },
+        {
+          "heading": "3. 当前阶段状态",
+          "level": 2,
+          "line": 201
+        },
+        {
+          "heading": "4. 提交时机规范",
+          "level": 2,
+          "line": 222
+        },
+        {
+          "heading": "4.1 何时提交",
+          "level": 3,
+          "line": 224
+        },
+        {
+          "heading": "4.2 提交规范",
+          "level": 3,
+          "line": 235
+        },
+        {
+          "heading": "4.3 提交后更新",
+          "level": 3,
+          "line": 258
+        },
+        {
+          "heading": "5. 分支合并顺序",
+          "level": 2,
+          "line": 278
+        },
+        {
+          "heading": "5.1 分支策略",
+          "level": 3,
+          "line": 280
+        },
+        {
+          "heading": "5.2 合并顺序",
+          "level": 3,
+          "line": 292
+        },
+        {
+          "heading": "5.3 合并检查清单",
+          "level": 3,
+          "line": 308
+        },
+        {
+          "heading": "5.4 合并命令",
+          "level": 3,
+          "line": 319
+        },
+        {
+          "heading": "6. 角色A任务清单（后端开发）",
+          "level": 2,
+          "line": 340
+        },
+        {
+          "heading": "阶段1：基础框架",
+          "level": 3,
+          "line": 342
+        },
+        {
+          "heading": "阶段2：行情模块",
+          "level": 3,
+          "line": 349
+        },
+        {
+          "heading": "阶段3：交易模块",
+          "level": 3,
+          "line": 356
+        },
+        {
+          "heading": "阶段4：高级功能",
+          "level": 3,
+          "line": 364
+        },
+        {
+          "heading": "阶段5：联调优化",
+          "level": 3,
+          "line": 371
+        },
+        {
+          "heading": "7. 角色B任务清单（前端开发）",
+          "level": 2,
+          "line": 381
+        },
+        {
+          "heading": "阶段1：基础框架",
+          "level": 3,
+          "line": 383
+        },
+        {
+          "heading": "阶段2：行情模块",
+          "level": 3,
+          "line": 390
+        },
+        {
+          "heading": "阶段3：交易模块",
+          "level": 3,
+          "line": 402
+        },
+        {
+          "heading": "阶段4：高级功能",
+          "level": 3,
+          "line": 411
+        },
+        {
+          "heading": "阶段5：联调优化",
+          "level": 3,
+          "line": 418
+        },
+        {
+          "heading": "8. 并行开发时间线",
+          "level": 2,
+          "line": 428
+        },
+        {
+          "heading": "9. 交接规范",
+          "level": 2,
+          "line": 460
+        },
+        {
+          "heading": "9.1 何时交接",
+          "level": 3,
+          "line": 462
+        },
+        {
+          "heading": "9.2 交接检查清单",
+          "level": 3,
+          "line": 471
+        },
+        {
+          "heading": "9.3 交接文档模板",
+          "level": 3,
+          "line": 482
+        },
+        {
+          "heading": "10. 快速判断指南",
+          "level": 2,
+          "line": 513
+        },
+        {
+          "heading": "10.1 AI接手时",
+          "level": 3,
+          "line": 515
+        },
+        {
+          "heading": "10.2 团队成员接手时",
+          "level": 3,
+          "line": 523
+        },
+        {
+          "heading": "11. 状态说明",
+          "level": 2,
+          "line": 535
+        },
+        {
+          "heading": "12. 开发日志",
+          "level": 2,
+          "line": 547
+        },
+        {
+          "heading": "13. CTP连接验证记录",
+          "level": 2,
+          "line": 565
+        },
+        {
+          "heading": "13.1 验证通过的功能",
+          "level": 3,
+          "line": 571
+        },
+        {
+          "heading": "13.2 关键发现",
+          "level": 3,
+          "line": 583
+        },
+        {
+          "heading": "13.3 参考实现",
+          "level": 3,
+          "line": 603
+        },
+        {
+          "heading": "13.4 待验证功能",
+          "level": 3,
+          "line": 607
+        },
+        {
+          "heading": "13.5 真实API字段结构",
+          "level": 3,
+          "line": 616
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 46,
+        "totalLines": 646,
+        "nonEmptyLines": 499
+      },
+      "extractedSymbols": [],
+      "referencedFiles": [
+        "docs/task.md",
+        "docs/design.md",
+        "docs/ctp-api-structure.txt",
+        "snapshots/role-a/progress.md",
+        "snapshots/role-b/progress.md",
+        "md_demo.py",
+        "ctp_realtime_demo.py"
+      ],
+      "definedEntities": [
+        {
+          "name": "项目阶段概览",
+          "kind": "section",
+          "description": "定义5个开发阶段（基础框架、行情模块、交易模块、高级功能、联调优化）及其PR范围和状态"
+        },
+        {
+          "name": "并行开发对照表",
+          "kind": "section",
+          "description": "角色A和角色B按时间段的并行开发安排，包含依赖关系判断"
+        },
+        {
+          "name": "关键路径",
+          "kind": "section",
+          "description": "PR-1→PR-3→PR-5→PR-7→PR-9→PR-11→PR-13→PR-16→PR-17，总工期23小时"
+        },
+        {
+          "name": "角色A任务清单",
+          "kind": "section",
+          "description": "后端开发任务列表，包含9个PR，约23小时工作量"
+        },
+        {
+          "name": "角色B任务清单",
+          "kind": "section",
+          "description": "前端开发任务列表，包含10个PR，约23小时工作量"
+        },
+        {
+          "name": "CTP连接验证记录",
+          "kind": "section",
+          "description": "CTP连接验证结果、关键发现（SubscribeMarketData必须传字符串列表）、待验证功能"
+        }
+      ],
+      "complexity": "moderate",
+      "type": "file"
+    },
+    {
+      "id": "file:docs/task.md",
+      "filePath": "docs/task.md",
+      "name": "task.md",
+      "kind": "file",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "summary": "项目PR任务拆分文档，定义了上期所Simnow模拟交易终端的22个PR任务（PR-1至PR-22）。每个PR包含详细规格：提交文件清单、实现方式、验证方法、验收标准、用户手动验证步骤。按5个阶段组织（基础框架、行情模块、交易模块、高级功能、联调优化），明确前后端分工和依赖关系。是开发实施的核心任务参考。",
+      "tags": [
+        "PR任务",
+        "任务拆分",
+        "验收标准",
+        "前后端分工",
+        "依赖关系",
+        "里程碑",
+        "CTP",
+        "交易终端"
+      ],
+      "sections": [
+        {
+          "heading": "Task: 上期所Simnow模拟交易终端 - PR任务拆分",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "1. 概述",
+          "level": 2,
+          "line": 4
+        },
+        {
+          "heading": "2. PR列表",
+          "level": 2,
+          "line": 19
+        },
+        {
+          "heading": "阶段1：基础框架",
+          "level": 3,
+          "line": 21
+        },
+        {
+          "heading": "PR-1: 后端CTP连接验证",
+          "level": 4,
+          "line": 25
+        },
+        {
+          "heading": "PR-2: 前端项目初始化",
+          "level": 4,
+          "line": 133
+        },
+        {
+          "heading": "PR-3: 后端FastAPI框架",
+          "level": 4,
+          "line": 247
+        },
+        {
+          "heading": "PR-4: 前端布局框架",
+          "level": 4,
+          "line": 323
+        },
+        {
+          "heading": "阶段2：行情模块",
+          "level": 3,
+          "line": 391
+        },
+        {
+          "heading": "PR-5: 后端行情API",
+          "level": 4,
+          "line": 395
+        },
+        {
+          "heading": "PR-6: 前端行情表格",
+          "level": 4,
+          "line": 486
+        },
+        {
+          "heading": "PR-6a: 前端行情表格接入真实API",
+          "level": 4,
+          "line": 579
+        },
+        {
+          "heading": "PR-7: 后端WebSocket管理",
+          "level": 4,
+          "line": 647
+        },
+        {
+          "heading": "PR-8: 前端五档行情",
+          "level": 4,
+          "line": 721
+        },
+        {
+          "heading": "阶段3：交易模块",
+          "level": 3,
+          "line": 795
+        },
+        {
+          "heading": "PR-9: 后端交易API",
+          "level": 4,
+          "line": 799
+        },
+        {
+          "heading": "PR-19: 后端合约查询API",
+          "level": 4,
+          "line": 893
+        },
+        {
+          "heading": "PR-20: 前端合约刷新功能",
+          "level": 4,
+          "line": 953
+        },
+        {
+          "heading": "PR-10: 前端报单表单",
+          "level": 4,
+          "line": 1008
+        },
+        {
+          "heading": "PR-11: 后端查询API",
+          "level": 4,
+          "line": 1160
+        },
+        {
+          "heading": "PR-12: 前端K线图",
+          "level": 4,
+          "line": 1244
+        },
+        {
+          "heading": "PR-12a: 前端补缺补差",
+          "level": 4,
+          "line": 1307
+        },
+        {
+          "heading": "阶段4：高级功能",
+          "level": 3,
+          "line": 1397
+        },
+        {
+          "heading": "PR-13: 后端止损单服务",
+          "level": 4,
+          "line": 1401
+        },
+        {
+          "heading": "PR-18: 后端期权API实现",
+          "level": 4,
+          "line": 1477
+        },
+        {
+          "heading": "PR-21: 手动订阅/退订合约",
+          "level": 4,
+          "line": 1539
+        },
+        {
+          "heading": "PR-22: 连接状态指示器完善",
+          "level": 4,
+          "line": 1600
+        },
+        {
+          "heading": "PR-14: 前端期权T型报价",
+          "level": 4,
+          "line": 1702
+        },
+        {
+          "heading": "PR-15: 前端快捷功能",
+          "level": 4,
+          "line": 1782
+        },
+        {
+          "heading": "PR-16: 前端查询面板",
+          "level": 4,
+          "line": 1864
+        },
+        {
+          "heading": "阶段5：联调优化",
+          "level": 3,
+          "line": 1982
+        },
+        {
+          "heading": "PR-17: 联调测试与Bug修复",
+          "level": 4,
+          "line": 1986
+        },
+        {
+          "heading": "3. PR依赖关系图",
+          "level": 2,
+          "line": 2086
+        },
+        {
+          "heading": "4. 里程碑对应",
+          "level": 2,
+          "line": 2132
+        },
+        {
+          "heading": "5. 开发日志",
+          "level": 2,
+          "line": 2145
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 35,
+        "totalLines": 2163,
+        "nonEmptyLines": 1880
+      },
+      "extractedSymbols": [],
+      "referencedFiles": [
+        "docs/task-dev-flow.md",
+        "docs/design.md",
+        "docs/ctp-api-structure.txt",
+        "server/ctp_wrapper/md_user_api.py",
+        "server/ctp_wrapper/trader_api.py",
+        "server/ctp_wrapper/callback.py",
+        "server/ctp_wrapper/types.py",
+        "server/config.py",
+        "server/main.py",
+        "server/api/connection.py",
+        "server/api/market.py",
+        "server/api/order.py",
+        "server/api/query.py",
+        "server/ws/manager.py",
+        "server/ws/handlers.py",
+        "server/services/market_service.py",
+        "server/services/field_mapping.py",
+        "server/services/ctp_bridge.py",
+        "server/services/ctp_startup.py",
+        "server/services/kline_service.py",
+        "server/services/order_manager.py",
+        "server/services/stop_order.py",
+        "server/services/options_service.py",
+        "server/services/reconnect.py",
+        "server/models/market.py",
+        "server/models/order.py",
+        "server/models/account.py",
+        "server/models/contract.py",
+        "server/models/options.py",
+        "server/data/instruments.json",
+        "server/data/stop_orders.json",
+        "server/start.py",
+        "frontend/src/services/types.ts",
+        "frontend/src/services/api.ts",
+        "frontend/src/services/ws.ts",
+        "frontend/src/stores/connection.ts",
+        "frontend/src/stores/contracts.ts",
+        "frontend/src/stores/userPrefs.ts",
+        "frontend/src/modules/market/MarketPanel.tsx",
+        "frontend/src/modules/market/MarketTable.tsx",
+        "frontend/src/modules/market/DepthQuote.tsx",
+        "frontend/src/modules/market/KLineChart.tsx",
+        "frontend/src/modules/market/store.ts",
+        "frontend/src/modules/order/OrderPanel.tsx",
+        "frontend/src/modules/order/OrderForm.tsx",
+        "frontend/src/modules/order/StopOrderForm.tsx",
+        "frontend/src/modules/order/QuickActions.tsx",
+        "frontend/src/modules/order/store.ts",
+        "frontend/src/modules/query/QueryPanel.tsx",
+        "frontend/src/modules/query/OrderFlow.tsx",
+        "frontend/src/modules/query/TradeFlow.tsx",
+        "frontend/src/modules/query/Position.tsx",
+        "frontend/src/modules/query/AccountQuery.tsx",
+        "frontend/src/modules/query/QuoteQuery.tsx",
+        "frontend/src/modules/query/ContractQuery.tsx",
+        "frontend/src/modules/query/StopOrderList.tsx",
+        "frontend/src/modules/query/store.ts",
+        "frontend/src/modules/options/OptionPanel.tsx",
+        "frontend/src/modules/options/TQuoteTable.tsx",
+        "frontend/src/modules/options/store.ts",
+        "frontend/src/components/ConnectionStatus/index.tsx",
+        "frontend/src/components/ContractSearch/index.tsx",
+        "frontend/src/components/PerfMonitor/index.tsx",
+        "frontend/src/components/Toast/index.tsx",
+        "frontend/src/components/OrderForm/index.tsx",
+        "frontend/src/components/BatchCancel/index.tsx",
+        "frontend/src/components/QuickKeys/index.tsx",
+        "frontend/src/components/SpreadDisplay/index.tsx",
+        "frontend/src/hooks/usePointOrder.ts",
+        "frontend/src/hooks/useReconnect.ts",
+        "frontend/src/hooks/useMarketWs.ts",
+        "frontend/src/hooks/usePriceStep.ts",
+        "frontend/src/hooks/useHotKeys.ts",
+        "frontend/src/hooks/useSystemWs.ts",
+        "frontend/src/App.tsx",
+        "frontend/src/utils/format.ts",
+        "frontend/src/utils/validators.ts"
+      ],
+      "definedEntities": [
+        {
+          "name": "PR-1: 后端CTP连接验证",
+          "kind": "pr_task",
+          "description": "验证ctp-python库可行性，完成CTP连接、登录、行情订阅、报单提交基础流程",
+          "status": "已完成",
+          "role": "角色A",
+          "dependencies": []
+        },
+        {
+          "name": "PR-2: 前端项目初始化",
+          "kind": "pr_task",
+          "description": "初始化前端项目，搭建React+TypeScript+Vite基础框架，实现通用服务层",
+          "status": "已完成",
+          "role": "角色B",
+          "dependencies": []
+        },
+        {
+          "name": "PR-3: 后端FastAPI框架",
+          "kind": "pr_task",
+          "description": "搭建FastAPI应用框架，实现连接管理接口、WebSocket分端点框架、数据模型定义",
+          "status": "已完成",
+          "role": "角色A",
+          "dependencies": [
+            "PR-1"
+          ]
+        },
+        {
+          "name": "PR-4: 前端布局框架",
+          "kind": "pr_task",
+          "description": "实现前端多面板布局（行情面板70%、报单面板30%、查询面板底部Tab切换）",
+          "status": "已完成",
+          "role": "角色B",
+          "dependencies": [
+            "PR-2"
+          ]
+        },
+        {
+          "name": "PR-5: 后端行情API",
+          "kind": "pr_task",
+          "description": "实现行情相关API接口（合约列表、订阅/退订、快照、K线、五档深度）",
+          "status": "已完成",
+          "role": "角色A",
+          "dependencies": [
+            "PR-3"
+          ]
+        },
+        {
+          "name": "PR-6: 前端行情表格",
+          "kind": "pr_task",
+          "description": "实现高性能行情表格（vtable虚拟滚动、增量渲染、点价报单、PerfMonitor）",
+          "status": "已完成",
+          "role": "角色B",
+          "dependencies": [
+            "PR-5"
+          ]
+        },
+        {
+          "name": "PR-6a: 前端行情表格接入真实API",
+          "kind": "pr_task",
+          "description": "将mock数据替换为真实后端API调用，实现WebSocket行情推送",
+          "status": "已完成",
+          "role": "角色B",
+          "dependencies": [
+            "PR-5",
+            "PR-6"
+          ]
+        },
+        {
+          "name": "PR-7: 后端WebSocket管理",
+          "kind": "pr_task",
+          "description": "实现WebSocket消息广播、断线重连、CTP回调处理完整流程",
+          "status": "已完成",
+          "role": "角色A",
+          "dependencies": [
+            "PR-5"
+          ]
+        },
+        {
+          "name": "PR-8: 前端五档行情",
+          "kind": "pr_task",
+          "description": "实现五档行情展示组件，支持点价报单和断线重连",
+          "status": "已完成",
+          "role": "角色B",
+          "dependencies": [
+            "PR-7"
+          ]
+        },
+        {
+          "name": "PR-9: 后端交易API",
+          "kind": "pr_task",
+          "description": "实现交易API（报单、撤单、批量撤单、一键反向、一键锁仓）",
+          "status": "已完成",
+          "role": "角色A",
+          "dependencies": [
+            "PR-7"
+          ]
+        },
+        {
+          "name": "PR-10: 前端报单表单",
+          "kind": "pr_task",
+          "description": "实现报单表单组件（限价/市价切换、开平切换、价格步进、快捷键、止损单表单）",
+          "status": "已完成",
+          "role": "角色B",
+          "dependencies": [
+            "PR-9"
+          ]
+        },
+        {
+          "name": "PR-11: 后端查询API",
+          "kind": "pr_task",
+          "description": "实现查询API（报单流水、成交流水、持仓、账户资金、合约信息）",
+          "status": "待开始",
+          "role": "角色A",
+          "dependencies": [
+            "PR-9"
+          ]
+        },
+        {
+          "name": "PR-12: 前端K线图",
+          "kind": "pr_task",
+          "description": "实现K线图组件（ECharts、多周期切换、技术指标、实时更新）",
+          "status": "已完成",
+          "role": "角色B",
+          "dependencies": [
+            "PR-5"
+          ]
+        },
+        {
+          "name": "PR-12a: 前端补缺补差",
+          "kind": "pr_task",
+          "description": "补充前端缺失功能（WebSocket重连、K线修复、PerfMonitor、布局优化）",
+          "status": "已完成",
+          "role": "角色B",
+          "dependencies": [
+            "PR-12"
+          ]
+        },
+        {
+          "name": "PR-13: 后端止损单服务",
+          "kind": "pr_task",
+          "description": "实现止损单监控服务（提交、取消、查询、自动触发、持久化）",
+          "status": "待开始",
+          "role": "角色A",
+          "dependencies": [
+            "PR-9"
+          ]
+        },
+        {
+          "name": "PR-14: 前端期权T型报价",
+          "kind": "pr_task",
+          "description": "实现期权T型报价组件（看涨/看跌、行权价、隐含波动率）",
+          "status": "待开始",
+          "role": "角色B",
+          "dependencies": [
+            "PR-6",
+            "PR-18"
+          ]
+        },
+        {
+          "name": "PR-15: 前端快捷功能",
+          "kind": "pr_task",
+          "description": "实现快捷操作（一键反向、一键锁仓、批量撤单、快捷键配置）",
+          "status": "待开始",
+          "role": "角色B",
+          "dependencies": [
+            "PR-9",
+            "PR-10",
+            "PR-11"
+          ]
+        },
+        {
+          "name": "PR-16: 前端查询面板",
+          "kind": "pr_task",
+          "description": "实现查询面板（报单流水、成交流水、持仓、资金、止损单、报价、合约）",
+          "status": "待开始",
+          "role": "角色B",
+          "dependencies": [
+            "PR-11",
+            "PR-13"
+          ]
+        },
+        {
+          "name": "PR-17: 联调测试与Bug修复",
+          "kind": "pr_task",
+          "description": "前后端联调测试（IT-01~IT-20、E2E-01~E2E-10）、Bug修复、性能优化",
+          "status": "待开始",
+          "role": "角色A+角色B",
+          "dependencies": [
+            "PR-1至PR-16",
+            "PR-18至PR-21"
+          ]
+        },
+        {
+          "name": "PR-18: 后端期权API实现",
+          "kind": "pr_task",
+          "description": "实现期权API（期权合约列表、期权T型报价、隐含波动率Black-Scholes计算）",
+          "status": "待开始",
+          "role": "角色A",
+          "dependencies": [
+            "PR-5"
+          ]
+        },
+        {
+          "name": "PR-19: 后端合约查询API",
+          "kind": "pr_task",
+          "description": "从CTP查询全量合约列表（ReqQryInstrument），结果缓存到instruments.json",
+          "status": "已完成",
+          "role": "角色A",
+          "dependencies": [
+            "PR-9"
+          ]
+        },
+        {
+          "name": "PR-20: 前端合约刷新功能",
+          "kind": "pr_task",
+          "description": "前端刷新合约按钮，点击触发后端查询，Toast提示结果",
+          "status": "待开始",
+          "role": "角色B",
+          "dependencies": [
+            "PR-19"
+          ]
+        },
+        {
+          "name": "PR-21: 手动订阅/退订合约",
+          "kind": "pr_task",
+          "description": "用户在ContractSearch中输入任意合约代码进行订阅/退订，已订阅合约标签展示",
+          "status": "待开始",
+          "role": "角色B",
+          "dependencies": [
+            "PR-6a"
+          ]
+        },
+        {
+          "name": "PR-22: 连接状态指示器完善",
+          "kind": "pr_task",
+          "description": "MD/TD状态广播+前端处理，登录流程重构（startup只连MD，TD由/login触发）",
+          "status": "待开始",
+          "role": "角色A+角色B",
+          "dependencies": [
+            "PR-9"
+          ]
+        },
+        {
+          "name": "里程碑M0",
+          "kind": "milestone",
+          "description": "基础框架（CTP验证+前端初始化）",
+          "prs": [
+            "PR-1",
+            "PR-2"
+          ]
+        },
+        {
+          "name": "里程碑M1",
+          "kind": "milestone",
+          "description": "框架搭建+行情模块启动",
+          "prs": [
+            "PR-3",
+            "PR-4",
+            "PR-5",
+            "PR-6"
+          ]
+        },
+        {
+          "name": "里程碑M2",
+          "kind": "milestone",
+          "description": "行情完善+交易模块",
+          "prs": [
+            "PR-7",
+            "PR-8",
+            "PR-9",
+            "PR-10",
+            "PR-11",
+            "PR-12"
+          ]
+        },
+        {
+          "name": "里程碑M3",
+          "kind": "milestone",
+          "description": "高级功能",
+          "prs": [
+            "PR-13",
+            "PR-14",
+            "PR-15",
+            "PR-16",
+            "PR-18"
+          ]
+        },
+        {
+          "name": "里程碑M3+",
+          "kind": "milestone",
+          "description": "合约查询+手动订阅",
+          "prs": [
+            "PR-19",
+            "PR-20",
+            "PR-21"
+          ]
+        },
+        {
+          "name": "里程碑M4",
+          "kind": "milestone",
+          "description": "联调测试与Bug修复",
+          "prs": [
+            "PR-17"
+          ]
+        }
+      ],
+      "complexity": "moderate",
+      "type": "file"
+    },
+    {
+      "id": "file:snapshots/role-b/dev-record-b.md",
+      "type": "file",
+      "path": "snapshots/role-b/dev-record-b.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "summary": "角色B前端开发的完整TDD开发记录，涵盖PR-2至PR-20共9个PR的测试用例清单、TDD循环记录、文件变更清单、提交记录、审查反馈修复和人工验证结果。",
+      "description": "该文件是角色B（前端开发）的核心开发记录文档，按照严格的TDD流程（红灯→绿灯→重构→提交）记录了每个PR的完整开发过程。包含：PR-2前端项目初始化（57测试）、PR-4多面板布局框架（28测试）、PR-6行情表格vtable（27测试）、PR-6a接入真实API（15测试）、PR-8五档行情展示（30测试）、PR-12 K线图ECharts（25测试）、PR-12a补缺补差（断线重连/PerfMonitor等）、PR-10报单表单（88测试）、PR-20合约刷新功能（13测试）、以及投机/套保/套利投保选择功能（9测试）。累计297+测试用例，详细记录了每次提交的hash、遇到的问题与解决方案、审查反馈处理过程。",
+      "tags": [
+        "角色B",
+        "开发记录",
+        "TDD",
+        "前端",
+        "PR进度",
+        "测试用例",
+        "提交记录",
+        "审查反馈"
+      ],
+      "metrics": {
+        "totalLines": 695,
+        "nonEmptyLines": 529,
+        "sectionCount": 52,
+        "prCount": 10,
+        "totalTests": 297
+      },
+      "complexity": "moderate",
+      "name": "dev-record-b.md"
+    },
+    {
+      "id": "file:snapshots/role-b/progress.md",
+      "type": "file",
+      "path": "snapshots/role-b/progress.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "summary": "角色B前端开发的PR完成进度总览，记录了13个PR的状态（9个已完成、4个待开始），包含每个PR的完成内容、验证结果和提交记录。",
+      "description": "该文件是角色B的进度快照文档，以表格形式展示所有PR的完成状态总览，以及每个PR的详细记录（分支名、依赖PR、工作量、完成内容、验证结果、提交记录、交接说明）。已完成的PR包括：PR-2前端初始化、PR-4布局框架、PR-6行情表格、PR-6a真实API接入、PR-8五档行情、PR-10报单表单、PR-12 K线图、PR-12a补缺补差、PR-20合约刷新。待开始的PR包括：PR-14期权T型报价、PR-15快捷功能、PR-16查询面板、PR-17联调测试、PR-21手动订阅退订。",
+      "tags": [
+        "角色B",
+        "进度快照",
+        "PR状态",
+        "前端开发",
+        "项目管理"
+      ],
+      "metrics": {
+        "totalLines": 415,
+        "nonEmptyLines": 308,
+        "sectionCount": 16,
+        "prCompleted": 9,
+        "prPending": 4,
+        "totalPRs": 13
+      },
+      "complexity": "moderate",
+      "name": "progress.md"
+    },
+    {
+      "id": "file:frontend/src/components/ConnectionStatus/styles.css",
+      "path": "frontend/src/components/ConnectionStatus/styles.css",
+      "language": "css",
+      "fileCategory": "markup",
+      "totalLines": 57,
+      "nonEmptyLines": 49,
+      "summary": "ConnectionStatus 组件的样式表，定义连接状态指示器的视觉样式，包括已连接（绿色常亮）、未连接（红色常亮）、连接中（黄色闪烁）、连接错误（红色快闪）四种状态的 CSS 类，以及 pulse-blink 闪烁动画。",
+      "symbols": [],
+      "tags": [
+        "css",
+        "connection-status",
+        "indicator",
+        "animation",
+        "styles"
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      },
+      "complexity": "moderate",
+      "type": "file",
+      "name": "styles.css"
+    },
+    {
+      "id": "file:frontend/src/modules/market/styles.css",
+      "path": "frontend/src/modules/market/styles.css",
+      "language": "css",
+      "fileCategory": "markup",
+      "totalLines": 197,
+      "nonEmptyLines": 171,
+      "summary": "行情模块的样式表，定义 MarketPanel 面板布局（flexbox 纵向排列）、K 线图区域（头部工具栏、周期切换按钮、画布容器、空状态提示）、行情表格容器，以及合约搜索/刷新/退订等操作按钮的样式。",
+      "symbols": [],
+      "tags": [
+        "css",
+        "market",
+        "kline",
+        "panel",
+        "buttons",
+        "styles"
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      },
+      "complexity": "moderate",
+      "type": "file",
+      "name": "styles.css"
+    },
+    {
+      "id": "file:frontend/src/modules/order/store.test.ts",
+      "path": "frontend/src/modules/order/store.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 222,
+      "nonEmptyLines": 175,
+      "summary": "OrderStore 的单元测试文件，使用 Vitest 框架测试订单状态管理的全部功能，包括：selectedInstrument 选中合约、orderForm 表单字段管理（默认值、单字段更新、多字段更新、重置）、submitOrder 报单（成功/失败/网络异常/提交中状态/客户端校验）、cancelOrder 撤单（成功/失败/网络异常）。Mock 了 api 和 toast 两个外部依赖。",
+      "symbols": [],
+      "tags": [
+        "test",
+        "vitest",
+        "order-store",
+        "mock",
+        "submit-order",
+        "cancel-order"
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      },
+      "complexity": "moderate",
+      "type": "file",
+      "name": "store.test.ts"
+    },
+    {
+      "id": "file:frontend/src/modules/order/store.ts",
+      "path": "frontend/src/modules/order/store.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 98,
+      "nonEmptyLines": 88,
+      "summary": "订单模块的 Zustand 状态管理 store，导出 DEFAULT_ORDER_FORM 默认表单值和 useOrderStore hook。管理 selectedInstrument（选中合约）、orderForm（报单表单）、isSubmitting（提交中状态）三个状态，提供 setSelectedInstrument、setOrderForm、resetOrderForm、submitOrder（含客户端校验+API调用+toast提示）、cancelOrder（API调用+toast提示）等方法。依赖 services/api 和 components/Toast。",
+      "symbols": [
+        {
+          "name": "DEFAULT_ORDER_FORM",
+          "kind": "const",
+          "line": 6,
+          "isDefault": false,
+          "signature": "const DEFAULT_ORDER_FORM: OrderRequestForm",
+          "description": "默认报单表单值，包含 instrumentID、direction(buy)、combOffsetFlag(open)、orderPriceType(limit)、timeCondition(gfd)、combHedgeFlag(speculation)、limitPrice(0)、volumeTotalOriginal(1)"
+        },
+        {
+          "name": "useOrderStore",
+          "kind": "const",
+          "line": 28,
+          "isDefault": false,
+          "signature": "const useOrderStore: UseBoundStore<StoreApi<OrderStore>>",
+          "description": "Zustand 订单状态管理 hook，提供 selectedInstrument、orderForm、isSubmitting 状态及 setSelectedInstrument、setOrderForm、resetOrderForm、submitOrder、cancelOrder 方法"
+        }
+      ],
+      "tags": [
+        "zustand",
+        "store",
+        "order",
+        "state-management",
+        "submit",
+        "cancel",
+        "tested"
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 0
+      },
+      "complexity": "moderate",
+      "type": "file",
+      "name": "store.ts"
+    },
+    {
+      "id": "file:frontend/src/modules/order/styles.css",
+      "path": "frontend/src/modules/order/styles.css",
+      "language": "css",
+      "fileCategory": "markup",
+      "totalLines": 201,
+      "nonEmptyLines": 167,
+      "summary": "订单模块的样式表，定义 OrderPanel 面板布局、面板头部标签页切换按钮、报单表单区域（表单行、toggle 按钮组用于买卖/开平方向选择、stepper 步进器用于数量和价格输入），以及提交按钮（买入红色、卖出绿色）的样式。",
+      "symbols": [],
+      "tags": [
+        "css",
+        "order",
+        "form",
+        "panel",
+        "stepper",
+        "toggle",
+        "submit-button",
+        "styles"
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      },
+      "complexity": "moderate",
+      "type": "file",
+      "name": "styles.css"
     }
   ],
   "edges": [
     {
-      "source": "file:frontend/src/components/ContractSearch/index.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/hooks/useMarketWs.ts",
-      "target": "file:frontend/src/hooks/useReconnect.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/hooks/useMarketWs.ts",
-      "target": "file:frontend/src/modules/market/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/hooks/useMarketWs.ts",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/modules/market/MarketPanel.tsx",
-      "target": "file:frontend/src/components/ContractSearch/index.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/modules/market/MarketPanel.tsx",
-      "target": "file:frontend/src/components/SpreadDisplay/index.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/modules/market/MarketPanel.tsx",
-      "target": "file:frontend/src/hooks/useMarketWs.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 2
-    },
-    {
-      "source": "file:frontend/src/modules/market/MarketPanel.tsx",
-      "target": "file:frontend/src/hooks/usePointOrder.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/modules/market/MarketPanel.tsx",
-      "target": "file:frontend/src/modules/market/DepthQuote.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/modules/market/MarketPanel.tsx",
-      "target": "file:frontend/src/modules/market/KLineChart.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/modules/market/MarketPanel.tsx",
-      "target": "file:frontend/src/modules/market/MarketTable.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/modules/market/MarketPanel.tsx",
-      "target": "file:frontend/src/modules/market/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/modules/market/MarketPanel.tsx",
-      "target": "file:frontend/src/services/api.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 2
-    },
-    {
-      "source": "file:frontend/src/modules/market/MarketTable.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
       "source": "file:frontend/src/components/ContractSearch/styles.css",
       "target": "file:frontend/src/components/ContractSearch/index.tsx",
-      "type": "related",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:frontend/src/modules/market/styles.css",
-      "target": "file:frontend/src/modules/market/MarketPanel.tsx",
       "type": "related",
       "direction": "forward",
       "weight": 0.5
@@ -3469,13 +4332,6 @@
     {
       "source": "file:CLAUDE.md",
       "target": "file:server/config.py",
-      "type": "related",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:CLAUDE.md",
-      "target": "file:server/main.py",
       "type": "related",
       "direction": "forward",
       "weight": 0.5
@@ -3593,77 +4449,7 @@
       "weight": 0.5
     },
     {
-      "source": "file:server/main.py",
-      "target": "file:server/api/connection.py",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:server/main.py",
-      "target": "file:server/api/market.py",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:server/main.py",
-      "target": "file:server/api/order.py",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:server/main.py",
-      "target": "file:server/api/query.py",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:server/main.py",
-      "target": "file:server/services/ctp_startup.py",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:server/main.py",
-      "target": "file:server/services/market_service.py",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
       "source": "file:server/services/ctp_startup.py",
-      "target": "file:server/services/market_service.py",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:server/services/ctp_startup.py",
-      "target": "file:server/services/field_mapping.py",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:server/api/market.py",
-      "target": "file:server/services/market_service.py",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:server/api/query.py",
-      "target": "file:server/services/market_service.py",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:server/services/market_service.py",
       "target": "file:server/services/field_mapping.py",
       "type": "calls",
       "direction": "forward",
@@ -3679,27 +4465,6 @@
     {
       "source": "file:server/tests/test_field_mapping.py",
       "target": "file:server/services/field_mapping.py",
-      "type": "related",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:server/tests/test_market_api.py",
-      "target": "file:server/api/market.py",
-      "type": "related",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:server/tests/test_market_api.py",
-      "target": "file:server/services/market_service.py",
-      "type": "related",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:server/tests/test_market_service.py",
-      "target": "file:server/services/market_service.py",
       "type": "related",
       "direction": "forward",
       "weight": 0.5
@@ -3789,34 +4554,6 @@
       "weight": 0.8
     },
     {
-      "source": "file:snapshots/role-b/progress.md",
-      "target": "file::PR-21: 手动订阅/退订合约",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:snapshots/role-b/progress.md",
-      "target": "file:snapshots/role-b/dev-record-b.md",
-      "type": "related",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:frontend/src/hooks/useMarketWs.test.ts",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/hooks/useMarketWs.test.ts",
-      "target": "file:frontend/src/modules/market/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
       "source": "file:frontend/src/modules/market/DepthQuote.test.tsx",
       "target": "file:frontend/src/modules/market/DepthQuote.tsx",
       "type": "imports",
@@ -3824,99 +4561,8 @@
       "weight": 0.7
     },
     {
-      "source": "file:frontend/src/modules/market/DepthQuote.test.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/market/DepthQuote.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
       "source": "file:frontend/src/modules/market/KLineChart.test.tsx",
       "target": "file:frontend/src/modules/market/KLineChart.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/market/KLineChart.test.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/market/KLineChart.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/market/MarketPanel.test.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/market/MarketPanel.test.tsx",
-      "target": "file:frontend/src/services/api.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/market/MarketPanel.test.tsx",
-      "target": "file:frontend/src/modules/market/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/market/MarketTable.test.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/market/store.test.ts",
-      "target": "file:frontend/src/modules/market/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/market/store.ts",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/services/api.test.ts",
-      "target": "file:frontend/src/services/api.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/services/api.test.ts",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/services/api.ts",
-      "target": "file:frontend/src/services/types.ts",
       "type": "imports",
       "direction": "forward",
       "weight": 0.7
@@ -3964,48 +4610,6 @@
       "weight": 1
     },
     {
-      "source": "file:frontend/src/services/api.ts",
-      "target": "function:frontend/src/services/api.ts:get",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/services/api.ts",
-      "target": "function:frontend/src/services/api.ts:post",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/services/api.ts",
-      "target": "function:frontend/src/services/api.ts:getInstruments",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/services/api.ts",
-      "target": "function:frontend/src/services/api.ts:subscribeMarket",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/services/api.ts",
-      "target": "function:frontend/src/services/api.ts:getSnapshots",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/services/api.ts",
-      "target": "function:frontend/src/services/api.ts:getKlineData",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
       "source": "file:frontend/src/modules/market/DepthQuote.tsx",
       "target": "file:frontend/src/modules/market/DepthQuote.test.tsx",
       "type": "tested_by",
@@ -4015,20 +4619,6 @@
     {
       "source": "file:frontend/src/modules/market/KLineChart.tsx",
       "target": "file:frontend/src/modules/market/KLineChart.test.tsx",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:frontend/src/modules/market/store.ts",
-      "target": "file:frontend/src/modules/market/store.test.ts",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:frontend/src/services/api.ts",
-      "target": "file:frontend/src/services/api.test.ts",
       "type": "tested_by",
       "direction": "forward",
       "weight": 0.5
@@ -4090,43 +4680,8 @@
       "weight": 0.5
     },
     {
-      "source": "file:frontend/src/hooks/useReconnect.ts",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
       "source": "file:frontend/src/modules/connection/ConnectionPanel.test.tsx",
       "target": "file:frontend/src/modules/connection/ConnectionPanel.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/connection/ConnectionPanel.test.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/connection/ConnectionPanel.test.tsx",
-      "target": "file:frontend/src/services/api.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/connection/ConnectionPanel.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/connection/ConnectionPanel.tsx",
-      "target": "file:frontend/src/services/api.ts",
       "type": "imports",
       "direction": "forward",
       "weight": 0.7
@@ -4153,127 +4708,8 @@
       "weight": 0.5
     },
     {
-      "source": "file:frontend/src/modules/order/OrderForm.test.tsx",
-      "target": "file:frontend/src/modules/order/OrderForm.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderForm.test.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderForm.test.tsx",
-      "target": "file:frontend/src/services/api.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderForm.test.tsx",
-      "target": "file:frontend/src/modules/market/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderForm.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderForm.tsx",
-      "target": "file:frontend/src/services/api.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderForm.tsx",
-      "target": "file:frontend/src/modules/market/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderForm.tsx",
-      "target": "file:frontend/src/modules/order/OrderForm.test.tsx",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:frontend/src/modules/order/store.test.ts",
-      "target": "file:frontend/src/modules/order/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/store.ts",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/store.ts",
-      "target": "file:frontend/src/services/api.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/store.ts",
-      "target": "file:frontend/src/modules/connection/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/store.ts",
-      "target": "file:frontend/src/modules/order/store.test.ts",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
       "source": "file:frontend/src/modules/position/PositionPanel.test.tsx",
       "target": "file:frontend/src/modules/position/PositionPanel.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/position/PositionPanel.test.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/position/PositionPanel.test.tsx",
-      "target": "file:frontend/src/services/api.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/position/PositionPanel.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/position/PositionPanel.tsx",
-      "target": "file:frontend/src/services/api.ts",
       "type": "imports",
       "direction": "forward",
       "weight": 0.7
@@ -4288,20 +4724,6 @@
     {
       "source": "file:frontend/src/modules/position/store.test.ts",
       "target": "file:frontend/src/modules/position/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/position/store.ts",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/position/store.ts",
-      "target": "file:frontend/src/services/api.ts",
       "type": "imports",
       "direction": "forward",
       "weight": 0.7
@@ -4335,36 +4757,8 @@
       "weight": 0.8
     },
     {
-      "source": "file:frontend/src/modules/query/QueryPanel.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPanel.tsx",
-      "target": "file:frontend/src/services/api.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
       "source": "file:frontend/src/modules/query/QueryPanel.test.tsx",
       "target": "file:frontend/src/modules/query/QueryPanel.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPanel.test.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPanel.test.tsx",
-      "target": "file:frontend/src/services/api.ts",
       "type": "imports",
       "direction": "forward",
       "weight": 0.7
@@ -4379,20 +4773,6 @@
     {
       "source": "file:frontend/src/modules/query/store.test.ts",
       "target": "file:frontend/src/modules/query/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/query/store.ts",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/query/store.ts",
-      "target": "file:frontend/src/services/api.ts",
       "type": "imports",
       "direction": "forward",
       "weight": 0.7
@@ -4419,46 +4799,11 @@
       "weight": 0.7
     },
     {
-      "source": "file:frontend/src/modules/stop/StopOrderPanel.test.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/stop/StopOrderPanel.test.tsx",
-      "target": "file:frontend/src/services/api.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/stop/StopOrderPanel.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/stop/StopOrderPanel.tsx",
-      "target": "file:frontend/src/services/api.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
       "source": "file:frontend/src/modules/stop/StopOrderPanel.tsx",
       "target": "file:frontend/src/modules/stop/StopOrderPanel.test.tsx",
       "type": "tested_by",
       "direction": "forward",
       "weight": 0.5
-    },
-    {
-      "source": "file:frontend/src/main.tsx",
-      "target": "file:frontend/src/App.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
     },
     {
       "source": "file:frontend/src/main.tsx",
@@ -4468,130 +4813,11 @@
       "weight": 0.7
     },
     {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/services/api.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/modules/connection/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/modules/market/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/modules/connection/ConnectionPanel.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/modules/order/OrderForm.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/modules/position/PositionPanel.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/modules/query/QueryPanel.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/modules/stop/StopOrderPanel.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/components/PerfMonitor/index.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/hooks/useReconnect.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.test.tsx",
-      "target": "file:frontend/src/App.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.test.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.test.tsx",
-      "target": "file:frontend/src/services/api.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
       "source": "file:frontend/src/App.test.tsx",
       "target": "file:frontend/src/modules/connection/store.ts",
       "type": "imports",
       "direction": "forward",
       "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.test.tsx",
-      "target": "file:frontend/src/modules/market/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "function:frontend/src/App.tsx:App",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/App.test.tsx",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
     },
     {
       "source": "file:frontend/index.html",
@@ -4608,22 +4834,8 @@
       "weight": 0.6
     },
     {
-      "source": "config:frontend/vite.config.ts",
-      "target": "file:frontend/src/App.tsx",
-      "type": "configures",
-      "direction": "forward",
-      "weight": 0.6
-    },
-    {
       "source": "config:frontend/tsconfig.json",
       "target": "file:frontend/src/main.tsx",
-      "type": "configures",
-      "direction": "forward",
-      "weight": 0.6
-    },
-    {
-      "source": "config:frontend/tsconfig.json",
-      "target": "file:frontend/src/App.tsx",
       "type": "configures",
       "direction": "forward",
       "weight": 0.6
@@ -4645,13 +4857,6 @@
     {
       "source": "config:frontend/.eslintrc.cjs",
       "target": "file:frontend/src/main.tsx",
-      "type": "configures",
-      "direction": "forward",
-      "weight": 0.6
-    },
-    {
-      "source": "config:frontend/.eslintrc.cjs",
-      "target": "file:frontend/src/App.tsx",
       "type": "configures",
       "direction": "forward",
       "weight": 0.6
@@ -4722,20 +4927,6 @@
     {
       "source": "document:docs/ctp-api-structure.txt",
       "target": "file:server/ctp_wrapper/md_user_api.py",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/ctp-api-structure.txt",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/prd.md",
-      "target": "file:frontend/src/services/api.ts",
       "type": "documents",
       "direction": "forward",
       "weight": 0.5
@@ -5161,20 +5352,6 @@
       "weight": 0.7
     },
     {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/assets/styles/global.css",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/ContractSearch/index.test.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
       "source": "file:frontend/src/components/SpreadDisplay/SpreadDisplay.test.tsx",
       "target": "file:frontend/src/components/SpreadDisplay/index.tsx",
       "type": "imports",
@@ -5184,27 +5361,6 @@
     {
       "source": "file:frontend/src/hooks/usePointOrder.test.ts",
       "target": "file:frontend/src/hooks/usePointOrder.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/market/store.test.ts",
-      "target": "file:frontend/src/services/api.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/market/store.test.ts",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/market/store.ts",
-      "target": "file:frontend/src/services/api.ts",
       "type": "imports",
       "direction": "forward",
       "weight": 0.7
@@ -5233,13 +5389,6 @@
     {
       "source": "file:frontend/src/stores/userPrefs.test.ts",
       "target": "file:frontend/src/stores/userPrefs.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/stores/userPrefs.ts",
-      "target": "file:frontend/src/services/types.ts",
       "type": "imports",
       "direction": "forward",
       "weight": 0.7
@@ -5439,148 +5588,501 @@
       "type": "contains",
       "direction": "forward",
       "weight": 1
+    },
+    {
+      "source": "file:frontend/src/hooks/useMarketWs.test.ts",
+      "target": "module:frontend/src/hooks/useMarketWs.ts",
+      "type": "test",
+      "label": "测试目标",
+      "direction": "forward"
+    },
+    {
+      "source": "file:frontend/src/hooks/useMarketWs.test.ts",
+      "target": "module:frontend/src/modules/market/store.ts",
+      "type": "import",
+      "label": "导入 useMarketStore",
+      "direction": "forward"
+    },
+    {
+      "source": "file:frontend/src/hooks/useMarketWs.test.ts",
+      "target": "module:frontend/src/services/types.ts",
+      "type": "import",
+      "label": "导入 MarketSnapshot 类型",
+      "direction": "forward"
+    },
+    {
+      "source": "module:frontend/src/hooks/useMarketWs.ts",
+      "target": "module:frontend/src/modules/market/store.ts",
+      "type": "import",
+      "label": "导入 useMarketStore（batchUpdate/appendKline）",
+      "direction": "forward"
+    },
+    {
+      "source": "module:frontend/src/hooks/useMarketWs.ts",
+      "target": "module:frontend/src/services/types.ts",
+      "type": "import",
+      "label": "导入 MarketSnapshot/KLineData/WSMessage 类型",
+      "direction": "forward"
+    },
+    {
+      "source": "file:frontend/src/modules/market/MarketPanel.test.tsx",
+      "target": "module:frontend/src/modules/market/MarketPanel.tsx",
+      "type": "test",
+      "label": "测试目标",
+      "direction": "forward"
+    },
+    {
+      "source": "file:frontend/src/modules/market/MarketPanel.test.tsx",
+      "target": "module:frontend/src/modules/market/store.ts",
+      "type": "import",
+      "label": "导入 useMarketStore",
+      "direction": "forward"
+    },
+    {
+      "source": "file:frontend/src/modules/market/MarketPanel.test.tsx",
+      "target": "module:frontend/src/stores/contracts.ts",
+      "type": "import",
+      "label": "导入 useContractsStore",
+      "direction": "forward"
+    },
+    {
+      "source": "file:frontend/src/modules/market/MarketPanel.test.tsx",
+      "target": "module:frontend/src/services/types.ts",
+      "type": "import",
+      "label": "导入 MarketSnapshot 类型",
+      "direction": "forward"
+    },
+    {
+      "source": "module:frontend/src/modules/market/MarketPanel.tsx",
+      "target": "module:frontend/src/modules/market/store.ts",
+      "type": "import",
+      "label": "导入 useMarketStore",
+      "direction": "forward"
+    },
+    {
+      "source": "module:frontend/src/modules/market/MarketPanel.tsx",
+      "target": "module:frontend/src/stores/contracts.ts",
+      "type": "import",
+      "label": "导入 useContractsStore",
+      "direction": "forward"
+    },
+    {
+      "source": "module:frontend/src/modules/market/MarketPanel.tsx",
+      "target": "module:frontend/src/services/api.ts",
+      "type": "import",
+      "label": "导入 API_BASE/getKlineData/subscribeMarket",
+      "direction": "forward"
+    },
+    {
+      "source": "module:frontend/src/modules/market/MarketPanel.tsx",
+      "target": "module:frontend/src/hooks/useMarketWs.ts",
+      "type": "import",
+      "label": "导入 useMarketWs/PERIOD_MS",
+      "direction": "forward"
+    },
+    {
+      "source": "file:frontend/src/modules/market/store.test.ts",
+      "target": "module:frontend/src/modules/market/store.ts",
+      "type": "test",
+      "label": "测试目标",
+      "direction": "forward"
+    },
+    {
+      "source": "file:frontend/src/modules/market/store.test.ts",
+      "target": "module:frontend/src/services/api.ts",
+      "type": "import",
+      "label": "Mock subscribeMarket/getSnapshots",
+      "direction": "forward"
+    },
+    {
+      "source": "file:frontend/src/modules/market/store.test.ts",
+      "target": "module:frontend/src/services/types.ts",
+      "type": "import",
+      "label": "导入 MarketSnapshot/KLineData 类型",
+      "direction": "forward"
+    },
+    {
+      "source": "module:frontend/src/modules/market/store.ts",
+      "target": "module:frontend/src/services/api.ts",
+      "type": "import",
+      "label": "导入 subscribeMarket",
+      "direction": "forward"
+    },
+    {
+      "source": "module:frontend/src/modules/market/store.ts",
+      "target": "module:frontend/src/services/types.ts",
+      "type": "import",
+      "label": "导入 MarketSnapshot/KLineData 类型",
+      "direction": "forward"
+    },
+    {
+      "source": "file:frontend/src/services/api.test.ts",
+      "target": "module:frontend/src/services/api.ts",
+      "type": "test",
+      "label": "测试目标",
+      "direction": "forward"
+    },
+    {
+      "source": "module:frontend/src/services/api.ts",
+      "target": "module:frontend/src/services/types.ts",
+      "type": "import",
+      "label": "导入 ApiResponse/ContractInfo/MarketSnapshot/KLineData 类型",
+      "direction": "forward"
+    },
+    {
+      "source": "file:frontend/src/stores/contracts.test.ts",
+      "target": "module:frontend/src/stores/contracts.ts",
+      "type": "test",
+      "label": "测试目标",
+      "direction": "forward"
+    },
+    {
+      "source": "file:frontend/src/stores/contracts.test.ts",
+      "target": "module:frontend/src/services/types.ts",
+      "type": "import",
+      "label": "导入 ContractInfo 类型",
+      "direction": "forward"
+    },
+    {
+      "source": "module:frontend/src/stores/contracts.ts",
+      "target": "module:frontend/src/services/types.ts",
+      "type": "import",
+      "label": "导入 ContractInfo 类型",
+      "direction": "forward"
+    },
+    {
+      "source": "module:frontend/src/stores/contracts.ts",
+      "target": "module:frontend/src/services/api.ts",
+      "type": "import",
+      "label": "导入 getPresetInstruments/getInstrumentsByIds/unsubscribeMarket",
+      "direction": "forward"
+    },
+    {
+      "source": "module:frontend/src/modules/market/MarketPanel.tsx",
+      "target": "file:frontend/src/modules/market/styles.css",
+      "type": "cross-batch-import",
+      "batchIndex": 10,
+      "label": "导入样式文件",
+      "direction": "forward"
+    },
+    {
+      "source": "file:frontend/src/modules/order/store.test.ts",
+      "target": "file:frontend/src/modules/order/store.ts",
+      "kind": "import",
+      "symbols": [
+        "useOrderStore",
+        "DEFAULT_ORDER_FORM"
+      ],
+      "description": "测试文件导入 order store 的 useOrderStore 和 DEFAULT_ORDER_FORM 进行单元测试",
+      "direction": "forward"
+    },
+    {
+      "source": "file:frontend/src/modules/market/styles.css",
+      "target": "module:frontend/src/modules/market/MarketPanel.tsx",
+      "kind": "styles-for",
+      "symbols": [
+        "MarketPanel"
+      ],
+      "description": "为 MarketPanel 组件提供样式定义（面板布局、K 线图、操作按钮等）",
+      "direction": "forward"
+    },
+    {
+      "source": "file:frontend/src/components/ContractSearch/index.tsx",
+      "target": "file:frontend/src/components/ContractSearch/index.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5,
+      "description": "Path-based pairing (deterministic)"
+    },
+    {
+      "source": "file:frontend/src/modules/market/MarketTable.tsx",
+      "target": "file:frontend/src/modules/market/MarketTable.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5,
+      "description": "Path-based pairing (deterministic)"
+    },
+    {
+      "source": "file:frontend/src/modules/order/store.ts",
+      "target": "file:frontend/src/modules/order/store.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5,
+      "description": "Path-based pairing (deterministic)"
+    },
+    {
+      "source": "file:frontend/src/components/ContractSearch/index.test.tsx",
+      "target": "file:frontend/src/components/ContractSearch/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:frontend/src/components/ContractSearch/index.tsx",
+      "target": "file:frontend/src/components/ContractSearch/styles.css",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:frontend/src/modules/market/MarketTable.test.tsx",
+      "target": "file:frontend/src/modules/market/MarketTable.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:server/ctp_wrapper/md_user_api.py",
+      "target": "file:server/ctp_wrapper/callback.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:server/ctp_wrapper/trader_api.py",
+      "target": "file:server/ctp_wrapper/callback.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:server/ctp_wrapper/trader_api.py",
+      "target": "file:server/ctp_wrapper/types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:server/tests/test_callback.py",
+      "target": "file:server/ctp_wrapper/callback.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:server/tests/test_ctp_startup.py",
+      "target": "file:server/services/ctp_startup.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:server/tests/test_field_mapping.py",
+      "target": "file:server/services/field_mapping.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:server/tests/test_trader_api.py",
+      "target": "file:server/config.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:server/tests/test_trader_api.py",
+      "target": "file:server/ctp_wrapper/trader_api.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:server/tests/test_trader_api.py",
+      "target": "file:server/ctp_wrapper/types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:server/tests/test_types.py",
+      "target": "file:server/ctp_wrapper/types.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
     }
   ],
   "layers": [
     {
-      "id": "layer:backend-api",
-      "name": "后端 API 层",
-      "description": "FastAPI 应用入口与 REST 路由模块，负责 HTTP 请求路由、参数校验和响应格式化。包含 main.py 工厂函数（CORS、路由注册、lifespan 管理）和四个路由模块（connection/market/order/query），以及 Python 包初始化文件和静态合约数据。",
-      "nodeIds": [
-        "file:server/main.py",
-        "file:server/api/__init__.py",
-        "file:server/api/connection.py",
-        "file:server/api/market.py",
-        "file:server/api/order.py",
-        "file:server/api/query.py",
-        "file:server/data/__init__.py",
-        "file:server/data/instruments.json",
-        "file:instruments.json:cffex-futures",
-        "schema:instruments.json:contract-fields",
-        "file:server/__init__.py"
-      ]
-    },
-    {
-      "id": "layer:ctp-wrapper",
-      "name": "CTP 封装层",
-      "description": "CTP 期货交易 API 的 Python 封装层，隔离 CTP DLL 的 SWIG 绑定细节。包含行情 API（md_user_api，含 bytes→str 防护）、交易 API（trader_api，含报单/撤单/查询）、回调 SPI 框架（callback，动态类生成支持 CTP 可用/不可用双模式）、类型枚举定义（types，11 个常量类），以及 CTP 连接演示脚本。",
-      "nodeIds": [
-        "file:server/ctp_wrapper/__init__.py",
-        "file:server/ctp_wrapper/callback.py",
-        "file:server/ctp_wrapper/md_user_api.py",
-        "file:server/ctp_wrapper/trader_api.py",
-        "file:server/ctp_wrapper/types.py",
-        "file:ctp_realtime_demo.py",
-        "file:demo.py",
-        "file:md_demo.py"
-      ]
-    },
-    {
-      "id": "layer:backend-services",
-      "name": "后端服务层",
-      "description": "后端业务逻辑层，包含 CTP 连接生命周期管理（ctp_startup，MD/TD 连接、断线重连）、行情数据服务（market_service，合约缓存、订阅管理、快照存储、线程安全）、CTP 字段映射（field_mapping，PascalCase→camelCase）、WebSocket 管理器、数据模型定义（account/contract/market/order）、配置管理（config）和启动脚本。",
-      "nodeIds": [
-        "file:server/config.py",
-        "file:server/start.py",
-        "file:server/services/__init__.py",
-        "file:server/services/ctp_startup.py",
-        "file:server/services/field_mapping.py",
-        "file:server/services/market_service.py",
-        "file:server/services/reconnect.py",
-        "file:server/ws/__init__.py",
-        "file:server/models/__init__.py",
-        "file:server/models/account.py",
-        "file:server/models/contract.py",
-        "file:server/models/market.py",
-        "file:server/models/order.py",
-        "config:server/requirements.txt",
-        "config:server/.env.sample"
-      ]
-    },
-    {
-      "id": "layer:backend-tests",
-      "name": "后端测试层",
-      "description": "后端单元测试与集成测试，使用 pytest 框架覆盖 CTP 封装、服务逻辑、API 端点、数据模型和 WebSocket 集成等全部后端模块，确保代码质量和回归安全。",
-      "nodeIds": [
-        "file:server/tests/__init__.py",
-        "file:server/tests/test_callback.py",
-        "file:server/tests/test_trader_api.py",
-        "file:server/tests/test_types.py",
-        "file:server/tests/test_ctp_startup.py",
-        "file:server/tests/test_field_mapping.py",
-        "file:server/tests/test_market_api.py",
-        "file:server/tests/test_market_service.py",
-        "file:server/tests/test_connection_api.py",
-        "file:server/tests/test_models.py",
-        "file:server/tests/test_reconnect.py",
-        "file:server/tests/test_ws_integration.py"
-      ]
-    },
-    {
       "id": "layer:frontend-ui",
-      "name": "前端 UI 层",
-      "description": "React 前端应用层，包含应用入口与全局布局（App 三栏可调布局、main.tsx）、业务模块（行情面板/报单/查询/持仓/止损/连接六个 feature 模块）、通用组件（合约搜索/性能监控/价差显示/连接状态）、自定义 Hooks（WebSocket 行情推送/断线重连/点价下单）、用户偏好状态管理、工具函数（格式化/校验）和前端构建配置。",
+      "name": "前端 UI 组件层",
+      "description": "React 组件和样式文件，负责用户界面渲染。包含行情面板（MarketPanel、MarketTable、KLineChart、DepthQuote）、报单面板（OrderPanel）、查询面板（QueryPanel）、连接面板（ConnectionPanel）、持仓面板（PositionPanel）、止损单面板（StopOrderPanel）等业务组件，以及 ContractSearch、PerfMonitor、SpreadDisplay 等通用组件。使用 @visactor/vtable 实现高性能虚拟滚动表格，ECharts 实现 K 线图。",
       "nodeIds": [
+        "file:frontend/src/components/ContractSearch/index.tsx",
+        "file:frontend/src/components/ContractSearch/styles.css",
+        "file:frontend/src/components/PerfMonitor/index.tsx",
+        "file:frontend/src/components/SpreadDisplay/index.tsx",
+        "file:frontend/src/components/ConnectionStatus/styles.css",
+        "file:frontend/src/modules/market/MarketTable.tsx",
+        "file:frontend/src/modules/market/DepthQuote.tsx",
+        "file:frontend/src/modules/market/KLineChart.tsx",
+        "file:frontend/src/modules/market/styles.css",
+        "module:frontend/src/modules/market/MarketPanel.tsx",
+        "file:frontend/src/modules/connection/ConnectionPanel.tsx",
+        "file:frontend/src/modules/position/PositionPanel.tsx",
+        "file:frontend/src/modules/query/QueryPanel.tsx",
+        "file:frontend/src/modules/query/styles.css",
+        "file:frontend/src/modules/stop/StopOrderPanel.tsx",
+        "file:frontend/src/modules/order/styles.css",
         "file:frontend/src/main.tsx",
-        "file:frontend/src/App.tsx",
         "file:frontend/src/App.test.tsx",
         "file:frontend/src/assets/styles/global.css",
         "file:frontend/index.html",
         "file:frontend/src/vite-env.d.ts",
-        "file:frontend/src/components/ContractSearch/index.tsx",
-        "file:frontend/src/components/ContractSearch/styles.css",
-        "file:frontend/src/components/ContractSearch/index.test.tsx",
-        "file:frontend/src/components/PerfMonitor/index.tsx",
-        "file:frontend/src/components/PerfMonitor/index.test.tsx",
-        "file:frontend/src/components/SpreadDisplay/index.tsx",
-        "file:frontend/src/components/SpreadDisplay/SpreadDisplay.test.tsx",
-        "file:frontend/src/components/ConnectionStatus/styles.css",
-        "file:frontend/src/hooks/useMarketWs.ts",
-        "file:frontend/src/hooks/useMarketWs.test.ts",
-        "file:frontend/src/hooks/useReconnect.ts",
-        "file:frontend/src/hooks/useReconnect.test.ts",
-        "file:frontend/src/hooks/usePointOrder.ts",
-        "file:frontend/src/hooks/usePointOrder.test.ts",
-        "file:frontend/src/modules/market/MarketPanel.tsx",
-        "file:frontend/src/modules/market/MarketPanel.test.tsx",
-        "file:frontend/src/modules/market/MarketTable.tsx",
-        "file:frontend/src/modules/market/MarketTable.test.tsx",
-        "file:frontend/src/modules/market/DepthQuote.tsx",
-        "file:frontend/src/modules/market/DepthQuote.test.tsx",
-        "file:frontend/src/modules/market/KLineChart.tsx",
-        "file:frontend/src/modules/market/KLineChart.test.tsx",
-        "file:frontend/src/modules/market/store.ts",
-        "file:frontend/src/modules/market/store.test.ts",
-        "file:frontend/src/modules/market/styles.css",
-        "file:frontend/src/modules/connection/ConnectionPanel.tsx",
-        "file:frontend/src/modules/connection/ConnectionPanel.test.tsx",
+        "function:frontend/src/modules/market/DepthQuote.tsx:DepthQuote",
+        "function:frontend/src/modules/market/KLineChart.tsx:KLineChart",
+        "function:frontend/src/modules/market/KLineChart.tsx:calcMA",
+        "function:frontend/src/modules/market/KLineChart.tsx:calcEMA",
+        "function:frontend/src/modules/market/KLineChart.tsx:calcMACD",
+        "function:frontend/src/modules/market/KLineChart.tsx:buildOption",
+        "function:frontend/src/components/PerfMonitor/index.tsx:PerfMonitor",
+        "function:frontend/src/modules/query/QueryPanel.tsx:QueryPanel",
+        "function:frontend/src/components/SpreadDisplay/index.tsx:SpreadDisplay"
+      ]
+    },
+    {
+      "id": "layer:frontend-state",
+      "name": "前端状态管理层",
+      "description": "Zustand 状态管理 Store，负责应用状态的集中管理和持久化。包含行情数据 Store（selectedInstrument、snapshots、klineData）、合约管理 Store（contracts、selectedContracts）、订单 Store（orderForm、submitOrder）、连接状态 Store、查询标签页 Store、用户偏好 Store（快捷键、自选合约，localStorage 持久化）。",
+      "nodeIds": [
         "file:frontend/src/modules/connection/store.ts",
-        "file:frontend/src/modules/connection/store.test.ts",
-        "file:frontend/src/modules/order/OrderForm.tsx",
-        "file:frontend/src/modules/order/OrderForm.test.tsx",
-        "file:frontend/src/modules/order/store.ts",
-        "file:frontend/src/modules/order/store.test.ts",
-        "file:frontend/src/modules/order/styles.css",
-        "file:frontend/src/modules/position/PositionPanel.tsx",
-        "file:frontend/src/modules/position/PositionPanel.test.tsx",
         "file:frontend/src/modules/position/store.ts",
-        "file:frontend/src/modules/position/store.test.ts",
-        "file:frontend/src/modules/query/QueryPanel.tsx",
-        "file:frontend/src/modules/query/QueryPanel.test.tsx",
         "file:frontend/src/modules/query/store.ts",
-        "file:frontend/src/modules/query/store.test.ts",
-        "file:frontend/src/modules/query/styles.css",
-        "file:frontend/src/modules/stop/StopOrderPanel.tsx",
-        "file:frontend/src/modules/stop/StopOrderPanel.test.tsx",
         "file:frontend/src/stores/userPrefs.ts",
-        "file:frontend/src/stores/userPrefs.test.ts",
+        "module:frontend/src/modules/market/store.ts",
+        "module:frontend/src/stores/contracts.ts",
+        "file:frontend/src/modules/order/store.ts"
+      ]
+    },
+    {
+      "id": "layer:frontend-services",
+      "name": "前端服务与 API 层",
+      "description": "前端 API 服务封装和类型定义。基于 Axios 封装 REST 请求（行情订阅、快照获取、K 线查询、报单提交、撤单、合约搜索），包含统一错误拦截器。定义所有核心 TypeScript 接口（MarketSnapshot、KLineData、OrderRequest、ContractInfo、WSMessage 等），实现前后端数据类型对齐。",
+      "nodeIds": [
+        "module:frontend/src/services/api.ts",
+        "module:frontend/src/services/types.ts"
+      ]
+    },
+    {
+      "id": "layer:frontend-hooks",
+      "name": "前端 Hooks 层",
+      "description": "自定义 React Hooks，封装可复用的状态逻辑和副作用。包含 useMarketWs（WebSocket 行情推送，100ms 批量缓冲策略）、useReconnect（WebSocket 断线重连，指数退避 1s-16s）、usePointOrder（点价下单交互）。",
+      "nodeIds": [
+        "file:frontend/src/hooks/useReconnect.ts",
+        "function:frontend/src/hooks/useReconnect.ts:useReconnect",
+        "file:frontend/src/hooks/usePointOrder.ts",
+        "function:frontend/src/hooks/usePointOrder.ts:usePointOrder",
+        "module:frontend/src/hooks/useMarketWs.ts"
+      ]
+    },
+    {
+      "id": "layer:frontend-utils",
+      "name": "前端工具层",
+      "description": "通用工具函数集。包含行情数据格式化（价格2位小数、数量千分位、涨跌+/-号、涨跌幅百分比）和表单校验（价格大于0、正整数数量、非空合约代码）。",
+      "nodeIds": [
         "file:frontend/src/utils/format.ts",
-        "file:frontend/src/utils/format.test.ts",
         "file:frontend/src/utils/validators.ts",
-        "file:frontend/src/utils/validators.test.ts",
-        "file:frontend/src/services/api.ts",
-        "file:frontend/src/services/api.test.ts",
-        "file:frontend/src/services/types.ts",
+        "function:frontend/src/utils/format.ts:formatPrice",
+        "function:frontend/src/utils/format.ts:formatVolume",
+        "function:frontend/src/utils/format.ts:formatTime",
+        "function:frontend/src/utils/format.ts:formatChange",
+        "function:frontend/src/utils/format.ts:formatPercent",
+        "function:frontend/src/utils/validators.ts:validatePrice",
+        "function:frontend/src/utils/validators.ts:validateVolume",
+        "function:frontend/src/utils/validators.ts:validateInstrumentId"
+      ]
+    },
+    {
+      "id": "layer:backend-api",
+      "name": "后端 API 路由层",
+      "description": "FastAPI REST API 路由模块，处理 HTTP 请求和响应。包含连接管理（/api/connection：登录、登出、状态查询）、查询接口（/api/query：持仓、资金、报单流水、成交记录、合约查询，缓存+手动刷新模式）。使用 Pydantic 模型进行请求验证和响应序列化。",
+      "nodeIds": [
+        "file:server/api/connection.py",
+        "file:server/api/query.py",
+        "file:server/api/__init__.py"
+      ]
+    },
+    {
+      "id": "layer:backend-services",
+      "name": "后端业务服务层",
+      "description": "核心业务逻辑服务。包含 CTP 连接管理（ctp_startup：MD/TD 完整连接生命周期、自动启动、手动登录、断线重连）、CTP 字段映射（field_mapping：PascalCase→camelCase，6 种数据结构）、断线重连服务（reconnect：指数退避策略，最多5次，自动恢复订阅）。",
+      "nodeIds": [
+        "file:server/services/ctp_startup.py",
+        "file:server/services/field_mapping.py",
+        "file:server/services/reconnect.py",
+        "class:server/services/reconnect.py:ReconnectService",
+        "file:server/services/__init__.py"
+      ]
+    },
+    {
+      "id": "layer:backend-ctp-wrapper",
+      "name": "后端 CTP 封装层",
+      "description": "CTP API 的 Python 封装层，对接 ctp-python SWIG 绑定。包含行情 API（MdUserApi：连接、登录、订阅/退订，内置 bytes→str 防护）、交易 API（TraderApi：报单、撤单、多种查询接口，HHmmss-N 格式 OrderRef）、回调 SPI 框架（动态类生成 MdSpi/TraderSpi，支持 CTP DLL 可用和不可用两种模式）、CTP 常量枚举（11 个枚举类，字符串值）。",
+      "nodeIds": [
+        "file:server/ctp_wrapper/md_user_api.py",
+        "class:server/ctp_wrapper/md_user_api.py:MdUserApi",
+        "file:server/ctp_wrapper/trader_api.py",
+        "file:server/ctp_wrapper/callback.py",
+        "file:server/ctp_wrapper/types.py",
+        "file:server/ctp_wrapper/__init__.py"
+      ]
+    },
+    {
+      "id": "layer:backend-models",
+      "name": "后端数据模型层",
+      "description": "Pydantic 数据模型定义，用于 REST API 请求/响应序列化。包含行情模型（MarketSnapshot 39字段、KLineData）、订单模型（OrderRequest、OrderReturn 18字段）、账户模型（AccountInfo 13字段、PositionInfo 16字段）、合约模型（InstrumentInfo）。",
+      "nodeIds": [
+        "file:server/models/market.py",
+        "file:server/models/order.py",
+        "file:server/models/account.py",
+        "file:server/models/contract.py",
+        "file:server/models/__init__.py",
+        "class:server/models/market.py:MarketSnapshot",
+        "class:server/models/market.py:KLineData",
+        "class:server/models/order.py:OrderRequest",
+        "class:server/models/order.py:OrderReturn",
+        "class:server/models/account.py:AccountInfo",
+        "class:server/models/account.py:PositionInfo",
+        "class:server/models/contract.py:InstrumentInfo"
+      ]
+    },
+    {
+      "id": "layer:backend-data",
+      "name": "后端数据层",
+      "description": "静态数据文件和启动配置。包含合约信息配置（instruments.json：中金所 8 个股指期货合约）、智能启动脚本（start.py：根据时间自动选择真实/扩展时段 CTP 前置地址）、服务端配置管理（config.py：环境变量读取）。",
+      "nodeIds": [
+        "file:server/data/instruments.json",
+        "file:instruments.json:cffex-futures",
+        "schema:instruments.json:contract-fields",
+        "file:server/data/__init__.py",
+        "file:server/start.py",
+        "function:server/start.py:_load_env_file",
+        "function:server/start.py:select_addresses",
+        "function:server/start.py:main",
+        "function:server/start.py:_parse_uvicorn_kwargs",
+        "file:server/config.py",
+        "file:server/__init__.py",
+        "file:server/ws/__init__.py"
+      ]
+    },
+    {
+      "id": "layer:configuration",
+      "name": "配置层",
+      "description": "项目构建、开发和部署配置文件。前端配置包含 Vite 构建（React 插件、代理规则、路径别名）、TypeScript 编译（严格模式、ES2020）、Vitest 测试框架（jsdom 环境）、ESLint 代码检查、npm 依赖管理。后端配置包含 Python 依赖清单（ctp-python、FastAPI、pytest）和 SimNow CTP 连接配置模板。",
+      "nodeIds": [
         "config:frontend/vitest.config.ts",
         "config:frontend/vite.config.ts",
         "config:frontend/tsconfig.json",
@@ -5589,13 +6091,15 @@
         "config:frontend/.env",
         "config:frontend/package.json",
         "file:frontend/package-lock.json",
-        "config:frontend/src/setupTests.ts"
+        "config:frontend/src/setupTests.ts",
+        "config:server/requirements.txt",
+        "config:server/.env.sample"
       ]
     },
     {
-      "id": "layer:docs-snapshots",
-      "name": "文档与快照层",
-      "description": "项目文档与开发过程记录，包含产品需求文档（prd.md）、CTP API 字段结构参考、角色 A/B 的开发进度快照、TDD 开发记录、多轮代码审查反馈与回复、人工验证讨论记录，以及项目 README 和 CLAUDE.md 核心开发指南。",
+      "id": "layer:documentation",
+      "name": "文档层",
+      "description": "项目文档和开发记录。包含核心开发文档（CLAUDE.md：技术栈、CTP 连接流程、架构设计）、产品需求文档（prd.md）、技术架构设计（design.md）、PR 任务拆分（task.md：22 个 PR、5 个阶段）、开发流程指南（task-dev-flow.md）、CTP 字段结构参考（ctp-api-structure.txt）、双角色开发记录和审查反馈（snapshots/role-a/、snapshots/role-b/）。",
       "nodeIds": [
         "file:CLAUDE.md",
         "file:README.md",
@@ -5608,26 +6112,25 @@
         "file:README.md:架构",
         "document:docs/ctp-api-structure.txt",
         "document:docs/prd.md",
+        "file:docs/task-dev-flow.md",
+        "file:docs/task.md",
         "file:snapshots/role-a/dev-record-a.md",
         "file:snapshots/role-a/progress.md",
-        "file:snapshots/role-b/dev-record-b.md",
-        "file:snapshots/role-b/progress.md",
-        "file::PR-21: 手动订阅/退订合约",
-        "document:snapshots/role-a/review-feedback-a-pr3-r2.md",
-        "document:snapshots/role-a/review-feedback-a-pr3-ws-r2.md",
-        "document:snapshots/role-a/review-feedback-a-pr3-ws.md",
+        "document:snapshots/role-a/review-feedback-a.md",
         "document:snapshots/role-a/review-feedback-a-pr3.md",
+        "document:snapshots/role-a/review-feedback-a-pr3-r2.md",
+        "document:snapshots/role-a/review-feedback-a-pr3-ws.md",
+        "document:snapshots/role-a/review-feedback-a-pr3-ws-r2.md",
+        "document:snapshots/role-a/review-feedback-a-pr5.md",
         "document:snapshots/role-a/review-feedback-a-pr5-r2.md",
         "document:snapshots/role-a/review-feedback-a-pr5-r4.md",
         "document:snapshots/role-a/review-feedback-a-pr5-r5.md",
         "document:snapshots/role-a/review-feedback-a-pr5-r6.md",
-        "document:snapshots/role-a/review-feedback-a-pr5.md",
-        "document:snapshots/role-a/review-feedback-a-pr7-final.md",
+        "document:snapshots/role-a/review-feedback-a-pr7.md",
         "document:snapshots/role-a/review-feedback-a-pr7-r2.md",
         "document:snapshots/role-a/review-feedback-a-pr7-r3.md",
         "document:snapshots/role-a/review-feedback-a-pr7-r4.md",
-        "document:snapshots/role-a/review-feedback-a-pr7.md",
-        "document:snapshots/role-a/review-feedback-a.md",
+        "document:snapshots/role-a/review-feedback-a-pr7-final.md",
         "document:snapshots/role-a/review-reply-a.md",
         "document:snapshots/role-b/review-feedback-b-pr12.md",
         "document:snapshots/role-b/review-feedback-b-pr12a.md",
@@ -5645,224 +6148,190 @@
         "document:snapshots/role-b/review-reply-b.md",
         "document:snapshots/role-b/verify-discussion-pr12.md",
         "document:snapshots/role-b/verify-discussion-pr6a.md",
-        "document:snapshots/role-b/verify-discussion-pr8.md"
+        "document:snapshots/role-b/verify-discussion-pr8.md",
+        "file:snapshots/role-b/dev-record-b.md",
+        "file:snapshots/role-b/progress.md"
+      ]
+    },
+    {
+      "id": "layer:tests",
+      "name": "测试层",
+      "description": "前后端单元测试和集成测试。前端测试使用 Vitest + React Testing Library + jsdom，覆盖组件渲染、交互行为、Store 逻辑、Hook 副作用、API 调用。后端测试使用 pytest，覆盖 CTP 封装、字段映射、API 路由、数据模型、重连服务、WebSocket 集成。总计约 350+ 测试用例。",
+      "nodeIds": [
+        "file:frontend/src/components/ContractSearch/index.test.tsx",
+        "file:frontend/src/modules/market/DepthQuote.test.tsx",
+        "file:frontend/src/modules/market/KLineChart.test.tsx",
+        "file:frontend/src/modules/market/MarketTable.test.tsx",
+        "file:frontend/src/components/PerfMonitor/index.test.tsx",
+        "file:frontend/src/hooks/useReconnect.test.ts",
+        "file:frontend/src/modules/connection/ConnectionPanel.test.tsx",
+        "file:frontend/src/modules/connection/store.test.ts",
+        "file:frontend/src/modules/position/PositionPanel.test.tsx",
+        "file:frontend/src/modules/position/store.test.ts",
+        "file:frontend/src/modules/query/QueryPanel.test.tsx",
+        "file:frontend/src/modules/query/store.test.ts",
+        "file:frontend/src/modules/stop/StopOrderPanel.test.tsx",
+        "file:frontend/src/stores/userPrefs.test.ts",
+        "file:frontend/src/utils/format.test.ts",
+        "file:frontend/src/utils/validators.test.ts",
+        "file:frontend/src/components/SpreadDisplay/SpreadDisplay.test.tsx",
+        "file:frontend/src/hooks/usePointOrder.test.ts",
+        "file:frontend/src/hooks/useMarketWs.test.ts",
+        "file:frontend/src/modules/market/MarketPanel.test.tsx",
+        "file:frontend/src/modules/market/store.test.ts",
+        "file:frontend/src/services/api.test.ts",
+        "file:frontend/src/stores/contracts.test.ts",
+        "file:frontend/src/modules/order/store.test.ts",
+        "file:server/tests/test_ctp_startup.py",
+        "file:server/tests/test_field_mapping.py",
+        "file:server/tests/test_callback.py",
+        "file:server/tests/test_trader_api.py",
+        "file:server/tests/test_types.py",
+        "file:server/tests/test_connection_api.py",
+        "file:server/tests/test_models.py",
+        "file:server/tests/test_reconnect.py",
+        "file:server/tests/test_ws_integration.py",
+        "file:server/tests/__init__.py",
+        "class:server/tests/test_connection_api.py:TestLogin",
+        "class:server/tests/test_connection_api.py:TestLogout",
+        "class:server/tests/test_connection_api.py:TestStatus",
+        "class:server/tests/test_models.py:TestMarketSnapshot",
+        "class:server/tests/test_models.py:TestKLineData",
+        "class:server/tests/test_models.py:TestOrderRequest",
+        "class:server/tests/test_models.py:TestOrderReturn",
+        "class:server/tests/test_models.py:TestAccountInfo",
+        "class:server/tests/test_models.py:TestPositionInfo",
+        "class:server/tests/test_models.py:TestInstrumentInfo",
+        "class:server/tests/test_reconnect.py:TestReconnectService",
+        "function:server/tests/test_ws_integration.py:test_main_routes_use_handle_ws",
+        "function:server/tests/test_ws_integration.py:test_heartbeat_starts_on_startup",
+        "function:server/tests/test_ws_integration.py:test_ws_manager_has_heartbeat_methods",
+        "function:server/tests/test_ws_integration.py:test_on_front_disconnected_broadcasts_to_system",
+        "function:server/tests/test_ws_integration.py:test_on_front_disconnected_with_active_system_ws",
+        "function:server/tests/test_ws_integration.py:test_reconnect_service_integrates_with_disconnect",
+        "function:server/tests/test_ws_integration.py:test_handle_ws_accepts_subscribe_fn"
+      ]
+    },
+    {
+      "id": "layer:scripts",
+      "name": "脚本与演示层",
+      "description": "独立运行的 CTP 演示脚本和工具脚本。包含实时行情显示（ctp_realtime_demo.py：继承 SPI 基类的参考实现）、最小化连接演示（demo.py）、CTP 字段结构探测（md_demo.py：反射 19 个 CTP 类，生成 TypeScript 接口和 mock 数据）。",
+      "nodeIds": [
+        "file:ctp_realtime_demo.py",
+        "class:ctp_realtime_demo.py:MarketDataSpi",
+        "function:ctp_realtime_demo.py:main",
+        "function:ctp_realtime_demo.py:now",
+        "file:demo.py",
+        "class:demo.py:MyMdSpi",
+        "file:md_demo.py",
+        "function:md_demo.py:pascal_to_camel",
+        "function:md_demo.py:inspect_ctp_class",
+        "function:md_demo.py:fields_to_typescript",
+        "function:md_demo.py:fields_to_mock",
+        "function:md_demo.py:run_and_save"
       ]
     }
   ],
   "tour": [
     {
       "order": 1,
-      "title": "项目概览与核心文档",
-      "description": "从 README.md 和 CLAUDE.md 开始，了解项目全貌：这是一个基于 React + FastAPI + CTP 的上期所 SimNow 模拟交易终端。README 提供技术栈、项目结构和常用命令速查；CLAUDE.md 包含详细的架构设计、CTP 连接流程和关键陷阱说明。docs/prd.md 是产品需求文档，docs/ctp-api-structure.txt 记录了 CTP 字段结构探测结果，是前后端类型对齐的核心参考。",
+      "title": "项目概览与文档",
+      "description": "首先了解项目的整体目标和技术架构。这是一个上期所 SimNow 模拟交易终端，采用前后端分离架构：前端 React+TypeScript 负责 UI 展示，后端 Python FastAPI 对接 CTP 期货柜台。README.md 提供快速开始指南和项目结构总览，CLAUDE.md 则是开发规范的核心参考，包含技术栈、CTP 连接流程、关键陷阱（如 SubscribeMarketData 必须传字符串列表）和架构设计决策。docs/prd.md 定义了产品需求和验收标准。",
       "nodeIds": [
-        "file:CLAUDE.md",
         "file:README.md",
-        "file:README.md:上期所SimNow模拟交易终端",
-        "file:README.md:技术栈",
-        "file:README.md:快速开始",
-        "file:README.md:项目结构",
-        "file:README.md:核心功能",
-        "file:README.md:架构",
+        "file:CLAUDE.md",
         "document:docs/prd.md",
         "document:docs/ctp-api-structure.txt"
       ]
     },
     {
       "order": 2,
-      "title": "后端入口与应用工厂",
-      "description": "server/main.py 是 FastAPI 应用的入口文件，通过 create_app() 工厂函数组装应用：配置 CORS 中间件、注册 4 个 REST 路由模块（connection/market/order/query）、5 个 WebSocket 端点，以及 lifespan 管理（启动时调用 ctp_startup 连接 CTP，关闭时断开）。config.py 负责从 .env 读取环境变量（CTP 前置地址、BrokerID 等）。.env.sample 是配置模板，requirements.txt 列出 Python 依赖。",
+      "title": "前端入口与构建配置",
+      "description": "了解前端应用的启动流程和构建工具链。main.tsx 是 React 18 应用入口，使用 createRoot API 在 StrictMode 下渲染 App 组件。vite.config.ts 配置了开发服务器（端口 5173）并将 /api 和 /ws 请求代理到后端 localhost:8000，这是前后端联通的关键。package.json 定义了核心依赖：React 18、@visactor/vtable（高性能表格）、ECharts（K 线图）、Zustand（状态管理）。tsconfig.json 启用严格模式并配置 @/* 路径别名。vitest.config.ts 配置了 jsdom 测试环境。",
       "nodeIds": [
-        "file:server/main.py",
-        "file:server/config.py",
-        "config:server/.env.sample",
-        "config:server/requirements.txt"
+        "file:frontend/src/main.tsx",
+        "config:frontend/vite.config.ts",
+        "config:frontend/package.json",
+        "config:frontend/tsconfig.json",
+        "config:frontend/vitest.config.ts",
+        "file:frontend/src/assets/styles/global.css"
       ]
     },
     {
       "order": 3,
-      "title": "CTP 封装层：隔离 SWIG 绑定细节",
-      "description": "server/ctp_wrapper/ 是 CTP 期货交易 API 的 Python 封装层，隔离 CTP DLL 的 SWIG 绑定细节。md_user_api.py 封装行情 API（连接、登录、订阅、退订，含 bytes→str 防护）；trader_api.py 封装交易 API（连接、登录、报单、撤单）；callback.py 实现回调 SPI 基类（组合模式 + 事件日志 + handler 注册）；types.py 定义 CTP 常量枚举（Direction、OffsetFlag 等）。注意：目录名不能叫 ctp/，否则 import ctp 会找到本地空包而非 site-packages。",
+      "title": "前端状态管理与服务层",
+      "description": "理解前端的数据流架构。项目使用 Zustand 做模块化状态管理，每个业务模块有独立的 store：market/store.ts 管理行情快照和 K 线数据，stores/contracts.ts 管理合约列表和订阅状态，connection/store.ts 管理连接状态，order/store.ts 管理报单表单。services/api.ts 封装了所有 REST API 调用（使用 Axios），services/types.ts 定义了前后端共享的 TypeScript 接口（MarketSnapshot、KLineData、OrderRequest 等）。stores/userPrefs.ts 提供用户偏好（如自选合约列表）的 localStorage 持久化。hooks/useMarketWs.ts 是 WebSocket 行情推送的核心 Hook，每 100ms 批量合并状态更新以优化 React 渲染性能。hooks/useReconnect.ts 实现了指数退避断线重连（1s-16s，最多 5 次）。",
       "nodeIds": [
-        "file:server/ctp_wrapper/__init__.py",
-        "file:server/ctp_wrapper/md_user_api.py",
-        "class:server/ctp_wrapper/md_user_api.py:MdUserApi",
-        "file:server/ctp_wrapper/trader_api.py",
-        "file:server/ctp_wrapper/callback.py",
-        "file:server/ctp_wrapper/types.py"
+        "module:frontend/src/modules/market/store.ts",
+        "module:frontend/src/stores/contracts.ts",
+        "file:frontend/src/modules/connection/store.ts",
+        "file:frontend/src/modules/order/store.ts",
+        "file:frontend/src/stores/userPrefs.ts",
+        "module:frontend/src/services/api.ts",
+        "module:frontend/src/services/types.ts",
+        "module:frontend/src/hooks/useMarketWs.ts",
+        "file:frontend/src/hooks/useReconnect.ts"
       ]
     },
     {
       "order": 4,
-      "title": "后端服务层：业务逻辑核心",
-      "description": "server/services/ 是后端业务逻辑层。ctp_startup.py 管理 CTP 连接生命周期（MD/TD 双连接、登录、断线重连）；market_service.py 处理行情数据服务（合约缓存、订阅管理、快照/K线/深度数据提供）；field_mapping.py 实现 CTP PascalCase 到 camelCase 的字段映射（302 个字段的双向转换）；reconnect.py 实现断线重连服务（指数退避策略）。这些服务被 API 路由层调用。",
+      "title": "行情模块 — 核心 UI 组件",
+      "description": "行情模块是系统的核心，包含四个关键组件。MarketPanel.tsx 是行情面板的顶层容器，组合了以下子组件。MarketTable.tsx 基于 @visactor/vtable 实现高性能虚拟滚动表格，支持 1000+ 合约的流畅展示，使用 rAF 防抖更新。DepthQuote.tsx 展示买卖五档盘口数据，处理 CTP 无效价格（DBL_MAX）过滤，支持点击价格触发报单。KLineChart.tsx 基于 ECharts 实现蜡烛图，支持 MA(5/10/20) 均线和 MACD 技术指标，提供多周期切换（1m/5m/15m/30m/1h/日线）。ContractSearch.tsx 提供合约搜索框，支持模糊匹配和键盘导航。每个组件都有对应的 .test.tsx 文件，体现了 TDD 开发方式。",
       "nodeIds": [
-        "file:server/services/__init__.py",
-        "file:server/services/ctp_startup.py",
-        "file:server/services/market_service.py",
-        "file:server/services/field_mapping.py",
-        "file:server/services/reconnect.py",
-        "class:server/services/reconnect.py:ReconnectService"
+        "module:frontend/src/modules/market/MarketPanel.tsx",
+        "file:frontend/src/modules/market/MarketTable.tsx",
+        "file:frontend/src/modules/market/DepthQuote.tsx",
+        "file:frontend/src/modules/market/KLineChart.tsx",
+        "file:frontend/src/components/ContractSearch/index.tsx",
+        "file:frontend/src/modules/market/MarketTable.test.tsx",
+        "file:frontend/src/modules/market/DepthQuote.test.tsx",
+        "file:frontend/src/modules/market/KLineChart.test.tsx"
       ]
     },
     {
       "order": 5,
-      "title": "后端 API 路由：REST 与 WebSocket",
-      "description": "server/api/ 包含 4 个 REST 路由模块，按职责划分：connection.py 处理登录/登出/状态查询；market.py 提供合约列表、行情订阅、快照、K线、五档深度、期权链、波动率等接口；order.py 实现报单/撤单/批量撤单/一键反向/锁仓/止损单；query.py 查询报单流水、成交、持仓、资金。每个路由模块注入 ctp_startup 或 market_service 等服务实例，是前端与后端的桥梁。",
+      "title": "前端其他模块与工具",
+      "description": "除行情模块外，前端还有报单、查询、持仓、止损单和连接管理等模块。order/store.ts 管理报单表单状态，提供客户端校验和 API 调用。QueryPanel.tsx 提供报单/成交/持仓/资金四个 Tab 切换。ConnectionPanel.tsx 负责行情/交易前置的连接状态显示和登录操作。PositionPanel.tsx 展示持仓列表和盈亏。StopOrderPanel.tsx 提供止损单管理界面。此外，utils/format.ts 提供价格/成交量/时间的格式化工具函数，utils/validators.ts 提供报单参数校验，components/PerfMonitor 实时监控 FPS 性能（低于 30 FPS 时红色警告），components/SpreadDisplay 展示价差数据。",
       "nodeIds": [
-        "file:server/api/__init__.py",
-        "file:server/api/connection.py",
-        "file:server/api/market.py",
-        "file:server/api/order.py",
-        "file:server/api/query.py"
+        "file:frontend/src/modules/order/store.ts",
+        "file:frontend/src/modules/query/QueryPanel.tsx",
+        "file:frontend/src/modules/connection/ConnectionPanel.tsx",
+        "file:frontend/src/modules/position/PositionPanel.tsx",
+        "file:frontend/src/modules/stop/StopOrderPanel.tsx",
+        "file:frontend/src/utils/format.ts",
+        "file:frontend/src/utils/validators.ts",
+        "file:frontend/src/components/PerfMonitor/index.tsx"
       ]
     },
     {
       "order": 6,
-      "title": "后端数据与静态资源",
-      "description": "server/data/ 存放后端静态数据。instruments.json 包含所有可交易合约的元数据（合约ID、交易所、合约乘数、最小变动价位、到期日等），按交易所分组（上期所 SHFE、大商所 DCE、郑商所 CZCE、中金所 CFFEX），共 1000+ 合约。API 路由层直接读取此文件提供合约查询服务。",
+      "title": "后端 CTP 封装层",
+      "description": "后端的核心是 ctp_wrapper 包，它封装了 CTP 期货交易 API。callback.py 是 SPI 回调框架，通过动态类生成在运行时创建 MdSpi 和 TraderSpi，支持 CTP DLL 可用时继承 SWIG 基类、不可用时回退到纯 Python 基类（便于测试）。md_user_api.py 封装行情 API（连接、登录、订阅/退订），内置 bytes->str 转换防护防止 SWIG 堆损坏。trader_api.py 封装交易 API（连接、登录、报单、撤单、多种查询），使用 HHmmss-N 格式生成 OrderRef 防止重启后冲突。types.py 定义了 11 个 CTP 枚举常量类（Direction、OffsetFlag、OrderStatus 等），全部使用字符串值。services/ctp_startup.py 管理 MD 和 TD 的完整连接生命周期，包括自动启动、断线重连和回调接线。services/field_mapping.py 将 CTP PascalCase 对象转换为 camelCase Python 字典。",
       "nodeIds": [
-        "file:server/data/instruments.json",
-        "file:instruments.json:cffex-futures",
-        "schema:instruments.json:contract-fields",
-        "file:server/data/__init__.py"
+        "file:server/ctp_wrapper/callback.py",
+        "file:server/ctp_wrapper/md_user_api.py",
+        "file:server/ctp_wrapper/trader_api.py",
+        "file:server/ctp_wrapper/types.py",
+        "file:server/services/ctp_startup.py",
+        "file:server/services/field_mapping.py"
       ]
     },
     {
       "order": 7,
-      "title": "前端入口与全局布局",
-      "description": "frontend/src/main.tsx 是 React 18 应用入口，使用 createRoot API 渲染 App 组件。App.tsx 是应用主组件，使用 react-resizable-panels 实现可调整的三栏布局（行情面板、报单面板、查询面板），支持面板尺寸 localStorage 持久化和性能监控面板切换（Ctrl+Shift+M 快捷键）。global.css 定义全局样式。这是理解前端整体结构的起点。",
+      "title": "后端 API、模型与配置",
+      "description": "后端的最上层是 FastAPI REST API 和数据模型。api/connection.py 提供登录/登出/状态查询端点，管理 CTP 交易连接的生命周期。api/query.py 提供持仓、资金、报单流水、成交记录和合约查询端点，采用缓存+手动刷新模式。models/ 目录定义了 Pydantic 数据模型：market.py（MarketSnapshot、KLineData）、order.py（OrderRequest、OrderReturn）、account.py（AccountInfo、PositionInfo）、contract.py（InstrumentInfo），用于 REST API 的请求/响应序列化。config.py 从 .env 文件读取 CTP 连接配置。start.py 是服务器启动脚本，根据当前时间自动选择交易/非交易时段的 CTP 前置地址。server/tests/ 包含 108+ 个 pytest 单元测试，覆盖所有模块。services/reconnect.py 提供断线自动恢复的指数退避策略。",
       "nodeIds": [
-        "file:frontend/src/main.tsx",
-        "file:frontend/src/App.tsx",
-        "function:frontend/src/App.tsx:App",
-        "file:frontend/src/assets/styles/global.css",
-        "file:frontend/src/App.test.tsx"
-      ]
-    },
-    {
-      "order": 8,
-      "title": "前端服务层：API 客户端与类型定义",
-      "description": "frontend/src/services/ 是前端与后端通信的核心。api.ts 封装所有 REST API 调用（get/post 辅助函数、getInstruments、subscribeMarket、getSnapshots、getKlineData 等），统一错误处理和响应解析；types.ts 定义前后端共享的 TypeScript 类型（MarketSnapshot、KLineData、OrderRequest、PositionInfo、AccountInfo 等），是全项目被引用最多的文件（33 次导入）。这两个文件是前后端数据契约的前端实现。",
-      "nodeIds": [
-        "file:frontend/src/services/api.ts",
-        "function:frontend/src/services/api.ts:get",
-        "function:frontend/src/services/api.ts:post",
-        "function:frontend/src/services/api.ts:getInstruments",
-        "function:frontend/src/services/api.ts:subscribeMarket",
-        "function:frontend/src/services/api.ts:getSnapshots",
-        "function:frontend/src/services/api.ts:getKlineData",
-        "file:frontend/src/services/types.ts",
-        "file:frontend/src/services/api.test.ts"
-      ]
-    },
-    {
-      "order": 9,
-      "title": "前端状态管理：Zustand Stores",
-      "description": "前端使用 Zustand 进行轻量级状态管理，按业务模块拆分为独立 store。connection/store.ts 管理连接状态（连接/断开/登录）；market/store.ts 管理行情数据（订阅列表、实时快照、K线数据）；order/store.ts 管理报单状态；position/store.ts 管理持仓数据；query/store.ts 管理查询结果。每个 store 通过 Zustand 的 create 函数定义，支持 localStorage 持久化用户偏好。",
-      "nodeIds": [
-        "file:frontend/src/modules/connection/store.ts",
-        "file:frontend/src/modules/market/store.ts",
-        "file:frontend/src/modules/order/store.ts",
-        "file:frontend/src/modules/position/store.ts",
-        "file:frontend/src/modules/query/store.ts"
-      ]
-    },
-    {
-      "order": 10,
-      "title": "前端业务模块：六大功能面板",
-      "description": "frontend/src/modules/ 包含 6 个业务模块，对应 App.tsx 三栏布局中的面板：market/（行情面板 — MarketPanel 主容器、MarketTable 虚拟滚动表格、DepthQuote 五档深度、KLineChart K线图）、connection/（连接面板 — 登录表单和状态显示）、order/（报单面板 — OrderForm 下单表单）、position/（持仓面板 — PositionPanel 持仓列表）、query/（查询面板 — QueryPanel 报单流水/成交/资金查询）、stop/（止损面板 — StopOrderPanel 止损单管理）。每个模块包含组件和对应的测试文件。",
-      "nodeIds": [
-        "file:frontend/src/modules/market/MarketPanel.tsx",
-        "file:frontend/src/modules/market/MarketTable.tsx",
-        "file:frontend/src/modules/market/DepthQuote.tsx",
-        "file:frontend/src/modules/market/KLineChart.tsx",
-        "function:frontend/src/modules/market/KLineChart.tsx:KLineChart",
-        "function:frontend/src/modules/market/KLineChart.tsx:calcMACD",
-        "file:frontend/src/modules/connection/ConnectionPanel.tsx",
-        "file:frontend/src/modules/order/OrderForm.tsx",
-        "file:frontend/src/modules/position/PositionPanel.tsx",
-        "file:frontend/src/modules/query/QueryPanel.tsx",
-        "function:frontend/src/modules/query/QueryPanel.tsx:QueryPanel",
-        "file:frontend/src/modules/stop/StopOrderPanel.tsx",
-        "file:frontend/src/modules/market/styles.css",
-        "file:frontend/src/modules/order/styles.css",
-        "file:frontend/src/modules/query/styles.css"
-      ]
-    },
-    {
-      "order": 11,
-      "title": "前端通用组件与自定义 Hooks",
-      "description": "frontend/src/components/ 和 hooks/ 包含跨模块复用的 UI 组件和 React hooks。ContractSearch 是带自动补全的合约搜索组件（支持键盘导航）；PerfMonitor 是性能监控面板（FPS、内存、WebSocket 延迟）；SpreadDisplay 是价差显示组件；ConnectionStatus 是连接状态指示器。hooks/ 中：useMarketWs 管理行情 WebSocket 连接和数据分发；useReconnect 实现断线自动重连；usePointOrder 实现点击报价快速下单。这些是前端架构中复用性最高的部分。",
-      "nodeIds": [
-        "file:frontend/src/components/ContractSearch/index.tsx",
-        "function:frontend/src/components/PerfMonitor/index.tsx:PerfMonitor",
-        "function:frontend/src/components/SpreadDisplay/index.tsx:SpreadDisplay",
-        "file:frontend/src/components/ConnectionStatus/styles.css",
-        "file:frontend/src/hooks/useMarketWs.ts",
-        "file:frontend/src/hooks/useReconnect.ts",
-        "function:frontend/src/hooks/useReconnect.ts:useReconnect",
-        "file:frontend/src/hooks/usePointOrder.ts",
-        "function:frontend/src/hooks/usePointOrder.ts:usePointOrder"
-      ]
-    },
-    {
-      "order": 12,
-      "title": "测试体系：前后端全覆盖",
-      "description": "项目采用严格的 TDD 开发流程，前后端均有完善的测试覆盖。后端 server/tests/ 包含 30 个测试文件，覆盖 CTP 封装（test_callback、test_trader_api、test_types）、服务逻辑（test_market_service、test_ctp_startup、test_reconnect）、API 端点（test_connection_api、test_market_api）和 WebSocket 集成（test_ws_integration）。前端有 25 个测试文件，覆盖所有业务模块和通用组件，使用 Vitest + React Testing Library。测试是理解各模块行为的最佳入口。",
-      "nodeIds": [
-        "file:server/tests/__init__.py",
-        "file:server/tests/test_callback.py",
-        "file:server/tests/test_trader_api.py",
-        "file:server/tests/test_types.py",
-        "file:server/tests/test_market_service.py",
-        "file:server/tests/test_ctp_startup.py",
-        "file:server/tests/test_reconnect.py",
-        "file:server/tests/test_connection_api.py",
-        "file:server/tests/test_market_api.py",
-        "file:server/tests/test_ws_integration.py",
-        "file:server/tests/test_field_mapping.py",
-        "file:server/tests/test_models.py",
-        "class:server/tests/test_connection_api.py:TestLogin",
-        "class:server/tests/test_connection_api.py:TestStatus",
-        "class:server/tests/test_models.py:TestMarketSnapshot",
-        "class:server/tests/test_models.py:TestOrderRequest",
-        "function:server/tests/test_ws_integration.py:test_heartbeat_starts_on_startup",
-        "function:server/tests/test_ws_integration.py:test_on_front_disconnected_broadcasts_to_system",
-        "file:frontend/src/services/api.test.ts",
-        "file:frontend/src/modules/market/store.test.ts",
-        "file:frontend/src/modules/market/MarketPanel.test.tsx",
-        "file:frontend/src/modules/market/MarketTable.test.tsx",
-        "file:frontend/src/modules/market/DepthQuote.test.tsx",
-        "file:frontend/src/modules/market/KLineChart.test.tsx",
-        "file:frontend/src/modules/connection/ConnectionPanel.test.tsx",
-        "file:frontend/src/modules/order/OrderForm.test.tsx",
-        "file:frontend/src/modules/position/PositionPanel.test.tsx",
-        "file:frontend/src/modules/query/QueryPanel.test.tsx",
-        "file:frontend/src/modules/stop/StopOrderPanel.test.tsx",
-        "file:frontend/src/hooks/useMarketWs.test.ts",
-        "file:frontend/src/hooks/useReconnect.test.ts",
-        "file:frontend/src/hooks/usePointOrder.test.ts",
-        "file:frontend/src/components/ContractSearch/index.test.tsx",
-        "file:frontend/src/components/PerfMonitor/index.test.tsx",
-        "file:frontend/src/components/SpreadDisplay/SpreadDisplay.test.tsx",
-        "file:frontend/src/utils/format.test.ts",
-        "file:frontend/src/utils/validators.test.ts",
-        "file:frontend/src/stores/userPrefs.test.ts"
-      ]
-    },
-    {
-      "order": 13,
-      "title": "项目配置与构建工具",
-      "description": "前端使用 Vite 5 构建（vite.config.ts），TypeScript 5 类型检查（tsconfig.json），ESLint 代码规范（.eslintrc.cjs），Vitest 测试框架（vitest.config.ts + setupTests.ts）。package.json 管理前端依赖（React 18、@visactor/vtable 高性能表格、ECharts 5 图表、Zustand 状态管理）。后端依赖通过 requirements.txt 管理（FastAPI 0.100+、websockets 11.x、ctp-python 6.7.7.post1）。这些配置文件定义了项目的构建、测试和开发环境。",
-      "nodeIds": [
-        "config:frontend/package.json",
-        "config:frontend/vite.config.ts",
-        "config:frontend/vitest.config.ts",
-        "config:frontend/tsconfig.json",
-        "config:frontend/tsconfig.node.json",
-        "config:frontend/.eslintrc.cjs",
-        "config:frontend/.env",
-        "config:frontend/src/setupTests.ts"
+        "file:server/api/connection.py",
+        "file:server/api/query.py",
+        "file:server/models/market.py",
+        "file:server/models/order.py",
+        "file:server/models/account.py",
+        "file:server/models/contract.py",
+        "file:server/config.py",
+        "file:server/start.py",
+        "file:server/services/reconnect.py",
+        "config:server/requirements.txt",
+        "file:server/data/instruments.json"
       ]
     }
   ]
