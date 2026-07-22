@@ -3,6 +3,7 @@ import { Group, Panel, Separator } from 'react-resizable-panels'
 import { ResizeHandle } from '@/components/ResizeHandle'
 import { ContractSearch } from '@/components/ContractSearch'
 import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
+import { SubscribedContractsModal } from '@/components/SubscribedContractsModal'
 import { MarketTable } from './MarketTable'
 import { DepthQuote } from './DepthQuote'
 import { SpreadDisplay } from '@/components/SpreadDisplay'
@@ -25,6 +26,7 @@ export function MarketPanel() {
   const { contracts, addContractInfo, removeContractById } = useContractsStore()
   const [period, setPeriod] = useState('5m')
   const [searchModalOpen, setSearchModalOpen] = useState(false)
+  const [subscribedModalOpen, setSubscribedModalOpen] = useState(false)
   const loadedRef = useRef(false)
 
   // Subscribed instrument IDs set (for modal to show "已订阅")
@@ -121,6 +123,12 @@ export function MarketPanel() {
             搜索合约
           </button>
           <button
+            className="btn-subscribed-list"
+            onClick={() => setSubscribedModalOpen(true)}
+          >
+            已订阅({contracts.length})
+          </button>
+          <button
             className="btn-unsubscribe"
             disabled={!selectedInstrument}
             onClick={handleUnsubscribe}
@@ -196,6 +204,15 @@ export function MarketPanel() {
         onClose={() => setSearchModalOpen(false)}
         onSubscribe={handleSubscribeFromModal}
         subscribedIds={subscribedIds}
+      />
+      <SubscribedContractsModal
+        isOpen={subscribedModalOpen}
+        onClose={() => setSubscribedModalOpen(false)}
+        contracts={contracts}
+        onUnsubscribe={async (id) => {
+          await removeContractById(id)
+          if (selectedInstrument === id) setSelectedInstrument(null)
+        }}
       />
     </section>
   )
