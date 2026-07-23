@@ -199,3 +199,18 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* ── PR-15: panel overlay ─────────────────────────────────── */
+
+.panel-overlay {
+  border-top: 1px solid var(--border-color, #3a4a6b);
+  max-height: 50%;
+  overflow-y: auto;
+}
+
+.batch-cancel-loading {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary, #8b9dc3);
+  font-size: 13px;
+}

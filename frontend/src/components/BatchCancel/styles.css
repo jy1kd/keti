@@ -1,0 +1,156 @@
+.batch-cancel {
+  display: flex;
+  flex-direction: column;
+  max-height: 400px;
+  overflow: hidden;
+}
+
+.batch-cancel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color, #3a4a6b);
+}
+
+.batch-cancel-header h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.batch-cancel-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.select-toggle-btn,
+.close-btn {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color, #3a4a6b);
+  background: var(--bg-secondary, #1a2332);
+  color: var(--text-primary, #e0e6f0);
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cancel-selected-btn {
+  padding: 4px 12px;
+  border: 1px solid #c0392b;
+  background: transparent;
+  color: #c0392b;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cancel-selected-btn:hover:not(:disabled) {
+  background: #c0392b;
+  color: #fff;
+}
+
+.cancel-selected-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.batch-cancel-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary, #8b9dc3);
+  font-size: 13px;
+}
+
+.batch-cancel-results {
+  display: flex;
+  gap: 12px;
+  padding: 6px 12px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border-color, #3a4a6b);
+}
+
+.result-success {
+  color: #2d8c4a;
+}
+
+.result-failed {
+  color: #c0392b;
+}
+
+.batch-cancel-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.order-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid rgba(58, 74, 107, 0.3);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.order-item:hover {
+  background: rgba(45, 108, 192, 0.1);
+}
+
+.order-item.selected {
+  background: rgba(45, 108, 192, 0.15);
+}
+
+.order-item input[type="checkbox"] {
+  flex-shrink: 0;
+  accent-color: var(--accent-color, #2d6cc0);
+}
+
+.order-ref {
+  color: var(--text-secondary, #8b9dc3);
+  min-width: 70px;
+}
+
+.order-instrument {
+  color: var(--accent-color, #5b9bd5);
+  font-weight: 600;
+  min-width: 70px;
+}
+
+.dir-buy {
+  color: #c0392b;
+}
+
+.dir-sell {
+  color: #2d8c4a;
+}
+
+.order-offset {
+  color: var(--text-secondary, #8b9dc3);
+  min-width: 30px;
+}
+
+.order-price {
+  color: var(--text-primary, #e0e6f0);
+  min-width: 60px;
+  text-align: right;
+}
+
+.order-vol {
+  color: var(--text-primary, #e0e6f0);
+  min-width: 30px;
+  text-align: right;
+}
+
+.status-no_traded {
+  color: #f0a030;
+}
+
+.status-partial {
+  color: #5b9bd5;
+}
+
+.status-submitted {
+  color: #5b9bd5;
+}
