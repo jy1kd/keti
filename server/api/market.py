@@ -251,3 +251,71 @@ async def get_depth(
         "bids": bids,
         "asks": asks,
     }
+
+
+# ── Options ──────────────────────────────────────────────────────────────
+
+@router.get("/options")
+async def get_options(request: Request, underlying: str = ""):
+    """Get option contract list.
+
+    Args:
+        underlying: Optional underlying instrument filter (e.g. "IF2610").
+    """
+    market_svc = _get_service(request)
+    options_svc = getattr(request.app.state, "options_service", None)
+    if options_svc is None:
+        return {"options": [], "count": 0}
+
+    instruments = market_svc.get_instruments()
+    options = options_svc.get_options(instruments, underlying=underlying)
+    return {"options": options, "count": len(options)}
+
+
+@router.get("/option_chain")
+async def get_option_chain(
+    request: Request,
+    underlying: str = "",
+    expire_date: str = "",
+):
+    """Get option chain grouped by underlying + expiry date.
+
+    Args:
+        underlying: Optional underlying instrument filter.
+        expire_date: Optional expiry date filter (YYYYMMDD).
+    """
+    market_svc = _get_service(request)
+    options_svc = getattr(request.app.state, "options_service", None)
+    if options_svc is None:
+        return {"chains": []}
+
+    instruments = market_svc.get_instruments()
+    chains = options_svc.get_option_chains(
+        instruments, underlying=underlying, expire_date=expire_date
+    )
+    return {"chains": chains}
+
+
+@router.get("/volatility")
+async def get_volatility(
+    request: Request,
+    underlying: str = "",
+    risk_free_rate: float = Query(0.03, ge=0, le=1),
+):
+    """Get implied volatility for option contracts.
+
+    Args:
+        underlying: Optional underlying instrument filter.
+        risk_free_rate: Risk-free rate (default 0.03).
+    """
+    market_svc = _get_service(request)
+    options_svc = getattr(request.app.state, "options_service", None)
+    if options_svc is None:
+        return {"volatility": []}
+
+    instruments = market_svc.get_instruments()
+    snapshots = {s["instrumentID"]: s for s in market_svc.get_all_snapshots()}
+    vol_data = options_svc.get_volatility(
+        instruments, snapshots, risk_free_rate=risk_free_rate, underlying=underlying
+    )
+    return {"volatility": vol_data}

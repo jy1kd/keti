@@ -15,7 +15,7 @@
 | PR-5 | 后端行情API实现 | ✅ 已合并 | 2026-07-14 | 81643c8 (merge), 6f19568~e4b2091 (19 commits) |
 | PR-7 | 后端WebSocket管理完善 | ✅ 已合并 | 2026-07-15 | c370cbc, 05b16a6, 4f07b9f, 5386563, 200ab85, 0a0e29c, 443a6c5, 89cb00a, 82ef2e9, 4b5bb2e |
 | PR-9 | 后端交易API实现 | ✅ 已合并 | 2026-07-20 | 07a08d9~77fbe3b (32 commits) |
-| PR-19 | 后端合约查询API | ✅ 已完成 | 2026-07-21 | a4686a3~85ce0a8 (11 commits, 29 tests) |
+| PR-19 | 后端合约查询API | ✅ 已完成 | 2026-07-20 | a4686a3~85ce0a8 (11 commits, 29 tests, R2 通过) |
 | PR-11 | 后端查询API实现 | ✅ 已完成 | 2026-07-21 | b883764~d6eb313 (11 commits, 96 tests) |
 | PR-13 | 后端止损单服务实现 | ✅ 已完成 | 2026-07-23 | ef734ae~894380f (7 commits, 44 tests) |
 | PR-17 | 联调测试与Bug修复 | ⏳ 待开始 | - | - |
@@ -352,7 +352,7 @@
 
 ### PR-19: 后端合约查询API
 
-**状态**：🔄 审查修复完成，待二次审查
+**状态**：✅ 已完成（R2 通过，已合入 main）
 
 **PR信息**：
 - PR分支名：`feature/pr-19-instrument-query-api`
@@ -469,6 +469,41 @@
 
 ---
 
+### PR-18: 后端期权API实现
+
+**状态**：✅ 人工验证通过，待收尾
+
+**PR信息**：
+- PR分支名：`feature/pr-18-options-api`
+- 依赖PR：PR-5
+- 工作量：2小时
+
+**完成内容**：
+- OptionsService：期权筛选、期权链聚合、Black-Scholes 隐含波动率计算
+- 数据模型：OptionQuote、OptionChain、VolatilityData
+- API 端点：GET /api/market/options, /option_chain, /volatility
+- 测试覆盖：44 tests（11 models + 20 service + 11 API + 2 integration）
+
+**验证结果**：
+- 期权合约列表获取正常（基于productClass筛选）✅
+- 期权T型报价数据获取正常（按标的+到期日分组）✅
+- 隐含波动率计算正常（Black-Scholes模型）✅
+- 看涨/看跌期权正确分类 ✅
+- VolatilityData返回完整参数 ✅
+- 期权类型映射正确 ✅
+
+**提交记录**：
+- `d9f9a9b` test(task-18): OptionQuote/OptionChain/VolatilityData models — 11 tests pass
+- `6cfc4f7` feat(task-18): OptionsService — filtering, chain aggregation, Black-Scholes IV — 20 tests pass
+- `f1701aa` feat(task-18): options API endpoints — /options, /option_chain, /volatility — 11 tests pass
+- `14f9adc` feat(task-18): wire OptionsService into main.py — 88 tests pass
+
+**交接说明**：
+- 无状态设计，依赖 market_service 提供 instruments 和 snapshots
+- Black-Scholes 实现使用 Newton-Raphson 迭代法
+
+---
+
 ### PR-17: 联调测试与Bug修复
 
 **状态**：⏳ 待开始
@@ -498,4 +533,7 @@
 |------|------|------|
 | 2026-07-20 | PR-9 合并 (PR #12)，32 commits，391 tests passed | ✅ 完成 |
 | 2026-07-20 | PR-19 开发完成，6 commits，29 tests passed，待审查 | 🔄 待审查 |
-| 2026-07-20 | PR-19 审查修复（1🔴+6🟡+2🔵），7 commits | 🔄 待二次审查 |
+| 2026-07-20 | PR-19 审查修复（1🔴+6🟡+2🔵），7 commits | ✅ R2 通过，已合入 |
+| 2026-07-21 | PR-19 二次审查通过，11 commits，29 tests | ✅ 完成 |
+| 2026-07-23 | PR-13 合并 (PR #25)，9 commits，44 tests passed | ✅ 完成 |
+| 2026-07-23 | PR-18 开发完成，4 commits，44 tests passed，待审查 | 🔄 待审查 |

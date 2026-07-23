@@ -674,3 +674,64 @@ TDD 完成 + 审查修复后，接入 SimNow 7x24 环境进行实盘测试，发
 - 🔵 subscribe/unsubscribe 语义 → 有意为之（本地状态=用户意图，CTP 失败不回滚）
 - 🔵 account 返回格式 → 有意为之（单一对象 vs 列表，与 CTP 数据模型一致）
 - 📦 Commit: `d6eb313`
+
+---
+
+## PR-18: 后端期权API实现
+
+**分支**：`feature/pr-18-options-api`
+**依赖**：PR-5
+**状态**：🔄 开发完成，待审查
+
+### 测试用例列表
+
+| 测试文件 | 测试数 | 覆盖内容 |
+|----------|--------|----------|
+| `tests/test_options_models.py` | 11 | OptionQuote/OptionChain/VolatilityData 模型（创建、序列化、反序列化） |
+| `tests/test_options_service.py` | 20 | OptionsService（期权筛选、期权链聚合、Black-Scholes IV计算） |
+| `tests/test_options_api.py` | 11 | REST API 集成测试（/options、/option_chain、/volatility） |
+| `tests/test_options_integration.py` | 2 | OptionsService 接入 app.state |
+| **合计** | **44**（新增） | |
+
+### 实现进度
+
+#### 循环1：数据模型（11 tests）
+- ✅ `models/options.py` — OptionQuote、OptionChain、VolatilityData 三个 dataclass
+- ✅ to_dict() / from_dict() 序列化/反序列化
+- 📦 Commit: `d9f9a9b`
+
+#### 循环2：OptionsService 核心逻辑（20 tests）
+- ✅ `services/options_service.py` — 期权筛选、期权链聚合、Black-Scholes 隐含波动率计算
+- ✅ get_options() — 按 productClass='2' 筛选，可选 underlying 过滤
+- ✅ get_option_chains() — 按 (underlyingInstrID, expireDate) 分组，calls/puts 分列，按 strikePrice 排序
+- ✅ calculate_implied_volatility() — Newton-Raphson 迭代法求解 IV
+- ✅ _black_scholes_price() — Black-Scholes 期权定价公式
+- 📦 Commit: `6cfc4f7`
+
+#### 循环3：API 端点（11 tests）
+- ✅ `api/market.py` — 新增 3 个端点：
+  - GET /api/market/options — 期权合约列表
+  - GET /api/market/option_chain — 期权T型报价（按标的+到期日分组）
+  - GET /api/market/volatility — 隐含波动率（Black-Scholes）
+- 📦 Commit: `f1701aa`
+
+#### 循环4：接入 main.py（2 tests）
+- ✅ `main.py` — OptionsService 注入 app.state
+- 📦 Commit: `14f9adc`
+
+### 关键设计决策
+
+1. **OptionsService 无状态设计**：不维护内部缓存，每次调用从 market_service 获取 instruments 和 snapshots，避免数据同步问题
+2. **期权链聚合键**：(underlyingInstrID, expireDate) 二元组，同一标的+同一到期日的期权聚合为一个 OptionChain
+3. **Black-Scholes Newton-Raphson**：标准 Newton-Raphson 迭代，初始猜测 sigma=0.3，最大 100 次迭代，容差 1e-6
+4. **VolatilityData 完整参数**：返回 impliedVolatility, underlyingPrice, strikePrice, timeToExpiry, riskFreeRate, optionType 六个字段
+5. **期权类型映射**：OptionsType '1'=看涨(Call), '2'=看跌(Put)，与 CTP 官方定义一致
+
+### Commit 记录
+
+| Commit | 类型 | 描述 |
+|--------|------|------|
+| `d9f9a9b` | test | OptionQuote/OptionChain/VolatilityData models — 11 tests pass |
+| `6cfc4f7` | feat | OptionsService — filtering, chain aggregation, Black-Scholes IV — 20 tests pass |
+| `f1701aa` | feat | options API endpoints — /options, /option_chain, /volatility — 11 tests pass |
+| `14f9adc` | feat | wire OptionsService into main.py — 88 tests pass |

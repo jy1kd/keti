@@ -1470,7 +1470,7 @@ server/
 
 **实现方式**：
 1. 实现期权服务层（OptionsService）
-   - 期权合约筛选（基于 InstrumentInfo.productClass='1'）
+   - 期权合约筛选（基于 InstrumentInfo.productClass='2'）
    - 期权链聚合（按标的合约+到期日分组）
    - 隐含波动率计算（Black-Scholes模型）
 2. 实现期权API接口
@@ -1484,7 +1484,7 @@ server/
 
 **真实API字段参考**：
 - 自定义接口来源：`ctp-api-structure.txt` → 自定义业务接口部分
-- 合约筛选：InstrumentInfo.productClass='1'（期权）
+- 合约筛选：InstrumentInfo.productClass='2'（期权，'1'=期货）
 - 期权类型：InstrumentInfo.optionsType（'1'=看涨，'2'=看跌）
 - 行权价：InstrumentInfo.strikePrice
 - 标的合约：InstrumentInfo.underlyingInstrID
