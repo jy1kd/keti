@@ -19,7 +19,7 @@
 | PR-12 | 前端K线图实现 | ✅ 已合并 | 2026-07-16 | 2423a6c~ea94d85 (12 commits) |
 | PR-12a | 前端补缺补差 | ✅ 已完成 | 2026-07-17 | bccca93~f00d066 (22 commits) |
 | PR-14 | 前端期权T型报价实现 | ⏳ 待开始 | - | - |
-| PR-15 | 前端快捷功能实现 | ⏳ 待开始 | - | - |
+| PR-15 | 前端快捷功能实现 | ✅ 已完成 | 2026-07-23 | 684d49c~d23d783 (7 commits) |
 | PR-16 | 前端查询面板实现 | ⏳ 待开始 | - | - |
 | PR-17 | 联调测试与Bug修复 | ⏳ 待开始 | - | - |
 | PR-20 | 前端合约刷新功能（刷新按钮 + Toast） | ✅ 已完成 | 2026-07-21 | 2a4d682~8ebaf1f (9 commits) |
@@ -238,6 +238,43 @@
 
 **提交记录**：
 - 2423a6c~ea94d85 (12 commits)
+
+---
+
+### PR-15: 前端快捷功能实现
+
+**状态**：✅ 已完成（开发完成，待审查）
+
+**PR信息**：
+- PR分支名：`feature/pr-15-quick-actions`
+- 依赖PR：PR-9 ✅ / PR-10 ✅ / PR-11 ✅
+- 工作量：2小时
+
+**完成内容**：
+- 新增 5 个 API 函数（cancelAllOrders, reversePosition, lockPosition, getPositions, getOrders）
+- BatchCancel 批量撤单组件（全选/取消全选、逐个撤单、进度展示）
+- QuickActions 快捷操作组件（一键反向、一键锁仓、批量撤单、501 友好降级）
+- QuickKeys 快捷键配置组件（key 捕获、保存/恢复默认、localStorage 持久化）
+- useHotKeys 增强（支持自定义快捷键映射、动态切换）
+- OrderPanel 集成（QuickActions 嵌入、BatchCancel/QuickKeys 浮动面板、快捷键 tab）
+
+**验证结果**：
+- ✅ 343 tests / 37 files 通过（新增 23 tests，2 pre-existing failures）
+- ✅ TypeScript 零错误
+- ✅ 无调试代码残留
+- ✅ 全部验收标准通过
+
+**提交记录**：
+- `684d49c` feat(task-15): add API functions for cancelAll, reverse, lock, query positions/orders
+- `2784b0c` feat(task-15): implement BatchCancel component with select/cancel flow
+- `1537653` feat(task-15): implement QuickActions component (reverse, lock, batch cancel)
+- `3b84f7b` feat(task-15): implement QuickKeys hotkey configuration component
+- `0b3085f` feat(task-15): enhance useHotKeys with custom key bindings support
+- `35a89fa` feat(task-15): integrate QuickActions, BatchCancel, QuickKeys into OrderPanel
+- `d23d783` docs(task-15): update dev-record-b with PR-15 TDD records
+
+**交接说明**：
+- PR-15 开发完成，待审查。审查通过后可进入 PR-16（查询面板，依赖 PR-11 ✅ + PR-13 ⏳）或 PR-14（期权 T 型报价，依赖 PR-18 ⏳）
 
 ---
 
