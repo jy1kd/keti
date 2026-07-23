@@ -1167,7 +1167,7 @@ const ORDER_STATUS_MAP = { '0': 'all_traded', '1': 'partial', '2': 'no_traded', 
 | **负责角色** | 角色A |
 | **依赖PR** | PR-9 |
 | **工作量** | 2小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
 
 **提交文件**：
 ```
@@ -1175,7 +1175,10 @@ server/
 ├── api/
 │   └── query.py                # 查询接口（完善）
 ├── ctp_wrapper/
-│   └── trader_api.py           # 交易API封装（完善查询功能）
+│   ├── trader_api.py           # 交易API封装（完善查询功能）
+│   └── callback.py             # 回调处理（完善查询回调）
+├── services/
+│   └── query_service.py        # 查询服务层（新增）
 └── models/
     ├── account.py              # 账户数据模型（完善）
     └── contract.py             # 合约数据模型（完善）
@@ -1226,12 +1229,12 @@ server/
 - `server/services/market_service.py` 的 subscribe() 和 unsubscribe() 方法在CTP调用失败时仍返回 `{"success": true}`，应返回失败信息。在PR-11开发时一并修复此错误处理逻辑。
 
 **验收标准**：
-- [ ] 报单流水查询正常
-- [ ] 成交流水查询正常
-- [ ] 持仓查询正常
-- [ ] 账户资金查询正常
-- [ ] 合约信息查询正常
-- [ ] WebSocket持仓推送正常
+- [x] 报单流水查询正常
+- [x] 成交流水查询正常
+- [x] 持仓查询正常
+- [x] 账户资金查询正常
+- [x] 合约信息查询正常
+- [x] WebSocket持仓推送正常
 
 **用户手动验证**：
 1. 启动后端

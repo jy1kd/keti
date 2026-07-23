@@ -16,7 +16,7 @@
 | PR-7 | 后端WebSocket管理完善 | ✅ 已合并 | 2026-07-15 | c370cbc, 05b16a6, 4f07b9f, 5386563, 200ab85, 0a0e29c, 443a6c5, 89cb00a, 82ef2e9, 4b5bb2e |
 | PR-9 | 后端交易API实现 | ✅ 已合并 | 2026-07-20 | 07a08d9~77fbe3b (32 commits) |
 | PR-19 | 后端合约查询API | ✅ 已完成 | 2026-07-21 | a4686a3~85ce0a8 (11 commits, 29 tests) |
-| PR-11 | 后端查询API实现 | 🔄 审查修复完成，待二次审查 | 2026-07-21 | b883764~26f141c (11 commits, 96 tests) |
+| PR-11 | 后端查询API实现 | ✅ 已完成 | 2026-07-21 | b883764~d6eb313 (11 commits, 96 tests) |
 | PR-13 | 后端止损单服务实现 | ⏳ 待开始 | - | - |
 | PR-17 | 联调测试与Bug修复 | ⏳ 待开始 | - | - |
 
@@ -392,7 +392,7 @@
 
 ### PR-11: 后端查询API实现
 
-**状态**：⏳ 待开始
+**状态**：✅ 已完成
 
 **PR信息**：
 - PR分支名：`feature/pr-11-query-api`
@@ -400,16 +400,33 @@
 - 工作量：2小时
 
 **完成内容**：
-- 待开发
+- ✅ `services/query_service.py` — QueryService 查询服务层（CTP 回调累积模式，threading.Event 同步）
+- ✅ `ctp_wrapper/trader_api.py` — query_orders/trades/positions/account 方法
+- ✅ `ctp_wrapper/callback.py` — OnRspQryOrder/Trade/InvestorPosition/TradingAccount 回调
+- ✅ `services/field_mapping.py` — map_position() + map_account() 字段映射
+- ✅ `api/query.py` — GET orders/trades/positions/account + POST refresh 端点
+- ✅ `services/ctp_startup.py` — QueryService 接线（startup + /login 两条路径）
+- ✅ 87 个新增单元测试
 
 **验证结果**：
-- 待验证
+- ✅ 87 新增测试全部通过
+- ✅ 二次审查通过（0 🔴 + 0 🟡 + 0 🔵）
+- ✅ 代码范围正确（仅 server/ + snapshots/）
+- ✅ 无调试代码残留
 
 **提交记录**：
-- 待提交
+- `b883764` test(task-11): map_position() + map_account() — 26 new tests
+- `69f1e7b` feat(task-11): TraderSpi query callbacks
+- `27b5b0a` feat(task-11): TraderApi query methods
+- `93ea36a` feat(task-11): QueryService — query orchestration
+- `1e9e786` feat(task-11): query API endpoints
+- `16172b5` feat(task-11): wire QueryService into ctp_startup
+- `d6eb313` fix(task-11): review反馈 — 公开属性+登录检查+工厂函数+测试
 
 **交接说明**：
-- 待交接
+- QueryService 封装 CTP 回调累积模式，API 层通过 `run_in_executor` 避免阻塞
+- GET 端点返回缓存数据（快速），POST /refresh 端点触发 CTP 查询（阻塞）
+- `/ws/position` 持仓推送已接线
 
 ---
 
