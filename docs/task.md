@@ -1471,7 +1471,7 @@ server/
 
 **用户手动验证**：
 1. 启动后端
-2. 提交止损单：`curl -X POST http://localhost:8000/api/order/stop -H "Content-Type: application/json" -d "{\"instrumentID\":\"IF2608\",\"direction\":\"1\",\"combOffsetFlag\":\"1\",\"limitPrice\":4800.0,\"volumeTotalOriginal\":1,\"stopPrice\":4790.0}"`
+2. 提交止损单：`curl -X POST http://localhost:8000/api/order/stop -H "Content-Type: application/json" -d "{\"instrumentID\":\"IF2608\",\"direction\":\"1\",\"offsetFlag\":\"1\",\"limitPrice\":4800.0,\"volume\":1,\"stopPrice\":4790.0}"`
 3. 查询止损单列表：浏览器访问 http://localhost:8000/api/order/stop/list
 4. 取消止损单
 

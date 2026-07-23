@@ -110,12 +110,12 @@ class StopOrderService:
     def __init__(
         self,
         data_dir: str,
-        market_service: "MarketService",
         order_manager: "OrderManager",
+        market_service: Optional["MarketService"] = None,
     ) -> None:
         self._data_dir = data_dir
-        self._market_service = market_service
         self._order_manager = order_manager
+        self._market_service = market_service  # Reserved for future use (e.g., snapshot lookup)
         self._orders: List[StopOrder] = []
         self._lock = threading.Lock()
         self._broadcast_fn: Optional[Callable[[str, dict], None]] = None
@@ -280,14 +280,25 @@ class StopOrderService:
         return os.path.join(self._data_dir, "stop_orders.json")
 
     def _save_to_disk(self) -> None:
-        """Save all stop orders to disk (must hold _lock)."""
+        """Save all stop orders to disk (must hold _lock).
+
+        Uses atomic write (write to temp file then rename) to prevent
+        data loss if the process crashes during write.
+        """
         file_path = self._get_file_path()
+        tmp_path = file_path + ".tmp"
         try:
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            with open(file_path, "w", encoding="utf-8") as f:
+            with open(tmp_path, "w", encoding="utf-8") as f:
                 json.dump([o.to_dict() for o in self._orders], f, ensure_ascii=False, indent=2)
+            os.replace(tmp_path, file_path)  # Atomic on POSIX/Windows
         except OSError as exc:
             logger.error("Failed to save stop orders: %s", exc)
+            # Clean up temp file if it exists
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
 
     def _load_from_disk(self) -> None:
         """Load pending stop orders from disk on startup.

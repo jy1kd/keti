@@ -31,7 +31,6 @@ def app_with_stop_service(tmp_path, mock_market_service, mock_order_manager):
 
     stop_service = StopOrderService(
         data_dir=str(tmp_path / "data"),
-        market_service=mock_market_service,
         order_manager=mock_order_manager,
     )
     app.state.stop_service = stop_service

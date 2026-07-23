@@ -38,11 +38,10 @@ def mock_order_manager():
 
 
 @pytest.fixture
-def service(tmp_data_dir, mock_market_service, mock_order_manager):
+def service(tmp_data_dir, mock_order_manager):
     """Create a StopOrderService with mocked dependencies."""
     svc = StopOrderService(
         data_dir=tmp_data_dir,
-        market_service=mock_market_service,
         order_manager=mock_order_manager,
     )
     return svc
@@ -395,12 +394,11 @@ class TestStopOrderBroadcast:
 class TestStopOrderPersistence:
     """Test stop order persistence across service restarts."""
 
-    def test_load_on_startup(self, tmp_data_dir, mock_market_service, mock_order_manager):
+    def test_load_on_startup(self, tmp_data_dir, mock_order_manager):
         """Service loads pending stop orders from file on startup."""
         # Create initial service and submit an order
         svc1 = StopOrderService(
             data_dir=tmp_data_dir,
-            market_service=mock_market_service,
             order_manager=mock_order_manager,
         )
         svc1.submit(
@@ -411,7 +409,6 @@ class TestStopOrderPersistence:
         # Create new service (simulating restart)
         svc2 = StopOrderService(
             data_dir=tmp_data_dir,
-            market_service=mock_market_service,
             order_manager=mock_order_manager,
         )
         orders = svc2.list_orders()
@@ -492,10 +489,11 @@ class TestStopOrderMultipleInstruments:
 class TestStopOrderGFD:
     """Test GFD (Good For Day) stop order expiry."""
 
-    def test_does_not_load_orders_from_previous_day(self, tmp_data_dir, mock_market_service, mock_order_manager):
+    def test_does_not_load_orders_from_previous_day(self, tmp_data_dir, mock_order_manager):
         """Service does not load stop orders from previous days on startup."""
         # Create a stop order file with yesterday's date
-        yesterday = datetime.now().replace(day=datetime.now().day - 1).strftime("%Y-%m-%d %H:%M:%S")
+        from datetime import timedelta
+        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
         old_order = {
             "stopOrderID": "so-old",
             "instrumentID": "IF2608",
@@ -515,7 +513,6 @@ class TestStopOrderGFD:
 
         svc = StopOrderService(
             data_dir=tmp_data_dir,
-            market_service=mock_market_service,
             order_manager=mock_order_manager,
         )
         assert len(svc.list_orders()) == 0
@@ -542,7 +539,6 @@ class TestStopOrderGFD:
 
         svc = StopOrderService(
             data_dir=tmp_data_dir,
-            market_service=mock_market_service,
             order_manager=mock_order_manager,
         )
         assert len(svc.list_orders()) == 1

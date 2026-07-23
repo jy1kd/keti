@@ -497,7 +497,6 @@ def start_ctp_trading_connection(
     data_dir = str(Path(__file__).parent.parent / "data")
     stop_service = StopOrderService(
         data_dir=data_dir,
-        market_service=app.state.market_service,
         order_manager=order_manager,
     )
 
