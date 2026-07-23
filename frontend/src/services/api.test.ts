@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { api, API_BASE, getInstruments, subscribeMarket, getSnapshots, getKlineData, submitOrder, cancelOrder, refreshInstruments } from './api'
+import { api, API_BASE, getInstruments, subscribeMarket, getSnapshots, getKlineData, submitOrder, cancelOrder, refreshInstruments, cancelAllOrders, reversePosition, lockPosition, getPositions, getOrders } from './api'
 
 describe('api (Axios 实例)', () => {
   it('API_BASE 有值', () => {
@@ -204,5 +204,145 @@ describe('refreshInstruments', () => {
     const result = await refreshInstruments()
 
     expect(result.status).toBe('already_running')
+  })
+})
+
+// ── PR-15: 快捷功能 API ────────────────────────────────────────────────
+
+describe('cancelAllOrders', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('calls POST /api/order/cancel_all and returns result', async () => {
+    const mockData = { success: true, cancelled: 3, failed: 0, errors: [] }
+    vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
+
+    const result = await cancelAllOrders()
+
+    expect(api.post).toHaveBeenCalledWith('/api/order/cancel_all')
+    expect(result).toEqual(mockData)
+  })
+
+  it('returns partial failure info when some orders fail', async () => {
+    const mockData = { success: true, cancelled: 1, failed: 2, errors: ['ORD-002: rejected', 'ORD-003: rejected'] }
+    vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
+
+    const result = await cancelAllOrders()
+
+    expect(result.cancelled).toBe(1)
+    expect(result.failed).toBe(2)
+  })
+})
+
+describe('reversePosition', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('calls POST /api/order/reverse with instrumentID', async () => {
+    const mockData = { success: true, message: 'Position reversed' }
+    vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
+
+    const result = await reversePosition('IF2608')
+
+    expect(api.post).toHaveBeenCalledWith('/api/order/reverse', { instrumentID: 'IF2608' })
+    expect(result).toEqual(mockData)
+  })
+
+  it('handles 501 not implemented gracefully', async () => {
+    const error = Object.assign(new Error('Request failed with status code 501'), {
+      response: { status: 501, data: { detail: 'Not implemented' } },
+    })
+    vi.spyOn(api, 'post').mockRejectedValue(error)
+
+    await expect(reversePosition('IF2608')).rejects.toThrow()
+  })
+})
+
+describe('lockPosition', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('calls POST /api/order/lock with instrumentID', async () => {
+    const mockData = { success: true, message: 'Position locked' }
+    vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
+
+    const result = await lockPosition('IF2608')
+
+    expect(api.post).toHaveBeenCalledWith('/api/order/lock', { instrumentID: 'IF2608' })
+    expect(result).toEqual(mockData)
+  })
+
+  it('handles 501 not implemented gracefully', async () => {
+    const error = Object.assign(new Error('Request failed with status code 501'), {
+      response: { status: 501, data: { detail: 'Not implemented' } },
+    })
+    vi.spyOn(api, 'post').mockRejectedValue(error)
+
+    await expect(lockPosition('IF2608')).rejects.toThrow()
+  })
+})
+
+describe('getPositions', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('calls GET /api/query/positions and returns position list', async () => {
+    const mockData = {
+      positions: [
+        { instrumentID: 'IF2608', posiDirection: 'long', position: 2, positionProfit: 1200.0 },
+      ],
+      count: 1,
+    }
+    vi.spyOn(api, 'get').mockResolvedValue({ data: mockData })
+
+    const result = await getPositions()
+
+    expect(api.get).toHaveBeenCalledWith('/api/query/positions')
+    expect(result).toEqual(mockData)
+  })
+
+  it('returns empty positions array when no positions', async () => {
+    const mockData = { positions: [], count: 0 }
+    vi.spyOn(api, 'get').mockResolvedValue({ data: mockData })
+
+    const result = await getPositions()
+
+    expect(result.positions).toEqual([])
+    expect(result.count).toBe(0)
+  })
+})
+
+describe('getOrders', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('calls GET /api/query/orders and returns order list', async () => {
+    const mockData = {
+      orders: [
+        { orderRef: 'ORD-001', instrumentID: 'IF2608', direction: 'buy', orderStatus: 'no_traded' },
+      ],
+      count: 1,
+    }
+    vi.spyOn(api, 'get').mockResolvedValue({ data: mockData })
+
+    const result = await getOrders()
+
+    expect(api.get).toHaveBeenCalledWith('/api/query/orders')
+    expect(result).toEqual(mockData)
+  })
+
+  it('returns empty orders array when no orders', async () => {
+    const mockData = { orders: [], count: 0 }
+    vi.spyOn(api, 'get').mockResolvedValue({ data: mockData })
+
+    const result = await getOrders()
+
+    expect(result.orders).toEqual([])
+    expect(result.count).toBe(0)
   })
 })

@@ -227,3 +227,72 @@ export async function unsubscribeMarket(instruments: string[]): Promise<Unsubscr
   const { data } = await api.post<UnsubscribeResponse>('/api/market/unsubscribe', { instruments })
   return data
 }
+
+// ── PR-15: 快捷功能 API ────────────────────────────────────────────────
+
+interface CancelAllResponse {
+  success: boolean
+  cancelled: number
+  failed: number
+  errors: string[]
+}
+
+interface ReverseResponse {
+  success: boolean
+  message: string
+}
+
+interface LockResponse {
+  success: boolean
+  message: string
+}
+
+interface PositionsResponse {
+  positions: Array<{
+    instrumentID: string
+    posiDirection: string
+    position: number
+    positionProfit: number
+  }>
+  count: number
+}
+
+interface OrdersResponse {
+  orders: Array<{
+    orderRef: string
+    instrumentID: string
+    direction: string
+    orderStatus: string
+  }>
+  count: number
+}
+
+/** 批量撤单 — 撤销所有未成交报单 */
+export async function cancelAllOrders(): Promise<CancelAllResponse> {
+  const { data } = await api.post<CancelAllResponse>('/api/order/cancel_all')
+  return data
+}
+
+/** 一键反向 — 平仓并反向开仓 */
+export async function reversePosition(instrumentID: string): Promise<ReverseResponse> {
+  const { data } = await api.post<ReverseResponse>('/api/order/reverse', { instrumentID })
+  return data
+}
+
+/** 一键锁仓 — 反手锁仓或双开锁仓 */
+export async function lockPosition(instrumentID: string): Promise<LockResponse> {
+  const { data } = await api.post<LockResponse>('/api/order/lock', { instrumentID })
+  return data
+}
+
+/** 查询持仓列表 */
+export async function getPositions(): Promise<PositionsResponse> {
+  const { data } = await api.get<PositionsResponse>('/api/query/positions')
+  return data
+}
+
+/** 查询报单列表 */
+export async function getOrders(): Promise<OrdersResponse> {
+  const { data } = await api.get<OrdersResponse>('/api/query/orders')
+  return data
+}
