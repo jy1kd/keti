@@ -45,7 +45,6 @@ export function QuickKeys({ hotKeys, onSave, onClose }: QuickKeysProps) {
 
   function handleReset() {
     setLocalHotKeys({ ...DEFAULT_HOT_KEYS })
-    onSave({ ...DEFAULT_HOT_KEYS })
   }
 
   return (

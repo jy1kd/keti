@@ -136,7 +136,7 @@ describe('QuickKeys', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('resets to defaults when reset button clicked', () => {
+  it('resets UI to defaults but does not auto-save', () => {
     render(
       <QuickKeys
         hotKeys={defaultHotKeys}
@@ -150,11 +150,15 @@ describe('QuickKeys', () => {
     fireEvent.focus(inputs[0]!)
     fireEvent.keyDown(inputs[0]!, { key: 'x' })
 
+    expect((inputs[0]! as HTMLInputElement).value).toBe('x')
+
     // Then reset
     const resetBtn = screen.getByText('恢复默认')
     fireEvent.click(resetBtn)
 
-    // Should call onSave with defaults
-    expect(onSave).toHaveBeenCalledWith(defaultHotKeys)
+    // UI should revert to defaults
+    expect((inputs[0]! as HTMLInputElement).value).toBe('b')
+    // onSave should NOT be called (user must manually save)
+    expect(onSave).not.toHaveBeenCalled()
   })
 })
