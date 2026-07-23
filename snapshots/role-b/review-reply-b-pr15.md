@@ -30,3 +30,10 @@
 |---|------|------|
 | 1 | 部分 hotKeys 静默失效 | ✅ 改为合并 DEFAULT_KEYS，缺失键回退默认值 |
 | 2 | Promise<unknown> 类型 | 保持。QuickActions 组件不消费返回值，仅依赖 try/catch 判断成败做 toast 提示 |
+
+### 补充修改
+
+- `docs/task.md` 已更新：
+  - PR-15 第 4 项标注 `cancelAllOrders()` 推迟到 PR-16
+  - PR-16 OrderFlow 第 2 项新增「撤销全部未成交报单」按钮说明
+  - PR-16 验收标准新增对应条目
