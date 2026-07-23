@@ -1470,7 +1470,7 @@ server/
 
 **实现方式**：
 1. 实现期权服务层（OptionsService）
-   - 期权合约筛选（基于 InstrumentInfo.productClass='1'）
+   - 期权合约筛选（基于 InstrumentInfo.productClass='2'）
    - 期权链聚合（按标的合约+到期日分组）
    - 隐含波动率计算（Black-Scholes模型）
 2. 实现期权API接口
