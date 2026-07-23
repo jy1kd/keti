@@ -77,6 +77,27 @@ class LockOrderRequest(BaseModel):
     instrumentID: str = Field(..., min_length=1)
 
 
+class SubmitStopOrderRequest(BaseModel):
+    """Submit stop order request body."""
+
+    instrumentID: str = Field(..., min_length=1,
+                              json_schema_extra={"examples": ["IF2608"]})
+    direction: str = Field(default="0", pattern=r"^[01]$",
+                           description="0=买, 1=卖")
+    offsetFlag: str = Field(default="0", pattern=r"^[013]$",
+                            description="0=开仓, 1=平仓, 3=平今")
+    limitPrice: float = Field(default=4800.0, ge=0.0,
+                              description="触发后报单的限价")
+    volume: int = Field(default=1, gt=0, description="报单数量")
+    stopPrice: float = Field(..., gt=0.0, description="止损触发价")
+
+
+class CancelStopOrderRequest(BaseModel):
+    """Cancel stop order request body."""
+
+    stopOrderID: str = Field(..., min_length=1)
+
+
 # ── Routes ────────────────────────────────────────────────────────────────
 
 @router.post("/insert")
@@ -164,3 +185,49 @@ async def lock_position(request: Request, body: LockOrderRequest):
         status_code=501,
         detail="Not implemented — position data needed (PR-11)",
     )
+
+
+# ── Stop order routes (PR-13) ──────────────────────────────────────────────
+
+@router.post("/stop")
+async def submit_stop_order(request: Request, body: SubmitStopOrderRequest):
+    """Submit a new stop order.
+
+    Creates a stop order that monitors market data and automatically
+    submits an order when the stop price is reached.
+    """
+    stop_service = getattr(request.app.state, "stop_service", None)
+    if stop_service is None:
+        return {"success": False, "message": "StopOrderService not available"}
+
+    result = stop_service.submit(
+        instrument_id=body.instrumentID,
+        direction=body.direction,
+        offset_flag=body.offsetFlag,
+        limit_price=body.limitPrice,
+        volume=body.volume,
+        stop_price=body.stopPrice,
+    )
+    return result
+
+
+@router.post("/stop/cancel")
+async def cancel_stop_order(request: Request, body: CancelStopOrderRequest):
+    """Cancel a pending stop order."""
+    stop_service = getattr(request.app.state, "stop_service", None)
+    if stop_service is None:
+        return {"success": False, "message": "StopOrderService not available"}
+
+    result = stop_service.cancel(body.stopOrderID)
+    return result
+
+
+@router.get("/stop/list")
+async def list_stop_orders(request: Request):
+    """List all stop orders (pending, triggered, canceled)."""
+    stop_service = getattr(request.app.state, "stop_service", None)
+    if stop_service is None:
+        return {"orders": [], "count": 0}
+
+    orders = stop_service.list_orders()
+    return {"orders": orders, "count": len(orders)}
