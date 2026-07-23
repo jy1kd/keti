@@ -10,7 +10,7 @@
 |------|--------|------|------|
 | **阶段1：基础框架** | PR-1 ~ PR-4 | ✅ 已完成 | CTP验证 ✅ / 前端初始化 ✅ / FastAPI框架 ✅ / 布局 ✅ |
 | **阶段2：行情模块** | PR-5 ~ PR-8, PR-6a | ✅ 已完成 | 行情API ✅ / 行情表格 ✅ / 行情接入 ✅ / WebSocket管理 ✅ / 五档行情 ✅ |
-| **阶段2+：合约管理** | PR-19, PR-20 | 🔄 进行中 | 合约查询 ✅ / 合约刷新UI ⏳ |
+| **阶段2+：合约管理** | PR-19, PR-20, PR-21 | ✅ 已完成 | 合约查询 ✅ / 合约刷新UI ✅ / 手动订阅 ✅ |
 | **阶段3：交易模块** | PR-9 ~ PR-12 | ✅ 已完成 | 交易API ✅ / 报单表单 ✅ / K线图 ✅ / 查询API ✅ |
 | **阶段4：高级功能** | PR-13 ~ PR-16 | ⏳ 待开始 | 止损单、期权、快捷功能、查询 |
 | **阶段5：联调优化** | PR-17 | ⏳ 待开始 | 联调测试、Bug修复 |
@@ -200,13 +200,13 @@ PR-1 [A] → PR-3 [A] → PR-5 [A] → PR-7 [A] → PR-9 [A] → PR-11 [A] → P
 
 ## 3. 当前阶段状态
 
-**当前阶段**：阶段3 - 交易模块（进行中）
+**当前阶段**：阶段4 - 高级功能（待开始）
 
-**当前状态**：PR-1 ✅ / PR-2 ✅ / PR-3 ✅ / PR-4 ✅ / PR-5 ✅ / PR-6 ✅ / PR-6a ✅ / PR-7 ✅ / PR-8 ✅ / PR-9 ✅ / PR-10 ✅ / PR-11 ✅ / PR-12 ✅ / PR-12a ✅ / PR-19 ✅
+**当前状态**：PR-1 ✅ / PR-2 ✅ / PR-3 ✅ / PR-4 ✅ / PR-5 ✅ / PR-6 ✅ / PR-6a ✅ / PR-7 ✅ / PR-8 ✅ / PR-9 ✅ / PR-10 ✅ / PR-11 ✅ / PR-12 ✅ / PR-12a ✅ / PR-19 ✅ / PR-20 ✅ / PR-21 ✅
 
 **下一步行动**：
 - 角色A：开始 PR-13（后端止损单服务，依赖 PR-9 ✅）或 PR-18（后端期权API，依赖 PR-5 ✅）
-- 角色B：开始 PR-20（合约刷新UI，依赖 PR-19）或 PR-21（手动订阅，依赖 PR-6a）
+- 角色B：开始 PR-15（前端快捷功能，依赖 PR-9 ✅ / PR-10 ✅ / PR-11 ✅）
 
 **⚠️ 已知不完善**：
 - `GET /instruments` 返回 `data/instruments.json`（PR-19 已支持动态刷新，17348 合约）
@@ -393,7 +393,7 @@ git branch -d feature/pr-<编号>-<描述>
 | PR-8 | 前端五档行情展示 | PR-7（需要WebSocket推送） | ✅ 已完成 | `feature/pr-8-depth-quote` |
 | PR-12 | 前端K线图实现 | PR-5（需要行情API） | ✅ 已完成 | `feature/pr-12-kline-chart` |
 | PR-12a | 前端补缺补差 | PR-12 | ✅ 已完成 | `feature/pr-12a-frontend-gaps` |
-| PR-21 | 手动订阅/退订合约 | PR-6a | ⏳ 待开始 | `feature/pr-21-manual-subscribe` |
+| PR-21 | 手动订阅/退订合约 | PR-6a | ✅ 已完成 | `feature/pr-21-manual-subscribe` |
 | PR-14 | 前端期权T型报价实现 | PR-6, PR-18（需要期权API） | ⏳ 待开始 | `feature/pr-14-option-tquote` |
 
 ### 阶段3：交易模块
@@ -403,7 +403,7 @@ git branch -d feature/pr-<编号>-<描述>
 | PR-9 | 后端交易API实现 | PR-7 | ⏳ 待开始 | `feature/pr-9-trader-api` |
 | PR-10 | 前端报单表单实现 | PR-9 | ⏳ 待开始 | `feature/pr-10-order-form` |
 | PR-19 | 后端合约查询API（CTP ReqQryInstrument） | PR-9 | ✅ 已完成 | `feature/pr-19-instrument-query-api` |
-| PR-20 | 前端合约刷新功能（刷新按钮 + Toast） | PR-19 | ⏳ 待开始 | `feature/pr-20-instrument-refresh-ui` |
+| PR-20 | 前端合约刷新功能（刷新按钮 + Toast） | PR-19 | ✅ 已完成 | `feature/pr-20-instrument-refresh-ui` |
 
 ### 阶段4：高级功能
 
