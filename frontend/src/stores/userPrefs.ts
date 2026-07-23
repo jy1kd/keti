@@ -13,6 +13,7 @@ interface UserPrefsStore {
   selectedContracts: string[]
   hotKeys: HotKeyConfig
   setHotKey: (action: string, key: string) => void
+  setHotKeys: (hotKeys: HotKeyConfig) => void
   addSelectedContract: (instrumentId: string) => void
   removeSelectedContract: (instrumentId: string) => void
   saveToLocalStorage: () => void
@@ -27,6 +28,8 @@ export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
     set((state) => ({
       hotKeys: { ...state.hotKeys, [action]: key },
     })),
+
+  setHotKeys: (hotKeys) => set({ hotKeys: { ...hotKeys } }),
 
   addSelectedContract: (instrumentId) =>
     set((state) => {

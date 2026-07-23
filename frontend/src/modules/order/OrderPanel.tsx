@@ -81,10 +81,9 @@ export function OrderPanel() {
 
   const handleSaveHotKeys = useCallback(
     (newHotKeys: typeof hotKeys) => {
-      useUserPrefsStore.getState().setHotKey('buy', newHotKeys.buy)
-      useUserPrefsStore.getState().setHotKey('sell', newHotKeys.sell)
-      useUserPrefsStore.getState().setHotKey('cancel', newHotKeys.cancel)
-      useUserPrefsStore.getState().saveToLocalStorage()
+      const prefs = useUserPrefsStore.getState()
+      prefs.setHotKeys(newHotKeys)
+      prefs.saveToLocalStorage()
       toast.success('快捷键已保存')
     },
     []

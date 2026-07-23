@@ -67,17 +67,16 @@ export function BatchCancel({ orders, onCancelOrder, onClose }: BatchCancelProps
     setCancelling(true)
     setResults(null)
 
+    const orderRefs = Array.from(selected)
+    const results_ = await Promise.allSettled(
+      orderRefs.map((ref) => onCancelOrder(ref))
+    )
+
     let success = 0
     let failed = 0
-
-    for (const orderRef of selected) {
-      try {
-        const ok = await onCancelOrder(orderRef)
-        if (ok) success++
-        else failed++
-      } catch {
-        failed++
-      }
+    for (const r of results_) {
+      if (r.status === 'fulfilled' && r.value) success++
+      else failed++
     }
 
     setResults({ success, failed })

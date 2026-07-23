@@ -270,7 +270,8 @@ interface OrdersResponse {
   count: number
 }
 
-/** 批量撤单 — 撤销所有未成交报单 */
+/** 批量撤单 — 撤销所有未成交报单
+ *  TODO: PR-16 查询面板中"批量撤单"按钮将使用此函数 */
 export async function cancelAllOrders(): Promise<CancelAllResponse> {
   const { data } = await api.post<CancelAllResponse>('/api/order/cancel_all')
   return data

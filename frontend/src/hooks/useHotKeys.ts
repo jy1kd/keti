@@ -24,8 +24,9 @@ export function useHotKeys({
   enabled,
   hotKeys,
 }: UseHotKeysOptions) {
+  // Merge with defaults so partial hotKeys fall back (e.g. { buy: 'x' } → sell/cancel stay default)
   const effectiveKeys: HotKeyConfig = useMemo(
-    () => hotKeys ?? DEFAULT_KEYS,
+    () => (hotKeys ? { ...DEFAULT_KEYS, ...hotKeys } : DEFAULT_KEYS),
     [hotKeys]
   )
 
