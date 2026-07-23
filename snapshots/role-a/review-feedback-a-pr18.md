@@ -85,3 +85,45 @@
 1. 修复 task.md productClass='1'→'2'（🔴 必须）
 2. 处理改进建议（🟡 建议）
 3. 修复完成后切审查窗口进行二次审查
+
+---
+
+## 第 2 轮审查（复审）
+
+审查分支：`feature/pr-18-options-api`
+审查 commit：`0bd498f`（修复提交）
+审查时间：2026-07-23
+
+### 第 1 轮反馈修复验证
+
+| # | 等级 | 问题 | 修复状态 |
+|---|------|------|----------|
+| B1 | 🔴 | task.md productClass='1' 应为 '2' | ⚠️ 部分修复 — 第 1487 行已改，但第 1473 行仍为 `productClass='1'` |
+| S1 | 🟡 | import datetime 在函数体内 | ✅ 移到文件顶部 |
+| S2 | 🟡 | Newton-Raphson 失败返回近似值 | ✅ docstring 已更新 |
+| S3 | 🟡 | OptionQuote market data 字段为 0 | ✅ docstring 已添加 |
+
+### 🔴 阻断性问题（必须修改）
+
+1. **【task.md:1473】productClass='1' 残留**
+   - 第 1487 行已修正为 `productClass='2'`，但第 1473 行仍写 `基于 InstrumentInfo.productClass='1'`。
+   - 同一文档两处不一致，会误导开发者。
+   - 建议：将第 1473 行也改为 `productClass='2'`。
+
+### 🟡 改进建议
+
+无
+
+### 🔵 疑问确认
+
+无
+
+### 测试验证
+
+- 44 tests：✅ 全部通过
+
+### 审查结论
+
+❌ **需要修改后再审**
+
+B1 修复不完整，第 1473 行仍有 productClass='1' 残留。请修复后进行三次审查。
