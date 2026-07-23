@@ -30,6 +30,7 @@ from ws.manager import WebSocketManager
 from services.market_service import MarketService
 from services.query_service import QueryService
 from services.stop_order import StopOrderService
+from services.options_service import OptionsService
 from services.ctp_bridge import wire_market_data_callback
 from services.ctp_startup import connect_ctp, start_ctp_trading_connection
 from ws.handlers import handle_ws
@@ -143,6 +144,10 @@ def create_app() -> FastAPI:
 
     query_service = QueryService()
     app.state.query_service = query_service
+
+    # Options service (PR-18) — stateless, depends on market_service instruments
+    options_service = OptionsService()
+    app.state.options_service = options_service
 
     # Stop order service (PR-13) — initialized lazily after OrderManager is available
     # Will be properly wired in ctp_startup after TD connects
