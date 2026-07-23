@@ -12,13 +12,33 @@ interface MarketTableProps {
 
 const PLACEHOLDER = '--'
 
+const UP_COLOR = '#ef4444'
+const DOWN_COLOR = '#22c55e'
+const FLAT_COLOR = '#e6edf3'
+
+/** 根据 record.change 正负返回文字颜色 */
+function priceColor(record: any): string {
+  const change = typeof record?.change === 'number' ? record.change : 0
+  if (change > 0) return UP_COLOR
+  if (change < 0) return DOWN_COLOR
+  return FLAT_COLOR
+}
+
+/** 列级 style 回调：通过 table.records 拿到行数据，按涨跌着色 */
+function coloredStyle(args: any) {
+  const record = args.table?.records?.[args.row]
+  return { color: priceColor(record) }
+}
+
 const columns = [
-  { field: 'instrumentID', title: '合约', width: 100 },
-  { field: 'lastPrice', title: '最新价', width: 100 },
-  { field: 'change', title: '涨跌', width: 80 },
-  { field: 'changePercent', title: '涨跌%', width: 80 },
-  { field: 'bidPrice1', title: '买一', width: 100 },
-  { field: 'askPrice1', title: '卖一', width: 100 },
+  { field: 'instrumentID', title: '合约', width: 90 },
+  { field: 'exchangeID', title: '交易所', width: 70 },
+  { field: 'expireDate', title: '到期日', width: 90 },
+  { field: 'lastPrice', title: '最新价', width: 100, style: coloredStyle },
+  { field: 'change', title: '涨跌', width: 80, style: coloredStyle },
+  { field: 'changePercent', title: '涨跌%', width: 80, style: coloredStyle },
+  { field: 'bidPrice1', title: '买一', width: 100, style: coloredStyle },
+  { field: 'askPrice1', title: '卖一', width: 100, style: coloredStyle },
   { field: 'volume', title: '成交量', width: 100 },
   { field: 'openInterest', title: '持仓量', width: 100 },
 ]
@@ -27,6 +47,8 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined) {
   if (!snap) {
     return {
       instrumentID: contract.instrumentID,
+      exchangeID: contract.exchangeID || PLACEHOLDER,
+      expireDate: contract.expireDate || PLACEHOLDER,
       lastPrice: PLACEHOLDER,
       change: PLACEHOLDER,
       changePercent: PLACEHOLDER,
@@ -41,6 +63,8 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined) {
   const changePercent = preSettlement ? (change / preSettlement) * 100 : 0
   return {
     instrumentID: snap.instrumentID,
+    exchangeID: contract.exchangeID || PLACEHOLDER,
+    expireDate: contract.expireDate || PLACEHOLDER,
     lastPrice: snap.lastPrice,
     change,
     changePercent,
