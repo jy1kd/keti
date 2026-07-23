@@ -693,3 +693,80 @@
 - `79bba22` feat(hedge-flag): add hedge flag toggle (投机/套保/套利) to OrderForm
 - `ff68c78` feat(hedge-flag): add hedge flag toggle (投机/套保/套利) to StopOrderForm
 - `892d419` fix(hedge-flag): update api.test expected hedgeFlag + types.ts OrderRequest/StopOrderRequest combHedgeFlag
+
+---
+
+## PR-15: 前端快捷功能实现
+
+**分支**：`feature/pr-15-quick-actions`
+**状态**：✅ 开发完成
+**依赖PR**：PR-9 ✅ / PR-10 ✅ / PR-11 ✅
+
+### TDD 循环记录
+
+#### Cycle 1: API 函数
+
+- `feat(task-15): add API functions for cancelAll, reverse, lock, query positions/orders`
+- 新增 5 个 API 函数：`cancelAllOrders`, `reversePosition`, `lockPosition`, `getPositions`, `getOrders`
+- 测试：27 passed（17 existing + 10 new）
+
+#### Cycle 2: BatchCancel 组件
+
+- `feat(task-15): implement BatchCancel component with select/cancel flow`
+- 批量撤单列表，全选/取消全选，逐个撤单，进度展示
+- 测试：9 passed
+
+#### Cycle 3: QuickActions 组件
+
+- `feat(task-15): implement QuickActions component (reverse, lock, batch cancel)`
+- 一键反向、一键锁仓、批量撤单三个按钮，loading 状态，501 错误处理
+- 测试：8 passed
+
+#### Cycle 4: QuickKeys 快捷键配置组件
+
+- `feat(task-15): implement QuickKeys hotkey configuration component`
+- 快捷键配置面板，key 捕获（忽略修饰键），保存/重置
+- 测试：7 passed
+
+#### Cycle 5: useHotKeys 增强
+
+- `feat(task-15): enhance useHotKeys with custom key bindings support`
+- 支持自定义快捷键映射，动态切换，保留现有 B/S/C 默认
+- 测试：13 passed（9 original + 4 new）
+
+#### Cycle 6: OrderPanel 集成
+
+- `feat(task-15): integrate QuickActions, BatchCancel, QuickKeys into OrderPanel`
+- QuickActions 内嵌面板头部下方，BatchCancel/QuickKeys 浮动覆盖
+- 快捷键按钮（"快捷键"tab）集成到 tab 栏
+- 测试：343 passed（2 pre-existing failures）
+
+### 新增/修改文件
+
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `src/services/api.ts` | 修改 | 新增 5 个 API 函数 |
+| `src/services/api.test.ts` | 修改 | 新增 10 个测试 |
+| `src/components/BatchCancel/index.tsx` | 新增 | 批量撤单组件 |
+| `src/components/BatchCancel/index.test.tsx` | 新增 | 9 个测试 |
+| `src/components/BatchCancel/styles.css` | 新增 | 样式 |
+| `src/components/QuickActions/index.tsx` | 新增 | 快捷操作组件 |
+| `src/components/QuickActions/index.test.tsx` | 新增 | 8 个测试 |
+| `src/components/QuickActions/styles.css` | 新增 | 样式 |
+| `src/components/QuickKeys/index.tsx` | 新增 | 快捷键配置组件 |
+| `src/components/QuickKeys/index.test.tsx` | 新增 | 7 个测试 |
+| `src/components/QuickKeys/styles.css` | 新增 | 样式 |
+| `src/hooks/useHotKeys.ts` | 修改 | 支持自定义 hotKeys 映射 |
+| `src/hooks/useHotKeys.test.ts` | 修改 | 新增 4 个测试 |
+| `src/modules/order/OrderPanel.tsx` | 修改 | 集成 PR-15 组件 |
+| `src/modules/order/OrderPanel.test.tsx` | 修改 | 新增 4 个集成测试 |
+| `src/modules/order/styles.css` | 修改 | 新增 overlay 样式 |
+
+### 提交记录
+
+- `684d49c` feat(task-15): add API functions for cancelAll, reverse, lock, query positions/orders
+- `2784b0c` feat(task-15): implement BatchCancel component with select/cancel flow
+- `1537653` feat(task-15): implement QuickActions component (reverse, lock, batch cancel)
+- `3b84f7b` feat(task-15): implement QuickKeys hotkey configuration component
+- `0b3085f` feat(task-15): enhance useHotKeys with custom key bindings support
+- `35a89fa` feat(task-15): integrate QuickActions, BatchCancel, QuickKeys into OrderPanel
