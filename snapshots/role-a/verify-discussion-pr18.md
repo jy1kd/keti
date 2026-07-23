@@ -51,7 +51,50 @@ curl "http://localhost:8000/api/market/option_chain?underlying=au2608"
 
 ## 验证项 3：隐含波动率计算正常
 
-**状态**：待验证
+**状态**：✅ 已验证
+
+**验证步骤**：
+1. 前端订阅 au2608 和 au2608C880 行情
+2. 等待行情数据推送
+3. 执行 `curl "http://localhost:8000/api/market/volatility?underlying=au2608"`
+
+**验证结果**：
+```json
+{
+  "volatility": [
+    {
+      "instrumentID": "au2608C816",
+      "impliedVolatility": 0.01,
+      "underlyingPrice": 899.88,
+      "strikePrice": 816,
+      "timeToExpiry": 0.009251477573738181,
+      "riskFreeRate": 0.03,
+      "optionType": "1"
+    },
+    {
+      "instrumentID": "au2608C880",
+      "impliedVolatility": 0.22623996179540498,
+      "underlyingPrice": 899.88,
+      "strikePrice": 880,
+      "timeToExpiry": 0.00925147741532943,
+      "riskFreeRate": 0.03,
+      "optionType": "1"
+    }
+  ]
+}
+```
+
+**参数说明**：
+- `impliedVolatility`：隐含波动率（市场对标的资产未来价格波动的预期）
+- `underlyingPrice`：标的价格（au2608 黄金期货当前价格）
+- `strikePrice`：行权价（期权到期时可以买入/卖出的价格）
+- `timeToExpiry`：到期时间（年化，0.00925 年 ≈ 3.4 天）
+- `riskFreeRate`：无风险利率（Black-Scholes 计算参数）
+- `optionType`：期权类型（"1"=看涨 Call, "2"=看跌 Put）
+
+**数据分析**：
+- au2608C880：实值期权（ITM），隐含波动率 22.6%，合理
+- au2608C816：深度实值期权（Deep ITM），隐含波动率 1%，偏低（深度实值期权 IV 计算可能不稳定）
 
 ---
 
