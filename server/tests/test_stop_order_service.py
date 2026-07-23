@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 import threading
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -484,3 +485,65 @@ class TestStopOrderMultipleInstruments:
         if2609 = [o for o in orders if o["instrumentID"] == "IF2609"][0]
         assert if2608["status"] == "triggered"
         assert if2609["status"] == "pending"
+
+
+# ── StopOrderService: GFD (Good For Day) ────────────────────────────────────
+
+class TestStopOrderGFD:
+    """Test GFD (Good For Day) stop order expiry."""
+
+    def test_does_not_load_orders_from_previous_day(self, tmp_data_dir, mock_market_service, mock_order_manager):
+        """Service does not load stop orders from previous days on startup."""
+        # Create a stop order file with yesterday's date
+        yesterday = datetime.now().replace(day=datetime.now().day - 1).strftime("%Y-%m-%d %H:%M:%S")
+        old_order = {
+            "stopOrderID": "so-old",
+            "instrumentID": "IF2608",
+            "direction": "0",
+            "offsetFlag": "0",
+            "limitPrice": 4800.0,
+            "volume": 1,
+            "stopPrice": 4790.0,
+            "status": "pending",
+            "createdAt": yesterday,
+            "triggeredAt": None,
+            "orderRef": None,
+        }
+        os.makedirs(tmp_data_dir, exist_ok=True)
+        with open(os.path.join(tmp_data_dir, "stop_orders.json"), "w") as f:
+            json.dump([old_order], f)
+
+        svc = StopOrderService(
+            data_dir=tmp_data_dir,
+            market_service=mock_market_service,
+            order_manager=mock_order_manager,
+        )
+        assert len(svc.list_orders()) == 0
+
+    def test_loads_orders_from_today(self, tmp_data_dir, mock_market_service, mock_order_manager):
+        """Service loads stop orders from today on startup."""
+        today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        today_order = {
+            "stopOrderID": "so-today",
+            "instrumentID": "IF2608",
+            "direction": "0",
+            "offsetFlag": "0",
+            "limitPrice": 4800.0,
+            "volume": 1,
+            "stopPrice": 4790.0,
+            "status": "pending",
+            "createdAt": today,
+            "triggeredAt": None,
+            "orderRef": None,
+        }
+        os.makedirs(tmp_data_dir, exist_ok=True)
+        with open(os.path.join(tmp_data_dir, "stop_orders.json"), "w") as f:
+            json.dump([today_order], f)
+
+        svc = StopOrderService(
+            data_dir=tmp_data_dir,
+            market_service=mock_market_service,
+            order_manager=mock_order_manager,
+        )
+        assert len(svc.list_orders()) == 1
+        assert svc.list_orders()[0]["stopOrderID"] == "so-today"

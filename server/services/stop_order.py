@@ -290,7 +290,11 @@ class StopOrderService:
             logger.error("Failed to save stop orders: %s", exc)
 
     def _load_from_disk(self) -> None:
-        """Load pending stop orders from disk on startup."""
+        """Load pending stop orders from disk on startup.
+
+        GFD (Good For Day): only loads orders created today.
+        Stop orders from previous days are discarded.
+        """
         file_path = self._get_file_path()
         try:
             with open(file_path, "r", encoding="utf-8") as f:
@@ -298,11 +302,25 @@ class StopOrderService:
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             return
 
+        today = datetime.now().strftime("%Y-%m-%d")
+        loaded = 0
+        skipped_old = 0
+
         for d in data:
             try:
                 order = StopOrder.from_dict(d)
                 # Only load pending orders
-                if order.status == StopOrderStatus.PENDING:
-                    self._orders.append(order)
+                if order.status != StopOrderStatus.PENDING:
+                    continue
+                # GFD: skip orders from previous days
+                if order.created_at and not order.created_at.startswith(today):
+                    skipped_old += 1
+                    continue
+                self._orders.append(order)
+                loaded += 1
             except (KeyError, ValueError) as exc:
                 logger.warning("Skipping invalid stop order: %s", exc)
+
+        if loaded > 0 or skipped_old > 0:
+            logger.info("Loaded %d stop orders from disk (%d expired GFD skipped)",
+                        loaded, skipped_old)
