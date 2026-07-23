@@ -2,6 +2,7 @@
 
 import math
 import logging
+from datetime import datetime
 from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -185,7 +186,8 @@ class OptionsService:
             option_type: '1'=看涨, '2'=看跌。
 
         Returns:
-            隐含波动率（如 0.25），无法收敛返回 0.0。
+            隐含波动率（如 0.25）。如果迭代 100 次仍未收敛，返回最后一次
+            迭代的近似值（通常接近真实值）；如果参数无效返回 0.0。
         """
         if option_price <= 0 or underlying_price <= 0 or strike_price <= 0:
             return 0.0
@@ -278,8 +280,6 @@ class OptionsService:
         Returns:
             年化时间（如 0.5 = 半年），已过期返回 0.0。
         """
-        from datetime import datetime
-
         if not expire_date or len(expire_date) != 8:
             return 0.0
 

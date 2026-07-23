@@ -1484,7 +1484,7 @@ server/
 
 **真实API字段参考**：
 - 自定义接口来源：`ctp-api-structure.txt` → 自定义业务接口部分
-- 合约筛选：InstrumentInfo.productClass='1'（期权）
+- 合约筛选：InstrumentInfo.productClass='2'（期权，'1'=期货）
 - 期权类型：InstrumentInfo.optionsType（'1'=看涨，'2'=看跌）
 - 行权价：InstrumentInfo.strikePrice
 - 标的合约：InstrumentInfo.underlyingInstrID

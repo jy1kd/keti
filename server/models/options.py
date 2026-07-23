@@ -11,7 +11,12 @@ from typing import List, Dict, Any
 
 @dataclass
 class OptionQuote:
-    """单个期权报价。"""
+    """单个期权报价。
+
+    注意：lastPrice/bidPrice/askPrice/volume/openInterest 字段在期权链 API 中
+    默认为 0.0，需要通过行情快照（/api/market/snapshots）获取实时数据。
+    这些字段主要用于 VolatilityData 计算和前端展示。
+    """
 
     instrumentID: str
     strikePrice: float
