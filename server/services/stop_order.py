@@ -1,0 +1,308 @@
+"""StopOrderService — stop order lifecycle, trigger monitoring, and persistence.
+
+Monitors market data and automatically submits orders when stop conditions are met.
+
+Architecture:
+  StopOrderService.submit()      → create stop order + persist
+  StopOrderService.cancel()      → cancel pending stop order
+  StopOrderService.list_orders() → return all stop orders
+  StopOrderService.on_market_data() → check triggers → OrderManager.insert()
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import threading
+import uuid
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from services.market_service import MarketService
+    from services.order_manager import OrderManager
+
+logger = logging.getLogger(__name__)
+
+
+class StopOrderStatus(str, Enum):
+    """Stop order status values."""
+    PENDING = "pending"
+    TRIGGERED = "triggered"
+    CANCELED = "canceled"
+    TRIGGER_FAILED = "trigger_failed"
+
+
+class StopOrder:
+    """Stop order data model."""
+
+    def __init__(
+        self,
+        stop_order_id: str,
+        instrument_id: str,
+        direction: str,
+        offset_flag: str,
+        limit_price: float,
+        volume: int,
+        stop_price: float,
+        status: StopOrderStatus = StopOrderStatus.PENDING,
+        created_at: Optional[str] = None,
+        triggered_at: Optional[str] = None,
+        order_ref: Optional[str] = None,
+    ) -> None:
+        self.stop_order_id = stop_order_id
+        self.instrument_id = instrument_id
+        self.direction = direction
+        self.offset_flag = offset_flag
+        self.limit_price = limit_price
+        self.volume = volume
+        self.stop_price = stop_price
+        self.status = status
+        self.created_at = created_at or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.triggered_at = triggered_at
+        self.order_ref = order_ref
+
+    def to_dict(self) -> dict:
+        """Serialize to camelCase dict for JSON/API."""
+        return {
+            "stopOrderID": self.stop_order_id,
+            "instrumentID": self.instrument_id,
+            "direction": self.direction,
+            "offsetFlag": self.offset_flag,
+            "limitPrice": self.limit_price,
+            "volume": self.volume,
+            "stopPrice": self.stop_price,
+            "status": self.status.value,
+            "createdAt": self.created_at,
+            "triggeredAt": self.triggered_at,
+            "orderRef": self.order_ref,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "StopOrder":
+        """Deserialize from camelCase dict."""
+        return cls(
+            stop_order_id=d["stopOrderID"],
+            instrument_id=d["instrumentID"],
+            direction=d["direction"],
+            offset_flag=d["offsetFlag"],
+            limit_price=d["limitPrice"],
+            volume=d["volume"],
+            stop_price=d["stopPrice"],
+            status=StopOrderStatus(d["status"]),
+            created_at=d.get("createdAt"),
+            triggered_at=d.get("triggeredAt"),
+            order_ref=d.get("orderRef"),
+        )
+
+
+class StopOrderService:
+    """Stop order lifecycle management and trigger monitoring.
+
+    Thread-safety: all public methods are protected by _lock.
+    Persistence: stop orders are saved to data/stop_orders.json on every
+    state change. On startup, only pending orders are loaded.
+    """
+
+    def __init__(
+        self,
+        data_dir: str,
+        market_service: "MarketService",
+        order_manager: "OrderManager",
+    ) -> None:
+        self._data_dir = data_dir
+        self._market_service = market_service
+        self._order_manager = order_manager
+        self._orders: List[StopOrder] = []
+        self._lock = threading.Lock()
+        self._broadcast_fn: Optional[Callable[[str, dict], None]] = None
+
+        # Load pending orders from disk
+        self._load_from_disk()
+
+    # ── Broadcast hook ──────────────────────────────────────────────────────
+
+    def set_broadcast_fn(self, fn: Callable[[str, dict], None]) -> None:
+        """Set callback for WebSocket broadcast on stop order events."""
+        self._broadcast_fn = fn
+
+    # ── Submit ──────────────────────────────────────────────────────────────
+
+    def submit(
+        self,
+        instrument_id: str,
+        direction: str,
+        offset_flag: str,
+        limit_price: float,
+        volume: int,
+        stop_price: float,
+    ) -> dict:
+        """Submit a new stop order.
+
+        Returns:
+            dict: {"success": bool, "stopOrderID": str, "message": str}
+        """
+        stop_id = f"so-{uuid.uuid4().hex[:8]}"
+        order = StopOrder(
+            stop_order_id=stop_id,
+            instrument_id=instrument_id,
+            direction=direction,
+            offset_flag=offset_flag,
+            limit_price=limit_price,
+            volume=volume,
+            stop_price=stop_price,
+        )
+
+        with self._lock:
+            self._orders.append(order)
+            self._save_to_disk()
+
+        logger.info("Stop order submitted: id=%s instrument=%s direction=%s stop=%s",
+                     stop_id, instrument_id, direction, stop_price)
+
+        # Broadcast
+        if self._broadcast_fn is not None:
+            try:
+                self._broadcast_fn("stop_order_update", order.to_dict())
+            except Exception:
+                logger.warning("Broadcast on submit failed", exc_info=True)
+
+        return {"success": True, "stopOrderID": stop_id, "message": "Stop order created"}
+
+    # ── Cancel ──────────────────────────────────────────────────────────────
+
+    def cancel(self, stop_order_id: str) -> dict:
+        """Cancel a pending stop order.
+
+        Returns:
+            dict: {"success": bool, "message": str}
+        """
+        with self._lock:
+            for order in self._orders:
+                if order.stop_order_id == stop_order_id:
+                    if order.status != StopOrderStatus.PENDING:
+                        return {
+                            "success": False,
+                            "message": f"Cannot cancel: status is {order.status.value}",
+                        }
+                    order.status = StopOrderStatus.CANCELED
+                    self._save_to_disk()
+
+                    logger.info("Stop order canceled: id=%s", stop_order_id)
+
+                    # Broadcast
+                    if self._broadcast_fn is not None:
+                        try:
+                            self._broadcast_fn("stop_order_update", order.to_dict())
+                        except Exception:
+                            logger.warning("Broadcast on cancel failed", exc_info=True)
+
+                    return {"success": True, "message": "Stop order canceled"}
+
+        return {"success": False, "message": "Stop order not found"}
+
+    # ── List ────────────────────────────────────────────────────────────────
+
+    def list_orders(self) -> List[dict]:
+        """Return all stop orders (including canceled/triggered)."""
+        with self._lock:
+            return [o.to_dict() for o in self._orders]
+
+    # ── Market data handler ─────────────────────────────────────────────────
+
+    def on_market_data(self, instrument_id: str, last_price: float) -> None:
+        """Check stop orders for the given instrument against the latest price.
+
+        Trigger conditions:
+        - Long stop (direction=buy "0"): triggers when lastPrice <= stopPrice
+        - Short stop (direction=sell "1"): triggers when lastPrice >= stopPrice
+
+        On trigger, submits an order via OrderManager.insert().
+        """
+        with self._lock:
+            candidates = [
+                o for o in self._orders
+                if o.instrument_id == instrument_id and o.status == StopOrderStatus.PENDING
+            ]
+
+        for order in candidates:
+            should_trigger = False
+            if order.direction == "0":  # Long stop
+                should_trigger = last_price <= order.stop_price
+            else:  # Short stop
+                should_trigger = last_price >= order.stop_price
+
+            if should_trigger:
+                self._trigger_order(order, last_price)
+
+    def _trigger_order(self, order: StopOrder, last_price: float) -> None:
+        """Execute the triggered stop order."""
+        logger.info("Stop order triggered: id=%s instrument=%s price=%s stop=%s",
+                     order.stop_order_id, order.instrument_id, last_price, order.stop_price)
+
+        # Submit the actual order
+        result = self._order_manager.insert(
+            instrument_id=order.instrument_id,
+            direction=order.direction,
+            offset_flag=order.offset_flag,
+            price_type="2",  # Limit order
+            limit_price=order.limit_price,
+            volume=order.volume,
+        )
+
+        with self._lock:
+            if result.get("success"):
+                order.status = StopOrderStatus.TRIGGERED
+                order.order_ref = result.get("orderRef", "")
+                order.triggered_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                order.status = StopOrderStatus.TRIGGER_FAILED
+                order.triggered_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                logger.warning("Stop order trigger failed: id=%s reason=%s",
+                               order.stop_order_id, result.get("message", "Unknown"))
+
+            self._save_to_disk()
+
+        # Broadcast
+        if self._broadcast_fn is not None:
+            try:
+                self._broadcast_fn("stop_order_update", order.to_dict())
+            except Exception:
+                logger.warning("Broadcast on trigger failed", exc_info=True)
+
+    # ── Persistence ─────────────────────────────────────────────────────────
+
+    def _get_file_path(self) -> str:
+        """Get the path to the stop orders JSON file."""
+        return os.path.join(self._data_dir, "stop_orders.json")
+
+    def _save_to_disk(self) -> None:
+        """Save all stop orders to disk (must hold _lock)."""
+        file_path = self._get_file_path()
+        try:
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump([o.to_dict() for o in self._orders], f, ensure_ascii=False, indent=2)
+        except OSError as exc:
+            logger.error("Failed to save stop orders: %s", exc)
+
+    def _load_from_disk(self) -> None:
+        """Load pending stop orders from disk on startup."""
+        file_path = self._get_file_path()
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            return
+
+        for d in data:
+            try:
+                order = StopOrder.from_dict(d)
+                # Only load pending orders
+                if order.status == StopOrderStatus.PENDING:
+                    self._orders.append(order)
+            except (KeyError, ValueError) as exc:
+                logger.warning("Skipping invalid stop order: %s", exc)
