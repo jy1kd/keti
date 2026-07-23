@@ -770,3 +770,11 @@
 - `3b84f7b` feat(task-15): implement QuickKeys hotkey configuration component
 - `0b3085f` feat(task-15): enhance useHotKeys with custom key bindings support
 - `35a89fa` feat(task-15): integrate QuickActions, BatchCancel, QuickKeys into OrderPanel
+- `d23d783` docs(task-15): update dev-record-b with PR-15 TDD records
+
+### 审查反馈修复（第 1 轮）
+
+- `2c6a4fd` fix(task-15): review反馈 - 扩展getOrders返回类型，移除BatchCancel hardcode假值
+- `5f0d51c` fix(task-15): review反馈 - QuickKeys恢复默认不再自动保存，需手动确认
+- `b4c0c83` fix(task-15): review反馈 - 提取executeAction公共函数，消除handleReverse/handleLock重复代码
+- `b2e9b4e` fix(task-15): review反馈 - 并发撤单 + setHotKeys批量更新 + cancelAllOrders加TODO + 快捷键去重 + hotKeys回退默认
