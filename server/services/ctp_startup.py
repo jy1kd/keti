@@ -296,11 +296,19 @@ def _wire_bridge(
     kline_service = KLineService()
     app.state.kline_service = kline_service
 
+    # Stop order callback — lazy lookup since StopOrderService may not be
+    # initialized yet (TD connects after MD)
+    def _check_stop_orders(instrument_id: str, last_price: float) -> None:
+        stop_svc = getattr(app.state, "stop_service", None)
+        if stop_svc is not None:
+            stop_svc.on_market_data(instrument_id, last_price)
+
     wire_market_data_callback(
         md_api.spi,
         app.state.market_service,
         broadcast_fn=_broadcast_to_ws,
         kline_service=kline_service,
+        stop_order_callback=_check_stop_orders,
     )
 
     # Wire OnFrontDisconnected → system broadcast + reconnect
@@ -483,6 +491,25 @@ def start_ctp_trading_connection(
         )
 
     app.state.order_manager.set_broadcast_fn(_broadcast_order)
+
+    # Initialize StopOrderService (PR-13)
+    from services.stop_order import StopOrderService
+    data_dir = str(Path(__file__).parent.parent / "data")
+    stop_service = StopOrderService(
+        data_dir=data_dir,
+        market_service=app.state.market_service,
+        order_manager=order_manager,
+    )
+
+    def _broadcast_stop(msg_type: str, data: dict) -> None:
+        asyncio.run_coroutine_threadsafe(
+            ws_manager.broadcast("stop", msg_type, data),
+            loop,
+        )
+
+    stop_service.set_broadcast_fn(_broadcast_stop)
+    app.state.stop_service = stop_service
+    logger.info("StopOrderService initialized")
 
     # Wire CTP callbacks → field mapping → OrderManager
     def _on_rtn_order(pOrder):

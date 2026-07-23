@@ -32,6 +32,7 @@ def wire_market_data_callback(
     market_service: MarketService,
     broadcast_fn: Optional[Callable[[dict], None]] = None,
     kline_service: Optional[KLineService] = None,
+    stop_order_callback: Optional[Callable[[str, float], None]] = None,
 ) -> None:
     """Wire the CTP OnRtnDepthMarketData callback to the service layer.
 
@@ -40,6 +41,7 @@ def wire_market_data_callback(
     2. Update the MarketService snapshot cache (thread-safe)
     3. Call broadcast_fn(data) if provided (for WebSocket push)
     4. Update KLineService bars if provided (K-line aggregation)
+    5. Check stop orders if stop_order_callback is provided
 
     Args:
         md_spi: The MdSpi instance from MdUserApi (ctp_wrapper.callback.MdSpi).
@@ -47,6 +49,8 @@ def wire_market_data_callback(
         broadcast_fn: Optional callback(dict) for WebSocket broadcast.
                       Called in the CTP worker thread.
         kline_service: Optional KLineService for K-line aggregation.
+        stop_order_callback: Optional callback(instrument_id, last_price) for
+                             stop order trigger checking.
     """
     def _on_depth_market_data(pDepthMarketData: Any) -> None:
         # Step 1: Map CTP PascalCase → camelCase dict
@@ -75,5 +79,18 @@ def wire_market_data_callback(
                     exc_info=True,
                 )
 
+        # Step 5: Check stop orders (if callback provided)
+        if stop_order_callback is not None:
+            try:
+                instrument_id = data.get("instrumentID", "")
+                last_price = data.get("lastPrice", 0.0)
+                if instrument_id and last_price > 0:
+                    stop_order_callback(instrument_id, last_price)
+            except Exception:
+                logger.warning(
+                    "Stop order callback raised an exception",
+                    exc_info=True,
+                )
+
     md_spi.on("OnRtnDepthMarketData", _on_depth_market_data)
-    logger.info("Wired OnRtnDepthMarketData → MarketService + broadcast")
+    logger.info("Wired OnRtnDepthMarketData → MarketService + broadcast + stop orders")
