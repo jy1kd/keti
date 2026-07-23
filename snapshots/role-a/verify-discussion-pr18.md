@@ -121,10 +121,44 @@ curl "http://localhost:8000/api/market/option_chain?underlying=au2608"
 
 ## 验证项 5：VolatilityData返回完整参数
 
-**状态**：待验证
+**状态**：✅ 已验证
+
+**验证步骤**：
+```bash
+curl "http://localhost:8000/api/market/volatility?underlying=au2608"
+```
+
+**验证结果**：
+```json
+{
+  "instrumentID": "au2608C880",
+  "impliedVolatility": 0.23051109188462193,
+  "underlyingPrice": 899.08,
+  "strikePrice": 880,
+  "timeToExpiry": 0.009214233242800466,
+  "riskFreeRate": 0.03,
+  "optionType": "1"
+}
+```
+
+**字段检查**：
+- `instrumentID` ✅
+- `impliedVolatility` ✅
+- `underlyingPrice` ✅
+- `strikePrice` ✅
+- `timeToExpiry` ✅
+- `riskFreeRate` ✅
+- `optionType` ✅
 
 ---
 
 ## 验证项 6：期权类型映射正确
 
-**状态**：待验证
+**状态**：✅ 已验证
+
+**验证结果**：
+- `au2608C816` → `optionType: "1"` (看涨 Call) ✅
+- `au2608C880` → `optionType: "1"` (看涨 Call) ✅
+- `au2608P880` → `optionType: "2"` (看跌 Put) ✅
+
+**结论**：期权类型映射与 CTP 官方定义一致（'1'=看涨, '2'=看跌）
