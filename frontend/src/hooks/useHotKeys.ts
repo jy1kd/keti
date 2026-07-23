@@ -1,22 +1,46 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
+import type { HotKeyConfig } from '../services/types'
+
+const DEFAULT_KEYS: HotKeyConfig = {
+  buy: 'b',
+  sell: 's',
+  cancel: 'c',
+}
 
 interface UseHotKeysOptions {
   onBuy?: () => void
   onSell?: () => void
   onCancelAll?: () => void
   enabled: boolean
+  hotKeys?: HotKeyConfig
 }
 
-const KEY_MAP: Record<string, keyof UseHotKeysOptions> = {
-  b: 'onBuy',
-  B: 'onBuy',
-  s: 'onSell',
-  S: 'onSell',
-  c: 'onCancelAll',
-  C: 'onCancelAll',
-}
+type ActionKey = 'buy' | 'sell' | 'cancel'
 
-export function useHotKeys({ onBuy, onSell, onCancelAll, enabled }: UseHotKeysOptions) {
+export function useHotKeys({
+  onBuy,
+  onSell,
+  onCancelAll,
+  enabled,
+  hotKeys,
+}: UseHotKeysOptions) {
+  const effectiveKeys: HotKeyConfig = useMemo(
+    () => hotKeys ?? DEFAULT_KEYS,
+    [hotKeys]
+  )
+
+  // Build key → action mapping from effective keys
+  const keyToAction = useMemo(() => {
+    const map: Record<string, ActionKey> = {}
+    for (const [action, key] of Object.entries(effectiveKeys)) {
+      if (key) {
+        map[key.toLowerCase()] = action as ActionKey
+        map[key.toUpperCase()] = action as ActionKey
+      }
+    }
+    return map
+  }, [effectiveKeys])
+
   useEffect(() => {
     if (!enabled) return
 
@@ -28,17 +52,17 @@ export function useHotKeys({ onBuy, onSell, onCancelAll, enabled }: UseHotKeysOp
       // Don't fire with modifier keys
       if (e.ctrlKey || e.metaKey || e.altKey) return
 
-      const action = KEY_MAP[e.key]
+      const action = keyToAction[e.key]
       if (!action) return
 
       e.preventDefault()
 
-      if (action === 'onBuy') onBuy?.()
-      if (action === 'onSell') onSell?.()
-      if (action === 'onCancelAll') onCancelAll?.()
+      if (action === 'buy') onBuy?.()
+      if (action === 'sell') onSell?.()
+      if (action === 'cancel') onCancelAll?.()
     }
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [enabled, onBuy, onSell, onCancelAll])
+  }, [enabled, keyToAction, onBuy, onSell, onCancelAll])
 }
