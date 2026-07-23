@@ -67,3 +67,4 @@ docs/superpowers/
 !.ua/fingerprints.json
 server/data/instruments.json
 server/data/preset_instruments.json
+server/data/stop_orders.json

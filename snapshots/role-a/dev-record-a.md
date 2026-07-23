@@ -622,6 +622,54 @@ TDD 完成 + 审查修复后，接入 SimNow 7x24 环境进行实盘测试，发
 - 🟡 import ctp 重复 → 保留（测试模式要求，与现有代码一致）
 - 🟡 缺少 refresh 端点测试 → 新增 9 个测试
 - 🟡 查询回调高度重复 → 提取 `_make_qry_callback()` 工厂函数
+
+---
+
+## PR-13: 后端止损单服务实现
+
+**分支**：`feature/pr-13-stop-order`
+**依赖**：PR-9
+**状态**：✅ 已完成
+
+### TDD 循环记录
+
+| 循环 | 功能点 | 测试文件 | 新增测试 | 状态 |
+|------|--------|----------|----------|------|
+| #1 | StopOrder 模型 + StopOrderService 核心逻辑 | test_stop_order_service.py | 29 | ✅ |
+| #2 | 止损单 API 端点 | test_stop_order_api.py | 10 | ✅ |
+| #3 | StopOrderService 接线（main.py + ctp_startup） | test_stop_order_integration.py | 3 | ✅ |
+| #4 | GFD 止损单过期逻辑 | test_stop_order_service.py | 2 | ✅ |
+
+### Commit 记录
+
+| Commit | 类型 | 描述 |
+|--------|------|------|
+| ef734ae | test | StopOrder model + StopOrderService core logic — 29 tests |
+| 3f4a2d7 | feat | stop order API endpoints — 10 tests |
+| fcb15b4 | feat | wire StopOrderService into main.py + ctp_startup — 42 tests |
+| b0a69f7 | feat | GFD stop order expiry — skip previous day orders on startup — 44 tests |
+| 09b256b | fix | review反馈 - S1月初测试+S2原子写入+S4移除未用参数+S5手动验证命令 |
+
+### 关键设计决策
+
+1. **StopOrderService 独立模块**：不依赖 OrderManager 内部实现，通过依赖注入获取 OrderManager
+2. **触发条件**：多头止损（direction=buy）：lastPrice <= stopPrice；空头止损（direction=sell）：lastPrice >= stopPrice
+3. **持久化策略**：每次状态变更原子写入 data/stop_orders.json（先写 .tmp 再 os.replace），启动时只加载 pending 状态的止损单
+4. **GFD 过期**：启动时跳过 createdAt 非当日的止损单
+5. **行情接线**：ctp_bridge.py 新增 stop_order_callback 参数，_wire_bridge() 使用懒查找（StopOrderService 可能晚于 MD 初始化）
+6. **WebSocket 广播**：submit/cancel/trigger 都推送 stop_order_update 到 /ws/stop 端点
+
+### 审查修复记录
+
+**第 1 轮审查**（`review-feedback-a-pr13.md`）：0 🔴 + 7 🟡 → 4 采纳 + 3 保留
+- 🟡 S1: GFD 测试月初崩溃 → 改用 `timedelta(days=1)`
+- 🟡 S2: 非原子写入 → 先写 `.tmp` 再 `os.replace()`
+- 🟡 S3: @dataclass → 保留（当前实现功能正确）
+- 🟡 S4: market_service 未使用 → 改为可选参数
+- 🟡 S5: 手动验证命令 → 更新 task.md
+- 🟡 S6: 无数量上限 → 后续优化
+- 🟡 S7: 锁获取模式 → 当前可接受
+- 📦 Commit: `09b256b`
 - 🟡 pending 列表线程安全 → 添加 docstring 标注线程模型
 - 🔵 subscribe/unsubscribe 语义 → 有意为之（本地状态=用户意图，CTP 失败不回滚）
 - 🔵 account 返回格式 → 有意为之（单一对象 vs 列表，与 CTP 数据模型一致）

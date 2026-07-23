@@ -1374,7 +1374,7 @@ frontend/src/
 | **负责角色** | 角色A |
 | **依赖PR** | PR-9 |
 | **工作量** | 3小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
 
 **提交文件**：
 ```
@@ -1385,8 +1385,10 @@ server/
 │   └── stop_order.py           # 止损单监控服务
 ├── data/
 │   └── stop_orders.json        # 止损单持久化文件
-└── models/
-    └── order.py                # 报单数据模型（完善StopOrder）
+└── tests/
+    ├── test_stop_order_service.py  # 服务层测试
+    ├── test_stop_order_api.py      # API测试
+    └── test_stop_order_integration.py  # 集成测试
 ```
 
 **PR描述**：
@@ -1424,17 +1426,17 @@ server/
 7. 持久化正常（重启后恢复）
 
 **验收标准**：
-- [ ] 止损单提交正常
-- [ ] 止损单取消正常
-- [ ] 止损单查询正常
-- [ ] 止损单触发逻辑正确
-- [ ] 触发后自动报单正常
-- [ ] WebSocket推送正常
-- [ ] 持久化正常
+- [x] 止损单提交正常
+- [x] 止损单取消正常
+- [x] 止损单查询正常
+- [x] 止损单触发逻辑正确
+- [x] 触发后自动报单正常
+- [x] WebSocket推送正常
+- [x] 持久化正常
 
 **用户手动验证**：
 1. 启动后端
-2. 提交止损单：`curl -X POST http://localhost:8000/api/order/stop -H "Content-Type: application/json" -d "{\"instrumentID\":\"IF2608\",\"direction\":\"1\",\"combOffsetFlag\":\"1\",\"limitPrice\":4800.0,\"volumeTotalOriginal\":1,\"stopPrice\":4790.0}"`
+2. 提交止损单：`curl -X POST http://localhost:8000/api/order/stop -H "Content-Type: application/json" -d "{\"instrumentID\":\"IF2608\",\"direction\":\"1\",\"offsetFlag\":\"1\",\"limitPrice\":4800.0,\"volume\":1,\"stopPrice\":4790.0}"`
 3. 查询止损单列表：浏览器访问 http://localhost:8000/api/order/stop/list
 4. 取消止损单
 

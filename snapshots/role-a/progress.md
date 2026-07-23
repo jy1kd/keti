@@ -17,7 +17,7 @@
 | PR-9 | 后端交易API实现 | ✅ 已合并 | 2026-07-20 | 07a08d9~77fbe3b (32 commits) |
 | PR-19 | 后端合约查询API | ✅ 已完成 | 2026-07-21 | a4686a3~85ce0a8 (11 commits, 29 tests) |
 | PR-11 | 后端查询API实现 | ✅ 已完成 | 2026-07-21 | b883764~d6eb313 (11 commits, 96 tests) |
-| PR-13 | 后端止损单服务实现 | ⏳ 待开始 | - | - |
+| PR-13 | 后端止损单服务实现 | ✅ 已完成 | 2026-07-23 | ef734ae~894380f (7 commits, 44 tests) |
 | PR-17 | 联调测试与Bug修复 | ⏳ 待开始 | - | - |
 
 **总计**：8个PR + 1个联调PR = 9个PR
@@ -432,24 +432,40 @@
 
 ### PR-13: 后端止损单服务实现
 
-**状态**：⏳ 待开始
+**状态**：✅ 已完成
 
 **PR信息**：
 - PR分支名：`feature/pr-13-stop-order`
-- 依赖PR：PR-9, PR-11
+- 依赖PR：PR-9
 - 工作量：3小时
 
 **完成内容**：
-- 待开发
+- ✅ `services/stop_order.py` — StopOrderService 核心逻辑（提交/取消/查询/触发/持久化）
+- ✅ `api/order.py` — 止损单 API 端点（POST /stop, POST /stop/cancel, GET /stop/list）
+- ✅ `services/ctp_bridge.py` — 行情回调 → StopOrderService 接线
+- ✅ `services/ctp_startup.py` — StopOrderService 初始化 + 广播接线
+- ✅ `main.py` — StopOrderService 导入 + app.state 注册
+- ✅ 44 个新增单元测试
 
 **验证结果**：
-- 待验证
+- ✅ 44 新增测试全部通过
+- ✅ 一次审查通过（0 🔴 + 7 🟡）
+- ✅ 审查修复完成（4 采纳 + 3 保留）
+- ✅ 代码范围正确（仅 server/ + snapshots/）
+- ✅ 无调试代码残留
 
 **提交记录**：
-- 待提交
+- `ef734ae` test(task-13): StopOrder model + StopOrderService core logic — 29 tests
+- `3f4a2d7` feat(task-13): stop order API endpoints — 10 tests
+- `fcb15b4` feat(task-13): wire StopOrderService into main.py + ctp_startup — 42 tests
+- `b0a69f7` feat(task-13): GFD stop order expiry — 44 tests
+- `09b256b` fix(task-13): review反馈 - S1月初测试+S2原子写入+S4移除未用参数+S5手动验证命令
 
 **交接说明**：
-- 待交接
+- StopOrderService 监控行情数据，自动触发止损单
+- API 端点：POST /stop, POST /stop/cancel, GET /stop/list
+- 持久化：data/stop_orders.json（原子写入 + GFD 过期）
+- WebSocket：/ws/stop 推送 stop_order_update
 
 ---
 

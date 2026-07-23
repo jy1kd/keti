@@ -362,7 +362,7 @@ git branch -d feature/pr-<编号>-<描述>
 
 | PR | 任务 | 依赖 | 状态 | 分支名 |
 |----|------|------|------|--------|
-| PR-13 | 后端止损单服务实现 | PR-9 | ⏳ 待开始 | `feature/pr-13-stop-order` |
+| PR-13 | 后端止损单服务实现 | PR-9 | ✅ 已完成 | `feature/pr-13-stop-order` |
 | PR-18 | 后端期权API实现 | PR-5 | ⏳ 待开始 | `feature/pr-18-options-api` |
 
 ### 阶段5：联调优化
