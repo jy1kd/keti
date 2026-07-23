@@ -23,7 +23,7 @@
 | PR-16 | 前端查询面板实现 | ⏳ 待开始 | - | - |
 | PR-17 | 联调测试与Bug修复 | ⏳ 待开始 | - | - |
 | PR-20 | 前端合约刷新功能（刷新按钮 + Toast） | ✅ 已完成 | 2026-07-21 | 2a4d682~8ebaf1f (9 commits) |
-| PR-21 | 手动订阅/退订合约 | ⏳ 待开始 | - | - |
+| PR-21 | 手动订阅/退订合约 | ✅ 已完成 | 2026-07-23 | 与 PR-20 共享提交 |
 
 **总计**：12个PR + 1个联调PR = 13个PR
 
@@ -335,32 +335,35 @@
 
 ### PR-21: 手动订阅/退订合约
 
-**状态**：⏳ 待开始
+**状态**：✅ 已完成（已合并）
 
 **PR信息**：
 - PR分支名：`feature/pr-21-manual-subscribe`
-- 依赖PR：PR-20
+- 依赖PR：PR-6a
 - 工作量：2小时
 
 **完成内容**：
-- 待开发
+- 与 PR-20 共享 InstrumentSearchModal 模态框实现
+- 合约搜索（按交易所/品种/关键词筛选）
+- 订阅/退订按钮（模态框内 + MarketPanel 按钮组）
+- Contracts Store 状态管理（addContractInfo / removeContractById）
+- UserPrefs Store localStorage 持久化
+- "已订阅"筛选切换按钮
+- subscribeMarket / unsubscribeMarket API 调用
 
 **验证结果**：
-- 待验证
+- ✅ 功能目标已全部覆盖
+- ✅ 已合并到 main
 
 **提交记录**：
-- 待提交
+- 与 PR-20 共享提交（InstrumentSearchModal、Contracts Store、MarketPanel 按钮组等）
 
 **交接说明**：
-- 待交接
-
----
-
----
+- 订阅/退订功能已完整实现，未严格按原始 ContractSearch 增强方案，实际采用 InstrumentSearchModal 方案更强大
 
 ### PR-20: 前端合约刷新功能
 
-**状态**：✅ 已完成（审查通过，待合并）
+**状态**：✅ 已完成（已合并）
 
 **PR信息**：
 - PR分支名：`feature/pr-20-instrument-refresh-ui`
@@ -392,18 +395,8 @@
 - `8ebaf1f` fix(task-20): add instruments_refreshed to WSMessageType union
 
 **交接说明**：
-- PR-20 完成，可合并。审查无阻断问题，2 个建议 + 2 个疑问已全部处理。
+- PR-20 已完成并合并。审查无阻断问题，2 个建议 + 2 个疑问已全部处理。
 - ✅ TypeScript 编译无错误
-
-**提交记录**：
-- `2a4d682` feat(task-20): implement refreshInstruments API function
-- `8e9bc8a` feat(task-20): add refreshInstruments + isRefreshing to market store
-- `ac84927` feat(task-20): handle instruments_refreshed WS message with toast + refetch
-- `51ae660` feat(task-20): add refresh contracts button to MarketPanel with loading state
-- `52cc723` docs(task-20): update dev-record-b with PR-20 TDD records
-
-**交接说明**：
-- 开发完成，待审查。审查通过后可进入 PR-21（手动订阅）
 
 ---
 
