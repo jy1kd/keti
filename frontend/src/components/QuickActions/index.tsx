@@ -9,46 +9,41 @@ interface QuickActionsProps {
   onBatchCancel: () => void
 }
 
-type ActionType = 'reverse' | 'lock' | 'batchCancel' | null
+type ActionType = 'reverse' | 'lock' | null
 
 export function QuickActions({ instrumentID, onReverse, onLock, onBatchCancel }: QuickActionsProps) {
   const [loading, setLoading] = useState<ActionType>(null)
   const disabled = !instrumentID
 
-  async function handleReverse() {
+  async function executeAction(
+    action: ActionType,
+    fn: () => Promise<unknown>,
+    successMsg: string,
+    errorPrefix: string
+  ) {
     if (disabled || loading) return
-    setLoading('reverse')
+    setLoading(action)
     try {
-      await onReverse(instrumentID)
-      toast.success('一键反向成功')
+      await fn()
+      toast.success(successMsg)
     } catch (e: unknown) {
       const err = e as Error & { response?: { status: number } }
       if (err.response?.status === 501) {
-        toast.error('一键反向失败：501 后端尚未实现此功能')
+        toast.error(`${errorPrefix}：501 后端尚未实现此功能`)
       } else {
-        toast.error(`一键反向失败：${err.message || '未知错误'}`)
+        toast.error(`${errorPrefix}：${err.message || '未知错误'}`)
       }
     } finally {
       setLoading(null)
     }
   }
 
-  async function handleLock() {
-    if (disabled || loading) return
-    setLoading('lock')
-    try {
-      await onLock(instrumentID)
-      toast.success('一键锁仓成功')
-    } catch (e: unknown) {
-      const err = e as Error & { response?: { status: number } }
-      if (err.response?.status === 501) {
-        toast.error('一键锁仓失败：501 后端尚未实现此功能')
-      } else {
-        toast.error(`一键锁仓失败：${err.message || '未知错误'}`)
-      }
-    } finally {
-      setLoading(null)
-    }
+  function handleReverse() {
+    executeAction('reverse', () => onReverse(instrumentID), '一键反向成功', '一键反向失败')
+  }
+
+  function handleLock() {
+    executeAction('lock', () => onLock(instrumentID), '一键锁仓成功', '一键锁仓失败')
   }
 
   function handleBatchCancel() {
