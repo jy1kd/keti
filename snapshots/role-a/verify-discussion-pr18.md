@@ -100,7 +100,22 @@ curl "http://localhost:8000/api/market/option_chain?underlying=au2608"
 
 ## 验证项 4：看涨/看跌期权正确分类
 
-**状态**：待验证
+**状态**：✅ 已验证
+
+**验证步骤**：
+```bash
+curl "http://localhost:8000/api/market/option_chain?underlying=au2608"
+```
+
+**验证结果**：
+- `calls` 中的合约 `optionsType` 都是 `"1"`（看涨）
+- `puts` 中的合约 `optionsType` 都是 `"2"`（看跌）
+- 分类正确
+
+**讨论**：
+- 用户提出：是否需要查询已订阅的 option_chain？
+- 结论：不需要。PR-14（前端期权T型报价）负责前端筛选，后端 API 返回全部数据即可
+- `subscribed_only=true` 参数会增加不必要的复杂度，职责混乱
 
 ---
 
