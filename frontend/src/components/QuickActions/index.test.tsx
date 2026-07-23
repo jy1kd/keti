@@ -12,15 +12,14 @@ vi.mock('../Toast', () => ({
 }))
 
 describe('QuickActions', () => {
-  let onReverse: ReturnType<typeof vi.fn>
-  let onLock: ReturnType<typeof vi.fn>
-  let onBatchCancel: ReturnType<typeof vi.fn>
+  const onReverse = vi.fn<[string], Promise<unknown>>()
+  const onLock = vi.fn<[string], Promise<unknown>>()
+  const onBatchCancel = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
-    onReverse = vi.fn().mockResolvedValue(true)
-    onLock = vi.fn().mockResolvedValue(true)
-    onBatchCancel = vi.fn()
+    onReverse.mockResolvedValue({ success: true, message: '' })
+    onLock.mockResolvedValue({ success: true, message: '' })
   })
 
   it('renders three action buttons', () => {

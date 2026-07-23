@@ -10,6 +10,16 @@ vi.mock('./store', () => ({
   }),
 }))
 
+// Mock API modules used by child components
+vi.mock('../../services/api', () => ({
+  cancelAllOrders: vi.fn().mockResolvedValue({ success: true, cancelled: 0, failed: 0, errors: [] }),
+  reversePosition: vi.fn().mockResolvedValue({ success: true, message: '' }),
+  lockPosition: vi.fn().mockResolvedValue({ success: true, message: '' }),
+  getOrders: vi.fn().mockResolvedValue({ orders: [], count: 0 }),
+  getPositions: vi.fn().mockResolvedValue({ positions: [], count: 0 }),
+  cancelOrder: vi.fn().mockResolvedValue(true),
+}))
+
 function setMockState(overrides: Record<string, unknown> = {}) {
   mockState = {
     orderForm: {
@@ -53,7 +63,6 @@ describe('OrderPanel', () => {
 
   it('shows OrderForm by default (报单 tab)', () => {
     render(<OrderPanel />)
-    // OrderForm renders direction toggle buttons
     expect(screen.getByText('买')).toBeInTheDocument()
     expect(screen.getByText('卖')).toBeInTheDocument()
   })
@@ -63,7 +72,6 @@ describe('OrderPanel', () => {
 
     fireEvent.click(screen.getByText('止损单'))
 
-    // StopOrderForm has the 止损价 label and 止损买入 button text
     expect(screen.getByText('止损价')).toBeInTheDocument()
   })
 
@@ -81,5 +89,40 @@ describe('OrderPanel', () => {
     fireEvent.keyDown(window, { key: 's' })
 
     expect(mockState.setOrderForm).toHaveBeenCalledWith({ direction: 'sell' })
+  })
+
+  // ── PR-15: QuickActions integration ─────────────────────────────────
+
+  it('renders QuickActions buttons', () => {
+    render(<OrderPanel />)
+
+    expect(screen.getByText('一键反向')).toBeInTheDocument()
+    expect(screen.getByText('一键锁仓')).toBeInTheDocument()
+    expect(screen.getByText('批量撤单')).toBeInTheDocument()
+  })
+
+  it('renders quick keys button to open hotkey config', () => {
+    render(<OrderPanel />)
+
+    expect(screen.getByText('快捷键')).toBeInTheDocument()
+  })
+
+  it('opens BatchCancel panel when 批量撤单 clicked', () => {
+    render(<OrderPanel />)
+
+    fireEvent.click(screen.getByText('批量撤单'))
+
+    // BatchCancel header should appear
+    expect(screen.getByText(/批量撤单/)).toBeInTheDocument()
+  })
+
+  it('opens QuickKeys panel when 快捷键 clicked', () => {
+    render(<OrderPanel />)
+
+    fireEvent.click(screen.getByText('快捷键'))
+
+    // QuickKeys panel should appear with save/close buttons
+    expect(screen.getByText('保存')).toBeInTheDocument()
+    expect(screen.getByText('恢复默认')).toBeInTheDocument()
   })
 })

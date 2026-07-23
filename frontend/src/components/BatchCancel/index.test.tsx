@@ -33,12 +33,12 @@ const mockOrders = [
 ]
 
 describe('BatchCancel', () => {
-  let onCancelOrder: ReturnType<typeof vi.fn>
-  let onClose: ReturnType<typeof vi.fn>
+  const onCancelOrder = vi.fn<[string], Promise<boolean>>()
+  const onClose = vi.fn()
 
   beforeEach(() => {
-    onCancelOrder = vi.fn().mockResolvedValue(true)
-    onClose = vi.fn()
+    vi.clearAllMocks()
+    onCancelOrder.mockResolvedValue(true)
   })
 
   it('renders order list with checkboxes', () => {
