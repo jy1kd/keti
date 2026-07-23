@@ -262,6 +262,9 @@ interface OrdersResponse {
     orderRef: string
     instrumentID: string
     direction: string
+    combOffsetFlag: string
+    limitPrice: number
+    volumeTotalOriginal: number
     orderStatus: string
   }>
   count: number

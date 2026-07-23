@@ -57,20 +57,10 @@ export function OrderPanel() {
     try {
       const result = await getOrders()
       if (result.orders) {
-        // Only show unfilled orders; map to full order shape
-        const unfilled = result.orders
-          .filter(
-            (o) => o.orderStatus === 'no_traded' || o.orderStatus === 'partial'
-          )
-          .map((o) => ({
-            orderRef: o.orderRef,
-            instrumentID: o.instrumentID,
-            direction: o.direction,
-            combOffsetFlag: 'open' as string,
-            limitPrice: 0,
-            volumeTotalOriginal: 0,
-            orderStatus: o.orderStatus,
-          }))
+        // Only show unfilled orders; pass real fields from backend
+        const unfilled = result.orders.filter(
+          (o) => o.orderStatus === 'no_traded' || o.orderStatus === 'partial'
+        )
         setActiveOrders(unfilled)
       }
     } catch {

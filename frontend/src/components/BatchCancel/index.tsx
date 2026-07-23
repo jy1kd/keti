@@ -5,9 +5,9 @@ interface OrderItem {
   orderRef: string
   instrumentID: string
   direction: string
-  combOffsetFlag: string
-  limitPrice: number
-  volumeTotalOriginal: number
+  combOffsetFlag?: string
+  limitPrice?: number
+  volumeTotalOriginal?: number
   orderStatus: string
 }
 
@@ -149,10 +149,10 @@ export function BatchCancel({ orders, onCancelOrder, onClose }: BatchCancelProps
               {DIRECTION_LABEL[order.direction] ?? order.direction}
             </span>
             <span className="order-offset">
-              {OFFSET_LABEL[order.combOffsetFlag] ?? order.combOffsetFlag}
+              {OFFSET_LABEL[order.combOffsetFlag ?? ''] ?? order.combOffsetFlag ?? '—'}
             </span>
-            <span className="order-price">{order.limitPrice}</span>
-            <span className="order-vol">{order.volumeTotalOriginal}</span>
+            <span className="order-price">{order.limitPrice != null ? order.limitPrice : '—'}</span>
+            <span className="order-vol">{order.volumeTotalOriginal != null ? order.volumeTotalOriginal : '—'}</span>
             <span className={`order-status status-${order.orderStatus}`}>
               {STATUS_LABEL[order.orderStatus] ?? order.orderStatus}
             </span>
