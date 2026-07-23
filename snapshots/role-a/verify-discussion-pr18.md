@@ -30,7 +30,22 @@ curl "http://localhost:8000/api/market/options?underlying=au2608"
 
 ## 验证项 2：期权T型报价数据获取正常
 
-**状态**：待验证
+**状态**：✅ 已验证
+
+**验证步骤**：
+```bash
+curl "http://localhost:8000/api/market/option_chain?underlying=au2608"
+```
+
+**验证结果**：
+- 返回期权链结构正确：`{underlying, expireDate, calls[], puts[]}`
+- calls 和 puts 按 strikePrice 升序排列
+- 同一 strikePrice 在 calls 和 puts 中都存在（标准 T型报价 结构）
+
+**知识点说明**：
+- 期权是成对存在的：每个行权价都有一个 Call 和一个 Put
+- T型报价：左边 Calls，中间行权价，右边 Puts
+- 例如：au2608C880（Call）和 au2608P880（Put）共享 strikePrice=880
 
 ---
 
