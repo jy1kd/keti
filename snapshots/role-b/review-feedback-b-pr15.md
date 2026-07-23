@@ -57,3 +57,55 @@
 ❌ 需要修改后再审（3 个 🔴 阻断性问题）
 
 下一步：请切回开发窗口，输入审查反馈进行修复
+
+---
+
+## 第 2 轮审查（复审）
+
+审查分支：`feature/pr-15-quick-actions`
+审查 commit：`c396d31..8b6b6e6`（7 个修复 commits）
+审查时间：2026-07-23
+
+### 🔴 阻断性问题（必须修改）
+
+无
+
+### 🟡 改进建议
+
+1. **【api.ts:293-296】`getPositions` 函数已定义但从未被任何组件使用**
+   - 说明：`cancelAllOrders` 已加 TODO 标注 PR-16 使用，但 `getPositions` 仍未标注计划用途。
+   - 建议：添加 TODO 或在 PR-16 查询面板中接入使用。
+
+2. **【useHotKeys.ts:4-8】`DEFAULT_KEYS` 与 `userPrefs.ts:6-10` 的 `DEFAULT_HOT_KEYS` 仍然重复定义**
+   - 说明：QuickKeys 的 `handleReset` 已从 userPrefs 导入 `DEFAULT_HOT_KEYS`，但 `useHotKeys.ts` 内部仍维护自己的 `DEFAULT_KEYS`。如果将来修改默认快捷键，需要同时改两处。
+   - 建议：`useHotKeys.ts` 也改为从 `userPrefs` 导入 `DEFAULT_HOT_KEYS`，消除重复。
+
+3. **【userPrefs.ts:32】`setHotKeys` 新方法未覆盖单元测试**
+   - 说明：`setHotKeys` 是新增的 batch 更新方法，但 `userPrefs.test.ts` 中未找到对应测试。
+   - 建议：补充一个简单测试用例验证 `setHotKeys` 一次更新所有键值。
+
+### 🔵 疑问确认
+
+无
+
+### 审查结论
+
+✅ **通过**
+
+第 1 轮审查的 3 个 🔴 阻断问题、4 个 🟡 建议、2 个 🔵 疑问已全部处理：
+- BatchCancel 硬编码假值 → 扩展 `getOrders()` 返回类型，OrderPanel 透传真实数据
+- QuickKeys reset 无确认 → 仅恢复 UI，必须手动点"保存"才持久化
+- QuickActions 重复代码 → 提取 `executeAction` 公共函数
+- 串行撤单 → `Promise.allSettled` 并发执行
+- 4 次 store 调用 → `setHotKeys` 批量更新
+- `cancelAllOrders` 闲置 → 加 TODO 标注 PR-16 使用
+- 快捷键去重校验 → `handleSave` 中检测重复键绑定
+- 部分 hotKeys 回退 → `useHotKeys` 合并 `DEFAULT_KEYS` 做 fallback
+
+**测试结果**：343 passed / 2 pre-existing failures（均为 PR-20 的 `useMarketWs.test.ts`，与 PR-15 无关）
+
+**范围控制**：仅修改预期文件，docs/task.md 已同步更新取消全撤推迟说明。
+
+剩余 3 个 🟡 建议为非阻断项，不阻塞合入。
+
+下一步：请完成人工验证后切回开发窗口生成 PR 描述
