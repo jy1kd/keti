@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import threading
+from pathlib import Path
 from typing import Any, List, Optional, TYPE_CHECKING
 
 from config import Config
