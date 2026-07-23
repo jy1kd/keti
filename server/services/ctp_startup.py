@@ -329,7 +329,7 @@ def _wire_bridge(
     def _on_front_disconnected(nReason: int) -> None:
         logger.warning("CTP front disconnected (reason=%s)", nReason)
         _broadcast_system("connection_status", {
-            "status": "disconnected",
+            "mdConnected": False,
             "reason": nReason,
         })
         reconnect_svc.on_disconnect()
@@ -343,11 +343,11 @@ def _wire_bridge(
                 success = reconnect_svc.try_reconnect()
                 if success:
                     _broadcast_system("connection_status", {
-                        "status": "connected",
+                        "mdConnected": True,
                     })
                 else:
                     _broadcast_system("connection_status", {
-                        "status": "reconnect_failed",
+                        "mdConnected": False,
                     })
 
             threading.Thread(target=_do_reconnect, daemon=True).start()
@@ -381,6 +381,7 @@ def _attempt_reconnect(app: "FastAPI", md_api: Any, loop: asyncio.AbstractEventL
         login_done = threading.Event()
 
         def _on_front_connected():
+            md_api.connection_status = "connected"
             front_connected.set()
             try:
                 md_api.login()

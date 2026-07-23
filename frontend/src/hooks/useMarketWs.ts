@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { WSManager } from '@/services/ws'
 import { useMarketStore } from '@/modules/market/store'
-import { useConnectionStore } from '@/stores/connection'
 import { useReconnect } from './useReconnect'
 import type { MarketSnapshot, KLineData, WSMessage } from '@/services/types'
 
@@ -59,8 +58,6 @@ export function useMarketWs(wsBaseUrl: string, period = '5m') {
   const klineBufferRef = useRef<Map<string, KLineData>>(new Map())
   const batchUpdate = useMarketStore((s) => s.batchUpdate)
   const appendKline = useMarketStore((s) => s.appendKline)
-  const setMdPhase = useConnectionStore((s) => s.setMdPhase)
-
   // 创建 WSManager 实例（仅创建一次）
   if (!wsRef.current) {
     wsRef.current = new WSManager(wsBaseUrl)
@@ -102,8 +99,6 @@ export function useMarketWs(wsBaseUrl: string, period = '5m') {
       snapshotBufferRef.current.push(snap)
       // 缓冲 K 线（同一合约多次更新只保留最新）
       klineBufferRef.current.set(snap.instrumentID, snapshotToKline(snap, periodMs))
-      // 收到行情数据说明 MD 已连接
-      setMdPhase('connected')
     }
   }
 

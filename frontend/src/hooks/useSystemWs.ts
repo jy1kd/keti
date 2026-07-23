@@ -30,7 +30,6 @@ export function useSystemWs(wsBaseUrl: string) {
       const data = message.data as {
         mdConnected?: boolean
         tdConnected?: boolean
-        status?: string
         reason?: number
       }
 
@@ -42,12 +41,6 @@ export function useSystemWs(wsBaseUrl: string) {
       // TD 状态即时更新
       if (data.tdConnected !== undefined) {
         setTdPhase(data.tdConnected ? 'connected' : 'disconnected')
-      }
-
-      // 通用断线事件
-      if (data.status === 'disconnected') {
-        setMdPhase('disconnected', `断线原因: ${data.reason}`)
-        setTdPhase('disconnected', `断线原因: ${data.reason}`)
       }
     } else if (message.type === 'instruments_refreshed') {
       const data = message.data as { count: number }
