@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { ApiResponse, ContractInfo, MarketSnapshot, KLineData } from './types'
+import type { ApiResponse, ContractInfo, MarketSnapshot, KLineData, OptionChain } from './types'
 import { convertOrderRequest } from '../utils/orderMapping'
 import type { OrderRequestForm } from '../utils/orderMapping'
 
@@ -212,6 +212,19 @@ export async function getInstrumentsByIds(ids: string[]): Promise<InstrumentsRes
 /** 刷新预设合约（自动检测主力合约） */
 export async function refreshPresetInstruments(): Promise<{ success: boolean; instruments: string[] }> {
   const { data } = await api.post<{ success: boolean; instruments: string[] }>('/api/market/preset/refresh')
+  return data
+}
+
+// ── 期权 API ──────────────────────────────────────────────────────────
+
+interface OptionChainsResponse {
+  chains: OptionChain[]
+}
+
+/** 获取期权T型报价数据 */
+export async function getOptionChains(underlying?: string, expireDate?: string): Promise<OptionChainsResponse> {
+  const params: Record<string, string | undefined> = { underlying, expire_date: expireDate }
+  const { data } = await api.get<OptionChainsResponse>('/api/market/option_chain', { params })
   return data
 }
 
