@@ -1,8 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, act } from '@testing-library/react'
 import { OptionPanel } from './OptionPanel'
+import { useMarketStore } from '@/modules/market/store'
+import type { MarketSnapshot } from '@/services/types'
 
-// Mock the store
+// Mock the options store
 const mockFetchOptionChains = vi.fn()
 const mockSetSelectedUnderlying = vi.fn()
 const mockSetSelectedExpireDate = vi.fn()
@@ -42,6 +44,8 @@ vi.mock('./store', () => ({
     }
   },
 }))
+
+// Use real useMarketStore — no mock, so setState triggers re-renders via zustand
 
 // Mock TQuoteTable (renders simple div)
 vi.mock('./TQuoteTable', () => ({
@@ -122,5 +126,106 @@ describe('OptionPanel', () => {
     render(<OptionPanel />)
     const labels = screen.getAllByText(/标的/)
     expect(labels.length).toBeGreaterThan(0)
+  })
+})
+
+describe('OptionPanel - volatility real-time refresh', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+    storeState = {
+      optionChains: [
+        { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [] },
+      ],
+      selectedUnderlying: 'IF2608',
+      selectedExpireDate: '20260815',
+      loading: false,
+      error: null,
+    }
+    useMarketStore.setState({ snapshots: new Map() })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('refetches option chains when underlying snapshot changes', () => {
+    render(<OptionPanel />)
+    // Initial mount fetch
+    expect(mockFetchOptionChains).toHaveBeenCalledTimes(1)
+
+    // Simulate underlying snapshot update via real zustand store
+    act(() => {
+      useMarketStore.setState({
+        snapshots: new Map([
+          ['IF2608', { instrumentID: 'IF2608', lastPrice: 4800 } as MarketSnapshot],
+        ]),
+      })
+    })
+
+    // Advance timers to trigger debounce
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+
+    expect(mockFetchOptionChains).toHaveBeenCalledTimes(2)
+    expect(mockFetchOptionChains).toHaveBeenLastCalledWith('IF2608', '20260815')
+  })
+
+  it('debounces rapid snapshot updates (only fetches once)', () => {
+    render(<OptionPanel />)
+    expect(mockFetchOptionChains).toHaveBeenCalledTimes(1)
+
+    // Simulate rapid snapshot updates
+    act(() => {
+      useMarketStore.setState({
+        snapshots: new Map([
+          ['IF2608', { instrumentID: 'IF2608', lastPrice: 4800 } as MarketSnapshot],
+        ]),
+      })
+    })
+    act(() => {
+      useMarketStore.setState({
+        snapshots: new Map([
+          ['IF2608', { instrumentID: 'IF2608', lastPrice: 4801 } as MarketSnapshot],
+        ]),
+      })
+    })
+    act(() => {
+      useMarketStore.setState({
+        snapshots: new Map([
+          ['IF2608', { instrumentID: 'IF2608', lastPrice: 4802 } as MarketSnapshot],
+        ]),
+      })
+    })
+
+    // Only advance past debounce window once
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+
+    // Should only have fetched once more (debounced), not 3 times
+    expect(mockFetchOptionChains).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not refresh when no underlying is selected', () => {
+    storeState.selectedUnderlying = null
+    storeState.optionChains = []
+    render(<OptionPanel />)
+    expect(mockFetchOptionChains).toHaveBeenCalledTimes(1) // mount only
+
+    act(() => {
+      useMarketStore.setState({
+        snapshots: new Map([
+          ['IF2608', { instrumentID: 'IF2608', lastPrice: 4800 } as MarketSnapshot],
+        ]),
+      })
+    })
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+
+    // Still only 1 call (mount)
+    expect(mockFetchOptionChains).toHaveBeenCalledTimes(1)
   })
 })

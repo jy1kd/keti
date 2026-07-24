@@ -1,6 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useOptionsStore } from './store'
+import { useMarketStore } from '@/modules/market/store'
 import { TQuoteTable } from './TQuoteTable'
+
+/** Debounce delay (ms) — avoids rapid re-fetches during high-frequency ticks. */
+const REFRESH_DEBOUNCE_MS = 800
 
 export function OptionPanel() {
   const optionChains = useOptionsStore((s) => s.optionChains)
@@ -14,10 +18,32 @@ export function OptionPanel() {
   const availableUnderlyings = useOptionsStore((s) => s.availableUnderlyings)
   const availableExpirations = useOptionsStore((s) => s.availableExpirations)
 
+  // Market snapshots — subscribe to underlying's real-time tick
+  const snapshots = useMarketStore((s) => s.snapshots)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const prevPriceRef = useRef<number | null>(null)
+
   // Fetch all chains on mount
   useEffect(() => {
     fetchOptionChains()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Real-time refresh: when underlying's lastPrice changes, debounce re-fetch
+  useEffect(() => {
+    if (!selectedUnderlying) return
+    const snap = snapshots.get(selectedUnderlying)
+    if (!snap) return
+
+    const currentPrice = snap.lastPrice
+    if (prevPriceRef.current === currentPrice) return
+    prevPriceRef.current = currentPrice
+
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      fetchOptionChains(selectedUnderlying, selectedExpireDate ?? undefined)
+      timerRef.current = null
+    }, REFRESH_DEBOUNCE_MS)
+  }, [snapshots, selectedUnderlying, selectedExpireDate, fetchOptionChains])
 
   const handleUnderlyingChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value || null
