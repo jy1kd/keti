@@ -256,7 +256,7 @@ async def get_depth(
 # ── Options ──────────────────────────────────────────────────────────────
 
 @router.get("/options")
-async def get_options(request: Request, underlying: str = ""):
+def get_options(request: Request, underlying: str = ""):
     """Get option contract list.
 
     Args:
@@ -273,7 +273,7 @@ async def get_options(request: Request, underlying: str = ""):
 
 
 @router.get("/option_chain")
-async def get_option_chain(
+def get_option_chain(
     request: Request,
     underlying: str = "",
     expire_date: str = "",
@@ -297,7 +297,7 @@ async def get_option_chain(
 
 
 @router.get("/volatility")
-async def get_volatility(
+def get_volatility(
     request: Request,
     underlying: str = "",
     risk_free_rate: float = Query(0.03, ge=0, le=1),
