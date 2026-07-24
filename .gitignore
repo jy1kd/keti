@@ -51,7 +51,11 @@ docs/superpowers/
 
 # Claude config
 # CLAUDE.md is now tracked (needed for AI guidance)
-.claude/skills/
+# 团队共享 skills（开发流程）
+# 个人 skills（不提交）
+.claude/skills/simnow-consistency-check/
+.claude/skills/simnow-resume/
+.claude/skills/simnow-weekly/
 
 # Understand Anything — 只保留知识图谱核心文件
 !.ua/config.json
