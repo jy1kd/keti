@@ -1,10 +1,12 @@
 import { create } from 'zustand'
 import type { OptionChain } from '@/services/types'
-import { get } from '@/services/api'
+import { get, getVolatility } from '@/services/api'
 
 interface OptionsStore {
   // T型报价数据
   optionChains: OptionChain[]
+  // 隐含波动率（instrumentID → IV），来自 /api/market/volatility
+  volatility: Map<string, number>
   // UI 状态
   selectedUnderlying: string | null
   selectedExpireDate: string | null
@@ -14,6 +16,7 @@ interface OptionsStore {
   setSelectedUnderlying: (underlying: string | null) => void
   setSelectedExpireDate: (expireDate: string | null) => void
   fetchOptionChains: (underlying?: string, expireDate?: string) => Promise<void>
+  fetchVolatility: (underlying?: string) => Promise<void>
   clearError: () => void
   // Computed helpers
   availableUnderlyings: () => string[]
@@ -23,6 +26,7 @@ interface OptionsStore {
 
 export const useOptionsStore = create<OptionsStore>((set, getState) => ({
   optionChains: [],
+  volatility: new Map(),
   selectedUnderlying: null,
   selectedExpireDate: null,
   loading: false,
@@ -46,6 +50,19 @@ export const useOptionsStore = create<OptionsStore>((set, getState) => ({
     } catch (err) {
       console.error('[OptionsStore] fetchOptionChains failed:', err)
       set({ loading: false, error: 'Failed to load option chains' })
+    }
+  },
+
+  fetchVolatility: async (underlying?) => {
+    try {
+      const res = await getVolatility(underlying)
+      const map = new Map<string, number>()
+      for (const v of res.volatility ?? []) {
+        map.set(v.instrumentID, v.impliedVolatility)
+      }
+      set({ volatility: map })
+    } catch (err) {
+      console.error('[OptionsStore] fetchVolatility failed:', err)
     }
   },
 

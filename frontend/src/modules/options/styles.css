@@ -32,7 +32,8 @@
 
 .options-content {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .options-empty {
@@ -45,4 +46,24 @@
   color: var(--color-error);
   text-align: center;
   padding: 40px;
+}
+
+/* ── 全部模式：多期权链堆叠 ────────────────────────────────────────────── */
+
+.options-chain-block {
+  margin-bottom: 8px;
+}
+
+.options-chain-title {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 2px;
+  font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+}
+
+.options-chain-table {
+  width: 100%;
 }

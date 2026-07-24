@@ -24,12 +24,18 @@ interface TQuoteTableProps {
   chain: OptionChain
   /** Market snapshots for real-time price data. */
   snapshots?: Map<string, MarketSnapshot>
+  /** Implied volatility from /api/market/volatility (instrumentID → IV). Takes precedence over quote.impliedVolatility. */
+  volatility?: Map<string, number>
 }
 
 const PLACEHOLDER = '--'
 
 /** Merge calls and puts by strike price into table records, enriching with snapshot data. */
-function buildRecords(chain: OptionChain, snapshots?: Map<string, MarketSnapshot>): TQuoteRow[] {
+function buildRecords(
+  chain: OptionChain,
+  snapshots?: Map<string, MarketSnapshot>,
+  volatility?: Map<string, number>,
+): TQuoteRow[] {
   const strikeMap = new Map<number, { call?: OptionQuote; put?: OptionQuote }>()
 
   for (const call of chain.calls) {
@@ -56,6 +62,9 @@ function buildRecords(chain: OptionChain, snapshots?: Map<string, MarketSnapshot
 
     const fmtIV = (iv: number) => (iv > 0 ? `${(iv * 100).toFixed(2)}%` : PLACEHOLDER)
     const valOrDash = (v: number | undefined) => (v != null && v > 0 ? v : PLACEHOLDER)
+    // IV: prefer live volatility map, fall back to chain quote value
+    const ivOf = (q: OptionQuote | undefined) =>
+      q ? (volatility?.get(q.instrumentID) ?? q.impliedVolatility) : 0
 
     return {
       strikePrice: strike,
@@ -64,13 +73,13 @@ function buildRecords(chain: OptionChain, snapshots?: Map<string, MarketSnapshot
       callAskPrice: cSnap?.askPrice1 ?? valOrDash(c?.askPrice),
       callVolume: cSnap?.volume ?? valOrDash(c?.volume),
       callOpenInterest: cSnap?.openInterest ?? valOrDash(c?.openInterest),
-      callIV: c ? fmtIV(c.impliedVolatility) : PLACEHOLDER,
+      callIV: c ? fmtIV(ivOf(c)) : PLACEHOLDER,
       putLastPrice: pSnap?.lastPrice ?? valOrDash(p?.lastPrice),
       putBidPrice: pSnap?.bidPrice1 ?? valOrDash(p?.bidPrice),
       putAskPrice: pSnap?.askPrice1 ?? valOrDash(p?.askPrice),
       putVolume: pSnap?.volume ?? valOrDash(p?.volume),
       putOpenInterest: pSnap?.openInterest ?? valOrDash(p?.openInterest),
-      putIV: p ? fmtIV(p.impliedVolatility) : PLACEHOLDER,
+      putIV: p ? fmtIV(ivOf(p)) : PLACEHOLDER,
     }
   })
 }
@@ -79,14 +88,14 @@ const CALL_COLOR = '#ef4444'
 const PUT_COLOR = '#22c55e'
 const STRIKE_BG = 'rgba(255,255,255,0.04)'
 
-export function TQuoteTable({ chain, snapshots }: TQuoteTableProps) {
+export function TQuoteTable({ chain, snapshots, volatility }: TQuoteTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
 
   useEffect(() => {
     if (!containerRef.current) return
 
-    const records = buildRecords(chain, snapshots)
+    const records = buildRecords(chain, snapshots, volatility)
 
     const columns = [
       // ── Call columns (left) ──
@@ -150,7 +159,7 @@ export function TQuoteTable({ chain, snapshots }: TQuoteTableProps) {
       table.release()
       tableRef.current = null
     }
-  }, [chain, snapshots])
+  }, [chain, snapshots, volatility])
 
   return <div ref={containerRef} style={{ width: '100%', height: '100%', background: '#0d1117' }} />
 }

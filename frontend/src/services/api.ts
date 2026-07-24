@@ -228,6 +228,25 @@ export async function getOptionChains(underlying?: string, expireDate?: string):
   return data
 }
 
+interface VolatilityResponse {
+  volatility: Array<{
+    instrumentID: string
+    impliedVolatility: number
+    underlyingPrice: number
+    strikePrice: number
+    timeToExpiry: number
+    riskFreeRate: number
+    optionType: string
+  }>
+}
+
+/** 获取期权隐含波动率（Black-Scholes 计算，依赖后端行情快照） */
+export async function getVolatility(underlying?: string): Promise<VolatilityResponse> {
+  const params = underlying ? { underlying } : undefined
+  const { data } = await api.get<VolatilityResponse>('/api/market/volatility', { params })
+  return data
+}
+
 // ── 退订 API ────────────────────────────────────────────────────────
 
 interface UnsubscribeResponse {

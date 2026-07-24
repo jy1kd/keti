@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { api, API_BASE, getInstruments, subscribeMarket, getSnapshots, getKlineData, submitOrder, cancelOrder, refreshInstruments, cancelAllOrders, reversePosition, lockPosition, getPositions, getOrders, getOptionChains } from './api'
+import { api, API_BASE, getInstruments, subscribeMarket, getSnapshots, getKlineData, submitOrder, cancelOrder, refreshInstruments, cancelAllOrders, reversePosition, lockPosition, getPositions, getOrders, getOptionChains, getVolatility } from './api'
 
 describe('api (Axios 实例)', () => {
   it('API_BASE 有值', () => {
@@ -394,6 +394,39 @@ describe('getOptionChains', () => {
 
     expect(api.get).toHaveBeenCalledWith('/api/market/option_chain', {
       params: { underlying: undefined, expire_date: undefined },
+    })
+  })
+})
+
+describe('getVolatility', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('calls GET /api/market/volatility with underlying filter', async () => {
+    const mockData = {
+      volatility: [
+        { instrumentID: 'IF2608-C-4800', impliedVolatility: 0.25, underlyingPrice: 4800, strikePrice: 4800, timeToExpiry: 0.06, riskFreeRate: 0.03, optionType: '1' },
+      ],
+    }
+    vi.spyOn(api, 'get').mockResolvedValue({ data: mockData })
+
+    const result = await getVolatility('IF2608')
+
+    expect(api.get).toHaveBeenCalledWith('/api/market/volatility', {
+      params: { underlying: 'IF2608' },
+    })
+    expect(result).toEqual(mockData)
+  })
+
+  it('fetches all volatility data when no underlying provided', async () => {
+    const mockData = { volatility: [] }
+    vi.spyOn(api, 'get').mockResolvedValue({ data: mockData })
+
+    await getVolatility()
+
+    expect(api.get).toHaveBeenCalledWith('/api/market/volatility', {
+      params: undefined,
     })
   })
 })

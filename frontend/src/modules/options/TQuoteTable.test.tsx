@@ -126,6 +126,27 @@ describe('TQuoteTable', () => {
     expect(options.records[0].putIV).toBe('--')
   })
 
+  it('prefers volatility map over quote impliedVolatility', async () => {
+    const volMap = new Map([
+      ['IF2608-C-4700', 0.35],
+      ['IF2608-P-4700', 0.42],
+    ])
+    render(<TQuoteTable chain={chain} volatility={volMap} />)
+    const { ListTable } = await import('@visactor/vtable')
+    const options = (ListTable as any).mock.calls[0][1]
+    // IV from volatility map (0.35 → "35.00%"), not from quote (0.22)
+    expect(options.records[0].callIV).toBe('35.00%')
+    expect(options.records[0].putIV).toBe('42.00%')
+  })
+
+  it('falls back to quote impliedVolatility when instrument not in volatility map', async () => {
+    const volMap = new Map([['OTHER-INSTRUMENT', 0.99]])
+    render(<TQuoteTable chain={chain} volatility={volMap} />)
+    const { ListTable } = await import('@visactor/vtable')
+    const options = (ListTable as any).mock.calls[0][1]
+    expect(options.records[0].callIV).toBe('22.00%')
+  })
+
   it('releases vtable instance on unmount', async () => {
     const { unmount } = render(<TQuoteTable chain={chain} />)
     const { ListTable } = await import('@visactor/vtable')

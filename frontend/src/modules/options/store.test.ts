@@ -5,9 +5,10 @@ import type { OptionChain, OptionQuote } from '@/services/types'
 // Mock API module
 vi.mock('@/services/api', () => ({
   get: vi.fn(),
+  getVolatility: vi.fn(),
 }))
 
-import { get } from '@/services/api'
+import { get, getVolatility } from '@/services/api'
 
 function makeQuote(overrides: Partial<OptionQuote> = {}): OptionQuote {
   return {
@@ -48,8 +49,10 @@ describe('OptionsStore', () => {
       selectedExpireDate: null,
       loading: false,
       error: null,
+      volatility: new Map(),
     })
     vi.mocked(get).mockReset()
+    vi.mocked(getVolatility).mockReset()
   })
 
   // --- initial state ---
@@ -214,5 +217,55 @@ describe('OptionsStore', () => {
 
   it('allStrikes returns empty when no chains', () => {
     expect(useOptionsStore.getState().allStrikes()).toEqual([])
+  })
+})
+
+describe('OptionsStore - fetchVolatility', () => {
+  beforeEach(() => {
+    useOptionsStore.setState({
+      optionChains: [],
+      selectedUnderlying: null,
+      selectedExpireDate: null,
+      loading: false,
+      error: null,
+      volatility: new Map(),
+    })
+    vi.mocked(getVolatility).mockReset()
+  })
+
+  it('has empty volatility map by default', () => {
+    expect(useOptionsStore.getState().volatility.size).toBe(0)
+  })
+
+  it('fetchVolatility populates volatility map from API', async () => {
+    vi.mocked(getVolatility).mockResolvedValue({
+      volatility: [
+        { instrumentID: 'IF2608-C-4800', impliedVolatility: 0.25, underlyingPrice: 4800, strikePrice: 4800, timeToExpiry: 0.06, riskFreeRate: 0.03, optionType: '1' },
+        { instrumentID: 'IF2608-P-4800', impliedVolatility: 0.28, underlyingPrice: 4800, strikePrice: 4800, timeToExpiry: 0.06, riskFreeRate: 0.03, optionType: '2' },
+      ],
+    })
+
+    await useOptionsStore.getState().fetchVolatility('IF2608')
+
+    expect(getVolatility).toHaveBeenCalledWith('IF2608')
+    expect(useOptionsStore.getState().volatility.get('IF2608-C-4800')).toBe(0.25)
+    expect(useOptionsStore.getState().volatility.get('IF2608-P-4800')).toBe(0.28)
+  })
+
+  it('fetchVolatility without underlying fetches all', async () => {
+    vi.mocked(getVolatility).mockResolvedValue({ volatility: [] })
+
+    await useOptionsStore.getState().fetchVolatility()
+
+    expect(getVolatility).toHaveBeenCalledWith(undefined)
+  })
+
+  it('fetchVolatility keeps existing map on API failure', async () => {
+    useOptionsStore.setState({ volatility: new Map([['X', 0.1]]) })
+    vi.mocked(getVolatility).mockRejectedValue(new Error('fail'))
+
+    await useOptionsStore.getState().fetchVolatility('IF2608')
+
+    expect(useOptionsStore.getState().volatility.get('X')).toBe(0.1)
   })
 })

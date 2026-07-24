@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useOptionsStore } from './store'
 import { useMarketStore } from '@/modules/market/store'
 import { subscribeMarket } from '@/services/api'
 import { TQuoteTable } from './TQuoteTable'
+import type { OptionChain } from '@/services/types'
 import './styles.css'
 
 /** Debounce delay (ms) — avoids rapid re-fetches during high-frequency ticks. */
@@ -14,22 +15,42 @@ function formatExpireDate(raw: string): string {
   return raw
 }
 
+/** Estimate table height for stacked layout: (strikes + header) * rowHeight + padding. */
+function chainHeight(chain: OptionChain): number {
+  const strikes = new Set([...chain.calls, ...chain.puts].map((q) => q.strikePrice)).size
+  return (Math.max(strikes, 1) + 1) * 28 + 4
+}
+
 export function OptionPanel() {
   const optionChains = useOptionsStore((s) => s.optionChains)
+  const volatility = useOptionsStore((s) => s.volatility)
   const selectedUnderlying = useOptionsStore((s) => s.selectedUnderlying)
   const selectedExpireDate = useOptionsStore((s) => s.selectedExpireDate)
   const loading = useOptionsStore((s) => s.loading)
   const error = useOptionsStore((s) => s.error)
   const fetchOptionChains = useOptionsStore((s) => s.fetchOptionChains)
+  const fetchVolatility = useOptionsStore((s) => s.fetchVolatility)
   const setSelectedUnderlying = useOptionsStore((s) => s.setSelectedUnderlying)
   const setSelectedExpireDate = useOptionsStore((s) => s.setSelectedExpireDate)
   const availableUnderlyings = useOptionsStore((s) => s.availableUnderlyings)
   const availableExpirations = useOptionsStore((s) => s.availableExpirations)
 
-  // Market snapshots — subscribe to underlying's real-time tick
+  // Market snapshots — real-time price data for chain quotes
   const snapshots = useMarketStore((s) => s.snapshots)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prevPriceRef = useRef<number | null>(null)
+
+  // Chains matching current filter (null selector = 全部 = match all)
+  // Memoized: filter creates a new array each render, which would retrigger effects.
+  const visibleChains = useMemo(
+    () =>
+      optionChains.filter(
+        (c) =>
+          (!selectedUnderlying || c.underlying === selectedUnderlying) &&
+          (!selectedExpireDate || c.expireDate === selectedExpireDate)
+      ),
+    [optionChains, selectedUnderlying, selectedExpireDate]
+  )
 
   // Fetch all chains on mount, then auto-select first underlying + expiry
   useEffect(() => {
@@ -43,7 +64,20 @@ export function OptionPanel() {
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Real-time refresh: when underlying's lastPrice changes, debounce re-fetch
+  // Subscribe to all visible chains' option instruments + fetch their IVs
+  useEffect(() => {
+    if (visibleChains.length === 0) return
+    const ids = visibleChains.flatMap((c) => [
+      ...c.calls.map((q) => q.instrumentID),
+      ...c.puts.map((q) => q.instrumentID),
+    ])
+    if (ids.length > 0) {
+      subscribeMarket(ids).catch(() => {})
+    }
+    fetchVolatility(selectedUnderlying ?? undefined)
+  }, [visibleChains, selectedUnderlying, fetchVolatility])
+
+  // Real-time IV refresh: when underlying's lastPrice changes, debounce re-fetch volatility
   useEffect(() => {
     if (!selectedUnderlying) return
     const snap = snapshots.get(selectedUnderlying)
@@ -55,10 +89,10 @@ export function OptionPanel() {
 
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
-      fetchOptionChains(selectedUnderlying, selectedExpireDate ?? undefined)
+      fetchVolatility(selectedUnderlying)
       timerRef.current = null
     }, REFRESH_DEBOUNCE_MS)
-  }, [snapshots, selectedUnderlying, selectedExpireDate, fetchOptionChains])
+  }, [snapshots, selectedUnderlying, fetchVolatility])
 
   const handleUnderlyingChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value || null
@@ -78,24 +112,11 @@ export function OptionPanel() {
     }
   }
 
-  // Find the selected chain
-  const selectedChain = optionChains.find(
-    (c) => c.underlying === selectedUnderlying && c.expireDate === selectedExpireDate
-  )
-
-  // Subscribe to all option instruments in the selected chain for real-time quotes
-  useEffect(() => {
-    if (!selectedChain) return
-    const ids = [
-      ...selectedChain.calls.map((q) => q.instrumentID),
-      ...selectedChain.puts.map((q) => q.instrumentID),
-    ]
-    if (ids.length > 0) {
-      subscribeMarket(ids).catch(() => {})
-    }
-  }, [selectedChain])
-
   const underlyings = availableUnderlyings()
+  // Expiry dropdown filtered by selected underlying (全部 = all expirations)
+  const expirations = selectedUnderlying
+    ? [...new Set(optionChains.filter((c) => c.underlying === selectedUnderlying).map((c) => c.expireDate))].sort()
+    : availableExpirations()
 
   return (
     <div className="options-panel">
@@ -115,7 +136,7 @@ export function OptionPanel() {
           到期日:
           <select value={selectedExpireDate ?? ''} onChange={handleExpireDateChange}>
             <option value="">全部</option>
-            {availableExpirations().map((d) => (
+            {expirations.map((d) => (
               <option key={d} value={d}>{formatExpireDate(d)}</option>
             ))}
           </select>
@@ -130,14 +151,28 @@ export function OptionPanel() {
         {error && !loading && (
           <div className="options-error">{error}</div>
         )}
-        {!loading && !error && selectedChain && (
-          <TQuoteTable chain={selectedChain} snapshots={snapshots} />
+        {!loading && !error && visibleChains.length > 0 && (
+          visibleChains.map((chain) => (
+            <div key={`${chain.underlying}-${chain.expireDate}`} className="options-chain-block">
+              {visibleChains.length > 1 && (
+                <div className="options-chain-title">
+                  {chain.underlying} · {formatExpireDate(chain.expireDate)}
+                </div>
+              )}
+              <div
+                className="options-chain-table"
+                style={visibleChains.length > 1 ? { height: chainHeight(chain) } : undefined}
+              >
+                <TQuoteTable chain={chain} snapshots={snapshots} volatility={volatility} />
+              </div>
+            </div>
+          ))
         )}
-        {!loading && !error && !selectedChain && optionChains.length === 0 && (
+        {!loading && !error && visibleChains.length === 0 && optionChains.length === 0 && (
           <div className="options-empty">暂无期权链数据</div>
         )}
-        {!loading && !error && !selectedChain && optionChains.length > 0 && (
-          <div className="options-empty">请选择标的合约和到期日</div>
+        {!loading && !error && visibleChains.length === 0 && optionChains.length > 0 && (
+          <div className="options-empty">无匹配的期权链，请调整标的或到期日</div>
         )}
       </div>
     </div>
