@@ -121,7 +121,7 @@ describe('OptionPanel', () => {
 
   it('shows underlying selector label', () => {
     storeState.optionChains = [
-      { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [] },
+      { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '2026-07-24T10:00:00' },
     ]
     render(<OptionPanel />)
     const labels = screen.getAllByText(/标的/)
@@ -135,7 +135,7 @@ describe('OptionPanel - volatility real-time refresh', () => {
     vi.useFakeTimers()
     storeState = {
       optionChains: [
-        { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [] },
+        { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '2026-07-24T10:00:00' },
       ],
       selectedUnderlying: 'IF2608',
       selectedExpireDate: '20260815',

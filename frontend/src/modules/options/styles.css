@@ -1,0 +1,48 @@
+/* ── OptionPanel 样式 ─────────────────────────────────────────────────── */
+
+.options-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 8px;
+}
+
+.options-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.options-toolbar label {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.options-toolbar select {
+  margin-left: 4px;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.options-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.options-empty {
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 40px;
+}
+
+.options-error {
+  color: var(--color-error);
+  text-align: center;
+  padding: 40px;
+}

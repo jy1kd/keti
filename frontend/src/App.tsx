@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, lazy, Suspense } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import { ConnectionStatus } from '@/components/ConnectionStatus'
 import { ResizeHandle } from '@/components/ResizeHandle'

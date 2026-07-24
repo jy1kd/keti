@@ -29,6 +29,7 @@ describe('TQuoteTable', () => {
       makeQuote({ instrumentID: 'IF2608-P-4700', strikePrice: 4700, lastPrice: 80.0, impliedVolatility: 0.20 }),
       makeQuote({ instrumentID: 'IF2608-P-4800', strikePrice: 4800, lastPrice: 130.0, impliedVolatility: 0.28 }),
     ],
+    updateTime: '2026-07-24T10:00:00',
   }
 
   const chainWithGaps: OptionChain = {
@@ -40,6 +41,7 @@ describe('TQuoteTable', () => {
     puts: [
       makeQuote({ instrumentID: 'IF2608-P-4700', strikePrice: 4700, lastPrice: 80.0 }),
     ],
+    updateTime: '2026-07-24T10:00:00',
   }
 
   beforeEach(() => {
@@ -92,7 +94,7 @@ describe('TQuoteTable', () => {
   })
 
   it('shows empty placeholder when chain has no data', async () => {
-    const emptyChain: OptionChain = { underlying: '', expireDate: '', calls: [], puts: [] }
+    const emptyChain: OptionChain = { underlying: '', expireDate: '', calls: [], puts: [], updateTime: '' }
     render(<TQuoteTable chain={emptyChain} />)
     const { ListTable } = await import('@visactor/vtable')
     const options = (ListTable as any).mock.calls[0][1]
@@ -115,6 +117,7 @@ describe('TQuoteTable', () => {
       expireDate: '20260815',
       calls: [makeQuote({ instrumentID: 'IF2608-C-4700', strikePrice: 4700, impliedVolatility: 0 })],
       puts: [makeQuote({ instrumentID: 'IF2608-P-4700', strikePrice: 4700, impliedVolatility: 0 })],
+      updateTime: '2026-07-24T10:00:00',
     }
     render(<TQuoteTable chain={chainZero} />)
     const { ListTable } = await import('@visactor/vtable')
@@ -123,9 +126,11 @@ describe('TQuoteTable', () => {
     expect(options.records[0].putIV).toBe('--')
   })
 
-  it('releases vtable instance on unmount', () => {
+  it('releases vtable instance on unmount', async () => {
     const { unmount } = render(<TQuoteTable chain={chain} />)
+    const { ListTable } = await import('@visactor/vtable')
+    const instance = (ListTable as any).mock.results[0]?.value
     unmount()
-    expect(true).toBe(true)
+    expect(instance?.release).toHaveBeenCalled()
   })
 })

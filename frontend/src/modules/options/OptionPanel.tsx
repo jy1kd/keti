@@ -2,9 +2,16 @@ import { useEffect, useRef } from 'react'
 import { useOptionsStore } from './store'
 import { useMarketStore } from '@/modules/market/store'
 import { TQuoteTable } from './TQuoteTable'
+import './styles.css'
 
 /** Debounce delay (ms) — avoids rapid re-fetches during high-frequency ticks. */
 const REFRESH_DEBOUNCE_MS = 800
+
+/** Format YYYYMMDD → YYYY-MM-DD for display. */
+function formatExpireDate(raw: string): string {
+  if (raw.length === 8) return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
+  return raw
+}
 
 export function OptionPanel() {
   const optionChains = useOptionsStore((s) => s.optionChains)
@@ -71,24 +78,12 @@ export function OptionPanel() {
   const underlyings = availableUnderlyings()
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '8px' }}>
+    <div className="options-panel">
       {/* Toolbar */}
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '8px', flexShrink: 0 }}>
-        <label style={{ color: '#8b949e', fontSize: 13 }}>
+      <div className="options-toolbar">
+        <label>
           标的:
-          <select
-            value={selectedUnderlying ?? ''}
-            onChange={handleUnderlyingChange}
-            style={{
-              marginLeft: 4,
-              padding: '4px 8px',
-              background: '#1a1a2e',
-              color: '#e6edf3',
-              border: '1px solid #30363d',
-              borderRadius: 4,
-              fontSize: 13,
-            }}
-          >
+          <select value={selectedUnderlying ?? ''} onChange={handleUnderlyingChange}>
             <option value="">全部</option>
             {underlyings.map((u) => (
               <option key={u} value={u}>{u}</option>
@@ -96,53 +91,33 @@ export function OptionPanel() {
           </select>
         </label>
 
-        <label style={{ color: '#8b949e', fontSize: 13 }}>
+        <label>
           到期日:
-          <select
-            value={selectedExpireDate ?? ''}
-            onChange={handleExpireDateChange}
-            style={{
-              marginLeft: 4,
-              padding: '4px 8px',
-              background: '#1a1a2e',
-              color: '#e6edf3',
-              border: '1px solid #30363d',
-              borderRadius: 4,
-              fontSize: 13,
-            }}
-          >
+          <select value={selectedExpireDate ?? ''} onChange={handleExpireDateChange}>
             <option value="">全部</option>
             {availableExpirations().map((d) => (
-              <option key={d} value={d}>{d}</option>
+              <option key={d} value={d}>{formatExpireDate(d)}</option>
             ))}
           </select>
         </label>
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
+      <div className="options-content">
         {loading && (
-          <div style={{ color: '#8b949e', textAlign: 'center', padding: '40px' }}>
-            加载中...
-          </div>
+          <div className="options-empty">加载中...</div>
         )}
         {error && !loading && (
-          <div style={{ color: '#ef4444', textAlign: 'center', padding: '40px' }}>
-            {error}
-          </div>
+          <div className="options-error">{error}</div>
         )}
         {!loading && !error && selectedChain && (
           <TQuoteTable chain={selectedChain} />
         )}
         {!loading && !error && !selectedChain && optionChains.length === 0 && (
-          <div style={{ color: '#8b949e', textAlign: 'center', padding: '40px' }}>
-            暂无期权链数据
-          </div>
+          <div className="options-empty">暂无期权链数据</div>
         )}
         {!loading && !error && !selectedChain && optionChains.length > 0 && (
-          <div style={{ color: '#8b949e', textAlign: 'center', padding: '40px' }}>
-            请选择标的合约和到期日
-          </div>
+          <div className="options-empty">请选择标的合约和到期日</div>
         )}
       </div>
     </div>

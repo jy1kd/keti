@@ -43,7 +43,8 @@ export const useOptionsStore = create<OptionsStore>((set, getState) => ({
       }
       const res = await get<{ chains: OptionChain[] }>('/api/market/option_chain', params)
       set({ optionChains: res.chains ?? [], loading: false })
-    } catch {
+    } catch (err) {
+      console.error('[OptionsStore] fetchOptionChains failed:', err)
       set({ loading: false, error: 'Failed to load option chains' })
     }
   },
