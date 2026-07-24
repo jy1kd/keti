@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useOptionsStore } from './store'
 import { useMarketStore } from '@/modules/market/store'
+import { subscribeMarket } from '@/services/api'
 import { TQuoteTable } from './TQuoteTable'
 import './styles.css'
 
@@ -81,6 +82,18 @@ export function OptionPanel() {
   const selectedChain = optionChains.find(
     (c) => c.underlying === selectedUnderlying && c.expireDate === selectedExpireDate
   )
+
+  // Subscribe to all option instruments in the selected chain for real-time quotes
+  useEffect(() => {
+    if (!selectedChain) return
+    const ids = [
+      ...selectedChain.calls.map((q) => q.instrumentID),
+      ...selectedChain.puts.map((q) => q.instrumentID),
+    ]
+    if (ids.length > 0) {
+      subscribeMarket(ids).catch(() => {})
+    }
+  }, [selectedChain])
 
   const underlyings = availableUnderlyings()
 
