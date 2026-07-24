@@ -16,6 +16,40 @@ const UP_COLOR = '#ef4444'
 const DOWN_COLOR = '#22c55e'
 const FLAT_COLOR = '#e6edf3'
 
+/** productID → 品种中文名（SimNow 柜台不返中文名，前端本地映射） */
+const PRODUCT_NAMES: Record<string, string> = {
+  IF: '沪深300', IC: '中证500', IH: '上证50', IM: '中证1000',
+  T: '10年国债', TF: '5年国债', TS: '2年国债', TL: '30年国债',
+  cu: '沪铜', al: '沪铝', zn: '沪锌', pb: '沪铅',
+  ni: '沪镍', sn: '沪锡', au: '沪金', ag: '沪银',
+  rb: '螺纹钢', wr: '线材', hc: '热卷', ss: '不锈钢',
+  fu: '燃料油', bu: '石油沥青', ru: '天然橡胶', sp: '纸浆',
+  sc: '原油', lu: '低硫燃油',
+  m: '豆粕', y: '豆油', a: '黄大豆1号', b: '黄大豆2号',
+  p: '棕榈油', c: '玉米', cs: '玉米淀粉', j: '焦炭',
+  jm: '焦煤', i: '铁矿石', eg: '乙二醇', eb: '苯乙烯',
+  l: '塑料', pp: '聚丙烯', v: 'PVC', pg: '液化气',
+  MA: '甲醇', TA: 'PTA', FG: '玻璃', SA: '纯碱',
+  CF: '棉花', CY: '棉纱', SR: '白糖', OI: '菜油',
+  RM: '菜粕', AP: '苹果', PK: '花生', CJ: '红枣',
+  UR: '尿素', SH: '烧碱', PF: '短纤',
+  bc: '国际铜', nr: '20号胶',
+  SM: '硅铁', SF: '锰硅',
+}
+
+/** 从合约代码提取月份后缀（IF2608 → 2608） */
+function extractMonth(instrumentID: string): string {
+  const m = instrumentID.match(/\d+$/)
+  return m ? m[0] : ''
+}
+
+/** 根据 productID + 合约代码组装显示名称（IF + IF2608 → 沪深3002608） */
+function buildInstrumentName(productID: string, instrumentID: string): string {
+  const productName = PRODUCT_NAMES[productID]
+  if (!productName) return PLACEHOLDER
+  return productName + extractMonth(instrumentID)
+}
+
 /** 根据 record.change 正负返回文字颜色 */
 function priceColor(record: any): string {
   const change = typeof record?.change === 'number' ? record.change : 0
@@ -32,6 +66,7 @@ function coloredStyle(args: any) {
 
 const columns = [
   { field: 'instrumentID', title: '合约', width: 90 },
+  { field: 'instrumentName', title: '合约名称', width: 140 },
   { field: 'exchangeID', title: '交易所', width: 70 },
   { field: 'expireDate', title: '到期日', width: 90 },
   { field: 'lastPrice', title: '最新价', width: 100, style: coloredStyle },
@@ -44,9 +79,11 @@ const columns = [
 ]
 
 function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined) {
+  const displayName = buildInstrumentName(contract.productID, contract.instrumentID)
   if (!snap) {
     return {
       instrumentID: contract.instrumentID,
+      instrumentName: displayName,
       exchangeID: contract.exchangeID || PLACEHOLDER,
       expireDate: contract.expireDate || PLACEHOLDER,
       lastPrice: PLACEHOLDER,
@@ -63,6 +100,7 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined) {
   const changePercent = preSettlement ? (change / preSettlement) * 100 : 0
   return {
     instrumentID: snap.instrumentID,
+    instrumentName: displayName,
     exchangeID: contract.exchangeID || PLACEHOLDER,
     expireDate: contract.expireDate || PLACEHOLDER,
     lastPrice: snap.lastPrice,
