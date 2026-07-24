@@ -778,3 +778,46 @@
 - `5f0d51c` fix(task-15): review反馈 - QuickKeys恢复默认不再自动保存，需手动确认
 - `b4c0c83` fix(task-15): review反馈 - 提取executeAction公共函数，消除handleReverse/handleLock重复代码
 - `b2e9b4e` fix(task-15): review反馈 - 并发撤单 + setHotKeys批量更新 + cancelAllOrders加TODO + 快捷键去重 + hotKeys回退默认
+
+---
+
+## PR-22: 连接状态指示器完善 + 行情表格涨跌着色
+
+**分支**：`feature/pr-22-connection-status`
+**开始时间**：2026-07-24
+**状态**：✅ 已完成（待审查）
+
+---
+
+### 完成内容
+
+**后端（角色A 部分，本次由角色B 代为完成）**：
+- `server/services/ctp_startup.py`：MD 断线/重连 3 处广播从 `{status}` 改为 `{mdConnected}` 格式
+
+**前端（角色B）**：
+- `frontend/src/hooks/useSystemWs.ts`：删除 `status === 'disconnected'` 兜底分支
+- `frontend/src/hooks/useMarketWs.ts`：删除 `setMdPhase('connected')` 行情 hack
+- `frontend/src/modules/market/MarketTable.tsx`：
+  - 涨跌着色（6 列 vtable theme bodyStyle 回调，红涨绿跌）
+  - 新增合约名称、交易所、到期日 3 列
+  - productID → 中文名本地映射（50+ 品种）
+
+### 实现文件清单
+
+| 文件 | 变更 | 说明 |
+|------|------|------|
+| `server/services/ctp_startup.py` | 修改 | 3 处广播格式统一 |
+| `frontend/src/hooks/useSystemWs.ts` | 修改 | 删除兜底分支 + status 类型字段 |
+| `frontend/src/hooks/useMarketWs.ts` | 修改 | 删除 hack + useConnectionStore 导入 |
+| `frontend/src/modules/market/MarketTable.tsx` | 修改 | 涨跌着色 + 3 新列 + 映射表 |
+
+### 提交记录
+
+- `9a8ebd6` fix(task-22): 统一MD断线/重连广播格式为mdConnected，删除前端demo方案和兜底逻辑
+- `ed7d01c` feat(task-22): 行情表格涨跌着色 + 新增交易所/到期日列
+- `43ed2e1` feat(task-22): 合约名称列 — productID本地映射中文名
+
+### 已知未完成
+
+- 角色A 后端登录流程重构（connect_ctp→connect_md 重命名、startup 只连 MD 等）留待角色A 处理
+- `server/tests/test_ws_integration.py` 仍有旧格式引用，需跟随重建测试

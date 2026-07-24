@@ -24,8 +24,9 @@
 | PR-17 | 联调测试与Bug修复 | ⏳ 待开始 | - | - |
 | PR-20 | 前端合约刷新功能（刷新按钮 + Toast） | ✅ 已完成 | 2026-07-21 | 2a4d682~8ebaf1f (9 commits) |
 | PR-21 | 手动订阅/退订合约 | ✅ 已完成 | 2026-07-23 | 与 PR-20 共享提交 |
+| PR-22 | 连接状态指示器完善 | ✅ 已完成 | 2026-07-24 | 9a8ebd6, ed7d01c, 43ed2e1 (3 commits) |
 
-**总计**：12个PR + 1个联调PR = 13个PR
+**总计**：13个PR + 1个联调PR = 14个PR
 
 ---
 
@@ -434,6 +435,46 @@
 **交接说明**：
 - PR-20 已完成并合并。审查无阻断问题，2 个建议 + 2 个疑问已全部处理。
 - ✅ TypeScript 编译无错误
+
+---
+
+### PR-22: 连接状态指示器完善 + 行情表格涨跌着色
+
+**状态**：✅ 已完成（开发完成，待审查）
+
+**PR信息**：
+- PR分支名：`feature/pr-22-connection-status`
+- 依赖PR：PR-9 ✅
+- 工作量：1小时
+- 角色：角色A + 角色B（本次两者均由角色B完成）
+
+**完成内容**：
+
+**后端（角色A）**：
+- `ctp_startup.py`：MD 断线/重连 3 处广播统一为 `{ mdConnected }` 格式（与其他 14 处一致）
+
+**前端（角色B）**：
+- `useSystemWs.ts`：删除 `status === 'disconnected'` 兜底分支（不再需要）
+- `useMarketWs.ts`：删除 `setMdPhase('connected')` 行情 hack（连接状态由 /ws/system 管理）
+- `MarketTable.tsx`：
+  - 行情表格涨跌着色（6 列红涨绿跌：最新价/涨跌/涨跌%/买一/卖一）
+  - 新增交易所、到期日、合约名称 3 列
+  - 合约名称通过 productID 本地映射表显示中文名（50+ 品种）
+  - 合约/交易所/到期日/合约名称/成交量/持仓量保持白字
+
+**验证结果**：
+- ✅ 前端：343 passed / 345 total（2 pre-existing failures，非本次改动引入）
+- ✅ 后端：569 passed / 584 total（15 pre-existing failures，非本次改动引入）
+- ✅ TypeScript 编译无错误
+
+**提交记录**：
+- `9a8ebd6` fix(task-22): 统一MD断线/重连广播格式为mdConnected，删除前端demo方案和兜底逻辑
+- `ed7d01c` feat(task-22): 行情表格涨跌着色 + 新增交易所/到期日列
+- `43ed2e1` feat(task-22): 合约名称列 — productID本地映射中文名
+
+**交接说明**：
+- PR-22 开发完成，待审查。行情表格涨跌着色为新增需求，合约名称需后端生产环境配合。
+- 角色A 后端部分（登录流程重构、connect_ctp→connect_md 重命名等）未在本次完成，留待角色A 处理。
 
 ---
 
