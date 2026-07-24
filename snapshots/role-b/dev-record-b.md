@@ -917,4 +917,49 @@
 ### 提交记录
 
 - `0d71c66` `fix(task-14): 期权API阻塞事件循环 — async def改为def`
-- `723c81d` `fix(task-14): 期权面板默认只加载预设合约的期权链`
+- `723003d` `fix(task-14): 期权面板默认只加载预设合约的期权链`
+
+---
+
+## PR-14: 前端期权 T 型报价 — 面板简化重构
+
+**分支**：`feature/pr-14-option-tquote`
+**重构时间**：2026-07-24
+**状态**：✅ 已完成
+
+---
+
+### 重构需求
+
+1. 面板名称从"期权"改为"T型期权报价"
+2. 整个面板只能看一个合约的信息，删除堆叠多合约设计
+3. 点击按钮后不自动加载合约，必须手动选择标的和到期日
+
+### 修改内容
+
+- `frontend/src/App.tsx`
+  - 标签名称从"期权"改为"T型期权报价"
+
+- `frontend/src/modules/options/OptionPanel.tsx`
+  - 删除自动加载逻辑（useEffect on mount）
+  - 删除堆叠多合约设计，改为只显示一个选中的 chain（`selectedChain`）
+  - 用户必须手动选择标的和到期日才能加载数据
+  - 选择标的后自动重置到期日，避免残留旧选择
+  - 下拉框默认文本改为"请选择标的"/"请选择到期日"
+  - 空状态提示根据选择状态显示不同文案
+
+- `frontend/src/modules/options/styles.css`
+  - 删除 `.options-chain-block` 和 `.options-chain-title` 样式（多合约堆叠相关）
+
+- `frontend/src/modules/options/OptionPanel.test.tsx`
+  - 重写测试：验证不自动加载、验证单表格渲染、验证空状态提示
+
+### 测试
+
+- `src/modules/options/OptionPanel.test.tsx`：13 个测试全部通过
+- `src/modules/options/TQuoteTable.test.tsx`：11 个测试全部通过
+- 完整前端测试：`398 passed, 2 failed`（2 个失败在 `useMarketWs.test.ts`，与本次修改无关）
+
+### 提交记录
+
+- `423003d` `refactor(task-14): 期权面板简化 — 改为T型期权报价，只显示单个合约`
