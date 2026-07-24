@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useOptionsStore } from './store'
 import { useMarketStore } from '@/modules/market/store'
-import { subscribeMarket } from '@/services/api'
+import { subscribeMarket, getOptionUnderlyings } from '@/services/api'
 import { TQuoteTable } from './TQuoteTable'
 import type { OptionChain } from '@/services/types'
 import './styles.css'
@@ -32,13 +32,22 @@ export function OptionPanel() {
   const fetchVolatility = useOptionsStore((s) => s.fetchVolatility)
   const setSelectedUnderlying = useOptionsStore((s) => s.setSelectedUnderlying)
   const setSelectedExpireDate = useOptionsStore((s) => s.setSelectedExpireDate)
-  const availableUnderlyings = useOptionsStore((s) => s.availableUnderlyings)
   const availableExpirations = useOptionsStore((s) => s.availableExpirations)
+
+  // Available underlyings — loaded via lightweight API on mount
+  const [availableUnderlyings, setAvailableUnderlyings] = useState<string[]>([])
 
   // Market snapshots — real-time price data for chain quotes
   const snapshots = useMarketStore((s) => s.snapshots)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prevPriceRef = useRef<number | null>(null)
+
+  // Load available underlyings on mount (lightweight API)
+  useEffect(() => {
+    getOptionUnderlyings().then((res) => {
+      setAvailableUnderlyings(res.underlyings ?? [])
+    })
+  }, [])
 
   // Find the selected chain (only one at a time)
   const selectedChain = useMemo(
@@ -97,7 +106,6 @@ export function OptionPanel() {
     setSelectedExpireDate(value)
   }
 
-  const underlyings = availableUnderlyings()
   // Expiry dropdown filtered by selected underlying
   const expirations = selectedUnderlying
     ? [...new Set(optionChains.filter((c) => c.underlying === selectedUnderlying).map((c) => c.expireDate))].sort()
@@ -111,7 +119,7 @@ export function OptionPanel() {
           标的:
           <select value={selectedUnderlying ?? ''} onChange={handleUnderlyingChange}>
             <option value="">请选择标的</option>
-            {underlyings.map((u) => (
+            {availableUnderlyings.map((u) => (
               <option key={u} value={u}>{u}</option>
             ))}
           </select>

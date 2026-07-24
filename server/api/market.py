@@ -255,6 +255,25 @@ async def get_depth(
 
 # ── Options ──────────────────────────────────────────────────────────────
 
+@router.get("/options/underlyings")
+def get_option_underlyings(request: Request):
+    """Get list of available underlying instruments for options.
+
+    Returns a lightweight list of underlying IDs (e.g. ["IF2608", "IC2608"])
+    without loading full option chain data.
+    """
+    market_svc = _get_service(request)
+    options_svc = getattr(request.app.state, "options_service", None)
+    if options_svc is None:
+        return {"underlyings": []}
+
+    instruments = market_svc.get_instruments()
+    options = options_svc.get_options(instruments)
+    # Extract unique underlyings
+    underlyings = sorted({inst.get("underlyingInstrID", "") for inst in options if inst.get("underlyingInstrID")})
+    return {"underlyings": underlyings}
+
+
 @router.get("/options")
 def get_options(request: Request, underlying: str = ""):
     """Get option contract list.

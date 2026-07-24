@@ -217,6 +217,16 @@ export async function refreshPresetInstruments(): Promise<{ success: boolean; in
 
 // ── 期权 API ──────────────────────────────────────────────────────────
 
+interface OptionUnderlyingsResponse {
+  underlyings: string[]
+}
+
+/** 获取可用的期权标的列表（轻量级，不加载全部期权链） */
+export async function getOptionUnderlyings(): Promise<OptionUnderlyingsResponse> {
+  const { data } = await api.get<OptionUnderlyingsResponse>('/api/market/options/underlyings')
+  return data
+}
+
 interface OptionChainsResponse {
   chains: OptionChain[]
 }

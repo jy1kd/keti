@@ -49,10 +49,12 @@ vi.mock('./store', () => ({
 
 // Use real useMarketStore — no mock, so setState triggers re-renders via zustand
 
-// Mock subscribeMarket
+// Mock subscribeMarket and getOptionUnderlyings
 const mockSubscribeMarket = vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] })
+const mockGetOptionUnderlyings = vi.fn().mockResolvedValue({ underlyings: ['IF2608', 'IF2609'] })
 vi.mock('@/services/api', () => ({
   subscribeMarket: (...args: any[]) => mockSubscribeMarket(...args),
+  getOptionUnderlyings: (...args: any[]) => mockGetOptionUnderlyings(...args),
 }))
 
 // Mock TQuoteTable (renders simple div)
