@@ -73,17 +73,9 @@ const PRODUCT_NAMES: Record<string, string> = {
   lc_o: '碳酸锂', pd_o: '工业硅', ps_o: '工业硅', pt_o: '工业硅', si_o: '工业硅',
 }
 
-/** 从合约代码提取月份后缀（IF2608 → 2608） */
-function extractMonth(instrumentID: string): string {
-  const m = instrumentID.match(/\d+$/)
-  return m ? m[0] : ''
-}
-
-/** 根据 productID + 合约代码组装显示名称（IF + IF2608 → 沪深3002608） */
-function buildInstrumentName(productID: string, instrumentID: string): string {
-  const productName = PRODUCT_NAMES[productID]
-  if (!productName) return PLACEHOLDER
-  return productName + extractMonth(instrumentID)
+/** 根据 productID 查中文名 */
+function buildProductName(productID: string): string {
+  return PRODUCT_NAMES[productID] || PLACEHOLDER
 }
 
 /** 根据 record.change 正负返回文字颜色 */
@@ -102,7 +94,7 @@ function coloredStyle(args: any) {
 
 const columns = [
   { field: 'instrumentID', title: '合约', width: 90 },
-  { field: 'instrumentName', title: '合约名称', width: 140 },
+  { field: 'productName', title: '合约品种', width: 100 },
   { field: 'exchangeID', title: '交易所', width: 70 },
   { field: 'expireDate', title: '到期日', width: 90 },
   { field: 'lastPrice', title: '最新价', width: 100, style: coloredStyle },
@@ -115,11 +107,11 @@ const columns = [
 ]
 
 function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined) {
-  const displayName = buildInstrumentName(contract.productID, contract.instrumentID)
+  const productName = buildProductName(contract.productID)
   if (!snap) {
     return {
       instrumentID: contract.instrumentID,
-      instrumentName: displayName,
+      productName,
       exchangeID: contract.exchangeID || PLACEHOLDER,
       expireDate: contract.expireDate || PLACEHOLDER,
       lastPrice: PLACEHOLDER,
@@ -136,7 +128,7 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined) {
   const changePercent = preSettlement ? (change / preSettlement) * 100 : 0
   return {
     instrumentID: snap.instrumentID,
-    instrumentName: displayName,
+    productName,
     exchangeID: contract.exchangeID || PLACEHOLDER,
     expireDate: contract.expireDate || PLACEHOLDER,
     lastPrice: snap.lastPrice,
