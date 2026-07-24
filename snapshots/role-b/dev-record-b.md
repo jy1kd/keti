@@ -878,5 +878,42 @@
 
 ### 提交记录
 
-- （待提交）`fix(task-14): 期权面板卡死修复 — vtable 增量更新 + 单 chain 高度修复`
+- `d34307d` `fix(task-14): 期权面板卡死修复 — vtable 增量更新 + 单 chain 高度修复`
 - `server/tests/test_ws_integration.py` 仍有旧格式引用，需跟随重建测试
+
+---
+
+## PR-14: 前端期权 T 型报价 — 人工验证修复2（后端阻塞）
+
+**分支**：`feature/pr-14-option-tquote`
+**修复时间**：2026-07-24
+**状态**：✅ 已修复
+
+---
+
+### 问题现象
+
+- 点击"期权"标签后，前端卡死在"加载中"页面，无响应。
+- 不传 `underlying`/`expire_date` 参数时必现，传参数时正常。
+
+### 根因分析
+
+`server/api/market.py` 中 `/options`、`/option_chain`、`/volatility` 三个端点是 `async def`，但内部调用的 `get_instruments()`、`get_option_chains()`、`get_volatility()` 都是**同步函数**。
+
+在 FastAPI 的 `async def` 中执行同步阻塞代码会**阻塞事件循环**，导致：
+- 该请求 hang 住，前端一直等待响应
+- 其他请求也无法处理
+- 不传参数时返回全部期权合约（几千个），遍历+分组耗时更长，更容易触发
+
+### 修复内容
+
+- `server/api/market.py`：将 `/options`、`/option_chain`、`/volatility` 三个端点从 `async def` 改为 `def`。
+- FastAPI 对 `def` 端点会自动放到线程池执行，不再阻塞事件循环。
+
+### 测试
+
+- `server/tests/test_options_api.py`：11 个测试全部通过。
+
+### 提交记录
+
+- `0d71c66` `fix(task-14): 期权API阻塞事件循环 — async def改为def`
