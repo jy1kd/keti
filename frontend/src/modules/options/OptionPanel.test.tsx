@@ -5,7 +5,7 @@ import { useMarketStore } from '@/modules/market/store'
 import type { MarketSnapshot } from '@/services/types'
 
 // Mock the options store
-const mockFetchOptionChains = vi.fn()
+const mockFetchOptionChains = vi.fn().mockResolvedValue(undefined)
 const mockSetSelectedUnderlying = vi.fn()
 const mockSetSelectedExpireDate = vi.fn()
 const mockAvailableUnderlyings = vi.fn(() => ['IF2608', 'IF2609'])
@@ -20,29 +20,28 @@ let storeState = {
   error: null as string | null,
 }
 
+function getMockState() {
+  return {
+    ...storeState,
+    fetchOptionChains: mockFetchOptionChains,
+    setSelectedUnderlying: mockSetSelectedUnderlying,
+    setSelectedExpireDate: mockSetSelectedExpireDate,
+    availableUnderlyings: mockAvailableUnderlyings,
+    availableExpirations: mockAvailableExpirations,
+    allStrikes: mockAllStrikes,
+  }
+}
+
 vi.mock('./store', () => ({
-  useOptionsStore: (selector: any) => {
-    if (typeof selector === 'function') {
-      return selector({
-        ...storeState,
-        fetchOptionChains: mockFetchOptionChains,
-        setSelectedUnderlying: mockSetSelectedUnderlying,
-        setSelectedExpireDate: mockSetSelectedExpireDate,
-        availableUnderlyings: mockAvailableUnderlyings,
-        availableExpirations: mockAvailableExpirations,
-        allStrikes: mockAllStrikes,
-      })
-    }
-    return {
-      ...storeState,
-      fetchOptionChains: mockFetchOptionChains,
-      setSelectedUnderlying: mockSetSelectedUnderlying,
-      setSelectedExpireDate: mockSetSelectedExpireDate,
-      availableUnderlyings: mockAvailableUnderlyings,
-      availableExpirations: mockAvailableExpirations,
-      allStrikes: mockAllStrikes,
-    }
-  },
+  useOptionsStore: Object.assign(
+    (selector: any) => {
+      if (typeof selector === 'function') {
+        return selector(getMockState())
+      }
+      return getMockState()
+    },
+    { getState: () => getMockState() }
+  ),
 }))
 
 // Use real useMarketStore — no mock, so setState triggers re-renders via zustand

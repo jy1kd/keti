@@ -30,9 +30,16 @@ export function OptionPanel() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prevPriceRef = useRef<number | null>(null)
 
-  // Fetch all chains on mount
+  // Fetch all chains on mount, then auto-select first underlying + expiry
   useEffect(() => {
-    fetchOptionChains()
+    fetchOptionChains().then(() => {
+      const { optionChains: chains, setSelectedUnderlying: setUL, setSelectedExpireDate: setED } = useOptionsStore.getState()
+      if (chains.length > 0) {
+        const first = chains[0]
+        setUL(first.underlying)
+        setED(first.expireDate)
+      }
+    })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Real-time refresh: when underlying's lastPrice changes, debounce re-fetch
@@ -111,7 +118,7 @@ export function OptionPanel() {
           <div className="options-error">{error}</div>
         )}
         {!loading && !error && selectedChain && (
-          <TQuoteTable chain={selectedChain} />
+          <TQuoteTable chain={selectedChain} snapshots={snapshots} />
         )}
         {!loading && !error && !selectedChain && optionChains.length === 0 && (
           <div className="options-empty">暂无期权链数据</div>
