@@ -119,19 +119,27 @@ export function TQuoteTable({ chain, snapshots }: TQuoteTableProps) {
       widthMode: 'adaptive' as const,
       hover: { highlightMode: 'row' as const },
       theme: {
+        underlayBackgroundColor: '#0d1117',
         defaultStyle: {
           color: '#e6edf3',
           fontSize: 13,
-          fontFamily: 'Consolas, monospace',
+          fontFamily: "'JetBrains Mono', Consolas, Monaco, monospace",
+          bgColor: '#0d1117',
+          borderColor: '#21262d',
+          hover: {
+            cellBgColor: '#1c2333',
+          },
         },
         headerStyle: {
-          bgColor: '#1a1a2e',
+          bgColor: '#161b22',
           color: '#8b949e',
           fontSize: 12,
           fontWeight: 'bold',
+          borderColor: '#30363d',
         },
         bodyStyle: {
           bgColor: '#0d1117',
+          borderColor: '#21262d',
         },
       },
     })
