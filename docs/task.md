@@ -1541,98 +1541,71 @@ frontend/src/
 | **PR编号** | PR-22 |
 | **PR标题** | 连接状态指示器完善（MD/TD状态广播+前端处理） |
 | **PR分支名** | `feature/pr-22-connection-status` |
-| **负责角色** | 角色A + 角色B |
+| **负责角色** | 角色A + 角色B（本次两者均由角色B完成） |
 | **依赖PR** | PR-9（需要TraderApi连接状态） |
 | **工作量** | 1小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成（审查通过） |
 
 **背景**：
 当前MD/TD指示器使用demo方案（前端通过行情数据推断MD状态），需要改为后端主动广播连接状态。
 同时，当前登录逻辑存在问题：startup 时 TD 用 `.env` 凭证自动连接，绕过了 `/login` 端点；`ctp_startup.py` 中有两套重复的 TD 连接代码（`start_ctp_trading_connection` 和 `connect_trading`）。
 
-**角色A（后端）任务**：
-```server/
-├── services/
-│   └── ctp_startup.py           # 修改：连接状态广播 + 登录流程重构
-```
+**实际实施（简化方案）**：
 
-**任务 1：登录流程重构**
+讨论后决定取消原设计的 `{status, target}` 格式，简化方案：后端所有广播已统一使用 `{mdConnected}` / `{tdConnected}` 字段，只需修复 MD 断线/重连相关的 3 处遗漏。
 
-现状问题：
-- `main.py` startup 同时启动 MD 和 TD，TD 绕过 `/login` 端点
-- `ctp_startup.py` 有两套重复的 TD 连接代码：`start_ctp_trading_connection()`（startup 用）和 `connect_trading()`（`/login` 用）
-- `connect_ctp()` 名字误导（只做 MD，不做 TD）
+**角色A（后端）已完成**：
+- `ctp_startup.py`：MD 断线/重连 3 处广播从 `{status}` 改为 `{mdConnected}` 格式（与其他 14 处一致）
 
-重构方案：
-1. 删除 `start_ctp_trading_connection()`，统一到 `connect_trading()`（唯一 TD 连接入口）
-2. `connect_ctp()` 重命名为 `connect_md()`，只做 MD 连接
-3. `main.py` startup 只调 `connect_md()`，删除 TD 自动连接
-4. `/login` 端点调用 `connect_trading(brokerID, userID, password, wait=True)` 触发 TD 连接
-5. `/logout` 端点增加广播 `connection_status` 到 `/ws/system`（通知前端 TD 断开）
+**角色B（前端）已完成**：
+- `useSystemWs.ts`：删除 `status === 'disconnected'` 兜底分支（不再需要）
+- `useMarketWs.ts`：删除 `setMdPhase('connected')` 行情 hack（连接状态由 /ws/system 管理）
+- `MarketTable.tsx`：
+  - 行情表格涨跌着色（6 列红涨绿跌：最新价/涨跌/涨跌%/买一/卖一）
+  - 新增合约品种、交易所、到期日 3 列
+  - 合约品种通过 productID 本地映射表显示中文名（132 品种全覆盖）
+  - fallback 逻辑修复：昨结算价为 0 时 fallback 到昨收价（解决 CTP DBL_MAX sanitize 导致的着色错乱）
 
-目标流程：
-```
-启动时：MD 自动连接（后台线程），TD 不连接
-POST /api/connection/login → connect_trading() → TD 连接+登录+确认结算 → 返回成功/失败
-POST /api/connection/logout → 释放 TD → MD 保持 → 广播 TD 断开
-```
-
-**任务 2：连接状态广播**
-
-1. 修改 `_on_front_connected` 回调
-   - MD连接成功时广播：`{ type: 'connection_status', data: { status: 'connected', target: 'md' } }`
-   - 不再依赖 `_wire_bridge` 后才广播
-2. 新增 TD 连接状态广播
-   - TD连接成功时广播：`{ type: 'connection_status', data: { status: 'connected', target: 'td' } }`
-   - TD断连时广播：`{ type: 'connection_status', data: { status: 'disconnected', target: 'td' } }`
-3. 初始连接成功后立即广播一次
-   - 解决当前MD指示器红色问题（后端未广播初始状态）
-
-**角色B（前端）任务**：
-```frontend/src/
-├── hooks/
-│   ├── useSystemWs.ts           # 修改：处理target字段
-│   └── useMarketWs.ts           # 修改：移除demo方案
-├── stores/
-│   └── connection.ts            # 修改：添加reset逻辑
-```
-
-1. 修改 `useSystemWs` hook
-   - 解析 `connection_status` 消息的 `target` 字段（'md' | 'td'）
-   - 根据 target 调用 `setMdConnected` 或 `setTdConnected`
-   - 移除当前只处理MD的逻辑
-2. 修改 `useMarketWs` hook
-   - 移除 `setMdConnected(true)` 的demo方案
-   - 连接状态完全由 `useSystemWs` 管理
-3. 连接状态重置
-   - WebSocket断连时自动重置对应状态
-   - 页面刷新时重新建立连接
-
-**消息格式**：
+**消息格式**（与现有格式一致，无新增 `target` 字段）：
 ```typescript
 // 后端推送
 {
   type: 'connection_status',
   data: {
-    status: 'connected' | 'disconnected' | 'reconnect_failed',
-    target: 'md' | 'td',  // 新增：区分行情/交易
-    reason?: number        // 断连原因（可选）
+    mdConnected: boolean,   // MD 连接状态
+    tdConnected: boolean,   // TD 连接状态
+    reason?: number         // 断连原因（可选）
   }
 }
 ```
 
-**验证方法**：
-1. 启动后端，确认MD指示器变绿
-2. 启动TD连接（PR-9完成后），确认TD指示器变绿
-3. 断开网络，确认指示器变红
-4. 恢复网络，确认指示器变绿
+**提交文件**：
+```
+server/services/ctp_startup.py                        # 修改：3 处广播格式统一
+frontend/src/hooks/useSystemWs.ts                      # 修改：删除兜底分支
+frontend/src/hooks/useMarketWs.ts                      # 修改：删除行情 hack
+frontend/src/modules/market/MarketTable.tsx            # 修改：涨跌着色 + 3 新列 + 映射表 + fallback 修复
+```
+
+**提交记录**：
+- `9a8ebd6` fix(task-22): 统一MD断线/重连广播格式为mdConnected，删除前端demo方案和兜底逻辑
+- `ed7d01c` feat(task-22): 行情表格涨跌着色 + 新增交易所/到期日列
+- `43ed2e1` feat(task-22): 合约名称列 — productID本地映射中文名
+- `ad924f7` fix(task-22): 补全产品映射表 — 132品种全覆盖（5交易所）
+- `ef11135` refactor(task-22): 合约名称改为合约品种，取消月份后缀
+- `6126ae1` docs(task-22): 文档更新
+- `41f3af1` fix(task-22): 昨结算价为0时fallback到昨收价，修复红绿着色错乱
 
 **验收标准**：
-- [ ] MD连接成功后指示器变绿
-- [ ] TD连接成功后指示器变绿
-- [ ] 断连后指示器变红
-- [ ] 重连后指示器变绿
-- [ ] 消息格式包含target字段
+- [x] MD连接成功后指示器变绿
+- [x] TD连接成功后指示器变绿
+- [x] 断连后指示器变红
+- [x] 重连后指示器变绿
+- [x] 行情表格涨跌着色正确（红涨绿跌，昨结算价为 0 时 fallback 到昨收）
+
+**留待角色A 处理**：
+- 登录流程重构（connect_ctp→connect_md 重命名、startup 只连 MD、/login 触发 TD）
+- `server/tests/test_ws_integration.py` 仍有旧格式引用，需跟随更新测试
 
 ---
 
@@ -2102,3 +2075,4 @@ PR-1~16,PR-18~21 ──►PR-17 (联调测试)
 | 2026-07-15 | v2.0 | 修复6处遗漏：PR-10报单确认反馈+止损单表单、PR-15依赖PR-11、PR-16撤单按钮、PR-14波动率调用、PR-6涨跌幅 | ✅ 完成 |
 | 2026-07-15 | v2.1 | 补充PR-6 PerfMonitor组件实现（PRD F5.4渲染性能监控） | ✅ 完成 |
 | 2026-07-15 | v2.2 | 补充PR-8 useReconnect Hook实现（PRD F4.3断线重连） | ✅ 完成 |
+| 2026-07-24 | v2.3 | PR-22 连接状态指示器完善（简化方案：修复广播格式+涨跌着色+合约品种映射） | ✅ 完成 |

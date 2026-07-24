@@ -785,7 +785,7 @@
 
 **分支**：`feature/pr-22-connection-status`
 **开始时间**：2026-07-24
-**状态**：✅ 已完成（待审查）
+**状态**：✅ 已完成（审查通过）
 
 ---
 
@@ -816,6 +816,19 @@
 - `9a8ebd6` fix(task-22): 统一MD断线/重连广播格式为mdConnected，删除前端demo方案和兜底逻辑
 - `ed7d01c` feat(task-22): 行情表格涨跌着色 + 新增交易所/到期日列
 - `43ed2e1` feat(task-22): 合约名称列 — productID本地映射中文名
+- `ad924f7` fix(task-22): 补全产品映射表 — 132品种全覆盖（5交易所）
+- `ef11135` refactor(task-22): 合约名称改为合约品种，取消月份后缀
+- `6126ae1` docs(task-22): 文档更新
+- `41f3af1` fix(task-22): 昨结算价为0时fallback到昨收价，修复红绿着色错乱
+
+### 遇到的问题与解决方案
+
+| 问题 | 原因 | 解决方案 |
+|------|------|----------|
+| vtable 列 style 回调中 `args.rowData` 不存在 | vtable `StylePropertyFunctionArg` 无 `rowData` 属性 | 改用 `args.table?.records?.[args.row]` |
+| theme `bodyStyle` 不支持函数 | vtable `bodyStyle` 类型为静态 `ThemeStyle` | 对每个需要着色的列配置 `style: coloredStyle` 回调 |
+| 部分合约涨跌颜色错乱 | CTP `PreSettlementPrice` 返回 DBL_MAX 被 sanitize 为 0，`??` 对 0 不触发 fallback | 改为显式判断 `> 0`，0 时 fallback 到 `preClosePrice` |
+| SimNow 返回 `InstrumentName` 等于 `InstrumentID` | SimNow 测试环境不返中文名 | 前端 productID → 中文名本地映射（132 品种全覆盖） |
 
 ### 已知未完成
 
