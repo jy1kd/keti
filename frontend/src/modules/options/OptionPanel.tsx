@@ -41,7 +41,8 @@ export function OptionPanel() {
   const prevPriceRef = useRef<number | null>(null)
 
   // Chains matching current filter (null selector = 全部 = match all)
-  // Memoized: filter creates a new array each render, which would retrigger effects.
+  // Note: intentionally does NOT depend on `snapshots`; market ticks should not
+  // re-filter chains or re-trigger the subscription effect.
   const visibleChains = useMemo(
     () =>
       optionChains.filter(
@@ -161,7 +162,7 @@ export function OptionPanel() {
               )}
               <div
                 className="options-chain-table"
-                style={visibleChains.length > 1 ? { height: chainHeight(chain) } : undefined}
+                style={{ height: chainHeight(chain) }}
               >
                 <TQuoteTable chain={chain} snapshots={snapshots} volatility={volatility} />
               </div>

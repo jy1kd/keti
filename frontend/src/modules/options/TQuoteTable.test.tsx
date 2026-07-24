@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 import { TQuoteTable } from './TQuoteTable'
-import type { OptionChain, OptionQuote } from '@/services/types'
+import type { OptionChain, OptionQuote, MarketSnapshot } from '@/services/types'
 
 function makeQuote(overrides: Partial<OptionQuote> = {}): OptionQuote {
   return {
@@ -153,5 +153,34 @@ describe('TQuoteTable', () => {
     const instance = (ListTable as any).mock.results[0]?.value
     unmount()
     expect(instance?.release).toHaveBeenCalled()
+  })
+
+  it('updates records incrementally when snapshots change without recreating table', async () => {
+    const { rerender } = render(<TQuoteTable chain={chain} />)
+    const { ListTable } = await import('@visactor/vtable')
+    const instance = (ListTable as any).mock.results[0]?.value
+
+    const callsBeforeRerender = (ListTable as any).mock.calls.length
+
+    const snapshots = new Map<string, MarketSnapshot>([
+      [
+        'IF2608-C-4700',
+        {
+          instrumentID: 'IF2608-C-4700',
+          lastPrice: 999,
+          bidPrice1: 998,
+          askPrice1: 1000,
+          volume: 100,
+          openInterest: 5000,
+        } as MarketSnapshot,
+      ],
+    ])
+
+    rerender(<TQuoteTable chain={chain} snapshots={snapshots} />)
+
+    // In StrictMode effects run twice on mount, so we assert that the rerender
+    // itself did not trigger a new ListTable construction.
+    expect((ListTable as any).mock.calls.length).toBe(callsBeforeRerender)
+    expect(instance.setRecords).toHaveBeenCalled()
   })
 })

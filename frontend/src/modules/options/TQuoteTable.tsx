@@ -88,42 +88,41 @@ const CALL_COLOR = '#ef4444'
 const PUT_COLOR = '#22c55e'
 const STRIKE_BG = 'rgba(255,255,255,0.04)'
 
+const columns = [
+  // ── Call columns (left) ──
+  { field: 'callIV', title: 'IV', width: 70, headerStyle: { color: CALL_COLOR } },
+  { field: 'callOpenInterest', title: '持仓', width: 70, headerStyle: { color: CALL_COLOR } },
+  { field: 'callVolume', title: '成交', width: 70, headerStyle: { color: CALL_COLOR } },
+  { field: 'callAskPrice', title: '卖价', width: 80, headerStyle: { color: CALL_COLOR } },
+  { field: 'callBidPrice', title: '买价', width: 80, headerStyle: { color: CALL_COLOR } },
+  { field: 'callLastPrice', title: '最新', width: 80, headerStyle: { color: CALL_COLOR } },
+  // ── Strike (middle) ──
+  {
+    field: 'strikePrice',
+    title: '行权价',
+    width: 90,
+    style: { fontWeight: 'bold', bgColor: STRIKE_BG },
+  },
+  // ── Put columns (right) ──
+  { field: 'putLastPrice', title: '最新', width: 80, headerStyle: { color: PUT_COLOR } },
+  { field: 'putBidPrice', title: '买价', width: 80, headerStyle: { color: PUT_COLOR } },
+  { field: 'putAskPrice', title: '卖价', width: 80, headerStyle: { color: PUT_COLOR } },
+  { field: 'putVolume', title: '成交', width: 70, headerStyle: { color: PUT_COLOR } },
+  { field: 'putOpenInterest', title: '持仓', width: 70, headerStyle: { color: PUT_COLOR } },
+  { field: 'putIV', title: 'IV', width: 70, headerStyle: { color: PUT_COLOR } },
+]
+
 export function TQuoteTable({ chain, snapshots, volatility }: TQuoteTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
 
+  // Mount/unmount: create and release the vtable instance exactly once.
   useEffect(() => {
     if (!containerRef.current) return
 
-    const records = buildRecords(chain, snapshots, volatility)
-
-    const columns = [
-      // ── Call columns (left) ──
-      { field: 'callIV', title: 'IV', width: 70, headerStyle: { color: CALL_COLOR } },
-      { field: 'callOpenInterest', title: '持仓', width: 70, headerStyle: { color: CALL_COLOR } },
-      { field: 'callVolume', title: '成交', width: 70, headerStyle: { color: CALL_COLOR } },
-      { field: 'callAskPrice', title: '卖价', width: 80, headerStyle: { color: CALL_COLOR } },
-      { field: 'callBidPrice', title: '买价', width: 80, headerStyle: { color: CALL_COLOR } },
-      { field: 'callLastPrice', title: '最新', width: 80, headerStyle: { color: CALL_COLOR } },
-      // ── Strike (middle) ──
-      {
-        field: 'strikePrice',
-        title: '行权价',
-        width: 90,
-        style: { fontWeight: 'bold', bgColor: STRIKE_BG },
-      },
-      // ── Put columns (right) ──
-      { field: 'putLastPrice', title: '最新', width: 80, headerStyle: { color: PUT_COLOR } },
-      { field: 'putBidPrice', title: '买价', width: 80, headerStyle: { color: PUT_COLOR } },
-      { field: 'putAskPrice', title: '卖价', width: 80, headerStyle: { color: PUT_COLOR } },
-      { field: 'putVolume', title: '成交', width: 70, headerStyle: { color: PUT_COLOR } },
-      { field: 'putOpenInterest', title: '持仓', width: 70, headerStyle: { color: PUT_COLOR } },
-      { field: 'putIV', title: 'IV', width: 70, headerStyle: { color: PUT_COLOR } },
-    ]
-
     const table = new ListTable(containerRef.current, {
       columns,
-      records,
+      records: buildRecords(chain, snapshots, volatility),
       defaultRowHeight: 28,
       widthMode: 'adaptive' as const,
       hover: { highlightMode: 'row' as const },
@@ -159,6 +158,11 @@ export function TQuoteTable({ chain, snapshots, volatility }: TQuoteTableProps) 
       table.release()
       tableRef.current = null
     }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Update records when data changes without rebuilding the table.
+  useEffect(() => {
+    tableRef.current?.setRecords(buildRecords(chain, snapshots, volatility))
   }, [chain, snapshots, volatility])
 
   return <div ref={containerRef} style={{ width: '100%', height: '100%', background: '#0d1117' }} />

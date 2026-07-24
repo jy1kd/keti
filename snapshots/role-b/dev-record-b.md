@@ -833,4 +833,50 @@
 ### 已知未完成
 
 - 角色A 后端登录流程重构（connect_ctp→connect_md 重命名、startup 只连 MD 等）留待角色A 处理
+
+---
+
+## PR-14: 前端期权 T 型报价 — 人工验证修复（卡死/黑屏）
+
+**分支**：`feature/pr-14-option-tquote`
+**修复时间**：2026-07-24
+**状态**：🛠️ 已修复，待验证
+
+---
+
+### 问题现象
+
+- 点击顶部“期权”标签页后，前端直接卡死，期间无法执行任何操作。
+- 加载完成后不显示 T 型报价表格，只显示纯黑面板。
+
+### 根因分析
+
+| 问题 | 原因 | 影响 |
+|------|------|------|
+| 行情推送导致表格反复重建 | `TQuoteTable` 的 `useEffect` 依赖 `snapshots`，而 `MarketStore.batchUpdate` 每 100ms 创建新的 `Map` 引用 | 每次行情批量更新都 `new ListTable(...)` 并 `release`，大量期权合约时主线程被占满 |
+| 单 chain 时表格高度缺失 | `visibleChains.length > 1` 才设置 `chainHeight`，单个 chain 时高度为 `undefined` | vtable 容器无明确高度，可能渲染为黑屏 |
+| 订阅 effect 被行情 tick 重复触发 | `visibleChains` useMemo 原计划不含 `snapshots`，但注释暗示可能误加 | 每次 tick 重新调用 `subscribeMarket` + `fetchVolatility`，网络/CPU 双重压力 |
+
+### 修复内容
+
+- `frontend/src/modules/options/TQuoteTable.tsx`
+  - 将 `columns` 提升为组件外常量，避免每次渲染重新创建。
+  - 拆分为两个 `useEffect`：
+    - mount 时只创建一次 `ListTable`；
+    - `chain`/`snapshots`/`volatility` 变化时通过 `table.setRecords(...)` 增量更新，不再重建表格。
+  - 新增回归测试：行情快照变化时 `ListTable` 构造次数不变且调用 `setRecords`。
+
+- `frontend/src/modules/options/OptionPanel.tsx`
+  - 明确 `visibleChains` useMemo 不依赖 `snapshots`，避免行情 tick 触发订阅 effect。
+  - 单 chain 与多 chain 统一使用 `chainHeight(chain)` 设置表格容器高度，解决黑屏。
+
+### 测试
+
+- `src/modules/options/TQuoteTable.test.tsx`：11 个测试全部通过（含新增回归测试）。
+- `src/modules/options/OptionPanel.test.tsx`：15 个测试全部通过。
+- 完整前端测试：`400 passed, 2 failed`；2 个失败位于 `useMarketWs.test.ts`（instruments_refreshed toast/重载合约），与本次修改无关。
+
+### 提交记录
+
+- （待提交）`fix(task-14): 期权面板卡死修复 — vtable 增量更新 + 单 chain 高度修复`
 - `server/tests/test_ws_integration.py` 仍有旧格式引用，需跟随重建测试
