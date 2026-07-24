@@ -21,6 +21,11 @@ function chainHeight(chain: OptionChain): number {
   return (Math.max(strikes, 1) + 1) * 28 + 4
 }
 
+/** Max retry attempts for loading underlyings. */
+const MAX_RETRIES = 3
+/** Delay between retries (ms). */
+const RETRY_DELAY_MS = 1500
+
 export function OptionPanel() {
   const optionChains = useOptionsStore((s) => s.optionChains)
   const volatility = useOptionsStore((s) => s.volatility)
@@ -36,17 +41,46 @@ export function OptionPanel() {
 
   // Available underlyings — loaded via lightweight API on mount
   const [availableUnderlyings, setAvailableUnderlyings] = useState<string[]>([])
+  const [underlyingsLoading, setUnderlyingsLoading] = useState(true)
 
   // Market snapshots — real-time price data for chain quotes
   const snapshots = useMarketStore((s) => s.snapshots)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prevPriceRef = useRef<number | null>(null)
 
-  // Load available underlyings on mount (lightweight API)
+  // Load available underlyings on mount with retry
   useEffect(() => {
-    getOptionUnderlyings().then((res) => {
-      setAvailableUnderlyings(res.underlyings ?? [])
-    })
+    let retryCount = 0
+    let cancelled = false
+
+    const loadUnderlyings = () => {
+      if (cancelled) return
+
+      getOptionUnderlyings().then((res) => {
+        if (cancelled) return
+
+        const underlyings = res.underlyings ?? []
+        if (underlyings.length === 0 && retryCount < MAX_RETRIES) {
+          retryCount++
+          setTimeout(loadUnderlyings, RETRY_DELAY_MS)
+        } else {
+          setAvailableUnderlyings(underlyings)
+          setUnderlyingsLoading(false)
+        }
+      }).catch(() => {
+        if (cancelled) return
+        if (retryCount < MAX_RETRIES) {
+          retryCount++
+          setTimeout(loadUnderlyings, RETRY_DELAY_MS)
+        } else {
+          setUnderlyingsLoading(false)
+        }
+      })
+    }
+
+    loadUnderlyings()
+
+    return () => { cancelled = true }
   }, [])
 
   // Find the selected chain (only one at a time)
@@ -106,6 +140,17 @@ export function OptionPanel() {
     setSelectedExpireDate(value)
   }
 
+  // Manual refresh underlyings
+  const handleRefreshUnderlyings = () => {
+    setUnderlyingsLoading(true)
+    getOptionUnderlyings().then((res) => {
+      setAvailableUnderlyings(res.underlyings ?? [])
+      setUnderlyingsLoading(false)
+    }).catch(() => {
+      setUnderlyingsLoading(false)
+    })
+  }
+
   // Expiry dropdown filtered by selected underlying
   const expirations = selectedUnderlying
     ? [...new Set(optionChains.filter((c) => c.underlying === selectedUnderlying).map((c) => c.expireDate))].sort()
@@ -117,8 +162,14 @@ export function OptionPanel() {
       <div className="options-toolbar">
         <label>
           标的:
-          <select value={selectedUnderlying ?? ''} onChange={handleUnderlyingChange}>
-            <option value="">请选择标的</option>
+          <select
+            value={selectedUnderlying ?? ''}
+            onChange={handleUnderlyingChange}
+            disabled={underlyingsLoading}
+          >
+            <option value="">
+              {underlyingsLoading ? '加载中...' : '请选择标的'}
+            </option>
             {availableUnderlyings.map((u) => (
               <option key={u} value={u}>{u}</option>
             ))}
@@ -134,6 +185,15 @@ export function OptionPanel() {
             ))}
           </select>
         </label>
+
+        <button
+          className="options-refresh-btn"
+          onClick={handleRefreshUnderlyings}
+          disabled={underlyingsLoading}
+          title="刷新标的列表"
+        >
+          {underlyingsLoading ? '⏳' : '🔄'}
+        </button>
       </div>
 
       {/* Content */}

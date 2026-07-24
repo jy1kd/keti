@@ -30,6 +30,32 @@
   font-size: 13px;
 }
 
+.options-toolbar select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.options-refresh-btn {
+  margin-left: 8px;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.options-refresh-btn:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+}
+
+.options-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .options-content {
   flex: 1;
   overflow-y: auto;

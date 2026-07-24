@@ -103,7 +103,9 @@ describe('OptionPanel', () => {
   it('shows loading text when loading=true', () => {
     storeState.loading = true
     render(<OptionPanel />)
-    expect(screen.getByText(/加载中/)).toBeTruthy()
+    // There are two elements with this text: the <option> in dropdown and the <div> content
+    const elements = screen.getAllByText(/加载中/)
+    expect(elements.length).toBeGreaterThanOrEqual(1)
   })
 
   it('shows error message when error is set', () => {
