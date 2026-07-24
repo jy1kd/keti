@@ -35,6 +35,7 @@ function makeChain(overrides: Partial<OptionChain> = {}): OptionChain {
       makeQuote({ instrumentID: 'IF2608-P-4700', strikePrice: 4700, lastPrice: 80.0 }),
       makeQuote({ instrumentID: 'IF2608-P-4800', strikePrice: 4800, lastPrice: 130.0 }),
     ],
+    updateTime: '2026-07-24T10:00:00',
     ...overrides,
   }
 }
