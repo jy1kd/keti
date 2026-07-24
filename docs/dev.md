@@ -71,13 +71,24 @@ frontend/
 │   │   │   └── index.tsx
 │   │   ├── SpreadDisplay/     # 价差显示组件
 │   │   │   └── index.tsx
-│   │   └── PerfMonitor/       # 渲染性能监控（FPS、渲染耗时，P2）
+│   │   ├── PerfMonitor/       # 渲染性能监控（FPS、渲染耗时，P2）
+│   │   │   └── index.tsx
+│   │   ├── Toast/             # Toast提示组件（报单成功/失败反馈）
+│   │   │   └── index.tsx
+│   │   ├── InstrumentSearchModal/ # 合约搜索模态框（交易所/品种筛选、订阅/退订）
+│   │   │   └── index.tsx
+│   │   ├── ErrorBoundary/     # 错误边界组件（React异常捕获）
+│   │   │   └── index.tsx
+│   │   └── ResizeHandle/      # 面板调整大小组件（拖拽调整面板比例）
 │   │       └── index.tsx
 │   ├── hooks/                 # 自定义Hook
 │   │   ├── useHotKeys.ts      # 快捷键Hook（仅报单面板焦点时生效）
 │   │   ├── usePointOrder.ts   # 点价报单Hook
 │   │   ├── usePriceStep.ts    # 价格步进Hook（自动对齐最小变动价位）
-│   │   └── useReconnect.ts    # 断线重连Hook（指数退避重试，最多5次）
+│   │   ├── useReconnect.ts    # 断线重连Hook（指数退避重试，最多5次）
+│   │   ├── useMarketWs.ts     # 行情WebSocket Hook（连接、重连、数据分发）
+│   │   ├── useSystemWs.ts     # 系统WebSocket Hook（连接状态、错误消息）
+│   │   └── useConnectionPoll.ts # 连接状态轮询Hook（HTTP轮询备用）
 │   ├── modules/               # 业务模块
 │   │   ├── market/            # 行情模块
 │   │   │   ├── MarketPanel.tsx    # 行情面板主组件
@@ -144,8 +155,18 @@ server/
 │   └── types.py               # CTP数据类型定义
 ├── services/                  # 业务服务层
 │   ├── __init__.py
+│   ├── market_service.py      # 行情服务（订阅管理、快照缓存、合约列表）
+│   ├── order_manager.py       # 报单管理（状态跟踪、FOK/FAK/GFD处理）
+│   ├── query_service.py       # 查询服务（报单/成交/持仓/资金查询与缓存）
+│   ├── options_service.py     # 期权服务（期权链聚合、隐含波动率计算）
 │   ├── stop_order.py          # 止损单监控服务（后端监控价格，触发后自动报单）
-│   └── reconnect.py           # 断线重连服务（指数退避重试，最多5次）
+│   ├── reconnect.py           # 断线重连服务（指数退避重试，最多5次）
+│   ├── ctp_bridge.py          # CTP回调桥接（回调→WebSocket广播）
+│   ├── ctp_startup.py         # CTP自动连接（启动时连接MD/TD）
+│   ├── field_mapping.py       # CTP字段映射（PascalCase→camelCase）
+│   └── kline_service.py       # K线聚合服务（实时行情→K线数据）
+├── utils/                     # 工具函数
+│   └── ctp_mapping.py         # CTP映射工具（方向/开平/价格类型/有效期 前后端转换）
 ├── ws/                        # WebSocket管理
 │   ├── __init__.py
 │   ├── manager.py             # 连接管理（连接池、消息广播）
@@ -213,6 +234,7 @@ App.tsx
 | **OrderFlow** | 报单流水 | 增量更新、新数据高亮、时间倒序 |
 | **TradeFlow** | 成交流水 | 增量更新、新数据高亮、时间倒序 |
 | **Position** | 持仓查询 | 点击持仓直接平仓 |
+| **AccountQuery** | 账户资金查询 | 可用余额、冻结资金、持仓盈亏、实时更新 |
 | **QuoteQuery** | 报价查询 | 五档行情深度展示 |
 | **ContractQuery** | 合约查询 | 合约详细信息展示 |
 | **StopOrderList** | 止损单列表 | 止损单状态展示、取消操作 |
@@ -1098,13 +1120,15 @@ ws_manager = WebSocketManager()
 ```typescript
 // 消息类型定义
 type WSMessageType =
-  | 'market_data'       // 行情推送
-  | 'order_return'      // 报单回报
-  | 'trade_return'      // 成交回报
-  | 'position_update'   // 持仓更新
-  | 'stop_order_update' // 止损单状态更新
-  | 'connection_status' // 连接状态变化
-  | 'error';            // 错误消息
+  | 'market_data'           // 行情推送
+  | 'order_return'          // 报单回报
+  | 'trade_return'          // 成交回报
+  | 'position_update'       // 持仓更新
+  | 'stop_order_update'     // 止损单状态更新
+  | 'connection_status'     // 连接状态变化
+  | 'instruments_refreshed' // 合约列表刷新完成（CTP查询后推送）
+  | 'ping'                  // 心跳检测
+  | 'error';                // 错误消息
 ```
 
 ### 6.3 自定义业务接口

@@ -452,9 +452,11 @@ type WSMessageType =
   "volumeTotalOriginal": 1,
   "orderPriceType": "2",
   "timeCondition": "3",
+  "volumeCondition": "1",
   "stopPrice": 0
 }
 ```
+> TimeCondition CTP 标准值: IOC='1', GFS='2', GFD='3'。FOK = IOC('1') + VolumeCondition=CV('3')，FAK = IOC('1') + VolumeCondition=AV('1')。
 
 **报单回报格式**：
 ```json
@@ -665,14 +667,20 @@ function handleNewData(newRecord) {
 | 方法 | 路径 | 描述 | 请求体 | 响应 |
 |------|------|------|--------|------|
 | GET | `/api/market/instruments` | 获取合约列表 | `?keyword=au` | `[{instrument_id, instrument_name, exchange_id}]` |
+| GET | `/api/market/instruments/exchanges` | 获取交易所列表 | - | `{exchanges: ["SHFE", "DCE", ...]}` |
+| GET | `/api/market/instruments/products` | 获取品种列表 | `?exchange=SHFE` | `{products: ["au", "ag", ...]}` |
+| GET | `/api/market/instruments/search` | 按交易所+品种搜索合约 | `?exchange=SHFE&product=au&keyword=2508` | `{instruments: [...], count: N}` |
+| GET | `/api/market/preset` | 获取预置合约列表 | - | `{instruments: [...]}` |
+| POST | `/api/market/preset/refresh` | 刷新预置合约（自动检测主力合约） | - | `{success, count}` |
 | POST | `/api/market/subscribe` | 订阅行情 | `{instruments: ["IF2608", "IF2609"]}` | `{success}` |
 | POST | `/api/market/unsubscribe` | 退订行情 | `{instruments: ["IF2608"]}` | `{success}` |
 | GET | `/api/market/snapshots` | 获取行情快照 | `?instruments=IF2608,IF2609` | `{[instrument_id]: MarketSnapshot}` |
+| POST | `/api/market/instruments/refresh` | 从CTP刷新全量合约列表 | - | `{status: "started"}` |
 | GET | `/api/market/options` | 获取期权合约列表 | `?underlying=IF2608` | `[OptionContract]` |
 | GET | `/api/market/option_chain` | 获取期权T型报价 | `?underlying=IF2608` | `OptionChain` |
 
 **合约搜索说明**：
-- `search`参数支持模糊匹配合约代码和合约名称
+- `keyword`参数支持模糊匹配合约代码和合约名称
 - `exchange`参数可选，用于按交易所筛选（SHFE/DCE/CZCE/CFFEX/INE）
 - 不传参数时返回全部合约列表
 - **实现说明**：CTP的ReqQryInstrument不支持服务端搜索，需在登录后一次性拉取全量合约列表
@@ -727,11 +735,14 @@ function handleNewData(newRecord) {
 
 | 方法 | 路径 | 描述 | 请求体 | 响应 |
 |------|------|------|--------|------|
-| GET | `/api/query/orders` | 查询报单流水 | - | `[OrderRecord]` |
-| GET | `/api/query/trades` | 查询成交流水 | - | `[TradeRecord]` |
-| GET | `/api/query/positions` | 查询持仓 | - | `[PositionRecord]` |
-| GET | `/api/query/account` | 查询账户资金 | - | `AccountInfo` |
-| GET | `/api/query/quotes` | 查询五档行情深度 | `?instruments=IF2608,IF2609` | `{[instrument_id]: QuoteDepth}` |
+| GET | `/api/query/orders` | 查询报单流水（缓存） | - | `{orders: [OrderRecord], count: N}` |
+| POST | `/api/query/orders/refresh` | 从CTP刷新报单流水 | - | `{orders: [OrderRecord], count: N}` |
+| GET | `/api/query/trades` | 查询成交流水（缓存） | - | `{trades: [TradeRecord], count: N}` |
+| POST | `/api/query/trades/refresh` | 从CTP刷新成交流水 | - | `{trades: [TradeRecord], count: N}` |
+| GET | `/api/query/positions` | 查询持仓（缓存） | - | `{positions: [PositionRecord], count: N}` |
+| POST | `/api/query/positions/refresh` | 从CTP刷新持仓 | - | `{positions: [PositionRecord], count: N}` |
+| GET | `/api/query/account` | 查询账户资金（缓存） | - | `AccountInfo` |
+| POST | `/api/query/account/refresh` | 从CTP刷新账户资金 | - | `AccountInfo` |
 | GET | `/api/query/contracts` | 查询合约信息 | `?instruments=IF2608` | `{[instrument_id]: ContractInfo}` |
 
 ### 4.6 数据模型
@@ -1193,7 +1204,11 @@ interface DepthData {
 interface VolatilityData {
   instrumentID: string;            // 合约代码
   impliedVolatility: number;       // 隐含波动率（基于Black-Scholes模型计算）
-  // historicalVolatility: number; // 历史波动率（P2，需额外数据源，暂不实现）
+  underlyingPrice: number;         // 标的资产价格
+  strikePrice: number;             // 行权价
+  timeToExpiry: number;            // 到期时间（年）
+  riskFreeRate: number;            // 无风险利率
+  optionType: string;              // 期权类型（'call'/'put'）
   updateTime: string;              // 更新时间
 }
 ```

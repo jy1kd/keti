@@ -1022,7 +1022,7 @@ frontend/src/
 | direction | `'buy'` / `'sell'` | `"0"` / `"1"` |
 | combOffsetFlag | `'open'` / `'close'` / `'close_today'` | `"0"` / `"1"` / `"3"` |
 | orderPriceType | `'limit'` / `'market'` | `"2"` / `"1"` |
-| timeCondition | `'gfd'` / `'fok'` / `'fak'` | `"1"` / `"2"` / `"3"` |
+| timeCondition | `'gfd'` / `'fok'` / `'fak'` | `"3"`(GFD) / `"1"`+VC=`"3"`(FOK) / `"1"`+VC=`"1"`(FAK) |
 
 **前端转换方案**（在前端api.ts或store中实现）：
 ```typescript
@@ -1030,7 +1030,10 @@ frontend/src/
 const DIRECTION_MAP = { buy: '0', sell: '1' }
 const OFFSET_MAP = { open: '0', close: '1', close_today: '3' }
 const PRICE_TYPE_MAP = { limit: '2', market: '1' }
-const TIME_CONDITION_MAP = { gfd: '1', fok: '2', fak: '3' }
+// CTP 标准: IOC='1', GFS='2', GFD='3'
+// FOK/FAK 不是 TimeCondition，而是 TimeCondition(IOC) + VolumeCondition 的组合
+const TIME_CONDITION_MAP = { gfd: '3', fok: '1', fak: '1' }
+const VOLUME_CONDITION_MAP = { gfd: '1', fok: '3', fak: '1' }  // FOK→CV, FAK→AV
 
 function convertOrderRequest(form: OrderRequest) {
   return {
@@ -1039,6 +1042,7 @@ function convertOrderRequest(form: OrderRequest) {
     combOffsetFlag: OFFSET_MAP[form.combOffsetFlag],
     orderPriceType: PRICE_TYPE_MAP[form.orderPriceType],
     timeCondition: TIME_CONDITION_MAP[form.timeCondition],
+    volumeCondition: VOLUME_CONDITION_MAP[form.timeCondition],
   }
 }
 ```
@@ -1452,7 +1456,7 @@ server/
 | **负责角色** | 角色A |
 | **依赖PR** | PR-5 |
 | **工作量** | 2小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成（2026-07-24，PR #27，人工验证全部通过） |
 
 **提交文件**：
 ```
@@ -1464,6 +1468,17 @@ server/
 └── models/
     └── options.py              # 期权数据模型（OptionChain, VolatilityData）
 ```
+
+**提交记录**：
+- `14f9adc` feat(task-18): wire OptionsService into main.py — 88 tests pass
+- `0bd498f` fix(task-18): review反馈 - B1 task.md productClass + S1 import位置 + S2/S3 文档说明
+- `53b761c` fix(task-18): R2审查反馈 - task.md productClass 残留修复
+- `a401e4f` docs(task-18): 人工验证 - 期权合约列表获取 通过
+- `cc10ee5` docs(task-18): 人工验证 - 期权T型报价 通过
+- `1e0cf68` docs(task-18): 人工验证 - 隐含波动率计算 通过
+- `d3aa84f` docs(task-18): 人工验证 - 看涨/看跌期权分类 通过
+- `2b4efb3` docs(task-18): 人工验证全部通过 — 6项验收标准全部完成
+- `609998a` Merge pull request #27 from jy1kd/feature/pr-18-options-api
 
 **PR描述**：
 实现期权相关API接口，包括期权合约列表、期权T型报价、隐含波动率计算。
@@ -1495,12 +1510,12 @@ server/
 3. 调用隐含波动率接口，返回Black-Scholes计算结果
 
 **验收标准**：
-- [ ] 期权合约列表获取正常（基于productClass筛选）
-- [ ] 期权T型报价数据获取正常（按标的+到期日分组）
-- [ ] 隐含波动率计算正常（Black-Scholes模型）
-- [ ] 看涨/看跌期权正确分类
-- [ ] VolatilityData返回完整参数（impliedVolatility, underlyingPrice, strikePrice, timeToExpiry, riskFreeRate, optionType）
-- [ ] 期权类型映射正确（OptionsType: '1'=看涨, '2'=看跌）
+- [x] 期权合约列表获取正常（基于productClass筛选）
+- [x] 期权T型报价数据获取正常（按标的+到期日分组）
+- [x] 隐含波动率计算正常（Black-Scholes模型）
+- [x] 看涨/看跌期权正确分类
+- [x] VolatilityData返回完整参数（impliedVolatility, underlyingPrice, strikePrice, timeToExpiry, riskFreeRate, optionType）
+- [x] 期权类型映射正确（OptionsType: '1'=看涨, '2'=看跌）
 
 ---
 
