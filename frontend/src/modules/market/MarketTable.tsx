@@ -123,7 +123,10 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined) {
       openInterest: PLACEHOLDER,
     }
   }
-  const preSettlement = snap.preSettlementPrice ?? snap.preClosePrice ?? snap.lastPrice
+  // preSettlementPrice 可能为 0（CTP DBL_MAX 被 sanitize 后），此时 fallback 到昨收
+  const preSettlement = (snap.preSettlementPrice && snap.preSettlementPrice > 0)
+    ? snap.preSettlementPrice
+    : (snap.preClosePrice || snap.lastPrice)
   const change = snap.lastPrice - preSettlement
   const changePercent = preSettlement ? (change / preSettlement) * 100 : 0
   return {
