@@ -49,12 +49,10 @@ vi.mock('./store', () => ({
 
 // Use real useMarketStore — no mock, so setState triggers re-renders via zustand
 
-// Mock subscribeMarket and getPresetInstruments
+// Mock subscribeMarket
 const mockSubscribeMarket = vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] })
-const mockGetPresetInstruments = vi.fn().mockResolvedValue({ instruments: ['IF2608'], updatedAt: null })
 vi.mock('@/services/api', () => ({
   subscribeMarket: (...args: any[]) => mockSubscribeMarket(...args),
-  getPresetInstruments: (...args: any[]) => mockGetPresetInstruments(...args),
 }))
 
 // Mock TQuoteTable (renders simple div)
@@ -82,20 +80,22 @@ describe('OptionPanel', () => {
     expect(container.firstChild).toBeTruthy()
   })
 
-  it('fetches option chains on mount using preset underlying', async () => {
+  it('does not auto-fetch option chains on mount', () => {
     render(<OptionPanel />)
-    // Wait for async: getPresetInstruments().then(() => fetchOptionChains(...))
-    await act(() => new Promise(resolve => setTimeout(resolve, 0)))
-    expect(mockGetPresetInstruments).toHaveBeenCalled()
-    expect(mockFetchOptionChains).toHaveBeenCalledWith('IF2608')
+    expect(mockFetchOptionChains).not.toHaveBeenCalled()
   })
 
-  it('does not re-fetch on re-render with same state', async () => {
-    const { rerender } = render(<OptionPanel />)
-    await act(() => new Promise(resolve => setTimeout(resolve, 0)))
-    rerender(<OptionPanel />)
-    // Only called once from the initial mount effect
-    expect(mockFetchOptionChains).toHaveBeenCalledTimes(1)
+  it('shows placeholder text when no underlying selected', () => {
+    render(<OptionPanel />)
+    expect(screen.getByText(/请先选择标的合约/)).toBeTruthy()
+  })
+
+  it('shows placeholder text when underlying selected but no expiry', () => {
+    storeState.selectedUnderlying = 'IF2608'
+    render(<OptionPanel />)
+    // There are two elements with this text: the <option> in dropdown and the <div> placeholder
+    const elements = screen.getAllByText(/请选择到期日/)
+    expect(elements.length).toBeGreaterThanOrEqual(1)
   })
 
   it('shows loading text when loading=true', () => {
@@ -126,71 +126,30 @@ describe('OptionPanel', () => {
     expect(screen.getByTestId('tquote-table').textContent).toBe('IF2608-20260815')
   })
 
-  it('shows empty state when no chains and not loading', () => {
-    storeState.optionChains = []
-    storeState.loading = false
-    storeState.error = null
-    render(<OptionPanel />)
-    expect(screen.getByText(/暂无期权链数据/)).toBeTruthy()
-  })
-
   it('shows underlying selector label', () => {
-    storeState.optionChains = [
-      { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '2026-07-24T10:00:00' },
-    ]
     render(<OptionPanel />)
     const labels = screen.getAllByText(/标的/)
     expect(labels.length).toBeGreaterThan(0)
   })
-})
 
-describe('OptionPanel - 全部 stacked tables', () => {
-  const twoChains = [
-    { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '2026-07-24T10:00:00' },
-    { underlying: 'IF2608', expireDate: '20260915', calls: [], puts: [], updateTime: '2026-07-24T10:00:00' },
-  ]
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-    storeState = {
-      optionChains: twoChains,
-      volatility: new Map(),
-      selectedUnderlying: null,
-      selectedExpireDate: null,
-      loading: false,
-      error: null,
-    }
-  })
-
-  it('renders all chains as stacked tables when both selectors are 全部', () => {
+  it('shows no match message when selection has no matching chain', () => {
+    storeState.selectedUnderlying = 'IF2609'
+    storeState.selectedExpireDate = '20261215'
     render(<OptionPanel />)
-    const tables = screen.getAllByTestId('tquote-table')
-    expect(tables).toHaveLength(2)
-    expect(tables[0].textContent).toBe('IF2608-20260815')
-    expect(tables[1].textContent).toBe('IF2608-20260915')
-  })
-
-  it('renders only matching chains when underlying selected and expiry is 全部', () => {
-    storeState.selectedUnderlying = 'IF2608'
-    render(<OptionPanel />)
-    const tables = screen.getAllByTestId('tquote-table')
-    expect(tables).toHaveLength(2)
+    expect(screen.getByText(/无匹配/)).toBeTruthy()
   })
 
   it('renders single table when both underlying and expiry selected', () => {
+    storeState.optionChains = [
+      { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [] },
+      { underlying: 'IF2608', expireDate: '20260915', calls: [], puts: [] },
+    ]
     storeState.selectedUnderlying = 'IF2608'
     storeState.selectedExpireDate = '20260815'
     render(<OptionPanel />)
     const tables = screen.getAllByTestId('tquote-table')
     expect(tables).toHaveLength(1)
     expect(tables[0].textContent).toBe('IF2608-20260815')
-  })
-
-  it('shows prompt when selection matches no chains', () => {
-    storeState.selectedUnderlying = 'IF2609'
-    storeState.selectedExpireDate = '20261215'
-    render(<OptionPanel />)
-    expect(screen.getByText(/无匹配/)).toBeTruthy()
   })
 })
 
@@ -200,7 +159,7 @@ describe('OptionPanel - volatility real-time refresh', () => {
     vi.useFakeTimers()
     storeState = {
       optionChains: [
-        { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '2026-07-24T10:00:00' },
+        { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [] },
       ],
       volatility: new Map(),
       selectedUnderlying: 'IF2608',
@@ -215,15 +174,9 @@ describe('OptionPanel - volatility real-time refresh', () => {
     vi.useRealTimers()
   })
 
-  it('refetches volatility when underlying snapshot changes', async () => {
+  it('refetches volatility when underlying snapshot changes', () => {
     render(<OptionPanel />)
-    // Wait for async: getPresetInstruments().then(() => fetchOptionChains(...))
-    await act(async () => {
-      await Promise.resolve()
-      await Promise.resolve()
-    })
-    // Mount: fetchOptionChains ×1, subscribe effect fetchVolatility ×1
-    expect(mockFetchOptionChains).toHaveBeenCalledTimes(1)
+    // Mount: subscribe effect fetchVolatility ×1
     expect(mockFetchVolatility).toHaveBeenCalledTimes(1)
 
     // Simulate underlying snapshot update via real zustand store
@@ -244,12 +197,8 @@ describe('OptionPanel - volatility real-time refresh', () => {
     expect(mockFetchVolatility).toHaveBeenLastCalledWith('IF2608')
   })
 
-  it('debounces rapid snapshot updates (only fetches once)', async () => {
+  it('debounces rapid snapshot updates (only fetches once)', () => {
     render(<OptionPanel />)
-    await act(async () => {
-      await Promise.resolve()
-      await Promise.resolve()
-    })
     expect(mockFetchVolatility).toHaveBeenCalledTimes(1)
 
     // Simulate rapid snapshot updates
@@ -284,15 +233,12 @@ describe('OptionPanel - volatility real-time refresh', () => {
     expect(mockFetchVolatility).toHaveBeenCalledTimes(2)
   })
 
-  it('does not refresh when no underlying is selected', async () => {
+  it('does not refresh when no underlying is selected', () => {
     storeState.selectedUnderlying = null
     storeState.optionChains = []
     render(<OptionPanel />)
-    await act(async () => {
-      await Promise.resolve()
-      await Promise.resolve()
-    })
-    expect(mockFetchOptionChains).toHaveBeenCalledTimes(1) // mount only
+    // No subscribe effect (no chain)
+    expect(mockFetchVolatility).not.toHaveBeenCalled()
 
     act(() => {
       useMarketStore.setState({
@@ -305,7 +251,7 @@ describe('OptionPanel - volatility real-time refresh', () => {
       vi.advanceTimersByTime(1000)
     })
 
-    // Still only 1 call (mount)
-    expect(mockFetchOptionChains).toHaveBeenCalledTimes(1)
+    // Still no fetch
+    expect(mockFetchVolatility).not.toHaveBeenCalled()
   })
 })

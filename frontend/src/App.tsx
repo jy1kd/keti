@@ -90,7 +90,7 @@ function App() {
                     className={`market-tab${activeTab === 'options' ? ' active' : ''}`}
                     onClick={() => setActiveTab('options')}
                   >
-                    期权
+                    T型期权报价
                   </button>
                 </div>
                 {activeTab === 'market' ? <MarketPanel /> : <OptionPanel />}
