@@ -49,10 +49,12 @@ vi.mock('./store', () => ({
 
 // Use real useMarketStore — no mock, so setState triggers re-renders via zustand
 
-// Mock subscribeMarket
+// Mock subscribeMarket and getPresetInstruments
 const mockSubscribeMarket = vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] })
+const mockGetPresetInstruments = vi.fn().mockResolvedValue({ instruments: ['IF2608'], updatedAt: null })
 vi.mock('@/services/api', () => ({
   subscribeMarket: (...args: any[]) => mockSubscribeMarket(...args),
+  getPresetInstruments: (...args: any[]) => mockGetPresetInstruments(...args),
 }))
 
 // Mock TQuoteTable (renders simple div)
@@ -80,13 +82,17 @@ describe('OptionPanel', () => {
     expect(container.firstChild).toBeTruthy()
   })
 
-  it('fetches option chains on mount (all chains, no filter)', () => {
+  it('fetches option chains on mount using preset underlying', async () => {
     render(<OptionPanel />)
-    expect(mockFetchOptionChains).toHaveBeenCalled()
+    // Wait for async: getPresetInstruments().then(() => fetchOptionChains(...))
+    await act(() => new Promise(resolve => setTimeout(resolve, 0)))
+    expect(mockGetPresetInstruments).toHaveBeenCalled()
+    expect(mockFetchOptionChains).toHaveBeenCalledWith('IF2608')
   })
 
-  it('does not re-fetch on re-render with same state', () => {
+  it('does not re-fetch on re-render with same state', async () => {
     const { rerender } = render(<OptionPanel />)
+    await act(() => new Promise(resolve => setTimeout(resolve, 0)))
     rerender(<OptionPanel />)
     // Only called once from the initial mount effect
     expect(mockFetchOptionChains).toHaveBeenCalledTimes(1)
@@ -209,8 +215,13 @@ describe('OptionPanel - volatility real-time refresh', () => {
     vi.useRealTimers()
   })
 
-  it('refetches volatility when underlying snapshot changes', () => {
+  it('refetches volatility when underlying snapshot changes', async () => {
     render(<OptionPanel />)
+    // Wait for async: getPresetInstruments().then(() => fetchOptionChains(...))
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
     // Mount: fetchOptionChains ×1, subscribe effect fetchVolatility ×1
     expect(mockFetchOptionChains).toHaveBeenCalledTimes(1)
     expect(mockFetchVolatility).toHaveBeenCalledTimes(1)
@@ -233,8 +244,12 @@ describe('OptionPanel - volatility real-time refresh', () => {
     expect(mockFetchVolatility).toHaveBeenLastCalledWith('IF2608')
   })
 
-  it('debounces rapid snapshot updates (only fetches once)', () => {
+  it('debounces rapid snapshot updates (only fetches once)', async () => {
     render(<OptionPanel />)
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
     expect(mockFetchVolatility).toHaveBeenCalledTimes(1)
 
     // Simulate rapid snapshot updates
@@ -269,10 +284,14 @@ describe('OptionPanel - volatility real-time refresh', () => {
     expect(mockFetchVolatility).toHaveBeenCalledTimes(2)
   })
 
-  it('does not refresh when no underlying is selected', () => {
+  it('does not refresh when no underlying is selected', async () => {
     storeState.selectedUnderlying = null
     storeState.optionChains = []
     render(<OptionPanel />)
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
     expect(mockFetchOptionChains).toHaveBeenCalledTimes(1) // mount only
 
     act(() => {

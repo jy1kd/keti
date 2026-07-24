@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useOptionsStore } from './store'
 import { useMarketStore } from '@/modules/market/store'
-import { subscribeMarket } from '@/services/api'
+import { subscribeMarket, getPresetInstruments } from '@/services/api'
 import { TQuoteTable } from './TQuoteTable'
 import type { OptionChain } from '@/services/types'
 import './styles.css'
@@ -53,15 +53,22 @@ export function OptionPanel() {
     [optionChains, selectedUnderlying, selectedExpireDate]
   )
 
-  // Fetch all chains on mount, then auto-select first underlying + expiry
+  // Fetch chains on mount: use preset instrument's underlying to avoid loading all chains at once.
+  // Loading all option chains (hundreds of underlyings × multiple expiry dates) causes the
+  // backend to block the event loop and the frontend to hang on "loading...".
   useEffect(() => {
-    fetchOptionChains().then(() => {
-      const { optionChains: chains, setSelectedUnderlying: setUL, setSelectedExpireDate: setED } = useOptionsStore.getState()
-      if (chains.length > 0) {
-        const first = chains[0]
-        setUL(first.underlying)
-        setED(first.expireDate)
-      }
+    getPresetInstruments().then((preset) => {
+      const firstPreset = preset.instruments?.[0]
+      // Extract underlying code from preset instrument (e.g. "IF2608" → "IF2608")
+      const defaultUnderlying = firstPreset ?? undefined
+
+      fetchOptionChains(defaultUnderlying).then(() => {
+        const { optionChains: chains, setSelectedUnderlying: setUL, setSelectedExpireDate: setED } = useOptionsStore.getState()
+        if (chains.length > 0) {
+          setUL(chains[0].underlying)
+          setED(chains[0].expireDate)
+        }
+      })
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
