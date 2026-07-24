@@ -1,8 +1,8 @@
 ============================================================
 CTP API 字段结构探测程序
-生成时间: 2026-07-10 09:47:31
+生成时间: 2026-07-23 16:41:41
 ============================================================
-ctp路径: C:\Users\pc\.conda\envs\pytorch\lib\site-packages\ctp\__init__.py
+ctp路径: D:\Python\Anaconda3\envs\keti\lib\site-packages\ctp\__init__.py
 待探测类: 19 个
 ============================================================
 
@@ -597,7 +597,7 @@ export const mockMarketSnapshot: MarketSnapshot = {
   volume: 0,
   reserve1: "",
   reserve2: "",
-  this: <Swig Object of type 'CThostFtdcDepthMarketDataField *' at 0x00000188CE2E5B40>,
+  this: <Swig Object of type 'CThostFtdcDepthMarketDataField *' at 0x000001BD824B1AB0>,
   thisown: true,
 };
 
@@ -637,7 +637,7 @@ export const mockOrderRequest: OrderRequest = {
   volumeTotalOriginal: 0,
   reserve1: "",
   reserve2: "",
-  this: <Swig Object of type 'CThostFtdcInputOrderField *' at 0x00000188CE2E5D20>,
+  this: <Swig Object of type 'CThostFtdcInputOrderField *' at 0x000001BD825E8750>,
   thisown: true,
 };
 
@@ -711,7 +711,7 @@ export const mockOrderReturn: OrderReturn = {
   reserve1: "",
   reserve2: "",
   reserve3: "",
-  this: <Swig Object of type 'CThostFtdcOrderField *' at 0x00000188CE2E5E10>,
+  this: <Swig Object of type 'CThostFtdcOrderField *' at 0x000001BD825F43C0>,
   thisown: true,
 };
 
@@ -750,7 +750,7 @@ export const mockTradeReturn: TradeReturn = {
   volume: 0,
   reserve1: "",
   reserve2: "",
-  this: <Swig Object of type 'CThostFtdcTradeField *' at 0x00000188CE6BF660>,
+  this: <Swig Object of type 'CThostFtdcTradeField *' at 0x000001BD8279C360>,
   thisown: true,
 };
 
@@ -806,7 +806,7 @@ export const mockPositionInfo: PositionInfo = {
   ydPosition: 0,
   ydStrikeFrozen: 0,
   reserve1: "",
-  this: <Swig Object of type 'CThostFtdcInvestorPositionField *' at 0x00000188CE6CD2A0>,
+  this: <Swig Object of type 'CThostFtdcInvestorPositionField *' at 0x000001BD82637F60>,
   thisown: true,
 };
 
@@ -861,7 +861,7 @@ export const mockAccountInfo: AccountInfo = {
   tradingDay: "",
   withdraw: 0.0,
   withdrawQuota: 0.0,
-  this: <Swig Object of type 'CThostFtdcTradingAccountField *' at 0x00000188CE6CD960>,
+  this: <Swig Object of type 'CThostFtdcTradingAccountField *' at 0x000001BD82637F30>,
   thisown: true,
 };
 
@@ -909,5 +909,5 @@ export interface VolatilityData {
 
 ============================================================
 [完成] 所有字段结构已输出
-[保存] 文件已保存到: D:/103/note/zhongjin/keti\docs\ctp-api-structure.txt
+[保存] 文件已保存到: D:\ss\keti\docs\ctp-api-structure.txt
 ============================================================
