@@ -746,7 +746,8 @@ server/services/stop_order.py             # StopOrder 增加 exchange_id
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 5 项 |
 | **严重等级** | 🔴 P1 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | `fix(task-C7): useMarketWs 单例化 — 消除双重 WebSocket 连接` |
 
 **问题描述**：
 - MarketPanel 和 QueryPanel 各自调用 `useMarketWs`，创建两个独立 WebSocket 连接
@@ -765,9 +766,9 @@ frontend/src/modules/market/store.ts       # 增加周期切换方法
 ```
 
 **验收标准**：
-- [ ] 只有一个 WebSocket 连接到 /ws/market
-- [ ] 切换 K 线周期后数据正确
-- [ ] 行情表格和 K 线图同时正常工作
+- [x] 只有一个 WebSocket 连接到 /ws/market
+- [x] 切换 K 线周期后数据正确
+- [x] 行情表格和 K 线图同时正常工作
 
 ---
 
