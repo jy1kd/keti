@@ -136,60 +136,59 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
 
   fetchOrders: async () => {
     try {
-      // POST /refresh 触发 CTP 查询（GET 只读缓存，初始为空）
       const res = await refreshOrders()
-      // 后端在 trader 未登录时返回 {success: false}，需过滤
+      console.debug('[QueryStore] fetchOrders response:', res)
       if (res && typeof res === 'object' && 'orders' in res) {
         set({ orders: res.orders ?? [] })
       }
-    } catch {
-      // Silently fail — keep existing data
+    } catch (e) {
+      console.error('[QueryStore] fetchOrders error:', e)
     }
   },
 
   fetchTrades: async () => {
     try {
       const res = await refreshTrades()
+      console.debug('[QueryStore] fetchTrades response:', res)
       if (res && typeof res === 'object' && 'trades' in res) {
         set({ trades: res.trades ?? [] })
       }
-    } catch {
-      // Silently fail
+    } catch (e) {
+      console.error('[QueryStore] fetchTrades error:', e)
     }
   },
 
   fetchPositions: async () => {
     try {
       const res = await refreshPositions()
+      console.debug('[QueryStore] fetchPositions response:', res)
       if (res && typeof res === 'object' && 'positions' in res) {
-        // as unknown as: CTP 返回 posiDirection 为 '2'/'3' 字符串，但 PositionInfo 类型定义为 'long'/'short'
-        // 实际运行时数据是 CTP 格式，RawPosition 用 string 接收更准确
         set({ positions: (res.positions ?? []) as unknown as RawPosition[] })
       }
-    } catch {
-      // Silently fail
+    } catch (e) {
+      console.error('[QueryStore] fetchPositions error:', e)
     }
   },
 
   fetchAccount: async () => {
     try {
       const res = await refreshAccount()
-      // 后端在 trader 未登录时返回 {success: false, message: "..."}，需过滤
+      console.debug('[QueryStore] fetchAccount response:', res)
       if (res && typeof res === 'object' && 'balance' in res) {
         set({ account: res })
       }
-    } catch {
-      // Silently fail
+    } catch (e) {
+      console.error('[QueryStore] fetchAccount error:', e)
     }
   },
 
   fetchStopOrders: async () => {
     try {
       const res = await getStopOrders()
-      // as unknown as: API 返回的止损单结构与 StopOrder 类型字段一致但来源不同，安全断言
+      console.debug('[QueryStore] fetchStopOrders response:', res)
       set({ stopOrders: (res.stopOrders ?? []) as unknown as StopOrder[] })
-    } catch {
-      // Silently fail
+    } catch (e) {
+      console.error('[QueryStore] fetchStopOrders error:', e)
     }
   },
 
@@ -197,13 +196,17 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
     if (get().isPaused) return
     set({ isLoading: true })
     try {
-      await Promise.all([
-        get().fetchOrders(),
-        get().fetchTrades(),
-        get().fetchPositions(),
-        get().fetchAccount(),
-        get().fetchStopOrders(),
-      ])
+      // 串行执行，CTP 单线程有查询频率限制（~1次/秒），并发会导致后续查询超时
+      const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
+      await get().fetchOrders()
+      await delay(1200)
+      await get().fetchTrades()
+      await delay(1200)
+      await get().fetchPositions()
+      await delay(1200)
+      await get().fetchAccount()
+      await delay(1200)
+      await get().fetchStopOrders()
     } finally {
       set({ isLoading: false })
     }

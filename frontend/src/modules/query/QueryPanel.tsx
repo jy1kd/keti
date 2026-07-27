@@ -36,12 +36,12 @@ export function QueryPanel() {
     refreshAll()
   }, [refreshAll])
 
-  // Auto-refresh every 3s (when not paused)
+  // Auto-refresh every 10s (串行 CTP 查询需要 ~6s，间隔太短会重叠)
   useEffect(() => {
     if (isPaused) return
     const interval = setInterval(() => {
       refreshAll()
-    }, 3000)
+    }, 10000)
     return () => clearInterval(interval)
   }, [isPaused, refreshAll])
 
