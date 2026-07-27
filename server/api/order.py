@@ -27,8 +27,8 @@ class InsertOrderRequest(BaseModel):
     limitPrice: float = Field(default=4100.0, ge=0.0,
                               description="限价（priceType=2时必填）")
     volumeTotalOriginal: int = Field(default=1, gt=0)
-    timeCondition: str = Field(default="1", pattern=r"^[123]$",
-                               description="1=当日有效GFD, 2=即时FOK, 3=即时FAK")
+    timeCondition: str = Field(default="3", pattern=r"^[123]$",
+                               description="1=IOC, 2=GFS, 3=GFD(当日有效)")
     volumeCondition: str = Field(default="1", pattern=r"^[123]$",
                                  description="1=任意数量, 2=最小数量, 3=全部数量")
     hedgeFlag: str = Field(default="1", pattern=r"^[123]$",
@@ -41,20 +41,27 @@ class InsertOrderRequest(BaseModel):
         """Validate FOK/FAK volume condition constraints.
 
         CTP convention:
-        - FOK (Fill or Kill, "2") → VolumeCondition CV ("3")
-        - FAK (Fill and Kill, "3") → VolumeCondition AV ("1")
-        - GFD ("1") accepts any volume condition.
+        - FOK (Fill or Kill) → TimeCondition=IOC('1') + VolumeCondition=CV('3')
+        - FAK (Fill and Kill) → TimeCondition=IOC('1') + VolumeCondition=AV('1')
+        - GFD ('3') accepts any volume condition.
         """
         tc = self.timeCondition
         vc = self.volumeCondition
-        if tc == "2" and vc != "3":
-            raise ValueError(
-                "FOK (timeCondition=2) requires volumeCondition=CV (3)"
-            )
-        if tc == "3" and vc != "1":
-            raise ValueError(
-                "FAK (timeCondition=3) requires volumeCondition=AV (1)"
-            )
+        # FOK: IOC + CV
+        if tc == "1" and vc == "3":
+            pass  # Valid FOK
+        # FAK: IOC + AV
+        elif tc == "1" and vc == "1":
+            pass  # Valid FAK
+        # GFD: accepts any volume condition
+        elif tc == "3":
+            pass  # Valid GFD
+        # IOC with MV: also valid
+        elif tc == "1":
+            pass  # Valid IOC variant
+        # GFS: also valid
+        elif tc == "2":
+            pass  # Valid GFS
         return self
 
 

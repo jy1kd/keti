@@ -156,7 +156,7 @@ describe('submitOrder', () => {
       direction: '0',
       offsetFlag: '0',
       priceType: '2',
-      timeCondition: '1',
+      timeCondition: '3',
       volumeCondition: '1',
       hedgeFlag: '1',
       limitPrice: 4800.0,

@@ -125,76 +125,8 @@ class TestOrderInsertFokFakValidation:
     """FOK/FAK volume condition constraints (PR-9 bugfix)."""
 
     @pytest.mark.anyio
-    async def test_fok_requires_cv(self):
-        """FOK (timeCondition=2) + AV (volumeCondition=1) → 422."""
-        app = _make_app_with_order_manager()
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.post("/api/order/insert", json={
-                "instrumentID": "IF2608",
-                "direction": "0",
-                "offsetFlag": "0",
-                "limitPrice": 3850.0,
-                "volumeTotalOriginal": 1,
-                "timeCondition": "2",
-                "volumeCondition": "1",  # AV — should be CV
-            })
-        assert resp.status_code == 422
-
-    @pytest.mark.anyio
-    async def test_fak_requires_av(self):
-        """FAK (timeCondition=3) + CV (volumeCondition=3) → 422."""
-        app = _make_app_with_order_manager()
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.post("/api/order/insert", json={
-                "instrumentID": "IF2608",
-                "direction": "0",
-                "offsetFlag": "0",
-                "limitPrice": 3850.0,
-                "volumeTotalOriginal": 1,
-                "timeCondition": "3",
-                "volumeCondition": "3",  # CV — should be AV
-            })
-        assert resp.status_code == 422
-
-    @pytest.mark.anyio
-    async def test_fok_with_cv_accepted(self):
-        """FOK (timeCondition=2) + CV (volumeCondition=3) → 200."""
-        app = _make_app_with_order_manager()
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.post("/api/order/insert", json={
-                "instrumentID": "IF2608",
-                "direction": "0",
-                "offsetFlag": "0",
-                "limitPrice": 3850.0,
-                "volumeTotalOriginal": 1,
-                "timeCondition": "2",
-                "volumeCondition": "3",
-            })
-        assert resp.status_code == 200
-
-    @pytest.mark.anyio
-    async def test_fak_with_av_accepted(self):
-        """FAK (timeCondition=3) + AV (volumeCondition=1) → 200."""
-        app = _make_app_with_order_manager()
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.post("/api/order/insert", json={
-                "instrumentID": "IF2608",
-                "direction": "0",
-                "offsetFlag": "0",
-                "limitPrice": 3850.0,
-                "volumeTotalOriginal": 1,
-                "timeCondition": "3",
-                "volumeCondition": "1",
-            })
-        assert resp.status_code == 200
-
-    @pytest.mark.anyio
-    async def test_gfd_any_volume_condition_accepted(self):
-        """GFD (timeCondition=1) accepts any volumeCondition."""
+    async def test_ioc_with_cv_is_fok(self):
+        """FOK = IOC(timeCondition=1) + CV(volumeCondition=3) → 200."""
         app = _make_app_with_order_manager()
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -205,6 +137,74 @@ class TestOrderInsertFokFakValidation:
                 "limitPrice": 3850.0,
                 "volumeTotalOriginal": 1,
                 "timeCondition": "1",
+                "volumeCondition": "3",  # CV — valid FOK
+            })
+        assert resp.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_ioc_with_av_is_fak(self):
+        """FAK = IOC(timeCondition=1) + AV(volumeCondition=1) → 200."""
+        app = _make_app_with_order_manager()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/insert", json={
+                "instrumentID": "IF2608",
+                "direction": "0",
+                "offsetFlag": "0",
+                "limitPrice": 3850.0,
+                "volumeTotalOriginal": 1,
+                "timeCondition": "1",
+                "volumeCondition": "1",  # AV — valid FAK
+            })
+        assert resp.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_fok_with_cv_accepted(self):
+        """FOK = IOC(timeCondition=1) + CV(volumeCondition=3) → 200."""
+        app = _make_app_with_order_manager()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/insert", json={
+                "instrumentID": "IF2608",
+                "direction": "0",
+                "offsetFlag": "0",
+                "limitPrice": 3850.0,
+                "volumeTotalOriginal": 1,
+                "timeCondition": "1",
+                "volumeCondition": "3",
+            })
+        assert resp.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_fak_with_av_accepted(self):
+        """FAK = IOC(timeCondition=1) + AV(volumeCondition=1) → 200."""
+        app = _make_app_with_order_manager()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/insert", json={
+                "instrumentID": "IF2608",
+                "direction": "0",
+                "offsetFlag": "0",
+                "limitPrice": 3850.0,
+                "volumeTotalOriginal": 1,
+                "timeCondition": "1",
+                "volumeCondition": "1",
+            })
+        assert resp.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_gfd_any_volume_condition_accepted(self):
+        """GFD (timeCondition=3) accepts any volumeCondition."""
+        app = _make_app_with_order_manager()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/insert", json={
+                "instrumentID": "IF2608",
+                "direction": "0",
+                "offsetFlag": "0",
+                "limitPrice": 3850.0,
+                "volumeTotalOriginal": 1,
+                "timeCondition": "3",
                 "volumeCondition": "2",  # MV — unusual but valid for GFD
             })
         assert resp.status_code == 200

@@ -265,20 +265,26 @@ class TestInsertOrderEnhanced:
         assert order.TimeCondition == TimeCondition.GFD
 
     def test_fok_time_condition(self):
+        """FOK = TimeCondition(IOC) + VolumeCondition(CV)"""
         api = self._make_api()
         api.insert_order(instrument_id="IF2608", direction=Direction.BUY,
                          offset_flag=OffsetFlag.OPEN,
-                         time_condition=TimeCondition.FOK)
+                         time_condition=TimeCondition.IOC,
+                         volume_condition=VolumeCondition.CV)
         order = api._api.ReqOrderInsert.call_args[0][0]
-        assert order.TimeCondition == TimeCondition.FOK
+        assert order.TimeCondition == TimeCondition.IOC
+        assert order.VolumeCondition == VolumeCondition.CV
 
     def test_fak_time_condition(self):
+        """FAK = TimeCondition(IOC) + VolumeCondition(AV)"""
         api = self._make_api()
         api.insert_order(instrument_id="IF2608", direction=Direction.BUY,
                          offset_flag=OffsetFlag.OPEN,
-                         time_condition=TimeCondition.FAK)
+                         time_condition=TimeCondition.IOC,
+                         volume_condition=VolumeCondition.AV)
         order = api._api.ReqOrderInsert.call_args[0][0]
-        assert order.TimeCondition == TimeCondition.FAK
+        assert order.TimeCondition == TimeCondition.IOC
+        assert order.VolumeCondition == VolumeCondition.AV
 
     def test_hedge_flag_param(self):
         api = self._make_api()

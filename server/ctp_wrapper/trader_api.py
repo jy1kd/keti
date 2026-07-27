@@ -110,7 +110,8 @@ class TraderApi:
             price_type: OrderPriceType.LIMIT ("2") or ANY ("1").
             limit_price: Limit price (0 for market orders).
             volume: Order quantity.
-            time_condition: TimeCondition.GFD ("1"), FOK ("2"), or FAK ("3").
+            time_condition: TimeCondition.GFD ("3"), IOC ("1"), or GFS ("2").
+                FOK = IOC("1") + VolumeCondition.CV("3"), FAK = IOC("1") + VolumeCondition.AV("1").
             volume_condition: VolumeCondition.AV ("1"), MV ("2"), or CV ("3").
             hedge_flag: CombHedgeFlag.SPECULATION ("1"), ARBITRAGE ("2"), or HEDGE ("3").
             contingent_condition: ContingentCondition.IMMEDIATELY ("1"), STOP ("2"),
