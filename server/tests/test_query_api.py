@@ -83,15 +83,15 @@ class TestGetAccount:
     """GET /api/query/account."""
 
     @pytest.mark.anyio
-    async def test_returns_default_when_no_account(self):
+    async def test_returns_error_when_no_account(self):
         app = _make_app()
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             resp = await client.get("/api/query/account")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["balance"] == 0.0
-        assert data["available"] == 0.0
+        assert data["success"] is False
+        assert "message" in data
 
     @pytest.mark.anyio
     async def test_returns_account_from_service(self):
