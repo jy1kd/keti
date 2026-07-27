@@ -419,7 +419,7 @@ interface ContractsResponse {
     volumeMultiple: number
     priceTick: number
     expireDate: string
-    isTrading: boolean
+    isTrading: number
   }>
   count: number
 }

@@ -96,13 +96,13 @@
 |------|------|
 | **严重等级** | 🔵 P3 |
 | **影响** | 命名风格不统一 |
-| **前端文件** | `frontend/src/services/types.ts:75`, `types.ts:203` |
+| **前端文件** | `frontend/src/services/types.ts:75`, `types.ts:224` |
 | **状态** | ✅ 已修复 |
 
 **问题描述**：
-- `VolatilityData` 使用 `optionType`（单数）
-- `OptionContract` 使用 `optionsType`（复数）
-- 后端 `options_service.py` 统一返回 `optionType`（单数）
+- ~~`VolatilityData` 使用 `optionsType`（复数）~~
+- ~~`OptionContract` 使用 `optionsType`（复数）~~
+- ✅ 已修复：统一为 `optionType`（单数），与后端一致
 
 ---
 

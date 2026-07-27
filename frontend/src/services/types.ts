@@ -72,7 +72,7 @@ export interface VolatilityData {
   impliedVolatility: number
   timeToExpiry: number
   riskFreeRate: number
-  optionType: 'call' | 'put'
+  optionType: string  // '1'=看涨(call), '2'=看跌(put)
   updateTime: string
 }
 
@@ -92,15 +92,37 @@ export interface OrderRequest {
 
 export interface OrderRecord {
   orderRef: string
+  orderSysID: string
+  orderLocalID: string
   instrumentID: string
+  exchangeID: string
+  brokerID: string
+  investorID: string
+  userID: string
   direction: string  // '0'=买, '1'=卖
   combOffsetFlag: string  // '0'=开仓, '1'=平仓, '3'=平今
+  combHedgeFlag: string
+  orderPriceType: string
   limitPrice: number
   volumeTotalOriginal: number
   volumeTraded: number
+  volumeTotal: number
   orderStatus: string  // '0'=全部成交, '1'=部分成交, '3'=未成交, '5'=已撤单
+  orderSubmitStatus: string
   statusMsg: string
+  timeCondition: string
+  volumeCondition: string
+  insertDate: string
   insertTime: string
+  cancelTime: string
+  updateTime: string
+  tradingDay: string
+  frontID: number
+  sessionID: number
+  stopPrice: number
+  orderType: string
+  businessUnit: string
+  traderID: string
 }
 
 // OrderStatus 与 OrderRecord 相同，保留别名兼容旧代码
@@ -108,13 +130,12 @@ export type OrderStatus = OrderRecord
 
 export interface StopOrderRequest {
   instrumentID: string
-  direction: 'buy' | 'sell'
-  combOffsetFlag: 'open' | 'close' | 'close_today'
-  combHedgeFlag?: 'speculation' | 'arbitrage' | 'hedge'
+  exchangeID?: string
+  direction: string      // '0'=买, '1'=卖
+  offsetFlag: string     // '0'=开仓, '1'=平仓, '3'=平今
   limitPrice: number
-  volumeTotalOriginal: number
+  volume: number
   stopPrice: number
-  timeCondition: 'gfd' | 'fok' | 'fak'
 }
 
 export interface StopOrder {
@@ -182,7 +203,7 @@ export interface ContractInfo {
   volumeMultiple: number
   priceTick: number
   expireDate: string
-  isTrading: boolean
+  isTrading: number  // 0=不可交易, 1=可交易
 }
 
 export interface QuoteDepth {
@@ -200,12 +221,12 @@ export interface OptionContract {
   instrumentID: string
   instrumentName: string
   underlying: string
-  optionsType: 'call' | 'put'
+  optionType: string  // '1'=看涨(call), '2'=看跌(put)
   strikePrice: number
   expireDate: string
   volumeMultiple: number
   priceTick: number
-  isTrading: boolean
+  isTrading: number  // 0=不可交易, 1=可交易
 }
 
 export interface OptionQuote {
