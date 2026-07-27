@@ -5,7 +5,9 @@ import { TradeFlow } from './TradeFlow'
 import { Position } from './Position'
 import { AccountQuery } from './AccountQuery'
 import { StopOrderList } from './StopOrderList'
+import { ContractQuery } from './ContractQuery'
 import { DepthQuote } from '../market/DepthQuote'
+import { useMarketStore } from '../market/store'
 import './styles.css'
 
 const TABS = [
@@ -26,6 +28,7 @@ export function QueryPanel() {
   const togglePause = useQueryStore((s) => s.togglePause)
   const refreshAll = useQueryStore((s) => s.refreshAll)
   const handleCancelAll = useQueryStore((s) => s.handleCancelAll)
+  const selectedInstrument = useMarketStore((s) => s.selectedInstrument)
 
   // Initial data load
   useEffect(() => {
@@ -79,11 +82,7 @@ export function QueryPanel() {
           </div>
         )
       case 'contracts':
-        return (
-          <div className="contract-query">
-            <div className="flow-empty">请在行情面板选择合约查看详情</div>
-          </div>
-        )
+        return <ContractQuery instrumentID={selectedInstrument ?? ''} />
       default:
         return null
     }
