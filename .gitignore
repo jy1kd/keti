@@ -10,6 +10,7 @@ templates/
 /*.md
 !README.md
 !CLAUDE.md
+!交易指令.md
 
 # Trader API files
 trader/
