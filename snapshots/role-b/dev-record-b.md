@@ -833,4 +833,186 @@
 ### 已知未完成
 
 - 角色A 后端登录流程重构（connect_ctp→connect_md 重命名、startup 只连 MD 等）留待角色A 处理
+
+---
+
+## PR-14: 前端期权 T 型报价 — 人工验证修复（卡死/黑屏）
+
+**分支**：`feature/pr-14-option-tquote`
+**修复时间**：2026-07-24
+**状态**：✅ 已修复
+
+---
+
+### 问题现象
+
+- 点击顶部“期权”标签页后，前端直接卡死，期间无法执行任何操作。
+- 加载完成后不显示 T 型报价表格，只显示纯黑面板。
+
+### 根因分析
+
+| 问题 | 原因 | 影响 |
+|------|------|------|
+| 行情推送导致表格反复重建 | `TQuoteTable` 的 `useEffect` 依赖 `snapshots`，而 `MarketStore.batchUpdate` 每 100ms 创建新的 `Map` 引用 | 每次行情批量更新都 `new ListTable(...)` 并 `release`，大量期权合约时主线程被占满 |
+| 单 chain 时表格高度缺失 | `visibleChains.length > 1` 才设置 `chainHeight`，单个 chain 时高度为 `undefined` | vtable 容器无明确高度，可能渲染为黑屏 |
+| 订阅 effect 被行情 tick 重复触发 | `visibleChains` useMemo 原计划不含 `snapshots`，但注释暗示可能误加 | 每次 tick 重新调用 `subscribeMarket` + `fetchVolatility`，网络/CPU 双重压力 |
+
+### 修复内容
+
+- `frontend/src/modules/options/TQuoteTable.tsx`
+  - 将 `columns` 提升为组件外常量，避免每次渲染重新创建。
+  - 拆分为两个 `useEffect`：
+    - mount 时只创建一次 `ListTable`；
+    - `chain`/`snapshots`/`volatility` 变化时通过 `table.setRecords(...)` 增量更新，不再重建表格。
+  - 新增回归测试：行情快照变化时 `ListTable` 构造次数不变且调用 `setRecords`。
+
+- `frontend/src/modules/options/OptionPanel.tsx`
+  - 明确 `visibleChains` useMemo 不依赖 `snapshots`，避免行情 tick 触发订阅 effect。
+  - 单 chain 与多 chain 统一使用 `chainHeight(chain)` 设置表格容器高度，解决黑屏。
+
+### 测试
+
+- `src/modules/options/TQuoteTable.test.tsx`：11 个测试全部通过（含新增回归测试）。
+- `src/modules/options/OptionPanel.test.tsx`：15 个测试全部通过。
+- 完整前端测试：`400 passed, 2 failed`；2 个失败位于 `useMarketWs.test.ts`（instruments_refreshed toast/重载合约），与本次修改无关。
+
+### 提交记录
+
+- `d34307d` `fix(task-14): 期权面板卡死修复 — vtable 增量更新 + 单 chain 高度修复`
 - `server/tests/test_ws_integration.py` 仍有旧格式引用，需跟随重建测试
+
+---
+
+## PR-14: 前端期权 T 型报价 — 人工验证修复2（后端阻塞）
+
+**分支**：`feature/pr-14-option-tquote`
+**修复时间**：2026-07-24
+**状态**：✅ 已修复
+
+---
+
+### 问题现象
+
+- 点击"期权"标签后，前端卡死在"加载中"页面，无响应。
+- 不传 `underlying`/`expire_date` 参数时必现，传参数时正常。
+
+### 根因分析
+
+`server/api/market.py` 中 `/options`、`/option_chain`、`/volatility` 三个端点是 `async def`，但内部调用的 `get_instruments()`、`get_option_chains()`、`get_volatility()` 都是**同步函数**。
+
+在 FastAPI 的 `async def` 中执行同步阻塞代码会**阻塞事件循环**，导致：
+- 该请求 hang 住，前端一直等待响应
+- 其他请求也无法处理
+- 不传参数时返回全部期权合约（几千个），遍历+分组耗时更长，更容易触发
+
+### 修复内容
+
+- `server/api/market.py`：将 `/options`、`/option_chain`、`/volatility` 三个端点从 `async def` 改为 `def`。
+- FastAPI 对 `def` 端点会自动放到线程池执行，不再阻塞事件循环。
+
+### 测试
+
+- `server/tests/test_options_api.py`：11 个测试全部通过。
+
+### 提交记录
+
+- `0d71c66` `fix(task-14): 期权API阻塞事件循环 — async def改为def`
+- `723003d` `fix(task-14): 期权面板默认只加载预设合约的期权链`
+
+---
+
+## PR-14: 前端期权 T 型报价 — 面板简化重构
+
+**分支**：`feature/pr-14-option-tquote`
+**重构时间**：2026-07-24
+**状态**：✅ 已完成
+
+---
+
+### 重构需求
+
+1. 面板名称从"期权"改为"T型期权报价"
+2. 整个面板只能看一个合约的信息，删除堆叠多合约设计
+3. 点击按钮后不自动加载合约，必须手动选择标的和到期日
+
+### 修改内容
+
+- `frontend/src/App.tsx`
+  - 标签名称从"期权"改为"T型期权报价"
+
+- `frontend/src/modules/options/OptionPanel.tsx`
+  - 删除自动加载逻辑（useEffect on mount）
+  - 删除堆叠多合约设计，改为只显示一个选中的 chain（`selectedChain`）
+  - 用户必须手动选择标的和到期日才能加载数据
+  - 选择标的后自动重置到期日，避免残留旧选择
+  - 下拉框默认文本改为"请选择标的"/"请选择到期日"
+  - 空状态提示根据选择状态显示不同文案
+
+- `frontend/src/modules/options/styles.css`
+  - 删除 `.options-chain-block` 和 `.options-chain-title` 样式（多合约堆叠相关）
+
+- `frontend/src/modules/options/OptionPanel.test.tsx`
+  - 重写测试：验证不自动加载、验证单表格渲染、验证空状态提示
+
+### 测试
+
+- `src/modules/options/OptionPanel.test.tsx`：13 个测试全部通过
+- `src/modules/options/TQuoteTable.test.tsx`：11 个测试全部通过
+- 完整前端测试：`398 passed, 2 failed`（2 个失败在 `useMarketWs.test.ts`，与本次修改无关）
+
+### 提交记录
+
+- `423003d` `refactor(task-14): 期权面板简化 — 改为T型期权报价，只显示单个合约`
+- `1ea2ad5` `feat(task-14): 添加期权标的列表API + 前端挂载时加载下拉框选项`
+- `bf3b543` `feat(task-14): 期权标的列表加载重试机制 + 手动刷新按钮`
+
+---
+
+## PR-14: 标的搜索功能
+
+**分支**：`feature/pr-14-option-tquote`
+**开发时间**：2026-07-24
+**状态**：✅ 已完成
+
+---
+
+### 需求
+
+标的下拉框增加搜索过滤功能，支持输入关键字实时过滤标的列表。
+
+### 修改内容
+
+- `frontend/src/modules/options/OptionPanel.tsx`
+  - 将标的 `<select>` 替换为可搜索输入框 + 下拉列表
+  - 新增 `underlyingSearch`、`showUnderlyingDropdown` 状态
+  - 输入框获焦时展开下拉列表，输入文字实时过滤
+  - 点击选项后自动选中并加载期权链
+  - 点击外部区域自动关闭下拉列表
+
+- `frontend/src/modules/options/styles.css`
+  - 新增 `.options-searchable-select`、`.options-search-input`、`.options-search-dropdown`、`.options-search-option` 等样式
+
+### 测试
+
+- `src/modules/options/OptionPanel.test.tsx`：13 个测试全部通过
+
+---
+
+## PR-14 总结
+
+**状态**：✅ 开发完成，待合并
+
+**完成内容**：
+1. TQuoteTable 组件 — T型布局（看涨/行权价/看跌），vtable 增量更新
+2. OptionPanel 组件 — 可搜索标的选择器、到期日选择器、单合约显示
+3. Options Store — optionChains、volatility、fetchOptionChains、fetchVolatility
+4. 后端 API — /options、/option_chain、/volatility、/options/underlyings
+5. 代码审查 — 二审通过
+6. 人工验证 — 卡死/黑屏/后端阻塞均已修复
+
+**测试覆盖**：
+- 前端：49/49 通过（OptionPanel 13、TQuoteTable 11、store 23）
+- 后端：14/14 通过
+
+**遗留问题**：
+- `store.ts` 及 `store.test.ts` 存在 4 个 TypeScript 类型错误，运行时正常

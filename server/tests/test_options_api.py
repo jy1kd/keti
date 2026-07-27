@@ -101,6 +101,48 @@ class TestOptionsListAPI:
         assert data["count"] == 0
 
 
+class TestOptionUnderlyingsAPI:
+    """GET /api/market/options/underlyings 测试。"""
+
+    def test_get_option_underlyings(self):
+        """获取期权标的列表。"""
+        app = _create_app()
+        client = TestClient(app)
+        resp = client.get("/api/market/options/underlyings")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "underlyings" in data
+        assert "IF2610" in data["underlyings"]
+
+    def test_get_option_underlyings_empty(self):
+        """无期权合约时返回空列表。"""
+        app = _create_app()
+        client = TestClient(app)
+        app.state.market_service.get_instruments.return_value = [
+            _make_instrument("IF2610", product_class="1"),
+        ]
+        resp = client.get("/api/market/options/underlyings")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["underlyings"] == []
+
+    def test_get_option_underlyings_sorted(self):
+        """返回的标的列表已排序。"""
+        app = _create_app()
+        client = TestClient(app)
+        # Add more instruments with different underlyings
+        app.state.market_service.get_instruments.return_value = [
+            _make_instrument("IC2610", product_class="1"),
+            _make_instrument("IF2610", product_class="1"),
+            _make_instrument("opt1", product_class="2", options_type="1", underlying_id="IC2610"),
+            _make_instrument("opt2", product_class="2", options_type="1", underlying_id="IF2610"),
+            _make_instrument("opt3", product_class="2", options_type="1", underlying_id="IH2610"),
+        ]
+        resp = client.get("/api/market/options/underlyings")
+        data = resp.json()
+        assert data["underlyings"] == ["IC2610", "IF2610", "IH2610"]
+
+
 class TestOptionChainAPI:
     """GET /api/market/option_chain 测试。"""
 

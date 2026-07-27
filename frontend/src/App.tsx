@@ -3,6 +3,7 @@ import { Group, Panel, Separator } from 'react-resizable-panels'
 import { ConnectionStatus } from '@/components/ConnectionStatus'
 import { ResizeHandle } from '@/components/ResizeHandle'
 import { MarketPanel } from '@/modules/market/MarketPanel'
+import { OptionPanel } from '@/modules/options/OptionPanel'
 import { OrderPanel } from '@/modules/order/OrderPanel'
 import { QueryPanel } from '@/modules/query/QueryPanel'
 import { PerfMonitor } from '@/components/PerfMonitor'
@@ -18,6 +19,7 @@ const savedMain = loadPanelSizes('main-layout')
 
 function App() {
   const [perfVisible, setPerfVisible] = useState(false)
+  const [activeTab, setActiveTab] = useState<'market' | 'options'>('market')
 
   // System WebSocket — 监听 MD/TD 连接状态即时推送
   useSystemWs(API_BASE.replace('http', 'ws'))
@@ -77,7 +79,21 @@ function App() {
           <Group orientation="horizontal" id="main-layout" onLayoutChange={onMainLayout}>
             <Panel id="market" defaultSize={savedMain?.market ?? 70} minSize={20}>
               <section className="market-area">
-                <MarketPanel />
+                <div className="market-tabs">
+                  <button
+                    className={`market-tab${activeTab === 'market' ? ' active' : ''}`}
+                    onClick={() => setActiveTab('market')}
+                  >
+                    行情
+                  </button>
+                  <button
+                    className={`market-tab${activeTab === 'options' ? ' active' : ''}`}
+                    onClick={() => setActiveTab('options')}
+                  >
+                    T型期权报价
+                  </button>
+                </div>
+                {activeTab === 'market' ? <MarketPanel /> : <OptionPanel />}
               </section>
             </Panel>
             <Separator>

@@ -1636,18 +1636,22 @@ frontend/src/modules/market/MarketTable.tsx            # 修改：涨跌着色 +
 | **负责角色** | 角色B |
 | **依赖PR** | PR-6, PR-18 |
 | **工作量** | 2小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
 
 **提交文件**：
 ```
 frontend/src/
 ├── modules/
 │   └── options/
-│       ├── OptionPanel.tsx     # 期权面板
-│       ├── TQuoteTable.tsx     # T型报价表格
-│       └── store.ts            # 期权Store
+│       ├── OptionPanel.tsx        # 期权面板（可搜索标的、重试机制、手动刷新）
+│       ├── OptionPanel.test.tsx   # 期权面板测试
+│       ├── TQuoteTable.tsx        # T型报价表格（vtable增量更新）
+│       ├── TQuoteTable.test.tsx   # T型报价表格测试
+│       ├── store.ts               # 期权Store
+│       ├── store.test.ts          # 期权Store测试
+│       └── styles.css             # 期权面板样式
 └── services/
-    └── api.ts                  # API封装（完善期权接口）
+    └── api.ts                     # API封装（期权接口）
 ```
 
 **PR描述**：
@@ -1687,16 +1691,24 @@ frontend/src/
 5. 波动率数据随行情实时更新
 6. 点击行权价高亮正常
 
+**已解决问题**：
+- vtable 卡死：改为 setRecords 增量更新，不再每次销毁重建
+- 后端阻塞事件循环：`async def` 改为 `def`
+- 面板简化：改为单合约 T 型报价，移除多合约堆叠
+- 标的列表加载：新增 `/api/market/options/underlyings` API + 重试机制 + 手动刷新
+- 可搜索标的下拉框：输入关键字实时过滤标的列表
+
 **⚠️ 待修复问题（遗留）**：
-- `design.md` 中 VolatilityData 定义只有3个字段（instrumentID, impliedVolatility, updateTime），与 `dev.md` 的8个字段不一致。在PR-14开发时统一两个文档的定义（以dev.md的8字段为准，含BS模型参数）。
+- `store.ts` 及 `store.test.ts` 存在 4 个 TypeScript 类型错误（`ApiResponse` 泛型不匹配），运行时正常但需修正类型定义
+- `design.md` 中 VolatilityData 定义只有3个字段（instrumentID, impliedVolatility, updateTime），与 `dev.md` 的8个字段不一致。以dev.md的8字段为准。
 
 **验收标准**：
-- [ ] 期权面板正常显示
-- [ ] T型报价表格正常渲染
-- [ ] 看涨/看跌期权正确显示
-- [ ] 隐含波动率列正常显示
-- [ ] 波动率数据实时更新
-- [ ] 交互操作正常
+- [x] 期权面板正常显示
+- [x] T型报价表格正常渲染
+- [x] 看涨/看跌期权正确显示
+- [x] 隐含波动率列正常显示
+- [x] 波动率数据实时更新
+- [x] 交互操作正常
 
 **用户手动验证**：
 1. 启动前端，切换到期权面板

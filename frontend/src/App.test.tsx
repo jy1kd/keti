@@ -52,4 +52,9 @@ describe('App Layout', () => {
     // At least 2 handles: horizontal (market/order) and vertical (main/query)
     expect(handles.length).toBeGreaterThanOrEqual(2)
   })
+
+  it('renders options panel button', () => {
+    render(<App />)
+    expect(screen.getByText(/期权/)).toBeInTheDocument()
+  })
 })

@@ -1,0 +1,148 @@
+/* ── OptionPanel 样式 ─────────────────────────────────────────────────── */
+
+.options-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 8px;
+}
+
+.options-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.options-toolbar label {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.options-toolbar select {
+  margin-left: 4px;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.options-toolbar select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── 可搜索下拉框 ──────────────────────────────────────────────────────── */
+
+.options-searchable-select {
+  position: relative;
+  display: inline-block;
+  margin-left: 4px;
+}
+
+.options-search-input {
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 13px;
+  width: 140px;
+  outline: none;
+}
+
+.options-search-input:focus {
+  border-color: var(--color-primary, #4a9eff);
+}
+
+.options-search-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.options-search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--bg-secondary, #1e1e2e);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.options-search-option {
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.options-search-option:hover {
+  background: var(--bg-tertiary, #2a2a3e);
+}
+
+.options-search-option.selected {
+  background: var(--color-primary, #4a9eff);
+  color: #fff;
+}
+
+.options-search-empty {
+  padding: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.options-refresh-btn {
+  margin-left: 8px;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.options-refresh-btn:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+}
+
+.options-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.options-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.options-empty {
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 40px;
+}
+
+.options-error {
+  color: var(--color-error);
+  text-align: center;
+  padding: 40px;
+}
+
+/* ── T型报价表格 ───────────────────────────────────────────────────────── */
+
+.options-chain-table {
+  width: 100%;
+}
