@@ -852,30 +852,24 @@ frontend/src/modules/query/QueryPanel.tsx  # interval 改 setTimeout
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 7 项 |
 | **严重等级** | 🔴 P2 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | `fix(task-C9): 止损单触发竞态条件修复 — _trigger_order 状态检查` |
 
 **问题描述**：
 - `on_market_data` 释放锁后才执行触发循环，已取消的止损单仍可能被触发
 - 快速行情变动可能重复触发同一止损单
 
 **修复方案**：
-1. `stop_order.py`：`_trigger_order` 开头增加状态检查：
-   ```python
-   with self._lock:
-       if order.status != StopOrderStatus.PENDING:
-           return
-       order.status = StopOrderStatus.TRIGGERING  # 新增中间状态
-   ```
-2. 或将整个触发逻辑放在锁内
+1. `stop_order.py`：`_trigger_order` 开头增加状态检查，确保只有 PENDING 状态的止损单才能被触发
 
 **涉及文件**：
 ```
-server/services/stop_order.py              # 状态检查 + 锁范围调整
+server/services/stop_order.py              # 状态检查
 ```
 
 **验收标准**：
-- [ ] 取消的止损单不会被触发
-- [ ] 快速行情变动不会重复触发
+- [x] 取消的止损单不会被触发
+- [x] 快速行情变动不会重复触发
 
 ---
 
