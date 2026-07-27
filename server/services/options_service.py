@@ -162,6 +162,7 @@ class OptionsService:
                 "timeToExpiry": time_to_expiry,
                 "riskFreeRate": risk_free_rate,
                 "optionType": option_type,
+                "updateTime": datetime.now().strftime("%H:%M:%S"),
             })
 
         return result

@@ -514,6 +514,42 @@ TDD 完成 + 审查修复后，接入 SimNow 7x24 环境进行实盘测试，发
 
 ---
 
+## PR-C2: VolatilityData 补充 updateTime 字段
+
+**分支**：`fix/consistency-c2-volatility-updatetime`
+**依赖**：无
+**状态**：✅ 开发完成，待自验证
+
+### 测试用例列表
+
+| 测试文件 | 测试数 | 覆盖内容 |
+|----------|--------|----------|
+| `tests/test_options_models.py` | +4 | VolatilityData updateTime 字段（to_dict 包含、默认空值、from_dict 读取、from_dict 默认） |
+| **合计** | **4**（新增） | |
+
+### 实现进度
+
+#### 循环1：VolatilityData updateTime 字段（4 tests）
+- ✅ `models/options.py` — VolatilityData dataclass 新增 `updateTime: str = ""`
+- ✅ `models/options.py` — to_dict() 返回 updateTime
+- ✅ `models/options.py` — from_dict() 读取 updateTime（默认空字符串）
+- ✅ `services/options_service.py` — get_volatility() 返回字典补充 updateTime（datetime.now().strftime("%H:%M:%S")）
+- 📦 Commit: `d58ac42`
+
+### 关键设计决策
+
+1. **updateTime 默认空字符串**：与 dataclass 其他字段保持一致的默认值模式
+2. **get_volatility() 使用 datetime.now()**：每次计算时记录当前时间，格式 HH:MM:SS
+3. **from_dict() 容错**：使用 `d.get("updateTime", "")` 处理缺少字段的情况
+
+### Commit 记录
+
+| Commit | 类型 | 描述 |
+|--------|------|------|
+| `d58ac42` | feat(task-C2): VolatilityData 补充 updateTime 字段 — 4 tests pass |
+
+---
+
 ## PR-19: 后端合约查询API
 
 **分支**：`feature/pr-19-instrument-query-api`
