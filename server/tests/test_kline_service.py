@@ -15,6 +15,24 @@ class TestParseTimestamp:
         ts = _parse_timestamp("20260714", "14:30:00")
         assert ts > 0
 
+    def test_utc8_offset(self):
+        """CTP times are UTC+8 (Beijing time), not UTC.
+
+        2026-07-14 14:30:00 UTC+8 = 2026-07-14 06:30:00 UTC
+        calendar.timegm would treat 14:30 as UTC (wrong, 8 hours ahead)
+        """
+        import calendar
+        # Wrong: treating Beijing time as UTC
+        wrong_ts = calendar.timegm((2026, 7, 14, 14, 30, 0))
+        # Correct: Beijing time converted to UTC
+        correct_ts = calendar.timegm((2026, 7, 14, 6, 30, 0))
+        actual_ts = _parse_timestamp("20260714", "14:30:00")
+        # The actual timestamp should be the correct one (UTC+8 handling)
+        assert actual_ts == correct_ts
+        assert actual_ts != wrong_ts
+        # The difference should be exactly 8 hours (28800 seconds)
+        assert wrong_ts - actual_ts == 8 * 3600
+
     def test_empty_action_day(self):
         """Falls back to time-only calculation."""
         ts = _parse_timestamp("", "14:30:00")

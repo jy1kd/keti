@@ -20,6 +20,7 @@ import calendar
 import logging
 import threading
 import time as _time
+from datetime import datetime, timezone, timedelta
 from typing import Dict, List
 
 logger = logging.getLogger(__name__)
@@ -35,15 +36,21 @@ PERIOD_SECONDS: Dict[str, int] = {
 
 
 def _parse_timestamp(action_day: str, update_time: str) -> int:
-    """Parse CTP ActionDay + UpdateTime into a Unix-like seconds timestamp.
+    """Parse CTP ActionDay + UpdateTime into a Unix timestamp.
 
     CTP formats:
       ActionDay: "YYYYMMDD" (e.g. "20260714")
       UpdateTime: "HH:MM:SS" (e.g. "14:30:00")
 
+    CTP times are in UTC+8 (Beijing time). This function correctly converts
+    them to UTC Unix timestamps.
+
     Returns:
-        Integer seconds since epoch. Falls back to 0 on parse error.
+        Integer seconds since epoch (UTC). Falls back to 0 on parse error.
     """
+    # Beijing timezone (UTC+8)
+    _CHINA_TZ = timezone(timedelta(hours=8))
+
     try:
         if not action_day or len(action_day) < 8:
             parts = update_time.split(":")
@@ -55,7 +62,9 @@ def _parse_timestamp(action_day: str, update_time: str) -> int:
         hour = int(parts[0])
         minute = int(parts[1])
         second = int(parts[2])
-        return int(calendar.timegm((year, month, day, hour, minute, second)))
+        # CTP times are UTC+8, convert to UTC timestamp
+        dt = datetime(year, month, day, hour, minute, second, tzinfo=_CHINA_TZ)
+        return int(dt.timestamp())
     except (ValueError, IndexError):
         return 0
 
