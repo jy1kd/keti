@@ -89,6 +89,7 @@ export function fromCtpOrderStatus(ctpStatus: string): string {
 
 export interface OrderRequestForm {
   instrumentID: string
+  exchangeID?: string
   direction: 'buy' | 'sell'
   combOffsetFlag: 'open' | 'close' | 'close_today'
   orderPriceType: 'limit' | 'market'
@@ -101,6 +102,7 @@ export interface OrderRequestForm {
 
 export interface CtpOrderRequest {
   instrumentID: string
+  exchangeID?: string
   direction: string
   offsetFlag: string
   priceType: string
@@ -132,6 +134,9 @@ export function convertOrderRequest(form: OrderRequestForm): CtpOrderRequest {
     hedgeFlag: toCtpHedgeFlag(form.combHedgeFlag ?? 'speculation'),
     limitPrice: form.limitPrice,
     volumeTotalOriginal: form.volumeTotalOriginal,
+  }
+  if (form.exchangeID) {
+    result.exchangeID = form.exchangeID
   }
   if (form.stopPrice !== undefined) {
     result.stopPrice = form.stopPrice

@@ -89,6 +89,8 @@ class SubmitStopOrderRequest(BaseModel):
 
     instrumentID: str = Field(..., min_length=1,
                               json_schema_extra={"examples": ["IF2608"]})
+    exchangeID: str = Field(default="CFFEX",
+                            description="交易所（CFFEX/SHFE/CZCE/DCE/INE/GFEX）")
     direction: str = Field(default="0", pattern=r"^[01]$",
                            description="0=买, 1=卖")
     offsetFlag: str = Field(default="0", pattern=r"^[013]$",
@@ -316,6 +318,7 @@ async def submit_stop_order(request: Request, body: SubmitStopOrderRequest):
 
     result = stop_service.submit(
         instrument_id=body.instrumentID,
+        exchange_id=body.exchangeID,
         direction=body.direction,
         offset_flag=body.offsetFlag,
         limit_price=body.limitPrice,

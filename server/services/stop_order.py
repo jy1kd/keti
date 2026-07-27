@@ -48,6 +48,7 @@ class StopOrder:
         limit_price: float,
         volume: int,
         stop_price: float,
+        exchange_id: str = "CFFEX",
         status: StopOrderStatus = StopOrderStatus.PENDING,
         created_at: Optional[str] = None,
         triggered_at: Optional[str] = None,
@@ -55,6 +56,7 @@ class StopOrder:
     ) -> None:
         self.stop_order_id = stop_order_id
         self.instrument_id = instrument_id
+        self.exchange_id = exchange_id
         self.direction = direction
         self.offset_flag = offset_flag
         self.limit_price = limit_price
@@ -70,6 +72,7 @@ class StopOrder:
         return {
             "stopOrderID": self.stop_order_id,
             "instrumentID": self.instrument_id,
+            "exchangeID": self.exchange_id,
             "direction": self.direction,
             "offsetFlag": self.offset_flag,
             "limitPrice": self.limit_price,
@@ -87,6 +90,7 @@ class StopOrder:
         return cls(
             stop_order_id=d["stopOrderID"],
             instrument_id=d["instrumentID"],
+            exchange_id=d.get("exchangeID", "CFFEX"),
             direction=d["direction"],
             offset_flag=d["offsetFlag"],
             limit_price=d["limitPrice"],
@@ -139,6 +143,7 @@ class StopOrderService:
         limit_price: float,
         volume: int,
         stop_price: float,
+        exchange_id: str = "CFFEX",
     ) -> dict:
         """Submit a new stop order.
 
@@ -149,6 +154,7 @@ class StopOrderService:
         order = StopOrder(
             stop_order_id=stop_id,
             instrument_id=instrument_id,
+            exchange_id=exchange_id,
             direction=direction,
             offset_flag=offset_flag,
             limit_price=limit_price,
@@ -246,6 +252,7 @@ class StopOrderService:
         # Submit the actual order
         result = self._order_manager.insert(
             instrument_id=order.instrument_id,
+            exchange_id=order.exchange_id,
             direction=order.direction,
             offset_flag=order.offset_flag,
             price_type="2",  # Limit order

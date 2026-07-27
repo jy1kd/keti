@@ -457,6 +457,7 @@ export async function getStopOrders(): Promise<StopOrdersResponse> {
 /** 提交止损单 */
 export async function submitStopOrder(params: {
   instrumentID: string
+  exchangeID?: string
   direction: string
   offsetFlag: string
   limitPrice: number
