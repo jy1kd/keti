@@ -39,6 +39,54 @@
 
 /* ── Panel content ─────────────────────────────────── */
 
+.query-panel .panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.query-panel .panel-header h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.query-panel .panel-controls {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  padding-right: 8px;
+}
+
+.btn-pause,
+.btn-refresh {
+  padding: 3px 10px;
+  font-size: 11px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn-pause:hover,
+.btn-refresh:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.btn-pause.paused {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.btn-refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .query-panel .panel-content {
   flex: 1;
   overflow: hidden;
