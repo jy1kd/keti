@@ -20,7 +20,7 @@
 | PR-13 | 后端止损单服务实现 | ✅ 已完成 | 2026-07-23 | ef734ae~894380f (7 commits, 44 tests) |
 | PR-17 | 联调测试与Bug修复 | ⏳ 待开始 | - | - |
 | PR-C1 | 修复 TimeCondition 枚举值错误 | ⏳ 待开始（需角色B） | - | - |
-| PR-C2 | VolatilityData 补充 updateTime 字段 | ✅ 开发完成，待审查 | 2026-07-27 | d58ac42 |
+| PR-C2 | VolatilityData 补充 updateTime 字段 | ✅ 已完成 | 2026-07-27 | d58ac42, 7b52b85, 0f61e67 |
 | PR-C3 | 实现一键反向/一键锁仓接口 | ⏳ 待开始 | - | - |
 
 **总计**：8个PR + 1个联调PR + 3个一致性检查PR = 12个PR
