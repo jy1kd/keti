@@ -165,26 +165,115 @@ async def cancel_all_orders(request: Request):
 
 @router.post("/reverse")
 async def reverse_position(request: Request, body: ReverseOrderRequest):
-    """Reverse position — placeholder (PR-11).
+    """一键反向：平掉当前持仓，再以相反方向开仓。
 
-    Requires position data from query API to determine current holding.
+    CTP posiDirection: "2"=多头(买), "3"=空头(卖)
     """
-    raise HTTPException(
-        status_code=501,
-        detail="Not implemented — position data needed (PR-11)",
-    )
+    trader_api = request.app.state.trader_api
+    if trader_api is None or trader_api.login_status != "logged_in":
+        return {"success": False, "message": "TD not connected"}
+
+    query_svc = request.app.state.query_service
+    om = request.app.state.order_manager
+    positions = query_svc.positions
+
+    # 找到该合约的持仓
+    target = [p for p in positions if p.get("instrumentID") == body.instrumentID]
+    if not target:
+        return {"success": False, "message": f"No position for {body.instrumentID}"}
+
+    results = []
+    for pos in target:
+        pos_dir = pos.get("posiDirection", "")  # "2"=多, "3"=空
+        volume = pos.get("position", 0)
+        exchange_id = pos.get("exchangeID", "")
+        if volume <= 0:
+            continue
+
+        # 平仓：反方向
+        # 多头(posiDirection="2") → 平仓用卖(direction="1")
+        # 空头(posiDirection="3") → 平仓用买(direction="0")
+        close_dir = "1" if pos_dir == "2" else "0"
+        close_result = om.insert(
+            instrument_id=body.instrumentID,
+            exchange_id=exchange_id,
+            direction=close_dir,
+            offset_flag="1",        # 平仓
+            price_type="1",         # 市价
+            limit_price=0.0,
+            volume=volume,
+            time_condition="1",     # GFD
+            volume_condition="1",
+            hedge_flag="1",
+        )
+        results.append({"action": "close", **close_result})
+
+        # 开仓：同原方向（反向后的新仓位）
+        # 多头 → 开空(direction="1")
+        # 空头 → 开多(direction="0")
+        open_dir = "1" if pos_dir == "2" else "0"
+        open_result = om.insert(
+            instrument_id=body.instrumentID,
+            exchange_id=exchange_id,
+            direction=open_dir,
+            offset_flag="0",        # 开仓
+            price_type="1",         # 市价
+            limit_price=0.0,
+            volume=volume,
+            time_condition="1",
+            volume_condition="1",
+            hedge_flag="1",
+        )
+        results.append({"action": "open", **open_result})
+
+    return {"success": True, "orders": results}
 
 
 @router.post("/lock")
 async def lock_position(request: Request, body: LockOrderRequest):
-    """Lock position — placeholder (PR-11).
+    """一键锁仓：在反方向开同等数量仓位，不平原有持仓。
 
-    Requires position data from query API to determine current holding.
+    CTP posiDirection: "2"=多头(买), "3"=空头(卖)
     """
-    raise HTTPException(
-        status_code=501,
-        detail="Not implemented — position data needed (PR-11)",
-    )
+    trader_api = request.app.state.trader_api
+    if trader_api is None or trader_api.login_status != "logged_in":
+        return {"success": False, "message": "TD not connected"}
+
+    query_svc = request.app.state.query_service
+    om = request.app.state.order_manager
+    positions = query_svc.positions
+
+    target = [p for p in positions if p.get("instrumentID") == body.instrumentID]
+    if not target:
+        return {"success": False, "message": f"No position for {body.instrumentID}"}
+
+    results = []
+    for pos in target:
+        pos_dir = pos.get("posiDirection", "")  # "2"=多, "3"=空
+        volume = pos.get("position", 0)
+        exchange_id = pos.get("exchangeID", "")
+        if volume <= 0:
+            continue
+
+        # 锁仓：反方向开仓
+        # 多头(posiDirection="2") → 开空(direction="1")
+        # 空头(posiDirection="3") → 开多(direction="0")
+        lock_dir = "1" if pos_dir == "2" else "0"
+        result = om.insert(
+            instrument_id=body.instrumentID,
+            exchange_id=exchange_id,
+            direction=lock_dir,
+            offset_flag="0",        # 开仓
+            price_type="1",         # 市价
+            limit_price=0.0,
+            volume=volume,
+            time_condition="1",
+            volume_condition="1",
+            hedge_flag="1",
+        )
+        results.append({"action": "lock_open", **result})
+
+    return {"success": True, "orders": results}
 
 
 # ── Stop order routes (PR-13) ──────────────────────────────────────────────
