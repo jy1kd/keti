@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { submitOrder as apiSubmitOrder, cancelOrder as apiCancelOrder, submitStopOrder as apiSubmitStopOrder } from '../../services/api'
 import { toast } from '../../components/Toast'
+import { useContractsStore } from '../../stores/contracts'
 import type { OrderRequestForm } from '../../utils/orderMapping'
 
 export const DEFAULT_ORDER_FORM: OrderRequestForm = {
@@ -32,11 +33,23 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   orderForm: { ...DEFAULT_ORDER_FORM },
   isSubmitting: false,
 
-  // 选中合约时仅更新 instrumentID，保留用户已选择的方向/开平设置
+  // 选中合约时更新 instrumentID 和 exchangeID，保留用户已选择的方向/开平设置
   setSelectedInstrument: (instrument) => {
+    const currentForm = get().orderForm
+    let exchangeID = currentForm.exchangeID ?? 'CFFEX'
+
+    // 从合约信息中获取 exchangeID
+    if (instrument) {
+      const contracts = useContractsStore.getState().contracts
+      const contract = contracts.find(c => c.instrumentID === instrument)
+      if (contract?.exchangeID) {
+        exchangeID = contract.exchangeID
+      }
+    }
+
     set({
       selectedInstrument: instrument,
-      orderForm: { ...get().orderForm, instrumentID: instrument ?? '' },
+      orderForm: { ...currentForm, instrumentID: instrument ?? '', exchangeID },
     })
   },
 
