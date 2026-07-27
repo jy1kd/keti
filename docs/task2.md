@@ -620,7 +620,8 @@ server/tests/test_order_api.py  # 角色A — 新增 reverse/lock 测试用例
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 1 项 |
 | **严重等级** | 🔴 P0 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | a15cd73 |
 
 **问题描述**：
 - 前端 `CancelAllResponse`（`api.ts:275-280`）期望 `cancelled`/`failed`/`errors`
