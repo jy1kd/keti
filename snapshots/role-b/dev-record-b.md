@@ -1065,3 +1065,35 @@
 ### 验收标准对照
 
 全部 14 项验收标准通过（详见 task.md PR-16 验收标准）
+
+---
+
+## PR-16: 审查反馈修复
+
+**修复日期**：2026-07-27
+
+### 修复项
+
+| # | 问题 | 等级 | 修复内容 |
+|---|------|------|----------|
+| F1 | 报价 Tab 传 snapshot={null}，始终显示空数据 | 🔴 阻断 | QueryPanel 从 marketStore 取 selectedInstrument 对应的 snapshot 传给 DepthQuote |
+| F2 | store.ts import 顺序混乱 | 🟡 改进 | import { toast } 移到文件顶部 |
+| F3 | 乐观更新 orderStatus: 'canceled' 不匹配 CTP 编码 | 🟡 改进 | 改为 '5'（CTP 已撤单编码） |
+| Q1 | 平仓始终用 close，今仓需 close_today | 🔵 疑问 | Position onClose 根据 todayPosition > 0 判断使用 'close_today' 或 'close' |
+| Q2 | as unknown as 类型断言 | 🔵 疑问 | 保持现状，加注释说明 CTP 格式与前端类型不匹配的原因 |
+
+### 附加修复（PR-14 遗留）
+
+| # | 问题 | 修复内容 |
+|---|------|----------|
+| 1 | options store.ts TS 错误 | fetchOptionChains 改用 api.get 直接调用，绕过 ApiResponse 包装 |
+| 2 | options store.test.ts TS 错误 | mock 从 get 改为 api.get，返回值改为 { data: { chains } } 格式 |
+| 3 | useHotKeys.test.ts TS 错误 | 补全 HotKeyConfig 缺失的 sell/cancel 字段 |
+
+### 测试结果
+
+```
+Test Files  45 passed (45), 1 failed (pre-existing useMarketWs)
+     Tests  463 passed (463), 2 failed (pre-existing)
+TypeScript: 0 errors
+```

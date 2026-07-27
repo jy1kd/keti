@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { Position } from './Position'
 import { useQueryStore } from './store'
+import { useOrderStore } from '../order/store'
 
 vi.mock('../../services/api', () => ({
   getOrders: vi.fn().mockResolvedValue({ orders: [], count: 0 }),
@@ -66,5 +67,29 @@ describe('Position', () => {
   it('renders with position-table-wrap class', () => {
     const { container } = render(<Position />)
     expect(container.firstChild).toHaveClass('position-table-wrap')
+  })
+
+  it('uses close_today when todayPosition > 0', () => {
+    useQueryStore.setState({
+      positions: [
+        { instrumentID: 'IF2608', posiDirection: '2', position: 2, positionCost: 9600, positionProfit: 100, openCost: 9600, useMargin: 96000, todayPosition: 1, ydPosition: 1, tradingDay: '20260727' },
+      ],
+    })
+    render(<Position />)
+    fireEvent.click(screen.getByText('平仓'))
+    const form = useOrderStore.getState().orderForm
+    expect(form.combOffsetFlag).toBe('close_today')
+  })
+
+  it('uses close when todayPosition === 0', () => {
+    useQueryStore.setState({
+      positions: [
+        { instrumentID: 'IF2609', posiDirection: '3', position: 1, positionCost: 4900, positionProfit: -50, openCost: 4900, useMargin: 49000, todayPosition: 0, ydPosition: 1, tradingDay: '20260727' },
+      ],
+    })
+    render(<Position />)
+    fireEvent.click(screen.getByText('平仓'))
+    const form = useOrderStore.getState().orderForm
+    expect(form.combOffsetFlag).toBe('close')
   })
 })

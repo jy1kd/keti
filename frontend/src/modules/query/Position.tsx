@@ -10,13 +10,14 @@ export function Position() {
   const setOrderForm = useOrderStore((s) => s.setOrderForm)
 
   const onClose = useCallback(
-    (instrumentID: string, posiDirection: string, volume: number) => {
-      // Set instrument and pre-fill close order form
+    (instrumentID: string, posiDirection: string, volume: number, todayPosition: number) => {
+      // 上期所/能源所今仓需用 'close_today'(CTP '3')，昨仓用 'close'(CTP '1')
+      const offsetFlag = todayPosition > 0 ? 'close_today' : 'close'
       setSelectedInstrument(instrumentID)
       setOrderForm({
         instrumentID,
         direction: posiDirection === '2' ? 'sell' : 'buy', // 多→卖平, 空→买平
-        combOffsetFlag: 'close',
+        combOffsetFlag: offsetFlag,
         volumeTotalOriginal: volume,
       })
     },
@@ -69,7 +70,7 @@ export function Position() {
                 <td className="col-action">
                   <button
                     className="btn-cancel"
-                    onClick={() => onClose(pos.instrumentID, pos.posiDirection, pos.position)}
+                    onClick={() => onClose(pos.instrumentID, pos.posiDirection, pos.position, pos.todayPosition)}
                   >
                     平仓
                   </button>

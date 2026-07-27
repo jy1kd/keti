@@ -10,6 +10,7 @@ import {
   cancelStopOrder,
 } from '../../services/api'
 import type { AccountInfo, StopOrder } from '../../services/types'
+import { toast } from '../../components/Toast'
 
 // API 返回的原始类型（direction/offsetFlag/posiDirection 等为 CTP 字符串）
 interface RawOrder {
@@ -53,7 +54,6 @@ interface RawPosition {
 type OrderEntry = RawOrder
 type TradeEntry = RawTrade
 type PositionEntry = RawPosition
-import { toast } from '../../components/Toast'
 
 export type QueryTab = 'orders' | 'trades' | 'positions' | 'account' | 'stop_orders' | 'quotes' | 'contracts'
 
@@ -155,6 +155,8 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
   fetchPositions: async () => {
     try {
       const res = await getPositions()
+      // as unknown as: CTP 返回 posiDirection 为 '2'/'3' 字符串，但 PositionInfo 类型定义为 'long'/'short'
+      // 实际运行时数据是 CTP 格式，RawPosition 用 string 接收更准确
       set({ positions: (res.positions ?? []) as unknown as RawPosition[] })
     } catch {
       // Silently fail
@@ -173,6 +175,7 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
   fetchStopOrders: async () => {
     try {
       const res = await getStopOrders()
+      // as unknown as: API 返回的止损单结构与 StopOrder 类型字段一致但来源不同，安全断言
       set({ stopOrders: (res.stopOrders ?? []) as unknown as StopOrder[] })
     } catch {
       // Silently fail
@@ -232,7 +235,7 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
         toast.success('撤单成功')
         // Optimistic: mark as canceled locally
         const orders = get().orders.map((o) =>
-          o.orderRef === orderRef ? { ...o, orderStatus: 'canceled' as const } : o
+          o.orderRef === orderRef ? { ...o, orderStatus: '5' } : o
         )
         set({ orders })
         return true

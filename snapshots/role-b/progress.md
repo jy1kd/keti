@@ -20,7 +20,7 @@
 | PR-12a | 前端补缺补差 | ✅ 已完成 | 2026-07-17 | bccca93~f00d066 (22 commits) |
 | PR-14 | 前端期权T型报价实现 | ✅ 已完成（含人工验证修复） | 2026-07-24 | 22d8b4d~423003d (多次修复) |
 | PR-15 | 前端快捷功能实现 | ✅ 已完成 | 2026-07-23 | 684d49c~bf7f88c (17 commits) |
-| PR-16 | 前端查询面板实现 | ✅ 开发完成，待审查 | 2026-07-27 | b4fd085~0ad1d78 (5 commits) |
+| PR-16 | 前端查询面板实现 | ✅ 审查反馈已修复 | 2026-07-27 | b4fd085~0ad1d78 (5 commits) + 审查修复 |
 | PR-17 | 联调测试与Bug修复 | ⏳ 待开始 | - | - |
 | PR-20 | 前端合约刷新功能（刷新按钮 + Toast） | ✅ 已完成 | 2026-07-21 | 2a4d682~8ebaf1f (9 commits) |
 | PR-21 | 手动订阅/退订合约 | ✅ 已完成 | 2026-07-23 | 与 PR-20 共享提交 |
@@ -334,7 +334,7 @@
 
 ### PR-16: 前端查询面板实现
 
-**状态**：⏳ 待开始
+**状态**：✅ 审查反馈已修复
 
 **PR信息**：
 - PR分支名：`feature/pr-16-query-panel`
@@ -342,16 +342,38 @@
 - 工作量：3小时
 
 **完成内容**：
-- 待开发
+1. QueryStore 增强：fetch/pause/cancel/incremental-update/highlight
+2. OrderFlow：报单流水表格、撤单/撤销全部、新数据高亮
+3. TradeFlow：成交流水、新数据高亮
+4. Position：持仓表格、平仓（close_today 判断）、盈亏着色
+5. AccountQuery：资金信息网格
+6. StopOrderList：止损单列表、取消操作
+7. ContractQuery：合约详情
+8. QueryPanel 集成：7Tab、暂停/刷新、3s 自动刷新、C 键撤单
+9. 报价 Tab 接入 marketStore 真实 snapshot
 
 **验证结果**：
-- 待验证
+- 71 个新增测试全部通过
+- 全量 463 passed（2 个预存在失败，非本次引入）
+- TypeScript 0 errors
+- 审查反馈 5 项全部处理（1 阻断 + 2 改进 + 2 疑问）
+- PR-14 遗留 TS 错误一并修复（options store + useHotKeys test）
 
 **提交记录**：
-- 待提交
+- b4fd085 feat: 查询API函数 + QueryStore增强
+- ffb1112 feat: OrderFlow 报单流水组件
+- 7451399 feat: TradeFlow/Position/AccountQuery/StopOrderList
+- 7b9e6c4 feat: QueryPanel集成
+- cf60a7a feat: ContractQuery 合约详情组件
+- ef344cf docs: progress.md + dev-record-b.md 更新
 
-**交接说明**：
-- 待交接
+**审查反馈修复**：
+- F1: 报价 Tab 从 marketStore 取 snapshot 替代 null
+- F2: import 顺序修正
+- F3: 乐观更新 orderStatus 改为 CTP 编码 '5'
+- Q1: 平仓 combOffsetFlag 根据 todayPosition 判断 close_today/close
+- Q2: as unknown as 加注释说明
+- 附: PR-14 options store + useHotKeys test TS 错误修复
 
 ---
 

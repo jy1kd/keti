@@ -56,7 +56,7 @@ export function StopOrderList() {
               <tr key={s.stopOrderRef}>
                 <td className="col-ref">{s.stopOrderRef}</td>
                 <td className="col-instrument">{s.instrumentID}</td>
-                <td className={`col-direction ${s.direction === '0' || s.direction === 'buy' ? 'buy' : 'sell'}`}>
+                <td className={`col-direction ${s.direction === 'buy' ? 'buy' : 'sell'}`}>
                   {DIRECTION_MAP[s.direction] ?? s.direction}
                 </td>
                 <td className="col-offset">{OFFSET_MAP[s.combOffsetFlag] ?? s.combOffsetFlag}</td>

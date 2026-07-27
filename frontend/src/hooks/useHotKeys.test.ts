@@ -197,7 +197,7 @@ describe('useHotKeys', () => {
 
     const { rerender } = renderHook(
       ({ hotKeys }) => useHotKeys({ onBuy, enabled: true, hotKeys }),
-      { initialProps: { hotKeys: { buy: 'a' } as const } }
+      { initialProps: { hotKeys: { buy: 'a', sell: 's', cancel: 'c' } } }
     )
 
     // First with 'a'
@@ -207,7 +207,7 @@ describe('useHotKeys', () => {
     expect(onBuy).toHaveBeenCalledTimes(1)
 
     // Switch to 'x'
-    rerender({ hotKeys: { buy: 'x' } as const })
+    rerender({ hotKeys: { buy: 'x', sell: 's', cancel: 'c' } })
 
     act(() => {
       fireKey('x')

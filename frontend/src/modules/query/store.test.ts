@@ -193,6 +193,8 @@ describe('QueryStore', () => {
 
     expect(result).toBe(true)
     expect(mockCancelOrder).toHaveBeenCalledWith('1001')
+    // F3: 乐观更新应使用 CTP 编码 '5'（已撤单），而非 'canceled'
+    expect(useQueryStore.getState().orders[0].orderStatus).toBe('5')
   })
 
   // ── Cancel All Orders ──────────────────────────────────────────

@@ -29,6 +29,7 @@ export function QueryPanel() {
   const refreshAll = useQueryStore((s) => s.refreshAll)
   const handleCancelAll = useQueryStore((s) => s.handleCancelAll)
   const selectedInstrument = useMarketStore((s) => s.selectedInstrument)
+  const snapshots = useMarketStore((s) => s.snapshots)
 
   // Initial data load
   useEffect(() => {
@@ -75,12 +76,14 @@ export function QueryPanel() {
         return <AccountQuery />
       case 'stop_orders':
         return <StopOrderList />
-      case 'quotes':
+      case 'quotes': {
+        const snapshot = selectedInstrument ? snapshots.get(selectedInstrument) ?? null : null
         return (
           <div className="quote-query">
-            <DepthQuote snapshot={null} />
+            <DepthQuote snapshot={snapshot} />
           </div>
         )
+      }
       case 'contracts':
         return <ContractQuery instrumentID={selectedInstrument ?? ''} />
       default:
