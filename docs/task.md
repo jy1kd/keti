@@ -1681,7 +1681,7 @@ frontend/src/
 - OptionChain：`{ underlying, expireDate, calls: OptionQuote[], puts: OptionQuote[], updateTime }`
 - OptionQuote：`{ instrumentID, strikePrice, lastPrice, bidPrice, askPrice, volume, openInterest, impliedVolatility }`
 - VolatilityData：`{ instrumentID, impliedVolatility, underlyingPrice, strikePrice, timeToExpiry, riskFreeRate, optionType, updateTime }`
-- 合约筛选：基于 InstrumentInfo.productClass='1'（期权）+ InstrumentInfo.optionsType（看涨/看跌）
+- 合约筛选：基于 InstrumentInfo.productClass='2'（期权）+ InstrumentInfo.optionsType（看涨/看跌）
 
 **验证方法**：
 1. 期权面板正常显示

@@ -527,39 +527,39 @@ type WSMessageType =
 - 服务启动时从文件加载未触发的止损单（status=pending）
 - 文件格式：
 ```json
-{
-  "stop_orders": [
-    {
-      "stop_order_ref": "SO123",
-      "instrument_id": "IF2608",
-      "direction": "sell",
-      "offset": "close",
-      "price": 480.00,
-      "volume": 1,
-      "stop_price": 480.00,
-      "status": "pending",
-      "created_at": "2026-07-08T14:30:00",
-      "triggered_at": null,
-      "triggered_order_ref": null
-    }
-  ]
-}
+[
+  {
+    "stopOrderID": "so-abc12345",
+    "instrumentID": "IF2608",
+    "exchangeID": "CFFEX",
+    "direction": "0",
+    "offsetFlag": "0",
+    "limitPrice": 4800.0,
+    "volume": 1,
+    "stopPrice": 4790.0,
+    "status": "pending",
+    "createdAt": "2026-07-27 14:30:00",
+    "triggeredAt": null,
+    "orderRef": null
+  }
+]
 ```
 
 **数据结构**：
 ```python
 class StopOrder:
-    stop_order_ref: str      # 止损单引用
+    stop_order_id: str       # 止损单ID（so-xxxxxxxx）
     instrument_id: str       # 合约代码
-    direction: str           # buy/sell
-    offset: str              # open/close/close_today
-    price: float             # 报单价格（触发后的报单价格）
+    exchange_id: str         # 交易所（CFFEX/SHFE/CZCE/DCE/INE/GFEX）
+    direction: str           # 0=买, 1=卖
+    offset_flag: str         # 0=开仓, 1=平仓, 3=平今
+    limit_price: float       # 触发后报单的限价
     volume: int              # 报单数量
-    stop_price: float        # 止损价
+    stop_price: float        # 止损触发价
     status: str              # pending/triggered/trigger_failed/canceled
-    created_at: datetime     # 创建时间
-    triggered_at: datetime   # 触发时间（触发后填写）
-    triggered_order_ref: str # 触发后的报单引用（触发后填写）
+    created_at: str          # 创建时间（YYYY-MM-DD HH:MM:SS）
+    triggered_at: str        # 触发时间（触发后填写）
+    order_ref: str           # 触发后的报单引用（触发后填写）
 ```
 
 ### 3.5 内存优化方案
@@ -703,12 +703,12 @@ function handleNewData(newRecord) {
 | POST | `/api/order/insert` | 报单 | `OrderRequest` | `{order_ref, success, message}` |
 | POST | `/api/order/cancel` | 撤单 | `{order_ref}` | `{success, message}` |
 | POST | `/api/order/cancel_all` | 批量撤单 | - | `{cancelled_count, success}` |
-| POST | `/api/order/reverse` | 一键反向 | `{order_ref}` | `{new_order_ref, success}` |
-| POST | `/api/order/lock` | 一键锁仓 | `{instrument_id, volume}` | `{buy_order_ref, sell_order_ref, success}` |
+| POST | `/api/order/reverse` | 一键反向 | `{instrumentID}` | `{success, orders: [...]}` |
+| POST | `/api/order/lock` | 一键锁仓 | `{instrumentID}` | `{success, orders: [...]}` |
 | GET | `/api/order/status/{order_ref}` | 查询单个报单状态 | - | `OrderStatus` |
-| POST | `/api/order/stop` | 提交止损单 | `StopOrderRequest` | `{stop_order_ref, success, message}` |
-| POST | `/api/order/stop/cancel` | 取消止损单 | `{stop_order_ref}` | `{success, message}` |
-| GET | `/api/order/stop/list` | 查询止损单列表 | - | `[StopOrder]` |
+| POST | `/api/order/stop` | 提交止损单 | `StopOrderRequest` | `{stopOrderID, success, message}` |
+| POST | `/api/order/stop/cancel` | 取消止损单 | `{stopOrderID}` | `{success, message}` |
+| GET | `/api/order/stop/list` | 查询止损单列表 | - | `{stopOrders: [...], count: N}` |
 
 **一键反向实现**（⚠️ 非原子操作，存在中间状态风险）：
 1. 根据原报单引用查询持仓方向和数量

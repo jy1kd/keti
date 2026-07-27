@@ -915,31 +915,31 @@ server/api/order.py                        # reverse 增加依赖检查
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 9-17 项 |
 | **严重等级** | 🟡 文档 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | `fix(task-C11): design.md 文档对齐 — API 端点、数据结构、productClass` |
 
 **修复内容**：
-1. 补充 4 个缺失的 API 端点（kline、depth、options/underlyings、volatility）
-2. 更新 reverse 请求参数：`{order_ref}` → `{instrumentID}`
-3. 更新 lock 请求参数：`{instrument_id, volume}` → `{instrumentID}`
-4. 更新 stop/cancel 请求参数：`{stop_order_ref}` → `{stopOrderID}`
-5. 更新 StopOrderRequest 字段名
-6. 更新 StopOrder 数据结构（接口定义 + 持久化格式）
-7. 更新 direction/offset 编码说明
-8. 修正 PR-14 的 productClass 值
-9. 删除 progress.md 重复条目
-10. 补充开发日志
+1. ✅ 补充 4 个缺失的 API 端点（kline、depth、options/underlyings、volatility）- 已存在
+2. ✅ 更新 reverse 请求参数：`{order_ref}` → `{instrumentID}`
+3. ✅ 更新 lock 请求参数：`{instrument_id, volume}` → `{instrumentID}`
+4. ✅ 更新 stop/cancel 请求参数：`{stop_order_ref}` → `{stopOrderID}`
+5. ✅ 更新 StopOrderRequest 字段名
+6. ✅ 更新 StopOrder 数据结构（接口定义 + 持久化格式）
+7. ✅ 更新 direction/offset 编码说明 - 已存在
+8. ✅ 修正 PR-14 的 productClass 值：`'1'` → `'2'`
+9. ✅ 删除 progress.md 重复条目 - 无重复
+10. ✅ 补充开发日志
 
 **涉及文件**：
 ```
 docs/design.md                             # API 端点、数据模型、编码说明
 docs/task.md                               # PR-14 productClass 修正
-snapshots/role-b/progress.md               # 删除重复条目
 ```
 
 **验收标准**：
-- [ ] design.md 中所有 API 端点与代码一致
-- [ ] 数据模型字段名与代码一致
-- [ ] 无重复的 progress 条目
+- [x] design.md 中所有 API 端点与代码一致
+- [x] 数据模型字段名与代码一致
+- [x] 无重复的 progress 条目
 
 ---
 
