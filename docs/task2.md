@@ -666,7 +666,8 @@ frontend/src/modules/query/store.ts      # toast 消息修改
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 2 项 |
 | **严重等级** | 🔴 P0 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | 623d36a |
 
 **问题描述**：
 - `kline_service.py:58` 用 `calendar.timegm()` 将 CTP 的 UTC+8 时间当 UTC 处理，时间戳快 8 小时
