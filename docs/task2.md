@@ -998,7 +998,8 @@ frontend/src/hooks/useSystemWs.ts          # 重连计数分离
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck04 第 1/2/3/6/7 项 |
 | **严重等级** | 🟡 不一致 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | `fix(task-C13): types.ts 类型定义修复 — isTrading/optionType/StopOrderRequest/OrderRecord` |
 
 **问题描述**：
 
@@ -1080,9 +1081,9 @@ frontend/src/services/types.ts    # 修改 5 处类型定义
 ```
 
 **验收标准**：
-- [ ] `isTrading` 类型为 `number`
-- [ ] `optionType` 统一使用单数，值为 `string`
-- [ ] `StopOrderRequest` 字段名与后端 `SubmitStopOrderRequest` 一致
-- [ ] `OrderRecord` 包含 `map_order()` 返回的全部字段
-- [ ] TypeScript 编译无错误
-- [ ] 前端运行正常
+- [x] `isTrading` 类型为 `number`
+- [x] `optionType` 统一使用单数，值为 `string`
+- [x] `StopOrderRequest` 字段名与后端 `SubmitStopOrderRequest` 一致
+- [x] `OrderRecord` 包含 `map_order()` 返回的全部字段
+- [x] TypeScript 编译无错误
+- [x] 前端运行正常

@@ -227,7 +227,7 @@ describe('QueryStore', () => {
   // ── Cancel All Orders ──────────────────────────────────────────
 
   it('handleCancelAll calls cancelAllOrders API', async () => {
-    mockCancelAllOrders.mockResolvedValue({ success: true, cancelled: 3, failed: 0, errors: [] })
+    mockCancelAllOrders.mockResolvedValue({ success: true, attempted: 3, succeeded: 3, failedRefs: [] })
 
     const result = await useQueryStore.getState().handleCancelAll()
 

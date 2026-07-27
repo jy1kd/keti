@@ -19,7 +19,7 @@ const mockContract: ContractInfo = {
   volumeMultiple: 1000,
   priceTick: 0.02,
   expireDate: '2024-06-15',
-  isTrading: true,
+  isTrading: 1,
 }
 
 const mockContract2: ContractInfo = {
@@ -30,7 +30,7 @@ const mockContract2: ContractInfo = {
   volumeMultiple: 10,
   priceTick: 1,
   expireDate: '2024-06-15',
-  isTrading: true,
+  isTrading: 1,
 }
 
 describe('useContractsStore', () => {
@@ -78,7 +78,7 @@ describe('useContractsStore', () => {
 
   it('setContracts 批量设置合约列表', () => {
     const contracts = [
-      { instrumentID: 'au2406', instrumentName: '黄金2406', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '2024-06-15', isTrading: true },
+      { instrumentID: 'au2406', instrumentName: '黄金2406', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '2024-06-15', isTrading: 1 },
     ]
     useContractsStore.getState().setContracts(contracts)
     expect(useContractsStore.getState().contracts).toEqual(contracts)
