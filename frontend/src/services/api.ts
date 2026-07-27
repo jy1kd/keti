@@ -342,3 +342,98 @@ export async function getOrders(): Promise<OrdersResponse> {
   const { data } = await api.get<OrdersResponse>('/api/query/orders')
   return data
 }
+
+// ── PR-16: 查询面板 API ──────────────────────────────────────────────
+
+interface TradesResponse {
+  trades: Array<{
+    tradeID: string
+    orderRef: string
+    instrumentID: string
+    direction: string
+    offsetFlag: string
+    price: number
+    volume: number
+    tradeTime: string
+  }>
+  count: number
+}
+
+interface AccountResponse {
+  data: {
+    accountID: string
+    balance: number
+    available: number
+    frozenMargin: number
+    currMargin: number
+    commission: number
+    closeProfit: number
+    positionProfit: number
+    deposit: number
+    withdraw: number
+    preBalance: number
+    tradingDay: string
+  }
+}
+
+interface StopOrdersResponse {
+  stopOrders: Array<{
+    stopOrderRef: string
+    instrumentID: string
+    direction: string
+    combOffsetFlag: string
+    limitPrice: number
+    volumeTotalOriginal: number
+    stopPrice: number
+    status: string
+    triggeredOrderRef?: string
+    createdAt: string
+    triggeredAt?: string
+  }>
+  count: number
+}
+
+interface ContractsResponse {
+  contracts: Array<{
+    instrumentID: string
+    instrumentName: string
+    exchangeID: string
+    productID: string
+    volumeMultiple: number
+    priceTick: number
+    expireDate: string
+    isTrading: boolean
+  }>
+  count: number
+}
+
+/** 查询成交流水 */
+export async function getTrades(): Promise<TradesResponse> {
+  const { data } = await api.get<TradesResponse>('/api/query/trades')
+  return data
+}
+
+/** 查询账户资金 */
+export async function getAccount(): Promise<AccountResponse> {
+  const { data } = await api.get<AccountResponse>('/api/query/account')
+  return data
+}
+
+/** 查询止损单列表 */
+export async function getStopOrders(): Promise<StopOrdersResponse> {
+  const { data } = await api.get<StopOrdersResponse>('/api/order/stop/list')
+  return data
+}
+
+/** 取消止损单 */
+export async function cancelStopOrder(stopOrderRef: string): Promise<CancelResponse> {
+  const { data } = await api.post<CancelResponse>('/api/order/stop/cancel', { stopOrderRef })
+  return data
+}
+
+/** 查询合约信息 */
+export async function getContracts(instruments?: string[]): Promise<ContractsResponse> {
+  const params = instruments?.length ? { instruments: instruments.join(',') } : undefined
+  const { data } = await api.get<ContractsResponse>('/api/query/contracts', { params })
+  return data
+}
