@@ -809,3 +809,45 @@ TDD 完成 + 审查修复后，接入 SimNow 7x24 环境进行实盘测试，发
 | `6cfc4f7` | feat | OptionsService — filtering, chain aggregation, Black-Scholes IV — 20 tests pass |
 | `f1701aa` | feat | options API endpoints — /options, /option_chain, /volatility — 11 tests pass |
 | `14f9adc` | feat | wire OptionsService into main.py — 88 tests pass |
+
+---
+
+## PR-C1: TimeCondition 枚举值对齐 CTP 标准
+
+**分支**：`fix/consistency-c1-time-condition`
+**依赖**：无
+**状态**：✅ 已完成
+
+### 测试用例列表
+
+| 测试文件 | 测试数 | 覆盖内容 |
+|----------|--------|----------|
+| `tests/test_types.py` | 3 | TimeCondition IOC/GFS/GFD 枚举值 |
+| `tests/test_trader_api.py` | 3 | FOK/FAK 作为 IOC+VC 组合 |
+| `tests/test_order_api.py` | 5 | FOK/FAK/GFD 校验逻辑 |
+| **合计** | **11**（修改） | |
+
+### 实现进度
+
+#### 循环1：枚举值修复（11 tests）
+- ✅ `ctp_wrapper/types.py` — TimeCondition 枚举：GFD='1'→'3', IOC='1', GFS='2'
+- ✅ `models/order.py` — 默认值 '1'→'3' (GFD)
+- ✅ `services/field_mapping.py` — 默认值 '1'→'3' (GFD)
+- ✅ `services/order_manager.py` — 默认值 '1'→'3' (GFD)
+- ✅ `utils/ctp_mapping.py` — TIME_CONDITION_MAP 修正 + volumeCondition 自动设置
+- ✅ `api/order.py` — 校验器逻辑重写：FOK/FAK 不再是独立 TimeCondition
+- ✅ `ctp_wrapper/trader_api.py` — 文档注释修正
+- 📦 Commit: `dfb20ad`
+
+### 关键设计决策
+
+1. **CTP 标准值**：IOC='1', GFS='2', GFD='3'
+2. **FOK/FAK 组合**：FOK = IOC('1') + CV('3'), FAK = IOC('1') + AV('1')
+3. **校验器逻辑**：IOC 可与任何 volumeCondition 组合，GFD/GFS 也接受任意 volumeCondition
+4. **volumeCondition 自动设置**：convert_order_request_to_ctp() 根据前端 timeCondition 自动设置 volumeCondition
+
+### Commit 记录
+
+| Commit | 类型 | 描述 |
+|--------|------|------|
+| `dfb20ad` | fix(task-C1): TimeCondition 枚举值对齐 CTP 标准 — 13 files changed |
