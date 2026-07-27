@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 class StopOrderStatus(str, Enum):
     """Stop order status values."""
     PENDING = "pending"
+    TRIGGERING = "triggering"  # 中间状态，防止重复触发
     TRIGGERED = "triggered"
     CANCELED = "canceled"
     TRIGGER_FAILED = "trigger_failed"
@@ -246,12 +247,14 @@ class StopOrderService:
 
     def _trigger_order(self, order: StopOrder, last_price: float) -> None:
         """Execute the triggered stop order."""
-        # Check status before submitting order to prevent duplicate triggers
+        # Check status and set to TRIGGERING atomically to prevent duplicate triggers
         with self._lock:
             if order.status != StopOrderStatus.PENDING:
                 logger.debug("Stop order %s already in status %s, skipping trigger",
                              order.stop_order_id, order.status.value)
                 return
+            # Set intermediate state to prevent concurrent triggers
+            order.status = StopOrderStatus.TRIGGERING
 
         logger.info("Stop order triggered: id=%s instrument=%s price=%s stop=%s",
                      order.stop_order_id, order.instrument_id, last_price, order.stop_price)

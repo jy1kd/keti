@@ -783,10 +783,11 @@ frontend/src/modules/market/store.ts       # 增加周期切换方法
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 6 项 |
 | **严重等级** | 🔴 P1 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
 
 **问题描述**：
-- `refreshAll` 总耗时 11-16 秒，但 interval 每 10 秒触发
+- ~~`refreshAll` 总耗时 11-16 秒，但 interval 每 10 秒触发~~
+- ✅ 已修复：增加 `isRefreshing` 重入保护，改为递归 `setTimeout`
 - 不检查上一次是否完成，并发调用导致 CTP 查询冲突
 
 **修复方案**：
@@ -853,23 +854,26 @@ frontend/src/modules/query/QueryPanel.tsx  # interval 改 setTimeout
 | **来源** | check/docsCheck03 第 7 项 |
 | **严重等级** | 🔴 P2 |
 | **状态** | ✅ 已完成 |
-| **修复commit** | `fix(task-C9): 止损单触发竞态条件修复 — _trigger_order 状态检查` |
+| **修复commit** | `fix(task-C9): 止损单触发竞态条件修复 — TRIGGERING 中间状态` |
 
 **问题描述**：
 - `on_market_data` 释放锁后才执行触发循环，已取消的止损单仍可能被触发
 - 快速行情变动可能重复触发同一止损单
+- 竞态窗口：两个线程都通过 PENDING 检查后，都会调用 insert()，导致重复报单
 
 **修复方案**：
-1. `stop_order.py`：`_trigger_order` 开头增加状态检查，确保只有 PENDING 状态的止损单才能被触发
+1. `stop_order.py`：添加 `TRIGGERING` 中间状态
+2. `_trigger_order` 检查通过后立即设置为 `TRIGGERING`，防止并发触发
 
 **涉及文件**：
 ```
-server/services/stop_order.py              # 状态检查
+server/services/stop_order.py              # 添加 TRIGGERING 状态 + 原子性状态转换
 ```
 
 **验收标准**：
 - [x] 取消的止损单不会被触发
 - [x] 快速行情变动不会重复触发
+- [x] 并发触发只会执行一次
 
 ---
 
