@@ -472,7 +472,7 @@ server/tests/test_options_models.py     # 角色A — 补充 updateTime 测试�
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck02 |
 | **严重等级** | 🔴 阻断 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
 
 **问题描述**：
 

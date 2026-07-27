@@ -514,6 +514,44 @@ TDD 完成 + 审查修复后，接入 SimNow 7x24 环境进行实盘测试，发
 
 ---
 
+## PR-C3: 实现一键反向 / 一键锁仓接口
+
+**分支**：`fix/consistency-c3-reverse-lock`
+**依赖**：无
+**状态**：✅ 开发完成，待自验证
+
+### 测试用例列表
+
+| 测试文件 | 测试数 | 覆盖内容 |
+|----------|--------|----------|
+| `tests/test_order_api.py` | +8 | reverse/lock 端点（多头/空头/无持仓/TD未连接） |
+| **合计** | **8**（新增） | |
+
+### 实现进度
+
+#### 循环1：reverse/lock 实现（8 tests）
+- ✅ `api/order.py` — `reverse_position()` 替换 501 占位符，实现平仓+反向开仓
+- ✅ `api/order.py` — `lock_position()` 替换 501 占位符，实现反向开仓（锁仓）
+- ✅ `tests/test_order_api.py` — 新增 8 个测试覆盖多头/空头/无持仓/TD未连接场景
+- 📦 Commit: `575812b`
+
+### 关键设计决策
+
+1. **CTP posiDirection 映射**：posiDirection "2"=多头(买), "3"=空头(卖)
+   - 多头平仓 → direction="1"(卖), offset="1"(平仓)
+   - 空头平仓 → direction="0"(买), offset="1"(平仓)
+2. **reverse 逻辑**：先平仓（反方向+平仓标志），再开仓（同原方向+开仓标志）
+3. **lock 逻辑**：仅反方向开仓（不平原有持仓）
+4. **无持仓返回错误**：不抛异常，返回 `{success: false, message: "No position for ..."}`
+
+### Commit 记录
+
+| Commit | 类型 | 描述 |
+|--------|------|------|
+| `575812b` | feat(task-C3): 实现一键反向/一键锁仓接口 — 8 tests pass |
+
+---
+
 ## PR-C2: VolatilityData 补充 updateTime 字段
 
 **分支**：`fix/consistency-c2-volatility-updatetime`

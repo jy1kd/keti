@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 # Import at module level BEFORE any mock — uses real CTP or fallback
 from ctp_wrapper.trader_api import TraderApi
 from services.order_manager import OrderManager
+from services.query_service import QueryService
 from ws.manager import WebSocketManager
 from config import Config
 from fastapi import FastAPI
@@ -21,8 +22,12 @@ from api.order import router as order_router
 
 # ── Helpers ──────────────────────────────────────────────────────────────
 
-def _make_app_with_order_manager():
-    """Create a FastAPI test app with OrderManager wired in."""
+def _make_app_with_order_manager(positions=None):
+    """Create a FastAPI test app with OrderManager wired in.
+
+    Args:
+        positions: Optional list of position dicts to inject into QueryService.
+    """
     app = FastAPI()
     app.add_middleware(
         CORSMiddleware,
@@ -42,6 +47,13 @@ def _make_app_with_order_manager():
     om = OrderManager(trader)
     app.state.order_manager = om
     app.state.trader_api = trader
+
+    # Wire QueryService with optional positions
+    qs = QueryService()
+    if positions is not None:
+        qs._positions = positions
+    app.state.query_service = qs
+
     return app
 
 
@@ -293,33 +305,161 @@ class TestOrderCancelAllApi:
         assert "failedRefs" in data
 
 
-# ── Reverse (placeholder) ────────────────────────────────────────────────
+# ── Reverse ──────────────────────────────────────────────────────────────
 
 class TestOrderReverseApi:
-    """POST /api/order/reverse — placeholder for PR-11."""
+    """POST /api/order/reverse — close position then open opposite."""
 
     @pytest.mark.anyio
-    async def test_reverse_returns_not_implemented(self):
-        app = _make_app_with_order_manager()
+    async def test_reverse_with_long_position(self):
+        """Reverse a long position: close long + open short."""
+        positions = [{
+            "instrumentID": "IF2608",
+            "posiDirection": "2",  # 多头
+            "position": 1,
+            "exchangeID": "CFFEX",
+        }]
+        app = _make_app_with_order_manager(positions=positions)
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             resp = await client.post("/api/order/reverse", json={
                 "instrumentID": "IF2608",
             })
-        assert resp.status_code == 501
-
-
-# ── Lock (placeholder) ───────────────────────────────────────────────────
-
-class TestOrderLockApi:
-    """POST /api/order/lock — placeholder for PR-11."""
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+        assert len(data["orders"]) == 2
+        # First order: close long (direction=1, offset=1)
+        assert data["orders"][0]["action"] == "close"
+        # Second order: open short (direction=1, offset=0)
+        assert data["orders"][1]["action"] == "open"
 
     @pytest.mark.anyio
-    async def test_lock_returns_not_implemented(self):
+    async def test_reverse_with_short_position(self):
+        """Reverse a short position: close short + open long."""
+        positions = [{
+            "instrumentID": "IF2608",
+            "posiDirection": "3",  # 空头
+            "position": 2,
+            "exchangeID": "CFFEX",
+        }]
+        app = _make_app_with_order_manager(positions=positions)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/reverse", json={
+                "instrumentID": "IF2608",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+        assert len(data["orders"]) == 2
+        # First order: close short (direction=0, offset=1)
+        assert data["orders"][0]["action"] == "close"
+        # Second order: open long (direction=0, offset=0)
+        assert data["orders"][1]["action"] == "open"
+
+    @pytest.mark.anyio
+    async def test_reverse_no_position(self):
+        """Reverse with no position returns error."""
+        app = _make_app_with_order_manager(positions=[])
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/reverse", json={
+                "instrumentID": "IF2608",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is False
+        assert "No position" in data["message"]
+
+    @pytest.mark.anyio
+    async def test_reverse_td_not_connected(self):
+        """Reverse with TD not connected returns error."""
         app = _make_app_with_order_manager()
+        app.state.trader_api.login_status = "not_logged_in"
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/reverse", json={
+                "instrumentID": "IF2608",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is False
+        assert "TD not connected" in data["message"]
+
+
+# ── Lock ─────────────────────────────────────────────────────────────────
+
+class TestOrderLockApi:
+    """POST /api/order/lock — open opposite position without closing."""
+
+    @pytest.mark.anyio
+    async def test_lock_with_long_position(self):
+        """Lock a long position: open short (no close)."""
+        positions = [{
+            "instrumentID": "IF2608",
+            "posiDirection": "2",  # 多头
+            "position": 1,
+            "exchangeID": "CFFEX",
+        }]
+        app = _make_app_with_order_manager(positions=positions)
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             resp = await client.post("/api/order/lock", json={
                 "instrumentID": "IF2608",
             })
-        assert resp.status_code == 501
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+        assert len(data["orders"]) == 1
+        assert data["orders"][0]["action"] == "lock_open"
+
+    @pytest.mark.anyio
+    async def test_lock_with_short_position(self):
+        """Lock a short position: open long (no close)."""
+        positions = [{
+            "instrumentID": "IF2608",
+            "posiDirection": "3",  # 空头
+            "position": 2,
+            "exchangeID": "CFFEX",
+        }]
+        app = _make_app_with_order_manager(positions=positions)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/lock", json={
+                "instrumentID": "IF2608",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+        assert len(data["orders"]) == 1
+        assert data["orders"][0]["action"] == "lock_open"
+
+    @pytest.mark.anyio
+    async def test_lock_no_position(self):
+        """Lock with no position returns error."""
+        app = _make_app_with_order_manager(positions=[])
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/lock", json={
+                "instrumentID": "IF2608",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is False
+        assert "No position" in data["message"]
+
+    @pytest.mark.anyio
+    async def test_lock_td_not_connected(self):
+        """Lock with TD not connected returns error."""
+        app = _make_app_with_order_manager()
+        app.state.trader_api.login_status = "not_logged_in"
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/lock", json={
+                "instrumentID": "IF2608",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is False
+        assert "TD not connected" in data["message"]
