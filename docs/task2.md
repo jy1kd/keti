@@ -707,7 +707,8 @@ frontend/src/modules/query/QueryPanel.tsx # REST 路径时间解析对齐
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 3、4 项 |
 | **严重等级** | 🔴 P1 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | 86c7e6c |
 
 **问题描述**：
 - 报单：前端 `orderMapping.ts:120-134` 不发 exchangeID，后端默认 "CFFEX"
