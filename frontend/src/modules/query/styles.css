@@ -176,3 +176,38 @@
   color: #ef4444;
   border-color: #ef4444;
 }
+
+/* Profit / Loss coloring */
+.profit-positive { color: #ef4444; }
+.profit-negative { color: #22c55e; }
+
+/* ── Account grid ──────────────────────────────────── */
+
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  padding: 12px;
+}
+
+.account-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.account-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.account-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
