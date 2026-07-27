@@ -128,15 +128,15 @@ export interface StopOrderRequest {
 }
 
 export interface StopOrder {
-  stopOrderRef: string
+  stopOrderID: string
   instrumentID: string
-  direction: 'buy' | 'sell'
-  combOffsetFlag: 'open' | 'close' | 'close_today'
+  direction: string
+  offsetFlag: string
   limitPrice: number
-  volumeTotalOriginal: number
+  volume: number
   stopPrice: number
-  status: 'pending' | 'triggered' | 'trigger_failed' | 'canceled'
-  triggeredOrderRef?: string
+  status: string
+  orderRef?: string
   createdAt: string
   triggeredAt?: string
 }

@@ -4,6 +4,7 @@ import { QueryPanel } from './QueryPanel'
 import { useQueryStore } from './store'
 
 vi.mock('../../services/api', () => ({
+  API_BASE: 'http://localhost:8000',
   getOrders: vi.fn().mockResolvedValue({ orders: [], count: 0 }),
   getTrades: vi.fn().mockResolvedValue({ trades: [], count: 0 }),
   getPositions: vi.fn().mockResolvedValue({ positions: [], count: 0 }),

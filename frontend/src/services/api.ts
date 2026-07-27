@@ -388,15 +388,15 @@ interface AccountResponse {
 
 interface StopOrdersResponse {
   stopOrders: Array<{
-    stopOrderRef: string
+    stopOrderID: string
     instrumentID: string
     direction: string
-    combOffsetFlag: string
+    offsetFlag: string
     limitPrice: number
-    volumeTotalOriginal: number
+    volume: number
     stopPrice: number
     status: string
-    triggeredOrderRef?: string
+    orderRef?: string
     createdAt: string
     triggeredAt?: string
   }>
@@ -448,8 +448,8 @@ export async function getStopOrders(): Promise<StopOrdersResponse> {
 }
 
 /** 取消止损单 */
-export async function cancelStopOrder(stopOrderRef: string): Promise<CancelResponse> {
-  const { data } = await api.post<CancelResponse>('/api/order/stop/cancel', { stopOrderRef })
+export async function cancelStopOrder(stopOrderID: string): Promise<CancelResponse> {
+  const { data } = await api.post<CancelResponse>('/api/order/stop/cancel', { stopOrderID })
   return data
 }
 
