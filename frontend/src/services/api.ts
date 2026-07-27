@@ -274,9 +274,9 @@ export async function unsubscribeMarket(instruments: string[]): Promise<Unsubscr
 
 interface CancelAllResponse {
   success: boolean
-  cancelled: number
-  failed: number
-  errors: string[]
+  attempted: number
+  succeeded: number
+  failedRefs: string[]
 }
 
 interface OrderResult {

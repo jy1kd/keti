@@ -262,7 +262,7 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
     try {
       const result = await cancelAllOrders()
       if (result.success) {
-        toast.success(`已撤销 ${result.cancelled} 笔报单`)
+        toast.success(`已撤销 ${result.succeeded} 笔报单`)
         // Refresh to get updated status
         await get().fetchOrders()
         return true

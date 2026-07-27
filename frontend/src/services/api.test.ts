@@ -215,7 +215,7 @@ describe('cancelAllOrders', () => {
   })
 
   it('calls POST /api/order/cancel_all and returns result', async () => {
-    const mockData = { success: true, cancelled: 3, failed: 0, errors: [] }
+    const mockData = { success: true, attempted: 3, succeeded: 3, failedRefs: [] }
     vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
 
     const result = await cancelAllOrders()
@@ -225,13 +225,13 @@ describe('cancelAllOrders', () => {
   })
 
   it('returns partial failure info when some orders fail', async () => {
-    const mockData = { success: true, cancelled: 1, failed: 2, errors: ['ORD-002: rejected', 'ORD-003: rejected'] }
+    const mockData = { success: true, attempted: 3, succeeded: 1, failedRefs: ['ORD-002', 'ORD-003'] }
     vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
 
     const result = await cancelAllOrders()
 
-    expect(result.cancelled).toBe(1)
-    expect(result.failed).toBe(2)
+    expect(result.succeeded).toBe(1)
+    expect(result.failedRefs).toEqual(['ORD-002', 'ORD-003'])
   })
 })
 
