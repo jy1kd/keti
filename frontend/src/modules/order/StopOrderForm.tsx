@@ -10,7 +10,7 @@ export function StopOrderForm({ priceTick = 0.2 }: StopOrderFormProps) {
   const orderForm = useOrderStore((s) => s.orderForm)
   const isSubmitting = useOrderStore((s) => s.isSubmitting)
   const setOrderForm = useOrderStore((s) => s.setOrderForm)
-  const submitOrder = useOrderStore((s) => s.submitOrder)
+  const submitStopOrder = useOrderStore((s) => s.submitStopOrder)
 
   const isBuy = orderForm.direction === 'buy'
   const timeCondition = orderForm.timeCondition
@@ -208,7 +208,7 @@ export function StopOrderForm({ priceTick = 0.2 }: StopOrderFormProps) {
         type="button"
         className={`submit-btn ${isBuy ? 'buy' : 'sell'}`}
         disabled={isSubmitting}
-        onClick={submitOrder}
+        onClick={submitStopOrder}
       >
         {isSubmitting ? '提交中...' : `止损${isBuy ? '买入' : '卖出'} ${orderForm.instrumentID || ''}`}
       </button>

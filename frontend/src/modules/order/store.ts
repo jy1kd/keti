@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { submitOrder as apiSubmitOrder, cancelOrder as apiCancelOrder } from '../../services/api'
+import { submitOrder as apiSubmitOrder, cancelOrder as apiCancelOrder, submitStopOrder as apiSubmitStopOrder } from '../../services/api'
 import { toast } from '../../components/Toast'
 import type { OrderRequestForm } from '../../utils/orderMapping'
 
@@ -22,6 +22,7 @@ interface OrderStore {
   setOrderForm: (partial: Partial<OrderRequestForm>) => void
   resetOrderForm: () => void
   submitOrder: () => Promise<boolean>
+  submitStopOrder: () => Promise<boolean>
   cancelOrder: (orderRef: string) => Promise<boolean>
 }
 
@@ -74,6 +75,54 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     } catch (e) {
       const message = e instanceof Error ? e.message : '未知错误'
       toast.error(`报单失败：${message}`)
+      set({ isSubmitting: false })
+      return false
+    }
+  },
+
+  submitStopOrder: async () => {
+    const form = get().orderForm
+
+    // Client-side validation
+    if (!form.instrumentID) {
+      toast.error('止损单失败：请选择合约')
+      return false
+    }
+    if (!form.stopPrice || form.stopPrice <= 0) {
+      toast.error('止损单失败：请输入有效止损价')
+      return false
+    }
+    if (form.limitPrice <= 0) {
+      toast.error('止损单失败：请输入有效委托价')
+      return false
+    }
+
+    // 前端字符串 → CTP 字符码
+    const DIRECTION_MAP: Record<string, string> = { buy: '0', sell: '1' }
+    const OFFSET_MAP: Record<string, string> = { open: '0', close: '1', close_today: '3' }
+
+    set({ isSubmitting: true })
+    try {
+      const result = await apiSubmitStopOrder({
+        instrumentID: form.instrumentID,
+        direction: DIRECTION_MAP[form.direction] ?? '0',
+        offsetFlag: OFFSET_MAP[form.combOffsetFlag] ?? '0',
+        limitPrice: form.limitPrice,
+        volume: form.volumeTotalOriginal,
+        stopPrice: form.stopPrice,
+      })
+      if (result.success) {
+        toast.success(`止损单已提交 ${result.stopOrderID}`)
+        set({ orderForm: { ...DEFAULT_ORDER_FORM }, isSubmitting: false })
+        return true
+      } else {
+        toast.error(`止损单失败：${result.message || '未知错误'}`)
+        set({ isSubmitting: false })
+        return false
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : '未知错误'
+      toast.error(`止损单失败：${message}`)
       set({ isSubmitting: false })
       return false
     }

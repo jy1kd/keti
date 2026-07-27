@@ -447,6 +447,19 @@ export async function getStopOrders(): Promise<StopOrdersResponse> {
   return data
 }
 
+/** 提交止损单 */
+export async function submitStopOrder(params: {
+  instrumentID: string
+  direction: string
+  offsetFlag: string
+  limitPrice: number
+  volume: number
+  stopPrice: number
+}): Promise<{ success: boolean; stopOrderID?: string; message?: string }> {
+  const { data } = await api.post('/api/order/stop', params)
+  return data
+}
+
 /** 取消止损单 */
 export async function cancelStopOrder(stopOrderID: string): Promise<CancelResponse> {
   const { data } = await api.post<CancelResponse>('/api/order/stop/cancel', { stopOrderID })
