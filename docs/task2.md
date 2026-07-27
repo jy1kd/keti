@@ -954,16 +954,17 @@ docs/task.md                               # PR-14 productClass 修正
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 18-25 项 |
 | **严重等级** | 🔵 P3 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | `fix(task-C12): 代码质量清理 — 死代码、类型修正、未使用导入` |
 
 **修复内容**：
-1. 删除 `server/main.py:173-211` 的 `wire_ctp_market_bridge` 死代码
-2. 删除 `frontend/src/services/ws.ts:34-36` 的空 onopen
-3. 修正 `types.ts` 的 `PositionRecord.posiDirection` 类型为 `string`
-4. 修正 `types.ts` 的 `OrderRecord.orderStatus` 类型为 `string`
-5. 合并 `OrderRecord` 和 `OrderStatus` 重复类型
-6. 删除 `server/api/query.py:9` 的未使用 `Optional` 导入
-7. 修正 `useSystemWs.ts:66-69` 的 MD/TD 重连计数共用问题
+1. ✅ 删除 `server/main.py` 的 `wire_ctp_market_bridge` 死代码
+2. ✅ 删除 `frontend/src/services/ws.ts` 的空 onopen
+3. ✅ 修正 `types.ts` 的 `PositionRecord.posiDirection` 类型为 `string`
+4. ✅ 修正 `types.ts` 的 `OrderRecord.orderStatus` 类型为 `string`
+5. ✅ 合并 `OrderRecord` 和 `OrderStatus` 重复类型（OrderStatus = OrderRecord）
+6. ✅ 删除 `server/api/query.py` 的未使用 `Optional` 导入
+7. ✅ 修正 `useSystemWs.ts` 的 MD/TD 重连计数共用问题
 
 **涉及文件**：
 ```
@@ -975,7 +976,7 @@ frontend/src/hooks/useSystemWs.ts          # 重连计数分离
 ```
 
 **验收标准**：
-- [ ] 无死代码
-- [ ] 类型定义与实际数据一致
-- [ ] TypeScript 编译无错误
-- [ ] Python 无未使用导入警告
+- [x] 无死代码
+- [x] 类型定义与实际数据一致
+- [x] TypeScript 编译无错误
+- [x] Python 无未使用导入警告

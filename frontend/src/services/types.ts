@@ -93,28 +93,18 @@ export interface OrderRequest {
 export interface OrderRecord {
   orderRef: string
   instrumentID: string
-  direction: 'buy' | 'sell'
-  combOffsetFlag: 'open' | 'close' | 'close_today'
+  direction: string  // '0'=买, '1'=卖
+  combOffsetFlag: string  // '0'=开仓, '1'=平仓, '3'=平今
   limitPrice: number
   volumeTotalOriginal: number
   volumeTraded: number
-  orderStatus: 'submitted' | 'partial' | 'all_traded' | 'canceled' | 'rejected'
+  orderStatus: string  // '0'=全部成交, '1'=部分成交, '3'=未成交, '5'=已撤单
   statusMsg: string
   insertTime: string
 }
 
-export interface OrderStatus {
-  orderRef: string
-  instrumentID: string
-  direction: 'buy' | 'sell'
-  combOffsetFlag: 'open' | 'close' | 'close_today'
-  limitPrice: number
-  volumeTotalOriginal: number
-  volumeTraded: number
-  orderStatus: 'submitted' | 'partial' | 'all_traded' | 'canceled' | 'rejected'
-  statusMsg: string
-  insertTime: string
-}
+// OrderStatus 与 OrderRecord 相同，保留别名兼容旧代码
+export type OrderStatus = OrderRecord
 
 export interface StopOrderRequest {
   instrumentID: string
@@ -156,7 +146,7 @@ export interface TradeRecord {
 
 export interface PositionRecord {
   instrumentID: string
-  posiDirection: 'long' | 'short'
+  posiDirection: string  // '2'=多头, '3'=空头
   position: number
   positionCost: number
   positionProfit: number

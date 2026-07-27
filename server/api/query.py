@@ -6,7 +6,6 @@ Uses MarketService from app.state.market_service for instrument queries.
 
 import asyncio
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Request
 
