@@ -72,7 +72,7 @@ export interface VolatilityData {
   impliedVolatility: number
   timeToExpiry: number
   riskFreeRate: number
-  optionsType: string  // '1'=看涨(call), '2'=看跌(put)
+  optionType: string  // '1'=看涨(call), '2'=看跌(put)
   updateTime: string
 }
 
@@ -221,7 +221,7 @@ export interface OptionContract {
   instrumentID: string
   instrumentName: string
   underlying: string
-  optionsType: string  // '1'=看涨(call), '2'=看跌(put)
+  optionType: string  // '1'=看涨(call), '2'=看跌(put)
   strikePrice: number
   expireDate: string
   volumeMultiple: number
