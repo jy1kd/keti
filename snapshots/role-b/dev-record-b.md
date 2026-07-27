@@ -1016,3 +1016,117 @@
 
 **遗留问题**：
 - `store.ts` 及 `store.test.ts` 存在 4 个 TypeScript 类型错误，运行时正常
+
+---
+
+## PR-16: 前端查询面板实现
+
+**分支**：`feature/pr-16-query-panel`
+**开始时间**：2026-07-27
+**状态**：✅ 开发完成，待审查
+
+### TDD 测试用例清单
+
+| # | 模块 | 测试文件 | 测试数 | 状态 |
+|---|------|----------|--------|------|
+| 1 | QueryStore | store.test.ts | 21 | ✅ 全部通过 |
+| 2 | OrderFlow | OrderFlow.test.tsx | 11 | ✅ 全部通过 |
+| 3 | TradeFlow | TradeFlow.test.tsx | 5 | ✅ 全部通过 |
+| 4 | Position | Position.test.tsx | 5 | ✅ 全部通过 |
+| 5 | AccountQuery | AccountQuery.test.tsx | 4 | ✅ 全部通过 |
+| 6 | StopOrderList | StopOrderList.test.tsx | 6 | ✅ 全部通过 |
+| 7 | ContractQuery | ContractQuery.test.tsx | 6 | ✅ 全部通过 |
+| 8 | QueryPanel | QueryPanel.test.tsx | 13 | ✅ 全部通过 |
+| **合计** | | | **71** | **✅ 全部通过** |
+
+### Commit 记录
+
+| Commit | 类型 | 说明 |
+|--------|------|------|
+| b4fd085 | feat | 查询API函数 + QueryStore增强 — fetch/pause/cancel/incremental-update |
+| ffb1112 | feat | OrderFlow 报单流水组件 — 表格/撤单/批量撤单/高亮 |
+| 7451399 | feat | TradeFlow/Position/AccountQuery/StopOrderList 四个查询组件 |
+| 7b9e6c4 | feat | QueryPanel集成 — 7个Tab/暂停刷新/C键快捷撤单 |
+| cf60a7a | feat | ContractQuery 合约详情组件 + QueryPanel 集成 |
+| 0ad1d78 | docs | progress.md 更新 — PR-16 开发完成 |
+
+### 完成内容
+
+1. **新增 API 函数**（5个）：getTrades, getAccount, getStopOrders, cancelStopOrder, getContracts
+2. **QueryStore 增强**：orders/trades/positions/account/stopOrders 数据管理、暂停/恢复、全量刷新、增量更新、撤单操作、新数据高亮追踪
+3. **OrderFlow**：报单流水表格（10列）、撤单按钮（活跃报单）、撤销全部按钮、新数据高亮（2s fade）
+4. **TradeFlow**：成交流水表格（7列）、新数据高亮
+5. **Position**：持仓表格（9列）、平仓按钮（预填报单表单）、盈亏着色
+6. **AccountQuery**：资金信息网格展示（10项）、盈亏着色
+7. **StopOrderList**：止损单列表（10列）、取消按钮（仅 pending 状态）
+8. **ContractQuery**：合约详情展示（8项）、加载/错误/未找到状态处理
+9. **QueryPanel 集成**：7个Tab、暂停/刷新按钮、3秒自动刷新、C键快捷撤单
+
+### 验收标准对照
+
+全部 14 项验收标准通过（详见 task.md PR-16 验收标准）
+
+---
+
+## PR-16: 审查反馈修复
+
+**修复日期**：2026-07-27
+
+### 修复项
+
+| # | 问题 | 等级 | 修复内容 |
+|---|------|------|----------|
+| F1 | 报价 Tab 传 snapshot={null}，始终显示空数据 | 🔴 阻断 | QueryPanel 从 marketStore 取 selectedInstrument 对应的 snapshot 传给 DepthQuote |
+| F2 | store.ts import 顺序混乱 | 🟡 改进 | import { toast } 移到文件顶部 |
+| F3 | 乐观更新 orderStatus: 'canceled' 不匹配 CTP 编码 | 🟡 改进 | 改为 '5'（CTP 已撤单编码） |
+| Q1 | 平仓始终用 close，今仓需 close_today | 🔵 疑问 | Position onClose 根据 todayPosition > 0 判断使用 'close_today' 或 'close' |
+| Q2 | as unknown as 类型断言 | 🔵 疑问 | 保持现状，加注释说明 CTP 格式与前端类型不匹配的原因 |
+
+### 附加修复（PR-14 遗留）
+
+| # | 问题 | 修复内容 |
+|---|------|----------|
+| 1 | options store.ts TS 错误 | fetchOptionChains 改用 api.get 直接调用，绕过 ApiResponse 包装 |
+| 2 | options store.test.ts TS 错误 | mock 从 get 改为 api.get，返回值改为 { data: { chains } } 格式 |
+| 3 | useHotKeys.test.ts TS 错误 | 补全 HotKeyConfig 缺失的 sell/cancel 字段 |
+
+### 测试结果
+
+```
+Test Files  45 passed (45), 1 failed (pre-existing useMarketWs)
+     Tests  463 passed (463), 2 failed (pre-existing)
+TypeScript: 0 errors
+```
+
+---
+
+## PR-16: 人工验证修复
+
+**修复日期**：2026-07-27
+
+### 修复项
+
+| # | 问题 | 根因 | 修复 |
+|---|------|------|------|
+| 1 | 查询面板成交/持仓/资金/止损单无数据 | GET 端点只读缓存（初始为空） | store fetch 改用 POST /refresh 触发 CTP 查询 |
+| 2 | 点击资金 Tab 前端崩溃 | 后端 account or {balance:0,available:0} 返回缺8字段的部分对象 | 后端 None 时返回 success:false；前端加字段校验 |
+| 3 | 合约详情交易所数据异常 | 前端传 instruments 参数，后端期望 keyword | getContracts 参数名修正 |
+| 4 | 止损单无数据 | 后端响应字段名 orders，前端期望 stopOrders | 后端返回 key 改为 stopOrders |
+| 5 | CTP 并发查询超时 | Promise.all 同时发5个CTP查询，限频导致后续超时 | refreshAll 改为串行，间隔1.2s；刷新间隔3s→10s |
+| 6 | 后端 len(None) 崩溃 | query_trades/positions 返回 None 时 len(None) TypeError | 4个 POST /refresh 端点加 None 检查 |
+
+### 提交记录
+
+- acf7e00 fix: 查询数据改用POST /refresh + 合约详情2×4网格布局
+- 635ba37 fix: 资金Tab崩溃修复 + 合约查询参数修正
+- 076a7d3 fix: 后端查询API None处理
+- 40cd7fd fix: 止损单响应字段名 orders → stopOrders
+- e4a96ec fix: CTP查询串行执行 + 刷新间隔3s→10s
+
+### 最终测试结果
+
+```
+Test Files  8 passed (8) (query module)
+     Tests  73 passed (73)
+TypeScript: 0 errors
+```

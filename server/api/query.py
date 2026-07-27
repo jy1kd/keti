@@ -64,6 +64,9 @@ async def refresh_positions(request: Request):
     # Run blocking query in a thread to avoid blocking the event loop
     positions = await loop.run_in_executor(None, svc.query_positions, trader)
 
+    if positions is None:
+        return {"success": False, "message": "Position query failed or timed out"}
+
     # Push to WebSocket if available
     ws_manager = getattr(request.app.state, "ws_manager", None)
     if ws_manager and positions:
@@ -86,7 +89,7 @@ async def get_account(request: Request):
     """
     svc = _get_query_service(request)
     account = svc.account
-    return account or {"balance": 0.0, "available": 0.0}
+    return account or {"success": False, "message": "No account data cached"}
 
 
 @router.post("/account/refresh")
@@ -106,7 +109,10 @@ async def refresh_account(request: Request):
 
     account = await loop.run_in_executor(None, svc.query_account, trader)
 
-    return account or {"balance": 0.0, "available": 0.0}
+    if account is None:
+        return {"success": False, "message": "Account query failed or timed out"}
+
+    return account
 
 
 # ── Orders ──────────────────────────────────────────────────────────────
@@ -139,6 +145,9 @@ async def refresh_orders(request: Request):
     loop = asyncio.get_running_loop()
 
     orders = await loop.run_in_executor(None, svc.query_orders, trader)
+
+    if orders is None:
+        return {"success": False, "message": "Order query failed or timed out"}
 
     return {"orders": orders, "count": len(orders)}
 
@@ -173,6 +182,9 @@ async def refresh_trades(request: Request):
     loop = asyncio.get_running_loop()
 
     trades = await loop.run_in_executor(None, svc.query_trades, trader)
+
+    if trades is None:
+        return {"success": False, "message": "Trade query failed or timed out"}
 
     return {"trades": trades, "count": len(trades)}
 

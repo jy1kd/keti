@@ -586,9 +586,7 @@ def start_ctp_trading_connection(
         if order_manager is not None:
             order_manager.on_rsp_order_action(order_ref, error_id, error_msg)
 
-    def _on_err_rtn_order_action(pOrderAction, pRspInfo, nRequestID, bIsLast):
-        if not bIsLast:
-            return
+    def _on_err_rtn_order_action(pOrderAction, pRspInfo):
         order_ref = getattr(pOrderAction, "OrderRef", "")
         error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
         error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
@@ -782,9 +780,7 @@ def _attempt_reconnect_td(app: "FastAPI") -> bool:
             logger.warning("CTP order action rejected (ref=%s): %s", order_ref, error_msg)
         order_manager.on_rsp_order_action(order_ref, error_id, error_msg)
 
-    def _on_err_rtn_order_action(pOrderAction, pRspInfo, nRequestID, bIsLast):
-        if not bIsLast:
-            return
+    def _on_err_rtn_order_action(pOrderAction, pRspInfo):
         order_ref = getattr(pOrderAction, "OrderRef", "")
         error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
         error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
@@ -1008,9 +1004,7 @@ def connect_trading(
         if order_manager is not None:
             order_manager.on_rsp_order_action(order_ref, error_id, error_msg)
 
-    def _on_err_rtn_order_action(pOrderAction, pRspInfo, nRequestID, bIsLast):
-        if not bIsLast:
-            return
+    def _on_err_rtn_order_action(pOrderAction, pRspInfo):
         order_ref = getattr(pOrderAction, "OrderRef", "")
         error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
         error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""

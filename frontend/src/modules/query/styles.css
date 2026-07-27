@@ -36,3 +36,257 @@
   border-bottom-color: var(--accent);
   background-color: transparent;
 }
+
+/* ── Panel content ─────────────────────────────────── */
+
+.query-panel .panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.query-panel .panel-header h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.query-panel .panel-controls {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  padding-right: 8px;
+}
+
+.btn-pause,
+.btn-refresh {
+  padding: 3px 10px;
+  font-size: 11px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn-pause:hover,
+.btn-refresh:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.btn-pause.paused {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.btn-refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.query-panel .panel-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Flow components (OrderFlow, TradeFlow, etc.) ──── */
+
+.order-flow,
+.trade-flow,
+.position-table-wrap,
+.account-query,
+.stop-order-list,
+.quote-query,
+.contract-query {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  padding: 8px;
+}
+
+/* 合约详情 2×4 网格 */
+.contract-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.contract-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  background: var(--bg-panel);
+}
+
+.contract-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.contract-value {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.flow-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-panel);
+}
+
+.flow-count {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+.btn-cancel-all {
+  padding: 3px 10px;
+  font-size: 11px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-cancel-all:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.btn-cancel-all:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.flow-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.flow-table-wrap {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.flow-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.flow-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-panel);
+}
+
+.flow-table th {
+  padding: 6px 8px;
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.flow-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.flow-table tr:hover {
+  background: var(--bg-hover);
+}
+
+/* Direction coloring */
+.flow-table .col-direction.buy {
+  color: #ef4444;
+}
+.flow-table .col-direction.sell {
+  color: #22c55e;
+}
+
+/* New row highlight */
+.flow-table .row-new {
+  animation: highlight-fade 2s ease-out;
+}
+
+@keyframes highlight-fade {
+  0% { background: rgba(234, 179, 8, 0.2); }
+  100% { background: transparent; }
+}
+
+/* Cancel button */
+.btn-cancel {
+  padding: 2px 8px;
+  font-size: 11px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.btn-cancel:hover {
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+/* Profit / Loss coloring */
+.profit-positive { color: #ef4444; }
+.profit-negative { color: #22c55e; }
+
+/* ── Account grid ──────────────────────────────────── */
+
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  padding: 12px;
+}
+
+.account-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.account-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.account-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}

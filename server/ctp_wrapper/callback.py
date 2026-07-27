@@ -197,12 +197,11 @@ def _td_on_rsp_order_action(self, pInputOrderAction: Any, pRspInfo: Any,
                    nRequestID, bIsLast)
 
 
-def _td_on_err_rtn_order_action(self, pOrderAction: Any, pRspInfo: Any,
-                              nRequestID: int, bIsLast: bool) -> None:
+def _td_on_err_rtn_order_action(self, pOrderAction: Any, pRspInfo: Any) -> None:
     self._log("OnErrRtnOrderAction",
-              {"request_id": nRequestID, "is_last": bIsLast})
-    self._dispatch("OnErrRtnOrderAction", pOrderAction, pRspInfo,
-                   nRequestID, bIsLast)
+              {"error_id": getattr(pRspInfo, 'ErrorID', None),
+               "error_msg": getattr(pRspInfo, 'ErrorMsg', None)})
+    self._dispatch("OnErrRtnOrderAction", pOrderAction, pRspInfo)
 
 
 def _td_on_rsp_error(self, pRspInfo: Any, nRequestID: int, bIsLast: bool) -> None:

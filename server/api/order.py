@@ -337,4 +337,4 @@ async def list_stop_orders(request: Request):
         return {"orders": [], "count": 0}
 
     orders = stop_service.list_orders()
-    return {"orders": orders, "count": len(orders)}
+    return {"stopOrders": orders, "count": len(orders)}
