@@ -178,6 +178,36 @@ class TestVolatilityData:
         assert d["impliedVolatility"] == 0.25
         assert d["optionType"] == "1"
 
+    def test_to_dict_contains_update_time(self):
+        """to_dict 返回包含 updateTime 键。"""
+        vol = VolatilityData(
+            instrumentID="c2610-C-3900",
+            impliedVolatility=0.25,
+            underlyingPrice=3950.0,
+            strikePrice=3900.0,
+            timeToExpiry=0.5,
+            riskFreeRate=0.03,
+            optionType="1",
+            updateTime="14:30:00",
+        )
+        d = vol.to_dict()
+        assert "updateTime" in d
+        assert d["updateTime"] == "14:30:00"
+
+    def test_to_dict_update_time_default_empty(self):
+        """to_dict 默认 updateTime 为空字符串。"""
+        vol = VolatilityData(
+            instrumentID="c2610-C-3900",
+            impliedVolatility=0.25,
+            underlyingPrice=3950.0,
+            strikePrice=3900.0,
+            timeToExpiry=0.5,
+            riskFreeRate=0.03,
+            optionType="1",
+        )
+        d = vol.to_dict()
+        assert d["updateTime"] == ""
+
     def test_from_dict(self):
         """从字典反序列化。"""
         d = {
@@ -192,3 +222,32 @@ class TestVolatilityData:
         vol = VolatilityData.from_dict(d)
         assert vol.impliedVolatility == 0.25
         assert vol.underlyingPrice == 3950.0
+
+    def test_from_dict_with_update_time(self):
+        """from_dict 正确读取 updateTime。"""
+        d = {
+            "instrumentID": "c2610-C-3900",
+            "impliedVolatility": 0.25,
+            "underlyingPrice": 3950.0,
+            "strikePrice": 3900.0,
+            "timeToExpiry": 0.5,
+            "riskFreeRate": 0.03,
+            "optionType": "1",
+            "updateTime": "14:30:00",
+        }
+        vol = VolatilityData.from_dict(d)
+        assert vol.updateTime == "14:30:00"
+
+    def test_from_dict_update_time_default_empty(self):
+        """from_dict 缺少 updateTime 时默认为空字符串。"""
+        d = {
+            "instrumentID": "c2610-C-3900",
+            "impliedVolatility": 0.25,
+            "underlyingPrice": 3950.0,
+            "strikePrice": 3900.0,
+            "timeToExpiry": 0.5,
+            "riskFreeRate": 0.03,
+            "optionType": "1",
+        }
+        vol = VolatilityData.from_dict(d)
+        assert vol.updateTime == ""

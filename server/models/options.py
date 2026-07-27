@@ -94,6 +94,7 @@ class VolatilityData:
     timeToExpiry: float  # 年化（如 0.5 = 半年）
     riskFreeRate: float
     optionType: str  # '1'=看涨, '2'=看跌
+    updateTime: str = ""  # 数据计算时间 (HH:MM:SS)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -104,6 +105,7 @@ class VolatilityData:
             "timeToExpiry": self.timeToExpiry,
             "riskFreeRate": self.riskFreeRate,
             "optionType": self.optionType,
+            "updateTime": self.updateTime,
         }
 
     @classmethod
@@ -116,4 +118,5 @@ class VolatilityData:
             timeToExpiry=d["timeToExpiry"],
             riskFreeRate=d["riskFreeRate"],
             optionType=d["optionType"],
+            updateTime=d.get("updateTime", ""),
         )
