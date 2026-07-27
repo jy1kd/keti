@@ -22,7 +22,7 @@ export function ContractQuery({ instrumentID }: ContractQueryProps) {
     setLoading(true)
     setError(false)
 
-    getContracts([instrumentID])
+    getContracts(instrumentID)
       .then((res) => {
         if (cancelled) return
         setContract(res.contracts?.[0] ?? null)

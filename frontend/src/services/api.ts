@@ -453,9 +453,9 @@ export async function cancelStopOrder(stopOrderRef: string): Promise<CancelRespo
   return data
 }
 
-/** 查询合约信息 */
-export async function getContracts(instruments?: string[]): Promise<ContractsResponse> {
-  const params = instruments?.length ? { instruments: instruments.join(',') } : undefined
+/** 查询合约信息（keyword 搜索 instrumentID/instrumentName/exchangeID/productID） */
+export async function getContracts(keyword?: string): Promise<ContractsResponse> {
+  const params = keyword ? { keyword } : undefined
   const { data } = await api.get<ContractsResponse>('/api/query/contracts', { params })
   return data
 }

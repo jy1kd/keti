@@ -138,7 +138,10 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
     try {
       // POST /refresh 触发 CTP 查询（GET 只读缓存，初始为空）
       const res = await refreshOrders()
-      set({ orders: res.orders ?? [] })
+      // 后端在 trader 未登录时返回 {success: false}，需过滤
+      if (res && typeof res === 'object' && 'orders' in res) {
+        set({ orders: res.orders ?? [] })
+      }
     } catch {
       // Silently fail — keep existing data
     }
@@ -147,7 +150,9 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
   fetchTrades: async () => {
     try {
       const res = await refreshTrades()
-      set({ trades: res.trades ?? [] })
+      if (res && typeof res === 'object' && 'trades' in res) {
+        set({ trades: res.trades ?? [] })
+      }
     } catch {
       // Silently fail
     }
@@ -156,9 +161,11 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
   fetchPositions: async () => {
     try {
       const res = await refreshPositions()
-      // as unknown as: CTP 返回 posiDirection 为 '2'/'3' 字符串，但 PositionInfo 类型定义为 'long'/'short'
-      // 实际运行时数据是 CTP 格式，RawPosition 用 string 接收更准确
-      set({ positions: (res.positions ?? []) as unknown as RawPosition[] })
+      if (res && typeof res === 'object' && 'positions' in res) {
+        // as unknown as: CTP 返回 posiDirection 为 '2'/'3' 字符串，但 PositionInfo 类型定义为 'long'/'short'
+        // 实际运行时数据是 CTP 格式，RawPosition 用 string 接收更准确
+        set({ positions: (res.positions ?? []) as unknown as RawPosition[] })
+      }
     } catch {
       // Silently fail
     }
@@ -167,8 +174,10 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
   fetchAccount: async () => {
     try {
       const res = await refreshAccount()
-      // POST /refresh 直接返回账户对象（非 ApiResponse 包装）
-      set({ account: res ?? null })
+      // 后端在 trader 未登录时返回 {success: false, message: "..."}，需过滤
+      if (res && typeof res === 'object' && 'balance' in res) {
+        set({ account: res })
+      }
     } catch {
       // Silently fail
     }
