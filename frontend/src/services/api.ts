@@ -279,14 +279,21 @@ interface CancelAllResponse {
   errors: string[]
 }
 
+interface OrderResult {
+  action: string
+  success: boolean
+  orderRef: string
+  message?: string
+}
+
 interface ReverseResponse {
   success: boolean
-  message: string
+  orders: OrderResult[]
 }
 
 interface LockResponse {
   success: boolean
-  message: string
+  orders: OrderResult[]
 }
 
 interface PositionsResponse {

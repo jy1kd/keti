@@ -290,3 +290,22 @@
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
 }
+
+/* ── K线样式 ──────────────────────────────────── */
+
+.kline-query {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  padding: 8px;
+}
+
+.kline-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
