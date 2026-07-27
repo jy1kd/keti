@@ -5,6 +5,7 @@ import type { OrderRequestForm } from '../../utils/orderMapping'
 
 export const DEFAULT_ORDER_FORM: OrderRequestForm = {
   instrumentID: '',
+  exchangeID: 'CFFEX',
   direction: 'buy',
   combOffsetFlag: 'open',
   orderPriceType: 'limit',
@@ -105,6 +106,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     try {
       const result = await apiSubmitStopOrder({
         instrumentID: form.instrumentID,
+        exchangeID: form.exchangeID,
         direction: DIRECTION_MAP[form.direction] ?? '0',
         offsetFlag: OFFSET_MAP[form.combOffsetFlag] ?? '0',
         limitPrice: form.limitPrice,
