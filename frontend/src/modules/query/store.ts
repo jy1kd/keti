@@ -137,58 +137,53 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
   fetchOrders: async () => {
     try {
       const res = await refreshOrders()
-      console.debug('[QueryStore] fetchOrders response:', res)
       if (res && typeof res === 'object' && 'orders' in res) {
         set({ orders: res.orders ?? [] })
       }
-    } catch (e) {
-      console.error('[QueryStore] fetchOrders error:', e)
+    } catch {
+      // Silently fail
     }
   },
 
   fetchTrades: async () => {
     try {
       const res = await refreshTrades()
-      console.debug('[QueryStore] fetchTrades response:', res)
       if (res && typeof res === 'object' && 'trades' in res) {
         set({ trades: res.trades ?? [] })
       }
-    } catch (e) {
-      console.error('[QueryStore] fetchTrades error:', e)
+    } catch {
+      // Silently fail
     }
   },
 
   fetchPositions: async () => {
     try {
       const res = await refreshPositions()
-      console.debug('[QueryStore] fetchPositions response:', res)
       if (res && typeof res === 'object' && 'positions' in res) {
         set({ positions: (res.positions ?? []) as unknown as RawPosition[] })
       }
-    } catch (e) {
-      console.error('[QueryStore] fetchPositions error:', e)
+    } catch {
+      // Silently fail
     }
   },
 
   fetchAccount: async () => {
     try {
       const res = await refreshAccount()
-      console.debug('[QueryStore] fetchAccount response:', res)
       if (res && typeof res === 'object' && 'balance' in res) {
         set({ account: res })
       }
-    } catch (e) {
-      console.error('[QueryStore] fetchAccount error:', e)
+    } catch {
+      // Silently fail
     }
   },
 
   fetchStopOrders: async () => {
     try {
       const res = await getStopOrders()
-      console.debug('[QueryStore] fetchStopOrders response:', res)
       set({ stopOrders: (res.stopOrders ?? []) as unknown as StopOrder[] })
-    } catch (e) {
-      console.error('[QueryStore] fetchStopOrders error:', e)
+    } catch {
+      // Silently fail
     }
   },
 

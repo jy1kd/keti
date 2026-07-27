@@ -1097,3 +1097,36 @@ Test Files  45 passed (45), 1 failed (pre-existing useMarketWs)
      Tests  463 passed (463), 2 failed (pre-existing)
 TypeScript: 0 errors
 ```
+
+---
+
+## PR-16: 人工验证修复
+
+**修复日期**：2026-07-27
+
+### 修复项
+
+| # | 问题 | 根因 | 修复 |
+|---|------|------|------|
+| 1 | 查询面板成交/持仓/资金/止损单无数据 | GET 端点只读缓存（初始为空） | store fetch 改用 POST /refresh 触发 CTP 查询 |
+| 2 | 点击资金 Tab 前端崩溃 | 后端 account or {balance:0,available:0} 返回缺8字段的部分对象 | 后端 None 时返回 success:false；前端加字段校验 |
+| 3 | 合约详情交易所数据异常 | 前端传 instruments 参数，后端期望 keyword | getContracts 参数名修正 |
+| 4 | 止损单无数据 | 后端响应字段名 orders，前端期望 stopOrders | 后端返回 key 改为 stopOrders |
+| 5 | CTP 并发查询超时 | Promise.all 同时发5个CTP查询，限频导致后续超时 | refreshAll 改为串行，间隔1.2s；刷新间隔3s→10s |
+| 6 | 后端 len(None) 崩溃 | query_trades/positions 返回 None 时 len(None) TypeError | 4个 POST /refresh 端点加 None 检查 |
+
+### 提交记录
+
+- acf7e00 fix: 查询数据改用POST /refresh + 合约详情2×4网格布局
+- 635ba37 fix: 资金Tab崩溃修复 + 合约查询参数修正
+- 076a7d3 fix: 后端查询API None处理
+- 40cd7fd fix: 止损单响应字段名 orders → stopOrders
+- e4a96ec fix: CTP查询串行执行 + 刷新间隔3s→10s
+
+### 最终测试结果
+
+```
+Test Files  8 passed (8) (query module)
+     Tests  73 passed (73)
+TypeScript: 0 errors
+```
