@@ -387,6 +387,41 @@ class TestOrderReverseApi:
         assert data["success"] is False
         assert "TD not connected" in data["message"]
 
+    @pytest.mark.anyio
+    async def test_reverse_close_failed_no_open(self):
+        """When close order fails, open order should not be submitted."""
+        positions = [{
+            "instrumentID": "IF2608",
+            "posiDirection": "2",  # 多头
+            "position": 1,
+            "exchangeID": "CFFEX",
+        }]
+        app = _make_app_with_order_manager(positions=positions)
+        # Mock insert to fail on first call (close), succeed on second (open)
+        call_count = [0]
+        original_insert = app.state.order_manager.insert
+
+        def mock_insert(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # First call (close) fails
+                return {"success": False, "orderRef": "", "message": "Rejected"}
+            # Second call (open) succeeds
+            return {"success": True, "orderRef": "ref-002", "message": "Accepted"}
+
+        app.state.order_manager.insert = mock_insert
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/reverse", json={
+                "instrumentID": "IF2608",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        # Should have only 1 order (close failed, open not attempted)
+        assert len(data["orders"]) == 1
+        assert data["orders"][0]["action"] == "close"
+        assert data["orders"][0]["success"] is False
+
 
 # ── Lock ─────────────────────────────────────────────────────────────────
 

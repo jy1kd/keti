@@ -884,7 +884,8 @@ server/services/stop_order.py              # 状态检查
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 8 项 |
 | **严重等级** | 🟡 P2 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | `fix(task-C10): reverse 平仓失败时不开新仓` |
 
 **问题描述**：
 - 平仓和开仓独立发送，平仓被拒时开仓仍执行
@@ -894,12 +895,12 @@ server/services/stop_order.py              # 状态检查
 
 **涉及文件**：
 ```
-server/api/order.py                        # reverse/lock 增加依赖检查
+server/api/order.py                        # reverse 增加依赖检查
 ```
 
 **验收标准**：
-- [ ] 平仓失败时不开新仓
-- [ ] 一键反向不会增加仓位
+- [x] 平仓失败时不开新仓
+- [x] 一键反向不会增加仓位
 
 ---
 

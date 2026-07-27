@@ -199,10 +199,7 @@ async def reverse_position(request: Request, body: ReverseOrderRequest):
     """一键反向：平掉当前持仓，再以相反方向开仓。
 
     适用场景：快速切换持仓方向（多→空或空→多）。
-    操作顺序：先平仓，再以相反方向开仓。
-
-    ⚠️ 风险提示：平仓和开仓是两笔独立报单，如果平仓成功但开仓失败，
-    会导致持仓被平掉但没有反向开仓。建议在非行情剧烈波动时使用。
+    操作顺序：先平仓，平仓成功后再以相反方向开仓。
 
     CTP posiDirection: "2"=多头(买), "3"=空头(卖)
     """
@@ -237,6 +234,10 @@ async def reverse_position(request: Request, body: ReverseOrderRequest):
             hedge_flag="1",
         )
         results.append({"action": "close", **close_result})
+
+        # 只有平仓成功才开新仓
+        if not close_result.get("success"):
+            continue
 
         # 开仓：同原方向（反向后的新仓位）
         # 多头 → 开空(direction="1")
