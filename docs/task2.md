@@ -458,3 +458,150 @@ server/tests/test_options_models.py     # 角色A — 补充 updateTime 测试�
 - [ ] `VolatilityData.from_dict()` 正确读取 `updateTime`
 - [ ] `GET /api/market/volatility` 响应中每条数据包含 `updateTime` 字段
 - [ ] 所有相关测试通过
+
+---
+
+### PR-C3: 实现一键反向 / 一键锁仓接口
+
+| 项目 | 内容 |
+|------|------|
+| **PR编号** | PR-C3 |
+| **PR标题** | 实现一键反向 / 一键锁仓接口 |
+| **PR分支名** | `fix/consistency-c3-reverse-lock` |
+| **负责角色** | 角色A |
+| **依赖PR** | 无 |
+| **来源** | check/docsCheck02 |
+| **严重等级** | 🔴 阻断 |
+| **状态** | ⏳ 待开始 |
+
+**问题描述**：
+
+task.md PR-11 定义了 `POST /api/order/reverse`（一键反向）和 `POST /api/order/lock`（一键锁仓），但代码中两者都是 501 占位符，未实现任何逻辑。
+
+注释声称 "position data needed"，但持仓查询（QueryService.query_positions）已在 PR-12 实现，条件已具备。
+
+涉及文件：
+```
+server/api/order.py:166-187         # reverse 和 lock 都是 raise HTTPException(501)
+```
+
+**修复方案**：
+
+**1. `server/api/order.py` — 实现 reverse 逻辑**
+
+```python
+@router.post("/reverse")
+async def reverse_position(request: Request, body: ReverseOrderRequest):
+    """一键反向：平掉当前持仓，再以相反方向开仓。"""
+    trader_api = request.app.state.trader_api
+    if trader_api is None or trader_api.login_status != "logged_in":
+        return {"success": False, "message": "TD not connected"}
+
+    query_svc = request.app.state.query_service
+    om = request.app.state.order_manager
+    positions = query_svc.positions
+
+    # 找到该合约的持仓
+    target = [p for p in positions if p.get("instrumentID") == body.instrumentID]
+    if not target:
+        return {"success": False, "message": f"No position for {body.instrumentID}"}
+
+    results = []
+    for pos in target:
+        # pos 包含 direction, position(数量), exchangeID 等
+        pos_dir = pos.get("direction", "0")     # "0"=多, "1"=空
+        volume = pos.get("position", 0)
+        exchange_id = pos.get("exchangeID", "")
+        if volume <= 0:
+            continue
+
+        # 平仓：反方向
+        close_dir = "1" if pos_dir == "0" else "0"
+        close_result = om.insert(
+            instrument_id=body.instrumentID,
+            exchange_id=exchange_id,
+            direction=close_dir,
+            offset_flag="1",        # 平仓
+            price_type="1",         # 市价
+            limit_price=0.0,
+            volume=volume,
+            time_condition="1",     # GFD
+            volume_condition="1",
+            hedge_flag="1",
+        )
+        results.append({"action": "close", **close_result})
+
+        # 开仓：同原方向（反向后的新仓位）
+        open_result = om.insert(
+            instrument_id=body.instrumentID,
+            exchange_id=exchange_id,
+            direction=pos_dir,      # 原方向开仓 = 反向
+            offset_flag="0",        # 开仓
+            price_type="1",         # 市价
+            limit_price=0.0,
+            volume=volume,
+            time_condition="1",
+            volume_condition="1",
+            hedge_flag="1",
+        )
+        results.append({"action": "open", **open_result})
+
+    return {"success": True, "orders": results}
+```
+
+**2. `server/api/order.py` — 实现 lock 逻辑**
+
+```python
+@router.post("/lock")
+async def lock_position(request: Request, body: LockOrderRequest):
+    """一键锁仓：在反方向开同等数量仓位，不平原有持仓。"""
+    trader_api = request.app.state.trader_api
+    if trader_api is None or trader_api.login_status != "logged_in":
+        return {"success": False, "message": "TD not connected"}
+
+    query_svc = request.app.state.query_service
+    om = request.app.state.order_manager
+    positions = query_svc.positions
+
+    target = [p for p in positions if p.get("instrumentID") == body.instrumentID]
+    if not target:
+        return {"success": False, "message": f"No position for {body.instrumentID}"}
+
+    results = []
+    for pos in target:
+        pos_dir = pos.get("direction", "0")
+        volume = pos.get("position", 0)
+        exchange_id = pos.get("exchangeID", "")
+        if volume <= 0:
+            continue
+
+        # 锁仓：反方向开仓
+        lock_dir = "1" if pos_dir == "0" else "0"
+        result = om.insert(
+            instrument_id=body.instrumentID,
+            exchange_id=exchange_id,
+            direction=lock_dir,
+            offset_flag="0",        # 开仓
+            price_type="1",         # 市价
+            limit_price=0.0,
+            volume=volume,
+            time_condition="1",
+            volume_condition="1",
+            hedge_flag="1",
+        )
+        results.append({"action": "lock_open", **result})
+
+    return {"success": True, "orders": results}
+```
+
+**涉及文件**：
+```
+server/api/order.py             # 角色A — 替换 501 占位符为实际逻辑
+server/tests/test_order_api.py  # 角色A — 新增 reverse/lock 测试用例
+```
+
+**验收标准**：
+- [ ] `POST /api/order/reverse` 根据持仓平仓+反向开仓，不再返回 501
+- [ ] `POST /api/order/lock` 根据持仓反向开仓（锁仓），不再返回 501
+- [ ] 无持仓时返回明确错误信息
+- [ ] 新增测试覆盖：有持仓/无持仓两种场景
