@@ -163,26 +163,47 @@ async def cancel_all_orders(request: Request):
     return {"success": True, **result}
 
 
+def _get_valid_positions(request: Request, instrument_id: str):
+    """获取有效持仓，检查 TD 连接状态和持仓是否存在。
+
+    Returns:
+        tuple: (positions_list, error_response)
+        - 成功时 error_response 为 None
+        - 失败时 positions_list 为空列表，error_response 为错误信息
+    """
+    trader_api = request.app.state.trader_api
+    if trader_api is None or trader_api.login_status != "logged_in":
+        return [], "TD not connected"
+
+    query_svc = request.app.state.query_service
+    positions = query_svc.positions
+
+    target = [p for p in positions if p.get("instrumentID") == instrument_id]
+    if not target:
+        return [], f"No position for {instrument_id}"
+
+    return target, None
+
+
 @router.post("/reverse")
 async def reverse_position(request: Request, body: ReverseOrderRequest):
     """一键反向：平掉当前持仓，再以相反方向开仓。
 
+    适用场景：快速切换持仓方向（多→空或空→多）。
+    操作顺序：先平仓，再以相反方向开仓。
+
+    ⚠️ 风险提示：平仓和开仓是两笔独立报单，如果平仓成功但开仓失败，
+    会导致持仓被平掉但没有反向开仓。建议在非行情剧烈波动时使用。
+
     CTP posiDirection: "2"=多头(买), "3"=空头(卖)
     """
-    trader_api = request.app.state.trader_api
-    if trader_api is None or trader_api.login_status != "logged_in":
-        return {"success": False, "message": "TD not connected"}
+    target, error = _get_valid_positions(request, body.instrumentID)
+    if error:
+        return {"success": False, "message": error}
 
-    query_svc = request.app.state.query_service
     om = request.app.state.order_manager
-    positions = query_svc.positions
-
-    # 找到该合约的持仓
-    target = [p for p in positions if p.get("instrumentID") == body.instrumentID]
-    if not target:
-        return {"success": False, "message": f"No position for {body.instrumentID}"}
-
     results = []
+
     for pos in target:
         pos_dir = pos.get("posiDirection", "")  # "2"=多, "3"=空
         volume = pos.get("position", 0)
@@ -233,21 +254,18 @@ async def reverse_position(request: Request, body: ReverseOrderRequest):
 async def lock_position(request: Request, body: LockOrderRequest):
     """一键锁仓：在反方向开同等数量仓位，不平原有持仓。
 
+    适用场景：对冲风险，保留原有持仓的同时建立反向仓位。
+    操作顺序：仅反方向开仓，不平原有持仓。
+
     CTP posiDirection: "2"=多头(买), "3"=空头(卖)
     """
-    trader_api = request.app.state.trader_api
-    if trader_api is None or trader_api.login_status != "logged_in":
-        return {"success": False, "message": "TD not connected"}
+    target, error = _get_valid_positions(request, body.instrumentID)
+    if error:
+        return {"success": False, "message": error}
 
-    query_svc = request.app.state.query_service
     om = request.app.state.order_manager
-    positions = query_svc.positions
-
-    target = [p for p in positions if p.get("instrumentID") == body.instrumentID]
-    if not target:
-        return {"success": False, "message": f"No position for {body.instrumentID}"}
-
     results = []
+
     for pos in target:
         pos_dir = pos.get("posiDirection", "")  # "2"=多, "3"=空
         volume = pos.get("position", 0)
