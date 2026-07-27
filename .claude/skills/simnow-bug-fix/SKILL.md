@@ -6,6 +6,16 @@ disable-model-invocation: true
 
 # SimNow Bug 修复流程
 
+## 角色自适应
+
+⚠️ **本 skill 不固定角色。根据当前 PR 涉及的文件自动判断工作范围：**
+
+- PR 涉及 `server/` → 后端工作
+- PR 涉及 `frontend/` → 前端工作
+- PR 同时涉及 `server/` + `frontend/` → 前后端统一处理
+
+诊断阶段自动检测涉及文件并输出工作范围，不预设"我是角色A"或"我是角色B"。
+
 ## 首次交互
 Skill 加载后第一条回复：
 ```
