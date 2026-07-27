@@ -281,24 +281,31 @@
 
 ### PR-14: 前端期权T型报价实现
 
-**状态**：⏳ 待开始
+**状态**：✅ 已完成
 
 **PR信息**：
 - PR分支名：`feature/pr-14-option-tquote`
-- 依赖PR：PR-6
-- 工作量：2小时
+- 依赖PR：PR-6, PR-18
+- 工作量：约8小时（含多次人工验证修复）
 
 **完成内容**：
-- 待开发
+1. TQuoteTable 组件 — T型布局（看涨/行权价/看跌），vtable 增量更新
+2. OptionPanel 组件 — 可搜索标的选择器、到期日选择器、单合约显示
+3. Options Store — optionChains、volatility、fetchOptionChains、fetchVolatility
+4. 后端 API — /options、/option_chain、/volatility、/options/underlyings
+5. 标的搜索功能 — 输入关键字实时过滤标的列表
 
 **验证结果**：
-- 待验证
+- 代码审查：二审通过
+- 人工验证：卡死/黑屏/后端阻塞均已修复
+- 前端测试：49/49 通过
+- 后端测试：14/14 通过
 
 **提交记录**：
-- 待提交
+- 22 个提交，从 `22d8b4d` 到 `bf3b543`
 
-**交接说明**：
-- 待交接
+**遗留问题**：
+- `store.ts` 及 `store.test.ts` 存在 4 个 TypeScript 类型错误，运行时正常
 
 ---
 

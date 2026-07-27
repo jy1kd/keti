@@ -35,6 +35,73 @@
   cursor: not-allowed;
 }
 
+/* ── 可搜索下拉框 ──────────────────────────────────────────────────────── */
+
+.options-searchable-select {
+  position: relative;
+  display: inline-block;
+  margin-left: 4px;
+}
+
+.options-search-input {
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 13px;
+  width: 140px;
+  outline: none;
+}
+
+.options-search-input:focus {
+  border-color: var(--color-primary, #4a9eff);
+}
+
+.options-search-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.options-search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--bg-secondary, #1e1e2e);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.options-search-option {
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.options-search-option:hover {
+  background: var(--bg-tertiary, #2a2a3e);
+}
+
+.options-search-option.selected {
+  background: var(--color-primary, #4a9eff);
+  color: #fff;
+}
+
+.options-search-empty {
+  padding: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
 .options-refresh-btn {
   margin-left: 8px;
   padding: 4px 8px;

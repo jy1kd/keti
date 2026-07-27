@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useOptionsStore } from './store'
 import { useMarketStore } from '@/modules/market/store'
-import { subscribeMarket, getOptionUnderlyings } from '@/services/api'
+import { subscribeMarket, getOptionUnderlyings, getSnapshots } from '@/services/api'
 import { TQuoteTable } from './TQuoteTable'
 import type { OptionChain } from '@/services/types'
 import './styles.css'
@@ -45,8 +45,32 @@ export function OptionPanel() {
 
   // Market snapshots — real-time price data for chain quotes
   const snapshots = useMarketStore((s) => s.snapshots)
+  const batchUpdate = useMarketStore((s) => s.batchUpdate)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prevPriceRef = useRef<number | null>(null)
+
+  // Searchable underlying dropdown state
+  const [underlyingSearch, setUnderlyingSearch] = useState('')
+  const [showUnderlyingDropdown, setShowUnderlyingDropdown] = useState(false)
+  const underlyingDropdownRef = useRef<HTMLDivElement>(null)
+
+  const filteredUnderlyings = useMemo(() => {
+    if (!underlyingSearch.trim()) return availableUnderlyings
+    const q = underlyingSearch.trim().toUpperCase()
+    return availableUnderlyings.filter((u) => u.toUpperCase().includes(q))
+  }, [availableUnderlyings, underlyingSearch])
+
+  // Close underlying dropdown on outside click
+  useEffect(() => {
+    if (!showUnderlyingDropdown) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (underlyingDropdownRef.current && !underlyingDropdownRef.current.contains(e.target as Node)) {
+        setShowUnderlyingDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showUnderlyingDropdown])
 
   // Load available underlyings on mount with retry
   useEffect(() => {
@@ -96,7 +120,7 @@ export function OptionPanel() {
 
   // No auto-load on mount: user must select underlying + expiry manually.
 
-  // Subscribe to selected chain's option instruments + fetch IVs
+  // Subscribe to selected chain's option instruments + fetch snapshots + IVs
   useEffect(() => {
     if (!selectedChain) return
     const ids = [
@@ -105,9 +129,17 @@ export function OptionPanel() {
     ]
     if (ids.length > 0) {
       subscribeMarket(ids).catch(() => {})
+      // Proactively fetch current snapshots so the table shows data immediately,
+      // without waiting for WebSocket market_data push.
+      getSnapshots(ids)
+        .then((res) => {
+          const snaps = Object.values(res.snapshots)
+          if (snaps.length > 0) batchUpdate(snaps)
+        })
+        .catch(() => {})
     }
     fetchVolatility(selectedUnderlying ?? undefined)
-  }, [selectedChain, selectedUnderlying, fetchVolatility])
+  }, [selectedChain, selectedUnderlying, fetchVolatility, batchUpdate])
 
   // Real-time IV refresh: when underlying's lastPrice changes, debounce re-fetch volatility
   useEffect(() => {
@@ -126,12 +158,18 @@ export function OptionPanel() {
     }, REFRESH_DEBOUNCE_MS)
   }, [snapshots, selectedUnderlying, fetchVolatility])
 
-  const handleUnderlyingChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value || null
+  const selectUnderlying = (value: string) => {
     setSelectedUnderlying(value)
-    setSelectedExpireDate(null) // Reset expiry when underlying changes
+    setSelectedExpireDate(null)
+    setUnderlyingSearch('')
+    setShowUnderlyingDropdown(false)
     if (value) {
-      fetchOptionChains(value)
+      fetchOptionChains(value).then(() => {
+        const { optionChains: chains, setSelectedExpireDate: setED } = useOptionsStore.getState()
+        if (chains.length > 0) {
+          setED(chains[0].expireDate)
+        }
+      })
     }
   }
 
@@ -162,18 +200,44 @@ export function OptionPanel() {
       <div className="options-toolbar">
         <label>
           标的:
-          <select
-            value={selectedUnderlying ?? ''}
-            onChange={handleUnderlyingChange}
-            disabled={underlyingsLoading}
-          >
-            <option value="">
-              {underlyingsLoading ? '加载中...' : '请选择标的'}
-            </option>
-            {availableUnderlyings.map((u) => (
-              <option key={u} value={u}>{u}</option>
-            ))}
-          </select>
+          <div className="options-searchable-select" ref={underlyingDropdownRef}>
+            <input
+              type="text"
+              className="options-search-input"
+              placeholder={underlyingsLoading ? '加载中...' : '输入关键字搜索...'}
+              value={showUnderlyingDropdown ? underlyingSearch : (selectedUnderlying ?? '')}
+              disabled={underlyingsLoading}
+              onChange={(e) => {
+                setUnderlyingSearch(e.target.value)
+                setShowUnderlyingDropdown(true)
+              }}
+              onFocus={() => {
+                setUnderlyingSearch('')
+                setShowUnderlyingDropdown(true)
+              }}
+            />
+            {showUnderlyingDropdown && filteredUnderlyings.length > 0 && (
+              <div className="options-search-dropdown">
+                {filteredUnderlyings.map((u) => (
+                  <div
+                    key={u}
+                    className={`options-search-option${u === selectedUnderlying ? ' selected' : ''}`}
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      selectUnderlying(u)
+                    }}
+                  >
+                    {u}
+                  </div>
+                ))}
+              </div>
+            )}
+            {showUnderlyingDropdown && filteredUnderlyings.length === 0 && (
+              <div className="options-search-dropdown">
+                <div className="options-search-empty">无匹配标的</div>
+              </div>
+            )}
+          </div>
         </label>
 
         <label>

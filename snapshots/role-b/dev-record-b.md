@@ -840,7 +840,7 @@
 
 **分支**：`feature/pr-14-option-tquote`
 **修复时间**：2026-07-24
-**状态**：🛠️ 已修复，待验证
+**状态**：✅ 已修复
 
 ---
 
@@ -964,3 +964,55 @@
 
 - `423003d` `refactor(task-14): 期权面板简化 — 改为T型期权报价，只显示单个合约`
 - `1ea2ad5` `feat(task-14): 添加期权标的列表API + 前端挂载时加载下拉框选项`
+- `bf3b543` `feat(task-14): 期权标的列表加载重试机制 + 手动刷新按钮`
+
+---
+
+## PR-14: 标的搜索功能
+
+**分支**：`feature/pr-14-option-tquote`
+**开发时间**：2026-07-24
+**状态**：✅ 已完成
+
+---
+
+### 需求
+
+标的下拉框增加搜索过滤功能，支持输入关键字实时过滤标的列表。
+
+### 修改内容
+
+- `frontend/src/modules/options/OptionPanel.tsx`
+  - 将标的 `<select>` 替换为可搜索输入框 + 下拉列表
+  - 新增 `underlyingSearch`、`showUnderlyingDropdown` 状态
+  - 输入框获焦时展开下拉列表，输入文字实时过滤
+  - 点击选项后自动选中并加载期权链
+  - 点击外部区域自动关闭下拉列表
+
+- `frontend/src/modules/options/styles.css`
+  - 新增 `.options-searchable-select`、`.options-search-input`、`.options-search-dropdown`、`.options-search-option` 等样式
+
+### 测试
+
+- `src/modules/options/OptionPanel.test.tsx`：13 个测试全部通过
+
+---
+
+## PR-14 总结
+
+**状态**：✅ 开发完成，待合并
+
+**完成内容**：
+1. TQuoteTable 组件 — T型布局（看涨/行权价/看跌），vtable 增量更新
+2. OptionPanel 组件 — 可搜索标的选择器、到期日选择器、单合约显示
+3. Options Store — optionChains、volatility、fetchOptionChains、fetchVolatility
+4. 后端 API — /options、/option_chain、/volatility、/options/underlyings
+5. 代码审查 — 二审通过
+6. 人工验证 — 卡死/黑屏/后端阻塞均已修复
+
+**测试覆盖**：
+- 前端：49/49 通过（OptionPanel 13、TQuoteTable 11、store 23）
+- 后端：14/14 通过
+
+**遗留问题**：
+- `store.ts` 及 `store.test.ts` 存在 4 个 TypeScript 类型错误，运行时正常
