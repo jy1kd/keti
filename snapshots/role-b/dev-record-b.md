@@ -1016,3 +1016,52 @@
 
 **遗留问题**：
 - `store.ts` 及 `store.test.ts` 存在 4 个 TypeScript 类型错误，运行时正常
+
+---
+
+## PR-16: 前端查询面板实现
+
+**分支**：`feature/pr-16-query-panel`
+**开始时间**：2026-07-27
+**状态**：✅ 开发完成，待审查
+
+### TDD 测试用例清单
+
+| # | 模块 | 测试文件 | 测试数 | 状态 |
+|---|------|----------|--------|------|
+| 1 | QueryStore | store.test.ts | 21 | ✅ 全部通过 |
+| 2 | OrderFlow | OrderFlow.test.tsx | 11 | ✅ 全部通过 |
+| 3 | TradeFlow | TradeFlow.test.tsx | 5 | ✅ 全部通过 |
+| 4 | Position | Position.test.tsx | 5 | ✅ 全部通过 |
+| 5 | AccountQuery | AccountQuery.test.tsx | 4 | ✅ 全部通过 |
+| 6 | StopOrderList | StopOrderList.test.tsx | 6 | ✅ 全部通过 |
+| 7 | ContractQuery | ContractQuery.test.tsx | 6 | ✅ 全部通过 |
+| 8 | QueryPanel | QueryPanel.test.tsx | 13 | ✅ 全部通过 |
+| **合计** | | | **71** | **✅ 全部通过** |
+
+### Commit 记录
+
+| Commit | 类型 | 说明 |
+|--------|------|------|
+| b4fd085 | feat | 查询API函数 + QueryStore增强 — fetch/pause/cancel/incremental-update |
+| ffb1112 | feat | OrderFlow 报单流水组件 — 表格/撤单/批量撤单/高亮 |
+| 7451399 | feat | TradeFlow/Position/AccountQuery/StopOrderList 四个查询组件 |
+| 7b9e6c4 | feat | QueryPanel集成 — 7个Tab/暂停刷新/C键快捷撤单 |
+| cf60a7a | feat | ContractQuery 合约详情组件 + QueryPanel 集成 |
+| 0ad1d78 | docs | progress.md 更新 — PR-16 开发完成 |
+
+### 完成内容
+
+1. **新增 API 函数**（5个）：getTrades, getAccount, getStopOrders, cancelStopOrder, getContracts
+2. **QueryStore 增强**：orders/trades/positions/account/stopOrders 数据管理、暂停/恢复、全量刷新、增量更新、撤单操作、新数据高亮追踪
+3. **OrderFlow**：报单流水表格（10列）、撤单按钮（活跃报单）、撤销全部按钮、新数据高亮（2s fade）
+4. **TradeFlow**：成交流水表格（7列）、新数据高亮
+5. **Position**：持仓表格（9列）、平仓按钮（预填报单表单）、盈亏着色
+6. **AccountQuery**：资金信息网格展示（10项）、盈亏着色
+7. **StopOrderList**：止损单列表（10列）、取消按钮（仅 pending 状态）
+8. **ContractQuery**：合约详情展示（8项）、加载/错误/未找到状态处理
+9. **QueryPanel 集成**：7个Tab、暂停/刷新按钮、3秒自动刷新、C键快捷撤单
+
+### 验收标准对照
+
+全部 14 项验收标准通过（详见 task.md PR-16 验收标准）
