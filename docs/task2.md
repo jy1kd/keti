@@ -984,3 +984,105 @@ frontend/src/hooks/useSystemWs.ts          # 重连计数分离
 - [x] 类型定义与实际数据一致
 - [x] TypeScript 编译无错误
 - [x] Python 无未使用导入警告
+
+---
+
+### PR-C13: types.ts 类型定义修复（isTrading、optionType、StopOrderRequest、OrderRecord）
+
+| 项目 | 内容 |
+|------|------|
+| **PR编号** | PR-C13 |
+| **PR标题** | types.ts 类型定义修复 — isTrading/optionType/StopOrderRequest/OrderRecord |
+| **PR分支名** | `fix/consistency-c13-types-cleanup` |
+| **负责角色** | 角色B（frontend/） |
+| **依赖PR** | 无 |
+| **来源** | check/docsCheck04 第 1/2/3/6/7 项 |
+| **严重等级** | 🟡 不一致 |
+| **状态** | ⏳ 待开始 |
+
+**问题描述**：
+
+5 个类型定义问题合并为一个 PR：
+
+1. `isTrading` 类型不匹配 — 前端 `boolean`，后端返回 `int`（0/1）
+2. `optionType` / `optionsType` 枚举值不匹配 — 前端 `'call' | 'put'`，后端返回 `'1' | '2'`
+3. `StopOrderRequest` 类型定义与实际 API 不匹配 — 使用了错误的字段名
+4. `optionType` 命名不一致 — VolatilityData 用单数，OptionContract 用复数
+5. `OrderRecord` 字段覆盖不全 — 仅 10 个字段，后端返回 27 个
+
+**修复方案**：
+
+**1. `isTrading: boolean` → `isTrading: number`**
+```typescript
+// types.ts:185 ContractInfo
+isTrading: number  // 0=不可交易, 1=可交易
+
+// types.ts:208 OptionContract
+isTrading: number  // 0=不可交易, 1=可交易
+```
+
+**2. optionType 枚举值对齐 CTP**
+```typescript
+// types.ts:75 VolatilityData
+optionType: string  // '1'=看涨(call), '2'=看跌(put)
+
+// types.ts:203 OptionContract — 统一为 optionType（单数）
+optionType: string  // '1'=看涨(call), '2'=看跌(put)
+```
+
+**3. StopOrderRequest 类型对齐实际 API**
+```typescript
+// types.ts:109-118 修改为：
+export interface StopOrderRequest {
+  instrumentID: string
+  exchangeID?: string
+  direction: string      // '0'=买, '1'=卖
+  offsetFlag: string     // '0'=开仓, '1'=平仓, '3'=平今
+  limitPrice: number
+  volume: number
+  stopPrice: number
+}
+```
+
+**4. OrderRecord 补充缺失字段**
+```typescript
+// types.ts:93-104 补充后端 map_order() 返回的完整字段：
+export interface OrderRecord {
+  orderRef: string
+  orderSysID: string
+  orderLocalID: string
+  instrumentID: string
+  exchangeID: string
+  direction: string
+  combOffsetFlag: string
+  combHedgeFlag: string
+  limitPrice: number
+  volumeTotalOriginal: number
+  volumeTraded: number
+  volumeTotal: number
+  orderStatus: string
+  orderSubmitStatus: string
+  statusMsg: string
+  insertDate: string
+  insertTime: string
+  cancelTime: string
+  updateTime: string
+  tradingDay: string
+  frontID: number
+  sessionID: number
+  stopPrice: number
+}
+```
+
+**涉及文件**：
+```
+frontend/src/services/types.ts    # 修改 5 处类型定义
+```
+
+**验收标准**：
+- [ ] `isTrading` 类型为 `number`
+- [ ] `optionType` 统一使用单数，值为 `string`
+- [ ] `StopOrderRequest` 字段名与后端 `SubmitStopOrderRequest` 一致
+- [ ] `OrderRecord` 包含 `map_order()` 返回的全部字段
+- [ ] TypeScript 编译无错误
+- [ ] 前端运行正常

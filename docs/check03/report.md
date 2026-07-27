@@ -15,12 +15,12 @@
 | **影响** | 批量撤单 toast 显示 "已撤销 undefined 笔报单" |
 | **前端文件** | `frontend/src/services/api.ts:275-280` |
 | **后端文件** | `server/services/order_manager.py:401-404` |
-| **状态** | ⏳ 待处理 |
+| **状态** | ✅ 已修复 |
 
 **问题描述**：
-- 前端 `CancelAllResponse` 期望字段：`cancelled`(int) / `failed`(int) / `errors`(string[])
-- 后端 `cancel_all()` 返回字段：`attempted`(int) / `succeeded`(int) / `failedRefs`(string[])
-- `result.cancelled` 为 `undefined`，toast 显示异常
+- ~~前端 `CancelAllResponse` 期望字段：`cancelled`(int) / `failed`(int) / `errors`(string[])~~
+- ~~后端 `cancel_all()` 返回字段：`attempted`(int) / `succeeded`(int) / `failedRefs`(string[])~~
+- ✅ 已修复：前端字段已对齐为 `attempted` / `succeeded` / `failedRefs`，与后端一致
 
 ---
 
@@ -32,12 +32,12 @@
 | **影响** | K 线图表数据错位/重复，REST 和 WebSocket 路径产生不同时间戳 |
 | **后端文件** | `server/services/kline_service.py:58` |
 | **前端文件** | `frontend/src/hooks/useMarketWs.ts:23-25`、`frontend/src/modules/query/QueryPanel.tsx:66-69` |
-| **状态** | ⏳ 待处理 |
+| **状态** | ✅ 已修复 |
 
 **问题描述**：
-- 后端 `calendar.timegm()` 将 CTP 的中国时间（UTC+8）当作 UTC 处理，时间戳快 8 小时
-- 前端 WebSocket 路径直接用 CTP 原始时分秒，REST 路径用 `new Date()` 按浏览器本地时区解析
-- 同一根 K 线，两条路径产生不同的 `timestamp`，导致图表上出现重复/错位蜡烛
+- ~~后端 `calendar.timegm()` 将 CTP 的中国时间（UTC+8）当作 UTC 处理，时间戳快 8 小时~~
+- ~~前端 WebSocket 路径直接用 CTP 原始时分秒，REST 路径用 `new Date()` 按浏览器本地时区解析~~
+- ✅ 已修复：后端改用 `datetime(..., tzinfo=timezone(timedelta(hours=8)))`，前端两条路径均用时分秒构造偏移量，一致
 
 ---
 

@@ -246,14 +246,15 @@ server/
 **消息类型枚举**：
 ```typescript
 type WSMessageType =
-  | 'market_data'        // 行情推送
-  | 'order_return'       // 报单回报
-  | 'trade_return'       // 成交回报
-  | 'position_update'    // 持仓更新
-  | 'account_update'     // 账户资金更新
-  | 'stop_order_update'  // 止损单状态更新
-  | 'connection_status'  // 连接状态变化
-  | 'error';             // 错误消息
+  | 'market_data'           // 行情推送
+  | 'order_return'          // 报单回报
+  | 'trade_return'          // 成交回报
+  | 'position_update'       // 持仓更新
+  | 'stop_order_update'     // 止损单状态更新
+  | 'connection_status'     // 连接状态变化
+  | 'instruments_refreshed' // 合约列表刷新完成
+  | 'ping'                  // 心跳检测
+  | 'error';                // 错误消息
 ```
 
 **各消息类型数据格式**：
@@ -690,7 +691,7 @@ function handleNewData(newRecord) {
 **WebSocket推送**：分端点设计
 - `ws://localhost:8000/ws/market` - 行情推送（market_data）
 - `ws://localhost:8000/ws/order` - 报单回报（order_return, trade_return）
-- `ws://localhost:8000/ws/position` - 持仓更新（position_update, account_update）
+- `ws://localhost:8000/ws/position` - 持仓更新（position_update）
 - `ws://localhost:8000/ws/stop` - 止损单状态更新（stop_order_update）
 - `ws://localhost:8000/ws/system` - 系统消息（connection_status, error）
 - 连接后自动推送已订阅合约的行情更新
