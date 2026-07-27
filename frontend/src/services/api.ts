@@ -331,15 +331,27 @@ export async function lockPosition(instrumentID: string): Promise<LockResponse> 
   return data
 }
 
-/** 查询持仓列表 */
+/** 查询持仓列表（缓存） */
 export async function getPositions(): Promise<PositionsResponse> {
   const { data } = await api.get<PositionsResponse>('/api/query/positions')
   return data
 }
 
-/** 查询报单列表 */
+/** 刷新持仓（触发 CTP 查询） */
+export async function refreshPositions(): Promise<PositionsResponse> {
+  const { data } = await api.post<PositionsResponse>('/api/query/positions/refresh')
+  return data
+}
+
+/** 查询报单列表（缓存） */
 export async function getOrders(): Promise<OrdersResponse> {
   const { data } = await api.get<OrdersResponse>('/api/query/orders')
+  return data
+}
+
+/** 刷新报单（触发 CTP 查询） */
+export async function refreshOrders(): Promise<OrdersResponse> {
+  const { data } = await api.post<OrdersResponse>('/api/query/orders/refresh')
   return data
 }
 
@@ -360,20 +372,18 @@ interface TradesResponse {
 }
 
 interface AccountResponse {
-  data: {
-    accountID: string
-    balance: number
-    available: number
-    frozenMargin: number
-    currMargin: number
-    commission: number
-    closeProfit: number
-    positionProfit: number
-    deposit: number
-    withdraw: number
-    preBalance: number
-    tradingDay: string
-  }
+  accountID: string
+  balance: number
+  available: number
+  frozenMargin: number
+  currMargin: number
+  commission: number
+  closeProfit: number
+  positionProfit: number
+  deposit: number
+  withdraw: number
+  preBalance: number
+  tradingDay: string
 }
 
 interface StopOrdersResponse {
@@ -407,15 +417,27 @@ interface ContractsResponse {
   count: number
 }
 
-/** 查询成交流水 */
+/** 查询成交流水（缓存） */
 export async function getTrades(): Promise<TradesResponse> {
   const { data } = await api.get<TradesResponse>('/api/query/trades')
   return data
 }
 
-/** 查询账户资金 */
+/** 刷新成交（触发 CTP 查询） */
+export async function refreshTrades(): Promise<TradesResponse> {
+  const { data } = await api.post<TradesResponse>('/api/query/trades/refresh')
+  return data
+}
+
+/** 查询账户资金（缓存） */
 export async function getAccount(): Promise<AccountResponse> {
   const { data } = await api.get<AccountResponse>('/api/query/account')
+  return data
+}
+
+/** 刷新账户资金（触发 CTP 查询） */
+export async function refreshAccount(): Promise<AccountResponse> {
+  const { data } = await api.post<AccountResponse>('/api/query/account/refresh')
   return data
 }
 

@@ -73,18 +73,18 @@ export function ContractQuery({ instrumentID }: ContractQueryProps) {
 
   return (
     <div className="contract-query">
-      <div className="contract-detail">
+      <div className="contract-grid">
         <div className="contract-item">
           <span className="contract-label">合约代码</span>
           <span className="contract-value">{contract.instrumentID}</span>
         </div>
         <div className="contract-item">
-          <span className="contract-label">合约名称</span>
-          <span className="contract-value">{contract.instrumentName}</span>
-        </div>
-        <div className="contract-item">
           <span className="contract-label">交易所</span>
           <span className="contract-value">{contract.exchangeID}</span>
+        </div>
+        <div className="contract-item">
+          <span className="contract-label">合约名称</span>
+          <span className="contract-value">{contract.instrumentName}</span>
         </div>
         <div className="contract-item">
           <span className="contract-label">品种</span>
@@ -104,7 +104,9 @@ export function ContractQuery({ instrumentID }: ContractQueryProps) {
         </div>
         <div className="contract-item">
           <span className="contract-label">是否可交易</span>
-          <span className="contract-value">{contract.isTrading ? '是' : '否'}</span>
+          <span className={`contract-value ${contract.isTrading ? 'profit-positive' : 'profit-negative'}`}>
+            {contract.isTrading ? '是' : '否'}
+          </span>
         </div>
       </div>
     </div>

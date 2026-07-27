@@ -1,9 +1,9 @@
 import { create } from 'zustand'
 import {
-  getOrders,
-  getTrades,
-  getPositions,
-  getAccount,
+  refreshOrders,
+  refreshTrades,
+  refreshPositions,
+  refreshAccount,
   getStopOrders,
   cancelOrder,
   cancelAllOrders,
@@ -136,7 +136,8 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
 
   fetchOrders: async () => {
     try {
-      const res = await getOrders()
+      // POST /refresh 触发 CTP 查询（GET 只读缓存，初始为空）
+      const res = await refreshOrders()
       set({ orders: res.orders ?? [] })
     } catch {
       // Silently fail — keep existing data
@@ -145,7 +146,7 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
 
   fetchTrades: async () => {
     try {
-      const res = await getTrades()
+      const res = await refreshTrades()
       set({ trades: res.trades ?? [] })
     } catch {
       // Silently fail
@@ -154,7 +155,7 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
 
   fetchPositions: async () => {
     try {
-      const res = await getPositions()
+      const res = await refreshPositions()
       // as unknown as: CTP 返回 posiDirection 为 '2'/'3' 字符串，但 PositionInfo 类型定义为 'long'/'short'
       // 实际运行时数据是 CTP 格式，RawPosition 用 string 接收更准确
       set({ positions: (res.positions ?? []) as unknown as RawPosition[] })
@@ -165,8 +166,9 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
 
   fetchAccount: async () => {
     try {
-      const res = await getAccount()
-      set({ account: res.data ?? null })
+      const res = await refreshAccount()
+      // POST /refresh 直接返回账户对象（非 ApiResponse 包装）
+      set({ account: res ?? null })
     } catch {
       // Silently fail
     }

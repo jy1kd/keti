@@ -1,24 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useQueryStore } from './store'
 
-// Mock API functions
+// Mock API functions — store 使用 refresh* 函数（POST /refresh 触发 CTP 查询）
 vi.mock('../../services/api', () => ({
-  getOrders: vi.fn(),
-  getTrades: vi.fn(),
-  getPositions: vi.fn(),
-  getAccount: vi.fn(),
+  refreshOrders: vi.fn(),
+  refreshTrades: vi.fn(),
+  refreshPositions: vi.fn(),
+  refreshAccount: vi.fn(),
   getStopOrders: vi.fn(),
   cancelOrder: vi.fn(),
   cancelAllOrders: vi.fn(),
   cancelStopOrder: vi.fn(),
 }))
 
-import { getOrders, getTrades, getPositions, getAccount, getStopOrders, cancelOrder, cancelAllOrders, cancelStopOrder } from '../../services/api'
+import { refreshOrders, refreshTrades, refreshPositions, refreshAccount, getStopOrders, cancelOrder, cancelAllOrders, cancelStopOrder } from '../../services/api'
 
-const mockGetOrders = vi.mocked(getOrders)
-const mockGetTrades = vi.mocked(getTrades)
-const mockGetPositions = vi.mocked(getPositions)
-const mockGetAccount = vi.mocked(getAccount)
+const mockRefreshOrders = vi.mocked(refreshOrders)
+const mockRefreshTrades = vi.mocked(refreshTrades)
+const mockRefreshPositions = vi.mocked(refreshPositions)
+const mockRefreshAccount = vi.mocked(refreshAccount)
 const mockGetStopOrders = vi.mocked(getStopOrders)
 const mockCancelOrder = vi.mocked(cancelOrder)
 const mockCancelAllOrders = vi.mocked(cancelAllOrders)
@@ -79,7 +79,7 @@ describe('QueryStore', () => {
     const mockOrders = [
       { orderRef: '1001', instrumentID: 'IF2608', direction: '0', combOffsetFlag: '0', limitPrice: 4800, volumeTotalOriginal: 1, volumeTraded: 0, orderStatus: '0', statusMsg: '', insertTime: '09:30:00' },
     ]
-    mockGetOrders.mockResolvedValue({ orders: mockOrders, count: 1 })
+    mockRefreshOrders.mockResolvedValue({ orders: mockOrders, count: 1 })
 
     await useQueryStore.getState().fetchOrders()
 
@@ -89,7 +89,7 @@ describe('QueryStore', () => {
   })
 
   it('fetchOrders handles API error gracefully', async () => {
-    mockGetOrders.mockRejectedValue(new Error('network'))
+    mockRefreshOrders.mockRejectedValue(new Error('network'))
 
     await useQueryStore.getState().fetchOrders()
 
@@ -102,7 +102,7 @@ describe('QueryStore', () => {
     const mockTrades = [
       { tradeID: 'T001', orderRef: '1001', instrumentID: 'IF2608', direction: '0', offsetFlag: '0', price: 4800, volume: 1, tradeTime: '09:30:01' },
     ]
-    mockGetTrades.mockResolvedValue({ trades: mockTrades, count: 1 })
+    mockRefreshTrades.mockResolvedValue({ trades: mockTrades, count: 1 })
 
     await useQueryStore.getState().fetchTrades()
 
@@ -115,7 +115,7 @@ describe('QueryStore', () => {
     const mockPositions = [
       { instrumentID: 'IF2608', posiDirection: '2', position: 2, positionCost: 9600, positionProfit: 100, openCost: 9600, useMargin: 96000, todayPosition: 1, ydPosition: 1, tradingDay: '20260727' },
     ]
-    mockGetPositions.mockResolvedValue({ positions: mockPositions, count: 1 })
+    mockRefreshPositions.mockResolvedValue({ positions: mockPositions, count: 1 })
 
     await useQueryStore.getState().fetchPositions()
 
@@ -131,7 +131,7 @@ describe('QueryStore', () => {
       currMargin: 40000, commission: 100, closeProfit: 500, positionProfit: 200,
       deposit: 0, withdraw: 0, preBalance: 99800, tradingDay: '20260727',
     }
-    mockGetAccount.mockResolvedValue({ data: mockAccount })
+    mockRefreshAccount.mockResolvedValue(mockAccount)
 
     await useQueryStore.getState().fetchAccount()
 
@@ -156,18 +156,18 @@ describe('QueryStore', () => {
   // ── Refresh All ────────────────────────────────────────────────
 
   it('refreshAll calls all fetch methods', async () => {
-    mockGetOrders.mockResolvedValue({ orders: [], count: 0 })
-    mockGetTrades.mockResolvedValue({ trades: [], count: 0 })
-    mockGetPositions.mockResolvedValue({ positions: [], count: 0 })
-    mockGetAccount.mockResolvedValue({ data: null as never })
+    mockRefreshOrders.mockResolvedValue({ orders: [], count: 0 })
+    mockRefreshTrades.mockResolvedValue({ trades: [], count: 0 })
+    mockRefreshPositions.mockResolvedValue({ positions: [], count: 0 })
+    mockRefreshAccount.mockResolvedValue(null as never)
     mockGetStopOrders.mockResolvedValue({ stopOrders: [], count: 0 })
 
     await useQueryStore.getState().refreshAll()
 
-    expect(mockGetOrders).toHaveBeenCalled()
-    expect(mockGetTrades).toHaveBeenCalled()
-    expect(mockGetPositions).toHaveBeenCalled()
-    expect(mockGetAccount).toHaveBeenCalled()
+    expect(mockRefreshOrders).toHaveBeenCalled()
+    expect(mockRefreshTrades).toHaveBeenCalled()
+    expect(mockRefreshPositions).toHaveBeenCalled()
+    expect(mockRefreshAccount).toHaveBeenCalled()
     expect(mockGetStopOrders).toHaveBeenCalled()
   })
 
@@ -176,7 +176,7 @@ describe('QueryStore', () => {
 
     await useQueryStore.getState().refreshAll()
 
-    expect(mockGetOrders).not.toHaveBeenCalled()
+    expect(mockRefreshOrders).not.toHaveBeenCalled()
   })
 
   // ── Cancel Order ───────────────────────────────────────────────
