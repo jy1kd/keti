@@ -212,3 +212,25 @@ describe('MarketStore - klineData', () => {
   })
 })
 
+describe('MarketStore - currentPeriod', () => {
+  beforeEach(() => {
+    useMarketStore.setState({
+      currentPeriod: '5m',
+    })
+  })
+
+  it('has default period 5m', () => {
+    expect(useMarketStore.getState().currentPeriod).toBe('5m')
+  })
+
+  it('setPeriod updates currentPeriod', () => {
+    useMarketStore.getState().setPeriod('1m')
+    expect(useMarketStore.getState().currentPeriod).toBe('1m')
+  })
+
+  it('setPeriod to 1h', () => {
+    useMarketStore.getState().setPeriod('1h')
+    expect(useMarketStore.getState().currentPeriod).toBe('1h')
+  })
+})
+

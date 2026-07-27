@@ -12,6 +12,8 @@ interface MarketStore {
   klineData: Map<string, KLineData[]>
   setKlineData: (instrument: string, data: KLineData[]) => void
   appendKline: (instrument: string, candle: KLineData) => void
+  currentPeriod: string
+  setPeriod: (period: string) => void
 }
 
 export const useMarketStore = create<MarketStore>((set) => ({
@@ -77,4 +79,6 @@ export const useMarketStore = create<MarketStore>((set) => ({
       next.set(instrument, updated)
       return { klineData: next }
     }),
+  currentPeriod: '5m',
+  setPeriod: (period) => set({ currentPeriod: period }),
 }))

@@ -46,16 +46,16 @@ describe('toCtpPriceType', () => {
 })
 
 describe('toCtpTimeCondition', () => {
-  it("converts 'gfd' to '1'", () => {
-    expect(toCtpTimeCondition('gfd')).toBe('1')
+  it("converts 'gfd' to '3'", () => {
+    expect(toCtpTimeCondition('gfd')).toBe('3')
   })
 
-  it("converts 'fok' to '2'", () => {
-    expect(toCtpTimeCondition('fok')).toBe('2')
+  it("converts 'fok' to '1' (IOC)", () => {
+    expect(toCtpTimeCondition('fok')).toBe('1')
   })
 
-  it("converts 'fak' to '3'", () => {
-    expect(toCtpTimeCondition('fak')).toBe('3')
+  it("converts 'fak' to '1' (IOC)", () => {
+    expect(toCtpTimeCondition('fak')).toBe('1')
   })
 })
 
@@ -134,7 +134,7 @@ describe('convertOrderRequest', () => {
       direction: '0',
       offsetFlag: '0',
       priceType: '2',
-      timeCondition: '1',
+      timeCondition: '3',
       volumeCondition: '1',
       hedgeFlag: '1',
       limitPrice: 4800.0,
@@ -262,7 +262,7 @@ describe('convertOrderRequest', () => {
       direction: '1',
       offsetFlag: '3',
       priceType: '1',
-      timeCondition: '2',
+      timeCondition: '1',
       volumeCondition: '3',
       hedgeFlag: '1',
       limitPrice: 0,

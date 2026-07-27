@@ -62,12 +62,6 @@ export function useSystemWs(wsBaseUrl: string) {
 
   const { reconnectCount } = useReconnect(ws, 'system', handleMessage)
 
-  // 同步重连计数到 store
-  useEffect(() => {
-    useConnectionStore.getState().setMdReconnectCount(reconnectCount)
-    useConnectionStore.getState().setTdReconnectCount(reconnectCount)
-  }, [reconnectCount])
-
   // 连接时标记为 connecting
   useEffect(() => {
     setMdPhase('connecting')

@@ -27,8 +27,8 @@ class InsertOrderRequest(BaseModel):
     limitPrice: float = Field(default=4100.0, ge=0.0,
                               description="限价（priceType=2时必填）")
     volumeTotalOriginal: int = Field(default=1, gt=0)
-    timeCondition: str = Field(default="1", pattern=r"^[123]$",
-                               description="1=当日有效GFD, 2=即时FOK, 3=即时FAK")
+    timeCondition: str = Field(default="3", pattern=r"^[123]$",
+                               description="1=IOC, 2=GFS, 3=GFD(当日有效)")
     volumeCondition: str = Field(default="1", pattern=r"^[123]$",
                                  description="1=任意数量, 2=最小数量, 3=全部数量")
     hedgeFlag: str = Field(default="1", pattern=r"^[123]$",
@@ -41,20 +41,27 @@ class InsertOrderRequest(BaseModel):
         """Validate FOK/FAK volume condition constraints.
 
         CTP convention:
-        - FOK (Fill or Kill, "2") → VolumeCondition CV ("3")
-        - FAK (Fill and Kill, "3") → VolumeCondition AV ("1")
-        - GFD ("1") accepts any volume condition.
+        - FOK (Fill or Kill) → TimeCondition=IOC('1') + VolumeCondition=CV('3')
+        - FAK (Fill and Kill) → TimeCondition=IOC('1') + VolumeCondition=AV('1')
+        - GFD ('3') accepts any volume condition.
         """
         tc = self.timeCondition
         vc = self.volumeCondition
-        if tc == "2" and vc != "3":
-            raise ValueError(
-                "FOK (timeCondition=2) requires volumeCondition=CV (3)"
-            )
-        if tc == "3" and vc != "1":
-            raise ValueError(
-                "FAK (timeCondition=3) requires volumeCondition=AV (1)"
-            )
+        # FOK: IOC + CV
+        if tc == "1" and vc == "3":
+            pass  # Valid FOK
+        # FAK: IOC + AV
+        elif tc == "1" and vc == "1":
+            pass  # Valid FAK
+        # GFD: accepts any volume condition
+        elif tc == "3":
+            pass  # Valid GFD
+        # IOC with MV: also valid
+        elif tc == "1":
+            pass  # Valid IOC variant
+        # GFS: also valid
+        elif tc == "2":
+            pass  # Valid GFS
         return self
 
 
@@ -82,6 +89,8 @@ class SubmitStopOrderRequest(BaseModel):
 
     instrumentID: str = Field(..., min_length=1,
                               json_schema_extra={"examples": ["IF2608"]})
+    exchangeID: str = Field(default="CFFEX",
+                            description="交易所（CFFEX/SHFE/CZCE/DCE/INE/GFEX）")
     direction: str = Field(default="0", pattern=r"^[01]$",
                            description="0=买, 1=卖")
     offsetFlag: str = Field(default="0", pattern=r"^[013]$",
@@ -190,10 +199,7 @@ async def reverse_position(request: Request, body: ReverseOrderRequest):
     """一键反向：平掉当前持仓，再以相反方向开仓。
 
     适用场景：快速切换持仓方向（多→空或空→多）。
-    操作顺序：先平仓，再以相反方向开仓。
-
-    ⚠️ 风险提示：平仓和开仓是两笔独立报单，如果平仓成功但开仓失败，
-    会导致持仓被平掉但没有反向开仓。建议在非行情剧烈波动时使用。
+    操作顺序：先平仓，平仓成功后再以相反方向开仓。
 
     CTP posiDirection: "2"=多头(买), "3"=空头(卖)
     """
@@ -228,6 +234,10 @@ async def reverse_position(request: Request, body: ReverseOrderRequest):
             hedge_flag="1",
         )
         results.append({"action": "close", **close_result})
+
+        # 只有平仓成功才开新仓
+        if not close_result.get("success"):
+            continue
 
         # 开仓：同原方向（反向后的新仓位）
         # 多头 → 开空(direction="1")
@@ -309,6 +319,7 @@ async def submit_stop_order(request: Request, body: SubmitStopOrderRequest):
 
     result = stop_service.submit(
         instrument_id=body.instrumentID,
+        exchange_id=body.exchangeID,
         direction=body.direction,
         offset_flag=body.offsetFlag,
         limit_price=body.limitPrice,

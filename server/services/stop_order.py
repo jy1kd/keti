@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 class StopOrderStatus(str, Enum):
     """Stop order status values."""
     PENDING = "pending"
+    TRIGGERING = "triggering"  # 中间状态，防止重复触发
     TRIGGERED = "triggered"
     CANCELED = "canceled"
     TRIGGER_FAILED = "trigger_failed"
@@ -48,6 +49,7 @@ class StopOrder:
         limit_price: float,
         volume: int,
         stop_price: float,
+        exchange_id: str = "CFFEX",
         status: StopOrderStatus = StopOrderStatus.PENDING,
         created_at: Optional[str] = None,
         triggered_at: Optional[str] = None,
@@ -55,6 +57,7 @@ class StopOrder:
     ) -> None:
         self.stop_order_id = stop_order_id
         self.instrument_id = instrument_id
+        self.exchange_id = exchange_id
         self.direction = direction
         self.offset_flag = offset_flag
         self.limit_price = limit_price
@@ -70,6 +73,7 @@ class StopOrder:
         return {
             "stopOrderID": self.stop_order_id,
             "instrumentID": self.instrument_id,
+            "exchangeID": self.exchange_id,
             "direction": self.direction,
             "offsetFlag": self.offset_flag,
             "limitPrice": self.limit_price,
@@ -87,6 +91,7 @@ class StopOrder:
         return cls(
             stop_order_id=d["stopOrderID"],
             instrument_id=d["instrumentID"],
+            exchange_id=d.get("exchangeID", "CFFEX"),
             direction=d["direction"],
             offset_flag=d["offsetFlag"],
             limit_price=d["limitPrice"],
@@ -139,6 +144,7 @@ class StopOrderService:
         limit_price: float,
         volume: int,
         stop_price: float,
+        exchange_id: str = "CFFEX",
     ) -> dict:
         """Submit a new stop order.
 
@@ -149,6 +155,7 @@ class StopOrderService:
         order = StopOrder(
             stop_order_id=stop_id,
             instrument_id=instrument_id,
+            exchange_id=exchange_id,
             direction=direction,
             offset_flag=offset_flag,
             limit_price=limit_price,
@@ -240,12 +247,22 @@ class StopOrderService:
 
     def _trigger_order(self, order: StopOrder, last_price: float) -> None:
         """Execute the triggered stop order."""
+        # Check status and set to TRIGGERING atomically to prevent duplicate triggers
+        with self._lock:
+            if order.status != StopOrderStatus.PENDING:
+                logger.debug("Stop order %s already in status %s, skipping trigger",
+                             order.stop_order_id, order.status.value)
+                return
+            # Set intermediate state to prevent concurrent triggers
+            order.status = StopOrderStatus.TRIGGERING
+
         logger.info("Stop order triggered: id=%s instrument=%s price=%s stop=%s",
                      order.stop_order_id, order.instrument_id, last_price, order.stop_price)
 
         # Submit the actual order
         result = self._order_manager.insert(
             instrument_id=order.instrument_id,
+            exchange_id=order.exchange_id,
             direction=order.direction,
             offset_flag=order.offset_flag,
             price_type="2",  # Limit order

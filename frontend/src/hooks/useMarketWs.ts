@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { WSManager } from '@/services/ws'
 import { useMarketStore } from '@/modules/market/store'
+import { useContractsStore } from '@/stores/contracts'
+import { toast } from '@/components/Toast'
 import { useReconnect } from './useReconnect'
 import type { MarketSnapshot, KLineData, WSMessage } from '@/services/types'
 
@@ -41,30 +43,46 @@ function snapshotToKline(snap: MarketSnapshot, periodMs: number): KLineData {
 /** 批量刷新间隔（毫秒）— 100ms 内的所有行情消息合并为一次状态更新 */
 const FLUSH_INTERVAL_MS = 100
 
+/** 全局单例 WSManager 实例 */
+let globalWs: WSManager | null = null
+
 /**
- * WebSocket 行情推送 Hook
- * 连接 ws/market 端点，收到 market_data 消息时更新行情 store。
+ * 重置全局 WSManager 实例（仅用于测试）
+ */
+export function resetGlobalWs(): void {
+  if (globalWs) {
+    globalWs.disconnectAll()
+    globalWs = null
+  }
+}
+
+/**
+ * WebSocket 行情推送 Hook（单例模式）
+ * 全局只创建一个 WSManager 实例，连接 ws/market 端点。
+ * 收到 market_data 消息时更新行情 store。
  * 内置断线重连（指数退避，最多 5 次）。
  *
  * 使用批量更新策略：将短时间内的多条消息缓冲，每 100ms 合并为一次状态更新，
  * 减少 React 重渲染次数（50 个合约从 50 次/秒降至 10 次/秒）。
  *
+ * 周期从 store.currentPeriod 读取，通过 store.setPeriod 切换。
+ *
  * @param wsBaseUrl WebSocket 基础地址
- * @param period K 线周期（如 '1m', '5m', '1h'），影响实时 K 线的时间对齐
  */
-export function useMarketWs(wsBaseUrl: string, period = '5m') {
-  const wsRef = useRef<WSManager | null>(null)
+export function useMarketWs(wsBaseUrl: string) {
   const snapshotBufferRef = useRef<MarketSnapshot[]>([])
   const klineBufferRef = useRef<Map<string, KLineData>>(new Map())
   const batchUpdate = useMarketStore((s) => s.batchUpdate)
   const appendKline = useMarketStore((s) => s.appendKline)
-  // 创建 WSManager 实例（仅创建一次）
-  if (!wsRef.current) {
-    wsRef.current = new WSManager(wsBaseUrl)
+  const currentPeriod = useMarketStore((s) => s.currentPeriod)
+
+  // 创建全局单例 WSManager（仅创建一次）
+  if (!globalWs) {
+    globalWs = new WSManager(wsBaseUrl)
   }
 
-  const ws = wsRef.current
-  const periodMs = PERIOD_MS[period] ?? PERIOD_MS['5m']
+  const ws = globalWs
+  const periodMs = PERIOD_MS[currentPeriod] ?? PERIOD_MS['5m']
 
   // 定时刷新缓冲区
   useEffect(() => {
@@ -99,18 +117,22 @@ export function useMarketWs(wsBaseUrl: string, period = '5m') {
       snapshotBufferRef.current.push(snap)
       // 缓冲 K 线（同一合约多次更新只保留最新）
       klineBufferRef.current.set(snap.instrumentID, snapshotToKline(snap, periodMs))
+    } else if (message.type === 'instruments_refreshed') {
+      // 合约列表刷新完成
+      const count = (message.data as { count: number }).count
+      if (count > 0) {
+        toast.success(`已更新 ${count} 个合约`)
+        // 重新加载合约列表
+        useContractsStore.getState().loadSubscribedContracts()
+      }
     }
   }
 
   // 使用 useReconnect 管理连接和重连
   const { reconnectCount, isReconnecting } = useReconnect(ws, 'market', handleMessage)
 
-  // 组件卸载时断开所有连接
-  useEffect(() => {
-    return () => {
-      ws.disconnectAll()
-    }
-  }, [ws])
+  // 组件卸载时不断开连接（单例模式，由其他组件管理生命周期）
+  // 注意：不再调用 ws.disconnectAll()
 
   return { reconnectCount, isReconnecting }
 }

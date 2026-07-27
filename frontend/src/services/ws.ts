@@ -31,10 +31,6 @@ export class WSManager {
     const url = `${this.baseUrl}/ws/${endpoint}`
     const ws = new WebSocket(url)
 
-    ws.onopen = () => {
-      // 连接就绪
-    }
-
     ws.onmessage = (event) => {
       try {
         const message: WSMessage = JSON.parse(event.data)

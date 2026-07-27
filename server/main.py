@@ -170,46 +170,6 @@ def create_app() -> FastAPI:
     return app
 
 
-def wire_ctp_market_bridge(md_api, app: FastAPI) -> None:
-    """Wire CTP market-data callbacks → MarketService → WebSocket broadcast.
-
-    Call this AFTER MdUserApi has been created and connected. The bridge
-    ensures every CTP OnRtnDepthMarketData tick is:
-    1. Mapped (PascalCase → camelCase) via field_mapping
-    2. Cached in MarketService (thread-safe, in-memory snapshot store)
-    3. Pushed to all /ws/market clients via WebSocketManager.broadcast()
-
-    Because CTP callbacks run in the CTP worker thread (not the asyncio event
-    loop), the broadcast uses asyncio.run_coroutine_threadsafe() to safely
-    cross the thread boundary.
-
-    NOTE: Must be called from the asyncio main thread (where get_event_loop()
-    is valid). For automatic startup, use ctp_startup.start_ctp_market_connection()
-    instead — it handles the event-loop capture internally.
-
-    Example usage:
-        app = create_app()
-        md_api = MdUserApi(config)
-        md_api.create()
-        # ... wait for OnFrontConnected → login → OnRspUserLogin ...
-        wire_ctp_market_bridge(md_api, app)
-    """
-    loop = asyncio.get_event_loop()
-
-    def _broadcast_to_ws(data: dict) -> None:
-        """Bridge: CTP thread → asyncio event loop for WebSocket send."""
-        asyncio.run_coroutine_threadsafe(
-            app.state.ws_manager.broadcast("market", "market_data", data),
-            loop,
-        )
-
-    wire_market_data_callback(
-        md_api.spi,
-        app.state.market_service,
-        broadcast_fn=_broadcast_to_ws,
-    )
-
-
 # ── Application instance ──────────────────────────────────────────────
 
 app = create_app()

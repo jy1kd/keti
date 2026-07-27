@@ -274,9 +274,9 @@ export async function unsubscribeMarket(instruments: string[]): Promise<Unsubscr
 
 interface CancelAllResponse {
   success: boolean
-  cancelled: number
-  failed: number
-  errors: string[]
+  attempted: number
+  succeeded: number
+  failedRefs: string[]
 }
 
 interface OrderResult {
@@ -457,6 +457,7 @@ export async function getStopOrders(): Promise<StopOrdersResponse> {
 /** 提交止损单 */
 export async function submitStopOrder(params: {
   instrumentID: string
+  exchangeID?: string
   direction: string
   offsetFlag: string
   limitPrice: number

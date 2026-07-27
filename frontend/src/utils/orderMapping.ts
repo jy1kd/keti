@@ -22,9 +22,9 @@ const PRICE_TYPE_TO_CTP: Record<string, string> = {
 }
 
 const TIME_CONDITION_TO_CTP: Record<string, string> = {
-  gfd: '1',
-  fok: '2',
-  fak: '3',
+  gfd: '3',  // GFD
+  fok: '1',  // FOK uses IOC
+  fak: '1',  // FAK uses IOC
 }
 
 const COMB_HEDGE_TO_CTP: Record<string, string> = {
@@ -89,6 +89,7 @@ export function fromCtpOrderStatus(ctpStatus: string): string {
 
 export interface OrderRequestForm {
   instrumentID: string
+  exchangeID?: string
   direction: 'buy' | 'sell'
   combOffsetFlag: 'open' | 'close' | 'close_today'
   orderPriceType: 'limit' | 'market'
@@ -101,6 +102,7 @@ export interface OrderRequestForm {
 
 export interface CtpOrderRequest {
   instrumentID: string
+  exchangeID?: string
   direction: string
   offsetFlag: string
   priceType: string
@@ -115,7 +117,12 @@ export interface CtpOrderRequest {
 export function convertOrderRequest(form: OrderRequestForm): CtpOrderRequest {
   const timeCondition = toCtpTimeCondition(form.timeCondition)
   // volumeCondition: FOK → CV ("3"), FAK / GFD → AV ("1")
-  const volumeCondition = timeCondition === '2' ? '3' : '1'
+  const VOLUME_CONDITION_FOR_TC: Record<string, string> = {
+    gfd: '1',  // GFD → AV (any volume)
+    fok: '3',  // FOK → CV (complete volume)
+    fak: '1',  // FAK → AV (any volume)
+  }
+  const volumeCondition = VOLUME_CONDITION_FOR_TC[form.timeCondition] ?? '1'
 
   const result: CtpOrderRequest = {
     instrumentID: form.instrumentID,
@@ -127,6 +134,9 @@ export function convertOrderRequest(form: OrderRequestForm): CtpOrderRequest {
     hedgeFlag: toCtpHedgeFlag(form.combHedgeFlag ?? 'speculation'),
     limitPrice: form.limitPrice,
     volumeTotalOriginal: form.volumeTotalOriginal,
+  }
+  if (form.exchangeID) {
+    result.exchangeID = form.exchangeID
   }
   if (form.stopPrice !== undefined) {
     result.stopPrice = form.stopPrice

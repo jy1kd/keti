@@ -64,14 +64,14 @@ class TestOrderPriceType:
 class TestTimeCondition:
     """Time condition for orders."""
 
+    def test_ioc_value(self):
+        assert TimeCondition.IOC == "1"
+
+    def test_gfs_value(self):
+        assert TimeCondition.GFS == "2"
+
     def test_gfd_value(self):
-        assert TimeCondition.GFD == "1"
-
-    def test_fok_value(self):
-        assert TimeCondition.FOK == "2"
-
-    def test_fak_value(self):
-        assert TimeCondition.FAK == "3"
+        assert TimeCondition.GFD == "3"
 
 
 class TestVolumeCondition:

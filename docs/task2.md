@@ -18,7 +18,8 @@
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck01 第 1 项 |
 | **严重等级** | 🔴 阻断 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | dfb20ad |
 
 **问题描述**：
 
@@ -619,7 +620,8 @@ server/tests/test_order_api.py  # 角色A — 新增 reverse/lock 测试用例
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 1 项 |
 | **严重等级** | 🔴 P0 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | a15cd73 |
 
 **问题描述**：
 - 前端 `CancelAllResponse`（`api.ts:275-280`）期望 `cancelled`/`failed`/`errors`
@@ -664,7 +666,8 @@ frontend/src/modules/query/store.ts      # toast 消息修改
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 2 项 |
 | **严重等级** | 🔴 P0 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | 623d36a |
 
 **问题描述**：
 - `kline_service.py:58` 用 `calendar.timegm()` 将 CTP 的 UTC+8 时间当 UTC 处理，时间戳快 8 小时
@@ -704,7 +707,8 @@ frontend/src/modules/query/QueryPanel.tsx # REST 路径时间解析对齐
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 3、4 项 |
 | **严重等级** | 🔴 P1 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | 86c7e6c |
 
 **问题描述**：
 - 报单：前端 `orderMapping.ts:120-134` 不发 exchangeID，后端默认 "CFFEX"
@@ -742,7 +746,8 @@ server/services/stop_order.py             # StopOrder 增加 exchange_id
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 5 项 |
 | **严重等级** | 🔴 P1 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | `fix(task-C7): useMarketWs 单例化 — 消除双重 WebSocket 连接` |
 
 **问题描述**：
 - MarketPanel 和 QueryPanel 各自调用 `useMarketWs`，创建两个独立 WebSocket 连接
@@ -761,9 +766,9 @@ frontend/src/modules/market/store.ts       # 增加周期切换方法
 ```
 
 **验收标准**：
-- [ ] 只有一个 WebSocket 连接到 /ws/market
-- [ ] 切换 K 线周期后数据正确
-- [ ] 行情表格和 K 线图同时正常工作
+- [x] 只有一个 WebSocket 连接到 /ws/market
+- [x] 切换 K 线周期后数据正确
+- [x] 行情表格和 K 线图同时正常工作
 
 ---
 
@@ -778,10 +783,11 @@ frontend/src/modules/market/store.ts       # 增加周期切换方法
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 6 项 |
 | **严重等级** | 🔴 P1 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
 
 **问题描述**：
-- `refreshAll` 总耗时 11-16 秒，但 interval 每 10 秒触发
+- ~~`refreshAll` 总耗时 11-16 秒，但 interval 每 10 秒触发~~
+- ✅ 已修复：增加 `isRefreshing` 重入保护，改为递归 `setTimeout`
 - 不检查上一次是否完成，并发调用导致 CTP 查询冲突
 
 **修复方案**：
@@ -802,6 +808,40 @@ server/services/query_service.py          # 查询锁（可选）
 
 ---
 
+### PR-C8: refreshAll 防重入
+
+| 项目 | 内容 |
+|------|------|
+| **PR编号** | PR-C8 |
+| **PR标题** | refreshAll 防重入 + CTP 查询串行化 |
+| **PR分支名** | `fix/consistency-c8-refresh-reentry` |
+| **负责角色** | 角色B（前端） + 角色A（后端） |
+| **依赖PR** | 无 |
+| **来源** | check/docsCheck03 第 6 项 |
+| **严重等级** | 🔴 P1 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | `fix(task-C8): refreshAll 防重入 — isRefreshing + 递归 setTimeout` |
+
+**问题描述**：
+- `refreshAll` 总耗时 11-16 秒，但 interval 每 10 秒触发
+- 不检查上一次是否完成，并发调用导致 CTP 查询冲突
+
+**修复方案**：
+1. 前端 `query/store.ts`：增加 `isRefreshing` 标志，`refreshAll` 开始时检查，跳过重入
+2. 前端 `query/QueryPanel.tsx`：改为递归 setTimeout：`refreshAll` 完成后再调度下一次
+
+**涉及文件**：
+```
+frontend/src/modules/query/store.ts       # 防重入逻辑
+frontend/src/modules/query/QueryPanel.tsx  # interval 改 setTimeout
+```
+
+**验收标准**：
+- [x] 快速切换 Tab 不会触发并发查询
+- [x] CTP 查询无超时错误
+
+---
+
 ### PR-C9: 止损单触发竞态条件修复
 
 | 项目 | 内容 |
@@ -813,30 +853,27 @@ server/services/query_service.py          # 查询锁（可选）
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 7 项 |
 | **严重等级** | 🔴 P2 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | `fix(task-C9): 止损单触发竞态条件修复 — TRIGGERING 中间状态` |
 
 **问题描述**：
 - `on_market_data` 释放锁后才执行触发循环，已取消的止损单仍可能被触发
 - 快速行情变动可能重复触发同一止损单
+- 竞态窗口：两个线程都通过 PENDING 检查后，都会调用 insert()，导致重复报单
 
 **修复方案**：
-1. `stop_order.py`：`_trigger_order` 开头增加状态检查：
-   ```python
-   with self._lock:
-       if order.status != StopOrderStatus.PENDING:
-           return
-       order.status = StopOrderStatus.TRIGGERING  # 新增中间状态
-   ```
-2. 或将整个触发逻辑放在锁内
+1. `stop_order.py`：添加 `TRIGGERING` 中间状态
+2. `_trigger_order` 检查通过后立即设置为 `TRIGGERING`，防止并发触发
 
 **涉及文件**：
 ```
-server/services/stop_order.py              # 状态检查 + 锁范围调整
+server/services/stop_order.py              # 添加 TRIGGERING 状态 + 原子性状态转换
 ```
 
 **验收标准**：
-- [ ] 取消的止损单不会被触发
-- [ ] 快速行情变动不会重复触发
+- [x] 取消的止损单不会被触发
+- [x] 快速行情变动不会重复触发
+- [x] 并发触发只会执行一次
 
 ---
 
@@ -851,7 +888,8 @@ server/services/stop_order.py              # 状态检查 + 锁范围调整
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 8 项 |
 | **严重等级** | 🟡 P2 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | `fix(task-C10): reverse 平仓失败时不开新仓` |
 
 **问题描述**：
 - 平仓和开仓独立发送，平仓被拒时开仓仍执行
@@ -861,12 +899,12 @@ server/services/stop_order.py              # 状态检查 + 锁范围调整
 
 **涉及文件**：
 ```
-server/api/order.py                        # reverse/lock 增加依赖检查
+server/api/order.py                        # reverse 增加依赖检查
 ```
 
 **验收标准**：
-- [ ] 平仓失败时不开新仓
-- [ ] 一键反向不会增加仓位
+- [x] 平仓失败时不开新仓
+- [x] 一键反向不会增加仓位
 
 ---
 
@@ -881,31 +919,31 @@ server/api/order.py                        # reverse/lock 增加依赖检查
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 9-17 项 |
 | **严重等级** | 🟡 文档 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | `fix(task-C11): design.md 文档对齐 — API 端点、数据结构、productClass` |
 
 **修复内容**：
-1. 补充 4 个缺失的 API 端点（kline、depth、options/underlyings、volatility）
-2. 更新 reverse 请求参数：`{order_ref}` → `{instrumentID}`
-3. 更新 lock 请求参数：`{instrument_id, volume}` → `{instrumentID}`
-4. 更新 stop/cancel 请求参数：`{stop_order_ref}` → `{stopOrderID}`
-5. 更新 StopOrderRequest 字段名
-6. 更新 StopOrder 数据结构（接口定义 + 持久化格式）
-7. 更新 direction/offset 编码说明
-8. 修正 PR-14 的 productClass 值
-9. 删除 progress.md 重复条目
-10. 补充开发日志
+1. ✅ 补充 4 个缺失的 API 端点（kline、depth、options/underlyings、volatility）- 已存在
+2. ✅ 更新 reverse 请求参数：`{order_ref}` → `{instrumentID}`
+3. ✅ 更新 lock 请求参数：`{instrument_id, volume}` → `{instrumentID}`
+4. ✅ 更新 stop/cancel 请求参数：`{stop_order_ref}` → `{stopOrderID}`
+5. ✅ 更新 StopOrderRequest 字段名
+6. ✅ 更新 StopOrder 数据结构（接口定义 + 持久化格式）
+7. ✅ 更新 direction/offset 编码说明 - 已存在
+8. ✅ 修正 PR-14 的 productClass 值：`'1'` → `'2'`
+9. ✅ 删除 progress.md 重复条目 - 无重复
+10. ✅ 补充开发日志
 
 **涉及文件**：
 ```
 docs/design.md                             # API 端点、数据模型、编码说明
 docs/task.md                               # PR-14 productClass 修正
-snapshots/role-b/progress.md               # 删除重复条目
 ```
 
 **验收标准**：
-- [ ] design.md 中所有 API 端点与代码一致
-- [ ] 数据模型字段名与代码一致
-- [ ] 无重复的 progress 条目
+- [x] design.md 中所有 API 端点与代码一致
+- [x] 数据模型字段名与代码一致
+- [x] 无重复的 progress 条目
 
 ---
 
@@ -920,16 +958,17 @@ snapshots/role-b/progress.md               # 删除重复条目
 | **依赖PR** | 无 |
 | **来源** | check/docsCheck03 第 18-25 项 |
 | **严重等级** | 🔵 P3 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | `fix(task-C12): 代码质量清理 — 死代码、类型修正、未使用导入` |
 
 **修复内容**：
-1. 删除 `server/main.py:173-211` 的 `wire_ctp_market_bridge` 死代码
-2. 删除 `frontend/src/services/ws.ts:34-36` 的空 onopen
-3. 修正 `types.ts` 的 `PositionRecord.posiDirection` 类型为 `string`
-4. 修正 `types.ts` 的 `OrderRecord.orderStatus` 类型为 `string`
-5. 合并 `OrderRecord` 和 `OrderStatus` 重复类型
-6. 删除 `server/api/query.py:9` 的未使用 `Optional` 导入
-7. 修正 `useSystemWs.ts:66-69` 的 MD/TD 重连计数共用问题
+1. ✅ 删除 `server/main.py` 的 `wire_ctp_market_bridge` 死代码
+2. ✅ 删除 `frontend/src/services/ws.ts` 的空 onopen
+3. ✅ 修正 `types.ts` 的 `PositionRecord.posiDirection` 类型为 `string`
+4. ✅ 修正 `types.ts` 的 `OrderRecord.orderStatus` 类型为 `string`
+5. ✅ 合并 `OrderRecord` 和 `OrderStatus` 重复类型（OrderStatus = OrderRecord）
+6. ✅ 删除 `server/api/query.py` 的未使用 `Optional` 导入
+7. ✅ 修正 `useSystemWs.ts` 的 MD/TD 重连计数共用问题
 
 **涉及文件**：
 ```
@@ -941,7 +980,7 @@ frontend/src/hooks/useSystemWs.ts          # 重连计数分离
 ```
 
 **验收标准**：
-- [ ] 无死代码
-- [ ] 类型定义与实际数据一致
-- [ ] TypeScript 编译无错误
-- [ ] Python 无未使用导入警告
+- [x] 无死代码
+- [x] 类型定义与实际数据一致
+- [x] TypeScript 编译无错误
+- [x] Python 无未使用导入警告

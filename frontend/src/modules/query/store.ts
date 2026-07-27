@@ -78,6 +78,7 @@ interface QueryStore {
   // Control
   isPaused: boolean
   isLoading: boolean
+  isRefreshing: boolean
   togglePause: () => void
 
   // Fetch methods
@@ -129,6 +130,7 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
   // Control
   isPaused: false,
   isLoading: false,
+  isRefreshing: false,
 
   togglePause: () => set({ isPaused: !get().isPaused }),
 
@@ -189,7 +191,8 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
 
   refreshAll: async () => {
     if (get().isPaused) return
-    set({ isLoading: true })
+    if (get().isRefreshing) return
+    set({ isLoading: true, isRefreshing: true })
     try {
       // 串行执行，CTP 单线程有查询频率限制（~1次/秒），并发会导致后续查询超时
       const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -203,7 +206,7 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
       await delay(1200)
       await get().fetchStopOrders()
     } finally {
-      set({ isLoading: false })
+      set({ isLoading: false, isRefreshing: false })
     }
   },
 
@@ -262,7 +265,7 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
     try {
       const result = await cancelAllOrders()
       if (result.success) {
-        toast.success(`已撤销 ${result.cancelled} 笔报单`)
+        toast.success(`已撤销 ${result.succeeded} 笔报单`)
         // Refresh to get updated status
         await get().fetchOrders()
         return true

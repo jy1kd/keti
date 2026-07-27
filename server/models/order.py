@@ -13,7 +13,7 @@ class OrderRequest(BaseModel):
     priceType: str = "2"  # OrderPriceType: "1"=any, "2"=limit
     limitPrice: float = 0.0
     volumeTotalOriginal: int = 1
-    timeCondition: str = "1"  # "1"=GFD, "2"=FOK, "3"=FAK
+    timeCondition: str = "3"  # "1"=IOC, "2"=GFS, "3"=GFD
     volumeCondition: str = "1"  # "1"=AV, "2"=MV, "3"=CV
     hedgeFlag: str = "1"  # "1"=speculation
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useMarketWs } from './useMarketWs'
+import { useMarketWs, resetGlobalWs } from './useMarketWs'
 import { useMarketStore } from '@/modules/market/store'
 import type { MarketSnapshot } from '@/services/types'
 
@@ -58,7 +58,9 @@ function pushAndFlush(act: (fn: () => void) => void, onMessage: (msg: { type: st
 describe('useMarketWs', () => {
   beforeEach(() => {
     vi.useFakeTimers()
-    useMarketStore.setState({ snapshots: new Map() })
+    useMarketStore.setState({ snapshots: new Map(), currentPeriod: '5m' })
+    // 重置全局单例
+    resetGlobalWs()
     mockConnect.mockClear()
     mockDisconnect.mockClear()
     mockDisconnectAll.mockClear()
@@ -101,13 +103,6 @@ describe('useMarketWs', () => {
     pushAndFlush(act, onMessage, { type: 'connection_status', data: { mdConnected: true } })
 
     expect(useMarketStore.getState().snapshots.size).toBe(0)
-  })
-
-  it('组件卸载时断开连接', () => {
-    const { unmount } = renderHook(() => useMarketWs('ws://localhost:8000'))
-
-    unmount()
-    expect(mockDisconnectAll).toHaveBeenCalled()
   })
 
   it('使用 useReconnect 实现断线重连', () => {
@@ -153,9 +148,9 @@ describe('useMarketWs', () => {
 
   it('K 线时间戳按周期向下取整', () => {
     const appendKline = vi.fn()
-    useMarketStore.setState({ appendKline })
+    useMarketStore.setState({ appendKline, currentPeriod: '5m' })
 
-    renderHook(() => useMarketWs('ws://localhost:8000', '5m'))
+    renderHook(() => useMarketWs('ws://localhost:8000'))
 
     const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
 
@@ -217,7 +212,8 @@ describe('useMarketWs', () => {
 
 describe('useMarketWs - instruments_refreshed', () => {
   beforeEach(() => {
-    useMarketStore.setState({ snapshots: new Map() })
+    useMarketStore.setState({ snapshots: new Map(), currentPeriod: '5m' })
+    resetGlobalWs()
     mockConnect.mockClear()
     mockToastSuccess.mockClear()
   })

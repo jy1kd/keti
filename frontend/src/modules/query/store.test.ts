@@ -36,6 +36,7 @@ describe('QueryStore', () => {
       stopOrders: [],
       isPaused: false,
       isLoading: false,
+      isRefreshing: false,
       newOrderRefs: new Set(),
       newTradeIDs: new Set(),
     })
@@ -177,6 +178,32 @@ describe('QueryStore', () => {
     await useQueryStore.getState().refreshAll()
 
     expect(mockRefreshOrders).not.toHaveBeenCalled()
+  })
+
+  it('refreshAll skips when already refreshing', async () => {
+    // 模拟正在进行中的刷新
+    useQueryStore.setState({ isRefreshing: true })
+
+    await useQueryStore.getState().refreshAll()
+
+    expect(mockRefreshOrders).not.toHaveBeenCalled()
+  })
+
+  it('refreshAll sets isRefreshing flag', async () => {
+    mockRefreshOrders.mockResolvedValue({ orders: [], count: 0 })
+    mockRefreshTrades.mockResolvedValue({ trades: [], count: 0 })
+    mockRefreshPositions.mockResolvedValue({ positions: [], count: 0 })
+    mockRefreshAccount.mockResolvedValue(null as never)
+    mockGetStopOrders.mockResolvedValue({ stopOrders: [], count: 0 })
+
+    // 刷新前，isRefreshing 应为 false
+    expect(useQueryStore.getState().isRefreshing).toBe(false)
+
+    // 执行刷新
+    await useQueryStore.getState().refreshAll()
+
+    // 刷新完成后，isRefreshing 应为 false
+    expect(useQueryStore.getState().isRefreshing).toBe(false)
   })
 
   // ── Cancel Order ───────────────────────────────────────────────

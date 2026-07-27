@@ -54,8 +54,8 @@ export function MarketPanel() {
     savePanelSizes('market-top-layout', { table: layout['market-table'], side: layout['market-side'] })
   }, [])
 
-  // WebSocket 行情推送
-  useMarketWs(API_BASE.replace('http', 'ws'), '5m')
+  // WebSocket 行情推送（单例模式）
+  useMarketWs(API_BASE.replace('http', 'ws'))
 
   // 启动时加载预设合约 + 用户订阅
   useEffect(() => {

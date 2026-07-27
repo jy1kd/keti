@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react'
+import { useEffect, useCallback } from 'react'
 import { useQueryStore } from './store'
 import { OrderFlow } from './OrderFlow'
 import { TradeFlow } from './TradeFlow'
@@ -9,8 +9,8 @@ import { ContractQuery } from './ContractQuery'
 import { DepthQuote } from '../market/DepthQuote'
 import { KLineChart } from '../market/KLineChart'
 import { useMarketStore } from '../market/store'
-import { useMarketWs, PERIOD_MS } from '@/hooks/useMarketWs'
-import { API_BASE, getKlineData } from '@/services/api'
+import { PERIOD_MS } from '@/hooks/useMarketWs'
+import { getKlineData } from '@/services/api'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import './styles.css'
 
@@ -37,24 +37,29 @@ export function QueryPanel() {
   const snapshots = useMarketStore((s) => s.snapshots)
   const klineData = useMarketStore((s) => s.klineData)
   const setKlineData = useMarketStore((s) => s.setKlineData)
-  const [period, setPeriod] = useState('5m')
+  const period = useMarketStore((s) => s.currentPeriod)
+  const setPeriod = useMarketStore((s) => s.setPeriod)
 
   // Initial data load
   useEffect(() => {
     refreshAll()
   }, [refreshAll])
 
-  // Auto-refresh every 10s (串行 CTP 查询需要 ~6s，间隔太短会重叠)
+  // Auto-refresh: 完成后再调度下一次，避免重入
   useEffect(() => {
     if (isPaused) return
-    const interval = setInterval(() => {
-      refreshAll()
-    }, 10000)
-    return () => clearInterval(interval)
+    let timer: ReturnType<typeof setTimeout>
+    const schedule = () => {
+      timer = setTimeout(async () => {
+        await refreshAll()
+        schedule()
+      }, 10000)
+    }
+    schedule()
+    return () => clearTimeout(timer)
   }, [isPaused, refreshAll])
 
-  // WebSocket 行情推送（K线需要）
-  useMarketWs(API_BASE.replace('http', 'ws'), period)
+  // 注意：WebSocket 行情推送由 MarketPanel 中的 useMarketWs 单例管理
 
   // 获取K线数据
   useEffect(() => {

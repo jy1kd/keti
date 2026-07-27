@@ -345,6 +345,62 @@ class TestStopOrderTrigger:
         orders = service.list_orders()
         assert orders[0]["status"] == "triggered"
 
+    def test_canceled_order_not_triggered(self, service):
+        """Canceled stop order should not be triggered even if price condition is met."""
+        r = service.submit(
+            instrument_id="IF2608", direction="0", offset_flag="0",
+            limit_price=4800.0, volume=1, stop_price=4790.0,
+        )
+        stop_id = r["stopOrderID"]
+
+        # Cancel the order
+        service.cancel(stop_id)
+
+        # Price drops below stop - should NOT trigger
+        service.on_market_data("IF2608", 4789.0)
+        orders = service.list_orders()
+        assert orders[0]["status"] == "canceled"
+
+    def test_triggered_order_not_triggered_again(self, service):
+        """Already triggered stop order should not be triggered again."""
+        r = service.submit(
+            instrument_id="IF2608", direction="0", offset_flag="0",
+            limit_price=4800.0, volume=1, stop_price=4790.0,
+        )
+
+        # First trigger
+        service.on_market_data("IF2608", 4789.0)
+        orders = service.list_orders()
+        assert orders[0]["status"] == "triggered"
+
+        # Second market data - should NOT trigger again
+        service.on_market_data("IF2608", 4780.0)
+        orders = service.list_orders()
+        assert orders[0]["status"] == "triggered"
+
+    def test_concurrent_triggers_only_once(self, service, mock_order_manager):
+        """Concurrent on_market_data calls should only trigger the stop order once."""
+        r = service.submit(
+            instrument_id="IF2608", direction="0", offset_flag="0",
+            limit_price=4800.0, volume=1, stop_price=4790.0,
+        )
+
+        # Simulate concurrent market data updates
+        threads = []
+        for _ in range(10):
+            t = threading.Thread(target=service.on_market_data, args=("IF2608", 4789.0))
+            threads.append(t)
+            t.start()
+
+        for t in threads:
+            t.join()
+
+        # Should only have triggered once
+        orders = service.list_orders()
+        assert orders[0]["status"] == "triggered"
+        # OrderManager.insert should have been called only once
+        assert mock_order_manager.insert.call_count == 1
+
 
 # ── StopOrderService: WebSocket broadcast ───────────────────────────────────
 

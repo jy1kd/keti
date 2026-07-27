@@ -111,7 +111,7 @@ class OrderManager:
         price_type: str = "2",
         limit_price: float = 0.0,
         volume: int = 1,
-        time_condition: str = "1",
+        time_condition: str = "3",
         volume_condition: str = "1",
         hedge_flag: str = "1",
         stop_price: float = 0.0,

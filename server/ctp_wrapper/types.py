@@ -25,10 +25,18 @@ class OrderPriceType:
 
 
 class TimeCondition:
-    """有效期类型."""
-    GFD: str = "1"  # 当日有效
-    FOK: str = "2"  # 全部成交或全部撤销（Fill or Kill）
-    FAK: str = "3"  # 部分成交，剩余撤销（Fill and Kill）
+    """有效期类型.
+
+    CTP 标准值:
+    - IOC ('1'): Immediately or Cancel
+    - GFS ('2'): Good For Session
+    - GFD ('3'): Good For Day
+
+    注意: FOK/FAK 不是 TimeCondition，而是 TimeCondition(IOC) + VolumeCondition 的组合
+    """
+    IOC: str = "1"   # Immediately or Cancel
+    GFS: str = "2"   # Good For Session
+    GFD: str = "3"   # Good For Day
 
 
 class VolumeCondition:

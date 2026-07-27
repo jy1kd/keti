@@ -23,10 +23,11 @@ ORDER_PRICE_TYPE_MAP = {
 ORDER_PRICE_TYPE_REVERSE = {v: k for k, v in ORDER_PRICE_TYPE_MAP.items()}
 
 # Time condition mapping
+# FOK/FAK 的 timeCondition 部分：FOK=IOC('1')+VC='3', FAK=IOC('1')+VC='1'
 TIME_CONDITION_MAP = {
-    'gfd': '1',  # Good For Day
-    'fok': '2',  # Fill or Kill
-    'fak': '3',  # Fill and Kill
+    'gfd': '3',  # Good For Day → TimeCondition=GFD('3')
+    'fok': '1',  # Fill or Kill → TimeCondition=IOC('1')
+    'fak': '1',  # Fill and Kill → TimeCondition=IOC('1')
 }
 TIME_CONDITION_REVERSE = {v: k for k, v in TIME_CONDITION_MAP.items()}
 
@@ -110,7 +111,8 @@ def convert_order_request_to_ctp(data: dict) -> dict:
         direction: '0' (buy) | '1' (sell)
         combOffsetFlag: '0' (open) | '1' (close) | '3' (close_today)
         orderPriceType: '1' (market) | '2' (limit)
-        timeCondition: '1' (GFD) | '2' (FOK) | '3' (FAK)
+        timeCondition: '3' (GFD) | '1' (IOC, for FOK/FAK)
+        volumeCondition: '1' (AV) | '3' (CV, for FOK)
     """
     result = data.copy()
 
@@ -124,7 +126,16 @@ def convert_order_request_to_ctp(data: dict) -> dict:
         result['priceType'] = order_price_type_to_ctp(result.pop('orderPriceType'))
 
     if 'timeCondition' in result:
-        result['timeCondition'] = time_condition_to_ctp(result['timeCondition'])
+        tc_frontend = result['timeCondition']  # 'gfd' | 'fok' | 'fak'
+        result['timeCondition'] = time_condition_to_ctp(tc_frontend)
+        # FOK/FAK 需要同时设置 volumeCondition
+        VOLUME_CONDITION_FOR_TC = {
+            'gfd': '1',  # GFD → AV (any volume)
+            'fok': '3',  # FOK → CV (complete volume)
+            'fak': '1',  # FAK → AV (any volume)
+        }
+        if 'volumeCondition' not in result or result['volumeCondition'] is None:
+            result['volumeCondition'] = VOLUME_CONDITION_FOR_TC.get(tc_frontend, '1')
 
     return result
 
