@@ -807,6 +807,40 @@ server/services/query_service.py          # 查询锁（可选）
 
 ---
 
+### PR-C8: refreshAll 防重入
+
+| 项目 | 内容 |
+|------|------|
+| **PR编号** | PR-C8 |
+| **PR标题** | refreshAll 防重入 + CTP 查询串行化 |
+| **PR分支名** | `fix/consistency-c8-refresh-reentry` |
+| **负责角色** | 角色B（前端） + 角色A（后端） |
+| **依赖PR** | 无 |
+| **来源** | check/docsCheck03 第 6 项 |
+| **严重等级** | 🔴 P1 |
+| **状态** | ✅ 已完成 |
+| **修复commit** | `fix(task-C8): refreshAll 防重入 — isRefreshing + 递归 setTimeout` |
+
+**问题描述**：
+- `refreshAll` 总耗时 11-16 秒，但 interval 每 10 秒触发
+- 不检查上一次是否完成，并发调用导致 CTP 查询冲突
+
+**修复方案**：
+1. 前端 `query/store.ts`：增加 `isRefreshing` 标志，`refreshAll` 开始时检查，跳过重入
+2. 前端 `query/QueryPanel.tsx`：改为递归 setTimeout：`refreshAll` 完成后再调度下一次
+
+**涉及文件**：
+```
+frontend/src/modules/query/store.ts       # 防重入逻辑
+frontend/src/modules/query/QueryPanel.tsx  # interval 改 setTimeout
+```
+
+**验收标准**：
+- [x] 快速切换 Tab 不会触发并发查询
+- [x] CTP 查询无超时错误
+
+---
+
 ### PR-C9: 止损单触发竞态条件修复
 
 | 项目 | 内容 |

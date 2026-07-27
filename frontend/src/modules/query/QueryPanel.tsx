@@ -45,13 +45,18 @@ export function QueryPanel() {
     refreshAll()
   }, [refreshAll])
 
-  // Auto-refresh every 10s (串行 CTP 查询需要 ~6s，间隔太短会重叠)
+  // Auto-refresh: 完成后再调度下一次，避免重入
   useEffect(() => {
     if (isPaused) return
-    const interval = setInterval(() => {
-      refreshAll()
-    }, 10000)
-    return () => clearInterval(interval)
+    let timer: ReturnType<typeof setTimeout>
+    const schedule = () => {
+      timer = setTimeout(async () => {
+        await refreshAll()
+        schedule()
+      }, 10000)
+    }
+    schedule()
+    return () => clearTimeout(timer)
   }, [isPaused, refreshAll])
 
   // 注意：WebSocket 行情推送由 MarketPanel 中的 useMarketWs 单例管理
