@@ -404,32 +404,6 @@ class OrderManager:
             "failedRefs": failed,
         }
 
-    # ── Reverse (placeholder — needs PR-11 position data) ────────────────
-
-    def reverse(self, instrument_id: str) -> dict:
-        """Reverse position — placeholder for PR-11.
-
-        Returns:
-            dict: {"success": bool, "message": str}
-        """
-        return {
-            "success": False,
-            "message": "Not implemented — position data needed (PR-11)",
-        }
-
-    # ── Lock (placeholder — needs PR-11 position data) ───────────────────
-
-    def lock(self, instrument_id: str) -> dict:
-        """Lock position — placeholder for PR-11.
-
-        Returns:
-            dict: {"success": bool, "message": str}
-        """
-        return {
-            "success": False,
-            "message": "Not implemented — position data needed (PR-11)",
-        }
-
     # ── Query ─────────────────────────────────────────────────────────────
 
     def get_order(self, order_ref: str) -> Optional[dict]:

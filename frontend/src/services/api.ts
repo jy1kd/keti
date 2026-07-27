@@ -279,14 +279,21 @@ interface CancelAllResponse {
   errors: string[]
 }
 
+interface OrderResult {
+  action: string
+  success: boolean
+  orderRef: string
+  message?: string
+}
+
 interface ReverseResponse {
   success: boolean
-  message: string
+  orders: OrderResult[]
 }
 
 interface LockResponse {
   success: boolean
-  message: string
+  orders: OrderResult[]
 }
 
 interface PositionsResponse {
@@ -388,15 +395,15 @@ interface AccountResponse {
 
 interface StopOrdersResponse {
   stopOrders: Array<{
-    stopOrderRef: string
+    stopOrderID: string
     instrumentID: string
     direction: string
-    combOffsetFlag: string
+    offsetFlag: string
     limitPrice: number
-    volumeTotalOriginal: number
+    volume: number
     stopPrice: number
     status: string
-    triggeredOrderRef?: string
+    orderRef?: string
     createdAt: string
     triggeredAt?: string
   }>
@@ -447,9 +454,22 @@ export async function getStopOrders(): Promise<StopOrdersResponse> {
   return data
 }
 
+/** 提交止损单 */
+export async function submitStopOrder(params: {
+  instrumentID: string
+  direction: string
+  offsetFlag: string
+  limitPrice: number
+  volume: number
+  stopPrice: number
+}): Promise<{ success: boolean; stopOrderID?: string; message?: string }> {
+  const { data } = await api.post('/api/order/stop', params)
+  return data
+}
+
 /** 取消止损单 */
-export async function cancelStopOrder(stopOrderRef: string): Promise<CancelResponse> {
-  const { data } = await api.post<CancelResponse>('/api/order/stop/cancel', { stopOrderRef })
+export async function cancelStopOrder(stopOrderID: string): Promise<CancelResponse> {
+  const { data } = await api.post<CancelResponse>('/api/order/stop/cancel', { stopOrderID })
   return data
 }
 

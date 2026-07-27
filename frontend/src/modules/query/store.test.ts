@@ -143,7 +143,7 @@ describe('QueryStore', () => {
 
   it('fetchStopOrders populates stop orders from API', async () => {
     const mockStopOrders = [
-      { stopOrderRef: 'S001', instrumentID: 'IF2608', direction: 'sell', combOffsetFlag: 'close', limitPrice: 4790, volumeTotalOriginal: 1, stopPrice: 4790, status: 'pending', createdAt: '09:30:00' },
+      { stopOrderID: 'S001', instrumentID: 'IF2608', direction: 'sell', offsetFlag: '1', limitPrice: 4790, volume: 1, stopPrice: 4790, status: 'pending', createdAt: '09:30:00' },
     ]
     mockGetStopOrders.mockResolvedValue({ stopOrders: mockStopOrders, count: 1 })
 
@@ -213,7 +213,7 @@ describe('QueryStore', () => {
   it('handleCancelStopOrder calls API and updates status', async () => {
     useQueryStore.setState({
       stopOrders: [
-        { stopOrderRef: 'S001', instrumentID: 'IF2608', direction: 'sell', combOffsetFlag: 'close', limitPrice: 4790, volumeTotalOriginal: 1, stopPrice: 4790, status: 'pending', createdAt: '09:30:00' },
+        { stopOrderID: 'S001', instrumentID: 'IF2608', direction: 'sell', offsetFlag: '1', limitPrice: 4790, volume: 1, stopPrice: 4790, status: 'pending', createdAt: '09:30:00' },
       ],
     })
     mockCancelStopOrder.mockResolvedValue({ success: true })

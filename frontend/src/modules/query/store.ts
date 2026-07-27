@@ -55,7 +55,7 @@ type OrderEntry = RawOrder
 type TradeEntry = RawTrade
 type PositionEntry = RawPosition
 
-export type QueryTab = 'orders' | 'trades' | 'positions' | 'account' | 'stop_orders' | 'quotes' | 'contracts'
+export type QueryTab = 'orders' | 'trades' | 'positions' | 'account' | 'stop_orders' | 'quotes' | 'contracts' | 'kline'
 
 interface QueryStore {
   // Tab
@@ -95,7 +95,7 @@ interface QueryStore {
   // Actions
   handleCancelOrder: (orderRef: string) => Promise<boolean>
   handleCancelAll: () => Promise<boolean>
-  handleCancelStopOrder: (stopOrderRef: string) => Promise<boolean>
+  handleCancelStopOrder: (stopOrderID: string) => Promise<boolean>
 }
 
 export const useQueryStore = create<QueryStore>((set, get) => ({
@@ -276,14 +276,14 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
     }
   },
 
-  handleCancelStopOrder: async (stopOrderRef) => {
+  handleCancelStopOrder: async (stopOrderID) => {
     try {
-      const result = await cancelStopOrder(stopOrderRef)
+      const result = await cancelStopOrder(stopOrderID)
       if (result.success) {
         toast.success('止损单已取消')
         // Optimistic: update status locally
         const stopOrders = get().stopOrders.map((s) =>
-          s.stopOrderRef === stopOrderRef ? { ...s, status: 'canceled' as const } : s
+          s.stopOrderID === stopOrderID ? { ...s, status: 'canceled' as const } : s
         )
         set({ stopOrders })
         return true

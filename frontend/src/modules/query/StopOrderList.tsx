@@ -9,15 +9,15 @@ const STATUS_MAP: Record<string, string> = {
 }
 
 const DIRECTION_MAP: Record<string, string> = { '0': '买', '1': '卖', buy: '买', sell: '卖' }
-const OFFSET_MAP: Record<string, string> = { '0': '开仓', '1': '平仓', '3': '平今', open: '开仓', close: '平仓', close_today: '平今' }
+const OFFSET_MAP: Record<string, string> = { '0': '开仓', '1': '平仓', '2': '强平', '3': '平今', '4': '平昨' }
 
 export function StopOrderList() {
   const stopOrders = useQueryStore((s) => s.stopOrders)
   const handleCancelStopOrder = useQueryStore((s) => s.handleCancelStopOrder)
 
   const onCancel = useCallback(
-    (ref: string) => {
-      handleCancelStopOrder(ref)
+    (id: string) => {
+      handleCancelStopOrder(id)
     },
     [handleCancelStopOrder]
   )
@@ -53,21 +53,21 @@ export function StopOrderList() {
           </thead>
           <tbody>
             {stopOrders.map((s) => (
-              <tr key={s.stopOrderRef}>
-                <td className="col-ref">{s.stopOrderRef}</td>
+              <tr key={s.stopOrderID}>
+                <td className="col-ref">{s.stopOrderID}</td>
                 <td className="col-instrument">{s.instrumentID}</td>
                 <td className={`col-direction ${s.direction === 'buy' ? 'buy' : 'sell'}`}>
                   {DIRECTION_MAP[s.direction] ?? s.direction}
                 </td>
-                <td className="col-offset">{OFFSET_MAP[s.combOffsetFlag] ?? s.combOffsetFlag}</td>
+                <td className="col-offset">{OFFSET_MAP[s.offsetFlag] ?? s.offsetFlag}</td>
                 <td className="col-price">{s.stopPrice}</td>
                 <td className="col-price">{s.limitPrice}</td>
-                <td className="col-volume">{s.volumeTotalOriginal}</td>
+                <td className="col-volume">{s.volume}</td>
                 <td className="col-status">{STATUS_MAP[s.status] ?? s.status}</td>
                 <td className="col-time">{s.createdAt}</td>
                 <td className="col-action">
                   {s.status === 'pending' && (
-                    <button className="btn-cancel" onClick={() => onCancel(s.stopOrderRef)}>
+                    <button className="btn-cancel" onClick={() => onCancel(s.stopOrderID)}>
                       取消
                     </button>
                   )}

@@ -31,7 +31,7 @@ describe('StopOrderList', () => {
   it('renders table headers', () => {
     useQueryStore.setState({
       stopOrders: [
-        { stopOrderRef: 'S001', instrumentID: 'IF2608', direction: 'sell', combOffsetFlag: 'close', limitPrice: 4790, volumeTotalOriginal: 1, stopPrice: 4790, status: 'pending', createdAt: '09:30:00' },
+        { stopOrderID: 'S001', instrumentID: 'IF2608', direction: 'sell', offsetFlag: '1', limitPrice: 4790, volume: 1, stopPrice: 4790, status: 'pending', createdAt: '09:30:00' },
       ],
     })
     render(<StopOrderList />)
@@ -48,7 +48,7 @@ describe('StopOrderList', () => {
   it('shows cancel button for pending stop orders', () => {
     useQueryStore.setState({
       stopOrders: [
-        { stopOrderRef: 'S001', instrumentID: 'IF2608', direction: 'sell', combOffsetFlag: 'close', limitPrice: 4790, volumeTotalOriginal: 1, stopPrice: 4790, status: 'pending', createdAt: '09:30:00' },
+        { stopOrderID: 'S001', instrumentID: 'IF2608', direction: 'sell', offsetFlag: '1', limitPrice: 4790, volume: 1, stopPrice: 4790, status: 'pending', createdAt: '09:30:00' },
       ],
     })
     render(<StopOrderList />)
@@ -58,7 +58,7 @@ describe('StopOrderList', () => {
   it('does not show cancel button for non-pending stop orders', () => {
     useQueryStore.setState({
       stopOrders: [
-        { stopOrderRef: 'S001', instrumentID: 'IF2608', direction: 'sell', combOffsetFlag: 'close', limitPrice: 4790, volumeTotalOriginal: 1, stopPrice: 4790, status: 'triggered', createdAt: '09:30:00', triggeredAt: '09:35:00' },
+        { stopOrderID: 'S001', instrumentID: 'IF2608', direction: 'sell', offsetFlag: '1', limitPrice: 4790, volume: 1, stopPrice: 4790, status: 'triggered', createdAt: '09:30:00', triggeredAt: '09:35:00' },
       ],
     })
     render(<StopOrderList />)
@@ -68,7 +68,7 @@ describe('StopOrderList', () => {
   it('calls handleCancelStopOrder when cancel clicked', async () => {
     useQueryStore.setState({
       stopOrders: [
-        { stopOrderRef: 'S001', instrumentID: 'IF2608', direction: 'sell', combOffsetFlag: 'close', limitPrice: 4790, volumeTotalOriginal: 1, stopPrice: 4790, status: 'pending', createdAt: '09:30:00' },
+        { stopOrderID: 'S001', instrumentID: 'IF2608', direction: 'sell', offsetFlag: '1', limitPrice: 4790, volume: 1, stopPrice: 4790, status: 'pending', createdAt: '09:30:00' },
       ],
     })
     const handleCancel = vi.fn().mockResolvedValue(true)
