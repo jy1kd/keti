@@ -213,12 +213,13 @@ UA 是 Claude Code 插件，通过 Claude Code 插件市场安装：
 
 ### 使用方式
 
-UA 作为 Claude Code 插件运行，无需手动操作：
+UA 提供以下指令：
 
-1. **自动分析**：安装后 UA 自动扫描项目代码，生成 `knowledge-graph.json`
-2. **领域图谱**：结合业务文档生成 `domain-graph.json`（领域概念和业务规则）
-3. **自动读取**：Claude Code 在代码审查和生成时自动读取 `.ua/` 下的图谱文件
-4. **增量更新**：通过 `fingerprints.json` 跟踪文件变更，只分析修改过的文件
+| 指令 | 用途 |
+|------|------|
+| `/understand` | 分析项目代码，生成/更新知识图谱 |
+| `/understand-chat` | 基于知识图谱进行对话，回答项目相关问题 |
+| `/understand-onboard` | 新人引导，生成项目概览和上手指南 |
 
 ### 配置
 
@@ -240,10 +241,13 @@ git clone <repo-url> && cd keti
 # 2. 安装 Claude Code 插件
 /plugin install understand-anything
 
-# 3. UA 会自动分析项目，生成知识图谱
-#    首次分析约需 1-2 分钟，后续增量更新秒级完成
+# 3. 生成知识图谱（首次使用）
+/understand
 
-# 4. 开始开发 — Claude Code 会自动参考知识图谱理解项目上下文
+# 4. 了解项目概况（可选）
+/understand-onboard
+
+# 5. 开始开发 — Claude Code 会自动参考知识图谱理解项目上下文
 ```
 
 ## 文档
