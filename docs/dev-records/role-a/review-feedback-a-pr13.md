@@ -132,7 +132,7 @@ os.replace(tmp_path, file_path)  # 原子操作
 
 | 文件 | 改动 | 新问题 |
 |------|------|:------:|
-| `docs/task.md` | curl 命令字段名修正 | 无 |
+| `docs/tasks/task.md` | curl 命令字段名修正 | 无 |
 | `server/services/stop_order.py` | 原子写入 + market_service 可选化 | 无 |
 | `server/services/ctp_startup.py` | 移除 market_service 传参 | 无 |
 | `server/tests/test_stop_order_service.py` | timedelta 修复 + 移除 market_service fixture | 无 |

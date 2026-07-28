@@ -43,7 +43,7 @@
 - **发现**：CTP 标准值 IOC='1', GFS='2', GFD='3'，代码使用 GFD='1', FOK='2', FAK='3'
 - **根因**：FOK/FAK 不是 TimeCondition 值，而是 TimeCondition(IOC) + VolumeCondition 的组合
 - **处理**：
-  - `docs/task2.md` — PR-C1 代码修复计划（12 个文件）
-  - `docs/task.md` — 修复 PR-10 映射表（line 1025）和转换代码示例（line 1033）
-  - `docs/design.md` — 修复报单请求格式示例（line 445-457），补充 volumeCondition 字段和 CTP 标准说明
+  - `docs/tasks/consistency-check-records.md` — PR-C1 代码修复计划（12 个文件）
+  - `docs/tasks/task.md` — 修复 PR-10 映射表（line 1025）和转换代码示例（line 1033）
+  - `docs/specs/design.md` — 修复报单请求格式示例（line 445-457），补充 volumeCondition 字段和 CTP 标准说明
 - **完成时间**：2026-07-24

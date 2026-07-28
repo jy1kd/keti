@@ -16,8 +16,8 @@
      2. 使用 `git rm --cached` 从 git 历史中移除这些文件
      3. 确认这些文件是否需要保留，如不需要则删除
 
-2. **【docs/task-dev-flow.md】越权修改非职责范围文件**
-   - 原因：角色B 负责 `frontend/` 目录，但修改了 `docs/task-dev-flow.md`
+2. **【docs/tasks/task-dev-flow.md】越权修改非职责范围文件**
+   - 原因：角色B 负责 `frontend/` 目录，但修改了 `docs/tasks/task-dev-flow.md`
    - 建议：回滚此文件的变更，或与角色A确认是否需要此修改
 
 ---
@@ -64,7 +64,7 @@
 
 **必须修复**：
 1. 移除 .con 敏感信息文件
-2. 回滚 docs/task-dev-flow.md 的变更（或与角色A确认）
+2. 回滚 docs/tasks/task-dev-flow.md 的变更（或与角色A确认）
 3. 更新 dev-record-b.md 的提交记录
 
 **修复后**：
@@ -85,8 +85,8 @@ git rm --cached server/DialogRsp.con server/QueryRsp.con server/TradingDay.con
 # 2. 添加 .con 到 .gitignore
 echo "*.con" >> .gitignore
 
-# 3. 回滚 docs/task-dev-flow.md（如需要）
-git checkout main -- docs/task-dev-flow.md
+# 3. 回滚 docs/tasks/task-dev-flow.md（如需要）
+git checkout main -- docs/tasks/task-dev-flow.md
 
 # 4. 更新 dev-record-b.md 提交记录
 

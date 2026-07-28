@@ -12,7 +12,7 @@
 - **修复**：`git rm --cached` 移除6个 .con 文件，`.gitignore` 添加 `*.con`
 - **提交**：`13f956d` fix(PR-4): 移除 .con 敏感文件，添加到 .gitignore
 
-### 2. 越权修改 docs/task-dev-flow.md
+### 2. 越权修改 docs/tasks/task-dev-flow.md
 - **状态**：⏸️ 保留（用户指示暂不回滚）
 - **理由**：用户明确表示先不回滚此文件
 
