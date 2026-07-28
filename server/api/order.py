@@ -215,35 +215,21 @@ def _get_valid_positions(request: Request, instrument_id: str):
     return target, None
 
 
-def _get_protection_price(request: Request, instrument_id: str, positions: list) -> tuple:
-    """获取市价单保护价。
+def _get_protection_price(request: Request, instrument_id: str) -> tuple:
+    """获取市价单保护价（从行情快照获取 lastPrice）。
 
-    优先从行情快照获取 lastPrice，若无则从持仓的开仓均价获取。
     Returns:
         tuple: (price, error_message)
         - 成功时 error_message 为 None
         - 失败时 price 为 0.0，error_message 为错误信息
     """
-    # 优先从行情快照获取
     market_svc = getattr(request.app.state, "market_service", None)
     snapshot = market_svc.get_snapshot(instrument_id) if market_svc else None
     if snapshot:
         last_price = snapshot.get("lastPrice", 0.0)
         if last_price > 0:
             return last_price, None
-
-    # 回退：从持仓的开仓均价获取
-    for pos in positions:
-        open_cost = pos.get("openCost", 0.0)
-        volume_multiple = pos.get("volumeMultiple", 1)
-        position = pos.get("position", 0)
-        if open_cost > 0 and position > 0 and volume_multiple > 0:
-            # 开仓均价 = 开仓成本 / (持仓量 * 合约乘数)
-            avg_price = open_cost / (position * volume_multiple)
-            if avg_price > 0:
-                return avg_price, None
-
-    return 0.0, f"无法获取 {instrument_id} 的价格，请先订阅行情"
+    return 0.0, f"无法获取 {instrument_id} 的行情，请先订阅行情"
 
 
 @router.post("/reverse")
@@ -260,8 +246,8 @@ async def reverse_position(request: Request, body: ReverseOrderRequest):
         return {"success": False, "message": error}
 
     om = request.app.state.order_manager
-    # 获取市价单保护价（优先行情快照，回退持仓均价）
-    last_price, price_error = _get_protection_price(request, body.instrumentID, target)
+    # 获取市价单保护价（从行情快照获取）
+    last_price, price_error = _get_protection_price(request, body.instrumentID)
     if price_error:
         return {"success": False, "message": price_error}
     results = []
@@ -400,8 +386,8 @@ async def lock_position(request: Request, body: LockOrderRequest):
         return {"success": False, "message": error}
 
     om = request.app.state.order_manager
-    # 获取市价单保护价（优先行情快照，回退持仓均价）
-    last_price, price_error = _get_protection_price(request, body.instrumentID, target)
+    # 获取市价单保护价（从行情快照获取）
+    last_price, price_error = _get_protection_price(request, body.instrumentID)
     if price_error:
         return {"success": False, "message": price_error}
     results = []
