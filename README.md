@@ -198,6 +198,7 @@ UA 是 Claude Code 插件，通过 Claude Code 插件市场安装：
 
 ```bash
 # 在 Claude Code 中运行
+/plugin marketplace add Egonex-AI/Understand-Anything
 /plugin install understand-anything
 ```
 
@@ -221,16 +222,6 @@ UA 提供以下指令：
 | `/understand-chat` | 基于知识图谱进行对话，回答项目相关问题 |
 | `/understand-onboard` | 新人引导，生成项目概览和上手指南 |
 
-### 配置
-
-`.ua/config.json`：
-
-```json
-{
-  "autoUpdate": true,    // 代码变更时自动更新图谱
-  "outputLanguage": "zh" // 输出语言（zh=中文）
-}
-```
 
 ### 克隆项目后快速上手
 
@@ -247,7 +238,8 @@ git clone <repo-url> && cd keti
 # 4. 了解项目概况（可选）
 /understand-onboard
 
-# 5. 开始开发 — Claude Code 会自动参考知识图谱理解项目上下文
+# 5. 询问任意代码库的问题
+/understand-chat How does the payment flow work?
 ```
 
 ## 文档
