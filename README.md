@@ -232,10 +232,13 @@ git clone <repo-url> && cd keti
 # 2. 安装 Claude Code 插件
 /plugin install understand-anything
 
-# 3. 生成知识图谱（首次使用）
+# 3. 生成知识图谱（增量更新）
 /understand
 
-# 4. 了解项目概况（可选）
+# 4. 提取业务领域知识（领域、流程、步骤）
+/understand-domain
+
+# 4. 打开UA面板
 /understand-onboard
 
 # 5. 询问任意代码库的问题
