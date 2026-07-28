@@ -652,9 +652,9 @@ function handleNewData(newRecord) {
 
 | 方法 | 路径 | 描述 | 请求体 | 响应 |
 |------|------|------|--------|------|
-| POST | `/api/connection/login` | 登录simnow | `{broker_id, user_id, password, md_front, td_front}` | `{success, message}` |
-| POST | `/api/connection/logout` | 登出 | - | `{success}` |
-| GET | `/api/connection/status` | 获取连接状态 | - | `{md_connected, td_connected}` |
+| POST | `/api/connection/login` | 登录simnow | `{brokerID, userID, password}` | `{success, message, userID}` |
+| POST | `/api/connection/logout` | 登出 | - | `{success, message}` |
+| GET | `/api/connection/status` | 获取连接状态 | - | `{loggedIn, mdConnected, tdConnected}` |
 
 **断线重连机制**：
 - **后端检测**：CTP回调`OnFrontDisconnected`触发断线事件

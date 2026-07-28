@@ -120,9 +120,10 @@ export interface OrderRecord {
   frontID: number
   sessionID: number
   stopPrice: number
-  orderType: string
-  businessUnit: string
-  traderID: string
+  // --- 以下字段由后端返回，前端暂未使用 ---
+  orderType?: string
+  businessUnit?: string
+  traderID?: string
 }
 
 // OrderStatus 与 OrderRecord 相同，保留别名兼容旧代码
@@ -161,11 +162,27 @@ export interface TradeRecord {
   tradeID: string
   orderRef: string
   instrumentID: string
-  direction: 'buy' | 'sell'
-  offsetFlag: 'open' | 'close' | 'close_today'
+  direction: string  // '0'=买, '1'=卖
+  offsetFlag: string  // '0'=开仓, '1'=平仓, '3'=平今
   price: number
   volume: number
   tradeTime: string
+  // --- 以下字段由后端返回，前端暂未使用 ---
+  exchangeID?: string
+  hedgeFlag?: string
+  tradeDate?: string
+  tradingDay?: string
+  tradeType?: string
+  tradeSource?: string
+  traderID?: string
+  orderLocalID?: string
+  participantID?: string
+  sequenceNo?: number
+  businessUnit?: string
+  orderSysID?: string
+  brokerID?: string
+  investorID?: string
+  userID?: string
 }
 
 export interface PositionRecord {
@@ -179,6 +196,14 @@ export interface PositionRecord {
   todayPosition: number
   ydPosition: number
   tradingDay: string
+  // --- 以下字段由后端返回，前端暂未使用 ---
+  brokerID?: string
+  investorID?: string
+  exchangeID?: string
+  hedgeFlag?: string
+  positionDate?: string
+  closeProfit?: number
+  exchangeMargin?: number
 }
 
 export interface AccountInfo {
@@ -194,6 +219,8 @@ export interface AccountInfo {
   withdraw: number
   preBalance: number
   tradingDay: string
+  // --- 以下字段由后端返回，前端暂未使用 ---
+  brokerID?: string
 }
 
 // --- 合约/报价 ---
@@ -225,7 +252,7 @@ export interface OptionContract {
   instrumentID: string
   instrumentName: string
   underlying: string
-  optionType: string  // '1'=看涨(call), '2'=看跌(put)
+  optionsType: string  // '1'=看涨(call), '2'=看跌(put) — 注意：复数，与后端 CTP 字段一致
   strikePrice: number
   expireDate: string
   volumeMultiple: number
