@@ -22,12 +22,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 keti/
 ├── docs/                     # 项目文档
-│   ├── prd.md                # 产品需求文档
-│   ├── design.md             # 技术架构设计（接口、数据模型）
-│   ├── dev.md                # 项目设计稿（代码结构、技术规范）
-│   ├── task.md               # PR 任务拆分（21 个 PR，5 个阶段）
-│   ├── task-dev-flow.md      # 开发流程指南
-│   └── ctp-api-structure.txt # CTP 字段探测输出（类型定义参考）
+│   ├── specs/                # 需求与设计
+│   │   ├── prd.md            # 产品需求文档
+│   │   ├── design.md         # 技术架构设计（接口、数据模型）
+│   │   ├── dev.md            # 项目设计稿（代码结构、技术规范）
+│   │   ├── trading-instructions.md  # 交易指令规范
+│   │   ├── ctp-api-structure.txt    # CTP 字段探测输出（类型定义参考）
+│   │   └── ctp-python-guide.md      # CTP Python 指南
+│   ├── tasks/                # 任务与流程
+│   │   ├── task.md           # PR 任务拆分（21 个 PR，5 个阶段）
+│   │   ├── task-dev-flow.md  # 开发流程指南
+│   │   ├── consistency-check-records.md  # 一致性检查修复记录
+│   │   └── compliance-fix-records.md     # 交易指令合规修复记录
+│   ├── reviews/              # 审查报告
+│   │   ├── compliance-review.md  # 交易指令合规审查
+│   │   ├── testing-guide.md      # 测试说明报告
+│   │   └── check*.md         # 一致性检查报告
+│   └── dev-records/          # 开发记录（双窗口协作快照）
+│       ├── role-a/           # 角色A（后端）
+│       └── role-b/           # 角色B（前端）
 ├── docs/dev-records/role-a/  # 角色A 开发记录
 │   ├── progress.md           # 进度快照（验证通过/修复完成后更新）
 │   ├── dev-record-a.md       # 开发记录（TDD 循环、commit 对应）
@@ -183,7 +196,7 @@ spi.on("OnFrontConnected", lambda: print("connected"))
 
 ## CTP 字段参考
 
-### 核心 CTP 数据结构（`md_demo.py` 探测结果，见 `docs/ctp-api-structure.txt`）
+### 核心 CTP 数据结构（`md_demo.py` 探测结果，见 `docs/specs/ctp-api-structure.txt`）
 
 | CTP 类 | 用途 | 关键字段 |
 |--------|------|----------|
@@ -220,7 +233,7 @@ CTP 使用 PascalCase 字段名（如 `InstrumentID`, `LastPrice`, `BidPrice1`�
 - 用户偏好使用 localStorage 持久化；业务数据不落库，仅内存展示
 - 止损单由后端监控服务实现，复用行情订阅数据流
 - GFD 报单依赖 simnow 柜台收盘自动撤销
-- 项目依赖 `docs/ctp-api-structure.txt` 做前后端类型对齐，修改 CTP 字段时需同步更新
+- 项目依赖 `docs/specs/ctp-api-structure.txt` 做前后端类型对齐，修改 CTP 字段时需同步更新
 
 ## 角色B 双窗口开发流程
 
@@ -249,7 +262,7 @@ CTP 使用 PascalCase 字段名（如 `InstrumentID`, `LastPrice`, `BidPrice1`�
 
 **可操作范围**：读写 `frontend/`，读写 `docs/dev-records/role-b/dev-record-b.md`，读 `docs/**/*.md` + `CLAUDE.md`。只改 Task N 对应文件。
 
-**禁止事项**：禁止读写 `review-feedback-b-prX.md` / `review-reply-b-prX.md`，禁止改 `docs/*.md`，禁止提交 Task N+1。
+**禁止事项**：禁止读写 `review-feedback-b-prX.md` / `review-reply-b-prX.md`，禁止改 `docs/**/*.md`，禁止提交 Task N+1。
 
 ### 诊断输出格式
 

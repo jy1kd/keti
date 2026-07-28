@@ -106,11 +106,10 @@ npm run lint      # ESLint 检查
 ```
 keti/
 ├── docs/                     # 项目文档
-│   ├── prd.md                # 产品需求文档
-│   ├── design.md             # 技术架构设计
-│   ├── dev.md                # 项目设计稿
-│   ├── task.md               # PR 任务拆分（21 个 PR，5 个阶段）
-│   └── task3.md              # 交易指令合规性修复记录
+│   ├── specs/                # 需求与设计（prd/design/dev/trading-instructions/ctp-*/）
+│   ├── tasks/                # 任务与流程（task/task-dev-flow/修复记录）
+│   ├── reviews/              # 审查报告（compliance-review/testing-guide/check*）
+│   └── dev-records/          # 开发记录（role-a/role-b 双窗口协作快照）
 ├── frontend/                 # 前端代码
 │   ├── src/
 │   │   ├── modules/          # 业务模块（market/order/query/options）
@@ -146,4 +145,4 @@ keti/
 - 用户偏好使用 localStorage 持久化；业务数据不落库，仅内存展示
 - 止损单由后端监控服务实现，复用行情订阅数据流，持久化到本地文件
 - GFD 报单依赖 SimNow 柜台收盘自动撤销
-- 项目依赖 `docs/ctp-api-structure.txt` 做前后端类型对齐
+- 项目依赖 `docs/specs/ctp-api-structure.txt` 做前后端类型对齐
