@@ -48,13 +48,11 @@ Thumbs.db
 
 # Superpowers process files
 .superpowers/
-docs/superpowers/
 
 # Claude config
 # CLAUDE.md is now tracked (needed for AI guidance)
-# 团队共享 skills（开发流程）
+# 团队共享 skills（开发流程）— 全部提交
 # 个人 skills（不提交）
-.claude/skills/simnow-consistency-check/
 .claude/skills/simnow-resume/
 .claude/skills/simnow-weekly/
 
@@ -70,6 +68,7 @@ docs/superpowers/
 !.ua/knowledge-graph.json
 !.ua/meta.json
 !.ua/fingerprints.json
+!.ua/domain-graph.json
 server/data/instruments.json
 server/data/preset_instruments.json
 server/data/stop_orders.json
