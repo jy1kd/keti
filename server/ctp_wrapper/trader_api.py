@@ -202,13 +202,12 @@ class TraderApi:
 
         rid = self._next_request_id()
 
-        # Normalise OrderSysID: CTP uses a right-aligned char[21] field.
-        # Strip and re-pad for deterministic behaviour regardless of
-        # whether the stored value came from a raw CTP callback or was
-        # round-tripped through JSON serialisation.
-        _sys_id = (order_sys_id or "").strip()
-        if _sys_id:
-            _sys_id = _sys_id.rjust(20)
+        # OrderSysID: pass the raw value from CTP as-is.
+        # CTP stores it in a char[21] buffer (right-aligned, trailing nulls).
+        # The Python wrapper returns the non-null portion (may be < 20 chars).
+        # Do NOT rjust(20) — CTP compares with memcmp and extra padding
+        # causes "撤单找不到相应报单" (error 25).
+        _sys_id = order_sys_id or ""
 
         action = ctp.CThostFtdcInputOrderActionField()
         action.BrokerID = self.config.broker_id
