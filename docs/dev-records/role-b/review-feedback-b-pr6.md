@@ -71,7 +71,7 @@
 
 **【验证方式】** 本地启动项目，逐条操作验证
 
-**【需验证内容（从 docs/task.md 提取）】**
+**【需验证内容（从 docs/tasks/task.md 提取）】**
 1. 行情表格正常渲染（vtable 组件）
 2. 虚拟滚动支持（大量合约数据）
 3. 涨跌计算正确（基于 preClosePrice/preSettlementPrice）

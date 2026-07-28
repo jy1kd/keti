@@ -6,7 +6,7 @@ Wraps CThostFtdcMdApi for SimNow connection:
 - subscribe / unsubscribe: SubscribeMarketData / UnSubscribeMarketData
 - release: cleanup
 
-Key findings from CTP verification (see docs/task.md PR-1):
+Key findings from CTP verification (see docs/tasks/task.md PR-1):
 - SubscribeMarketData MUST receive str list, NOT bytes list
   (bytes causes heap corruption crash 0xC0000374 in SWIG bindings)
 """

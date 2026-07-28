@@ -26,8 +26,8 @@
    - 审查轮次、结论
    ```
 2. 更新文档进度：
-   - docs/task.md：PR 状态 → ✅ 已完成
-   - docs/task-dev-flow.md：更新阶段进度
+   - docs/tasks/task.md：PR 状态 → ✅ 已完成
+   - docs/tasks/task-dev-flow.md：更新阶段进度
    - progress.md：更新为「已合并」
    - dev-record-b.md：补充最终记录
 3. git status，如有未提交内容，做最后一次 commit

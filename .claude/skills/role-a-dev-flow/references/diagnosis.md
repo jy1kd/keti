@@ -11,10 +11,10 @@
    - **⚠️ 如遇到冲突**：停止操作，输出冲突文件列表，提示用户手动解决后重新执行诊断
    - **禁止** `git push --force`、`git reset --hard` 等破坏性操作
 2. **git log --oneline -20**，查看最近提交，记录已合并的 PR
-3. 读取 docs/task.md，找第一个「⏳ 待开始」且依赖满足的 PR
+3. 读取 docs/tasks/task.md，找第一个「⏳ 待开始」且依赖满足的 PR
 4. **用 git log 交叉验证**：task.md 中的「⏳ 待开始」PR 是否已在 git log 中出现？如有则跳过
-5. 读取 docs/task-dev-flow.md，确认阶段和并行安排
-6. 读取 snapshots/role-a/progress.md，了解已完成 PR
+5. 读取 docs/tasks/task-dev-flow.md，确认阶段和并行安排
+6. 读取 docs/dev-records/role-a/progress.md，了解已完成 PR
 7. git status，检查未提交内容
 8. git branch，确认当前分支
 9. 分支校验：

@@ -104,7 +104,7 @@
 
 **测试结果**：343 passed / 2 pre-existing failures（均为 PR-20 的 `useMarketWs.test.ts`，与 PR-15 无关）
 
-**范围控制**：仅修改预期文件，docs/task.md 已同步更新取消全撤推迟说明。
+**范围控制**：仅修改预期文件，docs/tasks/task.md 已同步更新取消全撤推迟说明。
 
 剩余 3 个 🟡 建议为非阻断项，不阻塞合入。
 

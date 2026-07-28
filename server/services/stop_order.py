@@ -266,14 +266,18 @@ class StopOrderService:
                      order.stop_order_id, order.instrument_id, last_price, order.stop_price)
 
         # Submit the actual order
+        # 市价触发：limitPrice 作为保护价传给 stop_price（CTP 市价单忽略 LimitPrice）
+        # 限价触发：limitPrice 作为委托价传给 limit_price
+        is_market = order.trigger_price_type == "1"
         result = self._order_manager.insert(
             instrument_id=order.instrument_id,
             exchange_id=order.exchange_id,
             direction=order.direction,
             offset_flag=order.offset_flag,
             price_type=order.trigger_price_type,  # "1"=市价, "2"=限价
-            limit_price=order.limit_price,
+            limit_price=0.0 if is_market else order.limit_price,
             volume=order.volume,
+            stop_price=order.limit_price if is_market else 0.0,
         )
 
         with self._lock:
