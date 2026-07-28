@@ -106,6 +106,9 @@ const columns = [
   { field: 'openInterest', title: '持仓量', width: 100 },
 ]
 
+const CTP_INVALID_PRICE = 1.7976931348623157e+308
+const isValidPrice = (p: number) => p > 0 && p < CTP_INVALID_PRICE
+
 function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined) {
   const productName = buildProductName(contract.productID)
   if (!snap) {
@@ -134,11 +137,11 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined) {
     productName,
     exchangeID: contract.exchangeID || PLACEHOLDER,
     expireDate: contract.expireDate || PLACEHOLDER,
-    lastPrice: snap.lastPrice,
-    change,
-    changePercent,
-    bidPrice1: snap.bidPrice1,
-    askPrice1: snap.askPrice1,
+    lastPrice: isValidPrice(snap.lastPrice) ? snap.lastPrice : PLACEHOLDER,
+    change: isValidPrice(snap.lastPrice) && isValidPrice(preSettlement) ? change : PLACEHOLDER,
+    changePercent: isValidPrice(snap.lastPrice) && isValidPrice(preSettlement) ? changePercent : PLACEHOLDER,
+    bidPrice1: isValidPrice(snap.bidPrice1) ? snap.bidPrice1 : PLACEHOLDER,
+    askPrice1: isValidPrice(snap.askPrice1) ? snap.askPrice1 : PLACEHOLDER,
     volume: snap.volume,
     openInterest: snap.openInterest,
   }

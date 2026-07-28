@@ -1,6 +1,9 @@
 import { useQueryStore } from './store'
 
+const CTP_INVALID = 1.7976931348623157e+308
+
 function fmt(n: number): string {
+  if (n == null || n >= CTP_INVALID || n <= -CTP_INVALID) return '--'
   return n.toFixed(2)
 }
 

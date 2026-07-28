@@ -39,10 +39,9 @@ class OrderManager:
     _ACTIVE_STATUSES: tuple = (
         "pending",
         OrderStatus.UNKNOWN,              # "a" — CTP initial state
-        OrderStatus.NO_TRADED,            # "2"
-        OrderStatus.NO_TRADED_QUEUING,     # "3"
-        OrderStatus.NO_TRADED_NOT_QUEUING, # "4"
-        OrderStatus.PART_TRADED,           # "1"
+        OrderStatus.NO_TRADED,            # "2" — 未成交，还在队列中
+        OrderStatus.NO_TRADED_NOT_QUEUING, # "3" — 未成交，不在队列中
+        OrderStatus.PART_TRADED,           # "1" — 部分成交
     )
 
     def __init__(self, trader_api: "TraderApi") -> None:
@@ -259,14 +258,31 @@ class OrderManager:
 
         Called from the CTP callback thread.
         """
-        # Signal the waiting cancel() thread
+        with self._lock:
+            # Signal the waiting cancel() thread
+            event = self._rsp_events.get(order_ref)
+            if event is not None:
+                # Store result for cancel() to read
+                if error_id != 0:
+                    self._rsp_action_results[order_ref] = ("error", error_msg)
+                else:
+                    self._rsp_action_results[order_ref] = ("accepted", "")
+                event.set()
+
+    def on_err_rtn_order_insert(self, order_ref: str, error_id: int, error_msg: str) -> None:
+        """Handle OnErrRtnOrderInsert from CTP — exchange-level insert rejection.
+
+        Fires when CTP accepted the order but the exchange rejected it.
+        """
+        logger.warning("OnErrRtnOrderInsert ref=%s error=%s msg=%s", order_ref, error_id, error_msg)
+        with self._lock:
+            order = self._orders.get(order_ref)
+            if order is not None:
+                order["orderSubmitStatus"] = "error"
+                order["statusMsg"] = error_msg
+        # Signal the waiting insert() thread
         event = self._rsp_events.get(order_ref)
         if event is not None:
-            # Store result for cancel() to read
-            if error_id != 0:
-                self._rsp_action_results[order_ref] = ("error", error_msg)
-            else:
-                self._rsp_action_results[order_ref] = ("accepted", "")
             event.set()
 
     def on_err_rtn_order_action(self, order_ref: str, error_id: int, error_msg: str) -> None:
@@ -280,18 +296,18 @@ class OrderManager:
         Called from the CTP callback thread.  Updates the order's statusMsg
         and signals any thread waiting in cancel().
         """
-        if error_id != 0:
-            logger.warning("CTP err-rtn order action (ref=%s): %s", order_ref, error_msg)
-            with self._lock:
+        with self._lock:
+            if error_id != 0:
+                logger.warning("CTP err-rtn order action (ref=%s): %s", order_ref, error_msg)
                 order = self._orders.get(order_ref)
                 if order is not None:
                     order["statusMsg"] = error_msg
 
-        # Signal the waiting cancel() thread — store the error result
-        event = self._rsp_events.get(order_ref)
-        if event is not None:
-            self._rsp_action_results[order_ref] = ("error", error_msg)
-            event.set()
+            # Signal the waiting cancel() thread — store the error result
+            event = self._rsp_events.get(order_ref)
+            if event is not None:
+                self._rsp_action_results[order_ref] = ("error", error_msg)
+                event.set()
 
     # ── Cancel ────────────────────────────────────────────────────────────
 
@@ -470,9 +486,11 @@ class OrderManager:
 
             existing.update(order_data)
 
-        # Signal any thread waiting in insert() — OnRtnOrder may arrive
-        # without a prior OnRspOrderInsert (SimNow behaviour)
-        event = self._rsp_events.get(ref)
+            # Signal any thread waiting in insert() — OnRtnOrder may arrive
+            # without a prior OnRspOrderInsert (SimNow behaviour)
+            # Retrieve event inside the lock to avoid race with insert()'s pop
+            event = self._rsp_events.get(ref)
+
         if event is not None:
             event.set()
 

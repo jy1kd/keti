@@ -47,7 +47,6 @@ export function useReconnect(
         return
       }
       ws.connect(endpoint, onMessageRef.current as MessageHandler)
-      // 连接后等待 onclose 事件触发下一次重连
     }, delay)
 
     timersRef.current.push(timer)
@@ -57,15 +56,14 @@ export function useReconnect(
     // 初始连接
     ws.connect(endpoint, onMessageRef.current as MessageHandler)
 
-    // 监听连接断开事件（通过轮询检测）
-    const checkInterval = setInterval(() => {
-      if (!ws.isConnected(endpoint) && retryCountRef.current === 0) {
-        scheduleReconnect()
-      }
-    }, 1000)
+    // 注册关闭回调 — 连接断开时触发重连
+    ws.onClose(endpoint, () => {
+      // 无论 retryCountRef 当前值如何，都应尝试重连
+      // 之前的条件 `retryCountRef.current === 0` 导致第一次重连失败后永久中断
+      scheduleReconnect()
+    })
 
     return () => {
-      clearInterval(checkInterval)
       timersRef.current.forEach(clearTimeout)
       timersRef.current = []
       retryCountRef.current = 0

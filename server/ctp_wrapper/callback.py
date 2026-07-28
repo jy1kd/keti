@@ -32,6 +32,8 @@ except (ImportError, AttributeError):
 class _SpiInfrastructure:
     """Mixin providing event logging and custom handler registration."""
 
+    MAX_EVENTS: int = 10000  # 防止长时间运行内存泄漏
+
     def _init_spi(self, api: Optional[Any] = None) -> None:
         self.api = api
         self.events: List[dict] = []
@@ -43,6 +45,9 @@ class _SpiInfrastructure:
             "timestamp": time.time(),
             "data": data or {},
         })
+        # 超过上限时丢弃前半部分，保留最近的事件
+        if len(self.events) > self.MAX_EVENTS:
+            self.events = self.events[self.MAX_EVENTS // 2:]
 
     def on(self, event_type: str, handler: Callable) -> None:
         self._handlers[event_type] = handler
@@ -204,6 +209,13 @@ def _td_on_err_rtn_order_action(self, pOrderAction: Any, pRspInfo: Any) -> None:
     self._dispatch("OnErrRtnOrderAction", pOrderAction, pRspInfo)
 
 
+def _td_on_err_rtn_order_insert(self, pInputOrder: Any, pRspInfo: Any) -> None:
+    self._log("OnErrRtnOrderInsert",
+              {"error_id": getattr(pRspInfo, 'ErrorID', None),
+               "error_msg": getattr(pRspInfo, 'ErrorMsg', None)})
+    self._dispatch("OnErrRtnOrderInsert", pInputOrder, pRspInfo)
+
+
 def _td_on_rsp_error(self, pRspInfo: Any, nRequestID: int, bIsLast: bool) -> None:
     self._log("OnRspError",
               {"request_id": nRequestID, "is_last": bIsLast})
@@ -219,6 +231,7 @@ TraderSpi.OnRtnTrade = _td_on_rtn_trade  # type: ignore
 TraderSpi.OnRspOrderInsert = _td_on_rsp_order_insert  # type: ignore
 TraderSpi.OnRspOrderAction = _td_on_rsp_order_action  # type: ignore
 TraderSpi.OnErrRtnOrderAction = _td_on_err_rtn_order_action  # type: ignore
+TraderSpi.OnErrRtnOrderInsert = _td_on_err_rtn_order_insert  # type: ignore
 TraderSpi.OnRspError = _td_on_rsp_error  # type: ignore
 
 

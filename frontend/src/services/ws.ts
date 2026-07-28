@@ -4,10 +4,13 @@ export type WSEndpoint = 'market' | 'order' | 'position' | 'stop' | 'system'
 
 type MessageCallback = (message: WSMessage) => void
 
+type CloseCallback = (event: CloseEvent) => void
+
 export class WSManager {
   private baseUrl: string
   private connections: Map<string, WebSocket> = new Map()
   private callbacks: Map<string, MessageCallback> = new Map()
+  private closeCallbacks: Map<string, CloseCallback> = new Map()
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl
@@ -21,8 +24,10 @@ export class WSManager {
     if (this.connections.has(endpoint)) {
       const old = this.connections.get(endpoint)
       if (old) {
-        // 移除旧回调防止旧连接触发消息
+        // 移除旧回调防止旧连接触发消息和关闭事件
         old.onmessage = null
+        old.onclose = null
+        old.onerror = null
         old.close()
       }
       this.connections.delete(endpoint)
@@ -54,6 +59,8 @@ export class WSManager {
 
     ws.onclose = (event) => {
       console.log(`[WS] ${endpoint} closed (code=${event.code})`)
+      const closeCb = this.closeCallbacks.get(endpoint)
+      if (closeCb) closeCb(event)
     }
 
     ws.onerror = () => {
@@ -64,6 +71,13 @@ export class WSManager {
     if (onMessage) {
       this.callbacks.set(endpoint, onMessage)
     }
+  }
+
+  /**
+   * 注册连接关闭回调（用于重连）
+   */
+  onClose(endpoint: WSEndpoint, callback: CloseCallback): void {
+    this.closeCallbacks.set(endpoint, callback)
   }
 
   /**
@@ -84,6 +98,7 @@ export class WSManager {
       // 清除回调后它会自然超时关闭，不会触发任何业务逻辑
       this.connections.delete(endpoint)
       this.callbacks.delete(endpoint)
+      this.closeCallbacks.delete(endpoint)
     }
   }
 

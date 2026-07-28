@@ -86,7 +86,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       toast.error('报单失败：请选择合约')
       return false
     }
-    if (submitForm.orderPriceType === 'limit' && submitForm.limitPrice <= 0) {
+    if (submitForm.orderPriceType === 'limit' && (!Number.isFinite(submitForm.limitPrice) || submitForm.limitPrice <= 0)) {
       toast.error('报单失败：请输入有效价格')
       return false
     }
@@ -94,6 +94,12 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     // 市价单保护价校验
     if (submitForm.orderPriceType === 'market' && (!submitForm.stopPrice || submitForm.stopPrice <= 0)) {
       toast.error('报单失败：市价指令必须填写保护价')
+      return false
+    }
+
+    // 数量有效性校验
+    if (!Number.isFinite(submitForm.volumeTotalOriginal) || submitForm.volumeTotalOriginal < 1) {
+      toast.error('报单失败：请输入有效数量')
       return false
     }
 
