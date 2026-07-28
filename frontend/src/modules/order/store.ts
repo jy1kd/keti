@@ -74,10 +74,10 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
         toast.error(`报单失败：${arbErr}`)
         return false
       }
-      // 自动生成 SP 格式的 instrumentID
+      // 自动生成 SPD 格式的 instrumentID（CTP 套利合约格式）
       submitForm = {
         ...form,
-        instrumentID: `SP ${form.arbitrageLeg1}&${form.arbitrageLeg2}`,
+        instrumentID: `SPD ${form.arbitrageLeg1}-${form.arbitrageLeg2}`,
       }
     }
 
@@ -137,7 +137,13 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
         set({ orderForm: { ...DEFAULT_ORDER_FORM }, isSubmitting: false })
         return true
       } else {
-        toast.error(`报单失败：${result.error || '未知错误'}`)
+        const errMsg = result.message || result.error || '未知错误'
+        // 套利合约特殊提示
+        if (submitForm.orderPriceType === 'arbitrage' && errMsg.includes('instrument')) {
+          toast.error('套利合约不存在或不支持，请确认 SimNow 是否支持该套利合约')
+        } else {
+          toast.error(`报单失败：${errMsg}`)
+        }
         set({ isSubmitting: false })
         return false
       }

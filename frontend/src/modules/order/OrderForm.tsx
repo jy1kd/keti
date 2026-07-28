@@ -342,7 +342,7 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
       >
         {isSubmitting ? '提交中...' : `${isBuy ? '买入' : '卖出'} ${
           isArbitrage
-            ? (leg1 && leg2 ? `SP ${leg1}&${leg2}` : '套利合约')
+            ? (leg1 && leg2 ? `SPD ${leg1}-${leg2}` : '套利合约')
             : orderForm.instrumentID || ''
         }`}
       </button>
