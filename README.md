@@ -110,6 +110,10 @@ keti/
 │   ├── tasks/                # 任务与流程（task/task-dev-flow/修复记录）
 │   ├── reviews/              # 审查报告（compliance-review/testing-guide/check*）
 │   └── dev-records/          # 开发记录（role-a/role-b 双窗口协作快照）
+├── examples/                 # CTP 示例脚本
+│   ├── ctp_connection_demo.py    # CTP 连接验证
+│   ├── field_structure_demo.py   # CTP 字段结构探测
+│   └── realtime_market_demo.py   # 实时行情显示
 ├── frontend/                 # 前端代码
 │   ├── src/
 │   │   ├── modules/          # 业务模块（market/order/query/options）
@@ -125,9 +129,41 @@ keti/
 │   ├── config.py             # 配置管理（环境变量读取）
 │   ├── main.py               # CTP 验证脚本
 │   └── tests/                # 108 个单元测试（pytest）
-├── md_demo.py                # CTP 字段结构探测脚本
-└── ctp_realtime_demo.py      # CTP 实时行情显示脚本
+├── .claude/                  # Claude Code 配置
+│   └── skills/               # 自定义技能（双窗口协作开发流程）
+│       ├── role-a-dev-flow/  # 角色A（后端）开发流程
+│       ├── role-b-dev-flow/  # 角色B（前端）开发流程
+│       ├── simnow-bug-fix/   # Bug 修复流程
+│       └── simnow-consistency-check/  # 一致性检查流程
+└── .ua/                      # Understand Anything 知识图谱
+    ├── knowledge-graph.json  # 代码实体关系图谱
+    ├── domain-graph.json     # 业务领域知识图谱
+    └── config.json           # UA 配置
 ```
+
+## Claude Code 技能链
+
+项目使用 Claude Code 自定义技能实现标准化开发流程：
+
+| 技能 | 用途 | 触发方式 |
+|------|------|----------|
+| `role-a-dev-flow` | 角色A（后端）完整开发流程 | 9 步：诊断→TDD→自验证→审查→合并 |
+| `role-b-dev-flow` | 角色B（前端）完整开发流程 | 同上，针对 frontend/ 目录 |
+| `simnow-bug-fix` | Bug 修复流程 | 根因分析→TDD 修复→验证 |
+| `simnow-consistency-check` | 前后端一致性检查 | 自动扫描类型/字段/API 不一致 |
+
+技能文件位于 `.claude/skills/`，通过 Claude Code 的 `/skill-name` 命令触发。
+
+## Understand Anything 知识图谱
+
+项目使用 Understand Anything (UA) 工具维护代码和业务知识图谱：
+
+| 文件 | 内容 |
+|------|------|
+| `knowledge-graph.json` | 代码实体（函数/类/模块）之间的调用和依赖关系 |
+| `domain-graph.json` | 业务领域概念（合约/报单/持仓/行情）之间的关系 |
+
+知识图谱帮助 AI 工具理解项目结构和业务逻辑，提升代码生成和审查的准确性。
 
 ## 文档
 
