@@ -19,6 +19,7 @@ const OFFSET_TO_CTP: Record<string, string> = {
 const PRICE_TYPE_TO_CTP: Record<string, string> = {
   limit: '2',
   market: '1',
+  arbitrage: '2',  // 套利合约走限价单
 }
 
 const TIME_CONDITION_TO_CTP: Record<string, string> = {
@@ -92,12 +93,14 @@ export interface OrderRequestForm {
   exchangeID?: string
   direction: 'buy' | 'sell'
   combOffsetFlag: 'open' | 'close' | 'close_today'
-  orderPriceType: 'limit' | 'market'
+  orderPriceType: 'limit' | 'market' | 'arbitrage'
   timeCondition: 'gfd' | 'fok' | 'fak'
   combHedgeFlag?: 'speculation' | 'arbitrage' | 'hedge'
   limitPrice: number
   volumeTotalOriginal: number
   stopPrice?: number
+  arbitrageLeg1?: string  // 套利腿1合约代码
+  arbitrageLeg2?: string  // 套利腿2合约代码
 }
 
 export interface CtpOrderRequest {

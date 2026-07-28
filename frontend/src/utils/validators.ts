@@ -30,12 +30,12 @@ export function validateInstrumentId(instrumentId: string): string | null {
  * 校验数量上限 — 根据报单类型和品种类型
  * 交易指令规则：
  *   市价：期货≤60手，期权≤30手
- *   限价：期货≤500手，期权≤100手
+ *   限价/套利：期货≤500手，期权≤100手
  * 返回 null 表示通过，返回字符串表示错误信息
  */
 export function validateVolumeWithLimit(
   volume: number,
-  orderType: 'limit' | 'market',
+  orderType: 'limit' | 'market' | 'arbitrage',
   productClass: string = '1',  // "1"=期货, "2"=期权
 ): string | null {
   const basic = validateVolume(volume)
@@ -47,5 +47,16 @@ export function validateVolumeWithLimit(
     : (isOption ? 100 : 500)
 
   if (volume > limit) return `数量不能超过${limit}手`
+  return null
+}
+
+/**
+ * 校验套利合约 — 两腿都不能为空
+ * 返回 null 表示通过，返回字符串表示错误信息
+ */
+export function validateArbitrage(leg1: string, leg2: string): string | null {
+  if (!leg1 || !leg1.trim()) return '请选择腿1合约'
+  if (!leg2 || !leg2.trim()) return '请选择腿2合约'
+  if (leg1 === leg2) return '两腿合约不能相同'
   return null
 }
