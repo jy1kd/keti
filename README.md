@@ -190,7 +190,16 @@ keti/
 
 ## Understand Anything 知识图谱
 
-项目使用 Understand Anything (UA) Claude Code 插件维护代码和业务知识图谱。UA 会自动分析项目代码，生成实体关系图谱，帮助 Claude Code 理解项目结构和业务逻辑。
+项目使用 [Understand Anything (UA)](https://github.com/Egonex-AI/Understand-Anything) Claude Code 插件维护代码和业务知识图谱。UA 会自动分析项目代码，生成实体关系图谱，帮助 Claude Code 理解项目结构和业务逻辑。
+
+### 安装
+
+UA 是 Claude Code 插件，通过 Claude Code 插件市场安装：
+
+```bash
+# 在 Claude Code 中运行
+/plugin install understand-anything
+```
 
 ### 知识图谱文件
 
@@ -200,13 +209,42 @@ keti/
 | `domain-graph.json` | 业务领域概念（合约/报单/持仓/行情）之间的关系 |
 | `config.json` | UA 配置（自动更新、输出语言） |
 | `fingerprints.json` | 文件指纹（增量更新用） |
+| `.understandignore` | 忽略规则（排除 node_modules、__pycache__ 等） |
 
 ### 使用方式
 
 UA 作为 Claude Code 插件运行，无需手动操作：
-- **自动更新**：`config.json` 中 `autoUpdate: true`，代码变更时自动更新图谱
-- **自动读取**：Claude Code 在代码审查和生成时自动读取 `.ua/` 下的图谱文件
-- **增量分析**：通过 `fingerprints.json` 跟踪文件变更，只分析修改过的文件
+
+1. **自动分析**：安装后 UA 自动扫描项目代码，生成 `knowledge-graph.json`
+2. **领域图谱**：结合业务文档生成 `domain-graph.json`（领域概念和业务规则）
+3. **自动读取**：Claude Code 在代码审查和生成时自动读取 `.ua/` 下的图谱文件
+4. **增量更新**：通过 `fingerprints.json` 跟踪文件变更，只分析修改过的文件
+
+### 配置
+
+`.ua/config.json`：
+
+```json
+{
+  "autoUpdate": true,    // 代码变更时自动更新图谱
+  "outputLanguage": "zh" // 输出语言（zh=中文）
+}
+```
+
+### 克隆项目后快速上手
+
+```bash
+# 1. 克隆项目
+git clone <repo-url> && cd keti
+
+# 2. 安装 Claude Code 插件
+/plugin install understand-anything
+
+# 3. UA 会自动分析项目，生成知识图谱
+#    首次分析约需 1-2 分钟，后续增量更新秒级完成
+
+# 4. 开始开发 — Claude Code 会自动参考知识图谱理解项目上下文
+```
 
 ## 文档
 
