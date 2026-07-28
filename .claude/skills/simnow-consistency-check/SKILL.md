@@ -117,7 +117,7 @@ description: SimNow 项目代码与文档双向一致性检查、前后端开发
 | 五档行情 | `frontend/src/` 中行情组件 + `server/ctp_wrapper/md_user_api.py` | 买一到买五、卖一到卖五是否完整传递和展示 |
 | 持仓展示 | 前端持仓组件 + 后端 `/api/position` | 是否包含：持仓量、开仓均价、浮动盈亏、保证金 |
 | K 线图 | 前端 K 线组件（ECharts） | 是否支持多周期切换、均线指标、缩放状态保持 |
-| 止损单 | 后端止损监控服务 + `docs/design.md` | 逻辑是否合理：价格触发 → 自动报单 → 状态跟踪 |
+| 止损单 | 后端止损监控服务 + `docs/specs/design.md` | 逻辑是否合理：价格触发 → 自动报单 → 状态跟踪 |
 
 ### 第三步（续）：前后端数据流一致性检查
 
@@ -291,7 +291,7 @@ description: SimNow 项目代码与文档双向一致性检查、前后端开发
 #### 5.5 执行修改
 确认后立即执行：
 - **修改文档** → 直接更新 docs/ 下的文件（design.md、dev.md、prd.md、task.md 等）
-- **修改代码** → 将代码修改计划写入 `docs/task2.md`，格式见下方模板
+- **修改代码** → 将代码修改计划写入 `docs/tasks/consistency-check-records.md`，格式见下方模板
 - **暂不处理** → 记录原因到检查文档
 
 #### 5.6 更新报告状态
@@ -302,7 +302,7 @@ description: SimNow 项目代码与文档双向一致性检查、前后端开发
 
 ### task2.md 代码修改计划模板
 
-代码类问题统一写入 `docs/task2.md`，格式仿照 `docs/task.md`。每个问题对应一个 PR 条目：
+代码类问题统一写入 `docs/tasks/consistency-check-records.md`，格式仿照 `docs/tasks/task.md`。每个问题对应一个 PR 条目：
 
 ```markdown
 # Task2: 一致性检查代码修复计划
@@ -349,7 +349,7 @@ frontend/src/xxx.tsx   # 修改内容说明
 ```
 
 **task2.md 管理规则**：
-- 如果 `docs/task2.md` 不存在，第一次写入时创建完整文件（含标题和说明）
+- 如果 `docs/tasks/consistency-check-records.md` 不存在，第一次写入时创建完整文件（含标题和说明）
 - 如果已存在，在文件末追加新的 PR 条目
 - PR 编号从 PR-C1 开始递增（C = Consistency）
 - 负责角色根据文件目录自动分配：`server/` → 角色A，`frontend/` → 角色B

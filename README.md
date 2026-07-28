@@ -69,7 +69,7 @@ SimNow 柜台 (7×24 测试环境)
 - **TDD 驱动**：红（写测试）→ 绿（写实现）→ 重构 → 提交
 - **9 步流程**：启动诊断 → 创建分支 → TDD 开发 → 自验证 → 代码审查 → 处理反馈 → 二次审查 → 人工验证 → 收尾合并
 
-详细流程见 [开发流程指南](docs/task-dev-flow.md)。
+详细流程见 [开发流程指南](docs/tasks/task-dev-flow.md)。
 
 ## 快速开始
 
@@ -132,12 +132,14 @@ keti/
 
 ## 文档
 
-- [产品需求文档](docs/prd.md) — 功能需求、非目标、用户画像
-- [技术架构设计](docs/design.md) — 接口设计、数据模型、WebSocket 端点
-- [项目设计稿](docs/dev.md) — 代码结构、技术规范、CTP 连接流程
-- [任务拆分](docs/task.md) — 21 个 PR，5 个阶段
-- [一致性检查修复](docs/task2.md) — 13 个 PR，前后端类型对齐
-- [交易指令合规性修复](docs/task3.md) — 保护价/数量上限/套利指令
+- [产品需求文档](docs/specs/prd.md) — 功能需求、非目标、用户画像
+- [技术架构设计](docs/specs/design.md) — 接口设计、数据模型、WebSocket 端点
+- [项目设计稿](docs/specs/dev.md) — 代码结构、技术规范、CTP 连接流程
+- [任务拆分](docs/tasks/task.md) — 21 个 PR，5 个阶段
+- [一致性检查修复](docs/tasks/consistency-check-records.md) — 13 个 PR，前后端类型对齐
+- [交易指令合规性修复](docs/tasks/compliance-fix-records.md) — 保护价/数量上限/套利指令
+- [交易指令合规审查](docs/reviews/compliance-review.md) — 11 个合规性问题清单
+- [测试说明报告](docs/reviews/testing-guide.md) — 零基础使用测试说明
 
 ## 注意事项
 

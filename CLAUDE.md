@@ -28,7 +28,7 @@ keti/
 │   ├── task.md               # PR 任务拆分（21 个 PR，5 个阶段）
 │   ├── task-dev-flow.md      # 开发流程指南
 │   └── ctp-api-structure.txt # CTP 字段探测输出（类型定义参考）
-├── snapshots/role-a/         # 角色A 快照文件
+├── docs/dev-records/role-a/  # 角色A 开发记录
 │   ├── progress.md           # 进度快照（验证通过/修复完成后更新）
 │   ├── dev-record-a.md       # 开发记录（TDD 循环、commit 对应）
 │   ├── review-feedback-a.md  # 审查反馈（审查窗口写入）
@@ -231,7 +231,7 @@ CTP 使用 PascalCase 字段名（如 `InstrumentID`, `LastPrice`, `BidPrice1`�
 | 项目 | 开发模式 | 审查模式 |
 |------|----------|----------|
 | 职责 | 写代码、跑测试、提交 | 读 diff、写审查反馈 |
-| 产出 | `snapshots/role-b/dev-record-b.md` | `snapshots/role-b/review-feedback-b-prX.md` |
+| 产出 | `docs/dev-records/role-b/dev-record-b.md` | `docs/dev-records/role-b/review-feedback-b-prX.md` |
 | 文档 | 可读全部、可改 `dev-record-b.md` | 只读、只写 `review-feedback-b-prX.md` |
 | 操作 | 按 TDD 流程：红→绿→重构→提交 | 写完反馈后停，不改代码 |
 
@@ -247,7 +247,7 @@ CTP 使用 PascalCase 字段名（如 `InstrumentID`, `LastPrice`, `BidPrice1`�
 
 ### 开发模式启动约束
 
-**可操作范围**：读写 `frontend/`，读写 `snapshots/role-b/dev-record-b.md`，读 `docs/*.md` + `CLAUDE.md`。只改 Task N 对应文件。
+**可操作范围**：读写 `frontend/`，读写 `docs/dev-records/role-b/dev-record-b.md`，读 `docs/**/*.md` + `CLAUDE.md`。只改 Task N 对应文件。
 
 **禁止事项**：禁止读写 `review-feedback-b-prX.md` / `review-reply-b-prX.md`，禁止改 `docs/*.md`，禁止提交 Task N+1。
 
