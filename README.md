@@ -190,44 +190,23 @@ keti/
 
 ## Understand Anything 知识图谱
 
-项目使用 Understand Anything (UA) 工具维护代码和业务知识图谱，帮助 AI 工具理解项目结构和业务逻辑。
-
-### 安装
-
-```bash
-pip install understand-anything
-```
+项目使用 Understand Anything (UA) Claude Code 插件维护代码和业务知识图谱。UA 会自动分析项目代码，生成实体关系图谱，帮助 Claude Code 理解项目结构和业务逻辑。
 
 ### 知识图谱文件
 
-| 文件 | 内容 | 用途 |
-|------|------|------|
-| `knowledge-graph.json` | 代码实体（函数/类/模块）之间的调用和依赖关系 | AI 理解代码结构 |
-| `domain-graph.json` | 业务领域概念（合约/报单/持仓/行情）之间的关系 | AI 理解业务逻辑 |
-| `config.json` | UA 配置（扫描路径、忽略规则） | 控制图谱生成范围 |
-| `fingerprints.json` | 文件指纹（增量更新用） | 避免重复扫描 |
+| 文件 | 内容 |
+|------|------|
+| `knowledge-graph.json` | 代码实体（函数/类/模块）之间的调用和依赖关系 |
+| `domain-graph.json` | 业务领域概念（合约/报单/持仓/行情）之间的关系 |
+| `config.json` | UA 配置（自动更新、输出语言） |
+| `fingerprints.json` | 文件指纹（增量更新用） |
 
-### 常用命令
+### 使用方式
 
-```bash
-# 生成/更新知识图谱
-ua build                    # 扫描项目，生成 knowledge-graph.json
-
-# 查询知识图谱
-ua query "OrderManager"     # 查询某个实体的依赖关系
-ua query "报单流程"          # 查询业务概念（需 domain-graph.json）
-
-# 与 Claude Code 协作
-# Claude Code 会自动读取 .ua/ 下的图谱文件，在代码审查和生成时参考
-```
-
-### 工作原理
-
-1. UA 扫描项目代码，提取函数/类/模块等实体
-2. 分析实体之间的调用、继承、依赖关系
-3. 生成 `knowledge-graph.json`（代码图谱）
-4. 结合业务文档生成 `domain-graph.json`（领域图谱）
-5. Claude Code 读取图谱，在代码审查和生成时参考项目上下文
+UA 作为 Claude Code 插件运行，无需手动操作：
+- **自动更新**：`config.json` 中 `autoUpdate: true`，代码变更时自动更新图谱
+- **自动读取**：Claude Code 在代码审查和生成时自动读取 `.ua/` 下的图谱文件
+- **增量分析**：通过 `fingerprints.json` 跟踪文件变更，只分析修改过的文件
 
 ## 文档
 
