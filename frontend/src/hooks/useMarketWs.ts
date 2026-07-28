@@ -18,16 +18,31 @@ export const PERIOD_MS: Record<string, number> = {
 
 /**
  * 将行情快照转换为 K 线数据点
- * 只用时分秒，不用今天的日期，避免与历史数据日期不同导致排序错误。
+ * 使用 actionDay + updateTime 构造完整 epoch 时间戳，与历史数据兼容。
  * @param periodMs 周期毫秒数，用于将时间戳向下取整到周期边界
  */
 function snapshotToKline(snap: MarketSnapshot, periodMs: number): KLineData {
   const [h = 0, m = 0, s = 0] = (snap.updateTime ?? '00:00:00').split(':').map(Number)
-  // 只用时分秒毫秒，构造从 epoch 起的偏移量（不含日期）
   const timeMs = ((h * 3600 + m * 60 + s) * 1000) + (snap.updateMillisec ?? 0)
 
-  // 将时间戳向下取整到周期边界
-  const timestamp = Math.floor(timeMs / periodMs) * periodMs
+  // 用 actionDay 构造完整日期；若为空则 fallback 到今天
+  let dayMs = 0
+  const actionDay = snap.actionDay || snap.tradingDay
+  if (actionDay && actionDay.length === 8) {
+    // actionDay 格式 "YYYYMMDD"
+    const year = parseInt(actionDay.slice(0, 4), 10)
+    const month = parseInt(actionDay.slice(4, 6), 10) - 1
+    const day = parseInt(actionDay.slice(6, 8), 10)
+    dayMs = new Date(year, month, day).getTime()
+  } else {
+    // fallback: 今天零点
+    const now = new Date()
+    dayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  }
+
+  // 完整 epoch 时间戳，向下取整到周期边界
+  const fullTimestamp = dayMs + timeMs
+  const timestamp = Math.floor(fullTimestamp / periodMs) * periodMs
 
   return {
     timestamp,
@@ -125,6 +140,8 @@ export function useMarketWs(wsBaseUrl: string) {
         // 重新加载合约列表
         useContractsStore.getState().loadSubscribedContracts()
       }
+      // 通知监听者 CTP 刷新完成
+      window.dispatchEvent(new CustomEvent('instruments_refreshed', { detail: { count } }))
     }
   }
 

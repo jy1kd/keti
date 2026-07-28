@@ -1,9 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { WSManager } from '@/services/ws'
 import { useConnectionStore } from '@/stores/connection'
-import { useContractsStore } from '@/stores/contracts'
 import { useReconnect } from './useReconnect'
-import { toast } from '@/components/Toast'
 import type { WSMessage } from '@/services/types'
 
 /**
@@ -42,31 +40,14 @@ export function useSystemWs(wsBaseUrl: string) {
       if (data.tdConnected !== undefined) {
         setTdPhase(data.tdConnected ? 'connected' : 'disconnected')
       }
-    } else if (message.type === 'instruments_refreshed') {
-      const data = message.data as { count: number }
-      useContractsStore.getState().loadSubscribedContracts()
-        .then(() => {
-          if (data.count > 0) {
-            toast.success(`已更新 ${data.count} 个合约`)
-          }
-          // 通知监听者 CTP 刷新完成
-          window.dispatchEvent(new CustomEvent('instruments_refreshed', { detail: { count: data.count } }))
-        })
-        .catch((err) => {
-          console.warn('[useSystemWs] refresh instruments failed:', err)
-        })
-    } else if (message.type === 'ping') {
-      // 心跳 — 无需处理
     }
+    // instruments_refreshed 已由 useMarketWs 统一处理，此处不再重复
   }
 
   const { reconnectCount } = useReconnect(ws, 'system', handleMessage)
 
-  // 连接时标记为 connecting
-  useEffect(() => {
-    setMdPhase('connecting')
-    setTdPhase('connecting')
-  }, [setMdPhase, setTdPhase])
+  // 不再无条件设置 connecting 状态 — 避免重载时闪烁
+  // 连接状态由 connection_status WS 消息或轮询决定
 
   // 清理
   useEffect(() => {

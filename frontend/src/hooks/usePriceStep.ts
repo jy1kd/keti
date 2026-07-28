@@ -8,18 +8,24 @@ export function usePriceStep(initialPrice: number, priceTick: number) {
     setPrice(initialPrice)
   }, [initialPrice])
 
-  const stepUp = () => {
+  const stepUp = (): number => {
+    let result = 0
     setPrice((prev) => {
       const next = roundToDecimals(prev + priceTick, priceTick)
-      return Math.max(0, next)
+      result = Math.max(0, next)
+      return result
     })
+    return result
   }
 
-  const stepDown = () => {
+  const stepDown = (): number => {
+    let result = 0
     setPrice((prev) => {
       const next = roundToDecimals(prev - priceTick, priceTick)
-      return Math.max(0, next)
+      result = Math.max(0, next)
+      return result
     })
+    return result
   }
 
   const alignToTick = (value: number) => {

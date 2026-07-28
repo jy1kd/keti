@@ -211,31 +211,33 @@ class MarketService:
         if not instruments:
             return {"success": True, "added": 0, "alreadySubscribed": []}
 
-        already: List[str] = []
-        new_instruments: List[str] = []
+        with self._lock:
+            already: List[str] = []
+            new_instruments: List[str] = []
 
-        for inst in instruments:
-            if inst in self._subscriptions:
-                already.append(inst)
-            else:
-                new_instruments.append(inst)
+            for inst in instruments:
+                if inst in self._subscriptions:
+                    already.append(inst)
+                else:
+                    new_instruments.append(inst)
 
-        # Check limit BEFORE adding (atomic check for batch)
-        if len(self._subscriptions) + len(new_instruments) > self.MAX_SUBSCRIPTIONS:
-            return {
-                "success": False,
-                "added": 0,
-                "alreadySubscribed": already,
-                "message": (
-                    f"Subscription limit exceeded: "
-                    f"{len(self._subscriptions)} subscribed, "
-                    f"cannot add {len(new_instruments)} more "
-                    f"(max {self.MAX_SUBSCRIPTIONS})"
-                ),
-            }
+            # Check limit BEFORE adding (atomic check for batch)
+            if len(self._subscriptions) + len(new_instruments) > self.MAX_SUBSCRIPTIONS:
+                return {
+                    "success": False,
+                    "added": 0,
+                    "alreadySubscribed": already,
+                    "message": (
+                        f"Subscription limit exceeded: "
+                        f"{len(self._subscriptions)} subscribed, "
+                        f"cannot add {len(new_instruments)} more "
+                        f"(max {self.MAX_SUBSCRIPTIONS})"
+                    ),
+                }
 
-        for inst in new_instruments:
-            self._subscriptions.add(inst)
+            # 先加入本地跟踪（即使 CTP 失败也保留本地状态）
+            for inst in new_instruments:
+                self._subscriptions.add(inst)
 
         # Call CTP SubscribeMarketData for the new instruments
         if new_instruments and self._subscribe_fn is not None:
@@ -265,18 +267,23 @@ class MarketService:
         if not instruments:
             return {"success": True, "removed": 0}
 
-        removed_instruments: List[str] = []
-        for inst in instruments:
-            if inst in self._subscriptions:
+        with self._lock:
+            # Identify instruments to remove
+            removed_instruments: List[str] = []
+            for inst in instruments:
+                if inst in self._subscriptions:
+                    removed_instruments.append(inst)
+            # 先从本地跟踪移除
+            for inst in removed_instruments:
                 self._subscriptions.discard(inst)
-                removed_instruments.append(inst)
 
-        # Call CTP UnSubscribeMarketData for the removed instruments
+        # Call CTP UnSubscribeMarketData
         if removed_instruments and self._unsubscribe_fn is not None:
             try:
                 self._unsubscribe_fn(removed_instruments)
             except Exception as exc:
                 logger.warning("CTP unsubscribe failed for %s", removed_instruments, exc_info=True)
+                # 本地已移除，即使 CTP 失败也保持本地状态一致
                 return {
                     "success": False,
                     "removed": 0,
@@ -312,11 +319,13 @@ class MarketService:
 
     def get_snapshot(self, instrument_id: str) -> Optional[dict]:
         """Get a single snapshot by instrument ID. Returns None if missing."""
-        return self._snapshots.get(instrument_id)
+        with self._lock:
+            return self._snapshots.get(instrument_id)
 
     def get_all_snapshots(self) -> List[dict]:
         """Return all cached snapshots as a list."""
-        return list(self._snapshots.values())
+        with self._lock:
+            return list(self._snapshots.values())
 
     # ── Instrument refresh from CTP (PR-19) ──────────────────────────────
 

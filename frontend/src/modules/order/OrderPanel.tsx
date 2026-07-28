@@ -7,7 +7,7 @@ import { toast } from '../../components/Toast'
 import { QuickActions } from '../../components/QuickActions'
 import { BatchCancel } from '../../components/BatchCancel'
 import { QuickKeys } from '../../components/QuickKeys'
-import { reversePosition, lockPosition, getOrders, cancelOrder } from '../../services/api'
+import { reversePosition, lockPosition, refreshOrders, cancelOrder } from '../../services/api'
 import { useUserPrefsStore } from '../../stores/userPrefs'
 import './styles.css'
 
@@ -55,11 +55,12 @@ export function OrderPanel() {
     setShowQuickKeys(false)
     setOrdersLoading(true)
     try {
-      const result = await getOrders()
+      const result = await refreshOrders()
       if (result.orders) {
-        // Only show unfilled orders; pass real fields from backend
+        // Only show unfilled orders; match CTP status codes
+        // '1'=部分成交, '2'=未成交(排队), '3'=未成交(不在队列)
         const unfilled = result.orders.filter(
-          (o) => o.orderStatus === 'no_traded' || o.orderStatus === 'partial'
+          (o) => o.orderStatus === '1' || o.orderStatus === '2' || o.orderStatus === '3'
         )
         setActiveOrders(unfilled)
       }

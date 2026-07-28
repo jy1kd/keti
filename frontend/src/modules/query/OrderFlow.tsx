@@ -3,10 +3,10 @@ import { useQueryStore } from './store'
 
 /** CTP orderStatus → 中文映射 */
 const STATUS_MAP: Record<string, string> = {
-  '0': '已提交',
+  '0': '全部成交',
   '1': '部分成交',
-  '2': '未成交',
-  '3': '全部成交',
+  '2': '未成交(排队)',
+  '3': '未成交',
   '5': '已撤单',
 }
 
@@ -27,7 +27,7 @@ const OFFSET_MAP: Record<string, string> = {
 
 /** 判断报单是否处于活跃状态（可撤单） */
 function isActiveOrder(status: string): boolean {
-  return status === '0' || status === '1' || status === '2'
+  return status === '1' || status === '2' || status === '3'
 }
 
 export function OrderFlow() {
@@ -41,6 +41,7 @@ export function OrderFlow() {
   const timerRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   useEffect(() => {
+    // 只为新增的 ref 创建计时器，不重置已有的
     for (const ref of newOrderRefs) {
       if (!timerRef.current.has(ref)) {
         const timer = setTimeout(() => {
@@ -50,8 +51,12 @@ export function OrderFlow() {
         timerRef.current.set(ref, timer)
       }
     }
-    return () => {
-      for (const timer of timerRef.current.values()) clearTimeout(timer)
+    // 清理已不在 newOrderRefs 中的计时器
+    for (const [ref, timer] of timerRef.current) {
+      if (!newOrderRefs.has(ref)) {
+        clearTimeout(timer)
+        timerRef.current.delete(ref)
+      }
     }
   }, [newOrderRefs, clearNewOrderRef])
 
@@ -64,7 +69,6 @@ export function OrderFlow() {
 
   const onCancelAll = useCallback(() => {
     handleCancelAll()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleCancelAll])
 
   if (orders.length === 0) {

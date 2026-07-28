@@ -64,6 +64,8 @@ export const useContractsStore = create<ContractsStore>((set) => ({
     }
     set((state) => ({
       contracts: state.contracts.filter((c) => c.instrumentID !== instrumentId),
+      selectedContracts: state.selectedContracts.filter((id) => id !== instrumentId),
+      presetIds: state.presetIds.filter((id) => id !== instrumentId),
     }))
     const prefs = useUserPrefsStore.getState()
     prefs.removeSelectedContract(instrumentId)
@@ -98,7 +100,14 @@ export const useContractsStore = create<ContractsStore>((set) => ({
     try {
       const result = await getInstrumentsByIds(allIds)
       if (result.instruments?.length) {
-        set({ contracts: result.instruments, presetIds })
+        // 合并：保留用户通过搜索添加的合约，更新/添加 preset+prefs 中的合约
+        set((state) => {
+          const existingMap = new Map(state.contracts.map(c => [c.instrumentID, c]))
+          for (const inst of result.instruments) {
+            existingMap.set(inst.instrumentID, inst)
+          }
+          return { contracts: Array.from(existingMap.values()), presetIds }
+        })
       }
     } catch {
       console.warn('[ContractsStore] Failed to load contract details')

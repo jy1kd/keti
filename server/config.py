@@ -26,9 +26,9 @@ class Config:
         user_id: str = None,
         password: str = None,
     ) -> None:
-        self.broker_id: str = broker_id or os.getenv("CTP_BROKER_ID", "9999")
-        self.user_id: str = user_id or os.getenv("CTP_USER_ID", "")
-        self.password: str = password or os.getenv("CTP_PASSWORD", "")
+        self.broker_id: str = broker_id if broker_id is not None else os.getenv("CTP_BROKER_ID", "9999")
+        self.user_id: str = user_id if user_id is not None else os.getenv("CTP_USER_ID", "")
+        self.password: str = password if password is not None else os.getenv("CTP_PASSWORD", "")
         self.app_id: str = os.getenv("CTP_APP_ID", "simnow_client")
         self.auth_code: str = os.getenv("CTP_AUTH_CODE", "0000000000000000")
         self.md_front: str = os.getenv(

@@ -11,6 +11,7 @@ Key findings from CTP verification (see docs/task.md PR-1):
   (bytes causes heap corruption crash 0xC0000374 in SWIG bindings)
 """
 
+import threading
 from typing import List, Optional
 
 from .callback import MdSpi
@@ -29,6 +30,7 @@ class MdUserApi:
         self.spi: MdSpi = MdSpi(api=self)
         self._api = None
         self._request_id: int = 0
+        self._id_lock = threading.Lock()
         self.connection_status: str = "disconnected"  # disconnected | connecting | connected | error
         self.login_status: str = "not_logged_in"  # not_logged_in | logging_in | logged_in | error
         self.subscribed_instruments: List[str] = []
@@ -54,6 +56,12 @@ class MdUserApi:
         self._api.Init()
         self.connection_status = "connecting"
 
+    def _next_request_id(self) -> int:
+        """Thread-safe request ID increment."""
+        with self._id_lock:
+            self._request_id += 1
+            return self._request_id
+
     def login(self) -> int:
         """Send login request to CTP.
 
@@ -64,13 +72,13 @@ class MdUserApi:
         """
         import ctp
 
-        self._request_id += 1
+        rid = self._next_request_id()
         login_field = ctp.CThostFtdcReqUserLoginField()
         login_field.BrokerID = self.config.broker_id
         login_field.UserID = self.config.user_id
         login_field.Password = self.config.password
         self.login_status = "logging_in"
-        return self._api.ReqUserLogin(login_field, self._request_id)
+        return self._api.ReqUserLogin(login_field, rid)
 
     def subscribe(self, instruments: List[str]) -> int:
         """Subscribe to market data for given instrument IDs.
@@ -121,9 +129,13 @@ class MdUserApi:
 
     def release(self) -> None:
         """Release the CTP API instance and cleanup."""
-        if self._api is not None:
-            self._api.Release()
-            self._api = None
+        # Clean up state first to ensure consistent reporting even if Release() fails
         self.connection_status = "disconnected"
         self.login_status = "not_logged_in"
         self.subscribed_instruments.clear()
+        if self._api is not None:
+            try:
+                self._api.Release()
+            except Exception:
+                pass
+            self._api = None

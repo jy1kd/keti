@@ -24,8 +24,19 @@ export function QuickActions({ instrumentID, onReverse, onLock, onBatchCancel }:
     if (disabled || loading) return
     setLoading(action)
     try {
-      await fn()
-      toast.success(successMsg)
+      const result = await fn() as { success?: boolean; message?: string; orders?: Array<{ success: boolean }> }
+      // Check backend response body for failure
+      if (result && typeof result === 'object') {
+        if (result.success === false) {
+          toast.error(`${errorPrefix}：${result.message || '未知错误'}`)
+        } else if (result.orders && result.orders.length > 0 && result.orders.every(o => !o.success)) {
+          toast.error(`${errorPrefix}：所有子订单均失败`)
+        } else {
+          toast.success(successMsg)
+        }
+      } else {
+        toast.success(successMsg)
+      }
     } catch (e: unknown) {
       const err = e as Error & { response?: { status: number } }
       if (err.response?.status === 501) {

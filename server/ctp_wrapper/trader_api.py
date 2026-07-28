@@ -8,6 +8,7 @@ Wraps CThostFtdcTraderApi for SimNow order management:
 - release: cleanup
 """
 
+import threading
 import time
 from typing import Optional
 
@@ -38,6 +39,7 @@ class TraderApi:
         self._api = None
         self._request_id: int = 0
         self.order_ref: int = 0
+        self._id_lock = threading.Lock()
         self.connection_status: str = "disconnected"
         self.login_status: str = "not_logged_in"
 
@@ -48,30 +50,40 @@ class TraderApi:
         self._api = ctp.CThostFtdcTraderApi.CreateFtdcTraderApi()
         self._api.RegisterSpi(self.spi)
         self._api.RegisterFront(self.config.td_front)
+        # 必须在 Init() 之前设置订阅模式，否则默认 THOST_TERT_RESTART
+        # 会重放当天所有历史报单/成交，导致大量无用回调
+        self._api.SubscribePublicTopic(ctp.THOST_TERT_QUICK)
+        self._api.SubscribePrivateTopic(ctp.THOST_TERT_QUICK)
         self._api.Init()
         self.connection_status = "connecting"
+
+    def _next_request_id(self) -> int:
+        """Thread-safe request ID increment."""
+        with self._id_lock:
+            self._request_id += 1
+            return self._request_id
 
     def login(self) -> int:
         """Send login request after OnFrontConnected."""
         import ctp
 
-        self._request_id += 1
+        rid = self._next_request_id()
         login_field = ctp.CThostFtdcReqUserLoginField()
         login_field.BrokerID = self.config.broker_id
         login_field.UserID = self.config.user_id
         login_field.Password = self.config.password
         self.login_status = "logging_in"
-        return self._api.ReqUserLogin(login_field, self._request_id)
+        return self._api.ReqUserLogin(login_field, rid)
 
     def confirm_settlement(self) -> int:
         """Confirm settlement info — required before placing orders."""
         import ctp
 
-        self._request_id += 1
+        rid = self._next_request_id()
         field = ctp.CThostFtdcSettlementInfoConfirmField()
         field.BrokerID = self.config.broker_id
         field.InvestorID = self.config.user_id
-        return self._api.ReqSettlementInfoConfirm(field, self._request_id)
+        return self._api.ReqSettlementInfoConfirm(field, rid)
 
     def next_order_ref(self) -> str:
         """Generate next order reference string.
@@ -80,9 +92,11 @@ class TraderApi:
         historical orders after a service restart.  CTP OrderRef is char[13]
         in older CTP versions; 9 chars leaves 4 bytes of headroom.
         """
-        self.order_ref += 1
+        with self._id_lock:
+            self.order_ref += 1
+            ref_num = self.order_ref
         ts = time.strftime("%H%M%S")
-        return f"{ts}-{self.order_ref}"
+        return f"{ts}-{ref_num}"
 
     def insert_order(
         self,
@@ -126,7 +140,7 @@ class TraderApi:
         """
         import ctp
 
-        self._request_id += 1
+        rid = self._next_request_id()
         if not order_ref:
             order_ref = self.next_order_ref()
 
@@ -150,9 +164,9 @@ class TraderApi:
         order.ForceCloseReason = force_close_reason
         order.StopPrice = stop_price
         order.IsAutoSuspend = 0
-        order.RequestID = self._request_id
+        order.RequestID = rid
 
-        result = self._api.ReqOrderInsert(order, self._request_id)
+        result = self._api.ReqOrderInsert(order, rid)
         return order_ref if result == 0 else ""
 
     def cancel_order(
@@ -186,7 +200,7 @@ class TraderApi:
         """
         import ctp
 
-        self._request_id += 1
+        rid = self._next_request_id()
 
         # Normalise OrderSysID: CTP uses a right-aligned char[21] field.
         # Strip and re-pad for deterministic behaviour regardless of
@@ -207,9 +221,9 @@ class TraderApi:
         action.FrontID = front_id
         action.SessionID = session_id
         action.ActionFlag = "0"  # 0=撤单
-        action.RequestID = self._request_id
+        action.RequestID = rid
 
-        return self._api.ReqOrderAction(action, self._request_id)
+        return self._api.ReqOrderAction(action, rid)
 
     def query_instruments(self) -> int:
         """Query all instruments from CTP.
@@ -223,11 +237,11 @@ class TraderApi:
         """
         import ctp
 
-        self._request_id += 1
+        rid = self._next_request_id()
         field = ctp.CThostFtdcQryInstrumentField()
         field.BrokerID = self.config.broker_id
         field.InvestorID = self.config.user_id
-        return self._api.ReqQryInstrument(field, self._request_id)
+        return self._api.ReqQryInstrument(field, rid)
 
     def query_orders(self) -> int:
         """Query order list from CTP.
@@ -241,11 +255,11 @@ class TraderApi:
         """
         import ctp
 
-        self._request_id += 1
+        rid = self._next_request_id()
         field = ctp.CThostFtdcQryOrderField()
         field.BrokerID = self.config.broker_id
         field.InvestorID = self.config.user_id
-        return self._api.ReqQryOrder(field, self._request_id)
+        return self._api.ReqQryOrder(field, rid)
 
     def query_trades(self) -> int:
         """Query trade list from CTP.
@@ -259,11 +273,11 @@ class TraderApi:
         """
         import ctp
 
-        self._request_id += 1
+        rid = self._next_request_id()
         field = ctp.CThostFtdcQryTradeField()
         field.BrokerID = self.config.broker_id
         field.InvestorID = self.config.user_id
-        return self._api.ReqQryTrade(field, self._request_id)
+        return self._api.ReqQryTrade(field, rid)
 
     def query_positions(self) -> int:
         """Query investor positions from CTP.
@@ -277,11 +291,11 @@ class TraderApi:
         """
         import ctp
 
-        self._request_id += 1
+        rid = self._next_request_id()
         field = ctp.CThostFtdcQryInvestorPositionField()
         field.BrokerID = self.config.broker_id
         field.InvestorID = self.config.user_id
-        return self._api.ReqQryInvestorPosition(field, self._request_id)
+        return self._api.ReqQryInvestorPosition(field, rid)
 
     def query_account(self) -> int:
         """Query trading account funds from CTP.
@@ -294,17 +308,21 @@ class TraderApi:
         """
         import ctp
 
-        self._request_id += 1
+        rid = self._next_request_id()
         field = ctp.CThostFtdcQryTradingAccountField()
         field.BrokerID = self.config.broker_id
         field.InvestorID = self.config.user_id
-        return self._api.ReqQryTradingAccount(field, self._request_id)
+        return self._api.ReqQryTradingAccount(field, rid)
 
     def release(self) -> None:
         """Release the CTP API instance and cleanup."""
-        if self._api is not None:
-            self._api.Release()
-            self._api = None
+        # Clean up state first to ensure consistent reporting even if Release() fails
         self.connection_status = "disconnected"
         self.login_status = "not_logged_in"
         self.order_ref = 0
+        if self._api is not None:
+            try:
+                self._api.Release()
+            except Exception:
+                pass
+            self._api = None

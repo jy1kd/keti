@@ -35,10 +35,10 @@ class InsertOrderRequest(BaseModel):
                                  description="1=任意数量, 2=最小数量, 3=全部数量")
     hedgeFlag: str = Field(default="1", pattern=r"^[123]$",
                            description="1=投机, 2=套利, 3=套保")
-    exchangeID: str = Field(default="CFFEX",
-                            description="交易所（CFFEX/SHFE/CZCE/DCE/INE/GFEX）")
     productClass: str = Field(default="1",
                               description="1=期货, 2=期权（用于数量上限校验）")
+    exchangeID: str = Field(default="CFFEX",
+                            description="交易所（CFFEX/SHFE/CZCE/DCE/INE/GFEX）")
 
     @field_validator("volumeTotalOriginal")
     @classmethod
@@ -87,7 +87,7 @@ class CancelOrderRequest(BaseModel):
     """Cancel order request body."""
 
     orderRef: str = Field(..., min_length=1)
-    orderSysID: Optional[str] = ""
+    orderSysID: str = ""
 
 
 class ReverseOrderRequest(BaseModel):
@@ -229,11 +229,17 @@ async def reverse_position(request: Request, body: ReverseOrderRequest):
         return {"success": False, "message": error}
 
     om = request.app.state.order_manager
+    # 获取最新行情作为市价单保护价
+    market_svc = getattr(request.app.state, "market_service", None)
+    snapshot = market_svc.get_snapshot(body.instrumentID) if market_svc else None
+    last_price = snapshot.get("lastPrice", 0.0) if snapshot else 0.0
     results = []
 
     for pos in target:
         pos_dir = pos.get("posiDirection", "")  # "2"=多, "3"=空
         volume = pos.get("position", 0)
+        today_volume = pos.get("todayPosition", 0)
+        yd_volume = pos.get("ydPosition", 0)
         exchange_id = pos.get("exchangeID", "")
         if volume <= 0:
             continue
@@ -242,22 +248,89 @@ async def reverse_position(request: Request, body: ReverseOrderRequest):
         # 多头(posiDirection="2") → 平仓用卖(direction="1")
         # 空头(posiDirection="3") → 平仓用买(direction="0")
         close_dir = "1" if pos_dir == "2" else "0"
-        close_result = om.insert(
-            instrument_id=body.instrumentID,
-            exchange_id=exchange_id,
-            direction=close_dir,
-            offset_flag="1",        # 平仓
-            price_type="1",         # 市价
-            limit_price=0.0,
-            volume=volume,
-            time_condition="1",     # GFD
-            volume_condition="1",
-            hedge_flag="1",
-        )
-        results.append({"action": "close", **close_result})
+
+        # 上期所/能源所今仓需用平今(offset_flag="3")，昨仓用平仓(offset_flag="1")
+        # 其他交易所统一用平仓
+        SHFE_EXCHANGES = {"SHFE", "INE"}
+        close_success = True
+
+        if exchange_id in SHFE_EXCHANGES and today_volume > 0:
+            if yd_volume > 0:
+                # 分两笔：先平今，再平昨
+                close_today_result = om.insert(
+                    instrument_id=body.instrumentID,
+                    exchange_id=exchange_id,
+                    direction=close_dir,
+                    offset_flag="3",        # 平今
+                    price_type="1",         # 市价
+                    limit_price=0.0,
+                    volume=today_volume,
+                    time_condition="1",     # IOC
+                    volume_condition="3",   # FOK
+                    hedge_flag="1",
+                    stop_price=last_price,  # 市价单必须填写保护价
+                )
+                results.append({"action": "close_today", **close_today_result})
+
+                if not close_today_result.get("success"):
+                    close_success = False
+
+                if yd_volume > 0 and close_success:
+                    close_yd_result = om.insert(
+                        instrument_id=body.instrumentID,
+                        exchange_id=exchange_id,
+                        direction=close_dir,
+                        offset_flag="1",        # 平仓
+                        price_type="1",
+                        limit_price=0.0,
+                        volume=yd_volume,
+                        time_condition="1",
+                        volume_condition="3",   # FOK
+                        hedge_flag="1",
+                        stop_price=last_price,  # 市价单必须填写保护价
+                    )
+                    results.append({"action": "close_yesterday", **close_yd_result})
+                    if not close_yd_result.get("success"):
+                        close_success = False
+            else:
+                # 仅今仓，用平今
+                close_result = om.insert(
+                    instrument_id=body.instrumentID,
+                    exchange_id=exchange_id,
+                    direction=close_dir,
+                    offset_flag="3",        # 平今
+                    price_type="1",         # 市价
+                    limit_price=0.0,
+                    volume=today_volume,
+                    time_condition="1",     # IOC
+                    volume_condition="3",   # FOK
+                    hedge_flag="1",
+                    stop_price=last_price,  # 市价单必须填写保护价
+                )
+                results.append({"action": "close_today", **close_result})
+                if not close_result.get("success"):
+                    close_success = False
+        else:
+            # 非 SHFE 或仅昨仓，一次性平仓
+            close_result = om.insert(
+                instrument_id=body.instrumentID,
+                exchange_id=exchange_id,
+                direction=close_dir,
+                offset_flag="1",        # 平仓
+                price_type="1",         # 市价
+                limit_price=0.0,
+                volume=volume,
+                time_condition="1",     # IOC
+                volume_condition="3",   # FOK
+                hedge_flag="1",
+                stop_price=last_price,  # 市价单必须填写保护价
+            )
+            results.append({"action": "close", **close_result})
+            if not close_result.get("success"):
+                close_success = False
 
         # 只有平仓成功才开新仓
-        if not close_result.get("success"):
+        if not close_success:
             continue
 
         # 开仓：同原方向（反向后的新仓位）
@@ -273,8 +346,9 @@ async def reverse_position(request: Request, body: ReverseOrderRequest):
             limit_price=0.0,
             volume=volume,
             time_condition="1",
-            volume_condition="1",
+            volume_condition="3",   # FOK
             hedge_flag="1",
+            stop_price=last_price,  # 市价单必须填写保护价
         )
         results.append({"action": "open", **open_result})
 
@@ -295,6 +369,10 @@ async def lock_position(request: Request, body: LockOrderRequest):
         return {"success": False, "message": error}
 
     om = request.app.state.order_manager
+    # 获取最新行情作为市价单保护价
+    market_svc = getattr(request.app.state, "market_service", None)
+    snapshot = market_svc.get_snapshot(body.instrumentID) if market_svc else None
+    last_price = snapshot.get("lastPrice", 0.0) if snapshot else 0.0
     results = []
 
     for pos in target:
@@ -317,8 +395,9 @@ async def lock_position(request: Request, body: LockOrderRequest):
             limit_price=0.0,
             volume=volume,
             time_condition="1",
-            volume_condition="1",
+            volume_condition="3",   # FOK
             hedge_flag="1",
+            stop_price=last_price,  # 市价单必须填写保护价
         )
         results.append({"action": "lock_open", **result})
 

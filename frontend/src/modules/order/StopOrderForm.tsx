@@ -1,6 +1,6 @@
 import { useOrderStore } from './store'
 import { usePriceStep } from '../../hooks/usePriceStep'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 interface StopOrderFormProps {
   priceTick?: number
@@ -17,22 +17,27 @@ export function StopOrderForm({ priceTick = 0.2 }: StopOrderFormProps) {
   const [triggerPriceType, setTriggerPriceType] = useState<'limit' | 'market'>('limit')
   const isMarketTrigger = triggerPriceType === 'market'
 
-  const { price, stepUp, stepDown } = usePriceStep(orderForm.limitPrice, priceTick)
-  const { price: stopPrice, stepUp: stopStepUp, stepDown: stopStepDown } =
+  const { stepUp, stepDown } = usePriceStep(orderForm.limitPrice, priceTick)
+  const { stepUp: stopStepUp, stepDown: stopStepDown } =
     usePriceStep(orderForm.stopPrice ?? 0, priceTick)
 
-  // Sync hook state → store
-  useEffect(() => {
-    if (price !== orderForm.limitPrice) {
-      setOrderForm({ limitPrice: price })
-    }
-  }, [price])
-
-  useEffect(() => {
-    if (stopPrice !== (orderForm.stopPrice ?? 0)) {
-      setOrderForm({ stopPrice })
-    }
-  }, [stopPrice])
+  // 价格步进 — 直接更新 store，避免 hook↔store 双向同步导致双重渲染
+  const handlePriceStepUp = () => {
+    const stepped = stepUp()
+    if (stepped !== undefined) setOrderForm({ limitPrice: stepped })
+  }
+  const handlePriceStepDown = () => {
+    const stepped = stepDown()
+    if (stepped !== undefined) setOrderForm({ limitPrice: stepped })
+  }
+  const handleStopPriceStepUp = () => {
+    const stepped = stopStepUp()
+    if (stepped !== undefined) setOrderForm({ stopPrice: stepped })
+  }
+  const handleStopPriceStepDown = () => {
+    const stepped = stopStepDown()
+    if (stepped !== undefined) setOrderForm({ stopPrice: stepped })
+  }
 
   return (
     <div className="order-form">
@@ -156,7 +161,7 @@ export function StopOrderForm({ priceTick = 0.2 }: StopOrderFormProps) {
       <div className="form-row">
         <label>{isMarketTrigger ? '保护价' : '委托价'}</label>
         <div className="stepper-group">
-          <button type="button" className="stepper-btn" onClick={stepDown}>
+          <button type="button" className="stepper-btn" onClick={handlePriceStepDown}>
             −
           </button>
           <input
@@ -167,7 +172,7 @@ export function StopOrderForm({ priceTick = 0.2 }: StopOrderFormProps) {
             min={0}
             step={priceTick}
           />
-          <button type="button" className="stepper-btn" onClick={stepUp}>
+          <button type="button" className="stepper-btn" onClick={handlePriceStepUp}>
             +
           </button>
         </div>
@@ -210,7 +215,7 @@ export function StopOrderForm({ priceTick = 0.2 }: StopOrderFormProps) {
       <div className="form-row">
         <label>止损价</label>
         <div className="stepper-group">
-          <button type="button" className="stepper-btn" onClick={stopStepDown}>
+          <button type="button" className="stepper-btn" onClick={handleStopPriceStepDown}>
             −
           </button>
           <input
@@ -221,7 +226,7 @@ export function StopOrderForm({ priceTick = 0.2 }: StopOrderFormProps) {
             min={0}
             step={priceTick}
           />
-          <button type="button" className="stepper-btn" onClick={stopStepUp}>
+          <button type="button" className="stepper-btn" onClick={handleStopPriceStepUp}>
             +
           </button>
         </div>

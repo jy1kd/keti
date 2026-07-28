@@ -50,26 +50,28 @@ const OFFSET_FROM_CTP: Record<string, string> = {
 const ORDER_STATUS_FROM_CTP: Record<string, string> = {
   '0': 'all_traded',
   '1': 'partial',
-  '2': 'no_traded',
+  '2': 'no_traded_queuing',
+  '3': 'no_traded',
   '5': 'canceled',
+  'a': 'unknown',
 }
 
 // --- 导出函数 ---
 
 export function toCtpDirection(direction: string): string {
-  return DIRECTION_TO_CTP[direction]
+  return DIRECTION_TO_CTP[direction] ?? '0'
 }
 
 export function toCtpOffsetFlag(offsetFlag: string): string {
-  return OFFSET_TO_CTP[offsetFlag]
+  return OFFSET_TO_CTP[offsetFlag] ?? '0'
 }
 
 export function toCtpPriceType(priceType: string): string {
-  return PRICE_TYPE_TO_CTP[priceType]
+  return PRICE_TYPE_TO_CTP[priceType] ?? '2'
 }
 
 export function toCtpTimeCondition(timeCondition: string): string {
-  return TIME_CONDITION_TO_CTP[timeCondition]
+  return TIME_CONDITION_TO_CTP[timeCondition] ?? '3'
 }
 
 export function toCtpHedgeFlag(combHedgeFlag: string): string {
@@ -77,15 +79,15 @@ export function toCtpHedgeFlag(combHedgeFlag: string): string {
 }
 
 export function fromCtpDirection(ctpDirection: string): string {
-  return DIRECTION_FROM_CTP[ctpDirection]
+  return DIRECTION_FROM_CTP[ctpDirection] ?? 'unknown'
 }
 
 export function fromCtpOffsetFlag(ctpOffsetFlag: string): string {
-  return OFFSET_FROM_CTP[ctpOffsetFlag]
+  return OFFSET_FROM_CTP[ctpOffsetFlag] ?? 'unknown'
 }
 
 export function fromCtpOrderStatus(ctpStatus: string): string {
-  return ORDER_STATUS_FROM_CTP[ctpStatus]
+  return ORDER_STATUS_FROM_CTP[ctpStatus] ?? 'unknown'
 }
 
 export interface OrderRequestForm {

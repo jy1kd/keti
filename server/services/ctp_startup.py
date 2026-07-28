@@ -103,6 +103,8 @@ def connect_ctp(
         loop = asyncio.get_running_loop()
     except RuntimeError:
         loop = asyncio.new_event_loop()
+        # 必须在后台线程启动事件循环，否则 run_coroutine_threadsafe 的协程永远不执行
+        threading.Thread(target=loop.run_forever, daemon=True, name="asyncio-fallback").start()
 
     # Shared result dict — _connect_ctp writes the outcome here
     result: dict = {"success": False, "message": "Connection not started", "userID": user_id}
@@ -315,10 +317,18 @@ def _wire_bridge(
     # Wire OnFrontDisconnected → system broadcast + reconnect
     from services.reconnect import ReconnectService
 
-    reconnect_svc = ReconnectService(
-        connect_fn=lambda: _attempt_reconnect(app, md_api, loop),
-        subscribe_fn=md_api.subscribe,
-    )
+    # Preserve existing ReconnectService across reconnects to keep subscription tracking
+    existing_reconnect_svc = getattr(app.state, "reconnect_service", None)
+    if existing_reconnect_svc is not None:
+        reconnect_svc = existing_reconnect_svc
+        # Update hooks for the new md_api instance
+        reconnect_svc._connect_fn = lambda: _attempt_reconnect(app, md_api, loop)
+        reconnect_svc._subscribe_fn = md_api.subscribe
+    else:
+        reconnect_svc = ReconnectService(
+            connect_fn=lambda: _attempt_reconnect(app, md_api, loop),
+            subscribe_fn=md_api.subscribe,
+        )
     app.state.reconnect_service = reconnect_svc
 
     # Wire subscribe/unsubscribe: MarketService → CTP MdUserApi
@@ -543,7 +553,7 @@ def start_ctp_trading_connection(
             session_id = getattr(pRspUserLogin, "SessionID", 0)
             order_manager.set_session(front_id, session_id)
             logger.info("CTP TD login successful (user=%s, front=%s, session=%s), confirming settlement",
-                        config.user_id, front_id, session_id)
+                        td_user, front_id, session_id)
             # Broadcast TD connected status to frontend
             _broadcast_system("connection_status", {
                 "tdConnected": True,
@@ -568,7 +578,7 @@ def start_ctp_trading_connection(
         if not bIsLast:
             return
         order_ref = getattr(pInputOrder, "OrderRef", "")
-        error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
+        error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo is not None else 0
         error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
         if error_id != 0:
             logger.warning("CTP order insert rejected (ref=%s): %s", order_ref, error_msg)
@@ -579,7 +589,7 @@ def start_ctp_trading_connection(
         if not bIsLast:
             return
         order_ref = getattr(pInputOrderAction, "OrderRef", "")
-        error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
+        error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo is not None else 0
         error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
         if error_id != 0:
             logger.warning("CTP order action rejected (ref=%s): %s", order_ref, error_msg)
@@ -588,12 +598,21 @@ def start_ctp_trading_connection(
 
     def _on_err_rtn_order_action(pOrderAction, pRspInfo):
         order_ref = getattr(pOrderAction, "OrderRef", "")
-        error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
+        error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo is not None else 0
         error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
         if error_id != 0:
             logger.warning("CTP order action exchange rejected (ref=%s): %s", order_ref, error_msg)
         if order_manager is not None:
             order_manager.on_err_rtn_order_action(order_ref, error_id, error_msg)
+
+    def _on_err_rtn_order_insert(pInputOrder, pRspInfo):
+        order_ref = getattr(pInputOrder, "OrderRef", "")
+        error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo is not None else 0
+        error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
+        if error_id != 0:
+            logger.warning("CTP order insert exchange rejected (ref=%s): %s", order_ref, error_msg)
+        if order_manager is not None:
+            order_manager.on_err_rtn_order_insert(order_ref, error_id, error_msg)
 
     trader.spi.on("OnFrontConnected", _on_front_connected)
     trader.spi.on("OnRspUserLogin", _on_rsp_user_login)
@@ -602,6 +621,7 @@ def start_ctp_trading_connection(
     trader.spi.on("OnRspOrderInsert", _on_rsp_order_insert)
     trader.spi.on("OnRspOrderAction", _on_rsp_order_action)
     trader.spi.on("OnErrRtnOrderAction", _on_err_rtn_order_action)
+    trader.spi.on("OnErrRtnOrderInsert", _on_err_rtn_order_insert)
 
     # Create TD ReconnectService — mirrors MD reconnect pattern
     from services.reconnect import ReconnectService as TDReconnectService
@@ -764,7 +784,7 @@ def _attempt_reconnect_td(app: "FastAPI") -> bool:
         if not bIsLast:
             return
         order_ref = getattr(pInputOrder, "OrderRef", "")
-        error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
+        error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo is not None else 0
         error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
         if error_id != 0:
             logger.warning("CTP order insert rejected (ref=%s): %s", order_ref, error_msg)
@@ -774,7 +794,7 @@ def _attempt_reconnect_td(app: "FastAPI") -> bool:
         if not bIsLast:
             return
         order_ref = getattr(pInputOrderAction, "OrderRef", "")
-        error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
+        error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo is not None else 0
         error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
         if error_id != 0:
             logger.warning("CTP order action rejected (ref=%s): %s", order_ref, error_msg)
@@ -782,11 +802,19 @@ def _attempt_reconnect_td(app: "FastAPI") -> bool:
 
     def _on_err_rtn_order_action(pOrderAction, pRspInfo):
         order_ref = getattr(pOrderAction, "OrderRef", "")
-        error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
+        error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo is not None else 0
         error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
         if error_id != 0:
             logger.warning("CTP order action exchange rejected (ref=%s): %s", order_ref, error_msg)
         order_manager.on_err_rtn_order_action(order_ref, error_id, error_msg)
+
+    def _on_err_rtn_order_insert(pInputOrder, pRspInfo):
+        order_ref = getattr(pInputOrder, "OrderRef", "")
+        error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo is not None else 0
+        error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
+        if error_id != 0:
+            logger.warning("CTP order insert exchange rejected (ref=%s): %s", order_ref, error_msg)
+        order_manager.on_err_rtn_order_insert(order_ref, error_id, error_msg)
 
     # ── OnFrontDisconnected handler for the reconnected session ──────────
     # Re-fetch the reconnect service (it's the same one, re-stored on state)
@@ -826,6 +854,7 @@ def _attempt_reconnect_td(app: "FastAPI") -> bool:
     trader.spi.on("OnRspOrderInsert", _on_rsp_order_insert)
     trader.spi.on("OnRspOrderAction", _on_rsp_order_action)
     trader.spi.on("OnErrRtnOrderAction", _on_err_rtn_order_action)
+    trader.spi.on("OnErrRtnOrderInsert", _on_err_rtn_order_insert)
     trader.spi.on("OnFrontDisconnected", _on_td_front_disconnected)
     _wire_instrument_query(app, trader.spi)
     _wire_query_callbacks(app, trader.spi)
@@ -899,6 +928,8 @@ def connect_trading(
         loop = asyncio.get_running_loop()
     except RuntimeError:
         loop = asyncio.new_event_loop()
+        # 必须在后台线程启动事件循环，否则 run_coroutine_threadsafe 的协程永远不执行
+        threading.Thread(target=loop.run_forever, daemon=True, name="asyncio-fallback-td").start()
 
     result: dict = {"success": False, "message": "Connection not started", "userID": user_id}
     login_done = threading.Event() if wait else None
@@ -986,7 +1017,7 @@ def connect_trading(
         if not bIsLast:
             return
         order_ref = getattr(pInputOrder, "OrderRef", "")
-        error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
+        error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo is not None else 0
         error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
         if error_id != 0:
             logger.warning("CTP order insert rejected (ref=%s): %s", order_ref, error_msg)
@@ -997,7 +1028,7 @@ def connect_trading(
         if not bIsLast:
             return
         order_ref = getattr(pInputOrderAction, "OrderRef", "")
-        error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
+        error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo is not None else 0
         error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
         if error_id != 0:
             logger.warning("CTP order action rejected (ref=%s): %s", order_ref, error_msg)
@@ -1006,12 +1037,21 @@ def connect_trading(
 
     def _on_err_rtn_order_action(pOrderAction, pRspInfo):
         order_ref = getattr(pOrderAction, "OrderRef", "")
-        error_id = getattr(pRspInfo, "ErrorID", -1) if pRspInfo is not None else -1
+        error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo is not None else 0
         error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
         if error_id != 0:
             logger.warning("CTP order action exchange rejected (ref=%s): %s", order_ref, error_msg)
         if order_manager is not None:
             order_manager.on_err_rtn_order_action(order_ref, error_id, error_msg)
+
+    def _on_err_rtn_order_insert(pInputOrder, pRspInfo):
+        order_ref = getattr(pInputOrder, "OrderRef", "")
+        error_id = getattr(pRspInfo, "ErrorID", 0) if pRspInfo is not None else 0
+        error_msg = getattr(pRspInfo, "ErrorMsg", "") if pRspInfo is not None else ""
+        if error_id != 0:
+            logger.warning("CTP order insert exchange rejected (ref=%s): %s", order_ref, error_msg)
+        if order_manager is not None:
+            order_manager.on_err_rtn_order_insert(order_ref, error_id, error_msg)
 
     trader.spi.on("OnFrontConnected", _on_front_connected)
     trader.spi.on("OnRspUserLogin", _on_rsp_user_login)
@@ -1020,6 +1060,7 @@ def connect_trading(
     trader.spi.on("OnRspOrderInsert", _on_rsp_order_insert)
     trader.spi.on("OnRspOrderAction", _on_rsp_order_action)
     trader.spi.on("OnErrRtnOrderAction", _on_err_rtn_order_action)
+    trader.spi.on("OnErrRtnOrderInsert", _on_err_rtn_order_insert)
 
     # Wire OnFrontDisconnected → reset state + trigger reconnect
     def _broadcast_system(msg_type: str, data: dict) -> None:

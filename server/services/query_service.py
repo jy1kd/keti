@@ -53,6 +53,9 @@ class QueryService:
         self._positions_event = threading.Event()
         self._account_event = threading.Event()
 
+        # Query lock — prevents concurrent queries from corrupting pending lists
+        self._query_lock = threading.Lock()
+
         # Cached results (latest query)
         self._orders: List[dict] = []
         self._trades: List[dict] = []
@@ -63,15 +66,15 @@ class QueryService:
 
     @property
     def order_count(self) -> int:
-        return len(self._pending_orders)
+        return len(self._orders)
 
     @property
     def trade_count(self) -> int:
-        return len(self._pending_trades)
+        return len(self._trades)
 
     @property
     def position_count(self) -> int:
-        return len(self._pending_positions)
+        return len(self._positions)
 
     @property
     def account_info(self) -> Optional[dict]:
@@ -169,15 +172,16 @@ class QueryService:
         if trader_api.login_status != "logged_in":
             return []
 
-        self._pending_orders = []
-        self._orders_event.clear()
+        with self._query_lock:
+            self._pending_orders = []
+            self._orders_event.clear()
 
-        result = trader_api.query_orders()
-        if result < 0:
-            return []
+            result = trader_api.query_orders()
+            if result < 0:
+                return []
 
-        self._orders_event.wait(timeout=timeout)
-        return list(self._orders)
+            self._orders_event.wait(timeout=timeout)
+            return list(self._orders)
 
     def query_trades(self, trader_api: Any,
                      timeout: float = _QUERY_TIMEOUT) -> List[dict]:
@@ -193,15 +197,16 @@ class QueryService:
         if trader_api.login_status != "logged_in":
             return []
 
-        self._pending_trades = []
-        self._trades_event.clear()
+        with self._query_lock:
+            self._pending_trades = []
+            self._trades_event.clear()
 
-        result = trader_api.query_trades()
-        if result < 0:
-            return []
+            result = trader_api.query_trades()
+            if result < 0:
+                return []
 
-        self._trades_event.wait(timeout=timeout)
-        return list(self._trades)
+            self._trades_event.wait(timeout=timeout)
+            return list(self._trades)
 
     def query_positions(self, trader_api: Any,
                         timeout: float = _QUERY_TIMEOUT) -> List[dict]:
@@ -217,15 +222,16 @@ class QueryService:
         if trader_api.login_status != "logged_in":
             return []
 
-        self._pending_positions = []
-        self._positions_event.clear()
+        with self._query_lock:
+            self._pending_positions = []
+            self._positions_event.clear()
 
-        result = trader_api.query_positions()
-        if result < 0:
-            return []
+            result = trader_api.query_positions()
+            if result < 0:
+                return []
 
-        self._positions_event.wait(timeout=timeout)
-        return list(self._positions)
+            self._positions_event.wait(timeout=timeout)
+            return list(self._positions)
 
     def query_account(self, trader_api: Any,
                       timeout: float = _QUERY_TIMEOUT) -> Optional[dict]:
@@ -241,12 +247,13 @@ class QueryService:
         if trader_api.login_status != "logged_in":
             return None
 
-        self._account = None
-        self._account_event.clear()
+        with self._query_lock:
+            self._account = None
+            self._account_event.clear()
 
-        result = trader_api.query_account()
-        if result < 0:
-            return None
+            result = trader_api.query_account()
+            if result < 0:
+                return None
 
-        self._account_event.wait(timeout=timeout)
-        return self._account
+            self._account_event.wait(timeout=timeout)
+            return self._account
