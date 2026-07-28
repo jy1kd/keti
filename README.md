@@ -73,33 +73,67 @@ SimNow 柜台 (7×24 测试环境)
 
 ## 快速开始
 
-### 后端
+### 1. 后端配置
 
 ```bash
 cd server
-pip install -r requirements.txt
-cp .env.sample .env          # 填入 SimNow 账号密码
-python -m pytest tests/ -v   # 运行测试（108 个单元测试）
-python main.py               # CTP 连接验证（需交易时段 09:00-15:00 / 21:00-02:30）
+cp .env.sample .env          # 复制配置模板
+# 编辑 .env，填入 SimNow 账号密码：
+#   CTP_USER_ID=你的账号
+#   CTP_PASSWORD=你的密码
 ```
 
-### 前端
+`.env` 配置说明：
+
+| 配置项 | 说明 | 默认值 |
+|--------|------|--------|
+| `CTP_BROKER_ID` | 经纪商代码（SimNow 固定） | `9999` |
+| `CTP_USER_ID` | SimNow 账号 | 需填写 |
+| `CTP_PASSWORD` | SimNow 密码 | 需填写 |
+| `CTP_MD_FRONT` | 行情前置地址 | 7×24 测试环境 |
+| `CTP_TD_FRONT` | 交易前置地址 | 7×24 测试环境 |
+
+> 账号注册：https://www.simnow.com.cn
+
+### 2. 安装依赖
 
 ```bash
+# 后端（Python 依赖，在 server/ 目录下）
+cd server
+pip install -r requirements.txt
+
+# 前端（Node.js 依赖，在 frontend/ 目录下）
 cd frontend
 npm install
-npm run dev       # 开发服务器 → http://localhost:5173
-npm run build     # 生产构建
-npm run lint      # ESLint 检查
 ```
 
-### SimNow 7×24 测试环境
+### 3. 启动服务
 
-| 项目 | 地址 |
-|------|------|
-| 行情前置 | `tcp://182.254.243.31:40011` |
-| 交易前置 | `tcp://182.254.243.31:40001` |
-| BrokerID | `9999` |
+```bash
+# 启动后端（在 server/ 目录下）
+cd server
+python start.py              # 自动选择 CTP 地址（交易时段/7×24）
+python start.py --reload     # 开发模式（代码变更自动重启）
+python start.py --port 8001  # 指定端口
+
+# 启动前端（在 frontend/ 目录下，另开一个终端）
+cd frontend
+npm run dev                  # 开发服务器 → http://localhost:5173
+```
+
+`start.py` 会根据当前时间自动选择 CTP 地址：
+- 工作日 09:00-16:00 → 真实交易时段地址（`tcp://182.254.243.31:30011/30001`）
+- 其他时间 → 7×24 测试环境地址（`tcp://182.254.243.31:40011/40001`）
+
+### 4. 运行测试
+
+```bash
+# 后端测试（108 个单元测试）
+cd server && python -m pytest tests/ -v
+
+# 前端测试（469 个单元测试）
+cd frontend && npm test
+```
 
 ## 项目结构
 
@@ -156,14 +190,44 @@ keti/
 
 ## Understand Anything 知识图谱
 
-项目使用 Understand Anything (UA) 工具维护代码和业务知识图谱：
+项目使用 Understand Anything (UA) 工具维护代码和业务知识图谱，帮助 AI 工具理解项目结构和业务逻辑。
 
-| 文件 | 内容 |
-|------|------|
-| `knowledge-graph.json` | 代码实体（函数/类/模块）之间的调用和依赖关系 |
-| `domain-graph.json` | 业务领域概念（合约/报单/持仓/行情）之间的关系 |
+### 安装
 
-知识图谱帮助 AI 工具理解项目结构和业务逻辑，提升代码生成和审查的准确性。
+```bash
+pip install understand-anything
+```
+
+### 知识图谱文件
+
+| 文件 | 内容 | 用途 |
+|------|------|------|
+| `knowledge-graph.json` | 代码实体（函数/类/模块）之间的调用和依赖关系 | AI 理解代码结构 |
+| `domain-graph.json` | 业务领域概念（合约/报单/持仓/行情）之间的关系 | AI 理解业务逻辑 |
+| `config.json` | UA 配置（扫描路径、忽略规则） | 控制图谱生成范围 |
+| `fingerprints.json` | 文件指纹（增量更新用） | 避免重复扫描 |
+
+### 常用命令
+
+```bash
+# 生成/更新知识图谱
+ua build                    # 扫描项目，生成 knowledge-graph.json
+
+# 查询知识图谱
+ua query "OrderManager"     # 查询某个实体的依赖关系
+ua query "报单流程"          # 查询业务概念（需 domain-graph.json）
+
+# 与 Claude Code 协作
+# Claude Code 会自动读取 .ua/ 下的图谱文件，在代码审查和生成时参考
+```
+
+### 工作原理
+
+1. UA 扫描项目代码，提取函数/类/模块等实体
+2. 分析实体之间的调用、继承、依赖关系
+3. 生成 `knowledge-graph.json`（代码图谱）
+4. 结合业务文档生成 `domain-graph.json`（领域图谱）
+5. Claude Code 读取图谱，在代码审查和生成时参考项目上下文
 
 ## 文档
 
