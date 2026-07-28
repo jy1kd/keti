@@ -107,6 +107,7 @@ export async function getKlineData(instrument: string, period: string, count?: n
 interface OrderSubmitResponse {
   success: boolean
   orderRef: string
+  message?: string
   error?: string
 }
 

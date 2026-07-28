@@ -54,6 +54,16 @@ def _make_app_with_order_manager(positions=None):
         qs._positions = positions
     app.state.query_service = qs
 
+    # Mock MarketService with snapshot data
+    market_svc = Mock()
+    market_svc.get_snapshot.return_value = {
+        "instrumentID": "IF2608",
+        "lastPrice": 4800.0,
+        "upperLimitPrice": 5280.0,
+        "lowerLimitPrice": 4320.0,
+    }
+    app.state.market_service = market_svc
+
     return app
 
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getContracts } from '../../services/api'
+import { getProductName } from '../../utils/productNames'
 import type { ContractInfo } from '../../services/types'
 
 interface ContractQueryProps {
@@ -88,7 +89,7 @@ export function ContractQuery({ instrumentID }: ContractQueryProps) {
         </div>
         <div className="contract-item">
           <span className="contract-label">品种</span>
-          <span className="contract-value">{contract.productID}</span>
+          <span className="contract-value">{getProductName(contract.productID)}（{contract.productID}）</span>
         </div>
         <div className="contract-item">
           <span className="contract-label">合约乘数</span>

@@ -215,6 +215,23 @@ def _get_valid_positions(request: Request, instrument_id: str):
     return target, None
 
 
+def _get_protection_price(request: Request, instrument_id: str) -> tuple:
+    """获取市价单保护价（从行情快照获取 lastPrice）。
+
+    Returns:
+        tuple: (price, error_message)
+        - 成功时 error_message 为 None
+        - 失败时 price 为 0.0，error_message 为错误信息
+    """
+    market_svc = getattr(request.app.state, "market_service", None)
+    snapshot = market_svc.get_snapshot(instrument_id) if market_svc else None
+    if snapshot:
+        last_price = snapshot.get("lastPrice", 0.0)
+        if last_price > 0:
+            return last_price, None
+    return 0.0, f"无法获取 {instrument_id} 的行情，请先订阅行情"
+
+
 @router.post("/reverse")
 async def reverse_position(request: Request, body: ReverseOrderRequest):
     """一键反向：平掉当前持仓，再以相反方向开仓。
@@ -229,10 +246,10 @@ async def reverse_position(request: Request, body: ReverseOrderRequest):
         return {"success": False, "message": error}
 
     om = request.app.state.order_manager
-    # 获取最新行情作为市价单保护价
-    market_svc = getattr(request.app.state, "market_service", None)
-    snapshot = market_svc.get_snapshot(body.instrumentID) if market_svc else None
-    last_price = snapshot.get("lastPrice", 0.0) if snapshot else 0.0
+    # 获取市价单保护价（从行情快照获取）
+    last_price, price_error = _get_protection_price(request, body.instrumentID)
+    if price_error:
+        return {"success": False, "message": price_error}
     results = []
 
     for pos in target:
@@ -369,10 +386,10 @@ async def lock_position(request: Request, body: LockOrderRequest):
         return {"success": False, "message": error}
 
     om = request.app.state.order_manager
-    # 获取最新行情作为市价单保护价
-    market_svc = getattr(request.app.state, "market_service", None)
-    snapshot = market_svc.get_snapshot(body.instrumentID) if market_svc else None
-    last_price = snapshot.get("lastPrice", 0.0) if snapshot else 0.0
+    # 获取市价单保护价（从行情快照获取）
+    last_price, price_error = _get_protection_price(request, body.instrumentID)
+    if price_error:
+        return {"success": False, "message": price_error}
     results = []
 
     for pos in target:
