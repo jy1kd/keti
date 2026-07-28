@@ -420,6 +420,7 @@ interface ContractsResponse {
     priceTick: number
     expireDate: string
     isTrading: number
+    productClass: string
   }>
   count: number
 }
@@ -463,6 +464,7 @@ export async function submitStopOrder(params: {
   limitPrice: number
   volume: number
   stopPrice: number
+  triggerPriceType?: string  // '1'=市价, '2'=限价（默认限价）
 }): Promise<{ success: boolean; stopOrderID?: string; message?: string }> {
   const { data } = await api.post('/api/order/stop', params)
   return data

@@ -136,16 +136,19 @@ export interface StopOrderRequest {
   limitPrice: number
   volume: number
   stopPrice: number
+  triggerPriceType?: string  // '1'=市价, '2'=限价（默认限价）
 }
 
 export interface StopOrder {
   stopOrderID: string
   instrumentID: string
+  exchangeID?: string
   direction: string
   offsetFlag: string
   limitPrice: number
   volume: number
   stopPrice: number
+  triggerPriceType?: string  // '1'=市价, '2'=限价
   status: string
   orderRef?: string
   createdAt: string
@@ -204,6 +207,7 @@ export interface ContractInfo {
   priceTick: number
   expireDate: string
   isTrading: number  // 0=不可交易, 1=可交易
+  productClass: string  // "1"=期货, "2"=期权, "3"=组合
 }
 
 export interface QuoteDepth {

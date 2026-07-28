@@ -50,6 +50,7 @@ class StopOrder:
         volume: int,
         stop_price: float,
         exchange_id: str = "CFFEX",
+        trigger_price_type: str = "2",  # "1"=市价, "2"=限价
         status: StopOrderStatus = StopOrderStatus.PENDING,
         created_at: Optional[str] = None,
         triggered_at: Optional[str] = None,
@@ -63,6 +64,7 @@ class StopOrder:
         self.limit_price = limit_price
         self.volume = volume
         self.stop_price = stop_price
+        self.trigger_price_type = trigger_price_type
         self.status = status
         self.created_at = created_at or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.triggered_at = triggered_at
@@ -79,6 +81,7 @@ class StopOrder:
             "limitPrice": self.limit_price,
             "volume": self.volume,
             "stopPrice": self.stop_price,
+            "triggerPriceType": self.trigger_price_type,
             "status": self.status.value,
             "createdAt": self.created_at,
             "triggeredAt": self.triggered_at,
@@ -97,6 +100,7 @@ class StopOrder:
             limit_price=d["limitPrice"],
             volume=d["volume"],
             stop_price=d["stopPrice"],
+            trigger_price_type=d.get("triggerPriceType", "2"),
             status=StopOrderStatus(d["status"]),
             created_at=d.get("createdAt"),
             triggered_at=d.get("triggeredAt"),
@@ -145,6 +149,7 @@ class StopOrderService:
         volume: int,
         stop_price: float,
         exchange_id: str = "CFFEX",
+        trigger_price_type: str = "2",
     ) -> dict:
         """Submit a new stop order.
 
@@ -161,6 +166,7 @@ class StopOrderService:
             limit_price=limit_price,
             volume=volume,
             stop_price=stop_price,
+            trigger_price_type=trigger_price_type,
         )
 
         with self._lock:
@@ -265,7 +271,7 @@ class StopOrderService:
             exchange_id=order.exchange_id,
             direction=order.direction,
             offset_flag=order.offset_flag,
-            price_type="2",  # Limit order
+            price_type=order.trigger_price_type,  # "1"=市价, "2"=限价
             limit_price=order.limit_price,
             volume=order.volume,
         )

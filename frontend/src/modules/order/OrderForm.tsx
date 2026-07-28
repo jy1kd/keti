@@ -1,6 +1,8 @@
 import { useOrderStore } from './store'
+import { useContractsStore } from '../../stores/contracts'
 import { usePriceStep } from '../../hooks/usePriceStep'
-import { useEffect } from 'react'
+import { validateVolumeWithLimit } from '../../utils/validators'
+import { useEffect, useMemo } from 'react'
 
 interface OrderFormProps {
   priceTick?: number
@@ -17,6 +19,26 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
   const isMarket = orderPriceType === 'market'
 
   const { price, stepUp, stepDown } = usePriceStep(orderForm.limitPrice, priceTick)
+  const { price: stopPrice, stepUp: stopStepUp, stepDown: stopStepDown } =
+    usePriceStep(orderForm.stopPrice ?? 0, priceTick)
+
+  // 从合约列表获取当前合约的 productClass
+  const contracts = useContractsStore((s) => s.contracts)
+  const productClass = useMemo(() => {
+    const contract = contracts.find(c => c.instrumentID === orderForm.instrumentID)
+    return contract?.productClass ?? '1'
+  }, [contracts, orderForm.instrumentID])
+
+  // 数量上限提示
+  const volumeLimit = useMemo(() => {
+    const isOption = productClass === '2'
+    return isMarket ? (isOption ? 30 : 60) : (isOption ? 100 : 500)
+  }, [productClass, isMarket])
+
+  // 数量校验
+  const volumeError = useMemo(() => {
+    return validateVolumeWithLimit(orderForm.volumeTotalOriginal, orderPriceType, productClass)
+  }, [orderForm.volumeTotalOriginal, orderPriceType, productClass])
 
   // Sync hook state → store
   useEffect(() => {
@@ -24,6 +46,12 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
       setOrderForm({ limitPrice: price })
     }
   }, [price])
+
+  useEffect(() => {
+    if (stopPrice !== (orderForm.stopPrice ?? 0)) {
+      setOrderForm({ stopPrice })
+    }
+  }, [stopPrice])
 
   return (
     <div className="order-form">
@@ -140,8 +168,9 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
             type="button"
             className={`toggle-btn ${orderForm.combHedgeFlag === 'arbitrage' ? 'active' : ''}`}
             onClick={() => setOrderForm({ combHedgeFlag: 'arbitrage' })}
+            title="按套利保证金标准计算（非套利指令）"
           >
-            套利
+            套利优惠
           </button>
           <button
             type="button"
@@ -153,16 +182,34 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
         </div>
       </div>
 
-      {/* Price input (hidden for market orders) */}
-      {!isMarket && (
-        <div className="form-row">
-          <label>价格</label>
+      {/* Price input — limit: price; market: protection price (stopPrice) */}
+      <div className="form-row">
+        <label>{isMarket ? '保护价' : '价格'}</label>
+        {isMarket ? (
+          <>
+            <div className="stepper-group">
+              <button type="button" className="stepper-btn" onClick={stopStepDown}>
+                −
+              </button>
+              <input
+                type="number"
+                className="stepper-input"
+                value={orderForm.stopPrice ?? 0}
+                onChange={(e) => setOrderForm({ stopPrice: Number(e.target.value) })}
+                min={0}
+                step={priceTick}
+              />
+              <button type="button" className="stepper-btn" onClick={stopStepUp}>
+                +
+              </button>
+            </div>
+            <span className="form-hint" title="市价指令必须填写保护价，作为未成交部分转为限价单的限定价格">
+              ⓘ
+            </span>
+          </>
+        ) : (
           <div className="stepper-group">
-            <button
-              type="button"
-              className="stepper-btn"
-              onClick={stepDown}
-            >
+            <button type="button" className="stepper-btn" onClick={stepDown}>
               −
             </button>
             <input
@@ -173,16 +220,12 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
               min={0}
               step={priceTick}
             />
-            <button
-              type="button"
-              className="stepper-btn"
-              onClick={stepUp}
-            >
+            <button type="button" className="stepper-btn" onClick={stepUp}>
               +
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Volume input */}
       <div className="form-row">
@@ -215,6 +258,9 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
             +
           </button>
         </div>
+        <span className={`form-hint ${volumeError ? 'form-hint--error' : ''}`}>
+          最大 {volumeLimit} 手
+        </span>
       </div>
 
       {/* Submit button */}

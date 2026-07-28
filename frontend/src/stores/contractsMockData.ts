@@ -12,6 +12,7 @@ export const MOCK_CONTRACTS: ContractInfo[] = [
     priceTick: 0.02,
     expireDate: '2025-06-16',
     isTrading: 1,
+    productClass: "1",
   },
   {
     instrumentID: 'au2512',
@@ -22,6 +23,7 @@ export const MOCK_CONTRACTS: ContractInfo[] = [
     priceTick: 0.02,
     expireDate: '2025-12-15',
     isTrading: 1,
+    productClass: "1",
   },
   {
     instrumentID: 'ag2506',
@@ -32,6 +34,7 @@ export const MOCK_CONTRACTS: ContractInfo[] = [
     priceTick: 1,
     expireDate: '2025-06-16',
     isTrading: 1,
+    productClass: "1",
   },
   {
     instrumentID: 'ag2512',
@@ -42,6 +45,7 @@ export const MOCK_CONTRACTS: ContractInfo[] = [
     priceTick: 1,
     expireDate: '2025-12-15',
     isTrading: 1,
+    productClass: "1",
   },
   {
     instrumentID: 'cu2506',
@@ -52,6 +56,7 @@ export const MOCK_CONTRACTS: ContractInfo[] = [
     priceTick: 10,
     expireDate: '2025-06-16',
     isTrading: 1,
+    productClass: "1",
   },
   {
     instrumentID: 'cu2509',
@@ -62,6 +67,7 @@ export const MOCK_CONTRACTS: ContractInfo[] = [
     priceTick: 10,
     expireDate: '2025-09-15',
     isTrading: 1,
+    productClass: "1",
   },
   {
     instrumentID: 'rb2506',
@@ -72,6 +78,7 @@ export const MOCK_CONTRACTS: ContractInfo[] = [
     priceTick: 1,
     expireDate: '2025-06-16',
     isTrading: 1,
+    productClass: "1",
   },
   {
     instrumentID: 'rb2510',
@@ -82,6 +89,7 @@ export const MOCK_CONTRACTS: ContractInfo[] = [
     priceTick: 1,
     expireDate: '2025-10-15',
     isTrading: 1,
+    productClass: "1",
   },
   // 中金所 CFFEX
   {
@@ -93,6 +101,7 @@ export const MOCK_CONTRACTS: ContractInfo[] = [
     priceTick: 0.2,
     expireDate: '2025-06-20',
     isTrading: 1,
+    productClass: "1",
   },
   {
     instrumentID: 'IF2509',
@@ -103,6 +112,7 @@ export const MOCK_CONTRACTS: ContractInfo[] = [
     priceTick: 0.2,
     expireDate: '2025-09-19',
     isTrading: 1,
+    productClass: "1",
   },
   {
     instrumentID: 'IC2506',
@@ -113,6 +123,7 @@ export const MOCK_CONTRACTS: ContractInfo[] = [
     priceTick: 0.2,
     expireDate: '2025-06-20',
     isTrading: 1,
+    productClass: "1",
   },
   {
     instrumentID: 'IH2506',
@@ -123,6 +134,7 @@ export const MOCK_CONTRACTS: ContractInfo[] = [
     priceTick: 0.2,
     expireDate: '2025-06-20',
     isTrading: 1,
+    productClass: "1",
   },
   // 大商所 DCE
   {
@@ -134,6 +146,7 @@ export const MOCK_CONTRACTS: ContractInfo[] = [
     priceTick: 1,
     expireDate: '2025-09-15',
     isTrading: 1,
+    productClass: "1",
   },
   {
     instrumentID: 'i2509',
@@ -144,6 +157,7 @@ export const MOCK_CONTRACTS: ContractInfo[] = [
     priceTick: 0.5,
     expireDate: '2025-09-15',
     isTrading: 1,
+    productClass: "1",
   },
   // 郑商所 CZCE
   {
@@ -155,6 +169,7 @@ export const MOCK_CONTRACTS: ContractInfo[] = [
     priceTick: 1,
     expireDate: '2025-09-15',
     isTrading: 1,
+    productClass: "1",
   },
   {
     instrumentID: 'TA509',
@@ -165,5 +180,6 @@ export const MOCK_CONTRACTS: ContractInfo[] = [
     priceTick: 2,
     expireDate: '2025-09-15',
     isTrading: 1,
+    productClass: "1",
   },
 ]

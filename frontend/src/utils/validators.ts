@@ -25,3 +25,27 @@ export function validateInstrumentId(instrumentId: string): string | null {
   if (!instrumentId || instrumentId.trim() === '') return '请输入合约代码'
   return null
 }
+
+/**
+ * 校验数量上限 — 根据报单类型和品种类型
+ * 交易指令规则：
+ *   市价：期货≤60手，期权≤30手
+ *   限价：期货≤500手，期权≤100手
+ * 返回 null 表示通过，返回字符串表示错误信息
+ */
+export function validateVolumeWithLimit(
+  volume: number,
+  orderType: 'limit' | 'market',
+  productClass: string = '1',  // "1"=期货, "2"=期权
+): string | null {
+  const basic = validateVolume(volume)
+  if (basic) return basic
+
+  const isOption = productClass === '2'
+  const limit = orderType === 'market'
+    ? (isOption ? 30 : 60)
+    : (isOption ? 100 : 500)
+
+  if (volume > limit) return `数量不能超过${limit}手`
+  return null
+}

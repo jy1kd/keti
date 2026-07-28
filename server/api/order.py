@@ -26,6 +26,8 @@ class InsertOrderRequest(BaseModel):
                            description="1=市价, 2=限价")
     limitPrice: float = Field(default=4100.0, ge=0.0,
                               description="限价（priceType=2时必填）")
+    stopPrice: float = Field(default=0.0, ge=0.0,
+                             description="保护价（priceType=1时必填，市价指令必须填写保护价）")
     volumeTotalOriginal: int = Field(default=1, gt=0)
     timeCondition: str = Field(default="3", pattern=r"^[123]$",
                                description="1=IOC, 2=GFS, 3=GFD(当日有效)")
@@ -35,6 +37,22 @@ class InsertOrderRequest(BaseModel):
                            description="1=投机, 2=套利, 3=套保")
     exchangeID: str = Field(default="CFFEX",
                             description="交易所（CFFEX/SHFE/CZCE/DCE/INE/GFEX）")
+    productClass: str = Field(default="1",
+                              description="1=期货, 2=期权（用于数量上限校验）")
+
+    @field_validator("volumeTotalOriginal")
+    @classmethod
+    def validate_volume(cls, v, info):
+        """校验数量上限：市价期货≤60/期权≤30，限价期货≤500/期权≤100。"""
+        product_class = info.data.get("productClass", "1")
+        price_type = info.data.get("priceType", "2")
+        if price_type == "1":  # 市价
+            limit = 30 if product_class == "2" else 60
+        else:  # 限价
+            limit = 100 if product_class == "2" else 500
+        if v > limit:
+            raise ValueError(f"数量超限: 最大{limit}手")
+        return v
 
     @model_validator(mode="after")
     def validate_time_volume_condition(self):
@@ -96,9 +114,11 @@ class SubmitStopOrderRequest(BaseModel):
     offsetFlag: str = Field(default="0", pattern=r"^[013]$",
                             description="0=开仓, 1=平仓, 3=平今")
     limitPrice: float = Field(default=4800.0, ge=0.0,
-                              description="触发后报单的限价")
+                              description="触发后报单的限价（限价触发时）或保护价（市价触发时）")
     volume: int = Field(default=1, gt=0, description="报单数量")
     stopPrice: float = Field(..., gt=0.0, description="止损触发价")
+    triggerPriceType: str = Field(default="2", pattern=r"^[12]$",
+                                  description="触发后报单类型：1=市价, 2=限价（默认限价）")
 
 
 class CancelStopOrderRequest(BaseModel):
@@ -131,6 +151,7 @@ async def insert_order(request: Request, body: InsertOrderRequest):
         time_condition=body.timeCondition,
         volume_condition=body.volumeCondition,
         hedge_flag=body.hedgeFlag,
+        stop_price=body.stopPrice,
     )
     return result
 
@@ -325,6 +346,7 @@ async def submit_stop_order(request: Request, body: SubmitStopOrderRequest):
         limit_price=body.limitPrice,
         volume=body.volume,
         stop_price=body.stopPrice,
+        trigger_price_type=body.triggerPriceType,
     )
     return result
 
