@@ -78,12 +78,12 @@ describe('StopOrderForm', () => {
     render(<StopOrderForm />)
     expect(screen.getByText('投机')).toBeInTheDocument()
     expect(screen.getByText('套保')).toBeInTheDocument()
-    expect(screen.getByText('套利')).toBeInTheDocument()
+    expect(screen.getByText('套利优惠')).toBeInTheDocument()
   })
 
   it('calls setOrderForm with combHedgeFlag when hedge toggle clicked', () => {
     render(<StopOrderForm />)
-    const arbitrageBtn = screen.getByText('套利')
+    const arbitrageBtn = screen.getByText('套利优惠')
     fireEvent.click(arbitrageBtn)
     expect(mockState.setOrderForm).toHaveBeenCalledWith({ combHedgeFlag: 'arbitrage' })
   })

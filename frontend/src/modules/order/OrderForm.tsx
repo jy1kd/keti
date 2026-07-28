@@ -1,6 +1,9 @@
 import { useOrderStore } from './store'
+import { useContractsStore } from '../../stores/contracts'
 import { usePriceStep } from '../../hooks/usePriceStep'
-import { useEffect } from 'react'
+import { validateVolumeWithLimit } from '../../utils/validators'
+import { ContractSearch } from '../../components/ContractSearch'
+import { useEffect, useMemo, useState } from 'react'
 
 interface OrderFormProps {
   priceTick?: number
@@ -15,8 +18,43 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
   const { direction, combOffsetFlag, orderPriceType, timeCondition } = orderForm
   const isBuy = direction === 'buy'
   const isMarket = orderPriceType === 'market'
+  const isArbitrage = orderPriceType === 'arbitrage'
+
+  // 套利合约选择状态
+  const [leg1, setLeg1] = useState(orderForm.arbitrageLeg1 ?? '')
+  const [leg2, setLeg2] = useState(orderForm.arbitrageLeg2 ?? '')
 
   const { price, stepUp, stepDown } = usePriceStep(orderForm.limitPrice, priceTick)
+  const { price: stopPrice, stepUp: stopStepUp, stepDown: stopStepDown } =
+    usePriceStep(orderForm.stopPrice ?? 0, priceTick)
+
+  // 从合约列表获取当前合约的 productClass
+  const contracts = useContractsStore((s) => s.contracts)
+  const productClass = useMemo(() => {
+    const contract = contracts.find(c => c.instrumentID === orderForm.instrumentID)
+    return contract?.productClass ?? '1'
+  }, [contracts, orderForm.instrumentID])
+
+  // 数量上限提示
+  const volumeLimit = useMemo(() => {
+    const isOption = productClass === '2'
+    return isMarket ? (isOption ? 30 : 60) : (isOption ? 100 : 500)
+  }, [productClass, isMarket])
+
+  // 数量校验
+  const volumeError = useMemo(() => {
+    return validateVolumeWithLimit(orderForm.volumeTotalOriginal, orderPriceType, productClass)
+  }, [orderForm.volumeTotalOriginal, orderPriceType, productClass])
+
+  // 套利腿选择回调
+  const handleLeg1Select = (instrumentID: string) => {
+    setLeg1(instrumentID)
+    setOrderForm({ arbitrageLeg1: instrumentID })
+  }
+  const handleLeg2Select = (instrumentID: string) => {
+    setLeg2(instrumentID)
+    setOrderForm({ arbitrageLeg2: instrumentID })
+  }
 
   // Sync hook state → store
   useEffect(() => {
@@ -24,6 +62,12 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
       setOrderForm({ limitPrice: price })
     }
   }, [price])
+
+  useEffect(() => {
+    if (stopPrice !== (orderForm.stopPrice ?? 0)) {
+      setOrderForm({ stopPrice })
+    }
+  }, [stopPrice])
 
   return (
     <div className="order-form">
@@ -94,6 +138,21 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
           >
             市价
           </button>
+          <button
+            type="button"
+            className={`toggle-btn ${orderPriceType === 'arbitrage' ? 'active' : ''}`}
+            onClick={() => setOrderForm({ orderPriceType: 'arbitrage' })}
+          >
+            套利
+          </button>
+          <button
+            type="button"
+            className="toggle-btn"
+            disabled
+            title="暂未实现（仅适用于INE原油期货）"
+          >
+            TAS
+          </button>
         </div>
       </div>
 
@@ -140,8 +199,9 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
             type="button"
             className={`toggle-btn ${orderForm.combHedgeFlag === 'arbitrage' ? 'active' : ''}`}
             onClick={() => setOrderForm({ combHedgeFlag: 'arbitrage' })}
+            title="按套利保证金标准计算（非套利指令）"
           >
-            套利
+            套利优惠
           </button>
           <button
             type="button"
@@ -153,34 +213,82 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
         </div>
       </div>
 
-      {/* Price input (hidden for market orders) */}
-      {!isMarket && (
-        <div className="form-row">
-          <label>价格</label>
-          <div className="stepper-group">
-            <button
-              type="button"
-              className="stepper-btn"
-              onClick={stepDown}
-            >
-              −
-            </button>
-            <input
-              type="number"
-              className="stepper-input"
-              value={orderForm.limitPrice}
-              onChange={(e) => setOrderForm({ limitPrice: Number(e.target.value) })}
-              min={0}
-              step={priceTick}
-            />
-            <button
-              type="button"
-              className="stepper-btn"
-              onClick={stepUp}
-            >
-              +
-            </button>
+      {/* Price input — limit: price; market: protection price; arbitrage: contract selectors + spread */}
+      {isArbitrage ? (
+        <>
+          <div className="form-row">
+            <label>腿1</label>
+            <ContractSearch contracts={contracts} onSelect={handleLeg1Select} />
+            {leg1 && <span className="form-hint">{leg1}</span>}
           </div>
+          <div className="form-row">
+            <label>腿2</label>
+            <ContractSearch contracts={contracts} onSelect={handleLeg2Select} />
+            {leg2 && <span className="form-hint">{leg2}</span>}
+          </div>
+          <div className="form-row">
+            <label>价差</label>
+            <div className="stepper-group">
+              <button type="button" className="stepper-btn" onClick={stepDown}>
+                −
+              </button>
+              <input
+                type="number"
+                className="stepper-input"
+                value={orderForm.limitPrice}
+                onChange={(e) => setOrderForm({ limitPrice: Number(e.target.value) })}
+                min={0}
+                step={priceTick}
+              />
+              <button type="button" className="stepper-btn" onClick={stepUp}>
+                +
+              </button>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="form-row">
+          <label>{isMarket ? '保护价' : '价格'}</label>
+          {isMarket ? (
+            <>
+              <div className="stepper-group">
+                <button type="button" className="stepper-btn" onClick={stopStepDown}>
+                  −
+                </button>
+                <input
+                  type="number"
+                  className="stepper-input"
+                  value={orderForm.stopPrice ?? 0}
+                  onChange={(e) => setOrderForm({ stopPrice: Number(e.target.value) })}
+                  min={0}
+                  step={priceTick}
+                />
+                <button type="button" className="stepper-btn" onClick={stopStepUp}>
+                  +
+                </button>
+              </div>
+              <span className="form-hint" title="市价指令必须填写保护价，作为未成交部分转为限价单的限定价格">
+                ⓘ
+              </span>
+            </>
+          ) : (
+            <div className="stepper-group">
+              <button type="button" className="stepper-btn" onClick={stepDown}>
+                −
+              </button>
+              <input
+                type="number"
+                className="stepper-input"
+                value={orderForm.limitPrice}
+                onChange={(e) => setOrderForm({ limitPrice: Number(e.target.value) })}
+                min={0}
+                step={priceTick}
+              />
+              <button type="button" className="stepper-btn" onClick={stepUp}>
+                +
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -215,6 +323,9 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
             +
           </button>
         </div>
+        <span className={`form-hint ${volumeError ? 'form-hint--error' : ''}`}>
+          最大 {volumeLimit} 手
+        </span>
       </div>
 
       {/* Submit button */}
@@ -224,7 +335,11 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
         disabled={isSubmitting}
         onClick={submitOrder}
       >
-        {isSubmitting ? '提交中...' : `${isBuy ? '买入' : '卖出'} ${orderForm.instrumentID || ''}`}
+        {isSubmitting ? '提交中...' : `${isBuy ? '买入' : '卖出'} ${
+          isArbitrage
+            ? (leg1 && leg2 ? `SP ${leg1}&${leg2}` : '套利合约')
+            : orderForm.instrumentID || ''
+        }`}
       </button>
     </div>
   )

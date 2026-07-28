@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { submitOrder as apiSubmitOrder, cancelOrder as apiCancelOrder, submitStopOrder as apiSubmitStopOrder } from '../../services/api'
 import { toast } from '../../components/Toast'
 import { useContractsStore } from '../../stores/contracts'
+import { useMarketStore } from '../market/store'
+import { validateVolumeWithLimit, validateArbitrage } from '../../utils/validators'
 import type { OrderRequestForm } from '../../utils/orderMapping'
 
 export const DEFAULT_ORDER_FORM: OrderRequestForm = {
@@ -24,7 +26,7 @@ interface OrderStore {
   setOrderForm: (partial: Partial<OrderRequestForm>) => void
   resetOrderForm: () => void
   submitOrder: () => Promise<boolean>
-  submitStopOrder: () => Promise<boolean>
+  submitStopOrder: (triggerPriceType?: 'limit' | 'market') => Promise<boolean>
   cancelOrder: (orderRef: string) => Promise<boolean>
 }
 
@@ -64,19 +66,66 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   submitOrder: async () => {
     const form = get().orderForm
 
+    // 套利合约校验：自动生成 instrumentID
+    let submitForm = { ...form }
+    if (form.orderPriceType === 'arbitrage') {
+      const arbErr = validateArbitrage(form.arbitrageLeg1 ?? '', form.arbitrageLeg2 ?? '')
+      if (arbErr) {
+        toast.error(`报单失败：${arbErr}`)
+        return false
+      }
+      // 自动生成 SP 格式的 instrumentID
+      submitForm = {
+        ...form,
+        instrumentID: `SP ${form.arbitrageLeg1}&${form.arbitrageLeg2}`,
+      }
+    }
+
     // Client-side validation
-    if (!form.instrumentID) {
+    if (!submitForm.instrumentID) {
       toast.error('报单失败：请选择合约')
       return false
     }
-    if (form.orderPriceType === 'limit' && form.limitPrice <= 0) {
+    if (submitForm.orderPriceType === 'limit' && submitForm.limitPrice <= 0) {
       toast.error('报单失败：请输入有效价格')
       return false
     }
 
+    // 市价单保护价校验
+    if (submitForm.orderPriceType === 'market' && (!submitForm.stopPrice || submitForm.stopPrice <= 0)) {
+      toast.error('报单失败：市价指令必须填写保护价')
+      return false
+    }
+
+    // 数量上限校验
+    const contracts = useContractsStore.getState().contracts
+    const contract = contracts.find(c => c.instrumentID === submitForm.instrumentID)
+    const productClass = contract?.productClass ?? '1'
+    const volumeErr = validateVolumeWithLimit(submitForm.volumeTotalOriginal, submitForm.orderPriceType, productClass)
+    if (volumeErr) {
+      toast.error(`报单失败：${volumeErr}`)
+      return false
+    }
+
+    // 保护价涨跌停校验（市价单）
+    if (submitForm.orderPriceType === 'market' && submitForm.stopPrice) {
+      const snapshots = useMarketStore.getState().snapshots
+      const snap = snapshots.get(submitForm.instrumentID)
+      if (snap) {
+        if (submitForm.stopPrice > snap.upperLimitPrice) {
+          toast.error(`报单失败：保护价不能超过涨停价 ${snap.upperLimitPrice}`)
+          return false
+        }
+        if (submitForm.stopPrice < snap.lowerLimitPrice) {
+          toast.error(`报单失败：保护价不能低于跌停价 ${snap.lowerLimitPrice}`)
+          return false
+        }
+      }
+    }
+
     set({ isSubmitting: true })
     try {
-      const result = await apiSubmitOrder(get().orderForm)
+      const result = await apiSubmitOrder(submitForm)
       if (result.success) {
         toast.success(`报单成功 ${result.orderRef}`)
         set({ orderForm: { ...DEFAULT_ORDER_FORM }, isSubmitting: false })
@@ -94,7 +143,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     }
   },
 
-  submitStopOrder: async () => {
+  submitStopOrder: async (triggerPriceType: 'limit' | 'market' = 'limit') => {
     const form = get().orderForm
 
     // Client-side validation
@@ -106,8 +155,13 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       toast.error('止损单失败：请输入有效止损价')
       return false
     }
-    if (form.limitPrice <= 0) {
+    if (triggerPriceType === 'limit' && form.limitPrice <= 0) {
       toast.error('止损单失败：请输入有效委托价')
+      return false
+    }
+    // 市价触发时，limitPrice 作为保护价
+    if (triggerPriceType === 'market' && (!form.limitPrice || form.limitPrice <= 0)) {
+      toast.error('止损单失败：市价触发需填写保护价')
       return false
     }
 
@@ -125,6 +179,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
         limitPrice: form.limitPrice,
         volume: form.volumeTotalOriginal,
         stopPrice: form.stopPrice,
+        triggerPriceType: triggerPriceType === 'market' ? '1' : '2',
       })
       if (result.success) {
         toast.success(`止损单已提交 ${result.stopOrderID}`)

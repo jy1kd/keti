@@ -28,7 +28,7 @@ describe('ContractQuery', () => {
   it('renders contract info after load', async () => {
     mockGetContracts.mockResolvedValue({
       contracts: [
-        { instrumentID: 'IF2608', instrumentName: '沪深300股指期货2608', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260821', isTrading: 1 },
+        { instrumentID: 'IF2608', instrumentName: '沪深300股指期货2608', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260821', isTrading: 1, productClass: "1" },
       ],
       count: 1,
     })
@@ -61,7 +61,7 @@ describe('ContractQuery', () => {
   it('renders with contract-query class', async () => {
     mockGetContracts.mockResolvedValue({
       contracts: [
-        { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260821', isTrading: 1 },
+        { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260821', isTrading: 1, productClass: "1" },
       ],
       count: 1,
     })

@@ -1,6 +1,6 @@
 import { useOrderStore } from './store'
 import { usePriceStep } from '../../hooks/usePriceStep'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 interface StopOrderFormProps {
   priceTick?: number
@@ -14,6 +14,8 @@ export function StopOrderForm({ priceTick = 0.2 }: StopOrderFormProps) {
 
   const isBuy = orderForm.direction === 'buy'
   const timeCondition = orderForm.timeCondition
+  const [triggerPriceType, setTriggerPriceType] = useState<'limit' | 'market'>('limit')
+  const isMarketTrigger = triggerPriceType === 'market'
 
   const { price, stepUp, stepDown } = usePriceStep(orderForm.limitPrice, priceTick)
   const { price: stopPrice, stepUp: stopStepUp, stepDown: stopStepDown } =
@@ -115,8 +117,9 @@ export function StopOrderForm({ priceTick = 0.2 }: StopOrderFormProps) {
             type="button"
             className={`toggle-btn ${orderForm.combHedgeFlag === 'arbitrage' ? 'active' : ''}`}
             onClick={() => setOrderForm({ combHedgeFlag: 'arbitrage' })}
+            title="按套利保证金标准计算（非套利指令）"
           >
-            套利
+            套利优惠
           </button>
           <button
             type="button"
@@ -128,9 +131,30 @@ export function StopOrderForm({ priceTick = 0.2 }: StopOrderFormProps) {
         </div>
       </div>
 
-      {/* Price input */}
+      {/* Trigger type toggle */}
       <div className="form-row">
-        <label>价格</label>
+        <label>触发类型</label>
+        <div className="toggle-group">
+          <button
+            type="button"
+            className={`toggle-btn ${!isMarketTrigger ? 'active' : ''}`}
+            onClick={() => setTriggerPriceType('limit')}
+          >
+            限价
+          </button>
+          <button
+            type="button"
+            className={`toggle-btn ${isMarketTrigger ? 'active' : ''}`}
+            onClick={() => setTriggerPriceType('market')}
+          >
+            市价
+          </button>
+        </div>
+      </div>
+
+      {/* Price input — limit trigger: limitPrice; market trigger: protection price */}
+      <div className="form-row">
+        <label>{isMarketTrigger ? '保护价' : '委托价'}</label>
         <div className="stepper-group">
           <button type="button" className="stepper-btn" onClick={stepDown}>
             −
@@ -208,7 +232,7 @@ export function StopOrderForm({ priceTick = 0.2 }: StopOrderFormProps) {
         type="button"
         className={`submit-btn ${isBuy ? 'buy' : 'sell'}`}
         disabled={isSubmitting}
-        onClick={submitStopOrder}
+        onClick={() => submitStopOrder(triggerPriceType)}
       >
         {isSubmitting ? '提交中...' : `止损${isBuy ? '买入' : '卖出'} ${orderForm.instrumentID || ''}`}
       </button>

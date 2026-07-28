@@ -149,11 +149,11 @@ describe('OrderForm', () => {
     expect(mockState.setOrderForm).toHaveBeenCalledWith({ limitPrice: 500.02 })
   })
 
-  it('renders hedge flag toggle (投机/套保/套利)', () => {
+  it('renders hedge flag toggle (投机/套保/套利优惠)', () => {
     render(<OrderForm />)
     expect(screen.getByText('投机')).toBeInTheDocument()
     expect(screen.getByText('套保')).toBeInTheDocument()
-    expect(screen.getByText('套利')).toBeInTheDocument()
+    expect(screen.getByText('套利优惠')).toBeInTheDocument()
   })
 
   it('calls setOrderForm with combHedgeFlag when hedge toggle clicked', () => {
