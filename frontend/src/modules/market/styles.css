@@ -121,7 +121,35 @@
   pointer-events: none;
 }
 
-/* 刷新合约按钮 */
+/* 标签切换 */
+.panel-header__tabs {
+  display: flex;
+  gap: 2px;
+}
+
+.btn-tab {
+  padding: 4px 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-tab:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.btn-tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* 操作按钮 */
 .panel-header__actions {
   display: flex;
   align-items: center;
@@ -179,6 +207,32 @@
 
 .btn-subscribed-toggle:hover {
   opacity: 1;
+}
+
+.btn-favorite {
+  padding: 4px 12px;
+  background: var(--accent-color, #4a9eff);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-favorite:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-favorite--remove {
+  background: transparent;
+  border: 1px solid var(--border-color, #444);
+  color: var(--text-secondary, #999);
+}
+
+.btn-favorite--remove:hover {
+  border-color: #ff4444;
+  color: #ff4444;
 }
 
 .btn-unsubscribe {

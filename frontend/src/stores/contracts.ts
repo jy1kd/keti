@@ -4,116 +4,156 @@ import { useUserPrefsStore } from './userPrefs'
 import {
   getPresetInstruments,
   getInstrumentsByIds,
+  subscribeMarket,
   unsubscribeMarket,
 } from '@/services/api'
 
 interface ContractsStore {
-  contracts: ContractInfo[]
-  selectedContracts: string[]
+  /** Preset contracts (system-managed, subscribed on load, can be removed by退订) */
+  presetContracts: ContractInfo[]
+  /** User-favorited contracts (user-managed, no CTP subscribe needed) */
+  userContracts: ContractInfo[]
   /** Preset instrument IDs (auto-detected front-month contracts) */
   presetIds: string[]
-  showSubscribedOnly: boolean
+  /** Combined contracts for backward compatibility (OrderForm, order store) */
+  contracts: ContractInfo[]
   setContracts: (contracts: ContractInfo[]) => void
-  addContract: (instrumentId: string) => void
-  removeContract: (instrumentId: string) => void
-  /** Add a contract with full info (from search modal) */
+  /** Add a contract to userContracts (no CTP call — already subscribed via preset or modal) */
   addContractInfo: (contract: ContractInfo) => void
-  /** Remove by instrumentID and unsubscribe from CTP */
+  /** Remove from userContracts only (no CTP call) */
+  removeFromFavorites: (instrumentId: string) => void
+  /** Subscribe to CTP + add to presetContracts (for new contracts from modal) */
+  subscribeAndAddToPreset: (contract: ContractInfo) => Promise<void>
+  /** CTP unsubscribe + remove from both presetContracts and userContracts */
   removeContractById: (instrumentId: string) => Promise<void>
   /** Load preset + user subscriptions from localStorage and subscribe */
   loadSubscribedContracts: () => Promise<void>
-  /** Toggle table filter: show only subscribed contracts vs all */
-  toggleShowSubscribedOnly: () => void
 }
 
-export const useContractsStore = create<ContractsStore>((set) => ({
-  contracts: [],
-  selectedContracts: [],
+/** Helper: recompute combined contracts from preset + user */
+function buildCombinedContracts(presetContracts: ContractInfo[], userContracts: ContractInfo[]): ContractInfo[] {
+  const map = new Map<string, ContractInfo>()
+  for (const c of presetContracts) map.set(c.instrumentID, c)
+  for (const c of userContracts) map.set(c.instrumentID, c)
+  return Array.from(map.values())
+}
+
+export const useContractsStore = create<ContractsStore>((set, get) => ({
+  presetContracts: [],
+  userContracts: [],
   presetIds: [],
-  showSubscribedOnly: false,
+  contracts: [],
 
   setContracts: (contracts) => set({ contracts }),
 
-  addContract: (instrumentId) =>
-    set((state) => {
-      if (state.selectedContracts.includes(instrumentId)) return state
-      return { selectedContracts: [...state.selectedContracts, instrumentId] }
-    }),
-
-  removeContract: (instrumentId) =>
-    set((state) => ({
-      selectedContracts: state.selectedContracts.filter((id) => id !== instrumentId),
-    })),
-
+  /** 加入自选：只操作 userContracts + localStorage，不调 CTP */
   addContractInfo: (contract) => {
-    set((state) => {
-      if (state.contracts.some((c) => c.instrumentID === contract.instrumentID)) return state
-      return { contracts: [...state.contracts, contract] }
+    const { presetContracts, userContracts } = get()
+    if (userContracts.some((c) => c.instrumentID === contract.instrumentID)) return
+    const newUserContracts = [...userContracts, contract]
+    set({
+      userContracts: newUserContracts,
+      contracts: buildCombinedContracts(presetContracts, newUserContracts),
     })
-    // Persist to userPrefs
     const prefs = useUserPrefsStore.getState()
     prefs.addSelectedContract(contract.instrumentID)
     prefs.saveToLocalStorage()
   },
 
+  /** 移除收藏：只从 userContracts 移除，不调 CTP */
+  removeFromFavorites: (instrumentId) => {
+    const { presetContracts, userContracts } = get()
+    const newUserContracts = userContracts.filter((c) => c.instrumentID !== instrumentId)
+    set({
+      userContracts: newUserContracts,
+      contracts: buildCombinedContracts(presetContracts, newUserContracts),
+    })
+    const prefs = useUserPrefsStore.getState()
+    prefs.removeSelectedContract(instrumentId)
+    prefs.saveToLocalStorage()
+  },
+
+  /** 订阅新合约：CTP 订阅 + 加入预设表格 */
+  subscribeAndAddToPreset: async (contract) => {
+    const { presetContracts, presetIds, userContracts } = get()
+    if (presetContracts.some((c) => c.instrumentID === contract.instrumentID)) return
+    try {
+      await subscribeMarket([contract.instrumentID])
+    } catch {
+      // Silent fail
+    }
+    const newPresetContracts = [...presetContracts, contract]
+    const newPresetIds = [...presetIds, contract.instrumentID]
+    set({
+      presetContracts: newPresetContracts,
+      presetIds: newPresetIds,
+      contracts: buildCombinedContracts(newPresetContracts, userContracts),
+    })
+  },
+
+  /** 退订：CTP 退订 + 从预设/自选中移除 */
   removeContractById: async (instrumentId) => {
     try {
       await unsubscribeMarket([instrumentId])
     } catch {
-      // Silent fail — still remove from local state
+      // Silent fail
     }
-    set((state) => ({
-      contracts: state.contracts.filter((c) => c.instrumentID !== instrumentId),
-      selectedContracts: state.selectedContracts.filter((id) => id !== instrumentId),
-      presetIds: state.presetIds.filter((id) => id !== instrumentId),
-    }))
+    const { presetContracts, userContracts, presetIds } = get()
+    const newPresetContracts = presetContracts.filter((c) => c.instrumentID !== instrumentId)
+    const newUserContracts = userContracts.filter((c) => c.instrumentID !== instrumentId)
+    const newPresetIds = presetIds.filter((id) => id !== instrumentId)
+    set({
+      presetContracts: newPresetContracts,
+      presetIds: newPresetIds,
+      userContracts: newUserContracts,
+      contracts: buildCombinedContracts(newPresetContracts, newUserContracts),
+    })
     const prefs = useUserPrefsStore.getState()
     prefs.removeSelectedContract(instrumentId)
     prefs.saveToLocalStorage()
   },
 
   loadSubscribedContracts: async () => {
-    // 1. Load user prefs from localStorage
     const prefs = useUserPrefsStore.getState()
     prefs.loadFromLocalStorage()
-    // Re-read after loadFromLocalStorage updates the store
     const userSelected = useUserPrefsStore.getState().selectedContracts
 
-    // 2. Get preset instruments
     let presetIds: string[] = []
     try {
       const preset = await getPresetInstruments()
       presetIds = preset.instruments
     } catch {
-      // Preset load failed — continue with user selections only
+      // Preset load failed
     }
 
-    // 3. Merge and deduplicate
-    const allIds = [...new Set([...presetIds, ...userSelected])]
+    const presetIdSet = new Set(presetIds)
+    const userIds = userSelected.filter((id) => !presetIdSet.has(id))
+    const allIds = [...new Set([...presetIds, ...userIds])]
 
     if (allIds.length === 0) {
-      set({ presetIds })
+      set({ presetIds, presetContracts: [], userContracts: [], contracts: [] })
       return
     }
 
-    // 4. Get contract details
     try {
       const result = await getInstrumentsByIds(allIds)
       if (result.instruments?.length) {
-        // 合并：保留用户通过搜索添加的合约，更新/添加 preset+prefs 中的合约
-        set((state) => {
-          const existingMap = new Map(state.contracts.map(c => [c.instrumentID, c]))
-          for (const inst of result.instruments) {
-            existingMap.set(inst.instrumentID, inst)
-          }
-          return { contracts: Array.from(existingMap.values()), presetIds }
+        const idToContract = new Map(result.instruments.map((c) => [c.instrumentID, c]))
+        const presetContracts = presetIds
+          .map((id) => idToContract.get(id))
+          .filter((c): c is ContractInfo => c != null)
+        const userContracts = userIds
+          .map((id) => idToContract.get(id))
+          .filter((c): c is ContractInfo => c != null)
+        set({
+          presetContracts,
+          userContracts,
+          contracts: buildCombinedContracts(presetContracts, userContracts),
+          presetIds,
         })
       }
     } catch {
       console.warn('[ContractsStore] Failed to load contract details')
     }
   },
-
-  toggleShowSubscribedOnly: () =>
-    set((state) => ({ showSubscribedOnly: !state.showSubscribedOnly })),
 }))

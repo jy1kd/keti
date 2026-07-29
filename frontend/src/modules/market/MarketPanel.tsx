@@ -14,6 +14,7 @@ import { usePointOrder } from '@/hooks/usePointOrder'
 import { useOrderStore } from '@/modules/order/store'
 import { useMarketWs } from '@/hooks/useMarketWs'
 import { API_BASE, subscribeMarket } from '@/services/api'
+import { toast } from '@/components/Toast'
 import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
 import './styles.css'
 
@@ -22,32 +23,29 @@ const savedMarketTop = loadPanelSizes('market-top-layout')
 export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
-  const { contracts, showSubscribedOnly, presetIds, addContractInfo, removeContractById, toggleShowSubscribedOnly } = useContractsStore()
+  const { presetContracts, userContracts, contracts, presetIds, addContractInfo, removeFromFavorites, subscribeAndAddToPreset, removeContractById } = useContractsStore()
   const { selectedContracts } = useUserPrefsStore()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'preset' | 'user'>('preset')
   const loadedRef = useRef(false)
 
-  // Filter contracts when "已订阅" toggle is active
-  const displayContracts = useMemo(() => {
-    if (!showSubscribedOnly) return contracts
-    const selectedSet = new Set(selectedContracts)
-    return contracts.filter((c) => selectedSet.has(c.instrumentID))
-  }, [contracts, showSubscribedOnly, selectedContracts])
+  // Display contracts based on active tab
+  const displayContracts = activeTab === 'preset' ? presetContracts : userContracts
 
-  // User-subscribed IDs only (for modal "已订阅" badge)
+  // User-subscribed IDs (for modal "已订阅" badge and button state)
   const userSubscribedIds = useMemo(
     () => new Set(selectedContracts),
     [selectedContracts]
   )
-  // Preset IDs set (for modal "订阅(预设)" button)
+  // Preset IDs set (for modal button state)
   const presetIdsSet = useMemo(
     () => new Set(presetIds),
     [presetIds]
   )
-  // Whether selected instrument is a preset (not yet user-subscribed)
-  const isSelectedPreset = useMemo(
-    () => selectedInstrument != null && presetIdsSet.has(selectedInstrument) && !userSubscribedIds.has(selectedInstrument),
-    [selectedInstrument, presetIdsSet, userSubscribedIds]
+  // Combined set: all contracts in the system (preset + user)
+  const allContractIds = useMemo(
+    () => new Set(contracts.map(c => c.instrumentID)),
+    [contracts]
   )
 
   const onMarketTopLayout = useCallback((layout: Record<string, number>) => {
@@ -90,23 +88,10 @@ export function MarketPanel() {
 
   const handleUnsubscribe = async () => {
     if (!selectedInstrument) return
-    await removeContractById(selectedInstrument)
+    const id = selectedInstrument
+    await removeContractById(id)
     setSelectedInstrument(null)
-  }
-
-  const handleSubscribeSelected = () => {
-    if (!selectedInstrument) return
-    const inst = contracts.find((c) => c.instrumentID === selectedInstrument)
-    if (inst) {
-      addContractInfo(inst)
-      subscribeMarket([inst.instrumentID]).catch(() => {})
-    }
-  }
-
-  const handleSubscribeFromModal = (inst: import('@/services/types').ContractInfo) => {
-    addContractInfo(inst)
-    // Subscribe to CTP market data
-    subscribeMarket([inst.instrumentID]).catch(() => {})
+    toast.success(`已退订 ${id}`)
   }
 
   const selectedSnapshot = selectedInstrument ? snapshots.get(selectedInstrument) ?? null : null
@@ -115,8 +100,22 @@ export function MarketPanel() {
     <section className="market-panel">
       <div className="panel-header">
         <h2>行情面板</h2>
+        <div className="panel-header__tabs">
+          <button
+            className={`btn-tab${activeTab === 'preset' ? ' active' : ''}`}
+            onClick={() => setActiveTab('preset')}
+          >
+            预设合约
+          </button>
+          <button
+            className={`btn-tab${activeTab === 'user' ? ' active' : ''}`}
+            onClick={() => setActiveTab('user')}
+          >
+            自选合约
+          </button>
+        </div>
         <div className="panel-header__actions">
-          <ContractSearch contracts={contracts} onSelect={handleSelectContract} />
+          <ContractSearch contracts={displayContracts} onSelect={handleSelectContract} />
           <button
             className="btn-search-instruments"
             onClick={() => setSearchModalOpen(true)}
@@ -124,10 +123,23 @@ export function MarketPanel() {
             搜索合约
           </button>
           <button
-            className={`btn-subscribed-toggle${showSubscribedOnly ? ' active' : ''}`}
-            onClick={toggleShowSubscribedOnly}
+            className={`btn-favorite${selectedInstrument && userSubscribedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
+            disabled={!selectedInstrument}
+            onClick={() => {
+              if (!selectedInstrument) return
+              if (userSubscribedIds.has(selectedInstrument)) {
+                removeFromFavorites(selectedInstrument)
+                toast.success(`已移除 ${selectedInstrument}`)
+              } else {
+                const inst = presetContracts.find(c => c.instrumentID === selectedInstrument)
+                if (inst) {
+                  addContractInfo(inst)
+                  toast.success(`已收藏 ${inst.instrumentID}`)
+                }
+              }
+            }}
           >
-            已订阅
+            {selectedInstrument && userSubscribedIds.has(selectedInstrument) ? '移除' : '收藏'}
           </button>
           <button
             className="btn-unsubscribe"
@@ -135,13 +147,6 @@ export function MarketPanel() {
             onClick={handleUnsubscribe}
           >
             退订
-          </button>
-          <button
-            className="btn-subscribe-selected"
-            disabled={!isSelectedPreset}
-            onClick={handleSubscribeSelected}
-          >
-            订阅
           </button>
         </div>
       </div>
@@ -191,7 +196,10 @@ export function MarketPanel() {
       <InstrumentSearchModal
         isOpen={searchModalOpen}
         onClose={() => setSearchModalOpen(false)}
-        onSubscribe={handleSubscribeFromModal}
+        onSubscribeNew={subscribeAndAddToPreset}
+        onAddToFavorite={addContractInfo}
+        onUnsubscribe={removeContractById}
+        allContractIds={allContractIds}
         userSubscribedIds={userSubscribedIds}
         presetIds={presetIdsSet}
       />
