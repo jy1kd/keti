@@ -198,6 +198,7 @@ export function MarketPanel() {
         onClose={() => setSearchModalOpen(false)}
         onSubscribeNew={subscribeAndAddToPreset}
         onAddToFavorite={addContractInfo}
+        onRemoveFromFavorite={removeFromFavorites}
         onUnsubscribe={removeContractById}
         allContractIds={allContractIds}
         userSubscribedIds={userSubscribedIds}

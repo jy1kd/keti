@@ -11,17 +11,19 @@ interface Props {
   onSubscribeNew: (instrument: ContractInfo) => void
   /** 加入自选（只操作 userContracts，不调 CTP） */
   onAddToFavorite: (instrument: ContractInfo) => void
+  /** 移除收藏（只从 userContracts 移除，不调 CTP） */
+  onRemoveFromFavorite: (instrumentId: string) => void
   /** 退订（CTP 退订 + 从预设/自选中移除） */
   onUnsubscribe: (instrumentId: string) => Promise<void>
   /** All contract IDs in the system (preset + user) */
   allContractIds: Set<string>
-  /** User-subscribed IDs (show "已订阅" badge) */
+  /** User-favorited IDs (show "移除" button) */
   userSubscribedIds: Set<string>
-  /** Preset IDs (show "预设" label) */
+  /** Preset IDs */
   presetIds: Set<string>
 }
 
-export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddToFavorite, onUnsubscribe, allContractIds, userSubscribedIds, presetIds }: Props) {
+export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddToFavorite, onRemoveFromFavorite, onUnsubscribe, allContractIds, userSubscribedIds, presetIds }: Props) {
   const [exchanges, setExchanges] = useState<string[]>([])
   const [products, setProducts] = useState<string[]>([])
   const [instruments, setInstruments] = useState<ContractInfo[]>([])
@@ -201,7 +203,12 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddTo
                     <td>{inst.isTrading ? '交易中' : '已停牌'}</td>
                     <td>
                       {userSubscribedIds.has(inst.instrumentID) ? (
-                        <span className="subscribed-badge">已订阅</span>
+                        <button
+                          className="btn-remove-favorite"
+                          onClick={() => onRemoveFromFavorite(inst.instrumentID)}
+                        >
+                          移除
+                        </button>
                       ) : (
                         <button
                           className="btn-subscribe"
