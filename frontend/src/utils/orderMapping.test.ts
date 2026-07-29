@@ -106,8 +106,8 @@ describe('fromCtpOrderStatus', () => {
     expect(fromCtpOrderStatus('1')).toBe('partial')
   })
 
-  it("converts '2' to 'no_traded'", () => {
-    expect(fromCtpOrderStatus('2')).toBe('no_traded')
+  it("converts '2' to 'no_traded_queuing'", () => {
+    expect(fromCtpOrderStatus('2')).toBe('no_traded_queuing')
   })
 
   it("converts '5' to 'canceled'", () => {

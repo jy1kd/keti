@@ -104,9 +104,12 @@ describe('OrderPanel', () => {
   it('opens BatchCancel panel when 批量撤单 clicked', () => {
     render(<OrderPanel />)
 
-    fireEvent.click(screen.getByText('批量撤单'))
+    // 使用 QuickActions 中的按钮（class="qa-btn qa-batch"）
+    const batchButton = screen.getByRole('button', { name: '批量撤单' })
+    fireEvent.click(batchButton)
 
-    // BatchCancel header should appear
-    expect(screen.getByText(/批量撤单/)).toBeInTheDocument()
+    // BatchCancel panel should appear with loading state or order list
+    // 检查是否打开了 panel-overlay
+    expect(document.querySelector('.panel-overlay')).toBeInTheDocument()
   })
 })

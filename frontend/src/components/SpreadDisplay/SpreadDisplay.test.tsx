@@ -5,8 +5,8 @@ import { SpreadDisplay } from './index'
 describe('SpreadDisplay', () => {
   it('renders spread between ask1 and bid1', () => {
     render(<SpreadDisplay bidPrice={4694} askPrice={4696} />)
-    // spread = 4696 - 4694 = 2
-    expect(screen.getByText('2')).toBeInTheDocument()
+    // spread = 4696 - 4694 = 2.00 (toFixed(2))
+    expect(screen.getByText('2.00')).toBeInTheDocument()
   })
 
   it('renders label', () => {
@@ -21,7 +21,7 @@ describe('SpreadDisplay', () => {
 
   it('handles negative spread (inverted market)', () => {
     render(<SpreadDisplay bidPrice={4700} askPrice={4696} />)
-    // spread = 4696 - 4700 = -4
-    expect(screen.getByText('-4')).toBeInTheDocument()
+    // spread = 4696 - 4700 = -4.00 (toFixed(2))
+    expect(screen.getByText('-4.00')).toBeInTheDocument()
   })
 })

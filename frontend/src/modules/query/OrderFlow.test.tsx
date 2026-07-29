@@ -76,11 +76,12 @@ describe('OrderFlow', () => {
   it('does not show cancel button for completed/canceled orders', () => {
     useQueryStore.setState({
       orders: [
-        { orderRef: '1002', instrumentID: 'IF2608', direction: '0', combOffsetFlag: '0', limitPrice: 4810, volumeTotalOriginal: 1, volumeTraded: 1, orderStatus: '3', statusMsg: '', insertTime: '09:31:00' },
+        { orderRef: '1002', instrumentID: 'IF2608', direction: '0', combOffsetFlag: '0', limitPrice: 4810, volumeTotalOriginal: 1, volumeTraded: 1, orderStatus: '0', statusMsg: '', insertTime: '09:31:00' },
         { orderRef: '1003', instrumentID: 'IF2608', direction: '0', combOffsetFlag: '0', limitPrice: 4900, volumeTotalOriginal: 1, volumeTraded: 0, orderStatus: '5', statusMsg: '', insertTime: '09:32:00' },
       ],
     })
     render(<OrderFlow />)
+    // orderStatus '0' (all_traded) 和 '5' (canceled) 都不是活跃状态
     expect(screen.queryByText('撤单')).not.toBeInTheDocument()
   })
 
@@ -88,7 +89,7 @@ describe('OrderFlow', () => {
     const handleCancelOrder = vi.fn().mockResolvedValue(true)
     useQueryStore.setState({
       orders: [
-        { orderRef: '1001', instrumentID: 'IF2608', direction: '0', combOffsetFlag: '0', limitPrice: 4800, volumeTotalOriginal: 1, volumeTraded: 0, orderStatus: '0', statusMsg: '', insertTime: '09:30:00' },
+        { orderRef: '1001', instrumentID: 'IF2608', direction: '0', combOffsetFlag: '0', limitPrice: 4800, volumeTotalOriginal: 1, volumeTraded: 0, orderStatus: '2', statusMsg: '', insertTime: '09:30:00' },
       ],
       handleCancelOrder,
     })

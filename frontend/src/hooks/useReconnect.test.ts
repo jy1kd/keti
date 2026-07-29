@@ -11,6 +11,7 @@ function createMockWs(): WSManager {
     disconnectAll: vi.fn(),
     isConnected: vi.fn().mockReturnValue(false),
     send: vi.fn(),
+    onClose: vi.fn(),
   } as unknown as WSManager
 }
 
