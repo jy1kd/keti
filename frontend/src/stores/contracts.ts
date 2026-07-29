@@ -126,9 +126,8 @@ export const useContractsStore = create<ContractsStore>((set, get) => ({
       // Preset load failed
     }
 
-    const presetIdSet = new Set(presetIds)
-    const userIds = userSelected.filter((id) => !presetIdSet.has(id))
-    const allIds = [...new Set([...presetIds, ...userIds])]
+    // userIds 包含所有用户收藏的合约（包括同时是预设的合约）
+    const allIds = [...new Set([...presetIds, ...userSelected])]
 
     if (allIds.length === 0) {
       set({ presetIds, presetContracts: [], userContracts: [], contracts: [] })
@@ -142,7 +141,7 @@ export const useContractsStore = create<ContractsStore>((set, get) => ({
         const presetContracts = presetIds
           .map((id) => idToContract.get(id))
           .filter((c): c is ContractInfo => c != null)
-        const userContracts = userIds
+        const userContracts = userSelected
           .map((id) => idToContract.get(id))
           .filter((c): c is ContractInfo => c != null)
         set({
