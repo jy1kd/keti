@@ -167,6 +167,9 @@ class OptionsService:
 
         return result
 
+    # 隐含波动率上限（500%），超过此值认为是非物理的异常数据
+    MAX_IV = 5.0
+
     def calculate_implied_volatility(
         self,
         option_price: float,
@@ -187,17 +190,40 @@ class OptionsService:
             option_type: '1'=看涨, '2'=看跌。
 
         Returns:
-            隐含波动率（如 0.25）。如果迭代 100 次仍未收敛，返回最后一次
-            迭代的近似值（通常接近真实值）；如果参数无效返回 0.0。
+            隐含波动率（如 0.25）。异常价格或迭代不收敛返回 0.0。
         """
         if option_price <= 0 or underlying_price <= 0 or strike_price <= 0:
             return 0.0
         if time_to_expiry <= 0:
             return 0.0
 
+        # Layer 1: 套利边界检查 — 期权价格必须在理论上下界之内
+        intrinsic = self._intrinsic_value(
+            underlying_price, strike_price, option_type
+        )
+        if option_price < intrinsic - 1e-6:
+            # 价格低于内在价值（违反套利）
+            logger.debug(
+                "Option price %.4f < intrinsic %.4f, skip IV", option_price, intrinsic
+            )
+            return 0.0
+
+        # 期权价格上限：Call ≤ S，Put ≤ K·e^(-rT)
+        if option_type == "1":
+            upper_bound = underlying_price
+        else:
+            upper_bound = strike_price * math.exp(-risk_free_rate * time_to_expiry)
+        if option_price > upper_bound + 1e-6:
+            logger.debug(
+                "Option price %.4f > upper bound %.4f, skip IV", option_price, upper_bound
+            )
+            return 0.0
+
+        # Layer 2: Newton-Raphson 迭代（含步长限制 + IV 上限）
         sigma = 0.3  # Initial guess
         max_iterations = 100
         tolerance = 1e-6
+        made_progress = False  # 是否成功完成过至少一次迭代
 
         for _ in range(max_iterations):
             price = self._black_scholes_price(
@@ -211,7 +237,7 @@ class OptionsService:
             diff = price - option_price
 
             if abs(diff) < tolerance:
-                return sigma
+                return min(sigma, self.MAX_IV)
 
             vega = self._vega(
                 s=underlying_price,
@@ -222,15 +248,41 @@ class OptionsService:
             )
 
             if vega < 1e-10:
+                # vega 塌缩（临近到期 + 深度虚值/实值），Newton-Raphson 无法工作
                 break
 
-            sigma -= diff / vega
+            made_progress = True
+            step = diff / vega
+
+            # 步长限制：单步 sigma 变化不超过当前值的 4 倍
+            max_step = max(sigma * 4.0, 1.0)
+            if abs(step) > max_step:
+                step = max_step if step > 0 else -max_step
+
+            sigma -= step
 
             # Keep sigma positive
             if sigma <= 0:
                 sigma = 0.01
 
-        return sigma if sigma > 0 else 0.0
+            # IV 上限保护：sigma 超过上限直接返回 0（非物理值）
+            if sigma > self.MAX_IV:
+                logger.debug("IV exceeded %.0f%%, treating as non-physical", self.MAX_IV * 100)
+                return 0.0
+
+        if not made_progress:
+            # 第一次迭代 vega 就塌缩了，返回初始猜测无意义
+            return 0.0
+
+        return min(sigma, self.MAX_IV) if sigma > 0 else 0.0
+
+    @staticmethod
+    def _intrinsic_value(s: float, k: float, option_type: str) -> float:
+        """期权内在价值（不折现）。"""
+        if option_type == "1":  # Call
+            return max(s - k, 0.0)
+        else:  # Put
+            return max(k - s, 0.0)
 
     def _black_scholes_price(
         self, s: float, k: float, t: float, r: float, sigma: float, option_type: str
