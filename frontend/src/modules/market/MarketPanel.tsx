@@ -4,6 +4,7 @@ import { ResizeHandle } from '@/components/ResizeHandle'
 import { ContractSearch } from '@/components/ContractSearch'
 import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { OptionPanel } from '@/modules/options/OptionPanel'
 import { MarketTable } from './MarketTable'
 import { DepthQuote } from './DepthQuote'
 import { SpreadDisplay } from '@/components/SpreadDisplay'
@@ -27,6 +28,7 @@ export function MarketPanel() {
   const { selectedContracts } = useUserPrefsStore()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'preset' | 'user'>('preset')
+  const [viewMode, setViewMode] = useState<'market' | 'options'>('market')
   const loadedRef = useRef(false)
 
   // Display contracts based on active tab
@@ -96,8 +98,25 @@ export function MarketPanel() {
 
   const selectedSnapshot = selectedInstrument ? snapshots.get(selectedInstrument) ?? null : null
 
+  // T型期权报价模式：直接渲染 OptionPanel
+  if (viewMode === 'options') {
+    return (
+      <section className="market-panel">
+        <div className="market-tabs">
+          <button className="market-tab" onClick={() => setViewMode('market')}>行情</button>
+          <button className="market-tab active" onClick={() => setViewMode('options')}>T型期权报价</button>
+        </div>
+        <OptionPanel />
+      </section>
+    )
+  }
+
   return (
     <section className="market-panel">
+      <div className="market-tabs">
+        <button className="market-tab active" onClick={() => setViewMode('market')}>行情</button>
+        <button className="market-tab" onClick={() => setViewMode('options')}>T型期权报价</button>
+      </div>
       <div className="panel-header">
         <div className="panel-header__title">
           <h2>行情面板</h2>

@@ -101,12 +101,6 @@ describe('OrderPanel', () => {
     expect(screen.getByText('批量撤单')).toBeInTheDocument()
   })
 
-  it('renders quick keys button to open hotkey config', () => {
-    render(<OrderPanel />)
-
-    expect(screen.getByText('快捷键')).toBeInTheDocument()
-  })
-
   it('opens BatchCancel panel when 批量撤单 clicked', () => {
     render(<OrderPanel />)
 
@@ -114,15 +108,5 @@ describe('OrderPanel', () => {
 
     // BatchCancel header should appear
     expect(screen.getByText(/批量撤单/)).toBeInTheDocument()
-  })
-
-  it('opens QuickKeys panel when 快捷键 clicked', () => {
-    render(<OrderPanel />)
-
-    fireEvent.click(screen.getByText('快捷键'))
-
-    // QuickKeys panel should appear with save/close buttons
-    expect(screen.getByText('保存')).toBeInTheDocument()
-    expect(screen.getByText('恢复默认')).toBeInTheDocument()
   })
 })

@@ -38,7 +38,7 @@ const mockContract2: ContractInfo = {
 describe('useContractsStore', () => {
   beforeEach(() => {
     useContractsStore.setState({ contracts: [], presetContracts: [], userContracts: [], presetIds: [] })
-    useUserPrefsStore.setState({ selectedContracts: [], hotKeys: { buy: 'b', sell: 's', cancel: 'c' } })
+    useUserPrefsStore.setState({ selectedContracts: [], hotKeys: { buy: 'b', sell: 's', cancel: 'c', reverse: '', lock: '', batchCancel: 'Escape' } })
     localStorage.clear()
     vi.clearAllMocks()
   })

@@ -328,14 +328,28 @@ export async function cancelAllOrders(): Promise<CancelAllResponse> {
 }
 
 /** 一键反向 — 平仓并反向开仓 */
-export async function reversePosition(instrumentID: string): Promise<ReverseResponse> {
-  const { data } = await api.post<ReverseResponse>('/api/order/reverse', { instrumentID })
+export async function reversePosition(params: {
+  instrumentID: string
+  closePriceType?: string
+  closeLimitPrice?: number
+  closeTimeCondition?: string
+  openPriceType?: string
+  openLimitPrice?: number
+  openTimeCondition?: string
+  executionMode?: string
+}): Promise<ReverseResponse> {
+  const { data } = await api.post<ReverseResponse>('/api/order/reverse', params)
   return data
 }
 
 /** 一键锁仓 — 反手锁仓或双开锁仓 */
-export async function lockPosition(instrumentID: string): Promise<LockResponse> {
-  const { data } = await api.post<LockResponse>('/api/order/lock', { instrumentID })
+export async function lockPosition(params: {
+  instrumentID: string
+  priceType?: string
+  limitPrice?: number
+  timeCondition?: string
+}): Promise<LockResponse> {
+  const { data } = await api.post<LockResponse>('/api/order/lock', params)
   return data
 }
 

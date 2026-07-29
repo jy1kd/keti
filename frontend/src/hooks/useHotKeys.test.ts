@@ -146,7 +146,7 @@ describe('useHotKeys', () => {
         onSell,
         onCancelAll,
         enabled: true,
-        hotKeys: { buy: 'x', sell: 'y', cancel: 'z' },
+        hotKeys: { buy: 'x', sell: 'y', cancel: 'z', reverse: '', lock: '', batchCancel: '' },
       })
     )
 
@@ -197,7 +197,7 @@ describe('useHotKeys', () => {
 
     const { rerender } = renderHook(
       ({ hotKeys }) => useHotKeys({ onBuy, enabled: true, hotKeys }),
-      { initialProps: { hotKeys: { buy: 'a', sell: 's', cancel: 'c' } } }
+      { initialProps: { hotKeys: { buy: 'a', sell: 's', cancel: 'c', reverse: '', lock: '', batchCancel: '' } } }
     )
 
     // First with 'a'
@@ -207,7 +207,7 @@ describe('useHotKeys', () => {
     expect(onBuy).toHaveBeenCalledTimes(1)
 
     // Switch to 'x'
-    rerender({ hotKeys: { buy: 'x', sell: 's', cancel: 'c' } })
+    rerender({ hotKeys: { buy: 'x', sell: 's', cancel: 'c', reverse: '', lock: '', batchCancel: '' } })
 
     act(() => {
       fireKey('x')
@@ -228,7 +228,7 @@ describe('useHotKeys', () => {
       useHotKeys({
         onBuy,
         enabled: true,
-        hotKeys: { buy: 'b', sell: 's', cancel: 'c' },
+        hotKeys: { buy: 'b', sell: 's', cancel: 'c', reverse: '', lock: '', batchCancel: '' },
       })
     )
 

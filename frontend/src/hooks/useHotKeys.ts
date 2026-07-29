@@ -1,32 +1,33 @@
 import { useEffect, useMemo } from 'react'
 import type { HotKeyConfig } from '../services/types'
-
-const DEFAULT_KEYS: HotKeyConfig = {
-  buy: 'b',
-  sell: 's',
-  cancel: 'c',
-}
+import { DEFAULT_HOT_KEYS } from '../stores/userPrefs'
 
 interface UseHotKeysOptions {
   onBuy?: () => void
   onSell?: () => void
   onCancelAll?: () => void
+  onReverse?: () => void
+  onLock?: () => void
+  onBatchCancel?: () => void
   enabled: boolean
   hotKeys?: HotKeyConfig
 }
 
-type ActionKey = 'buy' | 'sell' | 'cancel'
+type ActionKey = 'buy' | 'sell' | 'cancel' | 'reverse' | 'lock' | 'batchCancel'
 
 export function useHotKeys({
   onBuy,
   onSell,
   onCancelAll,
+  onReverse,
+  onLock,
+  onBatchCancel,
   enabled,
   hotKeys,
 }: UseHotKeysOptions) {
-  // Merge with defaults so partial hotKeys fall back (e.g. { buy: 'x' } → sell/cancel stay default)
+  // Merge with defaults so partial hotKeys fall back
   const effectiveKeys: HotKeyConfig = useMemo(
-    () => (hotKeys ? { ...DEFAULT_KEYS, ...hotKeys } : DEFAULT_KEYS),
+    () => (hotKeys ? { ...DEFAULT_HOT_KEYS, ...hotKeys } : DEFAULT_HOT_KEYS),
     [hotKeys]
   )
 
@@ -61,9 +62,12 @@ export function useHotKeys({
       if (action === 'buy') onBuy?.()
       if (action === 'sell') onSell?.()
       if (action === 'cancel') onCancelAll?.()
+      if (action === 'reverse') onReverse?.()
+      if (action === 'lock') onLock?.()
+      if (action === 'batchCancel') onBatchCancel?.()
     }
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [enabled, keyToAction, onBuy, onSell, onCancelAll])
+  }, [enabled, keyToAction, onBuy, onSell, onCancelAll, onReverse, onLock, onBatchCancel])
 }

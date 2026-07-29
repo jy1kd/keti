@@ -244,10 +244,37 @@ describe('reversePosition', () => {
     const mockData = { success: true, message: 'Position reversed' }
     vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
 
-    const result = await reversePosition('IF2608')
+    const result = await reversePosition({ instrumentID: 'IF2608' })
 
     expect(api.post).toHaveBeenCalledWith('/api/order/reverse', { instrumentID: 'IF2608' })
     expect(result).toEqual(mockData)
+  })
+
+  it('passes all params to reverse endpoint', async () => {
+    const mockData = { success: true, message: '' }
+    vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
+
+    await reversePosition({
+      instrumentID: 'IF2608',
+      closePriceType: '2',
+      closeLimitPrice: 4790,
+      closeTimeCondition: '3',
+      openPriceType: '2',
+      openLimitPrice: 4810,
+      openTimeCondition: '3',
+      executionMode: 'serial',
+    })
+
+    expect(api.post).toHaveBeenCalledWith('/api/order/reverse', {
+      instrumentID: 'IF2608',
+      closePriceType: '2',
+      closeLimitPrice: 4790,
+      closeTimeCondition: '3',
+      openPriceType: '2',
+      openLimitPrice: 4810,
+      openTimeCondition: '3',
+      executionMode: 'serial',
+    })
   })
 
   it('handles 501 not implemented gracefully', async () => {
@@ -256,7 +283,7 @@ describe('reversePosition', () => {
     })
     vi.spyOn(api, 'post').mockRejectedValue(error)
 
-    await expect(reversePosition('IF2608')).rejects.toThrow()
+    await expect(reversePosition({ instrumentID: 'IF2608' })).rejects.toThrow()
   })
 })
 
@@ -269,10 +296,29 @@ describe('lockPosition', () => {
     const mockData = { success: true, message: 'Position locked' }
     vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
 
-    const result = await lockPosition('IF2608')
+    const result = await lockPosition({ instrumentID: 'IF2608' })
 
     expect(api.post).toHaveBeenCalledWith('/api/order/lock', { instrumentID: 'IF2608' })
     expect(result).toEqual(mockData)
+  })
+
+  it('passes price type and limit price to lock endpoint', async () => {
+    const mockData = { success: true, message: '' }
+    vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
+
+    await lockPosition({
+      instrumentID: 'IF2608',
+      priceType: '2',
+      limitPrice: 4800,
+      timeCondition: '3',
+    })
+
+    expect(api.post).toHaveBeenCalledWith('/api/order/lock', {
+      instrumentID: 'IF2608',
+      priceType: '2',
+      limitPrice: 4800,
+      timeCondition: '3',
+    })
   })
 
   it('handles 501 not implemented gracefully', async () => {
@@ -281,7 +327,7 @@ describe('lockPosition', () => {
     })
     vi.spyOn(api, 'post').mockRejectedValue(error)
 
-    await expect(lockPosition('IF2608')).rejects.toThrow()
+    await expect(lockPosition({ instrumentID: 'IF2608' })).rejects.toThrow()
   })
 })
 

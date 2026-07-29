@@ -1,15 +1,17 @@
 .quick-actions {
   display: flex;
-  gap: 6px;
-  padding: 8px 12px;
+  gap: 0;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
 }
 
 .qa-btn {
   flex: 1;
-  padding: 8px 4px;
-  border: 1px solid var(--border-color, #3a4a6b);
-  border-radius: 4px;
-  font-size: 12px;
+  padding: 6px 16px;
+  border: none;
+  border-radius: 0;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
@@ -17,13 +19,12 @@
 }
 
 .qa-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .qa-reverse {
   background: #8e44ad;
-  border-color: #8e44ad;
 }
 
 .qa-reverse:hover:not(:disabled) {
@@ -32,7 +33,6 @@
 
 .qa-lock {
   background: #c0392b;
-  border-color: #c0392b;
 }
 
 .qa-lock:hover:not(:disabled) {
@@ -41,7 +41,6 @@
 
 .qa-batch {
   background: #e67e22;
-  border-color: #e67e22;
 }
 
 .qa-batch:hover:not(:disabled) {
