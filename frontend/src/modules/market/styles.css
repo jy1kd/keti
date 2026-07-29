@@ -151,6 +151,21 @@
   border-color: var(--accent);
 }
 
+/* 表格过滤搜索 */
+.market-table-filter {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.market-table-filter .contract-search {
+  width: 100%;
+}
+
+.market-table-filter .search-input {
+  width: 100%;
+}
+
 /* 操作按钮 */
 .panel-header__actions {
   display: flex;

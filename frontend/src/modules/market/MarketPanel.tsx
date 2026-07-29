@@ -115,7 +115,6 @@ export function MarketPanel() {
           </button>
         </div>
         <div className="panel-header__actions">
-          <ContractSearch contracts={displayContracts} onSelect={handleSelectContract} />
           <button
             className="btn-search-instruments"
             onClick={() => setSearchModalOpen(true)}
@@ -154,6 +153,9 @@ export function MarketPanel() {
       <Group orientation="horizontal" className="panel-content" id="market-top-layout" onLayoutChange={onMarketTopLayout}>
         <Panel id="market-table" defaultSize={savedMarketTop?.table ?? 75} minSize={30}>
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div className="market-table-filter">
+              <ContractSearch contracts={displayContracts} onSelect={handleSelectContract} />
+            </div>
             <ErrorBoundary>
               <MarketTable
                 contracts={displayContracts}
