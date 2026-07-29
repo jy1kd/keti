@@ -111,19 +111,21 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddTo
           }
           return
         }
+        const matchedIdSet = new Set(matchedIds)
         // 用 productID 作为关键词搜索后端（后端搜 instrumentID/productID 等字段）
         Promise.all(matchedIds.map((id) => getInstruments(id)))
           .then((results) => {
             if (onCleanup?.()) return
             const merged = results.flatMap((r) => r.instruments)
-            // 去重
+            // 去重 + 前端按 productID 精确过滤（后端子串匹配会误匹配 MAP/SAP/TAP 等）
             const seen = new Set<string>()
-            const deduped = merged.filter((c) => {
+            const filtered = merged.filter((c) => {
+              if (!matchedIdSet.has(c.productID)) return false
               if (seen.has(c.instrumentID)) return false
               seen.add(c.instrumentID)
               return true
             })
-            setInstruments(deduped)
+            setInstruments(filtered)
           })
           .catch(() => { if (!onCleanup?.()) setError('加载合约列表失败') })
           .finally(() => { if (!onCleanup?.()) setLoading(false) })
