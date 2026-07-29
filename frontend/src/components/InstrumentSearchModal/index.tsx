@@ -211,7 +211,7 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddTo
                         </button>
                       ) : (
                         <button
-                          className="btn-subscribe"
+                          className={allContractIds.has(inst.instrumentID) ? 'btn-subscribe-favorite' : 'btn-subscribe'}
                           onClick={() => handleSubscribe(inst)}
                         >
                           {allContractIds.has(inst.instrumentID) ? '收藏' : '订阅'}
