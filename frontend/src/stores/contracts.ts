@@ -73,7 +73,7 @@ export const useContractsStore = create<ContractsStore>((set, get) => ({
     prefs.saveToLocalStorage()
   },
 
-  /** 订阅新合约：CTP 订阅 + 加入预设表格 */
+  /** 订阅新合约：CTP 订阅 + 加入预设表格 + 写入 localStorage */
   subscribeAndAddToPreset: async (contract) => {
     const { presetContracts, presetIds, userContracts } = get()
     if (presetContracts.some((c) => c.instrumentID === contract.instrumentID)) return
@@ -89,6 +89,10 @@ export const useContractsStore = create<ContractsStore>((set, get) => ({
       presetIds: newPresetIds,
       contracts: buildCombinedContracts(newPresetContracts, userContracts),
     })
+    // 写入 localStorage，刷新后能恢复
+    const prefs = useUserPrefsStore.getState()
+    prefs.addSelectedContract(contract.instrumentID)
+    prefs.saveToLocalStorage()
   },
 
   /** 退订：CTP 退订 + 从预设/自选中移除 */

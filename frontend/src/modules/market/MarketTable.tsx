@@ -184,20 +184,21 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     tableRef.current.setRecords(records)
   }, [contracts, snapshots])
 
-  // 高亮选中合约行
+  // 高亮选中合约行（rAF 等 vtable setRecords 渲染完成）
   useEffect(() => {
     if (!tableRef.current || !selectedInstrument) return
     const rowIndex = contracts.findIndex((c) => c.instrumentID === selectedInstrument)
-    if (rowIndex >= 0 && rowIndex < recordsRef.current.length) {
-      const vtableRow = rowIndex + 1
+    if (rowIndex < 0) return
+    const vtableRow = rowIndex + 1
+    const raf = requestAnimationFrame(() => {
       try {
-        tableRef.current.selectRow(vtableRow)
-        tableRef.current.scrollToCell({ row: vtableRow, col: 0 })
+        tableRef.current?.selectRow(vtableRow)
+        tableRef.current?.scrollToCell({ row: vtableRow, col: 0 })
       } catch {
-        // 表格内部状态尚未就绪（如 setRecords 还在 RAF 队列中），
-        // 忽略本次高亮 — 下次 contracts/snapshots 更新时会自动重试
+        // vtable 尚未就绪
       }
-    }
+    })
+    return () => cancelAnimationFrame(raf)
   }, [selectedInstrument, contracts])
 
   return <div ref={containerRef} className="market-table-container" />
