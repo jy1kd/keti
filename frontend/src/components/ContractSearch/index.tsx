@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import type { ContractInfo } from '@/services/types'
+import { getProductName } from '@/utils/productNames'
 import './styles.css'
 
 interface ContractSearchProps {
@@ -20,7 +21,8 @@ export function ContractSearch({ contracts, onSelect }: ContractSearchProps) {
     return contracts.filter(
       (c) =>
         c.instrumentID.toLowerCase().includes(q) ||
-        c.instrumentName.toLowerCase().includes(q),
+        c.instrumentName.toLowerCase().includes(q) ||
+        getProductName(c.productID).toLowerCase().includes(q),
     )
   }, [query, contracts])
 

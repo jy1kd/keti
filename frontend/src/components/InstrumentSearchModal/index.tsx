@@ -1,8 +1,22 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { ContractInfo } from '@/services/types'
 import { getExchanges, getProducts, getInstruments, searchInstruments, refreshInstruments, refreshPresetInstruments } from '@/services/api'
+import { PRODUCT_NAMES, getProductName } from '@/utils/productNames'
 import { toast } from '@/components/Toast'
 import './index.css'
+
+/** 判断字符串是否包含中文 */
+function hasChinese(s: string): boolean {
+  return /[一-鿿]/.test(s)
+}
+
+/** 从 PRODUCT_NAMES 中查找匹配中文关键词的 productID 列表 */
+function findProductIdsByChineseName(keyword: string): string[] {
+  const kw = keyword.toLowerCase()
+  return Object.entries(PRODUCT_NAMES)
+    .filter(([, name]) => name.toLowerCase().includes(kw))
+    .map(([id]) => id)
+}
 
 interface Props {
   isOpen: boolean
@@ -11,17 +25,19 @@ interface Props {
   onSubscribeNew: (instrument: ContractInfo) => void
   /** 加入自选（只操作 userContracts，不调 CTP） */
   onAddToFavorite: (instrument: ContractInfo) => void
+  /** 移除收藏（只从 userContracts 移除，不调 CTP） */
+  onRemoveFromFavorite: (instrumentId: string) => void
   /** 退订（CTP 退订 + 从预设/自选中移除） */
   onUnsubscribe: (instrumentId: string) => Promise<void>
   /** All contract IDs in the system (preset + user) */
   allContractIds: Set<string>
-  /** User-subscribed IDs (show "已订阅" badge) */
+  /** User-favorited IDs (show "移除" button) */
   userSubscribedIds: Set<string>
-  /** Preset IDs (show "预设" label) */
+  /** Preset IDs */
   presetIds: Set<string>
 }
 
-export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddToFavorite, onUnsubscribe, allContractIds, userSubscribedIds, presetIds }: Props) {
+export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddToFavorite, onRemoveFromFavorite, onUnsubscribe, allContractIds, userSubscribedIds, presetIds }: Props) {
   const [exchanges, setExchanges] = useState<string[]>([])
   const [products, setProducts] = useState<string[]>([])
   const [instruments, setInstruments] = useState<ContractInfo[]>([])
@@ -84,6 +100,39 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddTo
       if (!keyword.trim()) return
       setLoading(true)
       setError('')
+
+      // 中文搜索：从 PRODUCT_NAMES 查匹配的 productID，逐个搜索后合并
+      if (hasChinese(keyword.trim())) {
+        const matchedIds = findProductIdsByChineseName(keyword.trim())
+        if (matchedIds.length === 0) {
+          if (!onCleanup?.()) {
+            setInstruments([])
+            setLoading(false)
+          }
+          return
+        }
+        const matchedIdSet = new Set(matchedIds)
+        // 用 productID 作为关键词搜索后端（后端搜 instrumentID/productID 等字段）
+        Promise.all(matchedIds.map((id) => getInstruments(id)))
+          .then((results) => {
+            if (onCleanup?.()) return
+            const merged = results.flatMap((r) => r.instruments)
+            // 去重 + 前端按 productID 精确过滤（后端子串匹配会误匹配 MAP/SAP/TAP 等）
+            const seen = new Set<string>()
+            const filtered = merged.filter((c) => {
+              if (!matchedIdSet.has(c.productID)) return false
+              if (seen.has(c.instrumentID)) return false
+              seen.add(c.instrumentID)
+              return true
+            })
+            setInstruments(filtered)
+          })
+          .catch(() => { if (!onCleanup?.()) setError('加载合约列表失败') })
+          .finally(() => { if (!onCleanup?.()) setLoading(false) })
+        return
+      }
+
+      // 非中文：走原逻辑
       getInstruments(keyword.trim())
         .then((res) => { if (!onCleanup?.()) setInstruments(res.instruments) })
         .catch(() => { if (!onCleanup?.()) setError('加载合约列表失败') })
@@ -196,15 +245,20 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddTo
                 {instruments.map((inst) => (
                   <tr key={inst.instrumentID}>
                     <td>{inst.instrumentID}</td>
-                    <td>{inst.instrumentName}</td>
+                    <td>{getProductName(inst.productID)}</td>
                     <td>{inst.expireDate}</td>
                     <td>{inst.isTrading ? '交易中' : '已停牌'}</td>
                     <td>
                       {userSubscribedIds.has(inst.instrumentID) ? (
-                        <span className="subscribed-badge">已订阅</span>
+                        <button
+                          className="btn-remove-favorite"
+                          onClick={() => onRemoveFromFavorite(inst.instrumentID)}
+                        >
+                          移除
+                        </button>
                       ) : (
                         <button
-                          className="btn-subscribe"
+                          className={allContractIds.has(inst.instrumentID) ? 'btn-subscribe-favorite' : 'btn-subscribe'}
                           onClick={() => handleSubscribe(inst)}
                         >
                           {allContractIds.has(inst.instrumentID) ? '收藏' : '订阅'}
