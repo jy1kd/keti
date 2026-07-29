@@ -73,7 +73,7 @@ export const useContractsStore = create<ContractsStore>((set, get) => ({
     prefs.saveToLocalStorage()
   },
 
-  /** 订阅新合约：CTP 订阅 + 加入预设表格 + 写入 localStorage */
+  /** 订阅新合约：CTP 订阅 + 加入预设表格 + 持久化到 manualPresetIds */
   subscribeAndAddToPreset: async (contract) => {
     const { presetContracts, presetIds, userContracts } = get()
     if (presetContracts.some((c) => c.instrumentID === contract.instrumentID)) return
@@ -89,13 +89,13 @@ export const useContractsStore = create<ContractsStore>((set, get) => ({
       presetIds: newPresetIds,
       contracts: buildCombinedContracts(newPresetContracts, userContracts),
     })
-    // 写入 localStorage，刷新后能恢复
+    // 持久化到 manualPresetIds（不影响 selectedContracts / userSubscribedIds）
     const prefs = useUserPrefsStore.getState()
-    prefs.addSelectedContract(contract.instrumentID)
+    prefs.addManualPreset(contract.instrumentID)
     prefs.saveToLocalStorage()
   },
 
-  /** 退订：CTP 退订 + 从预设/自选中移除 */
+  /** 退订：CTP 退订 + 从预设/自选中移除 + 清理 manualPresetIds */
   removeContractById: async (instrumentId) => {
     try {
       await unsubscribeMarket([instrumentId])
@@ -114,6 +114,7 @@ export const useContractsStore = create<ContractsStore>((set, get) => ({
     })
     const prefs = useUserPrefsStore.getState()
     prefs.removeSelectedContract(instrumentId)
+    prefs.removeManualPreset(instrumentId)
     prefs.saveToLocalStorage()
   },
 
@@ -121,16 +122,19 @@ export const useContractsStore = create<ContractsStore>((set, get) => ({
     const prefs = useUserPrefsStore.getState()
     prefs.loadFromLocalStorage()
     const userSelected = useUserPrefsStore.getState().selectedContracts
+    const manualPresets = useUserPrefsStore.getState().manualPresetIds
 
-    let presetIds: string[] = []
+    let backendPresetIds: string[] = []
     try {
       const preset = await getPresetInstruments()
-      presetIds = preset.instruments
+      backendPresetIds = preset.instruments
     } catch {
       // Preset load failed
     }
 
-    // userIds 包含所有用户收藏的合约（包括同时是预设的合约）
+    // 合并后端预设 + 用户手动订阅的预设
+    const presetIds = [...new Set([...backendPresetIds, ...manualPresets])]
+    // 所有需要加载的合约 ID
     const allIds = [...new Set([...presetIds, ...userSelected])]
 
     if (allIds.length === 0) {

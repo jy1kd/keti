@@ -11,17 +11,22 @@ export const DEFAULT_HOT_KEYS: HotKeyConfig = {
 
 interface UserPrefsStore {
   selectedContracts: string[]
+  /** User manually subscribed preset contracts (persisted, separate from selectedContracts) */
+  manualPresetIds: string[]
   hotKeys: HotKeyConfig
   setHotKey: (action: string, key: string) => void
   setHotKeys: (hotKeys: HotKeyConfig) => void
   addSelectedContract: (instrumentId: string) => void
   removeSelectedContract: (instrumentId: string) => void
+  addManualPreset: (instrumentId: string) => void
+  removeManualPreset: (instrumentId: string) => void
   saveToLocalStorage: () => void
   loadFromLocalStorage: () => void
 }
 
 export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
   selectedContracts: [],
+  manualPresetIds: [],
   hotKeys: { ...DEFAULT_HOT_KEYS },
 
   setHotKey: (action, key) =>
@@ -42,11 +47,22 @@ export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
       selectedContracts: state.selectedContracts.filter((id) => id !== instrumentId),
     })),
 
+  addManualPreset: (instrumentId) =>
+    set((state) => {
+      if (state.manualPresetIds.includes(instrumentId)) return state
+      return { manualPresetIds: [...state.manualPresetIds, instrumentId] }
+    }),
+
+  removeManualPreset: (instrumentId) =>
+    set((state) => ({
+      manualPresetIds: state.manualPresetIds.filter((id) => id !== instrumentId),
+    })),
+
   saveToLocalStorage: () => {
-    const { selectedContracts, hotKeys } = get()
+    const { selectedContracts, manualPresetIds, hotKeys } = get()
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ selectedContracts, hotKeys })
+      JSON.stringify({ selectedContracts, manualPresetIds, hotKeys })
     )
   },
 
@@ -57,6 +73,7 @@ export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
       const data = JSON.parse(raw)
       set({
         selectedContracts: data.selectedContracts ?? [],
+        manualPresetIds: data.manualPresetIds ?? [],
         hotKeys: data.hotKeys ?? { ...DEFAULT_HOT_KEYS },
       })
     } catch {
