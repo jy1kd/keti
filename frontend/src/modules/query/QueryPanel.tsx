@@ -6,7 +6,6 @@ import { Position } from './Position'
 import { AccountQuery } from './AccountQuery'
 import { StopOrderList } from './StopOrderList'
 import { ContractQuery } from './ContractQuery'
-import { DepthQuote } from '../market/DepthQuote'
 import { KLineChart } from '../market/KLineChart'
 import { useMarketStore } from '../market/store'
 import { PERIOD_MS } from '@/hooks/useMarketWs'
@@ -20,7 +19,6 @@ const TABS = [
   { key: 'positions' as const, label: '持仓' },
   { key: 'account' as const, label: '资金' },
   { key: 'stop_orders' as const, label: '止损单' },
-  { key: 'quotes' as const, label: '报价' },
   { key: 'contracts' as const, label: '合约' },
   { key: 'kline' as const, label: 'K线' },
 ]
@@ -110,14 +108,6 @@ export function QueryPanel() {
         return <AccountQuery />
       case 'stop_orders':
         return <StopOrderList />
-      case 'quotes': {
-        const snapshot = selectedInstrument ? snapshots.get(selectedInstrument) ?? null : null
-        return (
-          <div className="quote-query">
-            <DepthQuote snapshot={snapshot} />
-          </div>
-        )
-      }
       case 'contracts':
         return <ContractQuery instrumentID={selectedInstrument ?? ''} />
       case 'kline': {

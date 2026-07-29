@@ -55,7 +55,7 @@ type OrderEntry = RawOrder
 type TradeEntry = RawTrade
 type PositionEntry = RawPosition
 
-export type QueryTab = 'orders' | 'trades' | 'positions' | 'account' | 'stop_orders' | 'quotes' | 'contracts' | 'kline'
+export type QueryTab = 'orders' | 'trades' | 'positions' | 'account' | 'stop_orders' | 'contracts' | 'kline'
 
 interface QueryStore {
   // Tab

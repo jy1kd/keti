@@ -38,14 +38,13 @@ describe('QueryPanel', () => {
     expect(screen.getByText('查询面板')).toBeInTheDocument()
   })
 
-  it('renders all 7 tab buttons', () => {
+  it('renders all 6 tab buttons', () => {
     render(<QueryPanel />)
     expect(screen.getByText('报单')).toBeInTheDocument()
     expect(screen.getByText('成交')).toBeInTheDocument()
     expect(screen.getByText('持仓')).toBeInTheDocument()
     expect(screen.getByText('资金')).toBeInTheDocument()
     expect(screen.getByText('止损单')).toBeInTheDocument()
-    expect(screen.getByText('报价')).toBeInTheDocument()
     expect(screen.getByText('合约')).toBeInTheDocument()
   })
 
