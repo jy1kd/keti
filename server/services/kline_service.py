@@ -106,6 +106,9 @@ class KLineService:
         action_day = data.get("actionDay", "")
         update_time = data.get("updateTime", "")
 
+        # Debug: 打印CTP返回的时间字段
+        logger.debug(f"[KLine] {instrument} ActionDay={action_day!r} UpdateTime={update_time!r}")
+
         ts = _parse_timestamp(action_day, update_time)
         if ts <= 0:
             return
