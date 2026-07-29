@@ -115,6 +115,7 @@ describe('useContractsStore', () => {
     vi.mocked(getPresetInstruments).mockResolvedValue({ instruments: ['au2406'], updatedAt: null })
     vi.mocked(getInstrumentsByIds).mockResolvedValue({ instruments: [mockContract, mockContract2], count: 2 })
 
+    // au2406 是预设同时也是用户收藏，rb2406 仅用户收藏
     useUserPrefsStore.getState().addSelectedContract('au2406')
     useUserPrefsStore.getState().addSelectedContract('rb2406')
     useUserPrefsStore.getState().saveToLocalStorage()
@@ -125,7 +126,8 @@ describe('useContractsStore', () => {
       expect.arrayContaining(['au2406', 'rb2406'])
     )
     expect(useContractsStore.getState().presetContracts).toEqual([mockContract])
-    expect(useContractsStore.getState().userContracts).toEqual([mockContract2])
+    // userContracts 包含所有用户收藏的合约（包括同时是预设的）
+    expect(useContractsStore.getState().userContracts).toEqual([mockContract, mockContract2])
     expect(useContractsStore.getState().contracts).toEqual([mockContract, mockContract2])
   })
 

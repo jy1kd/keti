@@ -118,7 +118,10 @@ export function MarketPanel() {
         <button className="market-tab" onClick={() => setViewMode('options')}>T型期权报价</button>
       </div>
       <div className="panel-header">
-        <h2>行情面板</h2>
+        <div className="panel-header__title">
+          <h2>行情面板</h2>
+          <ContractSearch contracts={displayContracts} onSelect={handleSelectContract} />
+        </div>
         <div className="panel-header__tabs">
           <button
             className={`btn-tab${activeTab === 'preset' ? ' active' : ''}`}
@@ -134,7 +137,6 @@ export function MarketPanel() {
           </button>
         </div>
         <div className="panel-header__actions">
-          <ContractSearch contracts={displayContracts} onSelect={handleSelectContract} />
           <button
             className="btn-search-instruments"
             onClick={() => setSearchModalOpen(true)}
@@ -217,6 +219,7 @@ export function MarketPanel() {
         onClose={() => setSearchModalOpen(false)}
         onSubscribeNew={subscribeAndAddToPreset}
         onAddToFavorite={addContractInfo}
+        onRemoveFromFavorite={removeFromFavorites}
         onUnsubscribe={removeContractById}
         allContractIds={allContractIds}
         userSubscribedIds={userSubscribedIds}
