@@ -16,10 +16,8 @@ Limitations:
 
 from __future__ import annotations
 
-import calendar
 import logging
 import threading
-import time as _time
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List
 
@@ -67,14 +65,6 @@ def _parse_timestamp(action_day: str, update_time: str) -> int:
         return int(dt.timestamp())
     except (ValueError, IndexError):
         return 0
-
-
-def _format_time(timestamp: int) -> str:
-    """Format a seconds timestamp into 'YYYY-MM-DD HH:MM:SS'."""
-    try:
-        return _time.strftime("%Y-%m-%d %H:%M:%S", _time.gmtime(timestamp))
-    except (ValueError, OSError):
-        return str(timestamp)
 
 
 class KLineService:
@@ -139,7 +129,7 @@ class KLineService:
                     # Create new bar
                     current = {
                         "_start": bar_start,
-                        "time": _format_time(bar_start),
+                        "timestamp": bar_start,
                         "open": price,
                         "high": price,
                         "low": price,
@@ -170,7 +160,7 @@ class KLineService:
             count: Maximum number of bars to return.
 
         Returns:
-            List of bar dicts with keys: time, open, high, low, close, volume, openInterest.
+            List of bar dicts with keys: timestamp, open, high, low, close, volume, openInterest.
         """
         if period not in PERIOD_SECONDS:
             return []

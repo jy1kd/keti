@@ -79,7 +79,8 @@ const DATE_FORMAT_MAP: Record<string, Intl.DateTimeFormatOptions> = {
 
 function buildOption(klineData: KLineData[], period: string) {
   const fmt = DATE_FORMAT_MAP[period] ?? { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }
-  const dates = klineData.map((d) => new Date(d.timestamp).toLocaleString(undefined, fmt))
+  // timestamp 是秒级时间戳，需要乘以1000转为毫秒
+  const dates = klineData.map((d) => new Date(d.timestamp * 1000).toLocaleString(undefined, fmt))
   // ECharts candlestick: [open, close, low, high]
   const ohlc = klineData.map((d) => [d.open, d.close, d.low, d.high])
   const volumes = klineData.map((d) => ({
