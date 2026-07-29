@@ -193,3 +193,12 @@
   display: flex;
   gap: 12px;
 }
+
+/* 合约状态颜色 */
+.status-trading {
+  color: #4caf50;
+}
+
+.status-halted {
+  color: var(--text-secondary, #999);
+}

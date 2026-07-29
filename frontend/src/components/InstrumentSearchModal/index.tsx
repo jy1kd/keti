@@ -248,7 +248,11 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddTo
                     <td>{inst.instrumentID}</td>
                     <td>{getProductName(inst.productID)}</td>
                     <td>{inst.expireDate}</td>
-                    <td>{inst.isTrading ? '交易中' : '已停牌'}</td>
+                    <td>
+                      <span className={inst.isTrading ? 'status-trading' : 'status-halted'}>
+                        {inst.isTrading ? '交易中' : '已停牌'}
+                      </span>
+                    </td>
                     <td>
                       {userSubscribedIds.has(inst.instrumentID) ? (
                         <button
