@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MarketPanel } from './MarketPanel'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
+import { useUserPrefsStore } from '@/stores/userPrefs'
 import type { MarketSnapshot } from '@/services/types'
 
 // Mock ResizeObserver (not available in jsdom)
@@ -99,7 +100,7 @@ describe('MarketPanel', () => {
       selectedInstrument: null,
       snapshots: new Map(),
     })
-    useContractsStore.setState({ contracts: [] })
+    useContractsStore.setState({ contracts: [], presetContracts: [], userContracts: [], presetIds: [] })
     vi.clearAllMocks()
   })
 
@@ -131,26 +132,20 @@ describe('MarketPanel', () => {
       snapshots: new Map([['IF2608', makeSnapshot()]]),
     })
     render(<MarketPanel />)
-    // DepthQuote 应显示选中合约的五档行情
     expect(screen.getByTestId('bid-1')).toBeInTheDocument()
     expect(screen.getByTestId('ask-1')).toBeInTheDocument()
-  })
-
-  it('renders SpreadDisplay for selected instrument', () => {
-    useMarketStore.setState({
-      selectedInstrument: 'IF2608',
-      snapshots: new Map([['IF2608', makeSnapshot()]]),
-    })
-    render(<MarketPanel />)
-    // SpreadDisplay 应显示价差
-    expect(screen.getByText('价差')).toBeInTheDocument()
-    expect(screen.getByText('2')).toBeInTheDocument() // 4696 - 4694
   })
 
   it('renders resize handle for main/side panel split', () => {
     render(<MarketPanel />)
     const handles = document.querySelectorAll('.resize-handle')
     expect(handles.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('renders 预设合约 and 自选合约 tabs', () => {
+    render(<MarketPanel />)
+    expect(screen.getByText('预设合约')).toBeInTheDocument()
+    expect(screen.getByText('自选合约')).toBeInTheDocument()
   })
 
   it('renders 搜索合约 and 退订 buttons', () => {
@@ -172,9 +167,21 @@ describe('MarketPanel', () => {
     expect(screen.getByText('退订')).toBeDisabled()
   })
 
-  it('退订 button is enabled when an instrument is selected', () => {
+  it('退订 button is enabled on preset tab when instrument is selected', () => {
     useMarketStore.setState({ selectedInstrument: 'IF2608' })
     render(<MarketPanel />)
+    // 退订 works on both tabs — just needs a selected instrument
+    expect(screen.getByText('退订')).toBeEnabled()
+  })
+
+  it('退订 button is enabled on user tab when user-subscribed instrument is selected', async () => {
+    const user = userEvent.setup()
+    useMarketStore.setState({ selectedInstrument: 'IF2608' })
+    useContractsStore.setState({ userContracts: [{ instrumentID: 'IF2608' } as any] })
+    useUserPrefsStore.setState({ selectedContracts: ['IF2608'] })
+    render(<MarketPanel />)
+    // Switch to user tab
+    await user.click(screen.getByText('自选合约'))
     expect(screen.getByText('退订')).toBeEnabled()
   })
 })

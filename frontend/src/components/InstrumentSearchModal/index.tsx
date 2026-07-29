@@ -7,14 +7,21 @@ import './index.css'
 interface Props {
   isOpen: boolean
   onClose: () => void
-  onSubscribe: (instrument: ContractInfo) => void
-  /** User-subscribed IDs (show "已订阅" badge, cannot re-subscribe) */
+  /** 订阅新合约（CTP 订阅 + 加入预设表格） */
+  onSubscribeNew: (instrument: ContractInfo) => void
+  /** 加入自选（只操作 userContracts，不调 CTP） */
+  onAddToFavorite: (instrument: ContractInfo) => void
+  /** 退订（CTP 退订 + 从预设/自选中移除） */
+  onUnsubscribe: (instrumentId: string) => Promise<void>
+  /** All contract IDs in the system (preset + user) */
+  allContractIds: Set<string>
+  /** User-subscribed IDs (show "已订阅" badge) */
   userSubscribedIds: Set<string>
-  /** Preset IDs (show "预设" badge, can still subscribe) */
+  /** Preset IDs (show "预设" label) */
   presetIds: Set<string>
 }
 
-export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, userSubscribedIds, presetIds }: Props) {
+export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddToFavorite, onUnsubscribe, allContractIds, userSubscribedIds, presetIds }: Props) {
   const [exchanges, setExchanges] = useState<string[]>([])
   const [products, setProducts] = useState<string[]>([])
   const [instruments, setInstruments] = useState<ContractInfo[]>([])
@@ -73,7 +80,6 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, userSubscr
 
   // Load instruments (shared by product change, button click, Enter key)
   const loadInstruments = useCallback((onCleanup?: () => boolean) => {
-    // Global keyword search when no exchange/product selected
     if (!selectedExchange || !selectedProduct) {
       if (!keyword.trim()) return
       setLoading(true)
@@ -84,7 +90,6 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, userSubscr
         .finally(() => { if (!onCleanup?.()) setLoading(false) })
       return
     }
-    // Filtered search by exchange + product
     setLoading(true)
     setError('')
     searchInstruments(selectedExchange, selectedProduct, keyword || undefined)
@@ -108,7 +113,17 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, userSubscr
   }
 
   const handleSubscribe = (inst: ContractInfo) => {
-    onSubscribe(inst)
+    if (allContractIds.has(inst.instrumentID)) {
+      // Already in system (preset or user) → 加入自选
+      onAddToFavorite(inst)
+    } else {
+      // New contract → CTP 订阅 + 加入预设
+      onSubscribeNew(inst)
+    }
+  }
+
+  const handleUnsubscribe = async (inst: ContractInfo) => {
+    await onUnsubscribe(inst.instrumentID)
   }
 
   if (!isOpen) return null
@@ -174,6 +189,7 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, userSubscr
                   <th>到期日</th>
                   <th>状态</th>
                   <th>操作</th>
+                  <th>退订</th>
                 </tr>
               </thead>
               <tbody>
@@ -191,9 +207,19 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, userSubscr
                           className="btn-subscribe"
                           onClick={() => handleSubscribe(inst)}
                         >
-                          {presetIds.has(inst.instrumentID) ? '订阅(预设)' : '订阅'}
+                          {allContractIds.has(inst.instrumentID) ? '收藏' : '订阅'}
                         </button>
                       )}
+                    </td>
+                    <td>
+                      {allContractIds.has(inst.instrumentID) ? (
+                        <button
+                          className="btn-unsubscribe-modal"
+                          onClick={() => handleUnsubscribe(inst)}
+                        >
+                          退订
+                        </button>
+                      ) : null}
                     </td>
                   </tr>
                 ))}
