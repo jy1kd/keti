@@ -34,14 +34,26 @@ class TestParseTimestamp:
         assert wrong_ts - actual_ts == 8 * 3600
 
     def test_empty_action_day(self):
-        """Falls back to time-only calculation."""
+        """Falls back to today's date with given time."""
         ts = _parse_timestamp("", "14:30:00")
-        assert ts == 14 * 3600 + 30 * 60
+        # 应该返回一个有效的时间戳（当天14:30）
+        assert ts > 0
+        # 验证时间戳对应的小时和分钟是14:30
+        from datetime import datetime, timezone, timedelta
+        china_tz = timezone(timedelta(hours=8))
+        dt = datetime.fromtimestamp(ts, tz=china_tz)
+        assert dt.hour == 14
+        assert dt.minute == 30
 
     def test_malformed_action_day(self):
-        """Short action_day falls back to time-only."""
+        """Short action_day falls back to today's date with given time."""
         ts = _parse_timestamp("2026", "14:30:00")
-        assert ts == 14 * 3600 + 30 * 60
+        assert ts > 0
+        from datetime import datetime, timezone, timedelta
+        china_tz = timezone(timedelta(hours=8))
+        dt = datetime.fromtimestamp(ts, tz=china_tz)
+        assert dt.hour == 14
+        assert dt.minute == 30
 
     def test_invalid_time(self):
         ts = _parse_timestamp("20260714", "bad")
