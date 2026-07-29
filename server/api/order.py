@@ -94,12 +94,35 @@ class ReverseOrderRequest(BaseModel):
     """Reverse position request body."""
 
     instrumentID: str = Field(..., min_length=1)
+    # 平仓单参数
+    closePriceType: str = Field(default="1", pattern=r"^[12]$",
+                                description="平仓价格类型: 1=市价, 2=对价限价")
+    closeLimitPrice: float = Field(default=0.0, ge=0.0,
+                                   description="平仓限价（closePriceType=2时由前端计算填入）")
+    closeTimeCondition: str = Field(default="3", pattern=r"^[13]$",
+                                    description="平仓时间条件: 1=FAK(IOC), 3=GFD")
+    # 开仓单参数
+    openPriceType: str = Field(default="1", pattern=r"^[12]$",
+                               description="开仓价格类型: 1=市价, 2=对价限价")
+    openLimitPrice: float = Field(default=0.0, ge=0.0,
+                                  description="开仓限价（openPriceType=2时由前端计算填入）")
+    openTimeCondition: str = Field(default="3", pattern=r"^[13]$",
+                                   description="开仓时间条件: 1=FAK(IOC), 3=GFD")
+    # 执行模式
+    executionMode: str = Field(default="serial", pattern=r"^(serial|parallel)$",
+                               description="执行模式: serial=串行(平仓成交后再开仓), parallel=并行(同时下发)")
 
 
 class LockOrderRequest(BaseModel):
     """Lock position request body."""
 
     instrumentID: str = Field(..., min_length=1)
+    priceType: str = Field(default="1", pattern=r"^[12]$",
+                           description="价格类型: 1=市价, 2=对价限价")
+    limitPrice: float = Field(default=0.0, ge=0.0,
+                              description="限价（priceType=2时由前端计算填入）")
+    timeCondition: str = Field(default="3", pattern=r"^[13]$",
+                               description="时间条件: 1=FAK(IOC), 3=GFD")
 
 
 class SubmitStopOrderRequest(BaseModel):
@@ -216,7 +239,9 @@ def _get_valid_positions(request: Request, instrument_id: str):
 
 
 def _get_protection_price(request: Request, instrument_id: str) -> tuple:
-    """获取市价单保护价（从行情快照获取 lastPrice）。
+    """获取市价单保护价（从行情快照获取，带回退链）。
+
+    回退顺序：lastPrice → preClosePrice → openPrice
 
     Returns:
         tuple: (price, error_message)
@@ -226,18 +251,291 @@ def _get_protection_price(request: Request, instrument_id: str) -> tuple:
     market_svc = getattr(request.app.state, "market_service", None)
     snapshot = market_svc.get_snapshot(instrument_id) if market_svc else None
     if snapshot:
-        last_price = snapshot.get("lastPrice", 0.0)
-        if last_price > 0:
-            return last_price, None
+        for key in ("lastPrice", "preClosePrice", "openPrice"):
+            price = snapshot.get(key, 0.0)
+            if price > 0:
+                return price, None
     return 0.0, f"无法获取 {instrument_id} 的行情，请先订阅行情"
+
+
+def _volume_condition_for(time_condition: str) -> str:
+    """根据时间条件返回对应的成交量条件。
+
+    GFD → "1"（任意数量），FAK/IOC → "3"（FOK，全部成交否则撤）。
+    """
+    if time_condition == "1":
+        return "3"  # FAK: IOC + 全部成交否则撤
+    return "1"  # GFD: 任意数量
+
+
+def _build_close_order_params(
+    instrument_id: str,
+    exchange_id: str,
+    close_dir: str,
+    offset_flag: str,
+    volume: int,
+    price_type: str,
+    limit_price: float,
+    time_condition: str,
+    protection_price: float,
+) -> dict:
+    """构建平仓单参数。"""
+    if price_type == "2":
+        # 限价模式
+        return dict(
+            instrument_id=instrument_id,
+            exchange_id=exchange_id,
+            direction=close_dir,
+            offset_flag=offset_flag,
+            price_type="2",
+            limit_price=limit_price,
+            volume=volume,
+            time_condition=time_condition,
+            volume_condition=_volume_condition_for(time_condition),
+            hedge_flag="1",
+            stop_price=0.0,
+        )
+    else:
+        # 市价模式
+        return dict(
+            instrument_id=instrument_id,
+            exchange_id=exchange_id,
+            direction=close_dir,
+            offset_flag=offset_flag,
+            price_type="1",
+            limit_price=0.0,
+            volume=volume,
+            time_condition=time_condition,
+            volume_condition=_volume_condition_for(time_condition),
+            hedge_flag="1",
+            stop_price=protection_price,
+        )
+
+
+def _build_open_order_params(
+    instrument_id: str,
+    exchange_id: str,
+    open_dir: str,
+    volume: int,
+    price_type: str,
+    limit_price: float,
+    time_condition: str,
+    protection_price: float,
+) -> dict:
+    """构建开仓单参数。"""
+    if price_type == "2":
+        return dict(
+            instrument_id=instrument_id,
+            exchange_id=exchange_id,
+            direction=open_dir,
+            offset_flag="0",
+            price_type="2",
+            limit_price=limit_price,
+            volume=volume,
+            time_condition=time_condition,
+            volume_condition=_volume_condition_for(time_condition),
+            hedge_flag="1",
+            stop_price=0.0,
+        )
+    else:
+        return dict(
+            instrument_id=instrument_id,
+            exchange_id=exchange_id,
+            direction=open_dir,
+            offset_flag="0",
+            price_type="1",
+            limit_price=0.0,
+            volume=volume,
+            time_condition=time_condition,
+            volume_condition=_volume_condition_for(time_condition),
+            hedge_flag="1",
+            stop_price=protection_price,
+        )
+
+
+def _execute_reverse_parallel(
+    om, target: list, body: ReverseOrderRequest, protection_price: float
+) -> dict:
+    """并行模式：平仓和开仓同时下发。"""
+    results = []
+
+    for pos in target:
+        pos_dir = pos.get("posiDirection", "")
+        volume = pos.get("position", 0)
+        today_volume = pos.get("todayPosition", 0)
+        yd_volume = pos.get("ydPosition", 0)
+        exchange_id = pos.get("exchangeID", "")
+        if volume <= 0:
+            continue
+
+        close_dir = "1" if pos_dir == "2" else "0"
+        open_dir = "1" if pos_dir == "2" else "0"
+        SHFE_EXCHANGES = {"SHFE", "INE"}
+        close_success = True
+
+        if exchange_id in SHFE_EXCHANGES and today_volume > 0:
+            if yd_volume > 0:
+                # 分两笔：先平今，再平昨
+                params = _build_close_order_params(
+                    body.instrumentID, exchange_id, close_dir, "3", today_volume,
+                    body.closePriceType, body.closeLimitPrice,
+                    body.closeTimeCondition, protection_price,
+                )
+                close_today_result = om.insert(**params)
+                results.append({"action": "close_today", **close_today_result})
+                if not close_today_result.get("success"):
+                    close_success = False
+
+                if yd_volume > 0 and close_success:
+                    params = _build_close_order_params(
+                        body.instrumentID, exchange_id, close_dir, "1", yd_volume,
+                        body.closePriceType, body.closeLimitPrice,
+                        body.closeTimeCondition, protection_price,
+                    )
+                    close_yd_result = om.insert(**params)
+                    results.append({"action": "close_yesterday", **close_yd_result})
+                    if not close_yd_result.get("success"):
+                        close_success = False
+            else:
+                params = _build_close_order_params(
+                    body.instrumentID, exchange_id, close_dir, "3", today_volume,
+                    body.closePriceType, body.closeLimitPrice,
+                    body.closeTimeCondition, protection_price,
+                )
+                close_result = om.insert(**params)
+                results.append({"action": "close_today", **close_result})
+                if not close_result.get("success"):
+                    close_success = False
+        else:
+            params = _build_close_order_params(
+                body.instrumentID, exchange_id, close_dir, "1", volume,
+                body.closePriceType, body.closeLimitPrice,
+                body.closeTimeCondition, protection_price,
+            )
+            close_result = om.insert(**params)
+            results.append({"action": "close", **close_result})
+            if not close_result.get("success"):
+                close_success = False
+
+        if not close_success:
+            continue
+
+        params = _build_open_order_params(
+            body.instrumentID, exchange_id, open_dir, volume,
+            body.openPriceType, body.openLimitPrice,
+            body.openTimeCondition, protection_price,
+        )
+        open_result = om.insert(**params)
+        results.append({"action": "open", **open_result})
+
+    return {"success": True, "orders": results}
+
+
+def _execute_reverse_serial(
+    om, target: list, body: ReverseOrderRequest, protection_price: float
+) -> dict:
+    """串行模式：平仓全部成交后再发开仓委托。"""
+    results = []
+
+    for pos in target:
+        pos_dir = pos.get("posiDirection", "")
+        volume = pos.get("position", 0)
+        today_volume = pos.get("todayPosition", 0)
+        yd_volume = pos.get("ydPosition", 0)
+        exchange_id = pos.get("exchangeID", "")
+        if volume <= 0:
+            continue
+
+        close_dir = "1" if pos_dir == "2" else "0"
+        open_dir = "1" if pos_dir == "2" else "0"
+        SHFE_EXCHANGES = {"SHFE", "INE"}
+        close_success = True
+        total_close_volume = 0  # 平仓总手数
+
+        # ── 平仓阶段 ──
+        if exchange_id in SHFE_EXCHANGES and today_volume > 0:
+            if yd_volume > 0:
+                # 平今
+                params = _build_close_order_params(
+                    body.instrumentID, exchange_id, close_dir, "3", today_volume,
+                    body.closePriceType, body.closeLimitPrice,
+                    body.closeTimeCondition, protection_price,
+                )
+                close_today_result = om.insert(**params)
+                results.append({"action": "close_today", **close_today_result})
+                if close_today_result.get("success"):
+                    total_close_volume += today_volume
+                else:
+                    close_success = False
+
+                # 平昨
+                if yd_volume > 0 and close_success:
+                    params = _build_close_order_params(
+                        body.instrumentID, exchange_id, close_dir, "1", yd_volume,
+                        body.closePriceType, body.closeLimitPrice,
+                        body.closeTimeCondition, protection_price,
+                    )
+                    close_yd_result = om.insert(**params)
+                    results.append({"action": "close_yesterday", **close_yd_result})
+                    if close_yd_result.get("success"):
+                        total_close_volume += yd_volume
+                    else:
+                        close_success = False
+            else:
+                params = _build_close_order_params(
+                    body.instrumentID, exchange_id, close_dir, "3", today_volume,
+                    body.closePriceType, body.closeLimitPrice,
+                    body.closeTimeCondition, protection_price,
+                )
+                close_result = om.insert(**params)
+                results.append({"action": "close_today", **close_result})
+                if close_result.get("success"):
+                    total_close_volume += today_volume
+                else:
+                    close_success = False
+        else:
+            params = _build_close_order_params(
+                body.instrumentID, exchange_id, close_dir, "1", volume,
+                body.closePriceType, body.closeLimitPrice,
+                body.closeTimeCondition, protection_price,
+            )
+            close_result = om.insert(**params)
+            results.append({"action": "close", **close_result})
+            if close_result.get("success"):
+                total_close_volume += volume
+            else:
+                close_success = False
+
+        if not close_success or total_close_volume <= 0:
+            results.append({"action": "open_skipped", "reason": "平仓未成功"})
+            continue
+
+        # ── 开仓阶段 ──
+        # 串行模式：平仓报单被接受后立即发开仓单
+        # （wait_response 只等待报单回报，不等待成交）
+        # 后续 Phase 2 可增加等待成交终态的逻辑
+        params = _build_open_order_params(
+            body.instrumentID, exchange_id, open_dir, total_close_volume,
+            body.openPriceType, body.openLimitPrice,
+            body.openTimeCondition, protection_price,
+        )
+        open_result = om.insert(**params)
+        results.append({"action": "open", **open_result})
+
+    return {"success": True, "orders": results}
 
 
 @router.post("/reverse")
 async def reverse_position(request: Request, body: ReverseOrderRequest):
     """一键反向：平掉当前持仓，再以相反方向开仓。
 
-    适用场景：快速切换持仓方向（多→空或空→多）。
-    操作顺序：先平仓，平仓成功后再以相反方向开仓。
+    支持两种执行模式：
+    - serial（串行）：先平仓，平仓被接受后再发开仓单
+    - parallel（并行）：平仓和开仓同时下发
+
+    支持两种价格模式：
+    - 市价（priceType="1"）：使用行情快照保护价
+    - 对价限价（priceType="2"）：使用前端传入的限价
 
     CTP posiDirection: "2"=多头(买), "3"=空头(卖)
     """
@@ -246,130 +544,23 @@ async def reverse_position(request: Request, body: ReverseOrderRequest):
         return {"success": False, "message": error}
 
     om = request.app.state.order_manager
-    # 获取市价单保护价（从行情快照获取）
-    last_price, price_error = _get_protection_price(request, body.instrumentID)
-    if price_error:
-        return {"success": False, "message": price_error}
-    results = []
 
-    for pos in target:
-        pos_dir = pos.get("posiDirection", "")  # "2"=多, "3"=空
-        volume = pos.get("position", 0)
-        today_volume = pos.get("todayPosition", 0)
-        yd_volume = pos.get("ydPosition", 0)
-        exchange_id = pos.get("exchangeID", "")
-        if volume <= 0:
-            continue
+    # 市价模式需要保护价
+    protection_price = 0.0
+    need_market_price = (
+        body.closePriceType == "1" or body.openPriceType == "1"
+    )
+    if need_market_price:
+        protection_price, price_error = _get_protection_price(request, body.instrumentID)
+        if price_error:
+            return {"success": False, "message": price_error}
 
-        # 平仓：反方向
-        # 多头(posiDirection="2") → 平仓用卖(direction="1")
-        # 空头(posiDirection="3") → 平仓用买(direction="0")
-        close_dir = "1" if pos_dir == "2" else "0"
+    if body.executionMode == "serial":
+        result = _execute_reverse_serial(om, target, body, protection_price)
+    else:
+        result = _execute_reverse_parallel(om, target, body, protection_price)
 
-        # 上期所/能源所今仓需用平今(offset_flag="3")，昨仓用平仓(offset_flag="1")
-        # 其他交易所统一用平仓
-        SHFE_EXCHANGES = {"SHFE", "INE"}
-        close_success = True
-
-        if exchange_id in SHFE_EXCHANGES and today_volume > 0:
-            if yd_volume > 0:
-                # 分两笔：先平今，再平昨
-                close_today_result = om.insert(
-                    instrument_id=body.instrumentID,
-                    exchange_id=exchange_id,
-                    direction=close_dir,
-                    offset_flag="3",        # 平今
-                    price_type="1",         # 市价
-                    limit_price=0.0,
-                    volume=today_volume,
-                    time_condition="1",     # IOC
-                    volume_condition="3",   # FOK
-                    hedge_flag="1",
-                    stop_price=last_price,  # 市价单必须填写保护价
-                )
-                results.append({"action": "close_today", **close_today_result})
-
-                if not close_today_result.get("success"):
-                    close_success = False
-
-                if yd_volume > 0 and close_success:
-                    close_yd_result = om.insert(
-                        instrument_id=body.instrumentID,
-                        exchange_id=exchange_id,
-                        direction=close_dir,
-                        offset_flag="1",        # 平仓
-                        price_type="1",
-                        limit_price=0.0,
-                        volume=yd_volume,
-                        time_condition="1",
-                        volume_condition="3",   # FOK
-                        hedge_flag="1",
-                        stop_price=last_price,  # 市价单必须填写保护价
-                    )
-                    results.append({"action": "close_yesterday", **close_yd_result})
-                    if not close_yd_result.get("success"):
-                        close_success = False
-            else:
-                # 仅今仓，用平今
-                close_result = om.insert(
-                    instrument_id=body.instrumentID,
-                    exchange_id=exchange_id,
-                    direction=close_dir,
-                    offset_flag="3",        # 平今
-                    price_type="1",         # 市价
-                    limit_price=0.0,
-                    volume=today_volume,
-                    time_condition="1",     # IOC
-                    volume_condition="3",   # FOK
-                    hedge_flag="1",
-                    stop_price=last_price,  # 市价单必须填写保护价
-                )
-                results.append({"action": "close_today", **close_result})
-                if not close_result.get("success"):
-                    close_success = False
-        else:
-            # 非 SHFE 或仅昨仓，一次性平仓
-            close_result = om.insert(
-                instrument_id=body.instrumentID,
-                exchange_id=exchange_id,
-                direction=close_dir,
-                offset_flag="1",        # 平仓
-                price_type="1",         # 市价
-                limit_price=0.0,
-                volume=volume,
-                time_condition="1",     # IOC
-                volume_condition="3",   # FOK
-                hedge_flag="1",
-                stop_price=last_price,  # 市价单必须填写保护价
-            )
-            results.append({"action": "close", **close_result})
-            if not close_result.get("success"):
-                close_success = False
-
-        # 只有平仓成功才开新仓
-        if not close_success:
-            continue
-
-        # 开仓：同原方向（反向后的新仓位）
-        # 多头 → 开空(direction="1")
-        # 空头 → 开多(direction="0")
-        open_dir = "1" if pos_dir == "2" else "0"
-        open_result = om.insert(
-            instrument_id=body.instrumentID,
-            exchange_id=exchange_id,
-            direction=open_dir,
-            offset_flag="0",        # 开仓
-            price_type="1",         # 市价
-            limit_price=0.0,
-            volume=volume,
-            time_condition="1",
-            volume_condition="3",   # FOK
-            hedge_flag="1",
-            stop_price=last_price,  # 市价单必须填写保护价
-        )
-        results.append({"action": "open", **open_result})
-
-    return {"success": True, "orders": results}
+    return result
 
 
 @router.post("/lock")
@@ -379,6 +570,10 @@ async def lock_position(request: Request, body: LockOrderRequest):
     适用场景：对冲风险，保留原有持仓的同时建立反向仓位。
     操作顺序：仅反方向开仓，不平原有持仓。
 
+    支持两种价格模式：
+    - 市价（priceType="1"）：使用行情快照保护价
+    - 对价限价（priceType="2"）：使用前端传入的限价
+
     CTP posiDirection: "2"=多头(买), "3"=空头(卖)
     """
     target, error = _get_valid_positions(request, body.instrumentID)
@@ -386,10 +581,14 @@ async def lock_position(request: Request, body: LockOrderRequest):
         return {"success": False, "message": error}
 
     om = request.app.state.order_manager
-    # 获取市价单保护价（从行情快照获取）
-    last_price, price_error = _get_protection_price(request, body.instrumentID)
-    if price_error:
-        return {"success": False, "message": price_error}
+
+    # 市价模式需要保护价
+    protection_price = 0.0
+    if body.priceType == "1":
+        protection_price, price_error = _get_protection_price(request, body.instrumentID)
+        if price_error:
+            return {"success": False, "message": price_error}
+
     results = []
 
     for pos in target:
@@ -400,22 +599,13 @@ async def lock_position(request: Request, body: LockOrderRequest):
             continue
 
         # 锁仓：反方向开仓
-        # 多头(posiDirection="2") → 开空(direction="1")
-        # 空头(posiDirection="3") → 开多(direction="0")
         lock_dir = "1" if pos_dir == "2" else "0"
-        result = om.insert(
-            instrument_id=body.instrumentID,
-            exchange_id=exchange_id,
-            direction=lock_dir,
-            offset_flag="0",        # 开仓
-            price_type="1",         # 市价
-            limit_price=0.0,
-            volume=volume,
-            time_condition="1",
-            volume_condition="3",   # FOK
-            hedge_flag="1",
-            stop_price=last_price,  # 市价单必须填写保护价
+        params = _build_open_order_params(
+            body.instrumentID, exchange_id, lock_dir, volume,
+            body.priceType, body.limitPrice,
+            body.timeCondition, protection_price,
         )
+        result = om.insert(**params)
         results.append({"action": "lock_open", **result})
 
     return {"success": True, "orders": results}

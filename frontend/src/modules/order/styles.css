@@ -6,6 +6,8 @@
   background: var(--bg-primary);
 }
 
+/* order-panel__spacer 已移除 — QuickActions 替代其位置与 market-tabs 对齐 */
+
 .panel-header {
   display: flex;
   align-items: center;

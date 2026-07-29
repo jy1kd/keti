@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { HotKeyConfig } from '@/services/types'
+import type { HotKeyConfig, QuickTradeConfig } from '@/services/types'
 
 const STORAGE_KEY = 'simnow-user-prefs'
 
@@ -7,13 +7,40 @@ export const DEFAULT_HOT_KEYS: HotKeyConfig = {
   buy: 'b',
   sell: 's',
   cancel: 'c',
+  reverse: '',
+  lock: '',
+  batchCancel: 'Escape',
+}
+
+export const DEFAULT_QUICK_TRADE_CONFIG: QuickTradeConfig = {
+  lock: {
+    priceMode: 'counterparty',
+    offsetTicks: 1,
+    timeCondition: 'gfd',
+  },
+  reverse: {
+    close: {
+      priceMode: 'counterparty',
+      offsetTicks: 1,
+      timeCondition: 'gfd',
+    },
+    open: {
+      priceMode: 'counterparty',
+      offsetTicks: 1,
+      timeCondition: 'gfd',
+    },
+    executionMode: 'serial',
+  },
+  confirmBeforeExecute: true,
 }
 
 interface UserPrefsStore {
   selectedContracts: string[]
   hotKeys: HotKeyConfig
+  quickTradeConfig: QuickTradeConfig
   setHotKey: (action: string, key: string) => void
   setHotKeys: (hotKeys: HotKeyConfig) => void
+  setQuickTradeConfig: (config: Partial<QuickTradeConfig>) => void
   addSelectedContract: (instrumentId: string) => void
   removeSelectedContract: (instrumentId: string) => void
   saveToLocalStorage: () => void
@@ -23,6 +50,7 @@ interface UserPrefsStore {
 export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
   selectedContracts: [],
   hotKeys: { ...DEFAULT_HOT_KEYS },
+  quickTradeConfig: { ...DEFAULT_QUICK_TRADE_CONFIG },
 
   setHotKey: (action, key) =>
     set((state) => ({
@@ -30,6 +58,11 @@ export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
     })),
 
   setHotKeys: (hotKeys) => set({ hotKeys: { ...hotKeys } }),
+
+  setQuickTradeConfig: (config) =>
+    set((state) => ({
+      quickTradeConfig: { ...state.quickTradeConfig, ...config },
+    })),
 
   addSelectedContract: (instrumentId) =>
     set((state) => {
@@ -43,10 +76,10 @@ export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
     })),
 
   saveToLocalStorage: () => {
-    const { selectedContracts, hotKeys } = get()
+    const { selectedContracts, hotKeys, quickTradeConfig } = get()
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ selectedContracts, hotKeys })
+      JSON.stringify({ selectedContracts, hotKeys, quickTradeConfig })
     )
   },
 
@@ -58,6 +91,7 @@ export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
       set({
         selectedContracts: data.selectedContracts ?? [],
         hotKeys: data.hotKeys ?? { ...DEFAULT_HOT_KEYS },
+        quickTradeConfig: data.quickTradeConfig ?? { ...DEFAULT_QUICK_TRADE_CONFIG },
       })
     } catch {
       // localStorage 数据损坏时忽略

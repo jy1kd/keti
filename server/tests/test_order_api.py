@@ -427,10 +427,11 @@ class TestOrderReverseApi:
             })
         assert resp.status_code == 200
         data = resp.json()
-        # Should have only 1 order (close failed, open not attempted)
-        assert len(data["orders"]) == 1
+        # Serial mode: close failed + open_skipped
+        assert len(data["orders"]) == 2
         assert data["orders"][0]["action"] == "close"
         assert data["orders"][0]["success"] is False
+        assert data["orders"][1]["action"] == "open_skipped"
 
 
 # ── Lock ─────────────────────────────────────────────────────────────────
@@ -508,3 +509,297 @@ class TestOrderLockApi:
         data = resp.json()
         assert data["success"] is False
         assert "TD not connected" in data["message"]
+
+    @pytest.mark.anyio
+    async def test_lock_with_limit_price(self):
+        """Lock with counterparty limit price (priceType=2)."""
+        positions = [{
+            "instrumentID": "IF2608",
+            "posiDirection": "2",  # 多头
+            "position": 1,
+            "exchangeID": "CFFEX",
+        }]
+        app = _make_app_with_order_manager(positions=positions)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/lock", json={
+                "instrumentID": "IF2608",
+                "priceType": "2",
+                "limitPrice": 4810.0,
+                "timeCondition": "3",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+        assert len(data["orders"]) == 1
+        assert data["orders"][0]["action"] == "lock_open"
+
+    @pytest.mark.anyio
+    async def test_lock_with_fak_time_condition(self):
+        """Lock with FAK time condition (timeCondition=1)."""
+        positions = [{
+            "instrumentID": "IF2608",
+            "posiDirection": "3",  # 空头
+            "position": 1,
+            "exchangeID": "CFFEX",
+        }]
+        app = _make_app_with_order_manager(positions=positions)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/lock", json={
+                "instrumentID": "IF2608",
+                "priceType": "2",
+                "limitPrice": 4790.0,
+                "timeCondition": "1",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+
+
+# ── Reverse with new params ──────────────────────────────────────────────
+
+class TestOrderReverseNewParams:
+    """POST /api/order/reverse — with price type and execution mode params."""
+
+    @pytest.mark.anyio
+    async def test_reverse_limit_price_parallel(self):
+        """Reverse with limit price in parallel mode."""
+        positions = [{
+            "instrumentID": "IF2608",
+            "posiDirection": "2",  # 多头
+            "position": 1,
+            "exchangeID": "CFFEX",
+        }]
+        app = _make_app_with_order_manager(positions=positions)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/reverse", json={
+                "instrumentID": "IF2608",
+                "closePriceType": "2",
+                "closeLimitPrice": 4790.0,
+                "closeTimeCondition": "3",
+                "openPriceType": "2",
+                "openLimitPrice": 4810.0,
+                "openTimeCondition": "3",
+                "executionMode": "parallel",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+        assert len(data["orders"]) == 2
+        assert data["orders"][0]["action"] == "close"
+        assert data["orders"][1]["action"] == "open"
+
+    @pytest.mark.anyio
+    async def test_reverse_serial_mode(self):
+        """Reverse in serial mode: close accepted then open."""
+        positions = [{
+            "instrumentID": "IF2608",
+            "posiDirection": "2",  # 多头
+            "position": 1,
+            "exchangeID": "CFFEX",
+        }]
+        app = _make_app_with_order_manager(positions=positions)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/reverse", json={
+                "instrumentID": "IF2608",
+                "executionMode": "serial",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+        assert len(data["orders"]) == 2
+        assert data["orders"][0]["action"] == "close"
+        assert data["orders"][1]["action"] == "open"
+
+    @pytest.mark.anyio
+    async def test_reverse_serial_close_failed_skips_open(self):
+        """Serial mode: close fails → open not submitted."""
+        positions = [{
+            "instrumentID": "IF2608",
+            "posiDirection": "2",
+            "position": 1,
+            "exchangeID": "CFFEX",
+        }]
+        app = _make_app_with_order_manager(positions=positions)
+        call_count = [0]
+        original_insert = app.state.order_manager.insert
+
+        def mock_insert(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return {"success": False, "orderRef": "", "message": "Rejected"}
+            return {"success": True, "orderRef": "ref-002", "message": "Accepted"}
+
+        app.state.order_manager.insert = mock_insert
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/reverse", json={
+                "instrumentID": "IF2608",
+                "executionMode": "serial",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        # close failed + open_skipped
+        assert len(data["orders"]) == 2
+        assert data["orders"][0]["action"] == "close"
+        assert data["orders"][0]["success"] is False
+        assert data["orders"][1]["action"] == "open_skipped"
+
+    @pytest.mark.anyio
+    async def test_reverse_mixed_price_types(self):
+        """Reverse with market close + limit open."""
+        positions = [{
+            "instrumentID": "IF2608",
+            "posiDirection": "3",  # 空头
+            "position": 1,
+            "exchangeID": "CFFEX",
+        }]
+        app = _make_app_with_order_manager(positions=positions)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/reverse", json={
+                "instrumentID": "IF2608",
+                "closePriceType": "1",       # 市价平仓
+                "openPriceType": "2",         # 限价开仓
+                "openLimitPrice": 4790.0,
+                "openTimeCondition": "3",
+                "executionMode": "parallel",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+        assert len(data["orders"]) == 2
+
+
+# ── Market price fallback ────────────────────────────────────────────────
+
+class TestMarketPriceFallback:
+    """Test _get_protection_price fallback chain."""
+
+    @pytest.mark.anyio
+    async def test_reverse_no_snapshot_fails(self):
+        """Reverse with no market snapshot returns error."""
+        positions = [{
+            "instrumentID": "IF2608",
+            "posiDirection": "2",
+            "position": 1,
+            "exchangeID": "CFFEX",
+        }]
+        app = _make_app_with_order_manager(positions=positions)
+        # Mock market service to return no snapshot
+        app.state.market_service.get_snapshot.return_value = None
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/reverse", json={
+                "instrumentID": "IF2608",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is False
+        assert "行情" in data["message"]
+
+    @pytest.mark.anyio
+    async def test_reverse_fallback_to_pre_close_price(self):
+        """When lastPrice=0, falls back to preClosePrice."""
+        positions = [{
+            "instrumentID": "IF2608",
+            "posiDirection": "2",
+            "position": 1,
+            "exchangeID": "CFFEX",
+        }]
+        app = _make_app_with_order_manager(positions=positions)
+        app.state.market_service.get_snapshot.return_value = {
+            "instrumentID": "IF2608",
+            "lastPrice": 0.0,
+            "preClosePrice": 4750.0,
+            "openPrice": 4760.0,
+            "upperLimitPrice": 5280.0,
+            "lowerLimitPrice": 4320.0,
+        }
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/reverse", json={
+                "instrumentID": "IF2608",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+
+    @pytest.mark.anyio
+    async def test_reverse_fallback_to_open_price(self):
+        """When lastPrice=0 and preClosePrice=0, falls back to openPrice."""
+        positions = [{
+            "instrumentID": "IF2608",
+            "posiDirection": "2",
+            "position": 1,
+            "exchangeID": "CFFEX",
+        }]
+        app = _make_app_with_order_manager(positions=positions)
+        app.state.market_service.get_snapshot.return_value = {
+            "instrumentID": "IF2608",
+            "lastPrice": 0.0,
+            "preClosePrice": 0.0,
+            "openPrice": 4760.0,
+            "upperLimitPrice": 5280.0,
+            "lowerLimitPrice": 4320.0,
+        }
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/reverse", json={
+                "instrumentID": "IF2608",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+
+    @pytest.mark.anyio
+    async def test_reverse_all_prices_zero_fails(self):
+        """When all price fields are 0, returns error."""
+        positions = [{
+            "instrumentID": "IF2608",
+            "posiDirection": "2",
+            "position": 1,
+            "exchangeID": "CFFEX",
+        }]
+        app = _make_app_with_order_manager(positions=positions)
+        app.state.market_service.get_snapshot.return_value = {
+            "instrumentID": "IF2608",
+            "lastPrice": 0.0,
+            "preClosePrice": 0.0,
+            "openPrice": 0.0,
+        }
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/reverse", json={
+                "instrumentID": "IF2608",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is False
+        assert "行情" in data["message"]
+
+    @pytest.mark.anyio
+    async def test_limit_price_no_market_snapshot_needed(self):
+        """Limit price mode does not require market snapshot."""
+        positions = [{
+            "instrumentID": "IF2608",
+            "posiDirection": "2",
+            "position": 1,
+            "exchangeID": "CFFEX",
+        }]
+        app = _make_app_with_order_manager(positions=positions)
+        app.state.market_service.get_snapshot.return_value = None
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/lock", json={
+                "instrumentID": "IF2608",
+                "priceType": "2",
+                "limitPrice": 4800.0,
+                "timeCondition": "3",
+            })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True

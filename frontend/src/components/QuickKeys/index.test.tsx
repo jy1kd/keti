@@ -7,6 +7,9 @@ const defaultHotKeys: HotKeyConfig = {
   buy: 'b',
   sell: 's',
   cancel: 'c',
+  reverse: '',
+  lock: '',
+  batchCancel: 'Escape',
 }
 
 describe('QuickKeys', () => {
@@ -118,6 +121,9 @@ describe('QuickKeys', () => {
       buy: 'x',
       sell: 's',
       cancel: 'c',
+      reverse: '',
+      lock: '',
+      batchCancel: 'Escape',
     })
   })
 

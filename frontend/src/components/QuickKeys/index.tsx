@@ -40,13 +40,14 @@ export function QuickKeys({ hotKeys, onSave, onClose }: QuickKeysProps) {
   }
 
   function handleSave() {
-    // Check for duplicate key bindings
-    const keys = Object.values(localHotKeys)
+    // Check for duplicate key bindings (ignore empty/unset keys)
+    const entries = Object.entries(localHotKeys).filter(([, key]) => key)
+    const keys = entries.map(([, key]) => key)
     const uniqueKeys = new Set(keys)
     if (uniqueKeys.size !== keys.length) {
       // Find which actions share the same key
       const seen = new Map<string, string>()
-      for (const [action, key] of Object.entries(localHotKeys)) {
+      for (const [action, key] of entries) {
         if (seen.has(key)) {
           const conflict = seen.get(key)!
           alert(`快捷键冲突：${LABELS[conflict] ?? conflict} 和 ${LABELS[action] ?? action} 都使用了 "${key}"`)

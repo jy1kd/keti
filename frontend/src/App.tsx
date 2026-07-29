@@ -3,10 +3,10 @@ import { Group, Panel, Separator } from 'react-resizable-panels'
 import { ConnectionStatus } from '@/components/ConnectionStatus'
 import { ResizeHandle } from '@/components/ResizeHandle'
 import { MarketPanel } from '@/modules/market/MarketPanel'
-import { OptionPanel } from '@/modules/options/OptionPanel'
 import { OrderPanel } from '@/modules/order/OrderPanel'
 import { QueryPanel } from '@/modules/query/QueryPanel'
 import { PerfMonitor } from '@/components/PerfMonitor'
+import { SettingsPanel } from '@/components/SettingsPanel'
 import { ToastContainer } from '@/components/Toast'
 import { useSystemWs } from '@/hooks/useSystemWs'
 import { useConnectionPoll } from '@/hooks/useConnectionPoll'
@@ -19,7 +19,7 @@ const savedMain = loadPanelSizes('main-layout')
 
 function App() {
   const [perfVisible, setPerfVisible] = useState(false)
-  const [activeTab, setActiveTab] = useState<'market' | 'options'>('market')
+  const [settingsVisible, setSettingsVisible] = useState(false)
 
   // System WebSocket — 监听 MD/TD 连接状态即时推送
   useSystemWs(API_BASE.replace('http', 'ws'))
@@ -52,6 +52,13 @@ function App() {
       <ToastContainer />
       <header className="status-bar">
         <div className="status-bar__left">
+          <button
+            className={`status-bar__gear${settingsVisible ? ' active' : ''}`}
+            onClick={() => setSettingsVisible((v) => !v)}
+            title="设置"
+          >
+            ⚙
+          </button>
           <ConnectionStatus />
           <button
             className="status-bar__btn"
@@ -79,21 +86,7 @@ function App() {
           <Group orientation="horizontal" id="main-layout" onLayoutChange={onMainLayout}>
             <Panel id="market" defaultSize={savedMain?.market ?? 70} minSize={20}>
               <section className="market-area">
-                <div className="market-tabs">
-                  <button
-                    className={`market-tab${activeTab === 'market' ? ' active' : ''}`}
-                    onClick={() => setActiveTab('market')}
-                  >
-                    行情
-                  </button>
-                  <button
-                    className={`market-tab${activeTab === 'options' ? ' active' : ''}`}
-                    onClick={() => setActiveTab('options')}
-                  >
-                    T型期权报价
-                  </button>
-                </div>
-                {activeTab === 'market' ? <MarketPanel /> : <OptionPanel />}
+                <MarketPanel />
               </section>
             </Panel>
             <Separator>
@@ -115,6 +108,14 @@ function App() {
           </footer>
         </Panel>
       </Group>
+
+      {settingsVisible && (
+        <div className="settings-overlay" onClick={() => setSettingsVisible(false)}>
+          <div className="settings-overlay__panel" onClick={(e) => e.stopPropagation()}>
+            <SettingsPanel onClose={() => setSettingsVisible(false)} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

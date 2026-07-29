@@ -328,10 +328,37 @@ export interface HotKeyConfig {
   buy: string
   sell: string
   cancel: string
+  reverse: string
+  lock: string
+  batchCancel: string
   [action: string]: string
+}
+
+/** 快捷交易配置 */
+export interface QuickTradeConfig {
+  lock: {
+    priceMode: 'counterparty' | 'market'
+    offsetTicks: number
+    timeCondition: 'gfd' | 'fak'
+  }
+  reverse: {
+    close: {
+      priceMode: 'counterparty' | 'market'
+      offsetTicks: number
+      timeCondition: 'gfd' | 'fak'
+    }
+    open: {
+      priceMode: 'counterparty' | 'market'
+      offsetTicks: number
+      timeCondition: 'gfd' | 'fak'
+    }
+    executionMode: 'serial' | 'parallel'
+  }
+  confirmBeforeExecute: boolean
 }
 
 export interface UserPreferences {
   selectedContracts: string[]
   hotKeys: HotKeyConfig
+  quickTradeConfig?: QuickTradeConfig
 }
