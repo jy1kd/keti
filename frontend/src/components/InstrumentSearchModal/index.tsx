@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { ContractInfo } from '@/services/types'
 import { getExchanges, getProducts, getInstruments, searchInstruments, refreshInstruments, refreshPresetInstruments } from '@/services/api'
+import { useContractsStore } from '@/stores/contracts'
 import { PRODUCT_NAMES, getProductName } from '@/utils/productNames'
 import { toast } from '@/components/Toast'
 import './index.css'
@@ -312,6 +313,8 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddTo
                   const result = await refreshPresetInstruments()
                   if (result.success && result.instruments) {
                     toast.success(`已更新 ${result.instruments.length} 个预设合约`)
+                    // 重新加载预设合约列表
+                    useContractsStore.getState().loadSubscribedContracts()
                   }
                 } catch {
                   setError('刷新预设合约失败')
