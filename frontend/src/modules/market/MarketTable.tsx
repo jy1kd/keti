@@ -92,8 +92,6 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   const onClickRef = useRef(onRowClick)
   const onDblClickRef = useRef(onRowDoubleClick)
   const recordsRef = useRef<ReturnType<typeof buildRecord>[]>([])
-  const rafRef = useRef<number>(0)
-  const pendingRef = useRef<{ contracts: ContractInfo[]; snapshots: Map<string, MarketSnapshot> } | null>(null)
 
   useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
@@ -178,24 +176,12 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Update records when contracts or snapshots change (debounced via rAF)
+  // Update records when contracts or snapshots change (sync)
   useEffect(() => {
-    pendingRef.current = { contracts, snapshots }
-    if (rafRef.current) return
-    rafRef.current = requestAnimationFrame(() => {
-      rafRef.current = 0
-      if (!tableRef.current || !pendingRef.current) return
-      const { contracts: c, snapshots: s } = pendingRef.current
-      const records = c.map((contract) => buildRecord(contract, s.get(contract.instrumentID)))
-      recordsRef.current = records
-      tableRef.current.setRecords(records)
-    })
-    return () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current)
-        rafRef.current = 0
-      }
-    }
+    if (!tableRef.current) return
+    const records = contracts.map((contract) => buildRecord(contract, snapshots.get(contract.instrumentID)))
+    recordsRef.current = records
+    tableRef.current.setRecords(records)
   }, [contracts, snapshots])
 
   // 高亮选中合约行
