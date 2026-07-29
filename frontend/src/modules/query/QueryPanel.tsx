@@ -69,9 +69,9 @@ export function QueryPanel() {
         if (res.bars?.length) {
           const periodMs = PERIOD_MS[period] ?? PERIOD_MS['5m']
           const aligned = res.bars.map((bar) => {
-            const d = new Date(bar.timestamp)
-            const timeMs = ((d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds()) * 1000) + d.getMilliseconds()
-            return { ...bar, timestamp: Math.floor(timeMs / periodMs) * periodMs }
+            // 使用完整的时间戳（包含日期），与实时数据格式一致
+            const timestamp = Math.floor(bar.timestamp / periodMs) * periodMs
+            return { ...bar, timestamp }
           })
           setKlineData(selectedInstrument, aligned)
         }
@@ -159,21 +159,23 @@ export function QueryPanel() {
             </button>
           ))}
         </div>
-        <div className="panel-controls">
-          <button
-            className={`btn-pause ${isPaused ? 'paused' : ''}`}
-            onClick={togglePause}
-          >
-            {isPaused ? '继续' : '暂停'}
-          </button>
-          <button
-            className="btn-refresh"
-            onClick={() => refreshAll()}
-            disabled={isLoading}
-          >
-            {isLoading ? '刷新中…' : '刷新'}
-          </button>
-        </div>
+        {activeTab !== 'kline' && (
+          <div className="panel-controls">
+            <button
+              className={`btn-pause ${isPaused ? 'paused' : ''}`}
+              onClick={togglePause}
+            >
+              {isPaused ? '继续' : '暂停'}
+            </button>
+            <button
+              className="btn-refresh"
+              onClick={() => refreshAll()}
+              disabled={isLoading || isPaused}
+            >
+              {isLoading ? '刷新中…' : '刷新'}
+            </button>
+          </div>
+        )}
       </div>
       <div className="panel-content">
         {renderContent()}

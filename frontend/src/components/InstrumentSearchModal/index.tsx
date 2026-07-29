@@ -34,11 +34,9 @@ interface Props {
   allContractIds: Set<string>
   /** User-favorited IDs (show "移除" button) */
   userSubscribedIds: Set<string>
-  /** Preset IDs */
-  presetIds: Set<string>
 }
 
-export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddToFavorite, onRemoveFromFavorite, onUnsubscribe, allContractIds, userSubscribedIds, presetIds }: Props) {
+export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddToFavorite, onRemoveFromFavorite, onUnsubscribe, allContractIds, userSubscribedIds }: Props) {
   const [exchanges, setExchanges] = useState<string[]>([])
   const [products, setProducts] = useState<string[]>([])
   const [instruments, setInstruments] = useState<ContractInfo[]>([])

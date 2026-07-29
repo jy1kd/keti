@@ -196,15 +196,23 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
     try {
       // 串行执行，CTP 单线程有查询频率限制（~1次/秒），并发会导致后续查询超时
       const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
-      await get().fetchOrders()
+      const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+
+      // 单个查询的超时包装（10秒超时）
+      const withTimeout = (promise: Promise<void>, name: string) =>
+        Promise.race([promise, timeout(10000).then(() => { throw new Error(`${name} timeout`) })])
+
+      await withTimeout(get().fetchOrders(), 'fetchOrders')
       await delay(1200)
-      await get().fetchTrades()
+      await withTimeout(get().fetchTrades(), 'fetchTrades')
       await delay(1200)
-      await get().fetchPositions()
+      await withTimeout(get().fetchPositions(), 'fetchPositions')
       await delay(1200)
-      await get().fetchAccount()
+      await withTimeout(get().fetchAccount(), 'fetchAccount')
       await delay(1200)
-      await get().fetchStopOrders()
+      await withTimeout(get().fetchStopOrders(), 'fetchStopOrders')
+    } catch (err) {
+      console.error('refreshAll error:', err)
     } finally {
       set({ isLoading: false, isRefreshing: false })
     }

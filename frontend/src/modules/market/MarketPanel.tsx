@@ -24,7 +24,7 @@ const savedMarketTop = loadPanelSizes('market-top-layout')
 export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
-  const { presetContracts, userContracts, contracts, presetIds, addContractInfo, removeFromFavorites, subscribeAndAddToPreset, removeContractById } = useContractsStore()
+  const { presetContracts, userContracts, contracts, addContractInfo, removeFromFavorites, subscribeAndAddToPreset, removeContractById } = useContractsStore()
   const { selectedContracts } = useUserPrefsStore()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'preset' | 'user'>('preset')
@@ -38,11 +38,6 @@ export function MarketPanel() {
   const userSubscribedIds = useMemo(
     () => new Set(selectedContracts),
     [selectedContracts]
-  )
-  // Preset IDs set (for modal button state)
-  const presetIdsSet = useMemo(
-    () => new Set(presetIds),
-    [presetIds]
   )
   // Combined set: all contracts in the system (preset + user)
   const allContractIds = useMemo(
@@ -223,7 +218,6 @@ export function MarketPanel() {
         onUnsubscribe={removeContractById}
         allContractIds={allContractIds}
         userSubscribedIds={userSubscribedIds}
-        presetIds={presetIdsSet}
       />
     </section>
   )
