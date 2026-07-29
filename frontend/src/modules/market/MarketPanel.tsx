@@ -99,7 +99,10 @@ export function MarketPanel() {
   return (
     <section className="market-panel">
       <div className="panel-header">
-        <h2>行情面板</h2>
+        <div className="panel-header__title">
+          <h2>行情面板</h2>
+          <ContractSearch contracts={displayContracts} onSelect={handleSelectContract} />
+        </div>
         <div className="panel-header__tabs">
           <button
             className={`btn-tab${activeTab === 'preset' ? ' active' : ''}`}
@@ -153,9 +156,6 @@ export function MarketPanel() {
       <Group orientation="horizontal" className="panel-content" id="market-top-layout" onLayoutChange={onMarketTopLayout}>
         <Panel id="market-table" defaultSize={savedMarketTop?.table ?? 75} minSize={30}>
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <div className="market-table-filter">
-              <ContractSearch contracts={displayContracts} onSelect={handleSelectContract} />
-            </div>
             <ErrorBoundary>
               <MarketTable
                 contracts={displayContracts}
