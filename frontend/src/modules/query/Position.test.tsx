@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { Position } from './Position'
 import { useQueryStore } from './store'
 import { useOrderStore } from '../order/store'
+import { useMarketStore } from '../market/store'
 
 vi.mock('../../services/api', () => ({
   getOrders: vi.fn().mockResolvedValue({ orders: [], count: 0 }),
@@ -95,5 +96,55 @@ describe('Position', () => {
     fireEvent.click(screen.getByText('平仓'))
     const form = useOrderStore.getState().orderForm
     expect(form.combOffsetFlag).toBe('close')
+  })
+
+  it('fills limitPrice with askPrice1 when closing long position', () => {
+    // 设置行情快照
+    useMarketStore.setState({
+      snapshots: new Map([
+        ['IF2608', { instrumentID: 'IF2608', lastPrice: 4000, bidPrice1: 3999, askPrice1: 4001, bidVolume1: 10, askVolume1: 5 } as any],
+      ]),
+    })
+    useQueryStore.setState({
+      positions: [
+        { instrumentID: 'IF2608', posiDirection: '2', position: 2, positionCost: 9600, positionProfit: 100, openCost: 9600, useMargin: 96000, todayPosition: 1, ydPosition: 1, tradingDay: '20260727' },
+      ],
+    })
+    render(<Position />)
+    fireEvent.click(screen.getByText('平仓'))
+    const form = useOrderStore.getState().orderForm
+    expect(form.limitPrice).toBe(4001) // 平多 → 卖出 → askPrice1
+    expect(form.direction).toBe('sell')
+  })
+
+  it('fills limitPrice with bidPrice1 when closing short position', () => {
+    useMarketStore.setState({
+      snapshots: new Map([
+        ['IF2609', { instrumentID: 'IF2609', lastPrice: 4000, bidPrice1: 3999, askPrice1: 4001, bidVolume1: 10, askVolume1: 5 } as any],
+      ]),
+    })
+    useQueryStore.setState({
+      positions: [
+        { instrumentID: 'IF2609', posiDirection: '3', position: 1, positionCost: 4900, positionProfit: -50, openCost: 4900, useMargin: 49000, todayPosition: 0, ydPosition: 1, tradingDay: '20260727' },
+      ],
+    })
+    render(<Position />)
+    fireEvent.click(screen.getByText('平仓'))
+    const form = useOrderStore.getState().orderForm
+    expect(form.limitPrice).toBe(3999) // 平空 → 买入 → bidPrice1
+    expect(form.direction).toBe('buy')
+  })
+
+  it('keeps limitPrice at 0 when no market snapshot', () => {
+    useMarketStore.setState({ snapshots: new Map() })
+    useQueryStore.setState({
+      positions: [
+        { instrumentID: 'IF2608', posiDirection: '2', position: 2, positionCost: 9600, positionProfit: 100, openCost: 9600, useMargin: 96000, todayPosition: 1, ydPosition: 1, tradingDay: '20260727' },
+      ],
+    })
+    render(<Position />)
+    fireEvent.click(screen.getByText('平仓'))
+    const form = useOrderStore.getState().orderForm
+    expect(form.limitPrice).toBe(0)
   })
 })

@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useQueryStore } from './store'
 import { useOrderStore } from '../order/store'
+import { useMarketStore } from '../market/store'
 
 const DIRECTION_MAP: Record<string, string> = { '2': '多', '3': '空' }
 
@@ -13,12 +14,26 @@ export function Position() {
     (instrumentID: string, posiDirection: string, volume: number, todayPosition: number) => {
       // 上期所/能源所今仓需用 'close_today'(CTP '3')，昨仓用 'close'(CTP '1')
       const offsetFlag = todayPosition > 0 ? 'close_today' : 'close'
+      const direction = posiDirection === '2' ? 'sell' : 'buy' // 多→卖平, 空→买平
+
+      // 从行情快照取对手价：平多→卖一价，平空→买一价
+      let price = 0
+      const snap = useMarketStore.getState().snapshots.get(instrumentID)
+      if (snap) {
+        if (posiDirection === '2') {
+          price = snap.askPrice1 > 0 ? snap.askPrice1 : snap.lastPrice
+        } else {
+          price = snap.bidPrice1 > 0 ? snap.bidPrice1 : snap.lastPrice
+        }
+      }
+
       setSelectedInstrument(instrumentID)
       setOrderForm({
         instrumentID,
-        direction: posiDirection === '2' ? 'sell' : 'buy', // 多→卖平, 空→买平
+        direction,
         combOffsetFlag: offsetFlag,
         volumeTotalOriginal: volume,
+        limitPrice: price,
       })
     },
     [setSelectedInstrument, setOrderForm]
