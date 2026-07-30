@@ -56,8 +56,10 @@ export const useMarketStore = create<MarketStore>((set) => ({
     set((state) => {
       const next = new Map(state.klineData)
       const existing = next.get(instrument)
+      // candle.volume 是 CTP 全天累计值，不能直接用作新 bar 的量；
+      // 新 bar 的成交量一律使用增量 deltaVolume（首个 tick 无历史累计，增量为 0）
       if (!existing || existing.length === 0) {
-        next.set(instrument, [candle])
+        next.set(instrument, [{ ...candle, volume: deltaVolume }])
         return { klineData: next }
       }
 
@@ -76,8 +78,8 @@ export const useMarketStore = create<MarketStore>((set) => ({
           openInterest: candle.openInterest,
         }
       } else if (candle.timestamp > last.timestamp) {
-        // 新周期 → 追加，保留最近200根
-        updated = [...existing, candle].slice(-200)
+        // 新周期 → 追加（volume 用增量，非全天累计值），保留最近200根
+        updated = [...existing, { ...candle, volume: deltaVolume }].slice(-200)
       } else {
         // 旧数据 → 忽略（避免打乱顺序）
         return state

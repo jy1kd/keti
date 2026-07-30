@@ -193,7 +193,11 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     const raf = requestAnimationFrame(() => {
       try {
         tableRef.current?.selectRow(vtableRow)
-        tableRef.current?.scrollToCell({ row: vtableRow, col: 0 })
+        // 仅当目标行不在可视区内才滚动，避免点击后行被顶到表格首位
+        const range = tableRef.current?.getBodyVisibleCellRange()
+        if (range && (vtableRow < range.rowStart || vtableRow > range.rowEnd)) {
+          tableRef.current?.scrollToCell({ row: vtableRow, col: 0 })
+        }
       } catch {
         // vtable 尚未就绪
       }

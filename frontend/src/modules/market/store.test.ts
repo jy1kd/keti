@@ -186,10 +186,11 @@ describe('MarketStore - klineData', () => {
       { timestamp: 1000, open: 100, high: 105, low: 98, close: 103, volume: 500, openInterest: 1000 },
     ]
     useMarketStore.getState().setKlineData('IF2608', candles)
-    const newCandle: KLineData = { timestamp: 2000, open: 103, high: 108, low: 101, close: 106, volume: 600, openInterest: 1100 }
-    useMarketStore.getState().appendKline('IF2608', newCandle)
+    // candle.volume 是 CTP 全天累计值（如 10600），新 bar 的 volume 应使用增量而非累计值
+    const newCandle: KLineData = { timestamp: 2000, open: 103, high: 108, low: 101, close: 106, volume: 10600, openInterest: 1100 }
+    useMarketStore.getState().appendKline('IF2608', newCandle, 600)
     expect(useMarketStore.getState().klineData.get('IF2608')?.length).toBe(2)
-    expect(useMarketStore.getState().klineData.get('IF2608')?.[1]).toEqual(newCandle)
+    expect(useMarketStore.getState().klineData.get('IF2608')?.[1]).toEqual({ ...newCandle, volume: 600 })
   })
 
   it('appendKline updates last candle if timestamp matches', () => {
@@ -210,9 +211,10 @@ describe('MarketStore - klineData', () => {
 
   it('appendKline creates new array if no existing data', () => {
     const candle: KLineData = { timestamp: 1000, open: 100, high: 105, low: 98, close: 103, volume: 500, openInterest: 1000 }
+    // 首根 bar 的 volume 同样使用增量（默认 0），不使用 CTP 全天累计值
     useMarketStore.getState().appendKline('IF2608', candle)
     expect(useMarketStore.getState().klineData.get('IF2608')?.length).toBe(1)
-    expect(useMarketStore.getState().klineData.get('IF2608')?.[0]).toEqual(candle)
+    expect(useMarketStore.getState().klineData.get('IF2608')?.[0]).toEqual({ ...candle, volume: 0 })
   })
 })
 

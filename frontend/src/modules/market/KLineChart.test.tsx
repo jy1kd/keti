@@ -62,7 +62,8 @@ describe('KLineChart', () => {
     expect(screen.getByText('15m')).toBeInTheDocument()
     expect(screen.getByText('30m')).toBeInTheDocument()
     expect(screen.getByText('1h')).toBeInTheDocument()
-    expect(screen.getByText('日线')).toBeInTheDocument()
+    // 日线功能已移除（后端不支持 1d 周期）
+    expect(screen.queryByText('日线')).not.toBeInTheDocument()
   })
 
   it('renders empty state when no data', () => {

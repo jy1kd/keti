@@ -64,7 +64,7 @@ class KLineData(BaseModel):
     """Single candlestick bar (camelCase)."""
 
     instrumentID: str
-    period: str  # "1m", "5m", "15m", "30m", "1h", "1d"
+    period: str  # "1m", "5m", "15m", "30m", "1h"
     time: str  # "HH:MM:SS" or "YYYY-MM-DD"
     open: float
     high: float

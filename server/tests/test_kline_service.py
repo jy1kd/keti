@@ -129,8 +129,15 @@ class TestUpdateTick:
         svc.update_tick(self._make_tick(volume=250, update_time="14:30:10"))
         svc.update_tick(self._make_tick(volume=300, update_time="14:30:15"))
         bars = svc.get_klines("IF2608", "1m")
-        # Total volume delta: (100-0) + (250-100) + (300-250) = 300
-        assert bars[0]["volume"] == 300
+        # 首个 tick 无历史累计 → delta=0；之后累加 (250-100) + (300-250) = 200
+        assert bars[0]["volume"] == 200
+
+    def test_first_tick_volume_not_cumulative(self):
+        """First tick's bar must not swallow the whole day's cumulative volume."""
+        svc = KLineService()
+        svc.update_tick(self._make_tick(volume=90000, update_time="14:30:05"))
+        bars = svc.get_klines("IF2608", "1m")
+        assert bars[0]["volume"] == 0
 
     def test_volume_cross_day_reset(self):
         """Negative volume delta (cross-day reset) should be treated as 0."""
@@ -138,7 +145,8 @@ class TestUpdateTick:
         svc.update_tick(self._make_tick(volume=90000, update_time="14:30:05"))
         svc.update_tick(self._make_tick(volume=50, update_time="14:30:10"))  # reset
         bars = svc.get_klines("IF2608", "1m")
-        assert bars[0]["volume"] == 90000  # 90000 + max(50-90000, 0) = 90000
+        # 首 tick delta=0；跨日重置负增量记 0
+        assert bars[0]["volume"] == 0
 
     def test_multiple_instruments(self):
         svc = KLineService()
