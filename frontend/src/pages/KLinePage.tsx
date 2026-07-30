@@ -42,7 +42,9 @@ export function KLinePage({ instrumentID }: KLinePageProps) {
           setKlineData(instrumentID, aligned);
         }
       })
-      .catch(() => { /* 静默失败 */ });
+      .catch((err) => {
+        console.warn('[KLinePage] Failed to fetch kline data:', err);
+      });
   }, [instrumentID, currentPeriod, setKlineData]);
 
   // Get K-line data for the instrument
