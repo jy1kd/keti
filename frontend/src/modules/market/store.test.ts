@@ -198,10 +198,14 @@ describe('MarketStore - klineData', () => {
     ]
     useMarketStore.getState().setKlineData('IF2608', candles)
     const updated: KLineData = { timestamp: 1000, open: 100, high: 110, low: 96, close: 108, volume: 800, openInterest: 1050 }
-    useMarketStore.getState().appendKline('IF2608', updated)
+    // deltaVolume=8 → 同周期内成交量累加增量
+    useMarketStore.getState().appendKline('IF2608', updated, 8)
     expect(useMarketStore.getState().klineData.get('IF2608')?.length).toBe(1)
-    expect(useMarketStore.getState().klineData.get('IF2608')?.[0].high).toBe(110)
-    expect(useMarketStore.getState().klineData.get('IF2608')?.[0].volume).toBe(800)
+    // high/low 基于 close 动态计算（CTP high/low 是当天值，非周期值）
+    expect(useMarketStore.getState().klineData.get('IF2608')?.[0].high).toBe(108)
+    expect(useMarketStore.getState().klineData.get('IF2608')?.[0].low).toBe(98)
+    // volume = last.volume + deltaVolume
+    expect(useMarketStore.getState().klineData.get('IF2608')?.[0].volume).toBe(508)
   })
 
   it('appendKline creates new array if no existing data', () => {

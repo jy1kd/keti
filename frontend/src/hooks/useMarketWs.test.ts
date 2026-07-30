@@ -142,8 +142,8 @@ describe('useMarketWs', () => {
       'IF2608',
       expect.objectContaining({
         close: 4120.0,
-        volume: 100,
       }),
+      expect.any(Number),
     )
   })
 

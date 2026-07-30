@@ -99,6 +99,10 @@ export function resetGlobalWs(): void {
 export function useMarketWs(wsBaseUrl: string) {
   const snapshotBufferRef = useRef<MarketSnapshot[]>([])
   const klineBufferRef = useRef<Map<string, KLineData>>(new Map())
+  /** 每个合约的成交量增量（CTP成交量是当日累计，需计算差值） */
+  const volumeDeltaBufferRef = useRef<Map<string, number>>(new Map())
+  /** 上一次每个合约的累计成交量，用于计算增量 */
+  const lastCumulativeVolumeRef = useRef<Map<string, number>>(new Map())
   const batchUpdate = useMarketStore((s) => s.batchUpdate)
   const appendKline = useMarketStore((s) => s.appendKline)
   const currentPeriod = useMarketStore((s) => s.currentPeriod)
@@ -116,6 +120,7 @@ export function useMarketWs(wsBaseUrl: string) {
     const timer = setInterval(() => {
       const snaps = snapshotBufferRef.current
       const klines = klineBufferRef.current
+      const deltas = volumeDeltaBufferRef.current
 
       if (snaps.length === 0 && klines.size === 0) return
 
@@ -127,9 +132,11 @@ export function useMarketWs(wsBaseUrl: string) {
 
       // 逐个更新 K 线（每个合约取最新一根，appendKline 内部处理去重）
       for (const [instrument, candle] of klines) {
-        appendKline(instrument, candle)
+        const deltaVol = deltas.get(instrument) ?? 0
+        appendKline(instrument, candle, deltaVol)
       }
       klineBufferRef.current = new Map()
+      volumeDeltaBufferRef.current = new Map()
     }, FLUSH_INTERVAL_MS)
 
     return () => clearInterval(timer)
@@ -137,13 +144,26 @@ export function useMarketWs(wsBaseUrl: string) {
 
   // 消息处理回调 — 只缓冲，不立即更新状态
   const handleMessage = (message: WSMessage) => {
-    console.log('[useMarketWs] received:', message.type, message.data)
     if (message.type === 'market_data') {
       const snap = message.data as MarketSnapshot
       // 缓冲快照
       snapshotBufferRef.current.push(snap)
       // 缓冲 K 线（同一合约多次更新只保留最新）
       klineBufferRef.current.set(snap.instrumentID, snapshotToKline(snap, periodMs))
+      // 计算成交量增量（CTP volume 是当日累计值）
+      const id = snap.instrumentID
+      const lastVol = lastCumulativeVolumeRef.current.get(id)
+      const cumVol = snap.volume ?? 0
+      if (lastVol !== undefined && cumVol >= lastVol) {
+        // 正常情况：增量 = 当前累计 - 上次累计
+        const existing = volumeDeltaBufferRef.current.get(id) ?? 0
+        volumeDeltaBufferRef.current.set(id, existing + (cumVol - lastVol))
+      } else if (lastVol !== undefined) {
+        // 跨日重置或数据异常：增量 = 0
+        volumeDeltaBufferRef.current.set(id, 0)
+      }
+      // 首次见到该合约时不设置增量（等待下一个 tick 才有差值）
+      lastCumulativeVolumeRef.current.set(id, cumVol)
     } else if (message.type === 'instruments_refreshed') {
       // 合约列表刷新完成
       const count = (message.data as { count: number }).count

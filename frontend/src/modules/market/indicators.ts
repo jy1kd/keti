@@ -123,46 +123,42 @@ export function calcKDJ(data: KLineData[], period: number = 9): {
 }
 
 /**
- * 计算RSI指标
+ * 计算RSI指标（Wilder 指数平滑）
  * @param data K线数据数组
  * @param period 周期（默认14）
  * @returns 每个数据点的RSI值
  */
 export function calcRSI(data: KLineData[], period: number = 14): (number | null)[] {
-  if (data.length === 0) {
-    return []
+  if (data.length === 0) return []
+
+  // 前 period 个点无法计算 RSI
+  if (data.length <= period) return data.map(() => null)
+
+  // 第一个 RSI（index=period）：用 SMA 初始化 avgGain/avgLoss
+  let gainSum = 0
+  let lossSum = 0
+  for (let j = 1; j <= period; j++) {
+    const change = data[j].close - data[j - 1].close
+    if (change > 0) gainSum += change
+    else lossSum += Math.abs(change)
   }
+  let avgGain = gainSum / period
+  let avgLoss = lossSum / period
 
-  const result: (number | null)[] = []
+  const result: (number | null)[] = data.map(() => null)
+  result[period] = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss)
 
-  // RSI需要至少 period + 1 个数据点（因为需要计算涨跌幅）
-  for (let i = 0; i < data.length; i++) {
-    if (i < period) {
-      result.push(null)
-      continue
-    }
+  // 后续 RSI（index > period）：Wilder 指数平滑
+  for (let i = period + 1; i < data.length; i++) {
+    const change = data[i].close - data[i - 1].close
+    const currentGain = change > 0 ? change : 0
+    const currentLoss = change < 0 ? Math.abs(change) : 0
 
-    // 计算涨幅和跌幅
-    let gainSum = 0
-    let lossSum = 0
-    for (let j = i - period + 1; j <= i; j++) {
-      const change = data[j].close - data[j - 1].close
-      if (change > 0) {
-        gainSum += change
-      } else {
-        lossSum += Math.abs(change)
-      }
-    }
+    // Wilder 平滑：avg = (prevAvg * (period-1) + current) / period
+    avgGain = (avgGain * (period - 1) + currentGain) / period
+    avgLoss = (avgLoss * (period - 1) + currentLoss) / period
 
-    const avgGain = gainSum / period
-    const avgLoss = lossSum / period
-
-    if (avgLoss === 0) {
-      result.push(100)
-    } else {
-      const rs = avgGain / avgLoss
-      result.push(100 - 100 / (1 + rs))
-    }
+    result[i] = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss)
   }
 
   return result
