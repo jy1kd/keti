@@ -38,24 +38,21 @@ describe('Electron Main Process', () => {
     vi.clearAllMocks();
   });
 
-  it('should export createMainWindow function', async () => {
-    // This test will fail initially (RED phase)
-    const mainModule = await import('../main');
-    expect(mainModule.createMainWindow).toBeDefined();
-    expect(typeof mainModule.createMainWindow).toBe('function');
-  });
-
   it('should export initializeApp function', async () => {
     const mainModule = await import('../main');
     expect(mainModule.initializeApp).toBeDefined();
     expect(typeof mainModule.initializeApp).toBe('function');
   });
 
-  it('should have correct app configuration', async () => {
+  it('should export getWindowManager function', async () => {
     const mainModule = await import('../main');
-    expect(mainModule.APP_CONFIG).toBeDefined();
-    expect(mainModule.APP_CONFIG.title).toBe('SimNow 交易终端');
-    expect(mainModule.APP_CONFIG.width).toBe(1600);
-    expect(mainModule.APP_CONFIG.height).toBe(1000);
+    expect(mainModule.getWindowManager).toBeDefined();
+    expect(typeof mainModule.getWindowManager).toBe('function');
+  });
+
+  it('should export isDev constant', async () => {
+    const mainModule = await import('../main');
+    expect(mainModule.isDev).toBeDefined();
+    expect(typeof mainModule.isDev).toBe('boolean');
   });
 });

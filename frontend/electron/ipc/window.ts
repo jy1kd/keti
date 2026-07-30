@@ -8,6 +8,7 @@
 
 import { BrowserWindow, ipcMain } from 'electron';
 import { IPC_CHANNELS } from './index';
+import { WindowManager } from '../windowManager';
 
 /**
  * Register window control IPC handlers
@@ -35,23 +36,16 @@ export function registerWindowControlHandlers(mainWindow: BrowserWindow): void {
 
 /**
  * Register window management IPC handlers
- *
- * These are placeholder implementations that will be extended in PR-E3
- * with the full WindowManager class.
  */
-export function registerWindowManagementHandlers(): void {
-  // Open order window (placeholder for PR-E3)
+export function registerWindowManagementHandlers(windowManager: WindowManager): void {
+  // Open order window
   ipcMain.handle(IPC_CHANNELS.WINDOW_OPEN_ORDER, (_event, instrumentID?: string) => {
-    // TODO: Implement in PR-E3 (Window Manager)
-    console.log('[IPC] open-order-window', instrumentID);
-    // In PR-E3, this will create a new BrowserWindow for order entry
+    windowManager.openOrderWindow(instrumentID);
   });
 
-  // Open K-line window (placeholder for PR-E3)
+  // Open K-line window
   ipcMain.handle(IPC_CHANNELS.WINDOW_OPEN_KLINE, (_event, instrumentID: string) => {
-    // TODO: Implement in PR-E3 (Window Manager)
-    console.log('[IPC] open-kline-window', instrumentID);
-    // In PR-E3, this will create a new BrowserWindow for K-line chart
+    windowManager.openKLineWindow(instrumentID);
   });
 }
 

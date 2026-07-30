@@ -1,53 +1,19 @@
 import { app, BrowserWindow } from 'electron';
-import path from 'path';
+import { WindowManager } from './windowManager';
 import { registerWindowControlHandlers, registerWindowManagementHandlers } from './ipc/window';
 import { registerAppInfoHandlers, registerBackendManagementHandlers } from './ipc/app';
-
-// App configuration
-export const APP_CONFIG = {
-  title: 'SimNow 交易终端',
-  width: 1600,
-  height: 1000,
-  minWidth: 1200,
-  minHeight: 800,
-};
 
 // Check if in development mode
 export const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
+// Global window manager instance
+let windowManager: WindowManager;
+
 /**
- * Create the main application window
+ * Get the window manager instance
  */
-export function createMainWindow(): BrowserWindow {
-  const mainWindow = new BrowserWindow({
-    width: APP_CONFIG.width,
-    height: APP_CONFIG.height,
-    minWidth: APP_CONFIG.minWidth,
-    minHeight: APP_CONFIG.minHeight,
-    title: APP_CONFIG.title,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-    show: false, // Don't show until ready
-  });
-
-  // Load the app
-  if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
-    // Open DevTools in development
-    mainWindow.webContents.openDevTools();
-  } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
-  }
-
-  // Show window when ready
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-  });
-
-  return mainWindow;
+export function getWindowManager(): WindowManager {
+  return windowManager;
 }
 
 /**
@@ -57,13 +23,16 @@ export async function initializeApp(): Promise<void> {
   // Wait for app to be ready
   await app.whenReady();
 
+  // Create window manager
+  windowManager = new WindowManager(isDev);
+
   // Create main window
-  const mainWindow = createMainWindow();
+  const mainWindow = windowManager.createMainWindow();
 
   // Handle app activation (macOS)
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow();
+      windowManager.createMainWindow();
     }
   });
 
@@ -76,7 +45,7 @@ export async function initializeApp(): Promise<void> {
 
   // Register IPC handlers using modular approach
   registerWindowControlHandlers(mainWindow);
-  registerWindowManagementHandlers();
+  registerWindowManagementHandlers(windowManager);
   registerAppInfoHandlers();
   registerBackendManagementHandlers();
 }
