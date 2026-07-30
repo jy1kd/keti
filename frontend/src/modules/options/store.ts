@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { OptionChain } from '@/services/types'
-import { api, getVolatility } from '@/services/api'
+import { getOptionChains, getVolatility } from '@/services/api'
 
 interface OptionsStore {
   // T型报价数据
@@ -41,13 +41,8 @@ export const useOptionsStore = create<OptionsStore>((set, getState) => ({
   fetchOptionChains: async (underlying?, expireDate?) => {
     set({ loading: true, error: null })
     try {
-      const params: Record<string, string | undefined> = {
-        underlying,
-        expire_date: expireDate,
-      }
-      // 直接用 api.get 绕过 ApiResponse 包装（后端返回 { chains: [...] }，非 ApiResponse 格式）
-      const { data } = await api.get<{ chains: OptionChain[] }>('/api/market/option_chain', { params })
-      set({ optionChains: data.chains ?? [], loading: false })
+      const res = await getOptionChains(underlying, expireDate)
+      set({ optionChains: res.chains ?? [], loading: false })
     } catch (err) {
       console.error('[OptionsStore] fetchOptionChains failed:', err)
       set({ loading: false, error: 'Failed to load option chains' })

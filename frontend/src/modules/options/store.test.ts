@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useOptionsStore } from './store'
 import type { OptionChain, OptionQuote } from '@/services/types'
 
-// Mock API module — api.get 是 axios 实例方法，返回 { data }
+// Mock API module — getOptionChains 和 getVolatility 是独立函数
 vi.mock('@/services/api', () => ({
-  api: { get: vi.fn() },
+  getOptionChains: vi.fn(),
   getVolatility: vi.fn(),
 }))
 
-import { api, getVolatility } from '@/services/api'
+import { getOptionChains, getVolatility } from '@/services/api'
 
 function makeQuote(overrides: Partial<OptionQuote> = {}): OptionQuote {
   return {
@@ -51,7 +51,7 @@ describe('OptionsStore', () => {
       error: null,
       volatility: new Map(),
     })
-    vi.mocked(api.get).mockReset()
+    vi.mocked(getOptionChains).mockReset()
     vi.mocked(getVolatility).mockReset()
   })
 
@@ -105,52 +105,46 @@ describe('OptionsStore', () => {
 
   it('fetchOptionChains calls API and stores chains', async () => {
     const chains = [makeChain()]
-    vi.mocked(api.get).mockResolvedValue({ data: { chains } })
+    vi.mocked(getOptionChains).mockResolvedValue({ chains })
 
     await useOptionsStore.getState().fetchOptionChains('IF2608')
 
-    expect(api.get).toHaveBeenCalledWith('/api/market/option_chain', {
-      params: { underlying: 'IF2608', expire_date: undefined },
-    })
+    expect(getOptionChains).toHaveBeenCalledWith('IF2608', undefined)
     expect(useOptionsStore.getState().optionChains).toEqual(chains)
     expect(useOptionsStore.getState().loading).toBe(false)
   })
 
   it('fetchOptionChains passes expire_date when provided', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: { chains: [] } })
+    vi.mocked(getOptionChains).mockResolvedValue({ chains: [] })
 
     await useOptionsStore.getState().fetchOptionChains('IF2608', '20260815')
 
-    expect(api.get).toHaveBeenCalledWith('/api/market/option_chain', {
-      params: { underlying: 'IF2608', expire_date: '20260815' },
-    })
+    expect(getOptionChains).toHaveBeenCalledWith('IF2608', '20260815')
   })
 
   it('fetchOptionChains fetches all chains when no underlying provided', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: { chains: [] } })
+    vi.mocked(getOptionChains).mockResolvedValue({ chains: [] })
 
     await useOptionsStore.getState().fetchOptionChains()
 
-    expect(api.get).toHaveBeenCalledWith('/api/market/option_chain', {
-      params: { underlying: undefined, expire_date: undefined },
-    })
+    expect(getOptionChains).toHaveBeenCalledWith(undefined, undefined)
   })
 
   it('fetchOptionChains sets loading=true during fetch', async () => {
     let resolvePromise: (value: unknown) => void
     const promise = new Promise((resolve) => { resolvePromise = resolve })
-    vi.mocked(api.get).mockReturnValue(promise as Promise<unknown>)
+    vi.mocked(getOptionChains).mockReturnValue(promise as Promise<{ chains: OptionChain[] }>)
 
     const fetchPromise = useOptionsStore.getState().fetchOptionChains('IF2608')
     expect(useOptionsStore.getState().loading).toBe(true)
 
-    resolvePromise!({ data: { chains: [makeChain()] } })
+    resolvePromise!({ chains: [makeChain()] })
     await fetchPromise
     expect(useOptionsStore.getState().loading).toBe(false)
   })
 
   it('fetchOptionChains sets error on API failure', async () => {
-    vi.mocked(api.get).mockRejectedValue(new Error('Network error'))
+    vi.mocked(getOptionChains).mockRejectedValue(new Error('Network error'))
 
     await useOptionsStore.getState().fetchOptionChains('IF2608')
 
@@ -161,7 +155,7 @@ describe('OptionsStore', () => {
   it('fetchOptionChains preserves existing chains on error', async () => {
     const existingChain = makeChain()
     useOptionsStore.setState({ optionChains: [existingChain] })
-    vi.mocked(api.get).mockRejectedValue(new Error('fail'))
+    vi.mocked(getOptionChains).mockRejectedValue(new Error('fail'))
 
     await useOptionsStore.getState().fetchOptionChains('IF2608')
 
