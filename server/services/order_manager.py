@@ -504,16 +504,40 @@ class OrderManager:
     def on_rtn_trade(self, trade_data: dict) -> None:
         """Handle OnRtnTrade callback from CTP.
 
-        Records the trade and appends to the per-order trade list.
+        Records the trade and appends to the per-order trade list.  Also
+        defensively updates the tracked order's cumulative volume fields
+        (``volumeTraded`` / ``volumeTotal``) so that the order state remains
+        consistent even if an ``OnRtnOrder`` callback is delayed, reordered,
+        or dropped.  ``orderStatus`` is intentionally left untouched —
+        ``OnRtnOrder`` is the authoritative source for status transitions.
 
         Args:
             trade_data: CamelCase dict from map_trade().
         """
         ref = trade_data.get("orderRef", "")
+        trade_volume = trade_data.get("volume", 0) or 0
         with self._lock:
             if ref not in self._trades:
                 self._trades[ref] = []
             self._trades[ref].append(trade_data)
+
+            # Defensive update of cumulative volume fields.  OnRtnOrder is the
+            # authoritative source for orderStatus, but CTP guarantees trade
+            # volume is monotonic; use it to keep volumeTraded/volumeTotal
+            # consistent even when OnRtnOrder arrives out of order.
+            order = self._orders.get(ref)
+            if order is not None:
+                original = order.get("volumeTotalOriginal", 0) or 0
+                traded = (order.get("volumeTraded", 0) or 0) + trade_volume
+                if traded > original:
+                    logger.warning(
+                        "Trade volume exceeds original order volume: ref=%s "
+                        "traded=%d original=%d",
+                        ref, traded, original,
+                    )
+                    traded = original
+                order["volumeTraded"] = traded
+                order["volumeTotal"] = max(0, original - traded)
 
         # Broadcast via WebSocket if configured
         if self._broadcast_fn is not None:
