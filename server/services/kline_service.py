@@ -118,7 +118,6 @@ class KLineService:
         china_tz = timezone(timedelta(hours=8))
         dt_str = datetime.fromtimestamp(ts, tz=china_tz).strftime('%Y-%m-%d %H:%M:%S')
         logger.debug(f"[KLine] {instrument} timestamp={ts} → {dt_str}")
-            return
 
         # Volume delta (CTP volume is cumulative)
         vol_delta = volume - self._last_volume.get(instrument, 0)
