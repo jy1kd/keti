@@ -56,14 +56,6 @@ def wire_market_data_callback(
         # Step 1: Map CTP PascalCase → camelCase dict
         data = map_depth_market_data(pDepthMarketData)
 
-        # Debug: 打印CTP返回的时间字段
-        logger.debug(
-            f"[CTP] {data.get('instrumentID')} "
-            f"ActionDay={data.get('actionDay')!r} "
-            f"UpdateTime={data.get('updateTime')!r} "
-            f"TradingDay={data.get('tradingDay')!r}"
-        )
-
         # Step 2: Update snapshot cache (thread-safe)
         market_service.update_snapshot(data)
 
