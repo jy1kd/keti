@@ -11,7 +11,7 @@ export const APP_CONFIG = {
 };
 
 // Check if in development mode
-const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+export const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 /**
  * Create the main application window
@@ -109,7 +109,31 @@ function registerIpcHandlers(mainWindow: BrowserWindow): void {
   ipcMain.handle('app:name', () => {
     return app.getName();
   });
+
+  // Window management (placeholders for PR-E3)
+  ipcMain.handle('window:open-order', (_event, instrumentID?: string) => {
+    // TODO: Implement in PR-E3 (Window Manager)
+    console.log('open-order-window', instrumentID);
+  });
+
+  ipcMain.handle('window:open-kline', (_event, instrumentID: string) => {
+    // TODO: Implement in PR-E3 (Window Manager)
+    console.log('open-kline-window', instrumentID);
+  });
+
+  // Backend management (placeholders for PR-E10)
+  ipcMain.handle('backend:restart', () => {
+    // TODO: Implement in PR-E10 (Python Backend Packaging)
+    console.log('backend:restart');
+  });
+
+  ipcMain.handle('backend:status', () => {
+    // TODO: Implement in PR-E10 (Python Backend Packaging)
+    return { running: false };
+  });
 }
 
-// Auto-initialize when imported
-initializeApp().catch(console.error);
+// Only auto-initialize when not in test environment
+if (process.env.NODE_ENV !== 'test') {
+  initializeApp().catch(console.error);
+}

@@ -20,9 +20,9 @@ export interface ElectronAPI {
   restartBackend: () => Promise<void>;
   getBackendStatus: () => Promise<{ running: boolean; pid?: number }>;
 
-  // Event listeners
-  onOrderUpdate: (callback: (data: any) => void) => void;
-  onNotification: (callback: (data: any) => void) => void;
+  // Event listeners (return cleanup function to prevent memory leaks)
+  onOrderUpdate: (callback: (data: any) => void) => () => void;
+  onNotification: (callback: (data: any) => void) => () => void;
   removeAllListeners: (channel: string) => void;
 }
 
@@ -49,12 +49,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   restartBackend: () => ipcRenderer.invoke('backend:restart'),
   getBackendStatus: () => ipcRenderer.invoke('backend:status'),
 
-  // Event listeners
+  // Event listeners (return cleanup function to prevent memory leaks)
   onOrderUpdate: (callback: (data: any) => void) => {
-    ipcRenderer.on('order:update', (_, data) => callback(data));
+    const handler = (_: any, data: any) => callback(data);
+    ipcRenderer.on('order:update', handler);
+    return () => ipcRenderer.removeListener('order:update', handler);
   },
   onNotification: (callback: (data: any) => void) => {
-    ipcRenderer.on('notification', (_, data) => callback(data));
+    const handler = (_: any, data: any) => callback(data);
+    ipcRenderer.on('notification', handler);
+    return () => ipcRenderer.removeListener('notification', handler);
   },
   removeAllListeners: (channel: string) => {
     ipcRenderer.removeAllListeners(channel);

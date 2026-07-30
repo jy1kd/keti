@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock electron modules
+// Mock electron modules (only what's used in PR-E1)
 vi.mock('electron', () => ({
   app: {
     whenReady: vi.fn().mockResolvedValue(undefined),
@@ -8,37 +8,28 @@ vi.mock('electron', () => ({
     quit: vi.fn(),
     getName: vi.fn().mockReturnValue('SimNow Trading Terminal'),
     getVersion: vi.fn().mockReturnValue('1.0.0'),
+    isPackaged: false,
   },
   BrowserWindow: vi.fn().mockImplementation(() => ({
     loadURL: vi.fn(),
     loadFile: vi.fn(),
     on: vi.fn(),
+    once: vi.fn(),
     show: vi.fn(),
     hide: vi.fn(),
     close: vi.fn(),
+    minimize: vi.fn(),
+    maximize: vi.fn(),
+    unmaximize: vi.fn(),
+    isMaximized: vi.fn().mockReturnValue(false),
     webContents: {
       send: vi.fn(),
+      openDevTools: vi.fn(),
     },
   })),
   ipcMain: {
     handle: vi.fn(),
     on: vi.fn(),
-  },
-  Tray: vi.fn().mockImplementation(() => ({
-    setToolTip: vi.fn(),
-    setContextMenu: vi.fn(),
-    on: vi.fn(),
-  })),
-  Menu: {
-    buildFromTemplate: vi.fn(),
-    setApplicationMenu: vi.fn(),
-  },
-  globalShortcut: {
-    register: vi.fn(),
-    unregisterAll: vi.fn(),
-  },
-  nativeImage: {
-    createFromPath: vi.fn().mockReturnValue({}),
   },
 }));
 
