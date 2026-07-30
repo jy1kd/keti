@@ -150,14 +150,6 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
           >
             套利
           </button>
-          <button
-            type="button"
-            className="toggle-btn"
-            disabled
-            title="暂未实现（仅适用于INE原油期货）"
-          >
-            TAS
-          </button>
         </div>
       </div>
 
