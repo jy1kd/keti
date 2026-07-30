@@ -239,11 +239,11 @@ frontend/
 |------|------|
 | **PR编号** | PR-E3 |
 | **PR标题** | 窗口管理器实现 |
-| **PR分支名** | `feature/electron-window-manager` |
+| **PR分支名** | `feature/electron-refactor` |
 | **负责角色** | 角色B |
 | **依赖PR** | PR-E2 |
 | **工作量** | 4小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成（2026-07-28，4 commits） |
 
 **提交文件**：
 ```

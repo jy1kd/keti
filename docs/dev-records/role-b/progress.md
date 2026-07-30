@@ -613,3 +613,46 @@
 
 **交接说明**：
 - PR-E2 已完成，可进入 PR-E3（窗口管理器）
+
+---
+
+### PR-E3: 窗口管理器实现
+
+**状态**：✅ 已完成（含审查修复+人工验证）
+
+**PR信息**：
+- PR分支名：`feature/electron-refactor`
+- 依赖PR：PR-E2 ✅
+- 工作量：4小时
+
+**完成内容**：
+1. electron/windowManager.ts — 窗口管理器类
+   - createMainWindow: 创建主窗口
+   - openOrderWindow: 打开报单窗口
+   - openKLineWindow: 打开K线窗口
+   - getWindow/getAllWindows: 获取窗口
+   - closeAllWindows: 关闭所有窗口
+   - sendToWindow/broadcast: 窗口间通信
+   - saveWindowState/restoreWindowState: 窗口状态持久化
+2. electron/__tests__/windowManager.test.ts — 窗口管理器单元测试（15 个用例）
+3. electron/ipc/window.ts — 使用 WindowManager 实现窗口管理 IPC
+4. electron/main.ts — 使用 WindowManager 类
+5. electron/__tests__/main.test.ts — 适配新的 main.ts 导出
+
+**审查反馈修复**：
+- I1: 移除 windowManager.ts 未使用的 IPC_CHANNELS 导入
+- I2: 补充窗口管理器行为测试（去重、关闭、状态保存、广播）
+
+**验证结果**：
+- ✅ 42 个测试全部通过
+- ✅ TypeScript 编译无错误
+- ✅ 所有验收标准通过
+
+**提交记录**：
+- `9db9aaf` feat(electron): PR-E3 窗口管理器实现
+- `582ca3c` fix(electron): 处理 PR-E3 审查反馈
+- `05cd4ed` docs(electron): 添加 PR-E3 审查反馈处理记录
+- `0ea2970` docs(electron): 添加 PR-E3 人工验证记录
+
+**交接说明**：
+- PR-E3 已完成，可进入 PR-E4（报单窗口实现）
