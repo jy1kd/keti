@@ -289,11 +289,11 @@ frontend/
 |------|------|
 | **PR编号** | PR-E4 |
 | **PR标题** | 报单窗口实现 |
-| **PR分支名** | `feature/electron-order-window` |
+| **PR分支名** | `feature/electron-refactor` |
 | **负责角色** | 角色B |
 | **依赖PR** | PR-E3 |
 | **工作量** | 3小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成（2026-07-28，4 commits） |
 
 **提交文件**：
 ```
