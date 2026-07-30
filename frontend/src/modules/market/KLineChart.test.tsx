@@ -156,8 +156,7 @@ describe('KLineChart', () => {
     }
   })
 
-  it('includes MACD DIF and DEA line series', () => {
-    // Need enough data points for MACD (EMA26 needs 26+ points)
+  it('includes volume bar series by default', () => {
     const longData: KLineData[] = Array.from({ length: 30 }, (_, i) => ({
       timestamp: i * 1000,
       open: 100 + i,
@@ -169,13 +168,11 @@ describe('KLineChart', () => {
     }))
     render(<KLineChart instrument="IF2608" klineData={longData} period="5m" />)
     const option = mockSetOption.mock.calls[mockSetOption.mock.calls.length - 1][0]
-    const difSeries = option.series.find((s: { name: string }) => s.name === 'DIF')
-    const deaSeries = option.series.find((s: { name: string }) => s.name === 'DEA')
-    expect(difSeries).toBeDefined()
-    expect(deaSeries).toBeDefined()
+    const volumeSeries = option.series.find((s: { type: string }) => s.type === 'bar')
+    expect(volumeSeries).toBeDefined()
   })
 
-  it('includes MACD histogram bar series', () => {
+  it('includes volume MA5 line series', () => {
     const longData: KLineData[] = Array.from({ length: 30 }, (_, i) => ({
       timestamp: i * 1000,
       open: 100 + i,
@@ -187,12 +184,12 @@ describe('KLineChart', () => {
     }))
     render(<KLineChart instrument="IF2608" klineData={longData} period="5m" />)
     const option = mockSetOption.mock.calls[mockSetOption.mock.calls.length - 1][0]
-    const macdHist = option.series.find((s: { name: string }) => s.name === 'MACD')
-    expect(macdHist).toBeDefined()
-    expect(macdHist.type).toBe('bar')
+    const volMa5 = option.series.find((s: { name: string }) => s.name === 'VOL-MA5')
+    expect(volMa5).toBeDefined()
+    expect(volMa5.type).toBe('line')
   })
 
-  it('MACD series use xAxisIndex 1 and yAxisIndex 2', () => {
+  it('has 2 grids by default (main + sub)', () => {
     const longData: KLineData[] = Array.from({ length: 30 }, (_, i) => ({
       timestamp: i * 1000,
       open: 100 + i,
@@ -204,8 +201,7 @@ describe('KLineChart', () => {
     }))
     render(<KLineChart instrument="IF2608" klineData={longData} period="5m" />)
     const option = mockSetOption.mock.calls[mockSetOption.mock.calls.length - 1][0]
-    // Should have 3 grids: candlestick, volume, MACD
-    expect(option.grid.length).toBe(3)
-    expect(option.yAxis.length).toBe(3)
+    expect(option.grid.length).toBe(2)
+    expect(option.yAxis.length).toBe(2)
   })
 })
