@@ -1,5 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
+// ⚠️ IMPORTANT: The IPC channel strings below must match those defined in ipc/index.ts
+// This file cannot import from ipc/index.ts directly (different execution context),
+// so channel names are hardcoded. Keep them in sync manually.
+
 // Define the API interface
 export interface ElectronAPI {
   // Window control

@@ -12,14 +12,16 @@ import type {
   NotificationEvent,
 } from '../../electron/ipc/index';
 
-// Check if running in Electron
-export const isElectron = typeof window !== 'undefined' && window.electronAPI !== undefined;
+// Check if running in Electron (dynamic check for testability)
+export function isElectron(): boolean {
+  return typeof window !== 'undefined' && window.electronAPI !== undefined;
+}
 
 /**
  * Get the Electron API (only available in Electron environment)
  */
 function getElectronAPI(): ElectronAPI {
-  if (!isElectron) {
+  if (!isElectron()) {
     throw new Error('Electron API is not available. This function can only be used in Electron environment.');
   }
   return window.electronAPI!;

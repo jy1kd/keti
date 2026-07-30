@@ -3,6 +3,9 @@
  *
  * Centralized definition of all IPC channels used for communication
  * between the main process and renderer process.
+ *
+ * ⚠️ IMPORTANT: preload.ts uses hardcoded channel strings that must match
+ * these constants. When adding new channels, update both files.
  */
 
 // IPC Channel constants
