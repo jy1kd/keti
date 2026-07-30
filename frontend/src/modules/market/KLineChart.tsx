@@ -69,10 +69,10 @@ function calcMACD(data: KLineData[]): { dif: number[]; dea: number[]; macd: numb
 }
 
 const DATE_FORMAT_MAP: Record<string, Intl.DateTimeFormatOptions> = {
-  '1m': { hour: '2-digit', minute: '2-digit' },
-  '5m': { hour: '2-digit', minute: '2-digit' },
-  '15m': { hour: '2-digit', minute: '2-digit' },
-  '30m': { hour: '2-digit', minute: '2-digit' },
+  '1m': { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' },
+  '5m': { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' },
+  '15m': { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' },
+  '30m': { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' },
   '1h': { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' },
   '1d': { month: '2-digit', day: '2-digit' },
 }
