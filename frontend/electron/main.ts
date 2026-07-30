@@ -1,5 +1,7 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import path from 'path';
+import { registerWindowControlHandlers, registerWindowManagementHandlers } from './ipc/window';
+import { registerAppInfoHandlers, registerBackendManagementHandlers } from './ipc/app';
 
 // App configuration
 export const APP_CONFIG = {
@@ -72,65 +74,11 @@ export async function initializeApp(): Promise<void> {
     }
   });
 
-  // Register IPC handlers
-  registerIpcHandlers(mainWindow);
-}
-
-/**
- * Register IPC handlers for window control
- */
-function registerIpcHandlers(mainWindow: BrowserWindow): void {
-  // Window control
-  ipcMain.handle('window:minimize', () => {
-    mainWindow.minimize();
-  });
-
-  ipcMain.handle('window:maximize', () => {
-    if (mainWindow.isMaximized()) {
-      mainWindow.unmaximize();
-    } else {
-      mainWindow.maximize();
-    }
-  });
-
-  ipcMain.handle('window:close', () => {
-    mainWindow.close();
-  });
-
-  // App info
-  ipcMain.handle('app:version', () => {
-    return app.getVersion();
-  });
-
-  ipcMain.handle('app:platform', () => {
-    return process.platform;
-  });
-
-  ipcMain.handle('app:name', () => {
-    return app.getName();
-  });
-
-  // Window management (placeholders for PR-E3)
-  ipcMain.handle('window:open-order', (_event, instrumentID?: string) => {
-    // TODO: Implement in PR-E3 (Window Manager)
-    console.log('open-order-window', instrumentID);
-  });
-
-  ipcMain.handle('window:open-kline', (_event, instrumentID: string) => {
-    // TODO: Implement in PR-E3 (Window Manager)
-    console.log('open-kline-window', instrumentID);
-  });
-
-  // Backend management (placeholders for PR-E10)
-  ipcMain.handle('backend:restart', () => {
-    // TODO: Implement in PR-E10 (Python Backend Packaging)
-    console.log('backend:restart');
-  });
-
-  ipcMain.handle('backend:status', () => {
-    // TODO: Implement in PR-E10 (Python Backend Packaging)
-    return { running: false };
-  });
+  // Register IPC handlers using modular approach
+  registerWindowControlHandlers(mainWindow);
+  registerWindowManagementHandlers();
+  registerAppInfoHandlers();
+  registerBackendManagementHandlers();
 }
 
 // Only auto-initialize when not in test environment
