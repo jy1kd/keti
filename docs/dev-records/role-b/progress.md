@@ -25,6 +25,7 @@
 | PR-20 | 前端合约刷新功能（刷新按钮 + Toast） | ✅ 已完成 | 2026-07-21 | 2a4d682~8ebaf1f (9 commits) |
 | PR-21 | 手动订阅/退订合约 | ✅ 已完成 | 2026-07-23 | 与 PR-20 共享提交 |
 | PR-22 | 连接状态指示器完善 | ✅ 已审查通过 | 2026-07-24 | 9a8ebd6, ed7d01c, 43ed2e1, ad924f7, ef11135, 6126ae1, 41f3af1 (7 commits) |
+| PR-E1 | Electron 基础框架搭建 | ✅ 已完成 | 2026-07-28 | c6fb4b8, fa69d6c, 1499acd, db154c1 (4 commits) |
 
 **总计**：13个PR + 1个联调PR = 14个PR
 
@@ -531,3 +532,45 @@
 | 2026-07-08 | 初始化progress.md | ✅ 完成 |
 | 2026-07-21 | PR-20 合约刷新功能完成 | ✅ 完成 |
 | 2026-07-24 | PR-14 期权T型报价实现完成 | ✅ 完成 |
+
+---
+
+### PR-E1: Electron 基础框架搭建
+
+**状态**：✅ 已完成（含审查修复+人工验证）
+
+**PR信息**：
+- PR分支名：`feature/electron-refactor`
+- 依赖PR：无
+- 工作量：3小时
+
+**完成内容**：
+1. electron/main.ts — 主进程入口，窗口管理，IPC 处理
+2. electron/preload.ts — 预加载脚本，安全的 IPC 桥接
+3. electron/tsconfig.json — Electron TypeScript 配置
+4. electron-builder.json — 应用打包配置（Windows/macOS/Linux）
+5. vite.config.ts — 添加 Electron 构建支持
+6. package.json — 添加 electron:dev/build/preview 脚本
+7. electron/__tests__/main.test.ts — 主进程单元测试
+8. electron/__tests__/preload.test.ts — 预加载脚本单元测试
+
+**审查反馈修复**：
+- F1: main.ts 自动初始化改为条件执行（非测试环境）
+- F2: 添加缺失的 IPC handler（window:open-order, window:open-kline, backend:restart, backend:status）
+- F3: preload.ts 事件监听器返回清理函数，防止内存泄漏
+- I1: 精简 main.test.ts mock，移除未使用的模块
+- I2: 移除 electron-is-dev 依赖
+
+**验证结果**：
+- ✅ 4 个测试全部通过
+- ✅ TypeScript 编译无错误
+- ✅ 所有验收标准通过
+
+**提交记录**：
+- `c6fb4b8` feat(electron): PR-E1 Electron 基础框架搭建
+- `fa69d6c` feat(electron): PR-E1 补全 - 配置文件和构建脚本
+- `1499acd` fix(electron): 处理 PR-E1 审查反馈
+- `db154c1` docs(electron): 添加 PR-E1 人工验证记录
+
+**交接说明**：
+- PR-E1 已完成，可进入 PR-E2（IPC 通信基础设施）
