@@ -27,7 +27,8 @@ SimNow 柜台 (7×24 测试环境)
 
 ## 核心功能
 
-- **行情模块**：实时行情表格、五档深度、K 线图、期权 T 型报价
+- **行情模块**：实时行情表格、五档深度、K 线图（含技术指标）、期权 T 型报价
+- **技术指标**：MA、BOLL、成交量、MACD、KDJ、RSI（主图/副图切换）
 - **报单模块**：限价/市价/止损单、套利指令、点价报单、一键反向/锁仓
 - **查询模块**：报单流水、成交、持仓、资金、合约信息
 - **系统连接**：SimNow 登录、连接状态监控、断线重连
@@ -40,13 +41,20 @@ SimNow 柜台 (7×24 测试环境)
 - **WebSocket 实时推送**：行情数据通过 `/ws/market` 端点推送，延迟 ≤100ms
 - **Zustand 状态管理**：轻量级 store + Map 结构，O(1) 快照更新
 
-### 2. CTP 协议封装
+### 2. K 线图与技术指标
+
+- **K 线聚合**：后端实时聚合 tick 数据为 OHLCV K 线，支持 1m/5m/15m/30m/1h/日线
+- **技术指标**：主图（MA5/10/20、BOLL 布林带）、副图（成交量、MACD、KDJ、RSI）
+- **指标切换**：下拉菜单切换主图/副图指标，不堆砌按钮，保持界面简洁
+- **动态计算**：前端实时计算指标值，支持空数据和数据不足时的优雅降级（显示null）
+
+### 3. CTP 协议封装
 
 - **ctp-python SWIG 绑定**：封装 CTP 行情/交易 API，处理回调 SPI 设计
 - **字段映射层**：CTP PascalCase → 前端 camelCase 自动转换（50+ 字段）
 - **回调穿透**：组合模式 SPI 基类，支持事件日志 + 自定义 handler 注册
 
-### 3. 交易指令合规性
+### 4. 交易指令合规性
 
 对齐上期所交易规则，前后端双重校验：
 
@@ -60,7 +68,7 @@ SimNow 柜台 (7×24 测试环境)
 - **保护价校验**：市价指令必须填写保护价，在涨跌停板范围内，priceTick 整数倍对齐
 - **后端权威校验**：Pydantic field_validator 兜底，防止前端绕过
 
-### 4. 双窗口协作开发
+### 5. 双窗口协作开发
 
 项目采用角色 A（后端）/ 角色 B（前端）双窗口协作模式：
 
@@ -151,6 +159,7 @@ keti/
 ├── frontend/                 # 前端代码
 │   ├── src/
 │   │   ├── modules/          # 业务模块（market/order/query/options）
+│   │   │   └── market/       # 行情模块（KLineChart/indicators/MarketTable）
 │   │   ├── components/       # 通用组件（ContractSearch/Toast/...）
 │   │   ├── services/         # API 层 + 类型定义
 │   │   ├── stores/           # Zustand 状态管理
@@ -158,7 +167,7 @@ keti/
 │   └── package.json
 ├── server/                   # 后端代码
 │   ├── api/                  # REST API 路由（connection/market/order/query）
-│   ├── services/             # 业务服务（order_manager/stop_order/market_service）
+│   ├── services/             # 业务服务（order_manager/stop_order/market_service/kline_service）
 │   ├── ctp_wrapper/          # CTP API 封装层（md_user_api/trader_api/callback/types）
 │   ├── config.py             # 配置管理（环境变量读取）
 │   ├── main.py               # CTP 验证脚本
@@ -256,9 +265,38 @@ git clone <repo-url> && cd keti
 - [交易指令合规审查](docs/reviews/compliance-review.md) — 11 个合规性问题清单
 - [测试说明报告](docs/reviews/testing-guide.md) — 零基础使用测试说明
 
+## 技术指标说明
+
+项目实现了常用的技术分析指标，用于 K 线图分析：
+
+### 主图指标
+
+| 指标 | 说明 | 参数 |
+|------|------|------|
+| MA | 移动平均线 | MA5（黄）、MA10（蓝）、MA20（粉） |
+| BOLL | 布林带 | 20日均线 ± 2倍标准差（上轨/中轨/下轨） |
+
+### 副图指标
+
+| 指标 | 说明 | 参数 |
+|------|------|------|
+| 成交量 | 柱状图 + VOL-MA5 均线 | 红涨绿跌 |
+| MACD | 指数平滑异同移动平均线 | DIF/DEA 线 + MACD 柱 |
+| KDJ | 随机指标 | 9日RSV，K/D/J 三线 |
+| RSI | 相对强弱指数 | 14日 Wilder 指数平滑 |
+
+### 实现细节
+
+- **计算位置**：前端 `frontend/src/modules/market/indicators.ts`
+- **数据要求**：MA5 需 5 个点，KDJ 需 9 个点，RSI 需 15 个点，BOLL/MACD 需 20/26 个点
+- **数据来源**：后端 `kline_service.py` 实时聚合 CTP tick 数据，无历史数据接口
+- **测试覆盖**：`indicators.test.ts` 包含 12 个单元测试，覆盖空数据/不足/正常场景
+
 ## 注意事项
 
 - 用户偏好使用 localStorage 持久化；业务数据不落库，仅内存展示
 - 止损单由后端监控服务实现，复用行情订阅数据流，持久化到本地文件
 - GFD 报单依赖 SimNow 柜台收盘自动撤销
 - 项目依赖 `docs/specs/ctp-api-structure.txt` 做前后端类型对齐
+- K 线数据由后端 `kline_service` 实时聚合 tick 数据生成，无历史数据接口
+- CTP 的 `highestPrice`/`lowestPrice` 是当日最高最低价，非周期内值，前端需动态计算
