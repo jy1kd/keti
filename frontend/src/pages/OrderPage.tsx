@@ -17,9 +17,7 @@ interface OrderPageProps {
 }
 
 export function OrderPage({ instrumentID }: OrderPageProps) {
-  const orderForm = useOrderStore((s) => s.orderForm);
   const setOrderForm = useOrderStore((s) => s.setOrderForm);
-  const resetOrderForm = useOrderStore((s) => s.resetOrderForm);
   const snapshots = useMarketStore((s) => s.snapshots);
   const contracts = useContractsStore((s) => s.contracts);
 
