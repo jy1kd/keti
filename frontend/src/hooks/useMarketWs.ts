@@ -13,7 +13,6 @@ export const PERIOD_MS: Record<string, number> = {
   '15m': 900_000,
   '30m': 1_800_000,
   '1h': 3_600_000,
-  '1d': 86_400_000,
 }
 
 /**
@@ -30,8 +29,18 @@ function snapshotToKline(snap: MarketSnapshot, periodMs: number): KLineData {
 
   // 用 actionDay 构造完整 UTC 时间戳（秒）
   let dayStartSec = 0
-  const actionDay = snap.actionDay || snap.tradingDay
+  let actionDay = snap.actionDay || snap.tradingDay
   if (actionDay && actionDay.length === 8) {
+    // 夜盘陷阱：actionDay 缺失时回退到 tradingDay，但夜盘（20:00 之后）的
+    // tradingDay 是下一个交易日，直接用它会把时间戳推后 +24h。
+    // 此时真实日历日 = tradingDay 前一天。
+    if (!snap.actionDay && snap.tradingDay && h >= 20) {
+      const y = parseInt(actionDay.slice(0, 4), 10)
+      const mo = parseInt(actionDay.slice(4, 6), 10) - 1
+      const d = parseInt(actionDay.slice(6, 8), 10)
+      const prev = new Date(Date.UTC(y, mo, d) - 86_400_000)
+      actionDay = `${prev.getUTCFullYear()}${String(prev.getUTCMonth() + 1).padStart(2, '0')}${String(prev.getUTCDate()).padStart(2, '0')}`
+    }
     // actionDay 格式 "YYYYMMDD"，CTP 时间是 UTC+8
     const year = parseInt(actionDay.slice(0, 4), 10)
     const month = parseInt(actionDay.slice(4, 6), 10) - 1

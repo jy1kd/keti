@@ -56,9 +56,13 @@ def _parse_timestamp(action_day: str, update_time: str) -> int:
         second = int(parts[2])
 
         if not action_day or len(action_day) < 8:
-            # ActionDay 为空时，使用当天日期
+            # ActionDay 为空时，使用当天日期。
+            # 跨零点陷阱：若组合出的时间在未来（如零点刚过收到 23:59 的tick），
+            # 说明该 tick 属于前一自然日，回退一天。
             now = datetime.now(_CHINA_TZ)
             dt = now.replace(hour=hour, minute=minute, second=second, microsecond=0)
+            if dt > now + timedelta(minutes=5):
+                dt -= timedelta(days=1)
             return int(dt.timestamp())
 
         year = int(action_day[0:4])
@@ -111,7 +115,11 @@ class KLineService:
             return
 
         # Volume delta (CTP volume is cumulative)
-        vol_delta = volume - self._last_volume.get(instrument, 0)
+        # 首次见到该合约时无历史累计，增量记 0（否则首根 bar 会吞入全天累计量）
+        if instrument in self._last_volume:
+            vol_delta = volume - self._last_volume[instrument]
+        else:
+            vol_delta = 0
         self._last_volume[instrument] = volume
         if vol_delta < 0:
             vol_delta = 0  # Cross-day reset

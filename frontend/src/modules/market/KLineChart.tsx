@@ -21,7 +21,6 @@ const PERIODS = [
   { label: '15m', value: '15m' },
   { label: '30m', value: '30m' },
   { label: '1h', value: '1h' },
-  { label: '日线', value: '1d' },
 ]
 
 const MA_PERIODS = [
@@ -80,7 +79,6 @@ const DATE_FORMAT_MAP: Record<string, Intl.DateTimeFormatOptions> = {
   '15m': { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' },
   '30m': { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' },
   '1h': { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' },
-  '1d': { month: '2-digit', day: '2-digit' },
 }
 
 function buildOption(
@@ -210,6 +208,8 @@ function buildOption(
 
   return {
     animation: false,
+    // 主图/副图十字线联动
+    axisPointer: { link: [{ xAxisIndex: 'all' }] },
     grid: [
       { left: 60, right: 20, top: 10, height: '50%' },
       { left: 60, right: 20, top: '65%', height: '25%' },
