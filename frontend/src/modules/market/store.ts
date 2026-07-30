@@ -11,7 +11,7 @@ interface MarketStore {
   subscribeInstruments: (instruments: string[]) => Promise<void>
   klineData: Map<string, KLineData[]>
   setKlineData: (instrument: string, data: KLineData[]) => void
-  appendKline: (instrument: string, candle: KLineData) => void
+  appendKline: (instrument: string, candle: KLineData, deltaVolume?: number) => void
   currentPeriod: string
   setPeriod: (period: string) => void
 }
@@ -52,7 +52,7 @@ export const useMarketStore = create<MarketStore>((set) => ({
       next.set(instrument, sorted)
       return { klineData: next }
     }),
-  appendKline: (instrument, candle) =>
+  appendKline: (instrument, candle, deltaVolume = 0) =>
     set((state) => {
       const next = new Map(state.klineData)
       const existing = next.get(instrument)
@@ -65,9 +65,16 @@ export const useMarketStore = create<MarketStore>((set) => ({
       let updated: typeof existing
 
       if (candle.timestamp === last.timestamp) {
-        // 同一周期 → 更新最后一根蜡烛
+        // 同一周期 → 更新最后一根蜡烛，成交量累加增量
         updated = [...existing]
-        updated[updated.length - 1] = candle
+        updated[updated.length - 1] = {
+          ...last,
+          high: Math.max(last.high, candle.close),
+          low: Math.min(last.low, candle.close),
+          close: candle.close,
+          volume: last.volume + deltaVolume,
+          openInterest: candle.openInterest,
+        }
       } else if (candle.timestamp > last.timestamp) {
         // 新周期 → 追加，保留最近200根
         updated = [...existing, candle].slice(-200)

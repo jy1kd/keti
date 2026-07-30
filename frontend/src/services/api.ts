@@ -92,11 +92,12 @@ export async function getKlineData(instrument: string, period: string, count?: n
   const { data } = await api.get<KlineResponse>('/api/market/kline', {
     params: { instrument, period, count },
   })
-  // 后端返回 time 字符串，前端需要 timestamp 毫秒数
+  // 后端返回秒级时间戳，前端需要毫秒级时间戳
   if (data.bars) {
-    data.bars = data.bars.map((bar: KLineData & { time?: string }) => ({
+    data.bars = data.bars.map((bar) => ({
       ...bar,
-      timestamp: bar.timestamp ?? (bar.time ? new Date(bar.time).getTime() : 0),
+      // 如果时间戳小于1e12，说明是秒级，需要乘以1000
+      timestamp: bar.timestamp < 1e12 ? bar.timestamp * 1000 : bar.timestamp,
     }))
   }
   return data
