@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -19,6 +20,18 @@ export default defineConfig({
       '/ws': {
         target: 'ws://localhost:8000',
         ws: true,
+      },
+    },
+  },
+  // Electron 配置
+  base: './',
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    // Generate relative paths for Electron
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
       },
     },
   },
