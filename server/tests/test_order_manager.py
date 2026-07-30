@@ -599,7 +599,8 @@ class TestOrderManagerOnRtnOrder:
         om = OrderManager(trader)
 
         res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
-                         offset_flag=OffsetFlag.OPEN, wait_response=False)
+                         offset_flag=OffsetFlag.OPEN, volume=5,
+                         wait_response=False)
         ref = res["orderRef"]
 
         order_data = {
@@ -607,12 +608,120 @@ class TestOrderManagerOnRtnOrder:
             "orderSysID": "SYS999",
             "orderStatus": "2",
             "instrumentID": "IF2608",
+            "volumeTotalOriginal": 5,
+            "volumeTraded": 0,
+            "volumeTotal": 5,
             "statusMsg": "",
         }
         om.on_rtn_order(order_data)
         updated = om.get_order(ref)
         assert updated["orderStatus"] == "2"
         assert updated["orderSysID"] == "SYS999"
+        _unmock_ctp()
+
+    def test_updates_partial_fill(self):
+        """OnRtnOrder with OrderStatus='1' reflects a partial fill."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        om = OrderManager(trader)
+
+        res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN, volume=5,
+                         wait_response=False)
+        ref = res["orderRef"]
+
+        om.on_rtn_order({
+            "orderRef": ref,
+            "orderSysID": "SYS999",
+            "orderStatus": "1",
+            "volumeTotalOriginal": 5,
+            "volumeTraded": 3,
+            "volumeTotal": 2,
+        })
+        updated = om.get_order(ref)
+        assert updated["orderStatus"] == "1"
+        assert updated["volumeTraded"] == 3
+        assert updated["volumeTotal"] == 2
+        _unmock_ctp()
+
+    def test_updates_full_fill_after_partial_fill(self):
+        """Multiple OnRtnOrder callbacks transition partial -> all traded."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        om = OrderManager(trader)
+
+        res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN, volume=5,
+                         wait_response=False)
+        ref = res["orderRef"]
+
+        om.on_rtn_order({
+            "orderRef": ref,
+            "orderSysID": "SYS999",
+            "orderStatus": "1",
+            "volumeTotalOriginal": 5,
+            "volumeTraded": 3,
+            "volumeTotal": 2,
+        })
+        om.on_rtn_order({
+            "orderRef": ref,
+            "orderSysID": "SYS999",
+            "orderStatus": "0",
+            "volumeTotalOriginal": 5,
+            "volumeTraded": 5,
+            "volumeTotal": 0,
+        })
+        updated = om.get_order(ref)
+        assert updated["orderStatus"] == "0"
+        assert updated["volumeTraded"] == 5
+        assert updated["volumeTotal"] == 0
+        _unmock_ctp()
+
+    def test_partial_fill_is_active_for_cancel(self):
+        """OrderStatus='1' is included in active orders and can be cancelled."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        trader._api.ReqOrderAction.return_value = 0
+        om = OrderManager(trader)
+
+        res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN, volume=5,
+                         wait_response=False)
+        ref = res["orderRef"]
+        om.on_rtn_order({
+            "orderRef": ref,
+            "orderSysID": "SYS999",
+            "orderStatus": "1",
+            "volumeTotalOriginal": 5,
+            "volumeTraded": 3,
+            "volumeTotal": 2,
+        })
+
+        # cancel_all should attempt this order
+        assert ref in [r for r, o in om.active_orders.items()
+                       if o["orderStatus"] == "1"]
+
+        # cancel() should also accept it (wire instant acceptance)
+        def _accept_cancel(action_field, request_id):
+            order_ref = getattr(action_field, "OrderRef", "")
+            om.on_rsp_order_action(order_ref, 0, "")
+            return 0
+        trader._api.ReqOrderAction.side_effect = _accept_cancel
+
+        result = om.cancel(ref, wait_response=True, wait_timeout=0.5)
+        assert result["success"] is True
         _unmock_ctp()
 
     def test_ignores_unknown_order_ref(self):
@@ -837,7 +946,8 @@ class TestOrderManagerOnRtnTrade:
         om = OrderManager(trader)
 
         res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
-                         offset_flag=OffsetFlag.OPEN, wait_response=False)
+                         offset_flag=OffsetFlag.OPEN, volume=5,
+                         wait_response=False)
         ref = res["orderRef"]
         om.on_rtn_order({
             "orderRef": ref,
@@ -856,6 +966,73 @@ class TestOrderManagerOnRtnTrade:
         trades = om.get_trades(ref)
         assert len(trades) == 1
         assert trades[0]["price"] == 3850.0
+        # Cumulative volume fields are also updated defensively
+        order = om.get_order(ref)
+        assert order["volumeTraded"] == 1
+        assert order["volumeTotal"] == 4
+        _unmock_ctp()
+
+    def test_trade_updates_cumulative_volume(self):
+        """Multiple OnRtnTrade callbacks increment volumeTraded decrement
+        volumeTotal until fully filled."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        om = OrderManager(trader)
+
+        res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN, volume=5,
+                         wait_response=False)
+        ref = res["orderRef"]
+        om.on_rtn_order({
+            "orderRef": ref,
+            "orderSysID": "SYS999",
+            "orderStatus": "2",
+            "volumeTotalOriginal": 5,
+        })
+
+        om.on_rtn_trade({"tradeID": "T001", "orderRef": ref, "volume": 3})
+        order = om.get_order(ref)
+        assert order["volumeTraded"] == 3
+        assert order["volumeTotal"] == 2
+
+        om.on_rtn_trade({"tradeID": "T002", "orderRef": ref, "volume": 2})
+        order = om.get_order(ref)
+        assert order["volumeTraded"] == 5
+        assert order["volumeTotal"] == 0
+        _unmock_ctp()
+
+    def test_trade_volume_capped_at_original(self):
+        """Trade volume never pushes volumeTraded above volumeTotalOriginal."""
+        _mock_ctp_module()
+        from services.order_manager import OrderManager
+
+        trader = TraderApi(Config())
+        trader._api = Mock()
+        trader._api.ReqOrderInsert.return_value = 0
+        om = OrderManager(trader)
+
+        res = om.insert(instrument_id="IF2608", direction=Direction.BUY,
+                         offset_flag=OffsetFlag.OPEN, volume=2,
+                         wait_response=False)
+        ref = res["orderRef"]
+        om.on_rtn_order({
+            "orderRef": ref,
+            "orderSysID": "SYS999",
+            "orderStatus": "1",
+            "volumeTotalOriginal": 2,
+            "volumeTraded": 2,
+            "volumeTotal": 0,
+        })
+
+        # Stray/duplicate trade should not exceed original volume
+        om.on_rtn_trade({"tradeID": "T003", "orderRef": ref, "volume": 1})
+        order = om.get_order(ref)
+        assert order["volumeTraded"] == 2
+        assert order["volumeTotal"] == 0
         _unmock_ctp()
 
     def test_get_trades_default_empty(self):
