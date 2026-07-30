@@ -18,31 +18,38 @@ export const PERIOD_MS: Record<string, number> = {
 
 /**
  * 将行情快照转换为 K 线数据点
- * 使用 actionDay + updateTime 构造完整 epoch 时间戳，与历史数据兼容。
+ * 使用 actionDay + updateTime 构造完整 UTC epoch 时间戳（秒），与后端一致。
  * @param periodMs 周期毫秒数，用于将时间戳向下取整到周期边界
  */
 function snapshotToKline(snap: MarketSnapshot, periodMs: number): KLineData {
   const [h = 0, m = 0, s = 0] = (snap.updateTime ?? '00:00:00').split(':').map(Number)
-  const timeMs = ((h * 3600 + m * 60 + s) * 1000) + (snap.updateMillisec ?? 0)
+  const timeSec = h * 3600 + m * 60 + s
 
-  // 用 actionDay 构造完整日期；若为空则 fallback 到今天
-  let dayMs = 0
+  // 用 actionDay 构造完整 UTC 时间戳（秒）
+  let dayStartSec = 0
   const actionDay = snap.actionDay || snap.tradingDay
   if (actionDay && actionDay.length === 8) {
-    // actionDay 格式 "YYYYMMDD"
+    // actionDay 格式 "YYYYMMDD"，CTP 时间是 UTC+8
     const year = parseInt(actionDay.slice(0, 4), 10)
     const month = parseInt(actionDay.slice(4, 6), 10) - 1
     const day = parseInt(actionDay.slice(6, 8), 10)
-    dayMs = new Date(year, month, day).getTime()
+    // Date.UTC 返回毫秒，除以1000得到秒
+    dayStartSec = Date.UTC(year, month, day) / 1000
+    // CTP 时间是 UTC+8，需要减去8小时得到 UTC 时间戳
+    dayStartSec -= 8 * 3600
   } else {
-    // fallback: 今天零点
+    // fallback: 今天零点（UTC+8）
     const now = new Date()
-    dayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const [y, mo, d] = todayStr.split('-').map(Number)
+    dayStartSec = Date.UTC(y, mo - 1, d) / 1000 - 8 * 3600
   }
 
-  // 完整 epoch 时间戳，向下取整到周期边界
-  const fullTimestamp = dayMs + timeMs
-  const timestamp = Math.floor(fullTimestamp / periodMs) * periodMs
+  // 完整 UTC 时间戳（秒），向下取整到周期边界
+  const fullTimestampSec = dayStartSec + timeSec
+  const timestampSec = Math.floor(fullTimestampSec / (periodMs / 1000)) * (periodMs / 1000)
+  // 转为毫秒返回
+  const timestamp = timestampSec * 1000
 
   return {
     timestamp,
