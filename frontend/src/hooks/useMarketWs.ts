@@ -20,6 +20,9 @@ export const PERIOD_MS: Record<string, number> = {
  * 将行情快照转换为 K 线数据点
  * 使用 actionDay + updateTime 构造完整 UTC epoch 时间戳（秒），与后端一致。
  * @param periodMs 周期毫秒数，用于将时间戳向下取整到周期边界
+ *
+ * 注意：CTP 的 highestPrice/lowestPrice 是当天的最高/最低价，不是当前周期的。
+ * 所以这里只返回 lastPrice，high/low 由 appendKline 在同一周期内动态计算。
  */
 function snapshotToKline(snap: MarketSnapshot, periodMs: number): KLineData {
   const [h = 0, m = 0, s = 0] = (snap.updateTime ?? '00:00:00').split(':').map(Number)
@@ -51,12 +54,14 @@ function snapshotToKline(snap: MarketSnapshot, periodMs: number): KLineData {
   // 转为毫秒返回
   const timestamp = timestampSec * 1000
 
+  // 只返回 lastPrice，high/low 由 appendKline 在同一周期内动态计算
+  const price = snap.lastPrice
   return {
     timestamp,
-    open: snap.openPrice,
-    high: snap.highestPrice,
-    low: snap.lowestPrice,
-    close: snap.lastPrice,
+    open: price,
+    high: price,
+    low: price,
+    close: price,
     volume: snap.volume,
     openInterest: snap.openInterest,
   }

@@ -66,7 +66,7 @@ export const useMarketStore = create<MarketStore>((set) => ({
 
       if (candle.timestamp === last.timestamp) {
         // 同一周期 → 更新最后一根蜡烛
-        // 保留当前K线的 open、high、low，只更新 close 和 volume
+        // 动态计算周期内的 high/low
         updated = [...existing]
         updated[updated.length - 1] = {
           ...last,
