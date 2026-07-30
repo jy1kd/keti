@@ -189,11 +189,11 @@ frontend/
 |------|------|
 | **PR编号** | PR-E2 |
 | **PR标题** | IPC 通信基础设施 |
-| **PR分支名** | `feature/electron-ipc-setup` |
+| **PR分支名** | `feature/electron-refactor` |
 | **负责角色** | 角色B |
 | **依赖PR** | PR-E1 |
 | **工作量** | 2小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成（2026-07-28，4 commits） |
 
 **提交文件**：
 ```

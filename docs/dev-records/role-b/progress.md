@@ -574,3 +574,42 @@
 
 **交接说明**：
 - PR-E1 已完成，可进入 PR-E2（IPC 通信基础设施）
+
+---
+
+### PR-E2: IPC 通信基础设施
+
+**状态**：✅ 已完成（含审查修复+人工验证）
+
+**PR信息**：
+- PR分支名：`feature/electron-refactor`
+- 依赖PR：PR-E1 ✅
+- 工作量：2小时
+
+**完成内容**：
+1. electron/ipc/index.ts — IPC 通道定义和类型接口
+2. electron/ipc/window.ts — 窗口控制 IPC 处理器
+3. electron/ipc/app.ts — 应用信息 IPC 处理器
+4. electron/ipc/__tests__/index.test.ts — IPC 索引单元测试
+5. src/services/electron.ts — 渲染进程 Electron API 封装
+6. src/services/__tests__/electron.test.ts — electron.ts 单元测试
+7. electron/main.ts — 使用模块化 IPC 处理器
+
+**审查反馈修复**：
+- I1: 添加 electron.ts 单元测试（16 个测试覆盖所有函数）
+- I2: 添加 preload.ts 和 ipc/index.ts 通道同步注释
+- isElectron 改为函数（动态检查，支持测试）
+
+**验证结果**：
+- ✅ 27 个测试全部通过
+- ✅ TypeScript 编译无错误
+- ✅ 所有验收标准通过
+
+**提交记录**：
+- `03f8fa0` feat(electron): PR-E2 IPC 通信基础设施
+- `647b804` fix(electron): 处理 PR-E2 审查反馈
+- `a8f26a0` docs(electron): 添加 PR-E2 审查反馈处理记录
+- `202137c` docs(electron): 添加 PR-E2 人工验证记录
+
+**交接说明**：
+- PR-E2 已完成，可进入 PR-E3（窗口管理器）
