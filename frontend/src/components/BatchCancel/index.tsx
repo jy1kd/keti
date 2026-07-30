@@ -18,20 +18,24 @@ interface BatchCancelProps {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  no_traded: '未成交',
-  partial: '部分成交',
-  submitted: '已提交',
+  '0': '全部成交',
+  '1': '部分成交',
+  '2': '未成交(排队)',
+  '3': '未成交',
+  '5': '已撤单',
 }
 
 const DIRECTION_LABEL: Record<string, string> = {
-  buy: '买',
-  sell: '卖',
+  '0': '买',
+  '1': '卖',
 }
 
 const OFFSET_LABEL: Record<string, string> = {
-  open: '开',
-  close: '平',
-  close_today: '平今',
+  '0': '开仓',
+  '1': '平仓',
+  '2': '强平',
+  '3': '平今',
+  '4': '平昨',
 }
 
 export function BatchCancel({ orders, onCancelOrder, onClose }: BatchCancelProps) {

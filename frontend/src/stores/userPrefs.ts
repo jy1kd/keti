@@ -92,10 +92,10 @@ export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
     })),
 
   saveToLocalStorage: () => {
-    const { selectedContracts, manualPresetIds, hotKeys } = get()
+    const { selectedContracts, manualPresetIds, hotKeys, quickTradeConfig } = get()
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ selectedContracts, manualPresetIds, hotKeys })
+      JSON.stringify({ selectedContracts, manualPresetIds, hotKeys, quickTradeConfig })
     )
   },
 
