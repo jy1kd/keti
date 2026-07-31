@@ -53,7 +53,7 @@ export async function initializeApp(): Promise<void> {
 
   // Create shortcut manager and register defaults
   shortcutManager = new ShortcutManager();
-  shortcutManager.registerDefaults({
+  shortcutManager.loadAndRegister({
     'open-order': () => {
       windowManager.openOrderWindow();
     },
@@ -88,6 +88,7 @@ export async function initializeApp(): Promise<void> {
 
   // Cleanup on quit
   app.on('will-quit', () => {
+    shortcutManager.save();
     shortcutManager.unregisterAll();
   });
 }
