@@ -10,7 +10,9 @@ import { SettingsPanel } from '@/components/SettingsPanel'
 import { ToastContainer } from '@/components/Toast'
 import { useSystemWs } from '@/hooks/useSystemWs'
 import { useConnectionPoll } from '@/hooks/useConnectionPoll'
+import { useQueryStore } from '@/modules/query/store'
 import { API_BASE } from '@/services/api'
+import { isElectron } from '@/services/electron'
 import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
 import '@/assets/styles/global.css'
 
@@ -20,12 +22,37 @@ const savedMain = loadPanelSizes('main-layout')
 function App() {
   const [perfVisible, setPerfVisible] = useState(false)
   const [settingsVisible, setSettingsVisible] = useState(false)
+  const setActiveTab = useQueryStore((s) => s.setActiveTab)
 
   // System WebSocket — 监听 MD/TD 连接状态即时推送
   useSystemWs(API_BASE.replace('http', 'ws'))
 
   // 轮询 /api/connection/status — MD/TD 状态的权威来源
   useConnectionPoll()
+
+  // Electron IPC — 监听托盘菜单导航消息
+  useEffect(() => {
+    if (!isElectron()) return
+
+    const cleanup = window.electronAPI?.onNavigateTab?.((tab: string) => {
+      switch (tab) {
+        case 'market':
+          // 行情面板是主面板，不需要切换 Tab
+          break
+        case 'order':
+          // 报单面板是独立面板，不需要切换 Tab
+          break
+        case 'query':
+          setActiveTab('orders')
+          break
+        case 'settings':
+          setSettingsVisible(true)
+          break
+      }
+    })
+
+    return () => cleanup?.()
+  }, [setActiveTab])
 
   // Ctrl+Shift+M 切换性能监控
   useEffect(() => {

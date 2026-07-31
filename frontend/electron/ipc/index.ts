@@ -28,6 +28,9 @@ export const IPC_CHANNELS = {
   BACKEND_RESTART: 'backend:restart',
   BACKEND_STATUS: 'backend:status',
 
+  // Navigation (main → renderer)
+  NAVIGATE_TAB: 'navigate:tab',
+
   // Events (main → renderer)
   EVENT_ORDER_UPDATE: 'order:update',
   EVENT_NOTIFICATION: 'notification',

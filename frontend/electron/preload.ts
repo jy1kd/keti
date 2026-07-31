@@ -24,6 +24,9 @@ export interface ElectronAPI {
   restartBackend: () => Promise<void>;
   getBackendStatus: () => Promise<{ running: boolean; pid?: number }>;
 
+  // Navigation (main → renderer)
+  onNavigateTab: (callback: (tab: string) => void) => () => void;
+
   // Event listeners (return cleanup function to prevent memory leaks)
   onOrderUpdate: (callback: (data: any) => void) => () => void;
   onNotification: (callback: (data: any) => void) => () => void;
@@ -52,6 +55,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Backend management
   restartBackend: () => ipcRenderer.invoke('backend:restart'),
   getBackendStatus: () => ipcRenderer.invoke('backend:status'),
+
+  // Navigation (main → renderer)
+  onNavigateTab: (callback: (tab: string) => void) => {
+    const handler = (_: any, tab: string) => callback(tab);
+    ipcRenderer.on('navigate:tab', handler);
+    return () => ipcRenderer.removeListener('navigate:tab', handler);
+  },
 
   // Event listeners (return cleanup function to prevent memory leaks)
   onOrderUpdate: (callback: (data: any) => void) => {

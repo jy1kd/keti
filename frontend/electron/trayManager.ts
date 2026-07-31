@@ -8,6 +8,7 @@
 import { Tray, Menu, nativeImage, BrowserWindow } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import { IPC_CHANNELS } from './ipc/index';
 
 // Tray notification types
 export interface TrayNotification {
@@ -63,7 +64,7 @@ export class TrayManager {
           if (this.mainWindow) {
             this.mainWindow.show();
             this.mainWindow.focus();
-            // TODO: Switch to market tab
+            this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'market');
           }
         },
       },
@@ -73,7 +74,7 @@ export class TrayManager {
           if (this.mainWindow) {
             this.mainWindow.show();
             this.mainWindow.focus();
-            // TODO: Switch to order tab
+            this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'order');
           }
         },
       },
@@ -83,7 +84,7 @@ export class TrayManager {
           if (this.mainWindow) {
             this.mainWindow.show();
             this.mainWindow.focus();
-            // TODO: Switch to query tab
+            this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'query');
           }
         },
       },
@@ -94,7 +95,7 @@ export class TrayManager {
           if (this.mainWindow) {
             this.mainWindow.show();
             this.mainWindow.focus();
-            // TODO: Open settings panel
+            this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'settings');
           }
         },
       },
