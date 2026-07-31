@@ -3,6 +3,7 @@ import { WindowManager } from './windowManager';
 import { TrayManager } from './trayManager';
 import { ShortcutManager } from './shortcuts';
 import { NotificationManager } from './notificationManager';
+import { BackendManager } from './backendManager';
 import { registerWindowControlHandlers, registerWindowManagementHandlers } from './ipc/window';
 import { registerAppInfoHandlers, registerBackendManagementHandlers } from './ipc/app';
 
@@ -14,6 +15,7 @@ let windowManager: WindowManager;
 let trayManager: TrayManager;
 let shortcutManager: ShortcutManager;
 let notificationManager: NotificationManager;
+let backendManager: BackendManager;
 
 /**
  * Get the window manager instance
@@ -41,6 +43,13 @@ export function getShortcutManager(): ShortcutManager {
  */
 export function getNotificationManager(): NotificationManager {
   return notificationManager;
+}
+
+/**
+ * Get the backend manager instance
+ */
+export function getBackendManager(): BackendManager {
+  return backendManager;
 }
 
 /**
@@ -78,6 +87,10 @@ export async function initializeApp(): Promise<void> {
   // Create notification manager
   notificationManager = new NotificationManager();
 
+  // Create backend manager and start backend
+  backendManager = new BackendManager();
+  await backendManager.start();
+
   // Handle app activation (macOS)
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -96,13 +109,14 @@ export async function initializeApp(): Promise<void> {
   registerWindowControlHandlers(mainWindow);
   registerWindowManagementHandlers(windowManager);
   registerAppInfoHandlers();
-  registerBackendManagementHandlers();
+  registerBackendManagementHandlers(backendManager);
 
   // Cleanup on quit
   app.on('will-quit', () => {
     shortcutManager.save();
     shortcutManager.unregisterAll();
     notificationManager.closeAll();
+    backendManager.stop();
   });
 }
 

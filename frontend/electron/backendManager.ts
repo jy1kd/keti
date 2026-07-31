@@ -6,9 +6,7 @@
  */
 
 import { spawn, ChildProcess } from 'child_process';
-import { app } from 'electron';
 import path from 'path';
-import fs from 'fs';
 
 // Backend status
 export interface BackendStatus {

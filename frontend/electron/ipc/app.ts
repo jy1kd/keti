@@ -8,6 +8,7 @@
 
 import { app, ipcMain } from 'electron';
 import { IPC_CHANNELS, BackendStatus } from './index';
+import { BackendManager } from '../backendManager';
 
 /**
  * Register app info IPC handlers
@@ -31,22 +32,17 @@ export function registerAppInfoHandlers(): void {
 
 /**
  * Register backend management IPC handlers
- *
- * These are placeholder implementations that will be extended in PR-E10
- * with the full BackendManager class.
  */
-export function registerBackendManagementHandlers(): void {
-  // Restart backend (placeholder for PR-E10)
+export function registerBackendManagementHandlers(backendManager: BackendManager): void {
+  // Restart backend
   ipcMain.handle(IPC_CHANNELS.BACKEND_RESTART, async () => {
-    // TODO: Implement in PR-E10 (Python Backend Packaging)
-    console.log('[IPC] backend:restart');
-    // In PR-E10, this will restart the Python backend process
+    const success = await backendManager.restart();
+    return { success };
   });
 
-  // Get backend status (placeholder for PR-E10)
+  // Get backend status
   ipcMain.handle(IPC_CHANNELS.BACKEND_STATUS, (): BackendStatus => {
-    // TODO: Implement in PR-E10 (Python Backend Packaging)
-    return { running: false };
+    return backendManager.getStatus();
   });
 }
 
