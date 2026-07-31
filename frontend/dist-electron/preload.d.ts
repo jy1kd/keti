@@ -12,6 +12,9 @@ export interface ElectronAPI {
         running: boolean;
         pid?: number;
     }>;
+    onNavigateTab: (callback: (tab: string) => void) => () => void;
+    onGetSelectedInstrument: (callback: () => string) => () => void;
+    sendSelectedInstrument: (instrumentID: string) => void;
     onOrderUpdate: (callback: (data: any) => void) => () => void;
     onNotification: (callback: (data: any) => void) => () => void;
     removeAllListeners: (channel: string) => void;

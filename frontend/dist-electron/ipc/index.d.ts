@@ -18,6 +18,9 @@ export declare const IPC_CHANNELS: {
     readonly APP_NAME: "app:name";
     readonly BACKEND_RESTART: "backend:restart";
     readonly BACKEND_STATUS: "backend:status";
+    readonly NAVIGATE_TAB: "navigate:tab";
+    readonly GET_SELECTED_INSTRUMENT: "data:get-selected-instrument";
+    readonly SELECTED_INSTRUMENT_RESPONSE: "data:selected-instrument-response";
     readonly EVENT_ORDER_UPDATE: "order:update";
     readonly EVENT_NOTIFICATION: "notification";
 };

@@ -3,6 +3,7 @@ import { TrayManager } from './trayManager';
 import { ShortcutManager } from './shortcuts';
 import { NotificationManager } from './notificationManager';
 import { BackendManager } from './backendManager';
+import { AutoUpdaterManager } from './autoUpdater';
 export declare const isDev: boolean;
 /**
  * Get the window manager instance
@@ -24,6 +25,10 @@ export declare function getNotificationManager(): NotificationManager;
  * Get the backend manager instance
  */
 export declare function getBackendManager(): BackendManager;
+/**
+ * Get the auto updater manager instance
+ */
+export declare function getAutoUpdaterManager(): AutoUpdaterManager;
 /**
  * Initialize the application
  */

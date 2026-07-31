@@ -58,7 +58,7 @@ export class AutoUpdaterManager {
       this.status = 'available';
       this.updateInfo = {
         version: info.version,
-        releaseDate: info.releaseDate?.toISOString() || new Date().toISOString(),
+        releaseDate: info.releaseDate?.toString() || new Date().toISOString(),
         releaseNotes: info.releaseNotes as string,
       };
       this.sendStatusToRenderer('update-available', this.updateInfo);
@@ -89,7 +89,7 @@ export class AutoUpdaterManager {
       this.status = 'downloaded';
       this.updateInfo = {
         version: info.version,
-        releaseDate: info.releaseDate?.toISOString() || new Date().toISOString(),
+        releaseDate: info.releaseDate?.toString() || new Date().toISOString(),
         releaseNotes: info.releaseNotes as string,
       };
       this.sendStatusToRenderer('update-downloaded', this.updateInfo);
