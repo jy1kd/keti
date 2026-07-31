@@ -478,11 +478,11 @@ frontend/
 |------|------|
 | **PR编号** | PR-E8 |
 | **PR标题** | 原生通知实现 |
-| **PR分支名** | `feature/electron-notifications` |
+| **PR分支名** | `feature/electron-refactor` |
 | **负责角色** | 角色B |
 | **依赖PR** | PR-E6 |
 | **工作量** | 2小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成（2026-07-31，4 commits） |
 
 **提交文件**：
 ```
