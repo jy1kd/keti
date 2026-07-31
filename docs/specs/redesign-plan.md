@@ -28,6 +28,7 @@
 | `query` | 📋 | ❌ | ✅ | 查询面板（报单/成交/持仓/资金） |
 | `kline` | 📈 | ❌ | ✅ | K 线图 |
 | `options` | 📉 | ❌ | ✅ | 期权 T 型报价 |
+| `ipc-monitor` | 🔌 | ❌ | ✅ | IPC 消息监控（调试用） |
 
 **标签页限制**：最多 15 个标签（含固定标签）
 
@@ -474,7 +475,175 @@ const results = contracts.filter(c =>
 
 ---
 
-## 6. 实施计划
+## 6. IPC 监控功能
+
+### 6.1 功能概述
+
+IPC 监控是一个调试工具，用于实时查看 Electron 主进程与渲染进程之间的 IPC 消息通信。
+
+**适用场景**：
+- 调试 IPC 通信问题
+- 监控数据流
+- 性能分析
+- 开发调试
+
+### 6.2 界面设计
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  🔌 IPC 监控                                                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  [全部] [行情] [报单] [系统] [导航]    [⏸ 暂停] [🗑 清空] [📥 导出] │   │
+│  ├─────────────────────────────────────────────────────────────────────┤   │
+│  │  时间      | 方向 | 类型    | 通道                | 数据摘要         │   │
+│  │  ─────────┼─────┼────────┼───────────────────┼──────────────     │   │
+│  │  14:30:05 | ←   | 收到    | market_data       | {instrumentID:..}│   │
+│  │  14:30:05 | →   | 发送    | navigate:tab      | "query"          │   │
+│  │  14:30:04 | ←   | 收到    | order:update      | {orderRef:...}   │   │
+│  │  14:30:03 | →   | 发送    | window:minimize   | -                │   │
+│  │  14:30:02 | ←   | 收到    | connection_status | {mdConnected:...}│   │
+│  │  ...                                                                │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  消息详情                                                           │   │
+│  │  {                                                                  │   │
+│  │    "type": "market_data",                                           │   │
+│  │    "data": {                                                        │   │
+│  │      "instrumentID": "IF2608",                                      │   │
+│  │      "lastPrice": 4585.6,                                           │   │
+│  │      "updateTime": "14:30:05"                                       │   │
+│  │    }                                                                │   │
+│  │  }                                                                  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  状态：监控中 | 消息数: 1234 | 暂停: 否                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 6.3 功能说明
+
+**消息过滤**：
+
+| 过滤器 | 说明 |
+|--------|------|
+| **全部** | 显示所有消息 |
+| **行情** | 只显示 market_data 相关消息 |
+| **报单** | 只显示 order_return, trade_return 相关消息 |
+| **系统** | 只显示 connection_status, notification 相关消息 |
+| **导航** | 只显示 navigate:tab 相关消息 |
+
+**操作按钮**：
+
+| 按钮 | 功能 |
+|------|------|
+| **⏸ 暂停** | 暂停/恢复消息滚动 |
+| **🗑 清空** | 清空消息列表 |
+| **📥 导出** | 导出消息为 JSON 文件 |
+
+**消息详情**：
+- 点击某条消息，在下方显示完整的消息内容
+- 支持 JSON 格式化显示
+- 支持复制消息内容
+
+### 6.4 实现方式
+
+**主进程**：
+```typescript
+// electron/ipcMonitor.ts
+export class IPCMonitor {
+  private messages: IPCMessage[] = [];
+  private listeners: Set<(msg: IPCMessage) => void> = new Set();
+
+  // 记录消息
+  record(direction: 'in' | 'out', channel: string, data?: any): void {
+    const msg: IPCMessage = {
+      id: generateId(),
+      timestamp: Date.now(),
+      direction,
+      channel,
+      data,
+    };
+    this.messages.push(msg);
+    this.notifyListeners(msg);
+  }
+
+  // 获取消息
+  getMessages(filter?: MessageFilter): IPCMessage[] {
+    // ...
+  }
+
+  // 清空消息
+  clear(): void {
+    this.messages = [];
+  }
+
+  // 导出消息
+  export(): string {
+    return JSON.stringify(this.messages, null, 2);
+  }
+}
+```
+
+**渲染进程**：
+```typescript
+// src/pages/IPCMonitorPage.tsx
+export function IPCMonitorPage() {
+  const [messages, setMessages] = useState<IPCMessage[]>([]);
+  const [filter, setFilter] = useState<MessageFilter>('all');
+  const [paused, setPaused] = useState(false);
+
+  // 监听 IPC 消息
+  useEffect(() => {
+    if (!isElectron()) return;
+    const cleanup = window.electronAPI?.onIPCMessage?.((msg) => {
+      if (!paused) {
+        setMessages(prev => [...prev, msg]);
+      }
+    });
+    return () => cleanup?.();
+  }, [paused]);
+
+  // 过滤消息
+  const filteredMessages = useMemo(() => {
+    if (filter === 'all') return messages;
+    return messages.filter(m => m.channel.includes(filter));
+  }, [messages, filter]);
+
+  return (
+    <div className="ipc-monitor-page">
+      {/* 过滤器、操作按钮、消息列表、消息详情 */}
+    </div>
+  );
+}
+```
+
+### 6.5 数据结构
+
+```typescript
+interface IPCMessage {
+  id: string;                    // 唯一标识
+  timestamp: number;             // 时间戳
+  direction: 'in' | 'out';      // 方向：in=收到，out=发送
+  channel: string;               // IPC 通道名
+  data?: any;                    // 消息数据
+}
+
+type MessageFilter = 'all' | 'market' | 'order' | 'system' | 'navigate';
+```
+
+### 6.6 标签页 Store
+
+```typescript
+// 在 TabStore 中添加 IPC 监控标签类型
+type TabType = 'market' | 'favorites' | 'order' | 'query' | 'kline' | 'options' | 'ipc-monitor';
+```
+
+---
+
+## 7. 实施计划
 
 ### 5.1 阶段 1：行情表格重构
 
