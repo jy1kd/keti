@@ -1,16 +1,22 @@
+"use strict";
 /**
  * Tray Manager
  *
  * Manages the system tray for the Electron application.
  * Supports tray icon, context menu, and notifications.
  */
-import { Tray, Menu, nativeImage } from 'electron';
-import path from 'path';
-import fs from 'fs';
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.TrayManager = void 0;
+const electron_1 = require("electron");
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
 /**
  * TrayManager class
  */
-export class TrayManager {
+class TrayManager {
     constructor() {
         this.tray = null;
         this.mainWindow = null;
@@ -21,22 +27,22 @@ export class TrayManager {
     initialize(mainWindow) {
         this.mainWindow = mainWindow;
         // Create tray icon
-        const iconPath = path.join(__dirname, '../assets/tray-icon.png');
+        const iconPath = path_1.default.join(__dirname, '../assets/tray-icon.png');
         // Check if icon file exists
-        if (!fs.existsSync(iconPath)) {
+        if (!fs_1.default.existsSync(iconPath)) {
             console.warn('[TrayManager] Tray icon not found:', iconPath);
             console.warn('[TrayManager] Tray functionality will be limited');
             // Create a simple 16x16 transparent icon as fallback
-            const fallbackIcon = nativeImage.createEmpty();
-            this.tray = new Tray(fallbackIcon);
+            const fallbackIcon = electron_1.nativeImage.createEmpty();
+            this.tray = new electron_1.Tray(fallbackIcon);
         }
         else {
-            const icon = nativeImage.createFromPath(iconPath);
-            this.tray = new Tray(icon);
+            const icon = electron_1.nativeImage.createFromPath(iconPath);
+            this.tray = new electron_1.Tray(icon);
         }
         this.tray.setToolTip('SimNow 交易终端');
         // Build context menu
-        const contextMenu = Menu.buildFromTemplate([
+        const contextMenu = electron_1.Menu.buildFromTemplate([
             {
                 label: '显示主窗口',
                 click: () => {
@@ -149,4 +155,5 @@ export class TrayManager {
         }
     }
 }
+exports.TrayManager = TrayManager;
 //# sourceMappingURL=trayManager.js.map
