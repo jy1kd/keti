@@ -54,6 +54,20 @@ function App() {
     return () => cleanup?.()
   }, [setActiveTab])
 
+  // Electron IPC — 响应获取选中合约请求
+  useEffect(() => {
+    if (!isElectron()) return
+
+    // Listen for GET_SELECTED_INSTRUMENT and respond with selected instrument
+    const cleanup = window.electronAPI?.onGetSelectedInstrument?.(() => {
+      const { selectedInstrument } = useMarketStore.getState()
+      // Send response back to main process
+      window.electronAPI?.sendSelectedInstrument?.(selectedInstrument || '')
+    })
+
+    return () => cleanup?.()
+  }, [])
+
   // Ctrl+Shift+M 切换性能监控
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

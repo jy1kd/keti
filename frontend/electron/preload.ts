@@ -27,6 +27,10 @@ export interface ElectronAPI {
   // Navigation (main → renderer)
   onNavigateTab: (callback: (tab: string) => void) => () => void;
 
+  // Data exchange (renderer → main)
+  onGetSelectedInstrument: (callback: () => string) => () => void;
+  sendSelectedInstrument: (instrumentID: string) => void;
+
   // Event listeners (return cleanup function to prevent memory leaks)
   onOrderUpdate: (callback: (data: any) => void) => () => void;
   onNotification: (callback: (data: any) => void) => () => void;
@@ -61,6 +65,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = (_: any, tab: string) => callback(tab);
     ipcRenderer.on('navigate:tab', handler);
     return () => ipcRenderer.removeListener('navigate:tab', handler);
+  },
+
+  // Data exchange (renderer → main)
+  onGetSelectedInstrument: (callback: () => string) => {
+    const handler = () => callback();
+    ipcRenderer.on('data:get-selected-instrument', handler);
+    return () => ipcRenderer.removeListener('data:get-selected-instrument', handler);
+  },
+  sendSelectedInstrument: (instrumentID: string) => {
+    ipcRenderer.invoke('data:selected-instrument-response', instrumentID);
   },
 
   // Event listeners (return cleanup function to prevent memory leaks)

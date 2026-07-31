@@ -1,9 +1,10 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import { WindowManager } from './windowManager';
 import { TrayManager } from './trayManager';
 import { ShortcutManager } from './shortcuts';
 import { NotificationManager } from './notificationManager';
 import { BackendManager } from './backendManager';
+import { IPC_CHANNELS } from './ipc/index';
 import { registerWindowControlHandlers, registerWindowManagementHandlers } from './ipc/window';
 import { registerAppInfoHandlers, registerBackendManagementHandlers } from './ipc/app';
 
@@ -69,6 +70,14 @@ export async function initializeApp(): Promise<void> {
   trayManager = new TrayManager();
   trayManager.initialize(mainWindow);
 
+  // Store selected instrument from renderer
+  let selectedInstrument = '';
+
+  // IPC handler to receive selected instrument from renderer
+  ipcMain.handle(IPC_CHANNELS.SELECTED_INSTRUMENT_RESPONSE, (_event, instrumentID: string) => {
+    selectedInstrument = instrumentID;
+  });
+
   // Create shortcut manager and register defaults
   shortcutManager = new ShortcutManager();
   shortcutManager.loadAndRegister({
@@ -76,8 +85,12 @@ export async function initializeApp(): Promise<void> {
       windowManager.openOrderWindow();
     },
     'open-kline': () => {
-      // Get selected instrument from main window
-      mainWindow.webContents.send('get-selected-instrument');
+      // Request selected instrument from renderer
+      mainWindow.webContents.send(IPC_CHANNELS.GET_SELECTED_INSTRUMENT);
+      // Open K-line window with stored instrument (will be updated on response)
+      if (selectedInstrument) {
+        windowManager.openKLineWindow(selectedInstrument);
+      }
     },
     'quit': () => {
       app.quit();
