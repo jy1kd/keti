@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron';
 import { WindowManager } from './windowManager';
 import { TrayManager } from './trayManager';
 import { ShortcutManager } from './shortcuts';
+import { NotificationManager } from './notificationManager';
 import { registerWindowControlHandlers, registerWindowManagementHandlers } from './ipc/window';
 import { registerAppInfoHandlers, registerBackendManagementHandlers } from './ipc/app';
 
@@ -12,6 +13,7 @@ export const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 let windowManager: WindowManager;
 let trayManager: TrayManager;
 let shortcutManager: ShortcutManager;
+let notificationManager: NotificationManager;
 
 /**
  * Get the window manager instance
@@ -32,6 +34,13 @@ export function getTrayManager(): TrayManager {
  */
 export function getShortcutManager(): ShortcutManager {
   return shortcutManager;
+}
+
+/**
+ * Get the notification manager instance
+ */
+export function getNotificationManager(): NotificationManager {
+  return notificationManager;
 }
 
 /**
@@ -66,6 +75,9 @@ export async function initializeApp(): Promise<void> {
     },
   });
 
+  // Create notification manager
+  notificationManager = new NotificationManager();
+
   // Handle app activation (macOS)
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -90,6 +102,7 @@ export async function initializeApp(): Promise<void> {
   app.on('will-quit', () => {
     shortcutManager.save();
     shortcutManager.unregisterAll();
+    notificationManager.closeAll();
   });
 }
 
