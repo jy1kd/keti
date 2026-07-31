@@ -11,6 +11,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BackendManager = void 0;
 const child_process_1 = require("child_process");
+const http_1 = __importDefault(require("http"));
 const path_1 = __importDefault(require("path"));
 // Default backend configuration
 const DEFAULT_CONFIG = {
@@ -31,11 +32,32 @@ class BackendManager {
         this.config = { ...DEFAULT_CONFIG, ...config };
     }
     /**
+     * Check if backend is already running on the configured port
+     */
+    async isBackendAlreadyRunning() {
+        return new Promise((resolve) => {
+            const req = http_1.default.get(`http://localhost:${this.config.port}/api/connection/status`, (res) => {
+                resolve(res.statusCode === 200);
+                res.resume(); // Consume response
+            });
+            req.on('error', () => resolve(false));
+            req.setTimeout(2000, () => {
+                req.destroy();
+                resolve(false);
+            });
+        });
+    }
+    /**
      * Start the backend process
      */
     async start() {
         if (this.isRunning()) {
             console.warn('[BackendManager] Backend is already running');
+            return true;
+        }
+        // Check if backend is already running on the port
+        if (await this.isBackendAlreadyRunning()) {
+            console.log(`[BackendManager] Backend already running on port ${this.config.port}`);
             return true;
         }
         try {

@@ -29,6 +29,10 @@ export declare class BackendManager {
     private maxLogs;
     constructor(config?: Partial<BackendConfig>);
     /**
+     * Check if backend is already running on the configured port
+     */
+    private isBackendAlreadyRunning;
+    /**
      * Start the backend process
      */
     start(): Promise<boolean>;
