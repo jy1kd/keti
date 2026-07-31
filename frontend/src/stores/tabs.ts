@@ -54,8 +54,8 @@ interface TabStore {
   tabs: Tab[]
   activeTabId: string
 
-  /** 打开标签页；相同 type+props 去重，超上限拒绝 */
-  openTab: (options: { type: TabType; title: string; props?: Record<string, unknown>; closable?: boolean }) => void
+  /** 打开标签页；相同 type+instrumentID 去重，超上限拒绝。返回 true 表示成功打开/激活 */
+  openTab: (options: { type: TabType; title: string; props?: Record<string, unknown>; closable?: boolean }) => boolean
 
   /** 关闭标签页；固定标签不可关闭 */
   closeTab: (tabId: string) => void
@@ -83,16 +83,19 @@ export const useTabStore = create<TabStore>((set, get) => ({
 
   openTab: ({ type, title, props = {}, closable = true }) => {
     const tabId = generateTabId(type, props)
+    let result = false
 
     set((state) => {
       // 去重：相同 type + instrumentID 直接激活
       const existing = state.tabs.find((t) => t.id === tabId)
       if (existing) {
+        result = true
         return { activeTabId: existing.id }
       }
 
       // 数量限制
       if (state.tabs.length >= MAX_TABS) {
+        result = false
         return state
       }
 
@@ -104,11 +107,14 @@ export const useTabStore = create<TabStore>((set, get) => ({
         closable,
       }
 
+      result = true
       return {
         tabs: [...state.tabs, newTab],
         activeTabId: newTab.id,
       }
     })
+
+    return result
   },
 
   closeTab: (tabId) => {

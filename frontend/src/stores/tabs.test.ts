@@ -59,10 +59,11 @@ describe('useTabStore', () => {
   // --- openTab ---
 
   describe('openTab', () => {
-    it('应打开新标签页并设为活跃', () => {
+    it('应打开新标签页并设为活跃，返回 true', () => {
       const { openTab } = useTabStore.getState()
-      openTab({ type: 'order', title: '📝 报单-au2406', props: { instrumentID: 'au2406' } })
+      const result = openTab({ type: 'order', title: '📝 报单-au2406', props: { instrumentID: 'au2406' } })
 
+      expect(result).toBe(true)
       const state = useTabStore.getState()
       expect(state.tabs).toHaveLength(2)
       expect(state.activeTabId).toBe('tab-order-au2406')
@@ -71,17 +72,18 @@ describe('useTabStore', () => {
       expect(state.tabs[1].closable).toBe(true)
     })
 
-    it('不应重复打开相同类型和 props 的标签页（应激活已有）', () => {
+    it('不应重复打开相同 type+instrumentID 的标签页（应激活已有，返回 true）', () => {
       const { openTab } = useTabStore.getState()
       openTab({ type: 'order', title: '📝 报单-au2406', props: { instrumentID: 'au2406' } })
-      openTab({ type: 'order', title: '📝 报单-au2406', props: { instrumentID: 'au2406' } })
+      const result = openTab({ type: 'order', title: '📝 报单-au2406', props: { instrumentID: 'au2406' } })
 
+      expect(result).toBe(true)
       const state = useTabStore.getState()
       expect(state.tabs).toHaveLength(2)
       expect(state.activeTabId).toBe('tab-order-au2406')
     })
 
-    it('应支持打开不同 props 的同类型标签页', () => {
+    it('应支持打开不同 instrumentID 的同类型标签页', () => {
       const { openTab } = useTabStore.getState()
       openTab({ type: 'order', title: '📝 报单-au2406', props: { instrumentID: 'au2406' } })
       openTab({ type: 'order', title: '📝 报单-rb2406', props: { instrumentID: 'rb2406' } })
@@ -107,18 +109,20 @@ describe('useTabStore', () => {
       expect(state.tabs[1].closable).toBe(false)
     })
 
-    it('标签页数量限制：最多 15 个', () => {
+    it('标签页数量限制：最多 15 个，超限返回 false', () => {
       const { openTab } = useTabStore.getState()
 
       // 打开 14 个额外标签页（加上 market = 15）
       for (let i = 0; i < 14; i++) {
-        openTab({ type: 'order', title: `📝 报单-合约${i}`, props: { instrumentID: `contract${i}` } })
+        const result = openTab({ type: 'order', title: `📝 报单-合约${i}`, props: { instrumentID: `contract${i}` } })
+        expect(result).toBe(true)
       }
 
       expect(useTabStore.getState().tabs).toHaveLength(15)
 
-      // 第 16 个应该失败
-      openTab({ type: 'order', title: '📝 报单-合约99', props: { instrumentID: 'contract99' } })
+      // 第 16 个应该返回 false
+      const overflowResult = openTab({ type: 'order', title: '📝 报单-合约99', props: { instrumentID: 'contract99' } })
+      expect(overflowResult).toBe(false)
       expect(useTabStore.getState().tabs).toHaveLength(15)
       // 活跃标签页不变
       expect(useTabStore.getState().activeTabId).not.toBe('tab-order-contract99')
