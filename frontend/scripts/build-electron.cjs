@@ -29,8 +29,23 @@ console.log(`Building Electron application for ${platform}...`);
 
 // Check if build resources exist
 const buildDir = path.join(__dirname, '..', 'build');
-if (!fs.existsSync(path.join(buildDir, 'icon.png'))) {
-  console.warn('Warning: build/icon.png not found. Run scripts/generate-icons.cjs first.');
+const iconFiles = {
+  win: 'icon.ico',
+  mac: 'icon.icns',
+  linux: 'icon.png',
+};
+
+// Check icon files for the target platform
+const platformsToCheck = platform === 'all' ? ['win', 'mac', 'linux'] : [platform];
+for (const p of platformsToCheck) {
+  const iconFile = iconFiles[p];
+  const iconPath = path.join(buildDir, iconFile);
+  if (!fs.existsSync(iconPath)) {
+    console.warn(`Warning: build/${iconFile} not found. Run scripts/generate-icons.cjs first.`);
+  } else if (fs.statSync(iconPath).size === 0) {
+    console.warn(`Warning: build/${iconFile} is empty (0 bytes). This may cause ${p} packaging to fail.`);
+    console.warn('Please replace with a valid icon file before building for production.');
+  }
 }
 
 // Build commands

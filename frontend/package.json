@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && tsc -p electron/tsconfig.json && electron .\"",
     "electron:build": "vite build && tsc -p electron/tsconfig.json && electron-builder",
-    "electron:preview": "vite build && tsc -p electron/tsconfig.json && electron ."
+    "electron:preview": "vite build && tsc -p electron/tsconfig.json && electron .",
+    "generate-icons": "node scripts/generate-icons.cjs"
   },
   "dependencies": {
     "@visactor/vtable": "^1.26.4",
