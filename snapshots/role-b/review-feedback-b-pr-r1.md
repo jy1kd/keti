@@ -72,3 +72,48 @@
 2. 移除 InstrumentSearchModal「退订」列 + `handleUnsubscribe` + `onUnsubscribe` prop
 3. 移除 `contracts.ts` 中的 `removeContractById` 方法
 4. （可选）清理 S1 死代码
+
+---
+
+## R2 二次审查（2026-07-31）
+
+### 修复验证
+
+| # | 等级 | 问题 | 修复状态 |
+|---|------|------|:--------:|
+| B1 | 🔴 | removeContractById 死 UI | ✅ 已修复 |
+| S1 | 🟡 | 死代码未清理 | ✅ 已修复 |
+| S2 | 🟡 | addToFavorites 订阅失败静默添加 | ✅ 已修复 |
+| S3 | 🟡 | 无效 ID 未清理 | ✅ 已修复 |
+
+### 修复详情
+
+**B1 修复**：
+- ✅ `contracts.ts`: `removeContractById` 方法已移除
+- ✅ `MarketPanel.tsx`: 「退订」按钮 + `handleUnsubscribe` 已移除
+- ✅ `InstrumentSearchModal`: 「退订」列 + `onUnsubscribe` prop + `handleUnsubscribe` 已移除
+- ✅ 测试：4 个退订相关测试已移除
+
+**S1 修复**：
+- ✅ `api.ts`: `getPresetInstruments` + `PresetResponse` 已移除
+- ✅ `userPrefs.ts`: `manualPresetIds` 字段 + `addManualPreset` + `removeManualPreset` 已移除
+- ✅ `saveToLocalStorage` / `loadFromLocalStorage` 已同步清理
+- ✅ 全局搜索确认无残留引用
+
+**S2 修复**：
+- ✅ `addToFavorites` 返回类型改为 `Promise<boolean>`
+- ✅ 订阅失败时 `return false`，不添加到 favorites
+- ✅ 持久化和状态更新移至订阅成功后
+
+**S3 修复**：
+- ✅ `loadFavoriteContracts` 添加无效 ID 清理逻辑
+- ✅ 对比 `selectedIds` 与返回结果，移除已下架合约 ID
+
+### 测试结果
+60 test files, 586 tests passed ✅（减少 4 个退订相关测试）
+
+### 新引入问题：0
+
+### 审查结论
+
+✅ **二次审查通过**
