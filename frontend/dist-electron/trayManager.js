@@ -1,22 +1,16 @@
-"use strict";
 /**
  * Tray Manager
  *
  * Manages the system tray for the Electron application.
  * Supports tray icon, context menu, and notifications.
  */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.TrayManager = void 0;
-const electron_1 = require("electron");
-const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
+import { Tray, Menu, nativeImage } from 'electron';
+import path from 'path';
+import fs from 'fs';
 /**
  * TrayManager class
  */
-class TrayManager {
+export class TrayManager {
     constructor() {
         this.tray = null;
         this.mainWindow = null;
@@ -27,22 +21,22 @@ class TrayManager {
     initialize(mainWindow) {
         this.mainWindow = mainWindow;
         // Create tray icon
-        const iconPath = path_1.default.join(__dirname, '../assets/tray-icon.png');
+        const iconPath = path.join(__dirname, '../assets/tray-icon.png');
         // Check if icon file exists
-        if (!fs_1.default.existsSync(iconPath)) {
+        if (!fs.existsSync(iconPath)) {
             console.warn('[TrayManager] Tray icon not found:', iconPath);
             console.warn('[TrayManager] Tray functionality will be limited');
             // Create a simple 16x16 transparent icon as fallback
-            const fallbackIcon = electron_1.nativeImage.createEmpty();
-            this.tray = new electron_1.Tray(fallbackIcon);
+            const fallbackIcon = nativeImage.createEmpty();
+            this.tray = new Tray(fallbackIcon);
         }
         else {
-            const icon = electron_1.nativeImage.createFromPath(iconPath);
-            this.tray = new electron_1.Tray(icon);
+            const icon = nativeImage.createFromPath(iconPath);
+            this.tray = new Tray(icon);
         }
         this.tray.setToolTip('SimNow 交易终端');
         // Build context menu
-        const contextMenu = electron_1.Menu.buildFromTemplate([
+        const contextMenu = Menu.buildFromTemplate([
             {
                 label: '显示主窗口',
                 click: () => {
@@ -121,7 +115,7 @@ class TrayManager {
         // Handle window close - minimize to tray instead of quitting
         if (this.mainWindow) {
             this.mainWindow.on('close', (event) => {
-                if (!this.mainWindow?.isDestroyed()) {
+                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
                     event.preventDefault();
                     this.mainWindow.hide();
                 }
@@ -155,5 +149,4 @@ class TrayManager {
         }
     }
 }
-exports.TrayManager = TrayManager;
 //# sourceMappingURL=trayManager.js.map

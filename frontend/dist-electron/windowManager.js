@@ -1,17 +1,11 @@
-"use strict";
 /**
  * Window Manager
  *
  * Manages multiple BrowserWindow instances for the Electron application.
  * Supports creating, closing, and switching between windows.
  */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.WindowManager = void 0;
-const electron_1 = require("electron");
-const path_1 = __importDefault(require("path"));
+import { BrowserWindow, screen } from 'electron';
+import path from 'path';
 // Default window configurations
 const DEFAULT_CONFIGS = {
     main: {
@@ -46,7 +40,7 @@ const DEFAULT_CONFIGS = {
 /**
  * WindowManager class
  */
-class WindowManager {
+export class WindowManager {
     constructor(isDev = false) {
         this.windows = new Map();
         this.windowStates = new Map();
@@ -57,15 +51,15 @@ class WindowManager {
      */
     createMainWindow() {
         const config = DEFAULT_CONFIGS.main;
-        const { width, height } = electron_1.screen.getPrimaryDisplay().workAreaSize;
-        const mainWindow = new electron_1.BrowserWindow({
+        const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+        const mainWindow = new BrowserWindow({
             width: Math.min(config.width, width),
             height: Math.min(config.height, height),
             minWidth: config.minWidth,
             minHeight: config.minHeight,
             title: config.title,
             webPreferences: {
-                preload: path_1.default.join(__dirname, 'preload.js'),
+                preload: path.join(__dirname, 'preload.js'),
                 contextIsolation: true,
                 nodeIntegration: false,
             },
@@ -77,7 +71,7 @@ class WindowManager {
             mainWindow.webContents.openDevTools();
         }
         else {
-            mainWindow.loadFile(path_1.default.join(__dirname, '../dist/index.html'));
+            mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
         }
         // Show window when ready
         mainWindow.once('ready-to-show', () => {
@@ -104,7 +98,7 @@ class WindowManager {
         }
         const config = DEFAULT_CONFIGS.order;
         const parent = this.windows.get('main');
-        const orderWindow = new electron_1.BrowserWindow({
+        const orderWindow = new BrowserWindow({
             width: config.width,
             height: config.height,
             minWidth: config.minWidth,
@@ -113,7 +107,7 @@ class WindowManager {
             parent,
             modal: false,
             webPreferences: {
-                preload: path_1.default.join(__dirname, 'preload.js'),
+                preload: path.join(__dirname, 'preload.js'),
                 contextIsolation: true,
                 nodeIntegration: false,
             },
@@ -124,7 +118,7 @@ class WindowManager {
             orderWindow.loadURL(`http://localhost:5173#/order/${instrumentID || ''}`);
         }
         else {
-            orderWindow.loadFile(path_1.default.join(__dirname, '../dist/index.html'), {
+            orderWindow.loadFile(path.join(__dirname, '../dist/index.html'), {
                 hash: `#/order/${instrumentID || ''}`,
             });
         }
@@ -152,14 +146,14 @@ class WindowManager {
             return existing;
         }
         const config = DEFAULT_CONFIGS.kline;
-        const klineWindow = new electron_1.BrowserWindow({
+        const klineWindow = new BrowserWindow({
             width: config.width,
             height: config.height,
             minWidth: config.minWidth,
             minHeight: config.minHeight,
             title: `${config.title} - ${instrumentID}`,
             webPreferences: {
-                preload: path_1.default.join(__dirname, 'preload.js'),
+                preload: path.join(__dirname, 'preload.js'),
                 contextIsolation: true,
                 nodeIntegration: false,
             },
@@ -170,7 +164,7 @@ class WindowManager {
             klineWindow.loadURL(`http://localhost:5173#/kline/${instrumentID}`);
         }
         else {
-            klineWindow.loadFile(path_1.default.join(__dirname, '../dist/index.html'), {
+            klineWindow.loadFile(path.join(__dirname, '../dist/index.html'), {
                 hash: `#/kline/${instrumentID}`,
             });
         }
@@ -273,5 +267,4 @@ class WindowManager {
         }
     }
 }
-exports.WindowManager = WindowManager;
 //# sourceMappingURL=windowManager.js.map

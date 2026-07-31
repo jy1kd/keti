@@ -1,28 +1,22 @@
-"use strict";
 /**
  * Backend Manager
  *
  * Manages the Python backend process for the Electron application.
  * Supports starting, stopping, restarting, and health checking.
  */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.BackendManager = void 0;
-const child_process_1 = require("child_process");
-const path_1 = __importDefault(require("path"));
+import { spawn } from 'child_process';
+import path from 'path';
 // Default backend configuration
 const DEFAULT_CONFIG = {
     command: 'python',
     args: ['start.py'],
-    cwd: path_1.default.join(__dirname, '../../server'),
+    cwd: path.join(__dirname, '../../server'),
     port: 8000,
 };
 /**
  * BackendManager class
  */
-class BackendManager {
+export class BackendManager {
     constructor(config) {
         this.process = null;
         this.startTime = 0;
@@ -45,7 +39,7 @@ class BackendManager {
                 throw new Error('Backend command not specified');
             }
             // Spawn the process
-            this.process = (0, child_process_1.spawn)(this.config.command, this.config.args, {
+            this.process = spawn(this.config.command, this.config.args, {
                 cwd: this.config.cwd,
                 env: { ...process.env, ...this.config.env },
                 stdio: ['pipe', 'pipe', 'pipe'],
@@ -175,5 +169,4 @@ class BackendManager {
         }
     }
 }
-exports.BackendManager = BackendManager;
 //# sourceMappingURL=backendManager.js.map

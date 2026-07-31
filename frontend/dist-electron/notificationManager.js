@@ -1,17 +1,14 @@
-"use strict";
 /**
  * Notification Manager
  *
  * Manages native system notifications for the Electron application.
  * Supports order notifications, stop order notifications, and connection notifications.
  */
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.NotificationManager = void 0;
-const electron_1 = require("electron");
+import { Notification } from 'electron';
 /**
  * NotificationManager class
  */
-class NotificationManager {
+export class NotificationManager {
     constructor() {
         this.notifications = [];
     }
@@ -19,7 +16,7 @@ class NotificationManager {
      * Check if notifications are supported
      */
     isSupported() {
-        return electron_1.Notification.isSupported();
+        return Notification.isSupported();
     }
     /**
      * Show a generic notification
@@ -29,7 +26,7 @@ class NotificationManager {
             console.warn('[NotificationManager] Notifications are not supported');
             return;
         }
-        const notification = new electron_1.Notification({
+        const notification = new Notification({
             title: options.title,
             body: options.body,
             silent: options.silent ?? false,
@@ -117,5 +114,4 @@ class NotificationManager {
         this.notifications = [];
     }
 }
-exports.NotificationManager = NotificationManager;
 //# sourceMappingURL=notificationManager.js.map
