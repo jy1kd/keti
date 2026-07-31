@@ -39,9 +39,14 @@ Skill 加载后第一条回复，询问窗口身份和任务来源：
 - `task.md` → 完整文档：progress.md、dev-record-b.md、task-dev-flow.md
 - `task-redesign.md` → 轻量文档：只更新 task-redesign.md 中的 PR 状态
 
+**任务文件决定参考文档**：
+- `task.md` → 参考 `docs/specs/prd.md`、`docs/specs/design.md`、`docs/specs/dev.md`
+- `task-redesign.md` → 同时参考 `docs/tasks/task-redesign.md`（PR 拆分）和 `docs/specs/redesign-plan.md`（设计文档）
+
 ### 第 2 步：TDD 开发
 用户确认分支后开始开发。TDD 循环：红 → 绿 → 重构
 - 详情见 `references/tdd.md`
+- **task-redesign.md**：开发时同时参考 `docs/tasks/task-redesign.md`（PR 拆分、验收标准）和 `docs/specs/redesign-plan.md`（架构设计、数据流、界面布局）
 - 每个功能点 commit 代码
 - **task.md**：更新 dev-record-b.md
 - **task-redesign.md**：跳过 dev-record-b.md
@@ -53,13 +58,18 @@ Skill 加载后第一条回复，询问窗口身份和任务来源：
 - 详情见 `references/verification.md`
 - 完整性检查：✅ 已实现 / ❌ 遗漏 / ⏸️ 推迟
 - ⚠️ 遗漏/推迟项必须展示给用户，**等待用户决定后才能继续**（立即实现 / 确认推迟）
-- ✅ 全部通过：更新任务文件中 PR 状态为「开发完成，待审查」+ commit
-- ✅ 提示用户切换审查窗口
+
+**⚠️ 自验证全部通过后，必须立即执行以下操作（不可跳过）**：
+1. 更新任务文件中 PR 状态为「开发完成，待审查」
+2. `git add` + `git commit` 提交状态变更
+3. 提示用户切换审查窗口
+
+> 自验证通过后如果不更新状态，审查窗口无法开始工作。这是流程中的关键衔接点。
 
 ### 第 4 步：处理审查反馈
 审查窗口通过后，用户切回开发窗口处理反馈
 - 详情见 `references/review.md`
-- 读取 review-feedback-b-prX.md
+- 读取审查反馈文件（命名规则见下方）
 - 🔴 必须修复，🟡 认同则改/不认同则记录理由
 - 🔴 修复时定向修复，不重新跑完整 TDD 循环，但修复代码必须有对应测试
 - 修复后直接走自验证（第 3 步），不回到 TDD 开发步骤
@@ -99,6 +109,23 @@ Skill 加载后第一条回复，询问窗口身份和任务来源：
 - 开发完成报告：完成内容列表、测试结果、Commit 列表
 - 审查报告：三级标注严重等级，附审查结论
 - 每步完成后必须给出下一步操作指令
+
+## 文件命名与存放规则
+审查相关文件的命名和存放位置根据任务来源区分：
+
+| 文件类型 | task.md | task-redesign.md |
+|----------|---------|------------------|
+| 审查反馈 | `review-feedback-b-prC1.md` | `review-feedback-redesign-r1.md` |
+| 审查回复 | `review-reply-b-prC1.md` | `review-reply-redesign-r1.md` |
+| 验证记录 | `verify-discussion-prC1.md` | `verify-discussion-redesign-r1.md` |
+
+存放位置：
+- **task.md**：`docs/dev-records/role-b/`
+- **task-redesign.md**：`docs/snapshots/role-b/`（开发过程中的临时记录，PR 完成后可清理）
+
+命名规则：
+- **task.md**：`{文件类型}-b-pr{编号}.md`（如 `review-feedback-b-prC1.md`）
+- **task-redesign.md**：`{文件类型}-redesign-{编号}.md`（如 `review-feedback-redesign-r1.md`）
 
 ## 审查窗口流程
 

@@ -5,7 +5,7 @@ import type { ContractInfo } from '@/services/types'
 
 // Mock API modules
 vi.mock('@/services/api', () => ({
-  getPresetInstruments: vi.fn(),
+  getInstruments: vi.fn(),
   getInstrumentsByIds: vi.fn(),
   subscribeMarket: vi.fn(),
   unsubscribeMarket: vi.fn(),
@@ -37,7 +37,7 @@ const mockContract2: ContractInfo = {
 
 describe('useContractsStore', () => {
   beforeEach(() => {
-    useContractsStore.setState({ contracts: [], presetContracts: [], userContracts: [], presetIds: [] })
+    useContractsStore.setState({ contracts: [], favorites: [], isLoaded: false })
     useUserPrefsStore.setState({ selectedContracts: [], hotKeys: { buy: 'b', sell: 's', cancel: 'c', reverse: '', lock: '', batchCancel: 'Escape' } })
     localStorage.clear()
     vi.clearAllMocks()
@@ -46,8 +46,8 @@ describe('useContractsStore', () => {
   it('初始状态：合约列表为空', () => {
     const state = useContractsStore.getState()
     expect(state.contracts).toEqual([])
-    expect(state.presetContracts).toEqual([])
-    expect(state.userContracts).toEqual([])
+    expect(state.favorites).toEqual([])
+    expect(state.isLoaded).toBe(false)
   })
 
   it('setContracts 批量设置合约列表', () => {
@@ -55,102 +55,90 @@ describe('useContractsStore', () => {
     expect(useContractsStore.getState().contracts).toEqual([mockContract])
   })
 
-  // --- addContractInfo tests ---
+  // --- loadAllInstruments tests ---
 
-  it('addContractInfo 添加合约到 userContracts', () => {
-    useContractsStore.getState().addContractInfo(mockContract)
-    expect(useContractsStore.getState().userContracts).toEqual([mockContract])
-    expect(useContractsStore.getState().contracts).toEqual([mockContract])
+  it('loadAllInstruments 从 API 加载全量合约', async () => {
+    const { getInstruments } = await import('@/services/api')
+    vi.mocked(getInstruments).mockResolvedValue({ instruments: [mockContract, mockContract2], count: 2 })
+
+    await useContractsStore.getState().loadAllInstruments()
+
+    expect(getInstruments).toHaveBeenCalled()
+    expect(useContractsStore.getState().contracts).toEqual([mockContract, mockContract2])
+    expect(useContractsStore.getState().isLoaded).toBe(true)
   })
 
-  it('addContractInfo 重复添加不产生重复', () => {
-    useContractsStore.getState().addContractInfo(mockContract)
-    useContractsStore.getState().addContractInfo(mockContract)
-    expect(useContractsStore.getState().userContracts).toHaveLength(1)
+  it('loadAllInstruments API 失败时不设置 isLoaded', async () => {
+    const { getInstruments } = await import('@/services/api')
+    vi.mocked(getInstruments).mockRejectedValue(new Error('network error'))
+
+    await useContractsStore.getState().loadAllInstruments()
+
+    expect(useContractsStore.getState().isLoaded).toBe(false)
   })
 
-  it('addContractInfo 同时持久化到 userPrefs', () => {
-    useContractsStore.getState().addContractInfo(mockContract)
+  // --- loadFavoriteContracts tests ---
+
+  it('loadFavoriteContracts 从 localStorage 加载收藏合约并订阅', async () => {
+    const { getInstrumentsByIds, subscribeMarket } = await import('@/services/api')
+    vi.mocked(getInstrumentsByIds).mockResolvedValue({ instruments: [mockContract], count: 1 })
+    vi.mocked(subscribeMarket).mockResolvedValue({ success: true, added: ['au2406'], alreadySubscribed: [] })
+
+    useUserPrefsStore.getState().addSelectedContract('au2406')
+    useUserPrefsStore.getState().saveToLocalStorage()
+
+    await useContractsStore.getState().loadFavoriteContracts()
+
+    expect(getInstrumentsByIds).toHaveBeenCalledWith(['au2406'])
+    expect(subscribeMarket).toHaveBeenCalledWith(['au2406'])
+    expect(useContractsStore.getState().favorites).toEqual([mockContract])
+  })
+
+  it('loadFavoriteContracts 无收藏时不调用 API', async () => {
+    const { getInstrumentsByIds } = await import('@/services/api')
+
+    await useContractsStore.getState().loadFavoriteContracts()
+
+    expect(getInstrumentsByIds).not.toHaveBeenCalled()
+    expect(useContractsStore.getState().favorites).toEqual([])
+  })
+
+  // --- addToFavorites tests ---
+
+  it('addToFavorites 添加到收藏并订阅', async () => {
+    const { subscribeMarket } = await import('@/services/api')
+    vi.mocked(subscribeMarket).mockResolvedValue({ success: true, added: ['au2406'], alreadySubscribed: [] })
+
+    await useContractsStore.getState().addToFavorites(mockContract)
+
+    expect(useContractsStore.getState().favorites).toEqual([mockContract])
     expect(useUserPrefsStore.getState().selectedContracts).toContain('au2406')
+    expect(subscribeMarket).toHaveBeenCalledWith(['au2406'])
+  })
+
+  it('addToFavorites 重复添加不产生重复', async () => {
+    const { subscribeMarket } = await import('@/services/api')
+    vi.mocked(subscribeMarket).mockResolvedValue({ success: true, added: ['au2406'], alreadySubscribed: [] })
+
+    await useContractsStore.getState().addToFavorites(mockContract)
+    await useContractsStore.getState().addToFavorites(mockContract)
+
+    expect(useContractsStore.getState().favorites).toHaveLength(1)
   })
 
   // --- removeFromFavorites tests ---
 
-  it('removeFromFavorites 从 userContracts 移除但保留 presetContracts', () => {
-    useContractsStore.setState({ presetContracts: [mockContract], userContracts: [mockContract], contracts: [mockContract] })
-    useContractsStore.getState().removeFromFavorites('au2406')
-    expect(useContractsStore.getState().userContracts).toEqual([])
-    expect(useContractsStore.getState().presetContracts).toEqual([mockContract])
-    expect(useContractsStore.getState().contracts).toEqual([mockContract])
-  })
+  it('removeFromFavorites 从收藏移除并取消订阅', async () => {
+    const { unsubscribeMarket } = await import('@/services/api')
+    vi.mocked(unsubscribeMarket).mockResolvedValue({ success: true, removed: 1 })
 
-  it('removeFromFavorites 同步移除 userPrefs 中的记录', () => {
-    useContractsStore.setState({ presetContracts: [], userContracts: [mockContract], contracts: [mockContract] })
+    useContractsStore.setState({ favorites: [mockContract] })
     useUserPrefsStore.getState().addSelectedContract('au2406')
-    useContractsStore.getState().removeFromFavorites('au2406')
+
+    await useContractsStore.getState().removeFromFavorites('au2406')
+
+    expect(useContractsStore.getState().favorites).toEqual([])
     expect(useUserPrefsStore.getState().selectedContracts).not.toContain('au2406')
-  })
-
-  // --- removeContractById tests ---
-
-  it('removeContractById 从 userContracts 和 presetContracts 中移除', async () => {
-    useContractsStore.setState({ presetContracts: [mockContract, mockContract2], userContracts: [mockContract], contracts: [mockContract, mockContract2] })
-    await useContractsStore.getState().removeContractById('au2406')
-    expect(useContractsStore.getState().presetContracts).toEqual([mockContract2])
-    expect(useContractsStore.getState().userContracts).toEqual([])
-    expect(useContractsStore.getState().contracts).toEqual([mockContract2])
-  })
-
-  it('removeContractById 同步移除 userPrefs 中的记录', async () => {
-    useContractsStore.setState({ presetContracts: [], userContracts: [mockContract], contracts: [mockContract] })
-    useUserPrefsStore.getState().addSelectedContract('au2406')
-    await useContractsStore.getState().removeContractById('au2406')
-    expect(useUserPrefsStore.getState().selectedContracts).not.toContain('au2406')
-  })
-
-  // --- loadSubscribedContracts tests ---
-
-  it('loadSubscribedContracts 分别加载预设和用户自选合约', async () => {
-    const { getPresetInstruments, getInstrumentsByIds } = await import('@/services/api')
-    vi.mocked(getPresetInstruments).mockResolvedValue({ instruments: ['au2406'], updatedAt: null })
-    vi.mocked(getInstrumentsByIds).mockResolvedValue({ instruments: [mockContract, mockContract2], count: 2 })
-
-    // au2406 是预设同时也是用户收藏，rb2406 仅用户收藏
-    useUserPrefsStore.getState().addSelectedContract('au2406')
-    useUserPrefsStore.getState().addSelectedContract('rb2406')
-    useUserPrefsStore.getState().saveToLocalStorage()
-
-    await useContractsStore.getState().loadSubscribedContracts()
-
-    expect(getInstrumentsByIds).toHaveBeenCalledWith(
-      expect.arrayContaining(['au2406', 'rb2406'])
-    )
-    expect(useContractsStore.getState().presetContracts).toEqual([mockContract])
-    // userContracts 包含所有用户收藏的合约（包括同时是预设的）
-    expect(useContractsStore.getState().userContracts).toEqual([mockContract, mockContract2])
-    expect(useContractsStore.getState().contracts).toEqual([mockContract, mockContract2])
-  })
-
-  it('loadSubscribedContracts 预设失败时仍加载用户自选', async () => {
-    const { getPresetInstruments, getInstrumentsByIds } = await import('@/services/api')
-    vi.mocked(getPresetInstruments).mockRejectedValue(new Error('network error'))
-    vi.mocked(getInstrumentsByIds).mockResolvedValue({ instruments: [mockContract], count: 1 })
-
-    useUserPrefsStore.getState().addSelectedContract('au2406')
-    useUserPrefsStore.getState().saveToLocalStorage()
-
-    await useContractsStore.getState().loadSubscribedContracts()
-
-    expect(getInstrumentsByIds).toHaveBeenCalledWith(['au2406'])
-    expect(useContractsStore.getState().userContracts).toEqual([mockContract])
-  })
-
-  it('loadSubscribedContracts 无合约时不调用API', async () => {
-    const { getInstrumentsByIds } = await import('@/services/api')
-    vi.mocked(getInstrumentsByIds).mockResolvedValue({ instruments: [], count: 0 })
-
-    await useContractsStore.getState().loadSubscribedContracts()
-
-    expect(getInstrumentsByIds).not.toHaveBeenCalled()
+    expect(unsubscribeMarket).toHaveBeenCalledWith(['au2406'])
   })
 })

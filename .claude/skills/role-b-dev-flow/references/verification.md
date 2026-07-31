@@ -15,10 +15,14 @@
 5. 验证维度：核心功能、正常路径、异常路径、调试代码清理、范围控制、文档同步
 6. 未通过 → 回到第 2 步 TDD 开发修复 → 重新自验证
 
-### 完成后
-- 更新任务文件中 PR 状态为「开发完成，待审查」
-- commit
-- 提示用户切换审查窗口
+### 完成后（⚠️ 必须执行，不可跳过）
+1. **⚠️ 立即更新任务文件中 PR 状态为「开发完成，待审查」**
+   - task.md：找到对应 PR 行，修改状态
+   - task-redesign.md：找到对应 PR 行，修改状态
+2. **git add + git commit** — commit 任务文件的状态变更
+3. **提示用户切换审查窗口**
+
+⚠️ **自验证通过后如果不更新状态，审查窗口无法开始工作。这是流程中的关键衔接点，绝对不能跳过。**
 
 ---
 
@@ -45,7 +49,9 @@
 5. 标记结果：通过 → ✅ 已验证，不通过 → 分析原因 → 修复 → 重新验证该项
 
 ### ⚠️ 每验证完一条，必须立即执行：
-a. 记录到 verify-discussion-prX.md（验证项、步骤、结果、问题 + 业务讨论）
+a. 记录到验证记录文件：
+   - task.md → `docs/dev-records/role-b/verify-discussion-prC1.md`
+   - task-redesign.md → `docs/snapshots/role-b/verify-discussion-redesign-r1.md`
 b. 然后才能进入下一条
 
 ### 全部验证完成后（批量 commit）

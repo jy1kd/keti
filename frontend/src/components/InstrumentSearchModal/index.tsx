@@ -22,21 +22,17 @@ function findProductIdsByChineseName(keyword: string): string[] {
 interface Props {
   isOpen: boolean
   onClose: () => void
-  /** 订阅新合约（CTP 订阅 + 加入预设表格） */
-  onSubscribeNew: (instrument: ContractInfo) => void
-  /** 加入自选（只操作 userContracts，不调 CTP） */
+  /** 加入收藏（自动订阅） */
   onAddToFavorite: (instrument: ContractInfo) => void
-  /** 移除收藏（只从 userContracts 移除，不调 CTP） */
+  /** 移除收藏（取消订阅） */
   onRemoveFromFavorite: (instrumentId: string) => void
-  /** 退订（CTP 退订 + 从预设/自选中移除） */
-  onUnsubscribe: (instrumentId: string) => Promise<void>
-  /** All contract IDs in the system (preset + user) */
+  /** All contract IDs in the system */
   allContractIds: Set<string>
-  /** User-favorited IDs (show "移除" button) */
-  userSubscribedIds: Set<string>
+  /** Favorited IDs (show "移除" button) */
+  favoritedIds: Set<string>
 }
 
-export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddToFavorite, onRemoveFromFavorite, onUnsubscribe, allContractIds, userSubscribedIds }: Props) {
+export function InstrumentSearchModal({ isOpen, onClose, onAddToFavorite, onRemoveFromFavorite, allContractIds, favoritedIds }: Props) {
   const [exchanges, setExchanges] = useState<string[]>([])
   const [products, setProducts] = useState<string[]>([])
   const [instruments, setInstruments] = useState<ContractInfo[]>([])
@@ -161,17 +157,8 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddTo
   }
 
   const handleSubscribe = (inst: ContractInfo) => {
-    if (allContractIds.has(inst.instrumentID)) {
-      // Already in system (preset or user) → 加入自选
-      onAddToFavorite(inst)
-    } else {
-      // New contract → CTP 订阅 + 加入预设
-      onSubscribeNew(inst)
-    }
-  }
-
-  const handleUnsubscribe = async (inst: ContractInfo) => {
-    await onUnsubscribe(inst.instrumentID)
+    // 加入收藏（自动订阅）
+    onAddToFavorite(inst)
   }
 
   if (!isOpen) return null
@@ -237,7 +224,6 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddTo
                   <th>到期日</th>
                   <th>状态</th>
                   <th>操作</th>
-                  <th>退订</th>
                 </tr>
               </thead>
               <tbody>
@@ -252,7 +238,7 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddTo
                       </span>
                     </td>
                     <td>
-                      {userSubscribedIds.has(inst.instrumentID) ? (
+                      {favoritedIds.has(inst.instrumentID) ? (
                         <button
                           className="btn-remove-favorite"
                           onClick={() => onRemoveFromFavorite(inst.instrumentID)}
@@ -267,16 +253,6 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddTo
                           {allContractIds.has(inst.instrumentID) ? '收藏' : '订阅'}
                         </button>
                       )}
-                    </td>
-                    <td>
-                      {allContractIds.has(inst.instrumentID) ? (
-                        <button
-                          className="btn-unsubscribe-modal"
-                          onClick={() => handleUnsubscribe(inst)}
-                        >
-                          退订
-                        </button>
-                      ) : null}
                     </td>
                   </tr>
                 ))}
@@ -315,8 +291,8 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribeNew, onAddTo
                   const result = await refreshPresetInstruments()
                   if (result.success && result.instruments) {
                     toast.success(`已更新 ${result.instruments.length} 个预设合约`)
-                    // 重新加载预设合约列表
-                    useContractsStore.getState().loadSubscribedContracts()
+                    // 重新加载全量合约列表
+                    useContractsStore.getState().loadAllInstruments()
                   }
                 } catch {
                   setError('刷新预设合约失败')

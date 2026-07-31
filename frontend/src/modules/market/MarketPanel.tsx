@@ -10,11 +10,10 @@ import { DepthQuote } from './DepthQuote'
 import { SpreadDisplay } from '@/components/SpreadDisplay'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
-import { useUserPrefsStore } from '@/stores/userPrefs'
 import { usePointOrder } from '@/hooks/usePointOrder'
 import { useOrderStore } from '@/modules/order/store'
 import { useMarketWs } from '@/hooks/useMarketWs'
-import { API_BASE, subscribeMarket } from '@/services/api'
+import { API_BASE } from '@/services/api'
 import { toast } from '@/components/Toast'
 import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
 import './styles.css'
@@ -24,22 +23,21 @@ const savedMarketTop = loadPanelSizes('market-top-layout')
 export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
-  const { presetContracts, userContracts, contracts, addContractInfo, removeFromFavorites, subscribeAndAddToPreset, removeContractById } = useContractsStore()
-  const { selectedContracts } = useUserPrefsStore()
+  const { contracts, favorites, addToFavorites, removeFromFavorites, loadAllInstruments, loadFavoriteContracts } = useContractsStore()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<'preset' | 'user'>('preset')
+  const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
   const [viewMode, setViewMode] = useState<'market' | 'options'>('market')
   const loadedRef = useRef(false)
 
   // Display contracts based on active tab
-  const displayContracts = activeTab === 'preset' ? presetContracts : userContracts
+  const displayContracts = activeTab === 'all' ? contracts : favorites
 
-  // User-subscribed IDs (for modal "已订阅" badge and button state)
-  const userSubscribedIds = useMemo(
-    () => new Set(selectedContracts),
-    [selectedContracts]
+  // User-favorited IDs (for modal "已订阅" badge and button state)
+  const favoritedIds = useMemo(
+    () => new Set(favorites.map(c => c.instrumentID)),
+    [favorites]
   )
-  // Combined set: all contracts in the system (preset + user)
+  // All contract IDs in the system
   const allContractIds = useMemo(
     () => new Set(contracts.map(c => c.instrumentID)),
     [contracts]
@@ -52,16 +50,12 @@ export function MarketPanel() {
   // WebSocket 行情推送（单例模式）
   useMarketWs(API_BASE.replace('http', 'ws'))
 
-  // 启动时加载预设合约 + 用户订阅
+  // 启动时加载全量合约 + 收藏合约
   useEffect(() => {
     if (!loadedRef.current) {
       loadedRef.current = true
-      useContractsStore.getState().loadSubscribedContracts().then(() => {
-        const loaded = useContractsStore.getState().contracts
-        if (loaded.length > 0) {
-          subscribeMarket(loaded.map((c) => c.instrumentID)).catch(() => {})
-        }
-      })
+      loadAllInstruments()
+      loadFavoriteContracts()
     }
   }, [])
 
@@ -81,14 +75,6 @@ export function MarketPanel() {
   const handleSelectContract = (instrumentID: string) => {
     setSelectedInstrument(instrumentID)
     setOrderInstrument(instrumentID)
-  }
-
-  const handleUnsubscribe = async () => {
-    if (!selectedInstrument) return
-    const id = selectedInstrument
-    await removeContractById(id)
-    setSelectedInstrument(null)
-    toast.success(`已退订 ${id}`)
   }
 
   const selectedSnapshot = selectedInstrument ? snapshots.get(selectedInstrument) ?? null : null
@@ -119,14 +105,14 @@ export function MarketPanel() {
         </div>
         <div className="panel-header__tabs">
           <button
-            className={`btn-tab${activeTab === 'preset' ? ' active' : ''}`}
-            onClick={() => setActiveTab('preset')}
+            className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
+            onClick={() => setActiveTab('all')}
           >
-            预设合约
+            全部合约
           </button>
           <button
-            className={`btn-tab${activeTab === 'user' ? ' active' : ''}`}
-            onClick={() => setActiveTab('user')}
+            className={`btn-tab${activeTab === 'favorites' ? ' active' : ''}`}
+            onClick={() => setActiveTab('favorites')}
           >
             自选合约
           </button>
@@ -139,30 +125,23 @@ export function MarketPanel() {
             搜索合约
           </button>
           <button
-            className={`btn-favorite${selectedInstrument && userSubscribedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
+            className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
             disabled={!selectedInstrument}
             onClick={() => {
               if (!selectedInstrument) return
-              if (userSubscribedIds.has(selectedInstrument)) {
+              if (favoritedIds.has(selectedInstrument)) {
                 removeFromFavorites(selectedInstrument)
                 toast.success(`已移除 ${selectedInstrument}`)
               } else {
-                const inst = presetContracts.find(c => c.instrumentID === selectedInstrument)
+                const inst = contracts.find(c => c.instrumentID === selectedInstrument)
                 if (inst) {
-                  addContractInfo(inst)
+                  addToFavorites(inst)
                   toast.success(`已收藏 ${inst.instrumentID}`)
                 }
               }
             }}
           >
-            {selectedInstrument && userSubscribedIds.has(selectedInstrument) ? '移除' : '收藏'}
-          </button>
-          <button
-            className="btn-unsubscribe"
-            disabled={!selectedInstrument}
-            onClick={handleUnsubscribe}
-          >
-            退订
+            {selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏'}
           </button>
         </div>
       </div>
@@ -212,12 +191,10 @@ export function MarketPanel() {
       <InstrumentSearchModal
         isOpen={searchModalOpen}
         onClose={() => setSearchModalOpen(false)}
-        onSubscribeNew={subscribeAndAddToPreset}
-        onAddToFavorite={addContractInfo}
+        onAddToFavorite={addToFavorites}
         onRemoveFromFavorite={removeFromFavorites}
-        onUnsubscribe={removeContractById}
         allContractIds={allContractIds}
-        userSubscribedIds={userSubscribedIds}
+        favoritedIds={favoritedIds}
       />
     </section>
   )

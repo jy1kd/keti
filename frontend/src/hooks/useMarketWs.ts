@@ -178,8 +178,8 @@ export function useMarketWs(wsBaseUrl: string) {
       const count = (message.data as { count: number }).count
       if (count > 0) {
         toast.success(`已更新 ${count} 个合约`)
-        // 重新加载合约列表
-        useContractsStore.getState().loadSubscribedContracts()
+        // 重新加载全量合约列表
+        useContractsStore.getState().loadAllInstruments()
       }
       // 通知监听者 CTP 刷新完成
       window.dispatchEvent(new CustomEvent('instruments_refreshed', { detail: { count } }))

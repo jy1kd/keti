@@ -42,9 +42,8 @@ describe('KLinePage', () => {
           productClass: '1',
         },
       ],
-      presetContracts: [],
-      userContracts: [],
-      presetIds: [],
+      favorites: [],
+      isLoaded: true,
     });
   });
 
