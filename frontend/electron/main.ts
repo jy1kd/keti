@@ -1,19 +1,28 @@
 import { app, BrowserWindow } from 'electron';
 import { WindowManager } from './windowManager';
+import { TrayManager } from './trayManager';
 import { registerWindowControlHandlers, registerWindowManagementHandlers } from './ipc/window';
 import { registerAppInfoHandlers, registerBackendManagementHandlers } from './ipc/app';
 
 // Check if in development mode
 export const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
-// Global window manager instance
+// Global manager instances
 let windowManager: WindowManager;
+let trayManager: TrayManager;
 
 /**
  * Get the window manager instance
  */
 export function getWindowManager(): WindowManager {
   return windowManager;
+}
+
+/**
+ * Get the tray manager instance
+ */
+export function getTrayManager(): TrayManager {
+  return trayManager;
 }
 
 /**
@@ -28,6 +37,10 @@ export async function initializeApp(): Promise<void> {
 
   // Create main window
   const mainWindow = windowManager.createMainWindow();
+
+  // Create tray manager and initialize
+  trayManager = new TrayManager();
+  trayManager.initialize(mainWindow);
 
   // Handle app activation (macOS)
   app.on('activate', () => {
