@@ -119,7 +119,7 @@ export class NotificationManager {
   /**
    * Get stop order status text
    */
-  private getStopOrderStatusText(status: string): void {
+  private getStopOrderStatusText(status: string): string {
     const statusMap: Record<string, string> = {
       'pending': '待触发',
       'triggered': '已触发',
