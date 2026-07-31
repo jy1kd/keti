@@ -166,11 +166,6 @@ interface ProductsResponse {
   products: string[]
 }
 
-interface PresetResponse {
-  instruments: string[]
-  updatedAt: string | null
-}
-
 /** 获取交易所列表 */
 export async function getExchanges(): Promise<ExchangesResponse> {
   const { data } = await api.get<ExchangesResponse>('/api/market/instruments/exchanges')
@@ -194,12 +189,6 @@ export async function searchInstruments(
   const params: Record<string, string> = { exchange, product }
   if (keyword) params.keyword = keyword
   const { data } = await api.get<InstrumentsResponse>('/api/market/instruments/search', { params })
-  return data
-}
-
-/** 获取预设合约列表 */
-export async function getPresetInstruments(): Promise<PresetResponse> {
-  const { data } = await api.get<PresetResponse>('/api/market/preset')
   return data
 }
 

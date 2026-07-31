@@ -22,11 +22,9 @@ interface ContractsStore {
   /** 加载收藏合约并订阅 */
   loadFavoriteContracts: () => Promise<void>
   /** 添加收藏并订阅 */
-  addToFavorites: (contract: ContractInfo) => Promise<void>
+  addToFavorites: (contract: ContractInfo) => Promise<boolean>
   /** 移除收藏并取消订阅 */
   removeFromFavorites: (instrumentId: string) => Promise<void>
-  /** 从合约列表中移除 */
-  removeContractById: (instrumentId: string) => void
 }
 
 export const useContractsStore = create<ContractsStore>((set, get) => ({
@@ -60,6 +58,15 @@ export const useContractsStore = create<ContractsStore>((set, get) => ({
     try {
       const result = await getInstrumentsByIds(selectedIds)
       if (result.instruments?.length) {
+        // 清理无效 ID（已下架的合约）
+        const validIds = new Set(result.instruments.map((c) => c.instrumentID))
+        const invalidIds = selectedIds.filter((id) => !validIds.has(id))
+        if (invalidIds.length > 0) {
+          const prefs = useUserPrefsStore.getState()
+          invalidIds.forEach((id) => prefs.removeSelectedContract(id))
+          prefs.saveToLocalStorage()
+        }
+
         set({ favorites: result.instruments })
         // 订阅收藏合约
         const ids = result.instruments.map((c) => c.instrumentID)
@@ -73,21 +80,23 @@ export const useContractsStore = create<ContractsStore>((set, get) => ({
   /** 添加收藏并订阅 */
   addToFavorites: async (contract) => {
     const { favorites } = get()
-    if (favorites.some((c) => c.instrumentID === contract.instrumentID)) return
+    if (favorites.some((c) => c.instrumentID === contract.instrumentID)) return true
+
+    // 订阅
+    try {
+      await subscribeMarket([contract.instrumentID])
+    } catch {
+      // 订阅失败，不添加到收藏
+      return false
+    }
 
     // 持久化到 userPrefs
     const prefs = useUserPrefsStore.getState()
     prefs.addSelectedContract(contract.instrumentID)
     prefs.saveToLocalStorage()
 
-    // 订阅
-    try {
-      await subscribeMarket([contract.instrumentID])
-    } catch {
-      // Silent fail
-    }
-
     set({ favorites: [...favorites, contract] })
+    return true
   },
 
   /** 移除收藏并取消订阅 */
@@ -106,11 +115,5 @@ export const useContractsStore = create<ContractsStore>((set, get) => ({
 
     const { favorites } = get()
     set({ favorites: favorites.filter((c) => c.instrumentID !== instrumentId) })
-  },
-
-  /** 从合约列表中移除 */
-  removeContractById: (instrumentId) => {
-    const { contracts } = get()
-    set({ contracts: contracts.filter((c) => c.instrumentID !== instrumentId) })
   },
 }))

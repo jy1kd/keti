@@ -36,8 +36,6 @@ export const DEFAULT_QUICK_TRADE_CONFIG: QuickTradeConfig = {
 
 interface UserPrefsStore {
   selectedContracts: string[]
-  /** User manually subscribed preset contracts (persisted, separate from selectedContracts) */
-  manualPresetIds: string[]
   hotKeys: HotKeyConfig
   quickTradeConfig: QuickTradeConfig
   setHotKey: (action: string, key: string) => void
@@ -45,15 +43,12 @@ interface UserPrefsStore {
   setQuickTradeConfig: (config: Partial<QuickTradeConfig>) => void
   addSelectedContract: (instrumentId: string) => void
   removeSelectedContract: (instrumentId: string) => void
-  addManualPreset: (instrumentId: string) => void
-  removeManualPreset: (instrumentId: string) => void
   saveToLocalStorage: () => void
   loadFromLocalStorage: () => void
 }
 
 export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
   selectedContracts: [],
-  manualPresetIds: [],
   hotKeys: { ...DEFAULT_HOT_KEYS },
   quickTradeConfig: { ...DEFAULT_QUICK_TRADE_CONFIG },
 
@@ -80,22 +75,11 @@ export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
       selectedContracts: state.selectedContracts.filter((id) => id !== instrumentId),
     })),
 
-  addManualPreset: (instrumentId) =>
-    set((state) => {
-      if (state.manualPresetIds.includes(instrumentId)) return state
-      return { manualPresetIds: [...state.manualPresetIds, instrumentId] }
-    }),
-
-  removeManualPreset: (instrumentId) =>
-    set((state) => ({
-      manualPresetIds: state.manualPresetIds.filter((id) => id !== instrumentId),
-    })),
-
   saveToLocalStorage: () => {
-    const { selectedContracts, manualPresetIds, hotKeys, quickTradeConfig } = get()
+    const { selectedContracts, hotKeys, quickTradeConfig } = get()
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ selectedContracts, manualPresetIds, hotKeys, quickTradeConfig })
+      JSON.stringify({ selectedContracts, hotKeys, quickTradeConfig })
     )
   },
 
@@ -106,7 +90,6 @@ export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
       const data = JSON.parse(raw)
       set({
         selectedContracts: data.selectedContracts ?? [],
-        manualPresetIds: data.manualPresetIds ?? [],
         hotKeys: data.hotKeys ?? { ...DEFAULT_HOT_KEYS },
         quickTradeConfig: data.quickTradeConfig ?? { ...DEFAULT_QUICK_TRADE_CONFIG },
       })

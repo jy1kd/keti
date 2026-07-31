@@ -26,15 +26,13 @@ interface Props {
   onAddToFavorite: (instrument: ContractInfo) => void
   /** 移除收藏（取消订阅） */
   onRemoveFromFavorite: (instrumentId: string) => void
-  /** 从合约列表中移除 */
-  onUnsubscribe: (instrumentId: string) => void
   /** All contract IDs in the system */
   allContractIds: Set<string>
   /** Favorited IDs (show "移除" button) */
   favoritedIds: Set<string>
 }
 
-export function InstrumentSearchModal({ isOpen, onClose, onAddToFavorite, onRemoveFromFavorite, onUnsubscribe, allContractIds, favoritedIds }: Props) {
+export function InstrumentSearchModal({ isOpen, onClose, onAddToFavorite, onRemoveFromFavorite, allContractIds, favoritedIds }: Props) {
   const [exchanges, setExchanges] = useState<string[]>([])
   const [products, setProducts] = useState<string[]>([])
   const [instruments, setInstruments] = useState<ContractInfo[]>([])
@@ -163,10 +161,6 @@ export function InstrumentSearchModal({ isOpen, onClose, onAddToFavorite, onRemo
     onAddToFavorite(inst)
   }
 
-  const handleUnsubscribe = async (inst: ContractInfo) => {
-    await onUnsubscribe(inst.instrumentID)
-  }
-
   if (!isOpen) return null
 
   return (
@@ -230,7 +224,6 @@ export function InstrumentSearchModal({ isOpen, onClose, onAddToFavorite, onRemo
                   <th>到期日</th>
                   <th>状态</th>
                   <th>操作</th>
-                  <th>退订</th>
                 </tr>
               </thead>
               <tbody>
@@ -260,16 +253,6 @@ export function InstrumentSearchModal({ isOpen, onClose, onAddToFavorite, onRemo
                           {allContractIds.has(inst.instrumentID) ? '收藏' : '订阅'}
                         </button>
                       )}
-                    </td>
-                    <td>
-                      {allContractIds.has(inst.instrumentID) ? (
-                        <button
-                          className="btn-unsubscribe-modal"
-                          onClick={() => handleUnsubscribe(inst)}
-                        >
-                          退订
-                        </button>
-                      ) : null}
                     </td>
                   </tr>
                 ))}

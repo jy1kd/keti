@@ -141,12 +141,4 @@ describe('useContractsStore', () => {
     expect(useUserPrefsStore.getState().selectedContracts).not.toContain('au2406')
     expect(unsubscribeMarket).toHaveBeenCalledWith(['au2406'])
   })
-
-  // --- removeContractById tests ---
-
-  it('removeContractById 从合约列表中移除', () => {
-    useContractsStore.setState({ contracts: [mockContract, mockContract2] })
-    useContractsStore.getState().removeContractById('au2406')
-    expect(useContractsStore.getState().contracts).toEqual([mockContract2])
-  })
 })

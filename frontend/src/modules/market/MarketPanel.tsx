@@ -23,7 +23,7 @@ const savedMarketTop = loadPanelSizes('market-top-layout')
 export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
-  const { contracts, favorites, addToFavorites, removeFromFavorites, removeContractById, loadAllInstruments, loadFavoriteContracts } = useContractsStore()
+  const { contracts, favorites, addToFavorites, removeFromFavorites, loadAllInstruments, loadFavoriteContracts } = useContractsStore()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
   const [viewMode, setViewMode] = useState<'market' | 'options'>('market')
@@ -75,14 +75,6 @@ export function MarketPanel() {
   const handleSelectContract = (instrumentID: string) => {
     setSelectedInstrument(instrumentID)
     setOrderInstrument(instrumentID)
-  }
-
-  const handleUnsubscribe = async () => {
-    if (!selectedInstrument) return
-    const id = selectedInstrument
-    await removeContractById(id)
-    setSelectedInstrument(null)
-    toast.success(`已退订 ${id}`)
   }
 
   const selectedSnapshot = selectedInstrument ? snapshots.get(selectedInstrument) ?? null : null
@@ -151,13 +143,6 @@ export function MarketPanel() {
           >
             {selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏'}
           </button>
-          <button
-            className="btn-unsubscribe"
-            disabled={!selectedInstrument}
-            onClick={handleUnsubscribe}
-          >
-            退订
-          </button>
         </div>
       </div>
 
@@ -208,7 +193,6 @@ export function MarketPanel() {
         onClose={() => setSearchModalOpen(false)}
         onAddToFavorite={addToFavorites}
         onRemoveFromFavorite={removeFromFavorites}
-        onUnsubscribe={removeContractById}
         allContractIds={allContractIds}
         favoritedIds={favoritedIds}
       />

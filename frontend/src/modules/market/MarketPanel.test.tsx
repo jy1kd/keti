@@ -151,10 +151,9 @@ describe('MarketPanel', () => {
     expect(screen.getByText('自选合约')).toBeInTheDocument()
   })
 
-  it('renders 搜索合约 and 退订 buttons', () => {
+  it('renders 搜索合约 button', () => {
     render(<MarketPanel />)
     expect(screen.getByText('搜索合约')).toBeInTheDocument()
-    expect(screen.getByText('退订')).toBeInTheDocument()
   })
 
   it('点击 搜索合约 按钮打开搜索弹窗', async () => {
@@ -163,28 +162,5 @@ describe('MarketPanel', () => {
     expect(screen.queryByTestId('instrument-search-modal')).not.toBeInTheDocument()
     await user.click(screen.getByText('搜索合约'))
     expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
-  })
-
-  it('退订 button is disabled when no instrument is selected', () => {
-    render(<MarketPanel />)
-    expect(screen.getByText('退订')).toBeDisabled()
-  })
-
-  it('退订 button is enabled on preset tab when instrument is selected', () => {
-    useMarketStore.setState({ selectedInstrument: 'IF2608' })
-    render(<MarketPanel />)
-    // 退订 works on both tabs — just needs a selected instrument
-    expect(screen.getByText('退订')).toBeEnabled()
-  })
-
-  it('退订 button is enabled on favorites tab when favorited instrument is selected', async () => {
-    const user = userEvent.setup()
-    useMarketStore.setState({ selectedInstrument: 'IF2608' })
-    useContractsStore.setState({ favorites: [{ instrumentID: 'IF2608' } as any] })
-    useUserPrefsStore.setState({ selectedContracts: ['IF2608'] })
-    render(<MarketPanel />)
-    // Switch to favorites tab
-    await user.click(screen.getByText('自选合约'))
-    expect(screen.getByText('退订')).toBeEnabled()
   })
 })
