@@ -32,7 +32,6 @@ export function QueryPanel() {
   const refreshAll = useQueryStore((s) => s.refreshAll)
   const handleCancelAll = useQueryStore((s) => s.handleCancelAll)
   const selectedInstrument = useMarketStore((s) => s.selectedInstrument)
-  const snapshots = useMarketStore((s) => s.snapshots)
   const klineData = useMarketStore((s) => s.klineData)
   const setKlineData = useMarketStore((s) => s.setKlineData)
   const period = useMarketStore((s) => s.currentPeriod)

@@ -1,12 +1,13 @@
 # 上期所 SimNow 模拟交易终端
 
-基于 CTP 协议的期货期权模拟交易终端，浏览器 Web 应用，对接 SimNow 7×24 测试环境，实现行情接入、交易接入、手动报单等完整功能。
+基于 CTP 协议的期货期权模拟交易终端，支持**浏览器 Web 应用**和 **Electron 桌面应用**两种运行模式，对接 SimNow 7×24 测试环境，实现行情接入、交易接入、手动报单等完整功能。
 
 ## 技术栈
 
 | 层级 | 技术 | 用途 |
 |------|------|------|
 | 前端 | React 18 + TypeScript 5 + Vite 5 | UI 框架、构建 |
+| 桌面端 | Electron 43 | 桌面应用、系统托盘、全局快捷键 |
 | 表格 | @visactor/vtable | 高性能虚拟滚动，支持 1000+ 合约 |
 | 图表 | ECharts 5 | K 线图、技术指标 |
 | 状态管理 | Zustand | 轻量级状态管理，localStorage 持久化 |
@@ -32,6 +33,7 @@ SimNow 柜台 (7×24 测试环境)
 - **报单模块**：限价/市价/止损单、套利指令、点价报单、一键反向/锁仓
 - **查询模块**：报单流水、成交、持仓、资金、合约信息
 - **系统连接**：SimNow 登录、连接状态监控、断线重连
+- **桌面应用**：Electron 桌面端、系统托盘、全局快捷键、原生通知、自动更新
 
 ## 技术亮点
 
@@ -68,7 +70,18 @@ SimNow 柜台 (7×24 测试环境)
 - **保护价校验**：市价指令必须填写保护价，在涨跌停板范围内，priceTick 整数倍对齐
 - **后端权威校验**：Pydantic field_validator 兜底，防止前端绕过
 
-### 5. 双窗口协作开发
+### 5. Electron 桌面应用
+
+基于 Electron 构建桌面应用，提供原生桌面体验：
+
+- **多窗口管理**：主窗口、报单窗口、K 线窗口独立显示，支持拖拽和调整大小
+- **系统托盘**：最小化到托盘，托盘菜单快速切换面板
+- **全局快捷键**：`Ctrl+B` 快速报单、`Ctrl+K` 打开 K 线图、`Ctrl+Q` 退出
+- **原生通知**：报单成交、止损触发、连接断开等事件通知
+- **自动更新**：集成 electron-updater，支持检查更新、下载、安装
+- **多平台打包**：支持 Windows（NSIS）、macOS（DMG）、Linux（AppImage）
+
+### 6. 双窗口协作开发
 
 项目采用角色 A（后端）/ 角色 B（前端）双窗口协作模式：
 
@@ -117,6 +130,8 @@ npm install
 
 ### 3. 启动服务
 
+#### 方式一：Web 浏览器模式
+
 ```bash
 # 启动后端（在 server/ 目录下）
 cd server
@@ -127,6 +142,20 @@ python start.py --port 8001  # 指定端口
 # 启动前端（在 frontend/ 目录下，另开一个终端）
 cd frontend
 npm run dev                  # 开发服务器 → http://localhost:5173
+```
+
+#### 方式二：Electron 桌面应用模式
+
+```bash
+# 启动 Electron 应用（自动启动后端）
+cd frontend
+npm run electron:dev         # 开发模式（支持热重载）
+
+# 打包生产版本
+npm run electron:build       # 打包当前平台
+npm run electron:build -- --win    # 打包 Windows
+npm run electron:build -- --mac    # 打包 macOS
+npm run electron:build -- --linux  # 打包 Linux
 ```
 
 `start.py` 会根据当前时间自动选择 CTP 地址：
@@ -163,15 +192,40 @@ keti/
 │   │   ├── components/       # 通用组件（ContractSearch/Toast/...）
 │   │   ├── services/         # API 层 + 类型定义
 │   │   ├── stores/           # Zustand 状态管理
+│   │   ├── hooks/            # 自定义 Hooks（useMarketWs/useReconnect/...）
+│   │   ├── pages/            # 独立页面（OrderPage/KLinePage，用于 Electron 窗口）
 │   │   └── utils/            # 工具函数（validators/orderMapping）
+│   ├── electron/             # Electron 主进程代码
+│   │   ├── main.ts           # 主进程入口
+│   │   ├── preload.ts        # 预加载脚本（IPC 桥接）
+│   │   ├── windowManager.ts  # 窗口管理器
+│   │   ├── trayManager.ts    # 系统托盘管理器
+│   │   ├── shortcuts.ts      # 全局快捷键管理器
+│   │   ├── notificationManager.ts  # 通知管理器
+│   │   ├── backendManager.ts # 后端进程管理器
+│   │   ├── autoUpdater.ts    # 自动更新管理器
+│   │   └── ipc/              # IPC 通道定义和处理器
+│   ├── scripts/              # 构建脚本
+│   │   ├── compile-electron.cjs  # Electron 编译脚本
+│   │   ├── build-electron.cjs    # 多平台打包脚本
+│   │   └── generate-icons.cjs    # 图标生成脚本
+│   ├── build/                # 打包资源（图标文件）
+│   ├── electron-builder.json # Electron 打包配置
 │   └── package.json
 ├── server/                   # 后端代码
 │   ├── api/                  # REST API 路由（connection/market/order/query）
 │   ├── services/             # 业务服务（order_manager/stop_order/market_service/kline_service）
 │   ├── ctp_wrapper/          # CTP API 封装层（md_user_api/trader_api/callback/types）
+│   ├── models/               # 数据模型（market/order/account/contract）
+│   ├── ws/                   # WebSocket 管理（manager/handlers）
 │   ├── config.py             # 配置管理（环境变量读取）
-│   ├── main.py               # CTP 验证脚本
+│   ├── main.py               # FastAPI 应用入口
+│   ├── start.py              # 智能启动脚本（自动选择 CTP 地址）
+│   ├── pyinstaller.spec      # PyInstaller 打包配置
 │   └── tests/                # 108 个单元测试（pytest）
+├── scripts/                  # 项目脚本
+│   ├── prepare-electron.sh   # Electron 环境检查脚本
+│   └── build-backend.py      # 后端打包脚本
 ├── .claude/                  # Claude Code 配置
 │   └── skills/               # 自定义技能（双窗口协作开发流程）
 │       ├── role-a-dev-flow/  # 角色A（后端）开发流程
@@ -254,12 +308,60 @@ git clone <repo-url> && cd keti
 /understand-chat How does the payment flow work?
 ```
 
+## Electron 桌面应用
+
+### 功能特性
+
+| 功能 | 说明 |
+|------|------|
+| **多窗口** | 主窗口、报单窗口、K 线窗口独立显示 |
+| **系统托盘** | 最小化到托盘，托盘菜单快速切换 |
+| **全局快捷键** | `Ctrl+B` 报单、`Ctrl+K` K 线、`Ctrl+Q` 退出 |
+| **原生通知** | 报单成交、止损触发、连接断开通知 |
+| **自动更新** | electron-updater 检查更新、下载、安装 |
+| **多平台** | Windows/macOS/Linux 三平台打包 |
+
+### 快捷键
+
+| 快捷键 | 功能 |
+|--------|------|
+| `Ctrl+B` | 快速报单 |
+| `Ctrl+K` | 打开 K 线图 |
+| `Ctrl+Q` | 退出应用 |
+| `Ctrl+Shift+M` | 切换性能监控 |
+
+### 系统托盘
+
+- **点击托盘图标**：显示/隐藏主窗口
+- **右键菜单**：行情面板、报单面板、查询面板、设置、退出
+- **关闭窗口**：最小化到托盘（不退出应用）
+
+### 打包命令
+
+```bash
+cd frontend
+
+# 生成占位图标（首次运行）
+npm run generate-icons
+
+# 打包当前平台
+npm run electron:build
+
+# 打包指定平台
+npm run electron:build -- --win     # Windows (NSIS)
+npm run electron:build -- --mac     # macOS (DMG)
+npm run electron:build -- --linux   # Linux (AppImage)
+```
+
+打包产物在 `frontend/release/` 目录。
+
 ## 文档
 
 - [产品需求文档](docs/specs/prd.md) — 功能需求、非目标、用户画像
 - [技术架构设计](docs/specs/design.md) — 接口设计、数据模型、WebSocket 端点
 - [项目设计稿](docs/specs/dev.md) — 代码结构、技术规范、CTP 连接流程
 - [任务拆分](docs/tasks/task.md) — 21 个 PR，5 个阶段
+- [Electron 迁移任务](docs/tasks/task-electron-migration.md) — 10 个 PR，桌面应用迁移
 - [一致性检查修复](docs/tasks/consistency-check-records.md) — 13 个 PR，前后端类型对齐
 - [交易指令合规性修复](docs/tasks/compliance-fix-records.md) — 保护价/数量上限/套利指令
 - [交易指令合规审查](docs/reviews/compliance-review.md) — 11 个合规性问题清单
@@ -300,3 +402,5 @@ git clone <repo-url> && cd keti
 - 项目依赖 `docs/specs/ctp-api-structure.txt` 做前后端类型对齐
 - K 线数据由后端 `kline_service` 实时聚合 tick 数据生成，无历史数据接口
 - CTP 的 `highestPrice`/`lowestPrice` 是当日最高最低价，非周期内值，前端需动态计算
+- Electron 桌面应用会自动检测并连接已有后端，避免重复启动
+- 托盘图标文件（`build/icon.png`、`icon.ico`、`icon.icns`）需替换为实际图标

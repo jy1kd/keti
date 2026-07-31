@@ -25,8 +25,15 @@
 | PR-20 | 前端合约刷新功能（刷新按钮 + Toast） | ✅ 已完成 | 2026-07-21 | 2a4d682~8ebaf1f (9 commits) |
 | PR-21 | 手动订阅/退订合约 | ✅ 已完成 | 2026-07-23 | 与 PR-20 共享提交 |
 | PR-22 | 连接状态指示器完善 | ✅ 已审查通过 | 2026-07-24 | 9a8ebd6, ed7d01c, 43ed2e1, ad924f7, ef11135, 6126ae1, 41f3af1 (7 commits) |
+| PR-E1 | Electron 基础框架搭建 | ✅ 已完成 | 2026-07-28 | c6fb4b8, fa69d6c, 1499acd, db154c1 (4 commits) |
+| PR-E2 | IPC 通信基础设施 | ✅ 已完成 | 2026-07-28 | 03f8fa0, 647b804 (2 commits) |
+| PR-E3 | 窗口管理器实现 | ✅ 已完成 | 2026-07-28 | 9db9aaf, 582ca3c (2 commits) |
+| PR-E4 | 报单窗口实现 | ✅ 已完成 | 2026-07-28 | 6f999e1, 0084c19 (2 commits) |
+| PR-E5 | K线窗口实现 | ✅ 已完成 | 2026-07-28 | d039ba2, 1fc1c41 (2 commits) |
+| PR-E6 | 系统托盘实现 | ✅ 已完成 | 2026-07-28 | 79a385e, f00af31 (2 commits) |
+| PR-E7 | 全局快捷键实现 | ✅ 已完成（含持久化补充） | 2026-07-28 | b615a68, d6f8cdc (2 commits) |
 
-**总计**：13个PR + 1个联调PR = 14个PR
+**总计**：13个PR + 1个联调PR + 7个Electron PR = 21个PR
 
 ---
 
@@ -531,3 +538,396 @@
 | 2026-07-08 | 初始化progress.md | ✅ 完成 |
 | 2026-07-21 | PR-20 合约刷新功能完成 | ✅ 完成 |
 | 2026-07-24 | PR-14 期权T型报价实现完成 | ✅ 完成 |
+
+---
+
+### PR-E1: Electron 基础框架搭建
+
+**状态**：✅ 已完成（含审查修复+人工验证）
+
+**PR信息**：
+- PR分支名：`feature/electron-refactor`
+- 依赖PR：无
+- 工作量：3小时
+
+**完成内容**：
+1. electron/main.ts — 主进程入口，窗口管理，IPC 处理
+2. electron/preload.ts — 预加载脚本，安全的 IPC 桥接
+3. electron/tsconfig.json — Electron TypeScript 配置
+4. electron-builder.json — 应用打包配置（Windows/macOS/Linux）
+5. vite.config.ts — 添加 Electron 构建支持
+6. package.json — 添加 electron:dev/build/preview 脚本
+7. electron/__tests__/main.test.ts — 主进程单元测试
+8. electron/__tests__/preload.test.ts — 预加载脚本单元测试
+
+**审查反馈修复**：
+- F1: main.ts 自动初始化改为条件执行（非测试环境）
+- F2: 添加缺失的 IPC handler（window:open-order, window:open-kline, backend:restart, backend:status）
+- F3: preload.ts 事件监听器返回清理函数，防止内存泄漏
+- I1: 精简 main.test.ts mock，移除未使用的模块
+- I2: 移除 electron-is-dev 依赖
+
+**验证结果**：
+- ✅ 4 个测试全部通过
+- ✅ TypeScript 编译无错误
+- ✅ 所有验收标准通过
+
+**提交记录**：
+- `c6fb4b8` feat(electron): PR-E1 Electron 基础框架搭建
+- `fa69d6c` feat(electron): PR-E1 补全 - 配置文件和构建脚本
+- `1499acd` fix(electron): 处理 PR-E1 审查反馈
+- `db154c1` docs(electron): 添加 PR-E1 人工验证记录
+
+**交接说明**：
+- PR-E1 已完成，可进入 PR-E2（IPC 通信基础设施）
+
+---
+
+### PR-E2: IPC 通信基础设施
+
+**状态**：✅ 已完成（含审查修复+人工验证）
+
+**PR信息**：
+- PR分支名：`feature/electron-refactor`
+- 依赖PR：PR-E1 ✅
+- 工作量：2小时
+
+**完成内容**：
+1. electron/ipc/index.ts — IPC 通道定义和类型接口
+2. electron/ipc/window.ts — 窗口控制 IPC 处理器
+3. electron/ipc/app.ts — 应用信息 IPC 处理器
+4. electron/ipc/__tests__/index.test.ts — IPC 索引单元测试
+5. src/services/electron.ts — 渲染进程 Electron API 封装
+6. src/services/__tests__/electron.test.ts — electron.ts 单元测试
+7. electron/main.ts — 使用模块化 IPC 处理器
+
+**审查反馈修复**：
+- I1: 添加 electron.ts 单元测试（16 个测试覆盖所有函数）
+- I2: 添加 preload.ts 和 ipc/index.ts 通道同步注释
+- isElectron 改为函数（动态检查，支持测试）
+
+**验证结果**：
+- ✅ 27 个测试全部通过
+- ✅ TypeScript 编译无错误
+- ✅ 所有验收标准通过
+
+**提交记录**：
+- `03f8fa0` feat(electron): PR-E2 IPC 通信基础设施
+- `647b804` fix(electron): 处理 PR-E2 审查反馈
+- `a8f26a0` docs(electron): 添加 PR-E2 审查反馈处理记录
+- `202137c` docs(electron): 添加 PR-E2 人工验证记录
+
+**交接说明**：
+- PR-E2 已完成，可进入 PR-E3（窗口管理器）
+
+---
+
+### PR-E3: 窗口管理器实现
+
+**状态**：✅ 已完成（含审查修复+人工验证）
+
+**PR信息**：
+- PR分支名：`feature/electron-refactor`
+- 依赖PR：PR-E2 ✅
+- 工作量：4小时
+
+**完成内容**：
+1. electron/windowManager.ts — 窗口管理器类
+   - createMainWindow: 创建主窗口
+   - openOrderWindow: 打开报单窗口
+   - openKLineWindow: 打开K线窗口
+   - getWindow/getAllWindows: 获取窗口
+   - closeAllWindows: 关闭所有窗口
+   - sendToWindow/broadcast: 窗口间通信
+   - saveWindowState/restoreWindowState: 窗口状态持久化
+2. electron/__tests__/windowManager.test.ts — 窗口管理器单元测试（15 个用例）
+3. electron/ipc/window.ts — 使用 WindowManager 实现窗口管理 IPC
+4. electron/main.ts — 使用 WindowManager 类
+5. electron/__tests__/main.test.ts — 适配新的 main.ts 导出
+
+**审查反馈修复**：
+- I1: 移除 windowManager.ts 未使用的 IPC_CHANNELS 导入
+- I2: 补充窗口管理器行为测试（去重、关闭、状态保存、广播）
+
+**验证结果**：
+- ✅ 42 个测试全部通过
+- ✅ TypeScript 编译无错误
+- ✅ 所有验收标准通过
+
+**提交记录**：
+- `9db9aaf` feat(electron): PR-E3 窗口管理器实现
+- `582ca3c` fix(electron): 处理 PR-E3 审查反馈
+- `05cd4ed` docs(electron): 添加 PR-E3 审查反馈处理记录
+- `0ea2970` docs(electron): 添加 PR-E3 人工验证记录
+
+**交接说明**：
+- PR-E3 已完成，可进入 PR-E4（报单窗口实现）
+
+---
+
+### PR-E4: 报单窗口实现
+
+**状态**：✅ 已完成（含审查修复+人工验证）
+
+**PR信息**：
+- PR分支名：`feature/electron-refactor`
+- 依赖PR：PR-E3 ✅
+- 工作量：3小时
+
+**完成内容**：
+1. src/pages/OrderPage.tsx — 独立报单页面
+   - 支持 instrumentID 参数
+   - 显示合约信息和最新价
+   - 集成 OrderForm 组件
+   - 支持 Electron 独立窗口模式
+2. src/pages/__tests__/OrderPage.test.tsx — 报单页面单元测试（4 个用例）
+
+**审查反馈修复**：
+- F1: 移除 OrderPage.tsx 未使用的 orderForm 和 resetOrderForm 导入
+
+**验证结果**：
+- ✅ 46 个测试全部通过
+- ✅ TypeScript 编译无错误
+- ✅ 所有验收标准通过
+
+**提交记录**：
+- `6f999e1` feat(electron): PR-E4 报单窗口实现
+- `0084c19` fix(electron): 处理 PR-E4 审查反馈
+- `b3d8e71` docs(electron): 添加 PR-E4 审查反馈处理记录
+- `77da9f4` docs(electron): 添加 PR-E4 人工验证记录
+
+**交接说明**：
+- PR-E4 已完成，可进入 PR-E5（K线窗口实现）
+
+---
+
+### PR-E5: K线窗口实现
+
+**状态**：✅ 已完成（含审查修复+人工验证）
+
+**PR信息**：
+- PR分支名：`feature/electron-refactor`
+- 依赖PR：PR-E3 ✅
+- 工作量：3小时
+
+**完成内容**：
+1. src/pages/KLinePage.tsx — 独立K线页面
+   - 支持 instrumentID 参数
+   - 显示合约信息和名称
+   - 集成 KLineChart 组件
+   - 支持多周期切换
+   - 支持 Electron 独立窗口模式
+2. src/pages/__tests__/KLinePage.test.tsx — K线页面单元测试（5 个用例）
+
+**审查反馈修复**：
+- I1: KLinePage 添加错误日志 console.warn
+
+**验证结果**：
+- ✅ 51 个测试全部通过
+- ✅ TypeScript 编译无错误
+- ✅ 所有验收标准通过
+
+**提交记录**：
+- `d039ba2` feat(electron): PR-E5 K线窗口实现
+- `1fc1c41` fix(electron): 处理 PR-E5 审查反馈
+- `0659334` docs(electron): 添加 PR-E5 审查反馈处理记录
+- `b3c9f52` docs(electron): 添加 PR-E5 人工验证记录
+
+**交接说明**：
+- PR-E5 已完成，可进入 PR-E6（系统托盘实现）
+
+---
+
+### PR-E6: 系统托盘实现
+
+**状态**：✅ 已完成（含审查修复+人工验证）
+
+**PR信息**：
+- PR分支名：`feature/electron-refactor`
+- 依赖PR：PR-E3 ✅
+- 工作量：2小时
+
+**完成内容**：
+1. electron/trayManager.ts — 系统托盘管理器
+   - initialize: 初始化托盘（图标、菜单、事件）
+   - showNotification: 显示托盘通知
+   - getTray: 获取托盘实例
+   - destroy: 销毁托盘
+   - 托盘菜单：显示主窗口、行情/报单/查询面板、设置、退出
+   - 点击托盘：显示/隐藏主窗口
+   - 关闭窗口：最小化到托盘而非退出
+2. electron/__tests__/trayManager.test.ts — 系统托盘单元测试（6 个用例）
+3. electron/main.ts — 集成 TrayManager
+
+**审查反馈修复**：
+- F1: 添加托盘图标文件存在性检查，缺失时使用空图标作为 fallback
+- I2: 移除 TrayNotification 未使用的 icon 字段
+
+**验证结果**：
+- ✅ 57 个测试全部通过
+- ✅ TypeScript 编译无错误
+- ✅ 所有验收标准通过
+
+**提交记录**：
+- `79a385e` feat(electron): PR-E6 系统托盘实现
+- `f00af31` fix(electron): 处理 PR-E6 审查反馈
+- `23c519b` docs(electron): 添加 PR-E6 审查反馈处理记录
+- `ced4e6d` docs(electron): 添加 PR-E6 人工验证记录
+
+**交接说明**：
+- PR-E6 已完成，可进入 PR-E7（全局快捷键实现）
+
+---
+
+### PR-E7: 全局快捷键实现
+
+**状态**：✅ 已完成（含持久化补充+审查+人工验证）
+
+**PR信息**：
+- PR分支名：`feature/electron-refactor`
+- 依赖PR：PR-E6 ✅
+- 工作量：1.5小时
+
+**完成内容**：
+1. ShortcutManager 类：register/unregister/unregisterAll/isRegistered/getShortcuts/registerDefaults
+2. 默认快捷键：Ctrl+B（报单）/ Ctrl+K（K线）/ Ctrl+Q（退出）
+3. main.ts 集成：loadAndRegister 传入 handler 映射 + will-quit 保存+清理
+4. 冲突检测：本地 Map + globalShortcut.isRegistered 双重检查
+5. 配置持久化：save/load/loadAndRegister/updateShortcut/resetToDefaults
+6. 存储位置：`<userData>/shortcuts.json`
+
+**验证结果**：
+- ✅ 14 个测试全部通过
+- ✅ 全局快捷键注册/注销正常
+- ✅ 冲突检测正确
+- ✅ 配置持久化正常
+
+**提交记录**：
+- `b615a68` feat(electron): PR-E7 全局快捷键实现
+- `d6f8cdc` fix(electron): PR-E7 补充 - 快捷键配置持久化
+- `5b152da` docs(electron): 添加 PR-E7 审查反馈
+
+**交接说明**：
+- PR-E7 已完成，可进入 PR-E8（原生通知实现）
+
+---
+
+### PR-E8: 原生通知实现
+
+**状态**：✅ 已完成（含审查修复+人工验证）
+
+**PR信息**：
+- PR分支名：`feature/electron-refactor`
+- 依赖PR：PR-E6 ✅
+- 工作量：2小时
+
+**完成内容**：
+1. electron/notificationManager.ts — 通知管理器
+   - show: 显示通用通知
+   - showOrderNotification: 显示报单通知
+   - showStopOrderNotification: 显示止损单通知
+   - showConnectionNotification: 显示连接状态通知
+   - isSupported: 检查通知是否支持
+   - closeAll: 关闭所有通知
+2. electron/__tests__/notificationManager.test.ts — 通知管理器单元测试（6 个用例）
+3. electron/main.ts — 集成 NotificationManager
+
+**审查反馈修复**：
+- F1: 修复 getStopOrderStatusText 返回类型 void → string
+
+**验证结果**：
+- ✅ 77 个测试全部通过
+- ✅ TypeScript 编译无错误
+- ✅ 所有验收标准通过
+
+**提交记录**：
+- `78ac05c` feat(electron): PR-E8 原生通知实现
+- `dde5803` fix(electron): 处理 PR-E8 审查反馈
+- `5afc666` docs(electron): 添加 PR-E8 和 PR-E7-v2 审查反馈处理记录
+- `f417508` docs(electron): 添加 PR-E8 人工验证记录
+
+**交接说明**：
+- PR-E8 已完成，可进入 PR-E9（应用打包配置）
+
+---
+
+### PR-E9: 应用打包配置
+
+**状态**：✅ 已完成（含审查修复+人工验证）
+
+**PR信息**：
+- PR分支名：`feature/electron-refactor`
+- 依赖PR：PR-E8 ✅
+- 工作量：3小时
+
+**完成内容**：
+1. electron-builder.json — 完整打包配置
+   - Windows: NSIS 安装程序
+   - macOS: DMG 安装程序
+   - Linux: AppImage 便携式应用
+   - compression: maximum
+   - removePackageScripts: true
+2. scripts/generate-icons.cjs — 占位图标生成脚本
+3. scripts/build-electron.cjs — 多平台打包脚本
+4. build/README.md — 打包资源说明
+
+**审查反馈修复**：
+- I1: 添加图标文件大小检查，空文件时显示警告
+- I2: 添加 generate-icons 脚本到 package.json
+
+**验证结果**：
+- ✅ 77 个测试全部通过
+- ✅ TypeScript 编译无错误
+- ✅ 所有验收标准通过
+
+**提交记录**：
+- `50595cf` feat(electron): PR-E9 应用打包配置
+- `620ee42` fix(electron): 处理 PR-E9 审查反馈
+- `0bca2c6` docs(electron): 添加 PR-E9 审查反馈处理记录
+- `da5ff3f` docs(electron): 添加 PR-E9 人工验证记录
+
+**交接说明**：
+- PR-E9 已完成，可进入 PR-E10（Python 后端打包集成）
+
+---
+
+### PR-E10: Python 后端打包集成
+
+**状态**：✅ 已完成（含审查修复+人工验证）
+
+**PR信息**：
+- PR分支名：`feature/electron-refactor`
+- 依赖PR：PR-E9 ✅
+- 工作量：4小时
+
+**完成内容**：
+1. electron/backendManager.ts — 后端进程管理器
+   - start: 启动后端进程
+   - stop: 停止后端进程（SIGTERM + 5s 超时 SIGKILL）
+   - restart: 重启后端进程
+   - getStatus: 获取后端状态（running/pid/uptime）
+   - isRunning: 检查后端是否运行
+   - getLogs: 获取后端日志（stdout/stderr 捕获）
+   - clearLogs: 清除后端日志
+2. electron/__tests__/backendManager.test.ts — 后端管理器单元测试（8 个用例）
+3. electron/main.ts — 集成 BackendManager（启动时自动启动，退出时自动停止）
+4. electron/ipc/app.ts — 更新 registerBackendManagementHandlers 接收 BackendManager 实例
+
+**审查反馈修复**：
+- F1: 集成 BackendManager 到 main.ts（启动时自动启动后端，退出时自动停止）
+- F1: 更新 ipc/app.ts 接收 BackendManager 实例
+- F2: 移除 backendManager.ts 未使用的导入（app, fs）
+
+**验证结果**：
+- ✅ 85 个测试全部通过
+- ✅ TypeScript 编译无错误
+- ✅ 所有验收标准通过
+
+**提交记录**：
+- `0069be1` feat(electron): PR-E10 Python 后端打包集成
+- `4c24944` fix(electron): 处理 PR-E10 审查反馈
+- `b184d6c` docs(electron): 添加 PR-E10 审查反馈处理记录
+- `9a0544c` docs(electron): 添加 PR-E10 人工验证记录
+
+**交接说明**：
+- PR-E10 已完成，Electron 迁移所有 PR 已完成
