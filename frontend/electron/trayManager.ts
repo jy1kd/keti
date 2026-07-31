@@ -127,7 +127,7 @@ export class TrayManager {
     // Handle window close - minimize to tray instead of quitting
     if (this.mainWindow) {
       this.mainWindow.on('close', (event) => {
-        if (!this.mainWindow?.isDestroyed()) {
+        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
           event.preventDefault();
           this.mainWindow.hide();
         }
