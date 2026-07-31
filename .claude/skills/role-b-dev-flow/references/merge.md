@@ -26,10 +26,9 @@
    - 审查轮次、结论
    ```
 2. 更新文档进度：
-   - docs/tasks/task.md：PR 状态 → ✅ 已完成
-   - docs/tasks/task-dev-flow.md：更新阶段进度
-   - progress.md：更新为「已合并」
-   - dev-record-b.md：补充最终记录
+   - 任务文件（task.md 或 task-redesign.md）：PR 状态 → ✅ 已完成
+   - **task.md**：同步更新 task-dev-flow.md、progress.md、dev-record-b.md
+   - **task-redesign.md**：只更新 task-redesign.md 本身（无额外文档）
 3. git status，如有未提交内容，做最后一次 commit
 4. 知识图谱评估（**仅展示评估结果，不执行更新**）：
    ```

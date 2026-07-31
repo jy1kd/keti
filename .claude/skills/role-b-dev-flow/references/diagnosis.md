@@ -3,26 +3,32 @@
 ## 信息来源优先级
 1. git log（真实提交历史，永远准确）
 2. 实际代码文件（磁盘上的代码，永远最新）
-3. task.md + progress.md（任务状态）
+3. 任务文件 + progress.md（任务状态）
 4. 知识图谱（辅助参考，可能过时）
+
+## 任务文件选择
+- 用户指定的任务文件（首次交互时确认）
+- 默认：`docs/tasks/task.md`
+- 重构任务：`docs/tasks/task-redesign.md`
+- 其他：用户输入的路径
 
 ## 执行步骤
 1. git pull
    - **⚠️ 如遇到冲突**：停止操作，输出冲突文件列表，提示用户手动解决后重新执行诊断
    - **禁止** `git push --force`、`git reset --hard` 等破坏性操作
 2. **git log --oneline -20**，查看最近提交，记录已合并的 PR
-3. 读取 docs/tasks/task.md，找第一个「⏳ 待开始」且依赖满足的 PR
-4. **用 git log 交叉验证**：task.md 中的「⏳ 待开始」PR 是否已在 git log 中出现？如有则跳过
-5. 读取 docs/tasks/task-dev-flow.md，确认阶段和并行安排
-6. 读取 docs/dev-records/role-b/progress.md，了解已完成 PR
-7. git status，检查未提交内容
-8. git branch，确认当前分支
-9. 分支校验：
+3. 读取用户指定的任务文件，找第一个「⏳ 待开始」且依赖满足的 PR
+4. **用 git log 交叉验证**：任务文件中的「⏳ 待开始」PR 是否已在 git log 中出现？如有则跳过
+5. **task.md**：读取 docs/tasks/task-dev-flow.md 确认阶段和并行安排，读取 docs/dev-records/role-b/progress.md 了解已完成 PR
+   **task-redesign.md**：跳过此步骤（无额外文档）
+6. git status，检查未提交内容
+7. git branch，确认当前分支
+8. 分支校验：
    - 当前分支 == 期望分支 → 继续
    - 当前分支 == main → 提示创建分支
    - 不匹配 → 提示切换或确认
-10. **读取当前 PR 涉及的实际代码文件**，确认现有实现（不依赖图谱定位）
-11. 如有必要，读取 .ua/knowledge-graph.json 作为辅助参考
+9. **读取当前 PR 涉及的实际代码文件**，确认现有实现（不依赖图谱定位）
+10. 如有必要，读取 .ua/knowledge-graph.json 作为辅助参考
 
 ## 硬约束
 - 不写代码、不改文件、不 commit
