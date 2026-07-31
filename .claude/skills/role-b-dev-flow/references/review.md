@@ -1,5 +1,9 @@
 # 审查规则
 
+## 文件命名与存放规则
+- **task.md**：`docs/dev-records/role-b/review-feedback-b-pr{编号}.md`
+- **task-redesign.md**：`docs/snapshots/role-b/review-feedback-redesign-{编号}.md`
+
 ## 审查前准备（审查窗口）
 1. git pull 确保最新（**⚠️ 如遇冲突，停止并提示用户解决**）
 2. 确认当前任务来源（task.md 或 task-redesign.md），从对应任务文件读取 PR 信息和状态
@@ -17,7 +21,7 @@
 3. 多轮审查追加到同一文件，按轮次区分
 
 ## ⚠️ 必须先写文件再给结论
-- **必须先将审查结果写入 review-feedback-b-prX.md**
+- **必须先将审查结果写入审查反馈文件**（命名见上方规则）
 - **然后才能给出审查结论**（结论必须与文件内容一致）
 - 防止跳过写文件直接说"通过"
 
@@ -31,7 +35,7 @@
 ## 审查反馈处理（开发窗口）
 
 ### 流程
-1. 读取 review-feedback-b-prX.md
+1. 读取审查反馈文件（命名见上方规则）
 2. 逐条处理：
    - 🔴 必须修复，每修复一个单独 commit
    - 🟡 认同则改/不认同则记录理由，可批量 commit

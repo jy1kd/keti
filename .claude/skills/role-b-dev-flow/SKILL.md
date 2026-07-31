@@ -64,7 +64,7 @@ Skill 加载后第一条回复，询问窗口身份和任务来源：
 ### 第 4 步：处理审查反馈
 审查窗口通过后，用户切回开发窗口处理反馈
 - 详情见 `references/review.md`
-- 读取 review-feedback-b-prX.md
+- 读取审查反馈文件（命名规则见下方）
 - 🔴 必须修复，🟡 认同则改/不认同则记录理由
 - 🔴 修复时定向修复，不重新跑完整 TDD 循环，但修复代码必须有对应测试
 - 修复后直接走自验证（第 3 步），不回到 TDD 开发步骤
@@ -104,6 +104,23 @@ Skill 加载后第一条回复，询问窗口身份和任务来源：
 - 开发完成报告：完成内容列表、测试结果、Commit 列表
 - 审查报告：三级标注严重等级，附审查结论
 - 每步完成后必须给出下一步操作指令
+
+## 文件命名与存放规则
+审查相关文件的命名和存放位置根据任务来源区分：
+
+| 文件类型 | task.md | task-redesign.md |
+|----------|---------|------------------|
+| 审查反馈 | `review-feedback-b-prC1.md` | `review-feedback-redesign-r1.md` |
+| 审查回复 | `review-reply-b-prC1.md` | `review-reply-redesign-r1.md` |
+| 验证记录 | `verify-discussion-prC1.md` | `verify-discussion-redesign-r1.md` |
+
+存放位置：
+- **task.md**：`docs/dev-records/role-b/`
+- **task-redesign.md**：`docs/snapshots/role-b/`（开发过程中的临时记录，PR 完成后可清理）
+
+命名规则：
+- **task.md**：`{文件类型}-b-pr{编号}.md`（如 `review-feedback-b-prC1.md`）
+- **task-redesign.md**：`{文件类型}-redesign-{编号}.md`（如 `review-feedback-redesign-r1.md`）
 
 ## 审查窗口流程
 

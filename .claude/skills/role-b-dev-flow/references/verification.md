@@ -49,7 +49,9 @@
 5. 标记结果：通过 → ✅ 已验证，不通过 → 分析原因 → 修复 → 重新验证该项
 
 ### ⚠️ 每验证完一条，必须立即执行：
-a. 记录到 verify-discussion-prX.md（验证项、步骤、结果、问题 + 业务讨论）
+a. 记录到验证记录文件：
+   - task.md → `docs/dev-records/role-b/verify-discussion-prC1.md`
+   - task-redesign.md → `docs/snapshots/role-b/verify-discussion-redesign-r1.md`
 b. 然后才能进入下一条
 
 ### 全部验证完成后（批量 commit）
