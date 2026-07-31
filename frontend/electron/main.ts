@@ -4,6 +4,7 @@ import { TrayManager } from './trayManager';
 import { ShortcutManager } from './shortcuts';
 import { NotificationManager } from './notificationManager';
 import { BackendManager } from './backendManager';
+import { AutoUpdaterManager } from './autoUpdater';
 import { IPC_CHANNELS } from './ipc/index';
 import { registerWindowControlHandlers, registerWindowManagementHandlers } from './ipc/window';
 import { registerAppInfoHandlers, registerBackendManagementHandlers } from './ipc/app';
@@ -17,6 +18,7 @@ let trayManager: TrayManager;
 let shortcutManager: ShortcutManager;
 let notificationManager: NotificationManager;
 let backendManager: BackendManager;
+let autoUpdaterManager: AutoUpdaterManager;
 
 /**
  * Get the window manager instance
@@ -51,6 +53,13 @@ export function getNotificationManager(): NotificationManager {
  */
 export function getBackendManager(): BackendManager {
   return backendManager;
+}
+
+/**
+ * Get the auto updater manager instance
+ */
+export function getAutoUpdaterManager(): AutoUpdaterManager {
+  return autoUpdaterManager;
 }
 
 /**
@@ -103,6 +112,15 @@ export async function initializeApp(): Promise<void> {
   // Create backend manager and start backend
   backendManager = new BackendManager();
   await backendManager.start();
+
+  // Create auto updater manager
+  autoUpdaterManager = new AutoUpdaterManager();
+  autoUpdaterManager.setMainWindow(mainWindow);
+
+  // Check for updates after a short delay (don't block startup)
+  setTimeout(() => {
+    autoUpdaterManager.checkForUpdates();
+  }, 5000);
 
   // Handle app activation (macOS)
   app.on('activate', () => {
