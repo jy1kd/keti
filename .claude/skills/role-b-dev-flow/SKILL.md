@@ -39,9 +39,14 @@ Skill 加载后第一条回复，询问窗口身份和任务来源：
 - `task.md` → 完整文档：progress.md、dev-record-b.md、task-dev-flow.md
 - `task-redesign.md` → 轻量文档：只更新 task-redesign.md 中的 PR 状态
 
+**任务文件决定参考文档**：
+- `task.md` → 参考 `docs/specs/prd.md`、`docs/specs/design.md`、`docs/specs/dev.md`
+- `task-redesign.md` → 同时参考 `docs/tasks/task-redesign.md`（PR 拆分）和 `docs/specs/redesign-plan.md`（设计文档）
+
 ### 第 2 步：TDD 开发
 用户确认分支后开始开发。TDD 循环：红 → 绿 → 重构
 - 详情见 `references/tdd.md`
+- **task-redesign.md**：开发时同时参考 `docs/tasks/task-redesign.md`（PR 拆分、验收标准）和 `docs/specs/redesign-plan.md`（架构设计、数据流、界面布局）
 - 每个功能点 commit 代码
 - **task.md**：更新 dev-record-b.md
 - **task-redesign.md**：跳过 dev-record-b.md

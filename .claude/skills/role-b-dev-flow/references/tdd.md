@@ -3,6 +3,7 @@
 ## 开始前
 - 使用诊断阶段已定位的文件路径确认改动范围，不重新读图谱
 - 确认当前任务来源（task.md 或 task-redesign.md）
+- **task-redesign.md**：同时读取 `docs/tasks/task-redesign.md`（PR 拆分、验收标准）和 `docs/specs/redesign-plan.md`（架构设计、数据流、界面布局）
 
 ## TDD 循环
 1. 红：写测试，确认失败

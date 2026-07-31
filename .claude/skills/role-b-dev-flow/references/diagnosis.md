@@ -20,7 +20,7 @@
 3. 读取用户指定的任务文件，找出**所有**「⏳ 待开始」且依赖满足的 PR（不是只找第一个）
 4. **用 git log 交叉验证**：任务文件中的「⏳ 待开始」PR 是否已在 git log 中出现？如有则跳过
 5. **task.md**：读取 docs/tasks/task-dev-flow.md 确认阶段和并行安排，读取 docs/dev-records/role-b/progress.md 了解已完成 PR
-   **task-redesign.md**：跳过此步骤（无额外文档）
+   **task-redesign.md**：读取 docs/specs/redesign-plan.md 了解整体架构设计（标签页系统、订阅策略、界面布局等）
 6. git status，检查未提交内容
 7. git branch，确认当前分支
 8. **读取每个可开始 PR 涉及的实际代码文件**，确认现有实现
