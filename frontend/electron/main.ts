@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron';
 import { WindowManager } from './windowManager';
 import { TrayManager } from './trayManager';
+import { ShortcutManager } from './shortcuts';
 import { registerWindowControlHandlers, registerWindowManagementHandlers } from './ipc/window';
 import { registerAppInfoHandlers, registerBackendManagementHandlers } from './ipc/app';
 
@@ -10,6 +11,7 @@ export const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 // Global manager instances
 let windowManager: WindowManager;
 let trayManager: TrayManager;
+let shortcutManager: ShortcutManager;
 
 /**
  * Get the window manager instance
@@ -23,6 +25,13 @@ export function getWindowManager(): WindowManager {
  */
 export function getTrayManager(): TrayManager {
   return trayManager;
+}
+
+/**
+ * Get the shortcut manager instance
+ */
+export function getShortcutManager(): ShortcutManager {
+  return shortcutManager;
 }
 
 /**
@@ -41,6 +50,21 @@ export async function initializeApp(): Promise<void> {
   // Create tray manager and initialize
   trayManager = new TrayManager();
   trayManager.initialize(mainWindow);
+
+  // Create shortcut manager and register defaults
+  shortcutManager = new ShortcutManager();
+  shortcutManager.registerDefaults({
+    'open-order': () => {
+      windowManager.openOrderWindow();
+    },
+    'open-kline': () => {
+      // Get selected instrument from main window
+      mainWindow.webContents.send('get-selected-instrument');
+    },
+    'quit': () => {
+      app.quit();
+    },
+  });
 
   // Handle app activation (macOS)
   app.on('activate', () => {
@@ -61,6 +85,11 @@ export async function initializeApp(): Promise<void> {
   registerWindowManagementHandlers(windowManager);
   registerAppInfoHandlers();
   registerBackendManagementHandlers();
+
+  // Cleanup on quit
+  app.on('will-quit', () => {
+    shortcutManager.unregisterAll();
+  });
 }
 
 // Only auto-initialize when not in test environment
