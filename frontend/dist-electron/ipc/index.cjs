@@ -26,6 +26,11 @@ exports.IPC_CHANNELS = {
     // Backend management
     BACKEND_RESTART: 'backend:restart',
     BACKEND_STATUS: 'backend:status',
+    // Navigation (main → renderer)
+    NAVIGATE_TAB: 'navigate:tab',
+    // Data exchange (renderer → main)
+    GET_SELECTED_INSTRUMENT: 'data:get-selected-instrument',
+    SELECTED_INSTRUMENT_RESPONSE: 'data:selected-instrument-response',
     // Events (main → renderer)
     EVENT_ORDER_UPDATE: 'order:update',
     EVENT_NOTIFICATION: 'notification',

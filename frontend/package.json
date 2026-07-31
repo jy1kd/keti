@@ -11,7 +11,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "vitest run",
     "test:watch": "vitest",
-    "electron:compile": "tsc -p electron/tsconfig.json && node -e \"const fs=require('fs'),p=require('path'),d='dist-electron';fs.readdirSync(d).filter(f=>f.endsWith('.js')).forEach(f=>fs.renameSync(p.join(d,f),p.join(d,f.replace('.js','.cjs'))));fs.readdirSync(d).filter(f=>require('fs').statSync(p.join(d,f)).isDirectory()).forEach(s=>fs.readdirSync(p.join(d,s)).filter(f=>f.endsWith('.js')).forEach(f=>fs.renameSync(p.join(d,s,f),p.join(d,s,f.replace('.js','.cjs')))))\"",
+    "electron:compile": "node scripts/compile-electron.cjs",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && npm run electron:compile && electron .\"",
     "electron:build": "vite build && npm run electron:compile && electron-builder",
     "electron:preview": "vite build && npm run electron:compile && electron .",

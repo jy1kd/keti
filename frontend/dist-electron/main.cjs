@@ -6,15 +6,18 @@ exports.getTrayManager = getTrayManager;
 exports.getShortcutManager = getShortcutManager;
 exports.getNotificationManager = getNotificationManager;
 exports.getBackendManager = getBackendManager;
+exports.getAutoUpdaterManager = getAutoUpdaterManager;
 exports.initializeApp = initializeApp;
 const electron_1 = require("electron");
-const windowManager_1 = require("./windowManager");
-const trayManager_1 = require("./trayManager");
-const shortcuts_1 = require("./shortcuts");
-const notificationManager_1 = require("./notificationManager");
-const backendManager_1 = require("./backendManager");
-const window_1 = require("./ipc/window");
-const app_1 = require("./ipc/app");
+const windowManager_1 = require('./windowManager.cjs');
+const trayManager_1 = require('./trayManager.cjs');
+const shortcuts_1 = require('./shortcuts.cjs');
+const notificationManager_1 = require('./notificationManager.cjs');
+const backendManager_1 = require('./backendManager.cjs');
+const autoUpdater_1 = require('./autoUpdater.cjs');
+const index_1 = require('./ipc/index.cjs');
+const window_1 = require('./ipc/window.cjs');
+const app_1 = require('./ipc/app.cjs');
 // Check if in development mode
 exports.isDev = process.env.NODE_ENV === 'development' || !electron_1.app.isPackaged;
 // Global manager instances
@@ -23,6 +26,7 @@ let trayManager;
 let shortcutManager;
 let notificationManager;
 let backendManager;
+let autoUpdaterManager;
 /**
  * Get the window manager instance
  */
@@ -54,6 +58,12 @@ function getBackendManager() {
     return backendManager;
 }
 /**
+ * Get the auto updater manager instance
+ */
+function getAutoUpdaterManager() {
+    return autoUpdaterManager;
+}
+/**
  * Initialize the application
  */
 async function initializeApp() {
@@ -66,6 +76,12 @@ async function initializeApp() {
     // Create tray manager and initialize
     trayManager = new trayManager_1.TrayManager();
     trayManager.initialize(mainWindow);
+    // Store selected instrument from renderer
+    let selectedInstrument = '';
+    // IPC handler to receive selected instrument from renderer
+    electron_1.ipcMain.handle(index_1.IPC_CHANNELS.SELECTED_INSTRUMENT_RESPONSE, (_event, instrumentID) => {
+        selectedInstrument = instrumentID;
+    });
     // Create shortcut manager and register defaults
     shortcutManager = new shortcuts_1.ShortcutManager();
     shortcutManager.loadAndRegister({
@@ -73,8 +89,12 @@ async function initializeApp() {
             windowManager.openOrderWindow();
         },
         'open-kline': () => {
-            // Get selected instrument from main window
-            mainWindow.webContents.send('get-selected-instrument');
+            // Request selected instrument from renderer
+            mainWindow.webContents.send(index_1.IPC_CHANNELS.GET_SELECTED_INSTRUMENT);
+            // Open K-line window with stored instrument (will be updated on response)
+            if (selectedInstrument) {
+                windowManager.openKLineWindow(selectedInstrument);
+            }
         },
         'quit': () => {
             electron_1.app.quit();
@@ -85,6 +105,13 @@ async function initializeApp() {
     // Create backend manager and start backend
     backendManager = new backendManager_1.BackendManager();
     await backendManager.start();
+    // Create auto updater manager
+    autoUpdaterManager = new autoUpdater_1.AutoUpdaterManager();
+    autoUpdaterManager.setMainWindow(mainWindow);
+    // Check for updates after a short delay (don't block startup)
+    setTimeout(() => {
+        autoUpdaterManager.checkForUpdates();
+    }, 5000);
     // Handle app activation (macOS)
     electron_1.app.on('activate', () => {
         if (electron_1.BrowserWindow.getAllWindows().length === 0) {

@@ -13,6 +13,7 @@ exports.TrayManager = void 0;
 const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
+const index_1 = require('./ipc/index.cjs');
 /**
  * TrayManager class
  */
@@ -59,7 +60,7 @@ class TrayManager {
                     if (this.mainWindow) {
                         this.mainWindow.show();
                         this.mainWindow.focus();
-                        // TODO: Switch to market tab
+                        this.mainWindow.webContents.send(index_1.IPC_CHANNELS.NAVIGATE_TAB, 'market');
                     }
                 },
             },
@@ -69,7 +70,7 @@ class TrayManager {
                     if (this.mainWindow) {
                         this.mainWindow.show();
                         this.mainWindow.focus();
-                        // TODO: Switch to order tab
+                        this.mainWindow.webContents.send(index_1.IPC_CHANNELS.NAVIGATE_TAB, 'order');
                     }
                 },
             },
@@ -79,7 +80,7 @@ class TrayManager {
                     if (this.mainWindow) {
                         this.mainWindow.show();
                         this.mainWindow.focus();
-                        // TODO: Switch to query tab
+                        this.mainWindow.webContents.send(index_1.IPC_CHANNELS.NAVIGATE_TAB, 'query');
                     }
                 },
             },
@@ -90,7 +91,7 @@ class TrayManager {
                     if (this.mainWindow) {
                         this.mainWindow.show();
                         this.mainWindow.focus();
-                        // TODO: Open settings panel
+                        this.mainWindow.webContents.send(index_1.IPC_CHANNELS.NAVIGATE_TAB, 'settings');
                     }
                 },
             },

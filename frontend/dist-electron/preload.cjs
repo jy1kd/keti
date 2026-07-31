@@ -18,6 +18,21 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     // Backend management
     restartBackend: () => electron_1.ipcRenderer.invoke('backend:restart'),
     getBackendStatus: () => electron_1.ipcRenderer.invoke('backend:status'),
+    // Navigation (main → renderer)
+    onNavigateTab: (callback) => {
+        const handler = (_, tab) => callback(tab);
+        electron_1.ipcRenderer.on('navigate:tab', handler);
+        return () => electron_1.ipcRenderer.removeListener('navigate:tab', handler);
+    },
+    // Data exchange (renderer → main)
+    onGetSelectedInstrument: (callback) => {
+        const handler = () => callback();
+        electron_1.ipcRenderer.on('data:get-selected-instrument', handler);
+        return () => electron_1.ipcRenderer.removeListener('data:get-selected-instrument', handler);
+    },
+    sendSelectedInstrument: (instrumentID) => {
+        electron_1.ipcRenderer.invoke('data:selected-instrument-response', instrumentID);
+    },
     // Event listeners (return cleanup function to prevent memory leaks)
     onOrderUpdate: (callback) => {
         const handler = (_, data) => callback(data);
