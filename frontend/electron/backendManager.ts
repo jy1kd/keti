@@ -6,6 +6,7 @@
  */
 
 import { spawn, ChildProcess } from 'child_process';
+import http from 'http';
 import path from 'path';
 
 // Backend status
@@ -49,11 +50,34 @@ export class BackendManager {
   }
 
   /**
+   * Check if backend is already running on the configured port
+   */
+  private async isBackendAlreadyRunning(): Promise<boolean> {
+    return new Promise((resolve) => {
+      const req = http.get(`http://localhost:${this.config.port}/api/connection/status`, (res) => {
+        resolve(res.statusCode === 200);
+        res.resume(); // Consume response
+      });
+      req.on('error', () => resolve(false));
+      req.setTimeout(2000, () => {
+        req.destroy();
+        resolve(false);
+      });
+    });
+  }
+
+  /**
    * Start the backend process
    */
   async start(): Promise<boolean> {
     if (this.isRunning()) {
       console.warn('[BackendManager] Backend is already running');
+      return true;
+    }
+
+    // Check if backend is already running on the port
+    if (await this.isBackendAlreadyRunning()) {
+      console.log(`[BackendManager] Backend already running on port ${this.config.port}`);
       return true;
     }
 
