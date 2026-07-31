@@ -21,9 +21,8 @@ describe('OrderPage', () => {
           productClass: '1',
         },
       ],
-      presetContracts: [],
-      userContracts: [],
-      presetIds: [],
+      favorites: [],
+      isLoaded: true,
     });
   });
 

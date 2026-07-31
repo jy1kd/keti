@@ -26,11 +26,11 @@ vi.mock('@/services/api', () => ({
 }))
 
 // Mock contracts store
-const mockLoadSubscribedContracts = vi.fn().mockResolvedValue(undefined)
+const mockLoadAllInstruments = vi.fn().mockResolvedValue(undefined)
 vi.mock('@/stores/contracts', () => ({
   useContractsStore: {
     getState: vi.fn(() => ({
-      loadSubscribedContracts: mockLoadSubscribedContracts,
+      loadAllInstruments: mockLoadAllInstruments,
     })),
   },
 }))
@@ -65,7 +65,7 @@ describe('useMarketWs', () => {
     mockConnect.mockClear()
     mockDisconnect.mockClear()
     mockDisconnectAll.mockClear()
-    mockLoadSubscribedContracts.mockClear()
+    mockLoadAllInstruments.mockClear()
   })
 
   afterEach(() => {
@@ -251,7 +251,7 @@ describe('useMarketWs - instruments_refreshed', () => {
       onMessage({ type: 'instruments_refreshed', data: { count: 5 } })
     })
 
-    expect(mockLoadSubscribedContracts).toHaveBeenCalled()
+    expect(mockLoadAllInstruments).toHaveBeenCalled()
     vi.useRealTimers()
   })
 

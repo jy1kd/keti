@@ -100,7 +100,7 @@ describe('MarketPanel', () => {
       selectedInstrument: null,
       snapshots: new Map(),
     })
-    useContractsStore.setState({ contracts: [], presetContracts: [], userContracts: [], presetIds: [] })
+    useContractsStore.setState({ contracts: [], favorites: [], isLoaded: false })
     vi.clearAllMocks()
   })
 
@@ -114,11 +114,14 @@ describe('MarketPanel', () => {
     expect(container.firstChild).toHaveClass('market-panel')
   })
 
-  it('启动时调用 loadSubscribedContracts 加载订阅合约', () => {
-    const loadSpy = vi.spyOn(useContractsStore.getState(), 'loadSubscribedContracts').mockResolvedValue(undefined)
+  it('启动时调用 loadAllInstruments 和 loadFavoriteContracts 加载合约', () => {
+    const loadAllSpy = vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
+    const loadFavSpy = vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
     render(<MarketPanel />)
-    expect(loadSpy).toHaveBeenCalled()
-    loadSpy.mockRestore()
+    expect(loadAllSpy).toHaveBeenCalled()
+    expect(loadFavSpy).toHaveBeenCalled()
+    loadAllSpy.mockRestore()
+    loadFavSpy.mockRestore()
   })
 
   it('启动时调用 useMarketWs 连接 WebSocket 行情推送', () => {
@@ -142,9 +145,9 @@ describe('MarketPanel', () => {
     expect(handles.length).toBeGreaterThanOrEqual(1)
   })
 
-  it('renders 预设合约 and 自选合约 tabs', () => {
+  it('renders 全部合约 and 自选合约 tabs', () => {
     render(<MarketPanel />)
-    expect(screen.getByText('预设合约')).toBeInTheDocument()
+    expect(screen.getByText('全部合约')).toBeInTheDocument()
     expect(screen.getByText('自选合约')).toBeInTheDocument()
   })
 
@@ -174,13 +177,13 @@ describe('MarketPanel', () => {
     expect(screen.getByText('退订')).toBeEnabled()
   })
 
-  it('退订 button is enabled on user tab when user-subscribed instrument is selected', async () => {
+  it('退订 button is enabled on favorites tab when favorited instrument is selected', async () => {
     const user = userEvent.setup()
     useMarketStore.setState({ selectedInstrument: 'IF2608' })
-    useContractsStore.setState({ userContracts: [{ instrumentID: 'IF2608' } as any] })
+    useContractsStore.setState({ favorites: [{ instrumentID: 'IF2608' } as any] })
     useUserPrefsStore.setState({ selectedContracts: ['IF2608'] })
     render(<MarketPanel />)
-    // Switch to user tab
+    // Switch to favorites tab
     await user.click(screen.getByText('自选合约'))
     expect(screen.getByText('退订')).toBeEnabled()
   })

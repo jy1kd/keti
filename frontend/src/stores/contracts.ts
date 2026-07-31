@@ -2,165 +2,115 @@ import { create } from 'zustand'
 import type { ContractInfo } from '@/services/types'
 import { useUserPrefsStore } from './userPrefs'
 import {
-  getPresetInstruments,
+  getInstruments,
   getInstrumentsByIds,
   subscribeMarket,
   unsubscribeMarket,
 } from '@/services/api'
 
 interface ContractsStore {
-  /** Preset contracts (system-managed, subscribed on load, can be removed by退订) */
-  presetContracts: ContractInfo[]
-  /** User-favorited contracts (user-managed, no CTP subscribe needed) */
-  userContracts: ContractInfo[]
-  /** Preset instrument IDs (auto-detected front-month contracts) */
-  presetIds: string[]
-  /** Combined contracts for backward compatibility (OrderForm, order store) */
+  /** 全量合约列表（从 API 加载） */
   contracts: ContractInfo[]
+  /** 收藏合约列表（用户管理，自动订阅） */
+  favorites: ContractInfo[]
+  /** 是否已加载全量合约 */
+  isLoaded: boolean
+  /** 批量设置合约列表 */
   setContracts: (contracts: ContractInfo[]) => void
-  /** Add a contract to userContracts (no CTP call — already subscribed via preset or modal) */
-  addContractInfo: (contract: ContractInfo) => void
-  /** Remove from userContracts only (no CTP call) */
-  removeFromFavorites: (instrumentId: string) => void
-  /** Subscribe to CTP + add to presetContracts (for new contracts from modal) */
-  subscribeAndAddToPreset: (contract: ContractInfo) => Promise<void>
-  /** CTP unsubscribe + remove from both presetContracts and userContracts */
-  removeContractById: (instrumentId: string) => Promise<void>
-  /** Load preset + user subscriptions from localStorage and subscribe */
-  loadSubscribedContracts: () => Promise<void>
-}
-
-/** Helper: recompute combined contracts from preset + user */
-function buildCombinedContracts(presetContracts: ContractInfo[], userContracts: ContractInfo[]): ContractInfo[] {
-  const map = new Map<string, ContractInfo>()
-  for (const c of presetContracts) map.set(c.instrumentID, c)
-  for (const c of userContracts) map.set(c.instrumentID, c)
-  return Array.from(map.values())
+  /** 加载全量合约 */
+  loadAllInstruments: () => Promise<void>
+  /** 加载收藏合约并订阅 */
+  loadFavoriteContracts: () => Promise<void>
+  /** 添加收藏并订阅 */
+  addToFavorites: (contract: ContractInfo) => Promise<void>
+  /** 移除收藏并取消订阅 */
+  removeFromFavorites: (instrumentId: string) => Promise<void>
+  /** 从合约列表中移除 */
+  removeContractById: (instrumentId: string) => void
 }
 
 export const useContractsStore = create<ContractsStore>((set, get) => ({
-  presetContracts: [],
-  userContracts: [],
-  presetIds: [],
   contracts: [],
+  favorites: [],
+  isLoaded: false,
 
   setContracts: (contracts) => set({ contracts }),
 
-  /** 加入自选：只操作 userContracts + localStorage，不调 CTP */
-  addContractInfo: (contract) => {
-    const { presetContracts, userContracts } = get()
-    if (userContracts.some((c) => c.instrumentID === contract.instrumentID)) return
-    const newUserContracts = [...userContracts, contract]
-    set({
-      userContracts: newUserContracts,
-      contracts: buildCombinedContracts(presetContracts, newUserContracts),
-    })
+  /** 从 API 加载全量合约 */
+  loadAllInstruments: async () => {
+    try {
+      const result = await getInstruments()
+      set({ contracts: result.instruments, isLoaded: true })
+    } catch (err) {
+      console.error('[contracts] Failed to load all instruments:', err)
+    }
+  },
+
+  /** 从 localStorage 加载收藏合约并订阅 */
+  loadFavoriteContracts: async () => {
+    const prefs = useUserPrefsStore.getState()
+    prefs.loadFromLocalStorage()
+    const selectedIds = useUserPrefsStore.getState().selectedContracts
+
+    if (selectedIds.length === 0) {
+      set({ favorites: [] })
+      return
+    }
+
+    try {
+      const result = await getInstrumentsByIds(selectedIds)
+      if (result.instruments?.length) {
+        set({ favorites: result.instruments })
+        // 订阅收藏合约
+        const ids = result.instruments.map((c) => c.instrumentID)
+        await subscribeMarket(ids)
+      }
+    } catch (err) {
+      console.error('[contracts] Failed to load favorite contracts:', err)
+    }
+  },
+
+  /** 添加收藏并订阅 */
+  addToFavorites: async (contract) => {
+    const { favorites } = get()
+    if (favorites.some((c) => c.instrumentID === contract.instrumentID)) return
+
+    // 持久化到 userPrefs
     const prefs = useUserPrefsStore.getState()
     prefs.addSelectedContract(contract.instrumentID)
     prefs.saveToLocalStorage()
-  },
 
-  /** 移除收藏：只从 userContracts 移除，不调 CTP */
-  removeFromFavorites: (instrumentId) => {
-    const { presetContracts, userContracts } = get()
-    const newUserContracts = userContracts.filter((c) => c.instrumentID !== instrumentId)
-    set({
-      userContracts: newUserContracts,
-      contracts: buildCombinedContracts(presetContracts, newUserContracts),
-    })
-    const prefs = useUserPrefsStore.getState()
-    prefs.removeSelectedContract(instrumentId)
-    prefs.saveToLocalStorage()
-  },
-
-  /** 订阅新合约：CTP 订阅 + 加入预设表格 + 持久化到 manualPresetIds */
-  subscribeAndAddToPreset: async (contract) => {
-    const { presetContracts, presetIds, userContracts } = get()
-    if (presetContracts.some((c) => c.instrumentID === contract.instrumentID)) return
+    // 订阅
     try {
       await subscribeMarket([contract.instrumentID])
     } catch {
       // Silent fail
     }
-    const newPresetContracts = [...presetContracts, contract]
-    const newPresetIds = [...presetIds, contract.instrumentID]
-    set({
-      presetContracts: newPresetContracts,
-      presetIds: newPresetIds,
-      contracts: buildCombinedContracts(newPresetContracts, userContracts),
-    })
-    // 持久化到 manualPresetIds（不影响 selectedContracts / userSubscribedIds）
-    const prefs = useUserPrefsStore.getState()
-    prefs.addManualPreset(contract.instrumentID)
-    prefs.saveToLocalStorage()
+
+    set({ favorites: [...favorites, contract] })
   },
 
-  /** 退订：CTP 退订 + 从预设/自选中移除 + 清理 manualPresetIds */
-  removeContractById: async (instrumentId) => {
+  /** 移除收藏并取消订阅 */
+  removeFromFavorites: async (instrumentId) => {
+    // 从 userPrefs 移除
+    const prefs = useUserPrefsStore.getState()
+    prefs.removeSelectedContract(instrumentId)
+    prefs.saveToLocalStorage()
+
+    // 取消订阅
     try {
       await unsubscribeMarket([instrumentId])
     } catch {
       // Silent fail
     }
-    const { presetContracts, userContracts, presetIds } = get()
-    const newPresetContracts = presetContracts.filter((c) => c.instrumentID !== instrumentId)
-    const newUserContracts = userContracts.filter((c) => c.instrumentID !== instrumentId)
-    const newPresetIds = presetIds.filter((id) => id !== instrumentId)
-    set({
-      presetContracts: newPresetContracts,
-      presetIds: newPresetIds,
-      userContracts: newUserContracts,
-      contracts: buildCombinedContracts(newPresetContracts, newUserContracts),
-    })
-    const prefs = useUserPrefsStore.getState()
-    prefs.removeSelectedContract(instrumentId)
-    prefs.removeManualPreset(instrumentId)
-    prefs.saveToLocalStorage()
+
+    const { favorites } = get()
+    set({ favorites: favorites.filter((c) => c.instrumentID !== instrumentId) })
   },
 
-  loadSubscribedContracts: async () => {
-    const prefs = useUserPrefsStore.getState()
-    prefs.loadFromLocalStorage()
-    const userSelected = useUserPrefsStore.getState().selectedContracts
-    const manualPresets = useUserPrefsStore.getState().manualPresetIds
-
-    let backendPresetIds: string[] = []
-    try {
-      const preset = await getPresetInstruments()
-      backendPresetIds = preset.instruments
-    } catch {
-      // Preset load failed
-    }
-
-    // 合并后端预设 + 用户手动订阅的预设
-    const presetIds = [...new Set([...backendPresetIds, ...manualPresets])]
-    // 所有需要加载的合约 ID
-    const allIds = [...new Set([...presetIds, ...userSelected])]
-
-    if (allIds.length === 0) {
-      set({ presetIds, presetContracts: [], userContracts: [], contracts: [] })
-      return
-    }
-
-    try {
-      const result = await getInstrumentsByIds(allIds)
-      if (result.instruments?.length) {
-        const idToContract = new Map(result.instruments.map((c) => [c.instrumentID, c]))
-        const presetContracts = presetIds
-          .map((id) => idToContract.get(id))
-          .filter((c): c is ContractInfo => c != null)
-        const userContracts = userSelected
-          .map((id) => idToContract.get(id))
-          .filter((c): c is ContractInfo => c != null)
-        set({
-          presetContracts,
-          userContracts,
-          contracts: buildCombinedContracts(presetContracts, userContracts),
-          presetIds,
-        })
-      }
-    } catch {
-      console.warn('[ContractsStore] Failed to load contract details')
-    }
+  /** 从合约列表中移除 */
+  removeContractById: (instrumentId) => {
+    const { contracts } = get()
+    set({ contracts: contracts.filter((c) => c.instrumentID !== instrumentId) })
   },
 }))
