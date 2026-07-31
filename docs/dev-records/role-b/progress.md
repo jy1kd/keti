@@ -729,3 +729,44 @@
 
 **交接说明**：
 - PR-E5 已完成，可进入 PR-E6（系统托盘实现）
+
+---
+
+### PR-E6: 系统托盘实现
+
+**状态**：✅ 已完成（含审查修复+人工验证）
+
+**PR信息**：
+- PR分支名：`feature/electron-refactor`
+- 依赖PR：PR-E3 ✅
+- 工作量：2小时
+
+**完成内容**：
+1. electron/trayManager.ts — 系统托盘管理器
+   - initialize: 初始化托盘（图标、菜单、事件）
+   - showNotification: 显示托盘通知
+   - getTray: 获取托盘实例
+   - destroy: 销毁托盘
+   - 托盘菜单：显示主窗口、行情/报单/查询面板、设置、退出
+   - 点击托盘：显示/隐藏主窗口
+   - 关闭窗口：最小化到托盘而非退出
+2. electron/__tests__/trayManager.test.ts — 系统托盘单元测试（6 个用例）
+3. electron/main.ts — 集成 TrayManager
+
+**审查反馈修复**：
+- F1: 添加托盘图标文件存在性检查，缺失时使用空图标作为 fallback
+- I2: 移除 TrayNotification 未使用的 icon 字段
+
+**验证结果**：
+- ✅ 57 个测试全部通过
+- ✅ TypeScript 编译无错误
+- ✅ 所有验收标准通过
+
+**提交记录**：
+- `79a385e` feat(electron): PR-E6 系统托盘实现
+- `f00af31` fix(electron): 处理 PR-E6 审查反馈
+- `23c519b` docs(electron): 添加 PR-E6 审查反馈处理记录
+- `ced4e6d` docs(electron): 添加 PR-E6 人工验证记录
+
+**交接说明**：
+- PR-E6 已完成，可进入 PR-E7（全局快捷键实现）
