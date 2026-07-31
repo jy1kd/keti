@@ -11,6 +11,7 @@ import { ToastContainer } from '@/components/Toast'
 import { useSystemWs } from '@/hooks/useSystemWs'
 import { useConnectionPoll } from '@/hooks/useConnectionPoll'
 import { useQueryStore } from '@/modules/query/store'
+import { useMarketStore } from '@/modules/market/store'
 import { API_BASE } from '@/services/api'
 import { isElectron } from '@/services/electron'
 import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
@@ -59,10 +60,12 @@ function App() {
     if (!isElectron()) return
 
     // Listen for GET_SELECTED_INSTRUMENT and respond with selected instrument
-    const cleanup = window.electronAPI?.onGetSelectedInstrument?.(() => {
+    const cleanup = window.electronAPI?.onGetSelectedInstrument?.((): string => {
       const { selectedInstrument } = useMarketStore.getState()
       // Send response back to main process
-      window.electronAPI?.sendSelectedInstrument?.(selectedInstrument || '')
+      const id = selectedInstrument || ''
+      window.electronAPI?.sendSelectedInstrument?.(id)
+      return id
     })
 
     return () => cleanup?.()

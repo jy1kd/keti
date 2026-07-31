@@ -87,6 +87,36 @@ export function removeAllListeners(channel: string): void {
 // Type-safe window.electronAPI declaration
 declare global {
   interface Window {
-    electronAPI?: ElectronAPI;
+    electronAPI?: {
+      // Window control
+      minimizeWindow: () => Promise<void>;
+      maximizeWindow: () => Promise<void>;
+      closeWindow: () => Promise<void>;
+
+      // Window management
+      openOrderWindow: (instrumentID?: string) => Promise<void>;
+      openKLineWindow: (instrumentID: string) => Promise<void>;
+
+      // App info
+      getAppVersion: () => Promise<string>;
+      getPlatform: () => Promise<string>;
+      getAppName: () => Promise<string>;
+
+      // Backend management
+      restartBackend: () => Promise<void>;
+      getBackendStatus: () => Promise<{ running: boolean; pid?: number }>;
+
+      // Navigation
+      onNavigateTab: (callback: (tab: string) => void) => () => void;
+
+      // Data exchange
+      onGetSelectedInstrument: (callback: () => string) => () => void;
+      sendSelectedInstrument: (instrumentID: string) => void;
+
+      // Event listeners
+      onOrderUpdate: (callback: (data: any) => void) => () => void;
+      onNotification: (callback: (data: any) => void) => () => void;
+      removeAllListeners: (channel: string) => void;
+    };
   }
 }
