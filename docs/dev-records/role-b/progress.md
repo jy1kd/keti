@@ -31,8 +31,9 @@
 | PR-E4 | 报单窗口实现 | ✅ 已完成 | 2026-07-28 | 6f999e1, 0084c19 (2 commits) |
 | PR-E5 | K线窗口实现 | ✅ 已完成 | 2026-07-28 | d039ba2, 1fc1c41 (2 commits) |
 | PR-E6 | 系统托盘实现 | ✅ 已完成 | 2026-07-28 | 79a385e, f00af31 (2 commits) |
+| PR-E7 | 全局快捷键实现 | ✅ 已完成 | 2026-07-28 | b615a68 (1 commit) |
 
-**总计**：13个PR + 1个联调PR + 6个Electron PR = 20个PR
+**总计**：13个PR + 1个联调PR + 7个Electron PR = 21个PR
 
 ---
 
@@ -775,3 +776,32 @@
 
 **交接说明**：
 - PR-E6 已完成，可进入 PR-E7（全局快捷键实现）
+
+---
+
+### PR-E7: 全局快捷键实现
+
+**状态**：✅ 已完成（含审查+人工验证）
+
+**PR信息**：
+- PR分支名：`feature/electron-refactor`
+- 依赖PR：PR-E6 ✅
+- 工作量：1小时
+
+**完成内容**：
+1. ShortcutManager 类：register/unregister/unregisterAll/isRegistered/getShortcuts/registerDefaults
+2. 默认快捷键：Ctrl+B（报单）/ Ctrl+K（K线）/ Ctrl+Q（退出）
+3. main.ts 集成：registerDefaults 传入 handler 映射 + will-quit 清理
+4. 冲突检测：本地 Map + globalShortcut.isRegistered 双重检查
+
+**验证结果**：
+- ✅ 8 个测试全部通过
+- ✅ 全局快捷键注册/注销正常
+- ✅ 冲突检测正确
+
+**提交记录**：
+- `b615a68` feat(electron): PR-E7 全局快捷键实现
+- `5b152da` docs(electron): 添加 PR-E7 审查反馈
+
+**交接说明**：
+- PR-E7 已完成，可进入 PR-E8（原生通知实现）
