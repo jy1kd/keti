@@ -29,6 +29,7 @@
 | `kline` | 📈 | ❌ | ✅ | K 线图 |
 | `options` | 📉 | ❌ | ✅ | 期权 T 型报价 |
 | `ipc-monitor` | 🔌 | ❌ | ✅ | IPC 消息监控（调试用） |
+| `settings` | ⚙ | ❌ | ✅ | 设置面板（快捷键/快捷交易） |
 
 **标签页限制**：最多 15 个标签（含固定标签）
 
@@ -37,7 +38,7 @@
 ### 2.2 标签页 Store
 
 ```typescript
-type TabType = 'market' | 'favorites' | 'order' | 'query' | 'kline' | 'options';
+type TabType = 'market' | 'favorites' | 'order' | 'query' | 'kline' | 'options' | 'ipc-monitor' | 'settings';
 
 interface Tab {
   id: string;                    // 唯一标识，如 "order-IF2608"
@@ -583,7 +584,7 @@ const results = contracts.filter(c =>
 
 ## 7. IPC 监控功能
 
-### 6.1 功能概述
+### 7.1 功能概述
 
 IPC 监控是一个调试工具，用于实时查看 Electron 主进程与渲染进程之间的 IPC 消息通信。
 
@@ -593,7 +594,7 @@ IPC 监控是一个调试工具，用于实时查看 Electron 主进程与渲染
 - 性能分析
 - 开发调试
 
-### 6.2 界面设计
+### 7.2 界面设计
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -629,7 +630,7 @@ IPC 监控是一个调试工具，用于实时查看 Electron 主进程与渲染
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 6.3 功能说明
+### 7.3 功能说明
 
 **消息过滤**：
 
@@ -654,7 +655,7 @@ IPC 监控是一个调试工具，用于实时查看 Electron 主进程与渲染
 - 支持 JSON 格式化显示
 - 支持复制消息内容
 
-### 6.4 实现方式
+### 7.4 实现方式
 
 **主进程**：
 ```typescript
@@ -726,7 +727,7 @@ export function IPCMonitorPage() {
 }
 ```
 
-### 6.5 数据结构
+### 7.5 数据结构
 
 ```typescript
 interface IPCMessage {
@@ -740,7 +741,7 @@ interface IPCMessage {
 type MessageFilter = 'all' | 'market' | 'order' | 'system' | 'navigate';
 ```
 
-### 6.6 标签页 Store
+### 7.6 标签页 Store
 
 ```typescript
 // 在 TabStore 中添加 IPC 监控标签类型
@@ -749,9 +750,9 @@ type TabType = 'market' | 'favorites' | 'order' | 'query' | 'kline' | 'options' 
 
 ---
 
-## 7. 实施计划
+## 8. 实施计划
 
-### 5.1 阶段 1：行情表格重构
+### 8.1 阶段 1：行情表格重构
 
 | 步骤 | 内容 | 文件 |
 |------|------|------|
@@ -761,7 +762,7 @@ type TabType = 'market' | 'favorites' | 'order' | 'query' | 'kline' | 'options' 
 | 1.4 | 修改 useMarketWs，实现按需订阅 | `hooks/useMarketWs.ts` |
 | 1.5 | 测试全量合约 + 按需订阅 | 测试文件 |
 
-### 5.2 阶段 2：标签页系统
+### 8.2 阶段 2：标签页系统
 
 | 步骤 | 内容 | 文件 |
 |------|------|------|
@@ -772,7 +773,7 @@ type TabType = 'market' | 'favorites' | 'order' | 'query' | 'kline' | 'options' 
 | 2.5 | 拆分页面组件（OrderPage, QueryPage, KLinePage） | `pages/` |
 | 2.6 | 更新快捷键和托盘菜单 | `electron/` |
 
-### 5.3 阶段 3：Electron 独立窗口
+### 8.3 阶段 3：Electron 独立窗口
 
 | 步骤 | 内容 | 文件 |
 |------|------|------|
@@ -782,7 +783,7 @@ type TabType = 'market' | 'favorites' | 'order' | 'query' | 'kline' | 'options' 
 
 ---
 
-## 6. 风险评估
+## 9. 风险评估
 
 | 风险 | 影响 | 缓解措施 |
 |------|------|----------|
@@ -795,9 +796,9 @@ type TabType = 'market' | 'favorites' | 'order' | 'query' | 'kline' | 'options' 
 
 ---
 
-## 7. 与现有架构的对比
+## 10. 与现有架构的对比
 
-### 7.1 现有架构
+### 10.1 现有架构
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -814,7 +815,7 @@ type TabType = 'market' | 'favorites' | 'order' | 'query' | 'kline' | 'options' 
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 7.2 新架构
+### 10.2 新架构
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -837,7 +838,7 @@ type TabType = 'market' | 'favorites' | 'order' | 'query' | 'kline' | 'options' 
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 7.3 对比总结
+### 10.3 对比总结
 
 | 维度 | 现有架构 | 新架构 |
 |------|----------|--------|
@@ -852,7 +853,7 @@ type TabType = 'market' | 'favorites' | 'order' | 'query' | 'kline' | 'options' 
 
 ---
 
-## 8. 遗留问题
+## 11. 遗留问题
 
 | 问题 | 状态 | 说明 |
 |------|------|------|
