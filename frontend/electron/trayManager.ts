@@ -7,12 +7,12 @@
 
 import { Tray, Menu, nativeImage, BrowserWindow } from 'electron';
 import path from 'path';
+import fs from 'fs';
 
 // Tray notification types
 export interface TrayNotification {
   title: string;
   content: string;
-  icon?: string;
 }
 
 /**
@@ -30,9 +30,19 @@ export class TrayManager {
 
     // Create tray icon
     const iconPath = path.join(__dirname, '../assets/tray-icon.png');
-    const icon = nativeImage.createFromPath(iconPath);
 
-    this.tray = new Tray(icon);
+    // Check if icon file exists
+    if (!fs.existsSync(iconPath)) {
+      console.warn('[TrayManager] Tray icon not found:', iconPath);
+      console.warn('[TrayManager] Tray functionality will be limited');
+      // Create a simple 16x16 transparent icon as fallback
+      const fallbackIcon = nativeImage.createEmpty();
+      this.tray = new Tray(fallbackIcon);
+    } else {
+      const icon = nativeImage.createFromPath(iconPath);
+      this.tray = new Tray(icon);
+    }
+
     this.tray.setToolTip('SimNow 交易终端');
 
     // Build context menu
