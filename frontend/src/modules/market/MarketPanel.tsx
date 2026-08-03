@@ -14,6 +14,7 @@ import { usePointOrder } from '@/hooks/usePointOrder'
 import { useOrderStore } from '@/modules/order/store'
 import { useMarketWs } from '@/hooks/useMarketWs'
 import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
+import { useContractSearch } from './useContractSearch'
 import { API_BASE } from '@/services/api'
 import { toast } from '@/components/Toast'
 import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
@@ -34,7 +35,12 @@ export function MarketPanel() {
   useSubscriptionManager()
 
   // Display contracts based on active tab
-  const displayContracts = activeTab === 'all' ? contracts : favorites
+  const baseContracts = activeTab === 'all' ? contracts : favorites
+
+  // 搜索功能
+  const { query: searchQuery, setQuery: setSearchQuery, filteredContracts } = useContractSearch(baseContracts)
+  const displayContracts = filteredContracts
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // User-favorited IDs (for modal "已订阅" badge and button state)
   const favoritedIds = useMemo(
@@ -61,6 +67,18 @@ export function MarketPanel() {
       loadAllInstruments()
       loadFavoriteContracts()
     }
+  }, [])
+
+  // Ctrl+F 快捷键聚焦搜索框
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault()
+        searchInputRef.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   const { handleClick, handleDoubleClick } = usePointOrder({
@@ -148,6 +166,30 @@ export function MarketPanel() {
             {selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏'}
           </button>
         </div>
+      </div>
+
+      <div className="market-search-bar">
+        <input
+          ref={searchInputRef}
+          type="text"
+          placeholder="搜索合约（Ctrl+F）..."
+          className="market-search-input"
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        {searchQuery && (
+          <button
+            className="market-search-clear"
+            onClick={() => {
+              setSearchQuery('')
+              if (searchInputRef.current) searchInputRef.current.value = ''
+            }}
+          >
+            ✕
+          </button>
+        )}
+        <span className="market-search-count">
+          {filteredContracts.length} / {baseContracts.length}
+        </span>
       </div>
 
       <Group orientation="horizontal" className="panel-content" id="market-top-layout" onLayoutChange={onMarketTopLayout}>

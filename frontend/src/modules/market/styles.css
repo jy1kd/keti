@@ -6,6 +6,56 @@
   background: var(--bg-primary);
 }
 
+/* ── 搜索栏 ─────────────────────────────────────────── */
+.market-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.market-search-input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
+}
+
+.market-search-input:focus {
+  border-color: var(--accent);
+}
+
+.market-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.market-search-clear {
+  padding: 2px 6px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.market-search-clear:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.market-search-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 .market-panel .panel-content {
   flex: 1;
   min-height: 0;
