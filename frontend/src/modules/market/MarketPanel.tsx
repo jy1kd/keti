@@ -14,6 +14,7 @@ import { usePointOrder } from '@/hooks/usePointOrder'
 import { useOrderStore } from '@/modules/order/store'
 import { useMarketWs } from '@/hooks/useMarketWs'
 import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
+import { getProductName } from '@/utils/productNames'
 import { API_BASE } from '@/services/api'
 import { toast } from '@/components/Toast'
 import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
@@ -45,10 +46,12 @@ export function MarketPanel() {
       const instrumentID = c.instrumentID?.toLowerCase() ?? ''
       const instrumentName = c.instrumentName?.toLowerCase() ?? ''
       const productID = c.productID?.toLowerCase() ?? ''
+      const productName = getProductName(c.productID).toLowerCase()
       return (
         instrumentID.includes(q) ||
         instrumentName.includes(q) ||
-        productID.includes(q)
+        productID.includes(q) ||
+        productName.includes(q)
       )
     })
   }, [baseContracts, searchQuery])
@@ -123,6 +126,11 @@ export function MarketPanel() {
         <div className="panel-header__title">
           <h2>行情面板</h2>
           <ContractSearch contracts={baseContracts} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
+          {searchQuery && (
+            <span className="search-count">
+              {displayContracts.length} / {baseContracts.length}
+            </span>
+          )}
         </div>
         <div className="panel-header__tabs">
           <button

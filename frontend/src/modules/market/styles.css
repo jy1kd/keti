@@ -250,6 +250,12 @@
   font-size: 12px;
 }
 
+.search-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 /* 操作按钮 */
 .panel-header__actions {
   display: flex;
