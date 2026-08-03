@@ -175,7 +175,14 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
           borderColor: '#30363d',
         },
         bodyStyle: {
-          bgColor: '#0d1117',
+          bgColor: (args: any) => {
+            // 多选高亮
+            const record = args.table?.records?.[args.row - 1]
+            if (record && selectedContractsRef.current?.has(record.instrumentID)) {
+              return 'rgba(59, 130, 246, 0.15)' // 蓝色高亮
+            }
+            return '#0d1117'
+          },
           borderColor: '#21262d',
         },
         selectionStyle: {
