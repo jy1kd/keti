@@ -58,10 +58,19 @@
 /* --- OrderForm --- */
 
 .order-form {
-  padding: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  justify-content: space-between;
+  min-height: 380px;
+}
+
+/* ── Form Body ────────────────────────────── */
+
+.order-form__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 /* ── Form Row ─────────────────────────────── */
@@ -109,7 +118,7 @@
 
 .toggle-btn {
   flex: 1;
-  padding: 7px 0;
+  height: 34px;
   border: none;
   border-right: 1px solid var(--border-color, #30363d);
   background: transparent;
@@ -120,6 +129,9 @@
   transition: all 0.15s;
   text-align: center;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .toggle-btn:last-child {
@@ -219,11 +231,19 @@
   margin: 0;
 }
 
+/* ── Submit Area ──────────────────────────── */
+
+.order-form__submit {
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color, #30363d);
+}
+
 /* ── Submit Button ────────────────────────── */
 
 .submit-btn {
   width: 100%;
-  padding: 12px;
+  height: 44px;
+  padding: 0;
   border: none;
   border-radius: 5px;
   font-size: 15px;
@@ -232,7 +252,9 @@
   transition: all 0.15s;
   color: #fff;
   letter-spacing: 0.03em;
-  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .submit-btn.buy {
