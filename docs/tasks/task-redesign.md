@@ -550,13 +550,17 @@ frontend/src/modules/query/
 | **负责角色** | 角色B |
 | **依赖PR** | PR-R11 |
 | **工作量** | 2小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | 开发完成，待自验证 |
 
 **提交文件**：
 ```
 frontend/src/pages/
-├── OrderPage.tsx            # 重构：独立报单页面
-└── OrderPage.test.tsx       # 更新测试
+├── OrderPage.tsx            # 重构：添加合约名称显示
+├── __tests__/
+│   └── OrderPage.test.tsx   # 更新测试：instrumentName/latestPrice
+frontend/src/components/TabContent/
+├── index.tsx                # 集成 OrderPage，替换占位符
+└── index.test.tsx           # 更新测试：mock OrderPage
 ```
 
 **PR描述**：
