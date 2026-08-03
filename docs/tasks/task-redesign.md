@@ -67,7 +67,7 @@ frontend/src/stores/
 | **负责角色** | 角色B |
 | **依赖PR** | PR-R1 |
 | **工作量** | 4小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 开发完成，待自验证 |
 
 **提交文件**：
 ```
@@ -86,10 +86,10 @@ frontend/src/modules/market/
 4. 300ms 防抖避免频繁触发
 
 **验收标准**：
-- [ ] 能检测当前可见行范围
-- [ ] 滚动时触发 onVisibleRangeChange 回调
-- [ ] 300ms 防抖正常工作
-- [ ] 所有测试通过
+- [x] 能检测当前可见行范围
+- [x] 滚动时触发 onVisibleRangeChange 回调
+- [x] 300ms 防抖正常工作
+- [x] 所有测试通过（609 tests passed）
 
 ---
 
