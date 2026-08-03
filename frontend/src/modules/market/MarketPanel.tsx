@@ -158,22 +158,50 @@ export function MarketPanel() {
           </button>
           <button
             className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
-            disabled={!selectedInstrument}
-            onClick={() => {
+            disabled={!selectedInstrument && selectedContracts.size === 0}
+            onClick={async () => {
+              // 如果有多选，批量收藏/取消收藏
+              if (selectedContracts.size > 1) {
+                const allFavorited = Array.from(selectedContracts).every(id => favoritedIds.has(id))
+                if (allFavorited) {
+                  // 全部已收藏，批量取消
+                  for (const id of selectedContracts) {
+                    await removeFromFavorites(id)
+                  }
+                  toast.success(`已移除 ${selectedContracts.size} 个合约`)
+                } else {
+                  // 批量收藏
+                  let count = 0
+                  for (const id of selectedContracts) {
+                    const inst = contracts.find(c => c.instrumentID === id)
+                    if (inst) {
+                      const success = await addToFavorites(inst)
+                      if (success) count++
+                    }
+                  }
+                  toast.success(`已收藏 ${count} 个合约`)
+                }
+                return
+              }
+
+              // 单个合约收藏/取消收藏
               if (!selectedInstrument) return
               if (favoritedIds.has(selectedInstrument)) {
-                removeFromFavorites(selectedInstrument)
+                await removeFromFavorites(selectedInstrument)
                 toast.success(`已移除 ${selectedInstrument}`)
               } else {
                 const inst = contracts.find(c => c.instrumentID === selectedInstrument)
                 if (inst) {
-                  addToFavorites(inst)
+                  await addToFavorites(inst)
                   toast.success(`已收藏 ${inst.instrumentID}`)
                 }
               }
             }}
           >
-            {selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏'}
+            {selectedContracts.size > 1
+              ? (Array.from(selectedContracts).every(id => favoritedIds.has(id)) ? '批量移除' : '批量收藏')
+              : (selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏')
+            }
           </button>
         </div>
       </div>
@@ -285,15 +313,21 @@ export function MarketPanel() {
           items={[
             { label: `批量打开报单 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📝', onClick: () => openOrderTabs(multiSelectMenu.instrumentIDs) },
             { label: `批量打开K线 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📈', onClick: () => openKlineTabs(multiSelectMenu.instrumentIDs) },
-            { label: `批量收藏 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '⭐', onClick: () => {
-              multiSelectMenu.instrumentIDs.forEach((id) => {
+            { label: `批量收藏 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '⭐', onClick: async () => {
+              let count = 0
+              for (const id of multiSelectMenu.instrumentIDs) {
                 const inst = contracts.find(c => c.instrumentID === id)
-                if (inst) addToFavorites(inst)
-              })
-              toast.success(`已收藏 ${multiSelectMenu.instrumentIDs.length} 个合约`)
+                if (inst) {
+                  const success = await addToFavorites(inst)
+                  if (success) count++
+                }
+              }
+              toast.success(`已收藏 ${count} 个合约`)
             }},
-            { label: `批量取消收藏 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '★', onClick: () => {
-              multiSelectMenu.instrumentIDs.forEach((id) => removeFromFavorites(id))
+            { label: `批量取消收藏 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '★', onClick: async () => {
+              for (const id of multiSelectMenu.instrumentIDs) {
+                await removeFromFavorites(id)
+              }
               toast.success(`已移除 ${multiSelectMenu.instrumentIDs.length} 个合约`)
             }},
           ]}
