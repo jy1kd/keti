@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { MarketTable } from '@/modules/market/MarketTable'
 import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
+import { useTabStore } from '@/stores/tabs'
 import { toast } from '@/components/Toast'
 import './FavoritesPage.css'
 
@@ -19,11 +20,45 @@ export function FavoritesPage() {
   const snapshots = useMarketStore((s) => s.snapshots)
   const selectedInstrument = useMarketStore((s) => s.selectedInstrument)
   const setSelectedInstrument = useMarketStore((s) => s.setSelectedInstrument)
+  const openTab = useTabStore((s) => s.openTab)
+  const [contextMenu, setContextMenu] = useState<{ instrumentID: string; price: number; x: number; y: number } | null>(null)
 
   const favoritedIds = useMemo(
     () => new Set(favorites.map((c) => c.instrumentID)),
     [favorites],
   )
+
+  // 打开报单标签页
+  const openOrderTab = useCallback((instrumentID: string) => {
+    openTab({
+      type: 'order',
+      title: `📝 报单-${instrumentID}`,
+      props: { instrumentID },
+    })
+  }, [openTab])
+
+  // 打开K线标签页
+  const openKlineTab = useCallback((instrumentID: string) => {
+    openTab({
+      type: 'kline',
+      title: `📈 K线-${instrumentID}`,
+      props: { instrumentID },
+    })
+  }, [openTab])
+
+  // 右键菜单处理
+  const handleContextMenu = useCallback((instrumentID: string, price: number, event: MouseEvent) => {
+    event.preventDefault()
+    setContextMenu({ instrumentID, price, x: event.clientX, y: event.clientY })
+  }, [])
+
+  // 关闭右键菜单
+  useEffect(() => {
+    if (!contextMenu) return
+    const close = () => setContextMenu(null)
+    window.addEventListener('click', close)
+    return () => window.removeEventListener('click', close)
+  }, [contextMenu])
 
   const handleFavoriteChange = (instrumentID: string, isFavorited: boolean) => {
     if (isFavorited) {
@@ -41,6 +76,12 @@ export function FavoritesPage() {
 
   const handleRowClick = (instrumentID: string) => {
     setSelectedInstrument(instrumentID)
+  }
+
+  // 双击打开报单标签页
+  const handleRowDoubleClick = (instrumentID: string) => {
+    setSelectedInstrument(instrumentID)
+    openOrderTab(instrumentID)
   }
 
   if (favorites.length === 0) {
@@ -70,10 +111,33 @@ export function FavoritesPage() {
           snapshots={snapshots}
           selectedInstrument={selectedInstrument}
           onRowClick={handleRowClick}
+          onRowDoubleClick={handleRowDoubleClick}
+          onContextMenu={handleContextMenu}
           favoritedIds={favoritedIds}
           onFavoriteChange={handleFavoriteChange}
         />
       </div>
+
+      {/* 右键菜单 */}
+      {contextMenu && (
+        <div
+          className="context-menu"
+          style={{ position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 1000 }}
+        >
+          <button
+            className="context-menu__item"
+            onClick={() => openOrderTab(contextMenu.instrumentID)}
+          >
+            打开报单
+          </button>
+          <button
+            className="context-menu__item"
+            onClick={() => openKlineTab(contextMenu.instrumentID)}
+          >
+            打开K线
+          </button>
+        </div>
+      )}
     </div>
   )
 }

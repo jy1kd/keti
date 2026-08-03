@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { act, render, screen, fireEvent } from '@testing-library/react'
 import { FavoritesPage } from './FavoritesPage'
 import { useContractsStore } from '@/stores/contracts'
 import { useMarketStore } from '@/modules/market/store'
+import { useTabStore } from '@/stores/tabs'
 
 // Mock MarketTable to simplify testing
 vi.mock('@/modules/market/MarketTable', () => ({
-  MarketTable: ({ contracts, onFavoriteChange }: any) => (
+  MarketTable: ({ contracts, onFavoriteChange, onRowDoubleClick, onContextMenu }: any) => (
     <div data-testid="market-table">
       <span data-testid="contract-count">{contracts.length}</span>
       {contracts.map((c: any) => (
@@ -23,6 +24,18 @@ vi.mock('@/modules/market/MarketTable', () => ({
             onClick={() => onFavoriteChange?.(c.instrumentID, true)}
           >
             收藏
+          </button>
+          <button
+            data-testid={`dbl-${c.instrumentID}`}
+            onClick={() => onRowDoubleClick?.(c.instrumentID, 0)}
+          >
+            双击
+          </button>
+          <button
+            data-testid={`ctx-${c.instrumentID}`}
+            onClick={() => onContextMenu?.(c.instrumentID, 0, { preventDefault: vi.fn(), clientX: 100, clientY: 200 })}
+          >
+            右键
           </button>
         </div>
       ))}
@@ -66,6 +79,11 @@ describe('FavoritesPage', () => {
     useMarketStore.setState({
       snapshots: new Map(),
       selectedInstrument: null,
+    })
+    // 重置标签页 store（保留固定行情标签）
+    useTabStore.setState({
+      tabs: [{ id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false }],
+      activeTabId: 'tab-market',
     })
   })
 
@@ -113,5 +131,47 @@ describe('FavoritesPage', () => {
     render(<FavoritesPage />)
     // Should not crash, table still renders
     expect(screen.getByTestId('market-table')).toBeDefined()
+  })
+
+  // --- 标签页打开方式测试 (PR-R13) ---
+
+  it('自选合约双击打开报单标签', () => {
+    render(<FavoritesPage />)
+    fireEvent.click(screen.getByTestId('dbl-IF2608'))
+
+    const tabs = useTabStore.getState().tabs
+    const orderTab = tabs.find(t => t.type === 'order' && t.props?.instrumentID === 'IF2608')
+    expect(orderTab).toBeDefined()
+    expect(orderTab?.title).toBe('📝 报单-IF2608')
+    expect(useTabStore.getState().activeTabId).toBe(orderTab?.id)
+  })
+
+  it('自选合约右键显示上下文菜单', () => {
+    render(<FavoritesPage />)
+    fireEvent.click(screen.getByTestId('ctx-IF2608'))
+    expect(screen.getByText('打开报单')).toBeDefined()
+    expect(screen.getByText('打开K线')).toBeDefined()
+  })
+
+  it('右键菜单点击「打开报单」打开报单标签', () => {
+    render(<FavoritesPage />)
+    fireEvent.click(screen.getByTestId('ctx-IF2608'))
+    fireEvent.click(screen.getByText('打开报单'))
+
+    const tabs = useTabStore.getState().tabs
+    const orderTab = tabs.find(t => t.type === 'order' && t.props?.instrumentID === 'IF2608')
+    expect(orderTab).toBeDefined()
+    expect(useTabStore.getState().activeTabId).toBe(orderTab?.id)
+  })
+
+  it('右键菜单点击「打开K线」打开K线标签', () => {
+    render(<FavoritesPage />)
+    fireEvent.click(screen.getByTestId('ctx-IF2608'))
+    fireEvent.click(screen.getByText('打开K线'))
+
+    const tabs = useTabStore.getState().tabs
+    const klineTab = tabs.find(t => t.type === 'kline' && t.props?.instrumentID === 'IF2608')
+    expect(klineTab).toBeDefined()
+    expect(useTabStore.getState().activeTabId).toBe(klineTab?.id)
   })
 })

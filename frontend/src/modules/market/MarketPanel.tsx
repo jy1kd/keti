@@ -10,6 +10,7 @@ import { DepthQuote } from './DepthQuote'
 import { SpreadDisplay } from '@/components/SpreadDisplay'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
+import { useTabStore } from '@/stores/tabs'
 import { usePointOrder } from '@/hooks/usePointOrder'
 import { useOrderStore } from '@/modules/order/store'
 import { useMarketWs } from '@/hooks/useMarketWs'
@@ -25,9 +26,11 @@ export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, favorites, addToFavorites, removeFromFavorites, loadAllInstruments, loadFavoriteContracts } = useContractsStore()
+  const openTab = useTabStore((s) => s.openTab)
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
   const [viewMode, setViewMode] = useState<'market' | 'options'>('market')
+  const [contextMenu, setContextMenu] = useState<{ instrumentID: string; price: number; x: number; y: number } | null>(null)
   const loadedRef = useRef(false)
 
   // 订阅管理器
@@ -70,9 +73,9 @@ export function MarketPanel() {
       setOrderForm({ limitPrice: price })
     },
     onFill: ({ instrumentID, price }) => {
+      // 双击打开报单标签页
       setSelectedInstrument(instrumentID)
-      setOrderInstrument(instrumentID)
-      setOrderForm({ limitPrice: price })
+      openOrderTab(instrumentID)
     },
   })
 
@@ -80,6 +83,38 @@ export function MarketPanel() {
     setSelectedInstrument(instrumentID)
     setOrderInstrument(instrumentID)
   }
+
+  // 打开报单标签页
+  const openOrderTab = useCallback((instrumentID: string) => {
+    openTab({
+      type: 'order',
+      title: `📝 报单-${instrumentID}`,
+      props: { instrumentID },
+    })
+  }, [openTab])
+
+  // 打开K线标签页
+  const openKlineTab = useCallback((instrumentID: string) => {
+    openTab({
+      type: 'kline',
+      title: `📈 K线-${instrumentID}`,
+      props: { instrumentID },
+    })
+  }, [openTab])
+
+  // 右键菜单处理
+  const handleContextMenu = useCallback((instrumentID: string, price: number, event: MouseEvent) => {
+    event.preventDefault()
+    setContextMenu({ instrumentID, price, x: event.clientX, y: event.clientY })
+  }, [])
+
+  // 关闭右键菜单
+  useEffect(() => {
+    if (!contextMenu) return
+    const close = () => setContextMenu(null)
+    window.addEventListener('click', close)
+    return () => window.removeEventListener('click', close)
+  }, [contextMenu])
 
   const selectedSnapshot = selectedInstrument ? snapshots.get(selectedInstrument) ?? null : null
 
@@ -160,6 +195,7 @@ export function MarketPanel() {
                 selectedInstrument={selectedInstrument}
                 onRowClick={handleClick}
                 onRowDoubleClick={handleDoubleClick}
+                onContextMenu={handleContextMenu}
                 onVisibleRangeChange={setVisibleInstrumentIDs}
                 favoritedIds={favoritedIds}
                 onFavoriteChange={(instrumentID, isFavorited) => {
@@ -214,6 +250,27 @@ export function MarketPanel() {
         allContractIds={allContractIds}
         favoritedIds={favoritedIds}
       />
+
+      {/* 右键菜单 */}
+      {contextMenu && (
+        <div
+          className="context-menu"
+          style={{ position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 1000 }}
+        >
+          <button
+            className="context-menu__item"
+            onClick={() => openOrderTab(contextMenu.instrumentID)}
+          >
+            打开报单
+          </button>
+          <button
+            className="context-menu__item"
+            onClick={() => openKlineTab(contextMenu.instrumentID)}
+          >
+            打开K线
+          </button>
+        </div>
+      )}
     </section>
   )
 }

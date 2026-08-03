@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MarketPanel } from './MarketPanel'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
+import { useTabStore } from '@/stores/tabs'
 import type { MarketSnapshot } from '@/services/types'
 
 // Mock ResizeObserver (not available in jsdom)
@@ -39,12 +40,16 @@ vi.mock('@/hooks/useMarketWs', () => ({
   PERIOD_MS: { '5m': 300000 },
 }))
 
-// Mock usePointOrder to avoid side effects
+// Mock usePointOrder — capture callbacks for PR-R13 tests
+let capturedPointOrderOpts: any = null
 vi.mock('@/hooks/usePointOrder', () => ({
-  usePointOrder: () => ({
-    handleClick: vi.fn(),
-    handleDoubleClick: vi.fn(),
-  }),
+  usePointOrder: (opts?: any) => {
+    capturedPointOrderOpts = opts
+    return {
+      handleClick: vi.fn(),
+      handleDoubleClick: vi.fn(),
+    }
+  },
 }))
 
 // Mock InstrumentSearchModal
@@ -100,6 +105,7 @@ describe('MarketPanel', () => {
       snapshots: new Map(),
     })
     useContractsStore.setState({ contracts: [], favorites: [], isLoaded: false })
+    capturedPointOrderOpts = null
     vi.clearAllMocks()
   })
 
@@ -161,5 +167,114 @@ describe('MarketPanel', () => {
     expect(screen.queryByTestId('instrument-search-modal')).not.toBeInTheDocument()
     await user.click(screen.getByText('搜索合约'))
     expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
+  })
+
+  // --- 标签页打开方式测试 (PR-R13) ---
+
+  /** 设置测试合约数据并阻止 loadAllInstruments/loadFavoriteContracts 覆盖 */
+  function setupContracts() {
+    vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
+    vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
+    useContractsStore.setState({
+      contracts: [
+        { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260821', isTrading: 1, productClass: '1' },
+      ],
+      favorites: [],
+      isLoaded: true,
+    })
+    useMarketStore.setState({
+      snapshots: new Map([['IF2608', makeSnapshot()]]),
+      selectedInstrument: null,
+    })
+  }
+
+  it('双击行情表格行打开报单标签', () => {
+    setupContracts()
+
+    render(<MarketPanel />)
+
+    // 通过 capturedPointOrderOpts 模拟双击
+    expect(capturedPointOrderOpts).toBeDefined()
+    capturedPointOrderOpts.onFill({ instrumentID: 'IF2608', price: 4695 })
+
+    const tabs = useTabStore.getState().tabs
+    const orderTab = tabs.find(t => t.type === 'order' && t.props?.instrumentID === 'IF2608')
+    expect(orderTab).toBeDefined()
+    expect(orderTab?.title).toBe('📝 报单-IF2608')
+    expect(useTabStore.getState().activeTabId).toBe(orderTab?.id)
+  })
+
+  it('右键行情表格行显示上下文菜单', async () => {
+    setupContracts()
+
+    render(<MarketPanel />)
+
+    // 模拟右键菜单事件
+    const { ListTable } = await import('@visactor/vtable')
+    const tableInstance = (ListTable as any).mock.results[0].value
+    const contextmenuHandler = tableInstance.on.mock.calls.find(
+      (call: any[]) => call[0] === 'contextmenu_cell'
+    )?.[1]
+
+    expect(contextmenuHandler).toBeDefined()
+
+    // 触发右键
+    act(() => {
+      contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
+    })
+
+    // 应该显示上下文菜单
+    expect(screen.getByText('打开报单')).toBeInTheDocument()
+    expect(screen.getByText('打开K线')).toBeInTheDocument()
+  })
+
+  it('右键菜单点击「打开报单」打开报单标签', async () => {
+    setupContracts()
+
+    const user = userEvent.setup()
+    render(<MarketPanel />)
+
+    // 触发右键菜单
+    const { ListTable } = await import('@visactor/vtable')
+    const tableInstance = (ListTable as any).mock.results[0].value
+    const contextmenuHandler = tableInstance.on.mock.calls.find(
+      (call: any[]) => call[0] === 'contextmenu_cell'
+    )?.[1]
+    act(() => {
+      contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
+    })
+
+    // 点击「打开报单」
+    await user.click(screen.getByText('打开报单'))
+
+    const tabs = useTabStore.getState().tabs
+    const orderTab = tabs.find(t => t.type === 'order' && t.props?.instrumentID === 'IF2608')
+    expect(orderTab).toBeDefined()
+    expect(useTabStore.getState().activeTabId).toBe(orderTab?.id)
+  })
+
+  it('右键菜单点击「打开K线」打开K线标签', async () => {
+    setupContracts()
+
+    const user = userEvent.setup()
+    render(<MarketPanel />)
+
+    // 触发右键菜单
+    const { ListTable } = await import('@visactor/vtable')
+    const tableInstance = (ListTable as any).mock.results[0].value
+    const contextmenuHandler = tableInstance.on.mock.calls.find(
+      (call: any[]) => call[0] === 'contextmenu_cell'
+    )?.[1]
+    act(() => {
+      contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
+    })
+
+    // 点击「打开K线」
+    await user.click(screen.getByText('打开K线'))
+
+    const tabs = useTabStore.getState().tabs
+    const klineTab = tabs.find(t => t.type === 'kline' && t.props?.instrumentID === 'IF2608')
+    expect(klineTab).toBeDefined()
+    expect(useTabStore.getState().activeTabId).toBe(klineTab?.id)
   })
 })
