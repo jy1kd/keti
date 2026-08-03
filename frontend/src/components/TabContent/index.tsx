@@ -1,32 +1,45 @@
+import { lazy, Suspense } from 'react'
 import { useTabStore, type Tab } from '@/stores/tabs'
+import { MarketPanel } from '@/modules/market/MarketPanel'
 import './styles.css'
+
+// 懒加载其他页面组件（后续 PR 集成）
+// const OrderPage = lazy(() => import('@/pages/OrderPage'))
+// const QueryPage = lazy(() => import('@/pages/QueryPage'))
+// const KLinePage = lazy(() => import('@/pages/KLinePage'))
 
 /**
  * 为每个标签类型生成面板内容。
  *
- * 当前使用模块级组件或占位文本；
- * PR-R11（App.tsx 重构）会将占位文本替换为实际页面组件。
+ * market 类型已集成 MarketPanel；
+ * 其他类型使用占位文本，后续 PR 会逐步替换为实际页面组件。
  */
 function renderTabContent(tab: Tab): React.ReactNode {
   switch (tab.type) {
     case 'market':
-      return <span>行情</span>
+      return <MarketPanel />
     case 'order':
-      return <span>报单</span>
+      // TODO: PR-R14 报单标签页
+      return <div className="tab-placeholder">📝 报单标签页（PR-R14）</div>
     case 'query':
-      return <span>查询</span>
+      // TODO: PR-R15 查询标签页
+      return <div className="tab-placeholder">📋 查询标签页（PR-R15）</div>
     case 'kline':
-      return <span>K线</span>
+      // TODO: PR-R16 K线标签页
+      return <div className="tab-placeholder">📈 K线标签页（PR-R16）</div>
     case 'favorites':
-      return <span>自选</span>
+      // TODO: PR-R12 自选标签页
+      return <div className="tab-placeholder">⭐ 自选标签页（PR-R12）</div>
     case 'settings':
-      return <span>设置</span>
+      // TODO: PR-R17 设置标签页
+      return <div className="tab-placeholder">⚙ 设置标签页（PR-R17）</div>
     case 'options':
-      return <span>期权</span>
+      return <div className="tab-placeholder">📉 期权标签页</div>
     case 'ipc-monitor':
-      return <span>IPC</span>
+      // TODO: PR-R18 IPC监控标签页
+      return <div className="tab-placeholder">🔌 IPC监控标签页（PR-R18）</div>
     default:
-      return <span>未知标签</span>
+      return <div className="tab-placeholder">未知标签</div>
   }
 }
 
