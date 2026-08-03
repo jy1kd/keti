@@ -6,9 +6,11 @@ import './styles.css'
 interface ContractSearchProps {
   contracts: ContractInfo[]
   onSelect?: (instrumentID: string) => void
+  /** 搜索关键词变化回调（用于表格过滤） */
+  onQueryChange?: (query: string) => void
 }
 
-export function ContractSearch({ contracts, onSelect }: ContractSearchProps) {
+export function ContractSearch({ contracts, onSelect, onQueryChange }: ContractSearchProps) {
   const [query, setQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
@@ -25,6 +27,11 @@ export function ContractSearch({ contracts, onSelect }: ContractSearchProps) {
         getProductName(c.productID).toLowerCase().includes(q),
     )
   }, [query, contracts])
+
+  // 通知父组件搜索关键词变化
+  useEffect(() => {
+    onQueryChange?.(query)
+  }, [query, onQueryChange])
 
   // Reset activeIndex when results change
   useEffect(() => {

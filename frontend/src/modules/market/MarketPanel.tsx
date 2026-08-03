@@ -14,7 +14,6 @@ import { usePointOrder } from '@/hooks/usePointOrder'
 import { useOrderStore } from '@/modules/order/store'
 import { useMarketWs } from '@/hooks/useMarketWs'
 import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
-import { useContractSearch } from './useContractSearch'
 import { API_BASE } from '@/services/api'
 import { toast } from '@/components/Toast'
 import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
@@ -37,10 +36,22 @@ export function MarketPanel() {
   // Display contracts based on active tab
   const baseContracts = activeTab === 'all' ? contracts : favorites
 
-  // 搜索功能
-  const { query: searchQuery, setQuery: setSearchQuery, clearQuery: clearSearchQuery, filteredContracts } = useContractSearch(baseContracts)
-  const displayContracts = filteredContracts
-  const searchInputRef = useRef<HTMLInputElement>(null)
+  // 搜索过滤
+  const [searchQuery, setSearchQuery] = useState('')
+  const displayContracts = useMemo(() => {
+    if (!searchQuery.trim()) return baseContracts
+    const q = searchQuery.toLowerCase()
+    return baseContracts.filter((c) => {
+      const instrumentID = c.instrumentID?.toLowerCase() ?? ''
+      const instrumentName = c.instrumentName?.toLowerCase() ?? ''
+      const productID = c.productID?.toLowerCase() ?? ''
+      return (
+        instrumentID.includes(q) ||
+        instrumentName.includes(q) ||
+        productID.includes(q)
+      )
+    })
+  }, [baseContracts, searchQuery])
 
   // User-favorited IDs (for modal "已订阅" badge and button state)
   const favoritedIds = useMemo(
@@ -67,18 +78,6 @@ export function MarketPanel() {
       loadAllInstruments()
       loadFavoriteContracts()
     }
-  }, [])
-
-  // Ctrl+F 快捷键聚焦搜索框
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-        e.preventDefault()
-        searchInputRef.current?.focus()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   const { handleClick, handleDoubleClick } = usePointOrder({
@@ -123,7 +122,7 @@ export function MarketPanel() {
       <div className="panel-header">
         <div className="panel-header__title">
           <h2>行情面板</h2>
-          <ContractSearch contracts={displayContracts} onSelect={handleSelectContract} />
+          <ContractSearch contracts={baseContracts} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
         </div>
         <div className="panel-header__tabs">
           <button
@@ -166,30 +165,6 @@ export function MarketPanel() {
             {selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏'}
           </button>
         </div>
-      </div>
-
-      <div className="market-search-bar">
-        <input
-          ref={searchInputRef}
-          type="text"
-          placeholder="搜索合约（Ctrl+F）..."
-          className="market-search-input"
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        {searchQuery && (
-          <button
-            className="market-search-clear"
-            onClick={() => {
-              clearSearchQuery()
-              if (searchInputRef.current) searchInputRef.current.value = ''
-            }}
-          >
-            ✕
-          </button>
-        )}
-        <span className="market-search-count">
-          {filteredContracts.length} / {baseContracts.length}
-        </span>
       </div>
 
       <Group orientation="horizontal" className="panel-content" id="market-top-layout" onLayoutChange={onMarketTopLayout}>
