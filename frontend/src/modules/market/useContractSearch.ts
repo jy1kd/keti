@@ -49,6 +49,14 @@ export function useContractSearch(contracts: ContractInfo[]) {
     }, SEARCH_DEBOUNCE_MS)
   }, [])
 
+  // 清空 query（跳过防抖）
+  const clearQuery = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+    setQuery('')
+  }, [])
+
   // 清理定时器
   useEffect(() => {
     return () => {
@@ -61,6 +69,7 @@ export function useContractSearch(contracts: ContractInfo[]) {
   return {
     query,
     setQuery: setQueryDebounced,
+    clearQuery,
     filteredContracts,
   }
 }

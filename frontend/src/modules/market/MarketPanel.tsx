@@ -38,7 +38,7 @@ export function MarketPanel() {
   const baseContracts = activeTab === 'all' ? contracts : favorites
 
   // 搜索功能
-  const { query: searchQuery, setQuery: setSearchQuery, filteredContracts } = useContractSearch(baseContracts)
+  const { query: searchQuery, setQuery: setSearchQuery, clearQuery: clearSearchQuery, filteredContracts } = useContractSearch(baseContracts)
   const displayContracts = filteredContracts
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -180,7 +180,7 @@ export function MarketPanel() {
           <button
             className="market-search-clear"
             onClick={() => {
-              setSearchQuery('')
+              clearSearchQuery()
               if (searchInputRef.current) searchInputRef.current.value = ''
             }}
           >
