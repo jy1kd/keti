@@ -298,17 +298,6 @@ describe('MarketStore - selectedContracts', () => {
     expect(useMarketStore.getState().selectedContracts.has('au2508')).toBe(true)
   })
 
-  it('toggleContractSelection adds contract if not selected', () => {
-    useMarketStore.getState().toggleContractSelection('IF2608')
-    expect(useMarketStore.getState().selectedContracts.has('IF2608')).toBe(true)
-  })
-
-  it('toggleContractSelection removes contract if already selected', () => {
-    useMarketStore.getState().toggleContractSelection('IF2608')
-    useMarketStore.getState().toggleContractSelection('IF2608')
-    expect(useMarketStore.getState().selectedContracts.has('IF2608')).toBe(false)
-  })
-
   it('clearSelection clears all selected contracts', () => {
     useMarketStore.getState().setSelectedContracts(new Set(['IF2608', 'au2508']))
     useMarketStore.getState().clearSelection()

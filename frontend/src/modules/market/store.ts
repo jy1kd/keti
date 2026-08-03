@@ -24,7 +24,6 @@ interface MarketStore {
   /** 多选的合约 ID 集合 */
   selectedContracts: Set<string>
   setSelectedContracts: (ids: Set<string>) => void
-  toggleContractSelection: (instrumentID: string) => void
   clearSelection: () => void
   selectAll: (instrumentIDs: string[]) => void
 }
@@ -120,16 +119,6 @@ export const useMarketStore = create<MarketStore>((set) => ({
     }),
   selectedContracts: new Set(),
   setSelectedContracts: (ids) => set({ selectedContracts: ids }),
-  toggleContractSelection: (instrumentID) =>
-    set((state) => {
-      const next = new Set(state.selectedContracts)
-      if (next.has(instrumentID)) {
-        next.delete(instrumentID)
-      } else {
-        next.add(instrumentID)
-      }
-      return { selectedContracts: next }
-    }),
   clearSelection: () => set({ selectedContracts: new Set() }),
   selectAll: (instrumentIDs) =>
     set({ selectedContracts: new Set(instrumentIDs) }),

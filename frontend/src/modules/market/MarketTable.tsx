@@ -304,6 +304,9 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     recordsRef.current = records
     tableRef.current.setRecords(records)
 
+    // contracts 变化后重置 Shift+点击的索引（避免指向错误的行）
+    lastClickedIndexRef.current = null
+
     // contracts 变化后触发可见行检测
     setTimeout(notifyVisibleRange, 0)
   }, [contracts, snapshots, notifyVisibleRange, favoritedIds])
