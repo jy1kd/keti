@@ -9,6 +9,8 @@ interface MarketTableProps {
   selectedInstrument?: string | null
   onRowClick?: (instrumentID: string, price: number) => void
   onRowDoubleClick?: (instrumentID: string, price: number) => void
+  /** 右键菜单回调，传入合约 ID、价格、鼠标事件 */
+  onContextMenu?: (instrumentID: string, price: number, event: MouseEvent) => void
   /** 可见行变化回调，传入当前可见的合约 ID 列表 */
   onVisibleRangeChange?: (visibleInstrumentIDs: string[]) => void
   /** 收藏的合约 ID 集合 */
@@ -95,11 +97,12 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, i
   }
 }
 
-export function MarketTable({ contracts, snapshots, selectedInstrument, onRowClick, onRowDoubleClick, onVisibleRangeChange, favoritedIds, onFavoriteChange }: MarketTableProps) {
+export function MarketTable({ contracts, snapshots, selectedInstrument, onRowClick, onRowDoubleClick, onContextMenu, onVisibleRangeChange, favoritedIds, onFavoriteChange }: MarketTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
   const onClickRef = useRef(onRowClick)
   const onDblClickRef = useRef(onRowDoubleClick)
+  const onContextMenuRef = useRef(onContextMenu)
   const onVisibleRangeChangeRef = useRef(onVisibleRangeChange)
   const onFavoriteChangeRef = useRef(onFavoriteChange)
   const favoritedIdsRef = useRef(favoritedIds)
@@ -108,6 +111,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
 
   useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
+  useEffect(() => { onContextMenuRef.current = onContextMenu }, [onContextMenu])
   useEffect(() => { onVisibleRangeChangeRef.current = onVisibleRangeChange }, [onVisibleRangeChange])
   useEffect(() => { onFavoriteChangeRef.current = onFavoriteChange }, [onFavoriteChange])
   useEffect(() => { favoritedIdsRef.current = favoritedIds }, [favoritedIds])
@@ -202,6 +206,16 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       if (record && onDblClickRef.current) {
         const price = record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
         onDblClickRef.current(record.instrumentID, price)
+      }
+    })
+
+    // 右键菜单事件
+    table.on('contextmenu_cell', (args: any) => {
+      const rowIndex = args.row - 1
+      const record = recordsRef.current[rowIndex]
+      if (record && onContextMenuRef.current) {
+        const price = record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
+        onContextMenuRef.current(record.instrumentID, price, args.event)
       }
     })
 

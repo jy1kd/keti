@@ -371,3 +371,31 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ── 右键菜单 ─────────────────────────────────────────── */
+
+.context-menu {
+  background: var(--bg-secondary, #1c2333);
+  border: 1px solid var(--border, #30363d);
+  border-radius: 6px;
+  padding: 4px 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  min-width: 140px;
+}
+
+.context-menu__item {
+  display: block;
+  width: 100%;
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary, #e6edf3);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.context-menu__item:hover {
+  background: var(--bg-hover, #2d333b);
+}

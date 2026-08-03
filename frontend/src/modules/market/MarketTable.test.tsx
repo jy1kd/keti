@@ -151,4 +151,66 @@ describe('MarketTable', () => {
     // 回调应该被调用
     expect(onVisibleRangeChange).toHaveBeenCalled()
   })
+
+  // --- onContextMenu tests ---
+
+  it('接受 onContextMenu 回调', () => {
+    const onContextMenu = vi.fn()
+    render(
+      <MarketTable
+        contracts={mockContracts}
+        snapshots={mockSnapshots}
+        onContextMenu={onContextMenu}
+      />
+    )
+    // 组件渲染成功，回调已传入
+    expect(onContextMenu).not.toHaveBeenCalled()
+  })
+
+  it('右键点击时调用 onContextMenu 并传入合约信息', async () => {
+    const onContextMenu = vi.fn()
+    render(
+      <MarketTable
+        contracts={mockContracts}
+        snapshots={mockSnapshots}
+        onContextMenu={onContextMenu}
+      />
+    )
+
+    // 获取 vtable 实例并触发 contextmenu_cell 事件
+    const { ListTable } = await import('@visactor/vtable')
+    const tableInstance = (ListTable as any).mock.results[0].value
+    const contextmenuHandler = tableInstance.on.mock.calls.find(
+      (call: any[]) => call[0] === 'contextmenu_cell'
+    )?.[1]
+
+    expect(contextmenuHandler).toBeDefined()
+
+    // 模拟右键点击第一行
+    contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200 } })
+
+    expect(onContextMenu).toHaveBeenCalledTimes(1)
+    expect(onContextMenu).toHaveBeenCalledWith('au2508', 480.5, expect.any(Object))
+  })
+
+  it('右键点击无行情的合约时 price 为 0', async () => {
+    const onContextMenu = vi.fn()
+    render(
+      <MarketTable
+        contracts={mockContracts}
+        snapshots={new Map()}
+        onContextMenu={onContextMenu}
+      />
+    )
+
+    const { ListTable } = await import('@visactor/vtable')
+    const tableInstance = (ListTable as any).mock.results[0].value
+    const contextmenuHandler = tableInstance.on.mock.calls.find(
+      (call: any[]) => call[0] === 'contextmenu_cell'
+    )?.[1]
+
+    contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200 } })
+
+    expect(onContextMenu).toHaveBeenCalledWith('au2508', 0, expect.any(Object))
+  })
 })

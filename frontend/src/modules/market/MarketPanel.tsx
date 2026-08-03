@@ -10,6 +10,7 @@ import { DepthQuote } from './DepthQuote'
 import { SpreadDisplay } from '@/components/SpreadDisplay'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
+import { useContractContextMenu } from '@/hooks/useContractContextMenu'
 import { usePointOrder } from '@/hooks/usePointOrder'
 import { useOrderStore } from '@/modules/order/store'
 import { useMarketWs } from '@/hooks/useMarketWs'
@@ -26,6 +27,7 @@ export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, favorites, addToFavorites, removeFromFavorites, loadAllInstruments, loadFavoriteContracts } = useContractsStore()
+  const { contextMenu, openOrderTab, openKlineTab, handleContextMenu } = useContractContextMenu()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
   const [viewMode, setViewMode] = useState<'market' | 'options'>('market')
@@ -90,9 +92,9 @@ export function MarketPanel() {
       setOrderForm({ limitPrice: price })
     },
     onFill: ({ instrumentID, price }) => {
+      // 双击打开报单标签页
       setSelectedInstrument(instrumentID)
-      setOrderInstrument(instrumentID)
-      setOrderForm({ limitPrice: price })
+      openOrderTab(instrumentID)
     },
   })
 
@@ -185,6 +187,7 @@ export function MarketPanel() {
                 selectedInstrument={selectedInstrument}
                 onRowClick={handleClick}
                 onRowDoubleClick={handleDoubleClick}
+                onContextMenu={handleContextMenu}
                 onVisibleRangeChange={setVisibleInstrumentIDs}
                 favoritedIds={favoritedIds}
                 onFavoriteChange={(instrumentID, isFavorited) => {
@@ -239,6 +242,27 @@ export function MarketPanel() {
         allContractIds={allContractIds}
         favoritedIds={favoritedIds}
       />
+
+      {/* 右键菜单 */}
+      {contextMenu && (
+        <div
+          className="context-menu"
+          style={{ position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 1000 }}
+        >
+          <button
+            className="context-menu__item"
+            onClick={() => openOrderTab(contextMenu.instrumentID)}
+          >
+            打开报单
+          </button>
+          <button
+            className="context-menu__item"
+            onClick={() => openKlineTab(contextMenu.instrumentID)}
+          >
+            打开K线
+          </button>
+        </div>
+      )}
     </section>
   )
 }
