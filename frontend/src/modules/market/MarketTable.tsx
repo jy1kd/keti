@@ -279,6 +279,69 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     }
     window.addEventListener('keydown', handleKeyDown)
 
+    // 鼠标拖动选择
+    let isDragging = false
+    let dragStartRow = -1
+    let dragSelected = new Set<string>()
+
+    const getRowFromEvent = (e: MouseEvent): number => {
+      const rect = containerRef.current?.getBoundingClientRect()
+      if (!rect) return -1
+      // 简单估算：根据鼠标 Y 位置计算行索引
+      const y = e.clientY - rect.top
+      const rowHeight = 28 // vtable 默认行高
+      const headerHeight = 30 // 表头高度
+      const rowIndex = Math.floor((y - headerHeight) / rowHeight)
+      return Math.max(0, Math.min(rowIndex, recordsRef.current.length - 1))
+    }
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return // 只处理左键
+      const rowIndex = getRowFromEvent(e)
+      if (rowIndex < 0) return
+
+      isDragging = true
+      dragStartRow = rowIndex
+      dragSelected = new Set(selectedContractsRef.current ?? [])
+
+      // 如果没有按 Ctrl/Shift，开始新的选择
+      if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        dragSelected = new Set()
+      }
+    }
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return
+      const rowIndex = getRowFromEvent(e)
+      if (rowIndex < 0) return
+
+      // 计算选择范围
+      const start = Math.min(dragStartRow, rowIndex)
+      const end = Math.max(dragStartRow, rowIndex)
+
+      const newSelected = new Set(dragSelected)
+      for (let i = start; i <= end; i++) {
+        const record = recordsRef.current[i]
+        if (record) newSelected.add(record.instrumentID)
+      }
+
+      if (onSelectionChangeRef.current) {
+        onSelectionChangeRef.current(newSelected)
+      }
+    }
+
+    const handleMouseUp = () => {
+      isDragging = false
+      dragStartRow = -1
+    }
+
+    const container = containerRef.current
+    if (container) {
+      container.addEventListener('mousedown', handleMouseDown)
+      window.addEventListener('mousemove', handleMouseMove)
+      window.addEventListener('mouseup', handleMouseUp)
+    }
+
     // 初始渲染后触发一次（延迟确保 vtable 就绪）
     setTimeout(notifyVisibleRange, 0)
 
@@ -292,6 +355,11 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
+      if (container) {
+        container.removeEventListener('mousedown', handleMouseDown)
+      }
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
       table.release()
     }
