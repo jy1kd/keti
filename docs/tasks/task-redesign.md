@@ -499,15 +499,18 @@ frontend/src/components/
 | **负责角色** | 角色B |
 | **依赖PR** | PR-R11 |
 | **工作量** | 3小时 |
-| **状态** | 开发完成，待审查 |
+| **状态** | 改进建议已处理，待确认合并 |
 
 **提交文件**：
 ```
 frontend/src/modules/market/
 ├── MarketTable.tsx           # 更新：双击打开报单标签
 └── MarketPanel.tsx           # 更新：右键菜单打开标签
+frontend/src/pages/
+├── FavoritesPage.tsx         # 更新：自选合约双击/右键打开标签
+└── FavoritesPage.test.tsx    # 新增：测试
 frontend/src/modules/query/
-└── Position.tsx              # 更新：平仓按钮打开报单标签
+└── Position.tsx              # 更新：平仓按钮打开报单标签（⏸️ PR-R20 实现）
 ```
 
 **PR描述**：

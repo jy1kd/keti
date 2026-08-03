@@ -193,9 +193,11 @@ describe('MarketPanel', () => {
 
     render(<MarketPanel />)
 
-    // 通过 capturedPointOrderOpts 模拟双击
+    // 通过 capturedPointOrderOpts 模拟双击（包 act 避免异步状态更新警告）
     expect(capturedPointOrderOpts).toBeDefined()
-    capturedPointOrderOpts.onFill({ instrumentID: 'IF2608', price: 4695 })
+    act(() => {
+      capturedPointOrderOpts.onFill({ instrumentID: 'IF2608', price: 4695 })
+    })
 
     const tabs = useTabStore.getState().tabs
     const orderTab = tabs.find(t => t.type === 'order' && t.props?.instrumentID === 'IF2608')
