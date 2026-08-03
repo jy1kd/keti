@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { useContractContextMenu } from './useContractContextMenu'
 import { useTabStore } from '@/stores/tabs'
+import { useOrderPopupStore } from '@/modules/order/popupStore'
 
 function resetTabs() {
   useTabStore.setState({
@@ -13,6 +14,7 @@ function resetTabs() {
 describe('useContractContextMenu', () => {
   beforeEach(() => {
     resetTabs()
+    useOrderPopupStore.setState({ instrumentID: null })
     vi.clearAllMocks()
   })
 
@@ -20,17 +22,13 @@ describe('useContractContextMenu', () => {
     resetTabs()
   })
 
-  it('openOrderTab 打开报单标签页', () => {
+  it('openOrderPopup 打开悬浮报单弹窗', () => {
     const { result } = renderHook(() => useContractContextMenu())
     act(() => {
-      result.current.openOrderTab('IF2608')
+      result.current.openOrderPopup('IF2608')
     })
 
-    const tabs = useTabStore.getState().tabs
-    const orderTab = tabs.find((t) => t.type === 'order' && t.props?.instrumentID === 'IF2608')
-    expect(orderTab).toBeDefined()
-    expect(orderTab?.title).toBe('📝 报单-IF2608')
-    expect(useTabStore.getState().activeTabId).toBe(orderTab?.id)
+    expect(useOrderPopupStore.getState().instrumentID).toBe('IF2608')
   })
 
   it('openKlineTab 打开K线标签页', () => {

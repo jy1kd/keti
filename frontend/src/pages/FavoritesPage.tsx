@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import { MarketTable } from '@/modules/market/MarketTable'
 import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
@@ -20,7 +20,7 @@ export function FavoritesPage() {
   const snapshots = useMarketStore((s) => s.snapshots)
   const selectedInstrument = useMarketStore((s) => s.selectedInstrument)
   const setSelectedInstrument = useMarketStore((s) => s.setSelectedInstrument)
-  const { contextMenu, openOrderTab, openKlineTab, handleContextMenu } = useContractContextMenu()
+  const { contextMenu, openOrderPopup, openKlineTab, handleContextMenu } = useContractContextMenu()
 
   const favoritedIds = useMemo(
     () => new Set(favorites.map((c) => c.instrumentID)),
@@ -45,10 +45,10 @@ export function FavoritesPage() {
     setSelectedInstrument(instrumentID)
   }
 
-  // 双击打开报单标签页
+  // 双击打开悬浮报单弹窗
   const handleRowDoubleClick = (instrumentID: string) => {
     setSelectedInstrument(instrumentID)
-    openOrderTab(instrumentID)
+    openOrderPopup(instrumentID)
   }
 
   if (favorites.length === 0) {
@@ -93,7 +93,7 @@ export function FavoritesPage() {
         >
           <button
             className="context-menu__item"
-            onClick={() => openOrderTab(contextMenu.instrumentID)}
+            onClick={() => openOrderPopup(contextMenu.instrumentID)}
           >
             打开报单
           </button>

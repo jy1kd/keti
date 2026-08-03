@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTabStore } from '@/stores/tabs'
+import { useOrderPopupStore } from '@/modules/order/popupStore'
 
 interface ContextMenuState {
   instrumentID: string
@@ -17,10 +18,11 @@ interface MultiSelectContextMenuState {
 /**
  * useContractContextMenu — 合约右键菜单共享 Hook
  *
- * 封装右键菜单的状态管理与标签页打开逻辑（打开报单/K线标签），
+ * 封装右键菜单的状态管理与打开逻辑（打开报单弹窗 / K线标签页），
  * 供 MarketPanel / FavoritesPage 复用，避免重复实现。
  *
  * 用法：
+ *   const { contextMenu, openOrderPopup, openKlineTab, handleContextMenu } = useContractContextMenu()
  *   const { contextMenu, multiSelectMenu, openOrderTab, openKlineTab, handleContextMenu, handleMultiSelectContextMenu } = useContractContextMenu()
  */
 export function useContractContextMenu() {
@@ -28,14 +30,10 @@ export function useContractContextMenu() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [multiSelectMenu, setMultiSelectMenu] = useState<MultiSelectContextMenuState | null>(null)
 
-  // 打开报单标签页
-  const openOrderTab = useCallback((instrumentID: string) => {
-    openTab({
-      type: 'order',
-      title: `📝 报单-${instrumentID}`,
-      props: { instrumentID },
-    })
-  }, [openTab])
+  // 打开悬浮报单弹窗
+  const openOrderPopup = useCallback((instrumentID: string) => {
+    useOrderPopupStore.getState().openPopup(instrumentID)
+  }, [])
 
   // 打开K线标签页
   const openKlineTab = useCallback((instrumentID: string) => {
@@ -95,6 +93,7 @@ export function useContractContextMenu() {
     return () => window.removeEventListener('click', closeMenus)
   }, [contextMenu, multiSelectMenu, closeMenus])
 
+  return { contextMenu, openOrderPopup, openKlineTab, handleContextMenu }
   return {
     contextMenu,
     multiSelectMenu,

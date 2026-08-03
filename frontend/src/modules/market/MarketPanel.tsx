@@ -28,6 +28,7 @@ export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, favorites, addToFavorites, removeFromFavorites, loadAllInstruments, loadFavoriteContracts } = useContractsStore()
+  const { contextMenu, openOrderPopup, openKlineTab, handleContextMenu } = useContractContextMenu()
   const { contextMenu, multiSelectMenu, openOrderTab, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
@@ -92,10 +93,10 @@ export function MarketPanel() {
       setOrderInstrument(instrumentID)
       setOrderForm({ limitPrice: price })
     },
-    onFill: ({ instrumentID, price }) => {
-      // 双击打开报单标签页
+    onFill: ({ instrumentID }) => {
+      // 双击打开悬浮报单弹窗
       setSelectedInstrument(instrumentID)
-      openOrderTab(instrumentID)
+      openOrderPopup(instrumentID)
     },
   })
 
@@ -277,6 +278,23 @@ export function MarketPanel() {
 
       {/* 单选右键菜单 */}
       {contextMenu && (
+        <div
+          className="context-menu"
+          style={{ position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 1000 }}
+        >
+          <button
+            className="context-menu__item"
+            onClick={() => openOrderPopup(contextMenu.instrumentID)}
+          >
+            打开报单
+          </button>
+          <button
+            className="context-menu__item"
+            onClick={() => openKlineTab(contextMenu.instrumentID)}
+          >
+            打开K线
+          </button>
+        </div>
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}

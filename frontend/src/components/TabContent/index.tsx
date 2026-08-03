@@ -1,18 +1,23 @@
 import { useTabStore, type Tab } from '@/stores/tabs'
 import { MarketPanel } from '@/modules/market/MarketPanel'
 import { FavoritesPage } from '@/pages/FavoritesPage'
+import { OrderPage } from '@/pages/OrderPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import './styles.css'
 
-// 懒加载其他页面组件（后续 PR 集成）
-// const OrderPage = lazy(() => import('@/pages/OrderPage'))
-// const QueryPage = lazy(() => import('@/pages/QueryPage'))
-// const KLinePage = lazy(() => import('@/pages/KLinePage'))
+/**
+ * 安全地从 tab.props 中提取 instrumentID 字符串。
+ * 使用运行时类型守卫，避免 `as string` 断言掩藏非字符串值传入的 bug。
+ */
+function getInstrumentID(props: Record<string, unknown>): string | undefined {
+  return typeof props.instrumentID === 'string' ? props.instrumentID : undefined
+}
 
 /**
  * 为每个标签类型生成面板内容。
  *
  * market 类型已集成 MarketPanel；
+ * order 类型已集成 OrderPage；
  * 其他类型使用占位文本，后续 PR 会逐步替换为实际页面组件。
  */
 function renderTabContent(tab: Tab): React.ReactNode {
@@ -20,8 +25,7 @@ function renderTabContent(tab: Tab): React.ReactNode {
     case 'market':
       return <MarketPanel />
     case 'order':
-      // TODO: PR-R14 报单标签页
-      return <div className="tab-placeholder">📝 报单标签页（PR-R14）</div>
+      return <OrderPage instrumentID={getInstrumentID(tab.props)} />
     case 'query':
       // TODO: PR-R15 查询标签页
       return <div className="tab-placeholder">📋 查询标签页（PR-R15）</div>

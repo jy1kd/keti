@@ -1,0 +1,184 @@
+/* ── OrderPage ──────────────────────────────────────────────── */
+
+.order-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--bg-primary);
+}
+
+/* ── 标题栏 ─────────────────────────────────────────────────── */
+
+.order-page__title-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  height: 36px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.order-page__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.order-page__subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+/* ── 无合约提示 ─────────────────────────────────────────────── */
+
+.order-page__no-contract {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ── 行情卡片 ───────────────────────────────────────────────── */
+
+.order-page__quote-card {
+  margin: 10px 12px;
+  padding: 12px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.quote-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.quote-card__contract {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.quote-card__code {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.quote-card__name {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.quote-card__change {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.quote-card__change--up {
+  color: var(--color-up);
+}
+
+.quote-card__change--down {
+  color: var(--color-down);
+}
+
+.quote-card__change--flat {
+  color: var(--color-flat);
+}
+
+.quote-card__change-val {
+  font-size: 14px;
+}
+
+.quote-card__change-pct {
+  font-size: 12px;
+  opacity: 0.82;
+}
+
+.quote-card__divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 10px 0;
+}
+
+/* ── 行情数据网格 ───────────────────────────────────────────── */
+
+.quote-card__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 20px;
+}
+
+.quote-card__cell {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 2px 0;
+}
+
+.quote-card__label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.quote-card__value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.quote-card__value--highlight {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.quote-card__value--up {
+  color: var(--color-up);
+}
+
+.quote-card__value--down {
+  color: var(--color-down);
+}
+
+.quote-card__value--muted {
+  color: var(--text-muted);
+}
+
+/* ── 表单卡片 ───────────────────────────────────────────────── */
+
+.order-page__form {
+  margin: 0 12px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+}

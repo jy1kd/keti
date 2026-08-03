@@ -4,6 +4,7 @@ import { usePriceStep } from '../../hooks/usePriceStep'
 import { validateVolumeWithLimit } from '../../utils/validators'
 import { ContractSearch } from '../../components/ContractSearch'
 import { useMemo, useState } from 'react'
+import './styles.css'
 
 interface OrderFormProps {
   priceTick?: number
@@ -76,6 +77,7 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
 
   return (
     <div className="order-form">
+        <div className="order-form__fields">
       {/* Direction toggle */}
       <div className="form-row">
         <label>方向</label>
@@ -325,19 +327,23 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
         </span>
       </div>
 
+        </div>
+
       {/* Submit button */}
-      <button
-        type="button"
-        className={`submit-btn ${isBuy ? 'buy' : 'sell'}`}
-        disabled={isSubmitting}
-        onClick={submitOrder}
-      >
-        {isSubmitting ? '提交中...' : `${isBuy ? '买入' : '卖出'} ${
-          isArbitrage
-            ? (leg1 && leg2 ? `SPD ${leg1}-${leg2}` : '套利合约')
-            : orderForm.instrumentID || ''
-        }`}
-      </button>
+      <div className="order-form__submit">
+        <button
+          type="button"
+          className={`submit-btn ${isBuy ? 'buy' : 'sell'}`}
+          disabled={isSubmitting}
+          onClick={submitOrder}
+        >
+          {isSubmitting ? '提交中...' : `${isBuy ? '买入' : '卖出'} ${
+            isArbitrage
+              ? (leg1 && leg2 ? `SPD ${leg1}-${leg2}` : '套利合约')
+              : orderForm.instrumentID || ''
+          }`}
+        </button>
+      </div>
     </div>
   )
 }

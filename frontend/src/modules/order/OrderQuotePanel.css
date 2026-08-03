@@ -1,0 +1,117 @@
+/* ── OrderQuotePanel 报单弹窗行情面板 ─────────────────────────── */
+
+.order-quote {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* ── 合约头 ── */
+
+.order-quote__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+}
+
+.order-quote__contract {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.order-quote__code {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.order-quote__name {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.order-quote__change {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.order-quote__change--up {
+  color: var(--color-up);
+}
+
+.order-quote__change--down {
+  color: var(--color-down);
+}
+
+.order-quote__change--flat {
+  color: var(--color-flat);
+}
+
+.order-quote__change-val {
+  font-size: 14px;
+}
+
+.order-quote__change-pct {
+  font-size: 12px;
+  opacity: 0.82;
+}
+
+/* ── 行情速览 ── */
+
+.order-quote__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 20px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.order-quote__cell {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 2px 0;
+}
+
+.order-quote__label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.order-quote__value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.order-quote__value--up {
+  color: var(--color-up);
+}
+
+.order-quote__value--down {
+  color: var(--color-down);
+}
+
+.order-quote__value--muted {
+  color: var(--text-muted);
+}

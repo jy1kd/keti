@@ -5,6 +5,7 @@ import { MarketPanel } from './MarketPanel'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
 import { useTabStore } from '@/stores/tabs'
+import { useOrderPopupStore } from '@/modules/order/popupStore'
 import type { MarketSnapshot } from '@/services/types'
 
 // Mock ResizeObserver (not available in jsdom)
@@ -105,6 +106,7 @@ describe('MarketPanel', () => {
       snapshots: new Map(),
     })
     useContractsStore.setState({ contracts: [], favorites: [], isLoaded: false })
+    useOrderPopupStore.setState({ instrumentID: null })
     capturedPointOrderOpts = null
     vi.clearAllMocks()
   })
@@ -188,7 +190,7 @@ describe('MarketPanel', () => {
     })
   }
 
-  it('双击行情表格行打开报单标签', () => {
+  it('双击行情表格行打开报单弹窗', () => {
     setupContracts()
 
     render(<MarketPanel />)
@@ -199,11 +201,7 @@ describe('MarketPanel', () => {
       capturedPointOrderOpts.onFill({ instrumentID: 'IF2608', price: 4695 })
     })
 
-    const tabs = useTabStore.getState().tabs
-    const orderTab = tabs.find(t => t.type === 'order' && t.props?.instrumentID === 'IF2608')
-    expect(orderTab).toBeDefined()
-    expect(orderTab?.title).toBe('📝 报单-IF2608')
-    expect(useTabStore.getState().activeTabId).toBe(orderTab?.id)
+    expect(useOrderPopupStore.getState().instrumentID).toBe('IF2608')
   })
 
   it('右键行情表格行显示上下文菜单', async () => {
@@ -230,7 +228,7 @@ describe('MarketPanel', () => {
     expect(screen.getByText('打开K线')).toBeInTheDocument()
   })
 
-  it('右键菜单点击「打开报单」打开报单标签', async () => {
+  it('右键菜单点击「打开报单」打开报单弹窗', async () => {
     setupContracts()
 
     const user = userEvent.setup()
@@ -249,10 +247,7 @@ describe('MarketPanel', () => {
     // 点击「打开报单」
     await user.click(screen.getByText('打开报单'))
 
-    const tabs = useTabStore.getState().tabs
-    const orderTab = tabs.find(t => t.type === 'order' && t.props?.instrumentID === 'IF2608')
-    expect(orderTab).toBeDefined()
-    expect(useTabStore.getState().activeTabId).toBe(orderTab?.id)
+    expect(useOrderPopupStore.getState().instrumentID).toBe('IF2608')
   })
 
   it('右键菜单点击「打开K线」打开K线标签', async () => {

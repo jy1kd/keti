@@ -58,27 +58,58 @@
 /* --- OrderForm --- */
 
 .order-form {
-  padding: 12px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  justify-content: space-between;
+  min-height: 380px;
 }
+
+/* ── Form Body ────────────────────────────── */
+
+.order-form__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Form Row ─────────────────────────────── */
 
 .form-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .form-row > label {
-  font-size: 12px;
-  color: var(--text-secondary, #8b9dc3);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #484f58);
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
+
+/* ── Form Hint ────────────────────────────── */
+
+.form-hint {
+  font-size: 11px;
+  color: var(--text-muted, #484f58);
+  padding-top: 2px;
+}
+
+.form-hint--error {
+  color: var(--color-error, #f85149);
+}
+
+/* ── Toggle Group (segmented control) ─────── */
 
 .toggle-group {
   display: flex;
-  gap: 2px;
+  gap: 0;
+  border: 1px solid var(--border-color, #30363d);
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--bg-primary, #0d1117);
 }
 
 .toggle-group.triple .toggle-btn {
@@ -87,79 +118,111 @@
 
 .toggle-btn {
   flex: 1;
-  padding: 6px 8px;
-  border: 1px solid var(--border-color, #3a4a6b);
-  background: var(--bg-secondary, #1a2332);
-  color: var(--text-primary, #e0e6f0);
-  font-size: 13px;
+  height: 34px;
+  border: none;
+  border-right: 1px solid var(--border-color, #30363d);
+  background: transparent;
+  color: var(--text-secondary, #8b949e);
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
-}
-
-.toggle-btn:first-child {
-  border-radius: 4px 0 0 4px;
-}
-
-.toggle-btn:last-child {
-  border-radius: 0 4px 4px 0;
-}
-
-.toggle-btn.active {
-  background: var(--accent-color, #2d6cc0);
-  border-color: var(--accent-color, #2d6cc0);
-  color: #fff;
-}
-
-.toggle-btn.active.buy {
-  background: #c0392b;
-  border-color: #c0392b;
-}
-
-.toggle-btn.active.sell {
-  background: #2d8c4a;
-  border-color: #2d8c4a;
-}
-
-/* Stepper */
-
-.stepper-group {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.stepper-btn {
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--border-color, #3a4a6b);
-  background: var(--bg-secondary, #1a2332);
-  color: var(--text-primary, #e0e6f0);
-  font-size: 16px;
-  cursor: pointer;
+  text-align: center;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.stepper-btn:first-child {
-  border-radius: 4px 0 0 4px;
+.toggle-btn:last-child {
+  border-right: none;
 }
 
-.stepper-btn:last-child {
-  border-radius: 0 4px 4px 0;
+.toggle-btn:hover {
+  color: var(--text-primary, #e6edf3);
+  background: var(--bg-secondary, #161b22);
+}
+
+.toggle-btn.active {
+  background: var(--accent, #f0b429);
+  color: #0d1117;
+  font-weight: 700;
+  box-shadow: 0 0 12px rgba(240, 180, 41, 0.45);
+}
+
+.toggle-btn.active.buy {
+  background: #c0392b;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(248, 81, 73, 0.45);
+}
+
+.toggle-btn.active.sell {
+  background: #1e7b3e;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(63, 185, 80, 0.45);
+}
+
+/* ── Stepper ──────────────────────────────── */
+
+.stepper-group {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-color, #30363d);
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--bg-primary, #0d1117);
+}
+
+.stepper-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary, #8b949e);
+  font-size: 18px;
+  font-weight: 400;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.stepper-btn:hover {
+  color: var(--accent, #f0b429);
+  background: var(--accent-dim, rgba(240,180,41,0.12));
+}
+
+.stepper-btn:active {
+  background: var(--accent-glow, rgba(240,180,41,0.25));
 }
 
 .stepper-input {
   flex: 1;
-  width: 100%;
-  padding: 5px 8px;
-  border: 1px solid var(--border-color, #3a4a6b);
-  background: var(--bg-secondary, #1a2332);
-  color: var(--text-primary, #e0e6f0);
-  font-size: 14px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: none;
+  border-left: 1px solid var(--border-color, #30363d);
+  border-right: 1px solid var(--border-color, #30363d);
+  background: var(--bg-secondary, #161b22);
+  color: var(--text-primary, #e6edf3);
+  font-size: 15px;
+  font-weight: 500;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-variant-numeric: tabular-nums;
   text-align: center;
-  font-family: inherit;
   -moz-appearance: textfield;
+  outline: none;
+  transition: background 0.15s;
+}
+
+.stepper-input:focus {
+  background: var(--bg-primary, #0d1117);
+  box-shadow: inset 0 0 0 1px var(--accent, #f0b429);
 }
 
 .stepper-input::-webkit-inner-spin-button,
@@ -168,38 +231,62 @@
   margin: 0;
 }
 
-/* Submit */
+/* ── Submit Area ──────────────────────────── */
+
+.order-form__submit {
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color, #30363d);
+}
+
+/* ── Submit Button ────────────────────────── */
 
 .submit-btn {
-  padding: 10px;
+  width: 100%;
+  height: 44px;
+  padding: 0;
   border: none;
-  border-radius: 4px;
+  border-radius: 5px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.15s;
   color: #fff;
+  letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .submit-btn.buy {
-  background: #c0392b;
+  background: linear-gradient(135deg, #c0392b, #e74c3c);
+  box-shadow: 0 2px 8px rgba(192, 57, 43, 0.3);
 }
 
 .submit-btn.buy:hover:not(:disabled) {
-  background: #e74c3c;
+  background: linear-gradient(135deg, #d44637, #f06050);
+  box-shadow: 0 3px 12px rgba(192, 57, 43, 0.4);
+  transform: translateY(-1px);
 }
 
 .submit-btn.sell {
-  background: #2d8c4a;
+  background: linear-gradient(135deg, #1e7b3e, #2d8c4a);
+  box-shadow: 0 2px 8px rgba(45, 140, 74, 0.3);
 }
 
 .submit-btn.sell:hover:not(:disabled) {
-  background: #27ae60;
+  background: linear-gradient(135deg, #238f47, #34a05a);
+  box-shadow: 0 3px 12px rgba(45, 140, 74, 0.4);
+  transform: translateY(-1px);
+}
+
+.submit-btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .submit-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.4;
   cursor: not-allowed;
+  transform: none;
 }
 
 /* ── PR-15: panel overlay ─────────────────────────────────── */

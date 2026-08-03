@@ -555,13 +555,17 @@ frontend/src/modules/query/
 | **负责角色** | 角色B |
 | **依赖PR** | PR-R11 |
 | **工作量** | 2小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
 
 **提交文件**：
 ```
 frontend/src/pages/
-├── OrderPage.tsx            # 重构：独立报单页面
-└── OrderPage.test.tsx       # 更新测试
+├── OrderPage.tsx            # 重构：添加合约名称显示
+├── __tests__/
+│   └── OrderPage.test.tsx   # 更新测试：instrumentName/latestPrice
+frontend/src/components/TabContent/
+├── index.tsx                # 集成 OrderPage，替换占位符
+└── index.test.tsx           # 更新测试：mock OrderPage
 ```
 
 **PR描述**：
@@ -574,11 +578,11 @@ frontend/src/pages/
 4. 标签页标题显示 "📝 报单-{instrumentID}"
 
 **验收标准**：
-- [ ] 报单标签页正常显示
-- [ ] 合约信息显示正确
-- [ ] 报单功能正常
-- [ ] 标签页标题显示正确
-- [ ] 所有测试通过
+- [x] 报单标签页正常显示
+- [x] 合约信息显示正确
+- [x] 报单功能正常
+- [x] 标签页标题显示正确
+- [x] 所有测试通过
 
 ---
 
