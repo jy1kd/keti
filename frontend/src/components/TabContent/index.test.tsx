@@ -8,6 +8,16 @@ vi.mock('@/modules/market/MarketPanel', () => ({
   MarketPanel: () => <div data-testid="market-panel">行情面板 Mock</div>,
 }))
 
+// Mock OrderPage 组件（避免依赖 stores）
+vi.mock('@/pages/OrderPage', () => ({
+  OrderPage: ({ instrumentID }: { instrumentID?: string }) => (
+    <div data-testid="order-page">
+      报单页面 Mock
+      {instrumentID && <span>合约: {instrumentID}</span>}
+    </div>
+  ),
+}))
+
 // --- 辅助函数 ---
 
 function makeTab(overrides: Partial<Tab> & { type: TabType }): Tab {
@@ -114,7 +124,7 @@ describe('TabContent', () => {
   describe('标签类型渲染', () => {
     it.each<[TabType, string]>([
       ['market', '行情面板'],
-      ['order', '报单标签页'],
+      ['order', '报单页面'],
       ['query', '查询标签页'],
       ['kline', 'K线标签页'],
       ['favorites', '⭐ 自选合约'],

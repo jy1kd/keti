@@ -42,6 +42,9 @@ export function OrderPage({ instrumentID }: OrderPageProps) {
         {instrumentID && (
           <div className="order-page__instrument">
             <span className="instrument-id">{instrumentID}</span>
+            {contract && (
+              <span className="instrument-name">{contract.instrumentName}</span>
+            )}
             {snapshot && (
               <span className="instrument-price">
                 最新价: {snapshot.lastPrice}

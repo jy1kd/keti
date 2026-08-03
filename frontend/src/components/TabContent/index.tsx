@@ -1,12 +1,8 @@
 import { useTabStore, type Tab } from '@/stores/tabs'
 import { MarketPanel } from '@/modules/market/MarketPanel'
 import { FavoritesPage } from '@/pages/FavoritesPage'
+import { OrderPage } from '@/pages/OrderPage'
 import './styles.css'
-
-// 懒加载其他页面组件（后续 PR 集成）
-// const OrderPage = lazy(() => import('@/pages/OrderPage'))
-// const QueryPage = lazy(() => import('@/pages/QueryPage'))
-// const KLinePage = lazy(() => import('@/pages/KLinePage'))
 
 /**
  * 为每个标签类型生成面板内容。
@@ -19,8 +15,7 @@ function renderTabContent(tab: Tab): React.ReactNode {
     case 'market':
       return <MarketPanel />
     case 'order':
-      // TODO: PR-R14 报单标签页
-      return <div className="tab-placeholder">📝 报单标签页（PR-R14）</div>
+      return <OrderPage instrumentID={tab.props.instrumentID as string | undefined} />
     case 'query':
       // TODO: PR-R15 查询标签页
       return <div className="tab-placeholder">📋 查询标签页（PR-R15）</div>
