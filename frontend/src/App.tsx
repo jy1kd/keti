@@ -3,19 +3,19 @@ import { ConnectionStatus } from '@/components/ConnectionStatus'
 import { TabBar } from '@/components/TabBar'
 import { TabContent } from '@/components/TabContent'
 import { PerfMonitor } from '@/components/PerfMonitor'
-import { SettingsPanel } from '@/components/SettingsPanel'
 import { ToastContainer } from '@/components/Toast'
 import { useSystemWs } from '@/hooks/useSystemWs'
 import { useConnectionPoll } from '@/hooks/useConnectionPoll'
 import { useMarketStore } from '@/modules/market/store'
 import { OrderPopup } from '@/modules/order/OrderPopup'
+import { useTabStore } from '@/stores/tabs'
 import { API_BASE } from '@/services/api'
 import { isElectron } from '@/services/electron'
 import '@/assets/styles/global.css'
 
 function App() {
   const [perfVisible, setPerfVisible] = useState(false)
-  const [settingsVisible, setSettingsVisible] = useState(false)
+  const openTab = useTabStore((s) => s.openTab)
 
   // System WebSocket — 监听 MD/TD 连接状态即时推送
   useSystemWs(API_BASE.replace('http', 'ws'))
@@ -39,7 +39,7 @@ function App() {
           // TODO: PR-R15 查询标签页
           break
         case 'settings':
-          setSettingsVisible(true)
+          openTab({ type: 'settings', title: '⚙ 设置' })
           break
       }
     })
@@ -81,8 +81,8 @@ function App() {
       <header className="status-bar">
         <div className="status-bar__left">
           <button
-            className={`status-bar__gear${settingsVisible ? ' active' : ''}`}
-            onClick={() => setSettingsVisible((v) => !v)}
+            className="status-bar__gear"
+            onClick={() => openTab({ type: 'settings', title: '⚙ 设置' })}
             title="设置"
           >
             ⚙
@@ -109,7 +109,7 @@ function App() {
         </div>
         <span className="app-title">SimNow 交易终端</span>
       </header>
-      <TabBar onAddTab={() => {/* TODO: PR-R13 标签页打开方式 */}} />
+      <TabBar onAddTab={() => openTab({ type: 'settings', title: '⚙ 设置' })} />
       <main className="tab-main">
         <TabContent />
       </main>

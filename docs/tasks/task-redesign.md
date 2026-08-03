@@ -221,12 +221,13 @@ frontend/src/modules/market/
 | **负责角色** | 角色B |
 | **依赖PR** | PR-R2 |
 | **工作量** | 3小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
 
 **提交文件**：
 ```
 frontend/src/modules/market/
 ├── MarketTable.tsx           # 更新：支持多选
+├── MarketPanel.tsx           # 更新：集成多选功能
 └── store.ts                  # 更新：添加选中状态管理
 ```
 
@@ -241,11 +242,11 @@ frontend/src/modules/market/
 5. 选中行高亮显示
 
 **验收标准**：
-- [ ] Ctrl+点击能逐个选择/取消选择
-- [ ] Shift+点击能范围选择
-- [ ] Ctrl+A 能全选当前搜索结果
-- [ ] 选中行高亮显示
-- [ ] 所有测试通过
+- [x] Ctrl+点击能逐个选择/取消选择
+- [x] Shift+点击能范围选择
+- [x] Ctrl+A 能全选当前搜索结果
+- [x] 选中行高亮显示
+- [x] 所有测试通过（682 tests passed）
 
 ---
 
@@ -259,15 +260,19 @@ frontend/src/modules/market/
 | **负责角色** | 角色B |
 | **依赖PR** | PR-R4, PR-R6 |
 | **工作量** | 3小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
 
 **提交文件**：
 ```
 frontend/src/components/
 ├── ContextMenu/index.tsx    # 新增：右键菜单组件
+├── ContextMenu/index.test.tsx # 新增：测试
 └── ContextMenu/styles.css   # 新增：样式
+frontend/src/hooks/
+└── useContractContextMenu.ts # 更新：支持多选操作
 frontend/src/modules/market/
-└── MarketTable.tsx           # 更新：集成右键菜单
+├── MarketPanel.tsx           # 更新：集成右键菜单
+└── MarketTable.tsx           # 更新：支持多选右键菜单
 ```
 
 **PR描述**：
@@ -280,11 +285,11 @@ frontend/src/modules/market/
 4. 菜单项显示操作数量（如 "收藏 (3个)"）
 
 **验收标准**：
-- [ ] 右键点击显示菜单
-- [ ] 单选菜单功能正常
-- [ ] 多选菜单功能正常
-- [ ] 菜单项显示操作数量
-- [ ] 所有测试通过
+- [x] 右键点击显示菜单
+- [x] 单选菜单功能正常
+- [x] 多选菜单功能正常
+- [x] 菜单项显示操作数量
+- [x] 所有测试通过（701 tests passed）
 
 ---
 
@@ -664,13 +669,16 @@ frontend/src/pages/
 | **负责角色** | 角色B |
 | **依赖PR** | PR-R11 |
 | **工作量** | 2小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
 
 **提交文件**：
 ```
 frontend/src/pages/
 ├── SettingsPage.tsx         # 新增：设置标签页
 └── SettingsPage.test.tsx    # 新增：测试
+frontend/src/components/
+├── TabContent/index.tsx     # 更新：渲染 SettingsPage
+└── SettingsPanel/styles.css # 更新：添加 SettingsPage 样式
 ```
 
 **PR描述**：
@@ -683,11 +691,11 @@ frontend/src/pages/
 4. 标签页标题显示 "⚙ 设置"
 
 **验收标准**：
-- [ ] 设置标签页正常显示
-- [ ] 快捷键设置功能正常
-- [ ] 快捷交易设置功能正常
-- [ ] 设置保存功能正常
-- [ ] 所有测试通过
+- [x] 设置标签页正常显示
+- [x] 快捷键设置功能正常
+- [x] 快捷交易设置功能正常
+- [x] 设置保存功能正常
+- [x] 所有测试通过（707 tests passed）
 
 ---
 

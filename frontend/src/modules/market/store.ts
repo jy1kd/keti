@@ -21,6 +21,11 @@ interface MarketStore {
   lockedContracts: Set<string>
   addLockedContract: (instrumentID: string) => void
   removeLockedContract: (instrumentID: string) => void
+  /** 多选的合约 ID 集合 */
+  selectedContracts: Set<string>
+  setSelectedContracts: (ids: Set<string>) => void
+  clearSelection: () => void
+  selectAll: (instrumentIDs: string[]) => void
 }
 
 export const useMarketStore = create<MarketStore>((set) => ({
@@ -112,4 +117,9 @@ export const useMarketStore = create<MarketStore>((set) => ({
       next.delete(instrumentID)
       return { lockedContracts: next }
     }),
+  selectedContracts: new Set(),
+  setSelectedContracts: (ids) => set({ selectedContracts: ids }),
+  clearSelection: () => set({ selectedContracts: new Set() }),
+  selectAll: (instrumentIDs) =>
+    set({ selectedContracts: new Set(instrumentIDs) }),
 }))

@@ -280,3 +280,36 @@ describe('MarketStore - lockedContracts', () => {
   })
 })
 
+describe('MarketStore - selectedContracts', () => {
+  beforeEach(() => {
+    useMarketStore.setState({
+      selectedContracts: new Set(),
+    })
+  })
+
+  it('has empty selectedContracts by default', () => {
+    expect(useMarketStore.getState().selectedContracts.size).toBe(0)
+  })
+
+  it('setSelectedContracts replaces the entire set', () => {
+    useMarketStore.getState().setSelectedContracts(new Set(['IF2608', 'au2508']))
+    expect(useMarketStore.getState().selectedContracts.size).toBe(2)
+    expect(useMarketStore.getState().selectedContracts.has('IF2608')).toBe(true)
+    expect(useMarketStore.getState().selectedContracts.has('au2508')).toBe(true)
+  })
+
+  it('clearSelection clears all selected contracts', () => {
+    useMarketStore.getState().setSelectedContracts(new Set(['IF2608', 'au2508']))
+    useMarketStore.getState().clearSelection()
+    expect(useMarketStore.getState().selectedContracts.size).toBe(0)
+  })
+
+  it('selectAll selects all provided contract IDs', () => {
+    useMarketStore.getState().selectAll(['IF2608', 'au2508', 'ag2508'])
+    expect(useMarketStore.getState().selectedContracts.size).toBe(3)
+    expect(useMarketStore.getState().selectedContracts.has('IF2608')).toBe(true)
+    expect(useMarketStore.getState().selectedContracts.has('au2508')).toBe(true)
+    expect(useMarketStore.getState().selectedContracts.has('ag2508')).toBe(true)
+  })
+})
+

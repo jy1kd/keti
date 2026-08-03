@@ -2,6 +2,7 @@ import { useTabStore, type Tab } from '@/stores/tabs'
 import { MarketPanel } from '@/modules/market/MarketPanel'
 import { FavoritesPage } from '@/pages/FavoritesPage'
 import { OrderPage } from '@/pages/OrderPage'
+import { SettingsPage } from '@/pages/SettingsPage'
 import './styles.css'
 
 /**
@@ -34,8 +35,7 @@ function renderTabContent(tab: Tab): React.ReactNode {
     case 'favorites':
       return <FavoritesPage />
     case 'settings':
-      // TODO: PR-R17 设置标签页
-      return <div className="tab-placeholder">⚙ 设置标签页（PR-R17）</div>
+      return <SettingsPage />
     case 'options':
       return <div className="tab-placeholder">📉 期权标签页</div>
     case 'ipc-monitor':

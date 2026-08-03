@@ -128,7 +128,7 @@ describe('TabContent', () => {
       ['query', '查询标签页'],
       ['kline', 'K线标签页'],
       ['favorites', '⭐ 自选合约'],
-      ['settings', '设置标签页'],
+      ['settings', '⚙ 设置'],
       ['options', '期权标签页'],
       ['ipc-monitor', 'IPC监控标签页'],
     ])('应为 %s 类型渲染对应内容', (type, expectedText) => {
