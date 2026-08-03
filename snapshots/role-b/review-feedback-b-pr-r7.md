@@ -57,6 +57,33 @@
 
 ❌ **需要修改** — B1 必须修复后再审
 
+---
+
+## R2 二次审查（2026-08-01）
+
+### 修复验证
+
+| # | 等级 | 问题 | 修复状态 |
+|---|------|------|:--------:|
+| B1 | 🔴 | onClose 空函数，Escape 无法关闭菜单 | ✅ 已修复 |
+
+### 修复详情
+
+**B1 修复**：
+- ✅ `useContractContextMenu.ts`: 添加 `closeMenus` 函数（`useCallback`）
+- ✅ `useContractContextMenu.ts`: 点击空白处关闭逻辑复用 `closeMenus`
+- ✅ `MarketPanel.tsx`: 两处 `onClose={() => {}}` 改为 `onClose={closeMenus}`
+- ✅ `closeMenus` 从 hook 中导出，可供外部调用
+
+### 测试结果
+67 test files, 701 tests passed ✅
+
+### 新引入问题：0
+
+### 审查结论
+
+✅ **二次审查通过**
+
 修复建议：
 1. 将 `<ContextMenu onClose={() => {}}>` 改为传入实际关闭函数
 2. 建议提取 `closeMenus` 统一关闭函数：`const closeMenus = () => { setContextMenu(null); setMultiSelectMenu(null) }`
