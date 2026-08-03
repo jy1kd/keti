@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useCallback } from 'react'
 import { ListTable } from '@visactor/vtable'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
 import { getProductName } from '@/utils/productNames'
@@ -101,6 +101,25 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
   useEffect(() => { onVisibleRangeChangeRef.current = onVisibleRangeChange }, [onVisibleRangeChange])
 
+  // 可见行检测函数（提取为共享）
+  const notifyVisibleRange = useCallback(() => {
+    if (!onVisibleRangeChangeRef.current || !tableRef.current) return
+    try {
+      const range = tableRef.current.getBodyVisibleCellRange()
+      if (!range) return
+      const startRow = range.rowStart - 1 // vtable row 0 = header
+      const endRow = range.rowEnd - 1
+      const visibleIDs: string[] = []
+      for (let i = Math.max(0, startRow); i <= Math.min(recordsRef.current.length - 1, endRow); i++) {
+        const record = recordsRef.current[i]
+        if (record) visibleIDs.push(record.instrumentID)
+      }
+      onVisibleRangeChangeRef.current(visibleIDs)
+    } catch {
+      // vtable 尚未就绪
+    }
+  }, [])
+
   useEffect(() => {
     if (!containerRef.current) return
 
@@ -174,25 +193,6 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       }
     })
 
-    // 可见行检测：初始渲染后触发一次
-    const notifyVisibleRange = () => {
-      if (!onVisibleRangeChangeRef.current) return
-      try {
-        const range = table.getBodyVisibleCellRange()
-        if (!range) return
-        const startRow = range.rowStart - 1 // vtable row 0 = header
-        const endRow = range.rowEnd - 1
-        const visibleIDs: string[] = []
-        for (let i = Math.max(0, startRow); i <= Math.min(recordsRef.current.length - 1, endRow); i++) {
-          const record = recordsRef.current[i]
-          if (record) visibleIDs.push(record.instrumentID)
-        }
-        onVisibleRangeChangeRef.current(visibleIDs)
-      } catch {
-        // vtable 尚未就绪
-      }
-    }
-
     // 初始渲染后触发一次（延迟确保 vtable 就绪）
     setTimeout(notifyVisibleRange, 0)
 
@@ -218,25 +218,8 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     tableRef.current.setRecords(records)
 
     // contracts 变化后触发可见行检测
-    if (onVisibleRangeChangeRef.current) {
-      setTimeout(() => {
-        try {
-          const range = tableRef.current?.getBodyVisibleCellRange()
-          if (!range) return
-          const startRow = range.rowStart - 1
-          const endRow = range.rowEnd - 1
-          const visibleIDs: string[] = []
-          for (let i = Math.max(0, startRow); i <= Math.min(recordsRef.current.length - 1, endRow); i++) {
-            const record = recordsRef.current[i]
-            if (record) visibleIDs.push(record.instrumentID)
-          }
-          onVisibleRangeChangeRef.current?.(visibleIDs)
-        } catch {
-          // vtable 尚未就绪
-        }
-      }, 0)
-    }
-  }, [contracts, snapshots])
+    setTimeout(notifyVisibleRange, 0)
+  }, [contracts, snapshots, notifyVisibleRange])
 
   // 高亮选中合约行（rAF 等 vtable setRecords 渲染完成）
   useEffect(() => {

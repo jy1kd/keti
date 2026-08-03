@@ -115,6 +115,8 @@ describe('MarketTable', () => {
     expect(onVisibleRangeChange).toHaveBeenCalled()
     const calledWith = onVisibleRangeChange.mock.calls[0][0]
     expect(Array.isArray(calledWith)).toBe(true)
+    // mock 返回 rowStart:1, rowEnd:30，所有合约都可见
+    expect(calledWith).toEqual(expect.arrayContaining(['au2508', 'ag2508']))
   })
 
   it('contracts 变化时更新可见行', async () => {
