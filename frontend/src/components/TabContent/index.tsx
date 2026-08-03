@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { useTabStore, type Tab } from '@/stores/tabs'
 import { MarketPanel } from '@/modules/market/MarketPanel'
+import { FavoritesPage } from '@/pages/FavoritesPage'
 import './styles.css'
 
 // 懒加载其他页面组件（后续 PR 集成）
@@ -28,8 +29,7 @@ function renderTabContent(tab: Tab): React.ReactNode {
       // TODO: PR-R16 K线标签页
       return <div className="tab-placeholder">📈 K线标签页（PR-R16）</div>
     case 'favorites':
-      // TODO: PR-R12 自选标签页
-      return <div className="tab-placeholder">⭐ 自选标签页（PR-R12）</div>
+      return <FavoritesPage />
     case 'settings':
       // TODO: PR-R17 设置标签页
       return <div className="tab-placeholder">⚙ 设置标签页（PR-R17）</div>
