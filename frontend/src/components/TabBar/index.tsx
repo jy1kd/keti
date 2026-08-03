@@ -7,6 +7,11 @@ interface TabBarProps {
   onAddTab?: () => void
 }
 
+/** 可通过快捷按钮打开的标签页类型 */
+const QUICK_TABS = [
+  { type: 'favorites' as const, icon: '⭐', title: '⭐ 自选' },
+]
+
 /**
  * 标签栏组件
  *
@@ -18,6 +23,7 @@ export function TabBar({ onAddTab }: TabBarProps) {
   const activeTabId = useTabStore((s) => s.activeTabId)
   const setActiveTab = useTabStore((s) => s.setActiveTab)
   const closeTab = useTabStore((s) => s.closeTab)
+  const openTab = useTabStore((s) => s.openTab)
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -87,6 +93,30 @@ export function TabBar({ onAddTab }: TabBarProps) {
           )}
         </div>
       ))}
+      <div className="tab-bar__separator" />
+      {QUICK_TABS.map(({ type, icon, title }) => {
+        const isOpen = tabs.some((t) => t.type === type)
+        return (
+          <button
+            key={type}
+            type="button"
+            className={`tab-bar__quick${isOpen ? ' tab-bar__quick--active' : ''}`}
+            aria-label={title}
+            title={title}
+            onClick={() => {
+              if (isOpen) {
+                // 已打开则激活
+                const tab = tabs.find((t) => t.type === type)
+                if (tab) setActiveTab(tab.id)
+              } else {
+                openTab({ type, title, closable: true })
+              }
+            }}
+          >
+            {icon}
+          </button>
+        )
+      })}
       <button
         type="button"
         className="tab-bar__add"
