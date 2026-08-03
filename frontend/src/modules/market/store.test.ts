@@ -240,3 +240,43 @@ describe('MarketStore - currentPeriod', () => {
   })
 })
 
+describe('MarketStore - lockedContracts', () => {
+  beforeEach(() => {
+    useMarketStore.setState({
+      lockedContracts: new Set(),
+      visibleInstrumentIDs: [],
+    })
+  })
+
+  it('has empty lockedContracts by default', () => {
+    expect(useMarketStore.getState().lockedContracts.size).toBe(0)
+  })
+
+  it('addLockedContract adds contract to locked set', () => {
+    useMarketStore.getState().addLockedContract('IF2608')
+    expect(useMarketStore.getState().lockedContracts.has('IF2608')).toBe(true)
+  })
+
+  it('addLockedContract is idempotent', () => {
+    useMarketStore.getState().addLockedContract('IF2608')
+    useMarketStore.getState().addLockedContract('IF2608')
+    expect(useMarketStore.getState().lockedContracts.size).toBe(1)
+  })
+
+  it('removeLockedContract removes contract from locked set', () => {
+    useMarketStore.getState().addLockedContract('IF2608')
+    useMarketStore.getState().removeLockedContract('IF2608')
+    expect(useMarketStore.getState().lockedContracts.has('IF2608')).toBe(false)
+  })
+
+  it('removeLockedContract is idempotent', () => {
+    useMarketStore.getState().removeLockedContract('IF2608')
+    expect(useMarketStore.getState().lockedContracts.size).toBe(0)
+  })
+
+  it('setVisibleInstrumentIDs updates visible instrument IDs', () => {
+    useMarketStore.getState().setVisibleInstrumentIDs(['IF2608', 'au2508'])
+    expect(useMarketStore.getState().visibleInstrumentIDs).toEqual(['IF2608', 'au2508'])
+  })
+})
+
