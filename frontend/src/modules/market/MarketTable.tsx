@@ -219,11 +219,12 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       }
 
       // 多选逻辑
+      const event = args.event as MouseEvent
+
       if (onSelectionChangeRef.current) {
-        const event = args.event as MouseEvent
         const currentSelected = new Set(selectedContractsRef.current ?? [])
 
-        if (event.ctrlKey || event.metaKey) {
+        if (event?.ctrlKey || event?.metaKey) {
           // Ctrl+点击：逐个选择/取消选择
           if (currentSelected.has(record.instrumentID)) {
             currentSelected.delete(record.instrumentID)
@@ -231,7 +232,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
             currentSelected.add(record.instrumentID)
           }
           onSelectionChangeRef.current(currentSelected)
-        } else if (event.shiftKey && lastClickedIndexRef.current !== null) {
+        } else if (event?.shiftKey && lastClickedIndexRef.current !== null) {
           // Shift+点击：范围选择
           const start = Math.min(lastClickedIndexRef.current, rowIndex)
           const end = Math.max(lastClickedIndexRef.current, rowIndex)
@@ -244,8 +245,10 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
           // 普通点击：单选
           onSelectionChangeRef.current(new Set([record.instrumentID]))
         }
-        lastClickedIndexRef.current = rowIndex
       }
+
+      // 记录上次点击的行索引（在 if 块外面，确保总是执行）
+      lastClickedIndexRef.current = rowIndex
 
       // 触发单击回调
       if (onClickRef.current) {
