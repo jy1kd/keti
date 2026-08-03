@@ -15,6 +15,10 @@ interface MarketTableProps {
   favoritedIds?: Set<string>
   /** 收藏状态变化回调 */
   onFavoriteChange?: (instrumentID: string, isFavorited: boolean) => void
+  /** 多选的合约 ID 集合 */
+  selectedContracts?: Set<string>
+  /** 多选变化回调 */
+  onSelectionChange?: (selectedIDs: Set<string>) => void
 }
 
 const PLACEHOLDER = '--'
@@ -95,7 +99,7 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, i
   }
 }
 
-export function MarketTable({ contracts, snapshots, selectedInstrument, onRowClick, onRowDoubleClick, onVisibleRangeChange, favoritedIds, onFavoriteChange }: MarketTableProps) {
+export function MarketTable({ contracts, snapshots, selectedInstrument, onRowClick, onRowDoubleClick, onVisibleRangeChange, favoritedIds, onFavoriteChange, selectedContracts, onSelectionChange }: MarketTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
   const onClickRef = useRef(onRowClick)
@@ -103,6 +107,9 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   const onVisibleRangeChangeRef = useRef(onVisibleRangeChange)
   const onFavoriteChangeRef = useRef(onFavoriteChange)
   const favoritedIdsRef = useRef(favoritedIds)
+  const selectedContractsRef = useRef(selectedContracts)
+  const onSelectionChangeRef = useRef(onSelectionChange)
+  const lastClickedIndexRef = useRef<number | null>(null)
   const recordsRef = useRef<ReturnType<typeof buildRecord>[]>([])
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -111,6 +118,8 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   useEffect(() => { onVisibleRangeChangeRef.current = onVisibleRangeChange }, [onVisibleRangeChange])
   useEffect(() => { onFavoriteChangeRef.current = onFavoriteChange }, [onFavoriteChange])
   useEffect(() => { favoritedIdsRef.current = favoritedIds }, [favoritedIds])
+  useEffect(() => { selectedContractsRef.current = selectedContracts }, [selectedContracts])
+  useEffect(() => { onSelectionChangeRef.current = onSelectionChange }, [onSelectionChange])
 
   // 可见行检测函数（提取为共享），包含预加载
   const notifyVisibleRange = useCallback(() => {
@@ -189,8 +198,50 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
 
     table.on('click_cell', (args: any) => {
       const rowIndex = args.row - 1 // vtable row 0 = header, row 1 = first data row
+      const colIndex = args.col
       const record = recordsRef.current[rowIndex]
-      if (record && onClickRef.current) {
+      if (!record) return
+
+      // 收藏列点击
+      if (colIndex === columns.length - 1) {
+        if (onFavoriteChangeRef.current) {
+          const isFavorited = favoritedIdsRef.current?.has(record.instrumentID) ?? false
+          onFavoriteChangeRef.current(record.instrumentID, !isFavorited)
+        }
+        return
+      }
+
+      // 多选逻辑
+      if (onSelectionChangeRef.current) {
+        const event = args.event as MouseEvent
+        const currentSelected = new Set(selectedContractsRef.current ?? [])
+
+        if (event.ctrlKey || event.metaKey) {
+          // Ctrl+点击：逐个选择/取消选择
+          if (currentSelected.has(record.instrumentID)) {
+            currentSelected.delete(record.instrumentID)
+          } else {
+            currentSelected.add(record.instrumentID)
+          }
+          onSelectionChangeRef.current(currentSelected)
+        } else if (event.shiftKey && lastClickedIndexRef.current !== null) {
+          // Shift+点击：范围选择
+          const start = Math.min(lastClickedIndexRef.current, rowIndex)
+          const end = Math.max(lastClickedIndexRef.current, rowIndex)
+          for (let i = start; i <= end; i++) {
+            const r = recordsRef.current[i]
+            if (r) currentSelected.add(r.instrumentID)
+          }
+          onSelectionChangeRef.current(currentSelected)
+        } else {
+          // 普通点击：单选
+          onSelectionChangeRef.current(new Set([record.instrumentID]))
+        }
+        lastClickedIndexRef.current = rowIndex
+      }
+
+      // 触发单击回调
+      if (onClickRef.current) {
         const price = record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
         onClickRef.current(record.instrumentID, price)
       }
@@ -205,19 +256,21 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       }
     })
 
-    // 收藏列点击事件
-    table.on('click_cell', (args: any) => {
-      const colIndex = args.col
-      const rowIndex = args.row - 1
-      // 检查是否点击了收藏列（最后一列）
-      if (colIndex === columns.length - 1) {
-        const record = recordsRef.current[rowIndex]
-        if (record && onFavoriteChangeRef.current) {
-          const isFavorited = favoritedIdsRef.current?.has(record.instrumentID) ?? false
-          onFavoriteChangeRef.current(record.instrumentID, !isFavorited)
+    // Ctrl+A 全选
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        // 检查焦点是否在表格内
+        const activeElement = document.activeElement
+        if (activeElement && containerRef.current?.contains(activeElement)) {
+          e.preventDefault()
+          if (onSelectionChangeRef.current) {
+            const allIDs = recordsRef.current.map(r => r.instrumentID).filter(Boolean)
+            onSelectionChangeRef.current(new Set(allIDs))
+          }
         }
       }
-    })
+    }
+    window.addEventListener('keydown', handleKeyDown)
 
     // 初始渲染后触发一次（延迟确保 vtable 就绪）
     setTimeout(notifyVisibleRange, 0)
@@ -231,6 +284,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     tableRef.current = table
 
     return () => {
+      window.removeEventListener('keydown', handleKeyDown)
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
       table.release()
     }
