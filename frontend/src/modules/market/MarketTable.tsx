@@ -398,6 +398,14 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     setTimeout(notifyVisibleRange, 0)
   }, [contracts, snapshots, notifyVisibleRange, favoritedIds])
 
+  // selectedContracts 变化时更新行高亮
+  useEffect(() => {
+    if (!tableRef.current) return
+    // 触发 vtable 重新渲染行样式
+    // vtable 的 bodyStyle.bgColor 函数会在重绘时被调用
+    tableRef.current.invalidate?.() || tableRef.current.setRecords(recordsRef.current)
+  }, [selectedContracts])
+
   // 高亮选中合约行（rAF 等 vtable setRecords 渲染完成）
   useEffect(() => {
     if (!tableRef.current || !selectedInstrument) return
