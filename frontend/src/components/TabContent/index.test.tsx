@@ -1,7 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { TabContent } from './index'
 import { useTabStore, type Tab, type TabType } from '@/stores/tabs'
+
+// Mock MarketPanel 组件（避免依赖复杂子组件）
+vi.mock('@/modules/market/MarketPanel', () => ({
+  MarketPanel: () => <div data-testid="market-panel">行情面板 Mock</div>,
+}))
 
 // --- 辅助函数 ---
 
@@ -113,14 +118,14 @@ describe('TabContent', () => {
 
   describe('标签类型渲染', () => {
     it.each<[TabType, string]>([
-      ['market', '行情'],
-      ['order', '报单'],
-      ['query', '查询'],
-      ['kline', 'K线'],
-      ['favorites', '自选'],
-      ['settings', '设置'],
-      ['options', '期权'],
-      ['ipc-monitor', 'IPC'],
+      ['market', '行情面板'],
+      ['order', '报单标签页'],
+      ['query', '查询标签页'],
+      ['kline', 'K线标签页'],
+      ['favorites', '自选标签页'],
+      ['settings', '设置标签页'],
+      ['options', '期权标签页'],
+      ['ipc-monitor', 'IPC监控标签页'],
     ])('应为 %s 类型渲染对应内容', (type, expectedText) => {
       const tab = makeTab({ type })
       useTabStore.setState({
