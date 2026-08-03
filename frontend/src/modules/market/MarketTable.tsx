@@ -220,6 +220,18 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
 
       // 多选逻辑
       const event = args.event as MouseEvent
+      const prevLastClicked = lastClickedIndexRef.current
+
+      // 先记录上次点击的行索引
+      lastClickedIndexRef.current = rowIndex
+
+      console.log('[MarketTable] Click:', {
+        rowIndex,
+        shiftKey: event?.shiftKey,
+        ctrlKey: event?.ctrlKey,
+        lastClicked: prevLastClicked,
+        hasOnSelectionChange: !!onSelectionChangeRef.current,
+      })
 
       if (onSelectionChangeRef.current) {
         const currentSelected = new Set(selectedContractsRef.current ?? [])
@@ -232,10 +244,11 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
             currentSelected.add(record.instrumentID)
           }
           onSelectionChangeRef.current(currentSelected)
-        } else if (event?.shiftKey && lastClickedIndexRef.current !== null) {
+        } else if (event?.shiftKey && prevLastClicked !== null) {
           // Shift+点击：范围选择
-          const start = Math.min(lastClickedIndexRef.current, rowIndex)
-          const end = Math.max(lastClickedIndexRef.current, rowIndex)
+          console.log('[MarketTable] Shift+click range:', prevLastClicked, 'to', rowIndex)
+          const start = Math.min(prevLastClicked, rowIndex)
+          const end = Math.max(prevLastClicked, rowIndex)
           for (let i = start; i <= end; i++) {
             const r = recordsRef.current[i]
             if (r) currentSelected.add(r.instrumentID)
@@ -246,9 +259,6 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
           onSelectionChangeRef.current(new Set([record.instrumentID]))
         }
       }
-
-      // 记录上次点击的行索引（在 if 块外面，确保总是执行）
-      lastClickedIndexRef.current = rowIndex
 
       // 触发单击回调
       if (onClickRef.current) {
