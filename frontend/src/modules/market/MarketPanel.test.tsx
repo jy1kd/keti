@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event'
 import { MarketPanel } from './MarketPanel'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
-import { useUserPrefsStore } from '@/stores/userPrefs'
 import type { MarketSnapshot } from '@/services/types'
 
 // Mock ResizeObserver (not available in jsdom)
