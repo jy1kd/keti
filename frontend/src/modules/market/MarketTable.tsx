@@ -233,14 +233,6 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       // 先记录上次点击的行索引
       lastClickedIndexRef.current = rowIndex
 
-      console.log('[MarketTable] Click:', {
-        rowIndex,
-        shiftKey: event?.shiftKey,
-        ctrlKey: event?.ctrlKey,
-        lastClicked: prevLastClicked,
-        hasOnSelectionChange: !!onSelectionChangeRef.current,
-      })
-
       if (onSelectionChangeRef.current) {
         const currentSelected = new Set(selectedContractsRef.current ?? [])
 
