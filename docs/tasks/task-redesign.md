@@ -260,15 +260,19 @@ frontend/src/modules/market/
 | **负责角色** | 角色B |
 | **依赖PR** | PR-R4, PR-R6 |
 | **工作量** | 3小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 开发完成，待自验证 |
 
 **提交文件**：
 ```
 frontend/src/components/
 ├── ContextMenu/index.tsx    # 新增：右键菜单组件
+├── ContextMenu/index.test.tsx # 新增：测试
 └── ContextMenu/styles.css   # 新增：样式
+frontend/src/hooks/
+└── useContractContextMenu.ts # 更新：支持多选操作
 frontend/src/modules/market/
-└── MarketTable.tsx           # 更新：集成右键菜单
+├── MarketPanel.tsx           # 更新：集成右键菜单
+└── MarketTable.tsx           # 更新：支持多选右键菜单
 ```
 
 **PR描述**：
@@ -281,11 +285,11 @@ frontend/src/modules/market/
 4. 菜单项显示操作数量（如 "收藏 (3个)"）
 
 **验收标准**：
-- [ ] 右键点击显示菜单
-- [ ] 单选菜单功能正常
-- [ ] 多选菜单功能正常
-- [ ] 菜单项显示操作数量
-- [ ] 所有测试通过
+- [x] 右键点击显示菜单
+- [x] 单选菜单功能正常
+- [x] 多选菜单功能正常
+- [x] 菜单项显示操作数量
+- [x] 所有测试通过（701 tests passed）
 
 ---
 
