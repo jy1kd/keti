@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { FavoritesPage } from '../FavoritesPage'
+import { FavoritesPage } from './FavoritesPage'
 import { useContractsStore } from '@/stores/contracts'
 import { useMarketStore } from '@/modules/market/store'
 
@@ -17,6 +17,12 @@ vi.mock('@/modules/market/MarketTable', () => ({
             onClick={() => onFavoriteChange?.(c.instrumentID, false)}
           >
             取消收藏
+          </button>
+          <button
+            data-testid={`fav-${c.instrumentID}`}
+            onClick={() => onFavoriteChange?.(c.instrumentID, true)}
+          >
+            收藏
           </button>
         </div>
       ))}
@@ -90,6 +96,17 @@ describe('FavoritesPage', () => {
     render(<FavoritesPage />)
     fireEvent.click(screen.getByTestId('unfav-IF2608'))
     expect(removeFromFavorites).toHaveBeenCalledWith('IF2608')
+  })
+
+  it('should call addToFavorites when favoriting', () => {
+    const addToFavorites = vi.fn().mockResolvedValue(true)
+    const allContracts = [
+      { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '2026-08-15', isTrading: 1, productClass: '1' },
+    ]
+    useContractsStore.setState({ addToFavorites, contracts: allContracts } as any)
+    render(<FavoritesPage />)
+    fireEvent.click(screen.getByTestId('fav-IF2608'))
+    expect(addToFavorites).toHaveBeenCalledWith(allContracts[0])
   })
 
   it('should render with empty snapshots', () => {
