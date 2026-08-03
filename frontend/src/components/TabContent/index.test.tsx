@@ -23,11 +23,6 @@ function makeTab(overrides: Partial<Tab> & { type: TabType }): Tab {
 const MARKET_TAB = makeTab({ type: 'market', title: '📊 行情', closable: false })
 const ORDER_TAB = makeTab({ type: 'order', title: '📝 报单', props: { instrumentID: 'IF2608' } })
 const QUERY_TAB = makeTab({ type: 'query', title: '📋 查询' })
-const KLINE_TAB = makeTab({ type: 'kline', title: '📈 K线', props: { instrumentID: 'IF2608' } })
-const FAVORITES_TAB = makeTab({ type: 'favorites', title: '⭐ 自选' })
-const SETTINGS_TAB = makeTab({ type: 'settings', title: '⚙ 设置' })
-const OPTIONS_TAB = makeTab({ type: 'options', title: '📉 期权' })
-const IPC_TAB = makeTab({ type: 'ipc-monitor', title: '🔌 IPC监控' })
 
 /** 获取所有面板（包括隐藏的） */
 function getAllPanels() {

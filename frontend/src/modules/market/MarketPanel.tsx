@@ -14,6 +14,7 @@ import { usePointOrder } from '@/hooks/usePointOrder'
 import { useOrderStore } from '@/modules/order/store'
 import { useMarketWs } from '@/hooks/useMarketWs'
 import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
+import { getProductName } from '@/utils/productNames'
 import { API_BASE } from '@/services/api'
 import { toast } from '@/components/Toast'
 import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
@@ -34,7 +35,26 @@ export function MarketPanel() {
   useSubscriptionManager()
 
   // Display contracts based on active tab
-  const displayContracts = activeTab === 'all' ? contracts : favorites
+  const baseContracts = activeTab === 'all' ? contracts : favorites
+
+  // 搜索过滤
+  const [searchQuery, setSearchQuery] = useState('')
+  const displayContracts = useMemo(() => {
+    if (!searchQuery.trim()) return baseContracts
+    const q = searchQuery.toLowerCase()
+    return baseContracts.filter((c) => {
+      const instrumentID = c.instrumentID?.toLowerCase() ?? ''
+      const instrumentName = c.instrumentName?.toLowerCase() ?? ''
+      const productID = c.productID?.toLowerCase() ?? ''
+      const productName = getProductName(c.productID).toLowerCase()
+      return (
+        instrumentID.includes(q) ||
+        instrumentName.includes(q) ||
+        productID.includes(q) ||
+        productName.includes(q)
+      )
+    })
+  }, [baseContracts, searchQuery])
 
   // User-favorited IDs (for modal "已订阅" badge and button state)
   const favoritedIds = useMemo(
@@ -105,7 +125,12 @@ export function MarketPanel() {
       <div className="panel-header">
         <div className="panel-header__title">
           <h2>行情面板</h2>
-          <ContractSearch contracts={displayContracts} onSelect={handleSelectContract} />
+          <ContractSearch contracts={baseContracts} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
+          {searchQuery && (
+            <span className="search-count">
+              {displayContracts.length} / {baseContracts.length}
+            </span>
+          )}
         </div>
         <div className="panel-header__tabs">
           <button

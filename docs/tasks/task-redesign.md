@@ -181,15 +181,14 @@ frontend/src/modules/market/
 | **负责角色** | 角色B |
 | **依赖PR** | PR-R1 |
 | **工作量** | 2小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
 
 **提交文件**：
 ```
 frontend/src/modules/market/
 ├── MarketPanel.tsx           # 更新：添加搜索框
-└── MarketTable.tsx           # 更新：支持搜索过滤
-frontend/src/components/
-└── SearchBar/index.tsx       # 新增：搜索框组件
+├── useContractSearch.ts      # 新增：搜索 Hook
+└── useContractSearch.test.ts # 新增：测试
 ```
 
 **PR描述**：
@@ -203,12 +202,12 @@ frontend/src/components/
 5. 快捷键 `Ctrl+F` 聚焦搜索框
 
 **验收标准**：
-- [ ] 输入关键词能过滤合约列表
-- [ ] 支持中文搜索
-- [ ] 300ms 防抖正常工作
-- [ ] 清空按钮能清空搜索
-- [ ] 快捷键 `Ctrl+F` 能聚焦搜索框
-- [ ] 所有测试通过
+- [x] 输入关键词能过滤合约列表
+- [x] 支持中文搜索
+- [x] 300ms 防抖正常工作
+- [x] 清空按钮能清空搜索
+- [x] 快捷键 `Ctrl+F` 能聚焦搜索框
+- [x] 所有测试通过（666 tests passed）
 
 ---
 

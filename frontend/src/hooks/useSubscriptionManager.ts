@@ -6,9 +6,6 @@ import { subscribeMarket, unsubscribeMarket } from '@/services/api'
 /** 订阅/退订防抖间隔（毫秒） */
 const SUBSCRIPTION_DEBOUNCE_MS = 100
 
-/** 预加载行数（可见区域上下各预加载 N 行） */
-const PRELOAD_ROWS = 10
-
 /**
  * 订阅管理器 Hook
  *

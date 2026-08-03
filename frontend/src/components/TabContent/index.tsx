@@ -1,4 +1,3 @@
-import { lazy, Suspense } from 'react'
 import { useTabStore, type Tab } from '@/stores/tabs'
 import { MarketPanel } from '@/modules/market/MarketPanel'
 import { FavoritesPage } from '@/pages/FavoritesPage'
