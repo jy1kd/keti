@@ -1,0 +1,91 @@
+/* ── OrderPopup 悬浮报单弹窗 ──────────────────────────────────── */
+
+.order-popup {
+  position: fixed;
+  z-index: 1500;
+  width: 740px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 24px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+/* ── 标题栏（可拖拽） ── */
+
+.order-popup__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px;
+  height: 32px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-color);
+  cursor: move;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.order-popup__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.order-popup__close {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.order-popup__close:hover {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* ── 双栏主体 ── */
+
+.order-popup__body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(280px, 5fr) minmax(360px, 7fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  overflow: hidden;
+}
+
+.order-popup__quote {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.order-popup__form {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+/* 表单填满右栏、提交按钮贴底 */
+.order-popup__form .order-form {
+  flex: 1;
+}

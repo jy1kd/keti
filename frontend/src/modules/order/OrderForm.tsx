@@ -4,6 +4,7 @@ import { usePriceStep } from '../../hooks/usePriceStep'
 import { validateVolumeWithLimit } from '../../utils/validators'
 import { ContractSearch } from '../../components/ContractSearch'
 import { useMemo, useState } from 'react'
+import './styles.css'
 
 interface OrderFormProps {
   priceTick?: number

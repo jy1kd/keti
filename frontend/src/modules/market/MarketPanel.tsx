@@ -27,7 +27,7 @@ export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, favorites, addToFavorites, removeFromFavorites, loadAllInstruments, loadFavoriteContracts } = useContractsStore()
-  const { contextMenu, openOrderTab, openKlineTab, handleContextMenu } = useContractContextMenu()
+  const { contextMenu, openOrderPopup, openKlineTab, handleContextMenu } = useContractContextMenu()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
   const [viewMode, setViewMode] = useState<'market' | 'options'>('market')
@@ -91,10 +91,10 @@ export function MarketPanel() {
       setOrderInstrument(instrumentID)
       setOrderForm({ limitPrice: price })
     },
-    onFill: ({ instrumentID, price }) => {
-      // 双击打开报单标签页
+    onFill: ({ instrumentID }) => {
+      // 双击打开悬浮报单弹窗
       setSelectedInstrument(instrumentID)
-      openOrderTab(instrumentID)
+      openOrderPopup(instrumentID)
     },
   })
 
@@ -251,7 +251,7 @@ export function MarketPanel() {
         >
           <button
             className="context-menu__item"
-            onClick={() => openOrderTab(contextMenu.instrumentID)}
+            onClick={() => openOrderPopup(contextMenu.instrumentID)}
           >
             打开报单
           </button>

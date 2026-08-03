@@ -8,6 +8,7 @@ import { ToastContainer } from '@/components/Toast'
 import { useSystemWs } from '@/hooks/useSystemWs'
 import { useConnectionPoll } from '@/hooks/useConnectionPoll'
 import { useMarketStore } from '@/modules/market/store'
+import { OrderPopup } from '@/modules/order/OrderPopup'
 import { API_BASE } from '@/services/api'
 import { isElectron } from '@/services/electron'
 import '@/assets/styles/global.css'
@@ -112,6 +113,9 @@ function App() {
       <main className="tab-main">
         <TabContent />
       </main>
+
+      {/* 悬浮报单弹窗（非模态，浮于所有标签页之上） */}
+      <OrderPopup />
 
       {settingsVisible && (
         <div className="settings-overlay" onClick={() => setSettingsVisible(false)}>

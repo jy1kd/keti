@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { OrderPage } from '../OrderPage';
 import { useContractsStore } from '@/stores/contracts';
 import { useMarketStore } from '@/modules/market/store';
+import type { MarketSnapshot } from '@/services/types';
 
 describe('OrderPage', () => {
   beforeEach(() => {
@@ -62,7 +63,7 @@ describe('OrderPage', () => {
           lowerLimitPrice: 4118.4,
           volume: 20892,
           openInterest: 45105,
-        }],
+        } as MarketSnapshot],
       ]),
     });
     render(<OrderPage instrumentID="IF2608" />);
@@ -127,7 +128,7 @@ describe('OrderPage', () => {
           lowerLimitPrice: 0,
           volume: 20892,
           openInterest: 45105,
-        }],
+        } as MarketSnapshot],
       ]),
     });
     render(<OrderPage instrumentID="IF2608" />);

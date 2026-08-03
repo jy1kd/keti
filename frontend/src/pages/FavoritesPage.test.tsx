@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { act, render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { FavoritesPage } from './FavoritesPage'
 import { useContractsStore } from '@/stores/contracts'
 import { useMarketStore } from '@/modules/market/store'
 import { useTabStore } from '@/stores/tabs'
+import { useOrderPopupStore } from '@/modules/order/popupStore'
 
 // Mock MarketTable to simplify testing
 vi.mock('@/modules/market/MarketTable', () => ({
@@ -85,6 +86,8 @@ describe('FavoritesPage', () => {
       tabs: [{ id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false }],
       activeTabId: 'tab-market',
     })
+    // 重置悬浮报单弹窗
+    useOrderPopupStore.setState({ instrumentID: null })
   })
 
   it('should render favorites page title', () => {
@@ -135,15 +138,11 @@ describe('FavoritesPage', () => {
 
   // --- 标签页打开方式测试 (PR-R13) ---
 
-  it('自选合约双击打开报单标签', () => {
+  it('自选合约双击打开报单弹窗', () => {
     render(<FavoritesPage />)
     fireEvent.click(screen.getByTestId('dbl-IF2608'))
 
-    const tabs = useTabStore.getState().tabs
-    const orderTab = tabs.find(t => t.type === 'order' && t.props?.instrumentID === 'IF2608')
-    expect(orderTab).toBeDefined()
-    expect(orderTab?.title).toBe('📝 报单-IF2608')
-    expect(useTabStore.getState().activeTabId).toBe(orderTab?.id)
+    expect(useOrderPopupStore.getState().instrumentID).toBe('IF2608')
   })
 
   it('自选合约右键显示上下文菜单', () => {
@@ -153,15 +152,12 @@ describe('FavoritesPage', () => {
     expect(screen.getByText('打开K线')).toBeDefined()
   })
 
-  it('右键菜单点击「打开报单」打开报单标签', () => {
+  it('右键菜单点击「打开报单」打开报单弹窗', () => {
     render(<FavoritesPage />)
     fireEvent.click(screen.getByTestId('ctx-IF2608'))
     fireEvent.click(screen.getByText('打开报单'))
 
-    const tabs = useTabStore.getState().tabs
-    const orderTab = tabs.find(t => t.type === 'order' && t.props?.instrumentID === 'IF2608')
-    expect(orderTab).toBeDefined()
-    expect(useTabStore.getState().activeTabId).toBe(orderTab?.id)
+    expect(useOrderPopupStore.getState().instrumentID).toBe('IF2608')
   })
 
   it('右键菜单点击「打开K线」打开K线标签', () => {
