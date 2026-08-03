@@ -25,6 +25,8 @@ describe('OrderPage', () => {
       favorites: [],
       isLoaded: true,
     });
+    // Reset market store (no snapshots)
+    useMarketStore.setState({ snapshots: new Map() });
   });
 
   it('should render order form', () => {
@@ -63,5 +65,35 @@ describe('OrderPage', () => {
   it('should render submit button', () => {
     render(<OrderPage instrumentID="IF2608" />);
     expect(screen.getByText(/买入 IF2608/)).toBeDefined();
+  });
+
+  // --- 边界条件 ---
+
+  it('should show only title when no instrumentID provided', () => {
+    render(<OrderPage />);
+    expect(screen.getByText('报单')).toBeDefined();
+    // 不显示 instrument-info 区域的具体元素
+    expect(screen.queryByText(/最新价/)).toBeNull();
+    // 提交按钮显示占位文本（无合约代码）
+    expect(screen.getByText(/买入\s/)).toBeDefined();
+  });
+
+  it('should show instrumentID but not name/price when contract not found', () => {
+    render(<OrderPage instrumentID="IF9999" />);
+    // 显示合约代码
+    expect(screen.getByText('IF9999')).toBeDefined();
+    // 不显示合约名称（contract 为 undefined）
+    expect(screen.queryByText('沪深300')).toBeNull();
+    // 不显示最新价（snapshot 为 null）
+    expect(screen.queryByText(/最新价/)).toBeNull();
+  });
+
+  it('should show ID and name but not price when snapshot unavailable', () => {
+    render(<OrderPage instrumentID="IF2608" />);
+    // 显示合约代码和名称（contract 存在）
+    expect(screen.getByText('IF2608')).toBeDefined();
+    expect(screen.getByText('沪深300')).toBeDefined();
+    // 不显示最新价（snapshot 为 null，beforeEach 清空了 snapshots）
+    expect(screen.queryByText(/最新价/)).toBeNull();
   });
 });

@@ -5,9 +5,18 @@ import { OrderPage } from '@/pages/OrderPage'
 import './styles.css'
 
 /**
+ * 安全地从 tab.props 中提取 instrumentID 字符串。
+ * 使用运行时类型守卫，避免 `as string` 断言掩藏非字符串值传入的 bug。
+ */
+function getInstrumentID(props: Record<string, unknown>): string | undefined {
+  return typeof props.instrumentID === 'string' ? props.instrumentID : undefined
+}
+
+/**
  * 为每个标签类型生成面板内容。
  *
  * market 类型已集成 MarketPanel；
+ * order 类型已集成 OrderPage；
  * 其他类型使用占位文本，后续 PR 会逐步替换为实际页面组件。
  */
 function renderTabContent(tab: Tab): React.ReactNode {
@@ -15,7 +24,7 @@ function renderTabContent(tab: Tab): React.ReactNode {
     case 'market':
       return <MarketPanel />
     case 'order':
-      return <OrderPage instrumentID={tab.props.instrumentID as string | undefined} />
+      return <OrderPage instrumentID={getInstrumentID(tab.props)} />
     case 'query':
       // TODO: PR-R15 查询标签页
       return <div className="tab-placeholder">📋 查询标签页（PR-R15）</div>
