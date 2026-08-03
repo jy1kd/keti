@@ -35,6 +35,15 @@ export function useContractContextMenu() {
     useOrderPopupStore.getState().openPopup(instrumentID)
   }, [])
 
+  // 打开单个报单标签页
+  const openOrderTab = useCallback((instrumentID: string) => {
+    openTab({
+      type: 'order',
+      title: `📝 报单-${instrumentID}`,
+      props: { instrumentID },
+    })
+  }, [openTab])
+
   // 打开K线标签页
   const openKlineTab = useCallback((instrumentID: string) => {
     openTab({
@@ -92,11 +101,10 @@ export function useContractContextMenu() {
     window.addEventListener('click', closeMenus)
     return () => window.removeEventListener('click', closeMenus)
   }, [contextMenu, multiSelectMenu, closeMenus])
-
-  return { contextMenu, openOrderPopup, openKlineTab, handleContextMenu }
   return {
     contextMenu,
     multiSelectMenu,
+    openOrderPopup,
     openOrderTab,
     openKlineTab,
     openOrderTabs,

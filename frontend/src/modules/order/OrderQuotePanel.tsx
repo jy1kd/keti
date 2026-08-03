@@ -73,6 +73,7 @@ export function OrderQuotePanel({ instrumentID, snapshot, priceTick }: OrderQuot
       {/* ── 五档盘口 ── */}
       <DepthQuote
         snapshot={snapshot}
+        priceTick={priceTick}
         onBuyClick={handleBuyClick}
         onSellClick={handleSellClick}
       />

@@ -93,6 +93,46 @@ describe('OrderQuotePanel', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThan(0)
   })
 
+  it('快照无五档挂单价时，以买一/卖一为基准合成档位价填满五档', () => {
+    // 只有最新价，买卖五档全为 0（CTP 无挂单）
+    const snap = makeSnapshot({
+      bidPrice1: 0, bidVolume1: 0,
+      bidPrice2: 0, bidVolume2: 0,
+      bidPrice3: 0, bidVolume3: 0,
+      bidPrice4: 0, bidVolume4: 0,
+      bidPrice5: 0, bidVolume5: 0,
+      askPrice1: 0, askVolume1: 0,
+      askPrice2: 0, askVolume2: 0,
+      askPrice3: 0, askVolume3: 0,
+      askPrice4: 0, askVolume4: 0,
+      askPrice5: 0, askVolume5: 0,
+    })
+    render(<OrderQuotePanel instrumentID="IF2608" snapshot={snap} priceTick={0.2} />)
+
+    // 基准回退最新价 4695：买一/卖一 = 4695.0（中间），买二 = 4694.8，卖二 = 4695.2
+    expect(screen.getAllByText('4695.0').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('4694.8')).toBeInTheDocument()
+    expect(screen.getByText('4695.2')).toBeInTheDocument()
+  })
+
+  it('点击合成档位回填价格到表单', () => {
+    const snap = makeSnapshot({
+      bidPrice1: 0, bidVolume1: 0,
+      askPrice1: 0, askVolume1: 0,
+    })
+    render(<OrderQuotePanel instrumentID="IF2608" snapshot={snap} priceTick={0.2} />)
+
+    // 点击卖一（合成价回退最新价 4695）→ 买入价
+    fireEvent.click(screen.getByTestId('ask-1'))
+    expect(useOrderStore.getState().orderForm.direction).toBe('buy')
+    expect(useOrderStore.getState().orderForm.limitPrice).toBe(4695)
+
+    // 点击买一（合成价回退最新价 4695）→ 卖出价
+    fireEvent.click(screen.getByTestId('bid-1'))
+    expect(useOrderStore.getState().orderForm.direction).toBe('sell')
+    expect(useOrderStore.getState().orderForm.limitPrice).toBe(4695)
+  })
+
   it('速览字段千分位格式化', () => {
     render(<OrderQuotePanel instrumentID="IF2608" snapshot={makeSnapshot()} priceTick={0.2} />)
     expect(screen.getByText('20,892')).toBeInTheDocument()

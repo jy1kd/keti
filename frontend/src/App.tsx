@@ -116,14 +116,6 @@ function App() {
 
       {/* 悬浮报单弹窗（非模态，浮于所有标签页之上） */}
       <OrderPopup />
-
-      {settingsVisible && (
-        <div className="settings-overlay" onClick={() => setSettingsVisible(false)}>
-          <div className="settings-overlay__panel" onClick={(e) => e.stopPropagation()}>
-            <SettingsPanel onClose={() => setSettingsVisible(false)} />
-          </div>
-        </div>
-      )}
     </div>
   )
 }

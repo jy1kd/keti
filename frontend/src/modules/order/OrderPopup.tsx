@@ -20,11 +20,22 @@ export function OrderPopup() {
   const setOrderForm = useOrderStore((s) => s.setOrderForm)
   const snapshots = useMarketStore((s) => s.snapshots)
   const contracts = useContractsStore((s) => s.contracts)
+  const addLockedContract = useMarketStore((s) => s.addLockedContract)
+  const removeLockedContract = useMarketStore((s) => s.removeLockedContract)
 
   // 合约切换 → 同步到报单表单（与 OrderPage 模式一致）
   useEffect(() => {
     if (instrumentID) setOrderForm({ instrumentID })
   }, [instrumentID, setOrderForm])
+
+  // 弹窗打开期间锁定该合约的行情订阅：
+  // 即使合约不在表格可见区/自选里，也保证有 WS 行情推送（五档盘口有数据）。
+  // useSubscriptionManager 会自动订阅锁定合约，弹窗关闭后自动退订。
+  useEffect(() => {
+    if (!instrumentID) return
+    addLockedContract(instrumentID)
+    return () => removeLockedContract(instrumentID)
+  }, [instrumentID, addLockedContract, removeLockedContract])
 
   const snapshot = instrumentID ? snapshots.get(instrumentID) ?? null : null
   const contract = instrumentID ? contracts.find((c) => c.instrumentID === instrumentID) : null

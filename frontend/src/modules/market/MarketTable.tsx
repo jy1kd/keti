@@ -116,6 +116,8 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   const selectedContractsRef = useRef(selectedContracts)
   const onSelectionChangeRef = useRef(onSelectionChange)
   const lastClickedIndexRef = useRef<number | null>(null)
+  const lastClickTimeRef = useRef<number>(0)
+  const lastClickRowRef = useRef<number>(-1)
   const recordsRef = useRef<ReturnType<typeof buildRecord>[]>([])
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -226,53 +228,56 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
         return
       }
 
-      // 多选逻辑
+      // 双击检测：同一行 300ms 内连续点击视为双击
+      const now = Date.now()
+      const isDoubleClick =
+        lastClickRowRef.current === rowIndex &&
+        now - lastClickTimeRef.current < 300
+      lastClickTimeRef.current = now
+      lastClickRowRef.current = rowIndex
+
+      // 多选逻辑（双击时不处理多选）
       const event = args.event as MouseEvent
       const prevLastClicked = lastClickedIndexRef.current
 
-      // 先记录上次点击的行索引
-      lastClickedIndexRef.current = rowIndex
+      if (!isDoubleClick) {
+        // 先记录上次点击的行索引
+        lastClickedIndexRef.current = rowIndex
 
-      if (onSelectionChangeRef.current) {
-        const currentSelected = new Set(selectedContractsRef.current ?? [])
+        if (onSelectionChangeRef.current) {
+          const currentSelected = new Set(selectedContractsRef.current ?? [])
 
-        if (event?.ctrlKey || event?.metaKey) {
-          // Ctrl+点击：逐个选择/取消选择
-          if (currentSelected.has(record.instrumentID)) {
-            currentSelected.delete(record.instrumentID)
+          if (event?.ctrlKey || event?.metaKey) {
+            // Ctrl+点击：逐个选择/取消选择
+            if (currentSelected.has(record.instrumentID)) {
+              currentSelected.delete(record.instrumentID)
+            } else {
+              currentSelected.add(record.instrumentID)
+            }
+            onSelectionChangeRef.current(currentSelected)
+          } else if (event?.shiftKey && prevLastClicked !== null) {
+            // Shift+点击：范围选择
+            console.log('[MarketTable] Shift+click range:', prevLastClicked, 'to', rowIndex)
+            const start = Math.min(prevLastClicked, rowIndex)
+            const end = Math.max(prevLastClicked, rowIndex)
+            for (let i = start; i <= end; i++) {
+              const r = recordsRef.current[i]
+              if (r) currentSelected.add(r.instrumentID)
+            }
+            onSelectionChangeRef.current(currentSelected)
           } else {
-            currentSelected.add(record.instrumentID)
+            // 普通点击：单选
+            onSelectionChangeRef.current(new Set([record.instrumentID]))
           }
-          onSelectionChangeRef.current(currentSelected)
-        } else if (event?.shiftKey && prevLastClicked !== null) {
-          // Shift+点击：范围选择
-          console.log('[MarketTable] Shift+click range:', prevLastClicked, 'to', rowIndex)
-          const start = Math.min(prevLastClicked, rowIndex)
-          const end = Math.max(prevLastClicked, rowIndex)
-          for (let i = start; i <= end; i++) {
-            const r = recordsRef.current[i]
-            if (r) currentSelected.add(r.instrumentID)
-          }
-          onSelectionChangeRef.current(currentSelected)
-        } else {
-          // 普通点击：单选
-          onSelectionChangeRef.current(new Set([record.instrumentID]))
         }
       }
 
-      // 触发单击回调
-      if (onClickRef.current) {
-        const price = record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
-        onClickRef.current(record.instrumentID, price)
-      }
-    })
-
-    table.on('dblclick_cell', (args: any) => {
-      const rowIndex = args.row - 1
-      const record = recordsRef.current[rowIndex]
-      if (record && onDblClickRef.current) {
-        const price = record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
+      // 触发回调：双击优先，否则单击
+      const price = record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
+      if (isDoubleClick && onDblClickRef.current) {
         onDblClickRef.current(record.instrumentID, price)
+      } else if (onClickRef.current) {
+        onClickRef.current(record.instrumentID, price)
       }
     })
 

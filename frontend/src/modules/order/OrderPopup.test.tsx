@@ -55,7 +55,7 @@ describe('OrderPopup', () => {
       favorites: [],
       isLoaded: true,
     })
-    useMarketStore.setState({ snapshots: new Map() })
+    useMarketStore.setState({ snapshots: new Map(), lockedContracts: new Set() })
   })
 
   it('弹窗关闭时不渲染', () => {
@@ -77,6 +77,22 @@ describe('OrderPopup', () => {
     useOrderPopupStore.setState({ instrumentID: 'IF2608' })
     render(<OrderPopup />)
     expect(useOrderStore.getState().orderForm.instrumentID).toBe('IF2608')
+  })
+
+  it('打开后锁定合约订阅，保证五档行情有数据', () => {
+    useOrderPopupStore.setState({ instrumentID: 'IF2608' })
+    render(<OrderPopup />)
+    // 合约进入锁定订阅集 → useSubscriptionManager 会订阅它 → WS 推送行情
+    expect(useMarketStore.getState().lockedContracts.has('IF2608')).toBe(true)
+  })
+
+  it('关闭弹窗后解除合约锁定订阅', () => {
+    useOrderPopupStore.setState({ instrumentID: 'IF2608' })
+    const { unmount } = render(<OrderPopup />)
+    expect(useMarketStore.getState().lockedContracts.has('IF2608')).toBe(true)
+
+    unmount()
+    expect(useMarketStore.getState().lockedContracts.has('IF2608')).toBe(false)
   })
 
   it('点击 × 关闭弹窗', () => {

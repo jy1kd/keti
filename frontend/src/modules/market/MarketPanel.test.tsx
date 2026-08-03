@@ -247,6 +247,7 @@ describe('MarketPanel', () => {
     // 点击「打开报单」
     await user.click(screen.getByText('打开报单'))
 
+    // 应打开悬浮报单弹窗
     expect(useOrderPopupStore.getState().instrumentID).toBe('IF2608')
   })
 

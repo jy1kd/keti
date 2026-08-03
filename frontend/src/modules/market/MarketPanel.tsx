@@ -28,8 +28,7 @@ export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, favorites, addToFavorites, removeFromFavorites, loadAllInstruments, loadFavoriteContracts } = useContractsStore()
-  const { contextMenu, openOrderPopup, openKlineTab, handleContextMenu } = useContractContextMenu()
-  const { contextMenu, multiSelectMenu, openOrderTab, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
+  const { contextMenu, multiSelectMenu, openOrderPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
   const [viewMode, setViewMode] = useState<'market' | 'options'>('market')
@@ -278,28 +277,11 @@ export function MarketPanel() {
 
       {/* 单选右键菜单 */}
       {contextMenu && (
-        <div
-          className="context-menu"
-          style={{ position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 1000 }}
-        >
-          <button
-            className="context-menu__item"
-            onClick={() => openOrderPopup(contextMenu.instrumentID)}
-          >
-            打开报单
-          </button>
-          <button
-            className="context-menu__item"
-            onClick={() => openKlineTab(contextMenu.instrumentID)}
-          >
-            打开K线
-          </button>
-        </div>
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
           items={[
-            { label: '打开报单', icon: '📝', onClick: () => openOrderTab(contextMenu.instrumentID) },
+            { label: '打开报单', icon: '📝', onClick: () => openOrderPopup(contextMenu.instrumentID) },
             { label: '打开K线', icon: '📈', onClick: () => openKlineTab(contextMenu.instrumentID) },
             {
               label: favoritedIds.has(contextMenu.instrumentID) ? '取消收藏' : '收藏',
