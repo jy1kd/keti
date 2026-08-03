@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto;
   background: var(--bg-primary);
 }
 
@@ -19,6 +19,9 @@
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-secondary);
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .order-page__title {
@@ -47,8 +50,8 @@
 /* ── 行情卡片 ───────────────────────────────────────────────── */
 
 .order-page__quote-card {
-  margin: 12px;
-  padding: 14px 16px;
+  margin: 10px 12px;
+  padding: 12px 14px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 6px;
@@ -57,28 +60,29 @@
 
 .quote-card__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 10px;
+  gap: 12px;
 }
 
 .quote-card__contract {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  min-width: 0;
 }
 
 .quote-card__code {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--text-primary);
   font-family: var(--font-mono);
-  letter-spacing: 0.02em;
 }
 
 .quote-card__name {
   font-size: 13px;
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .quote-card__change {
@@ -86,8 +90,10 @@
   align-items: baseline;
   gap: 6px;
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .quote-card__change--up {
@@ -103,26 +109,26 @@
 }
 
 .quote-card__change-val {
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .quote-card__change-pct {
   font-size: 12px;
-  opacity: 0.85;
+  opacity: 0.82;
 }
 
 .quote-card__divider {
   height: 1px;
   background: var(--border-color);
-  margin-bottom: 10px;
+  margin: 10px 0;
 }
 
 /* ── 行情数据网格 ───────────────────────────────────────────── */
 
 .quote-card__grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 6px 16px;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 20px;
 }
 
 .quote-card__cell {
@@ -136,7 +142,7 @@
   font-size: 11px;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
   flex-shrink: 0;
 }
 
@@ -149,7 +155,7 @@
 }
 
 .quote-card__value--highlight {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--accent);
 }
@@ -166,10 +172,13 @@
   color: var(--text-muted);
 }
 
-/* ── 表单区域 ───────────────────────────────────────────────── */
+/* ── 表单卡片 ───────────────────────────────────────────────── */
 
 .order-page__form {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
+  margin: 0 12px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
 }
