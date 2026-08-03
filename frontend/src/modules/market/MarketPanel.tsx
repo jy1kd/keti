@@ -306,34 +306,55 @@ export function MarketPanel() {
       )}
 
       {/* 多选右键菜单 */}
-      {multiSelectMenu && (
-        <ContextMenu
-          x={multiSelectMenu.x}
-          y={multiSelectMenu.y}
-          items={[
-            { label: `批量打开报单 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📝', onClick: () => openOrderTabs(multiSelectMenu.instrumentIDs) },
-            { label: `批量打开K线 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📈', onClick: () => openKlineTabs(multiSelectMenu.instrumentIDs) },
-            { label: `批量收藏 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '⭐', onClick: async () => {
-              let count = 0
-              for (const id of multiSelectMenu.instrumentIDs) {
-                const inst = contracts.find(c => c.instrumentID === id)
-                if (inst) {
-                  const success = await addToFavorites(inst)
-                  if (success) count++
-                }
-              }
-              toast.success(`已收藏 ${count} 个合约`)
-            }},
-            { label: `批量取消收藏 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '★', onClick: async () => {
-              for (const id of multiSelectMenu.instrumentIDs) {
-                await removeFromFavorites(id)
-              }
-              toast.success(`已移除 ${multiSelectMenu.instrumentIDs.length} 个合约`)
-            }},
-          ]}
-          onClose={closeMenus}
-        />
-      )}
+      {multiSelectMenu && (() => {
+        // 计算已收藏和未收藏的数量
+        const unfavoritedIds = multiSelectMenu.instrumentIDs.filter(id => !favoritedIds.has(id))
+        const favoritedIdsInSelection = multiSelectMenu.instrumentIDs.filter(id => favoritedIds.has(id))
+
+        return (
+          <ContextMenu
+            x={multiSelectMenu.x}
+            y={multiSelectMenu.y}
+            items={[
+              { label: `批量打开报单 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📝', onClick: () => openOrderTabs(multiSelectMenu.instrumentIDs) },
+              { label: `批量打开K线 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📈', onClick: () => openKlineTabs(multiSelectMenu.instrumentIDs) },
+              {
+                label: `批量收藏 (${unfavoritedIds.length}个)`,
+                icon: '⭐',
+                disabled: unfavoritedIds.length === 0,
+                onClick: async () => {
+                  let count = 0
+                  for (const id of unfavoritedIds) {
+                    const inst = contracts.find(c => c.instrumentID === id)
+                    if (inst) {
+                      const success = await addToFavorites(inst)
+                      if (success) count++
+                    }
+                  }
+                  toast.success(`已收藏 ${count} 个合约`)
+                },
+              },
+              {
+                label: `批量取消收藏 (${favoritedIdsInSelection.length}个)`,
+                icon: '★',
+                disabled: favoritedIdsInSelection.length === 0,
+                onClick: async () => {
+                  for (const id of favoritedIdsInSelection) {
+                    await removeFromFavorites(id)
+                  }
+                  toast.success(`已移除 ${favoritedIdsInSelection.length} 个合约`)
+                },
+              },
+              {
+                label: `复制合约代码 (${multiSelectMenu.instrumentIDs.length}个)`,
+                icon: '📋',
+                onClick: () => navigator.clipboard.writeText(multiSelectMenu.instrumentIDs.join(',')),
+              },
+            ]}
+            onClose={closeMenus}
+          />
+        )
+      })()}
     </section>
   )
 }
