@@ -28,7 +28,7 @@ export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, favorites, addToFavorites, removeFromFavorites, loadAllInstruments, loadFavoriteContracts } = useContractsStore()
-  const { contextMenu, multiSelectMenu, openOrderTab, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu } = useContractContextMenu()
+  const { contextMenu, multiSelectMenu, openOrderTab, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
   const [viewMode, setViewMode] = useState<'market' | 'options'>('market')
@@ -273,7 +273,7 @@ export function MarketPanel() {
             },
             { label: '复制合约代码', icon: '📋', onClick: () => navigator.clipboard.writeText(contextMenu.instrumentID) },
           ]}
-          onClose={() => {}}
+          onClose={closeMenus}
         />
       )}
 
@@ -297,7 +297,7 @@ export function MarketPanel() {
               toast.success(`已移除 ${multiSelectMenu.instrumentIDs.length} 个合约`)
             }},
           ]}
-          onClose={() => {}}
+          onClose={closeMenus}
         />
       )}
     </section>

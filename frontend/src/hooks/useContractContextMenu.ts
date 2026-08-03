@@ -82,16 +82,18 @@ export function useContractContextMenu() {
     setMultiSelectMenu({ instrumentIDs, x: event.clientX, y: event.clientY })
   }, [])
 
+  // 关闭所有菜单
+  const closeMenus = useCallback(() => {
+    setContextMenu(null)
+    setMultiSelectMenu(null)
+  }, [])
+
   // 点击空白处关闭右键菜单
   useEffect(() => {
     if (!contextMenu && !multiSelectMenu) return
-    const close = () => {
-      setContextMenu(null)
-      setMultiSelectMenu(null)
-    }
-    window.addEventListener('click', close)
-    return () => window.removeEventListener('click', close)
-  }, [contextMenu, multiSelectMenu])
+    window.addEventListener('click', closeMenus)
+    return () => window.removeEventListener('click', closeMenus)
+  }, [contextMenu, multiSelectMenu, closeMenus])
 
   return {
     contextMenu,
@@ -102,5 +104,6 @@ export function useContractContextMenu() {
     openKlineTabs,
     handleContextMenu,
     handleMultiSelectContextMenu,
+    closeMenus,
   }
 }
