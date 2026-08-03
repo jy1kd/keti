@@ -1,29 +1,20 @@
-import { useCallback, useState, useEffect } from 'react'
-import { Group, Panel, Separator } from 'react-resizable-panels'
+import { useState, useEffect } from 'react'
 import { ConnectionStatus } from '@/components/ConnectionStatus'
-import { ResizeHandle } from '@/components/ResizeHandle'
-import { MarketPanel } from '@/modules/market/MarketPanel'
-import { OrderPanel } from '@/modules/order/OrderPanel'
-import { QueryPanel } from '@/modules/query/QueryPanel'
+import { TabBar } from '@/components/TabBar'
+import { TabContent } from '@/components/TabContent'
 import { PerfMonitor } from '@/components/PerfMonitor'
 import { SettingsPanel } from '@/components/SettingsPanel'
 import { ToastContainer } from '@/components/Toast'
 import { useSystemWs } from '@/hooks/useSystemWs'
 import { useConnectionPoll } from '@/hooks/useConnectionPoll'
-import { useQueryStore } from '@/modules/query/store'
 import { useMarketStore } from '@/modules/market/store'
 import { API_BASE } from '@/services/api'
 import { isElectron } from '@/services/electron'
-import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
 import '@/assets/styles/global.css'
-
-const savedApp = loadPanelSizes('app-layout')
-const savedMain = loadPanelSizes('main-layout')
 
 function App() {
   const [perfVisible, setPerfVisible] = useState(false)
   const [settingsVisible, setSettingsVisible] = useState(false)
-  const setActiveTab = useQueryStore((s) => s.setActiveTab)
 
   // System WebSocket — 监听 MD/TD 连接状态即时推送
   useSystemWs(API_BASE.replace('http', 'ws'))
@@ -44,7 +35,7 @@ function App() {
           // 报单面板是独立面板，不需要切换 Tab
           break
         case 'query':
-          setActiveTab('orders')
+          // TODO: PR-R15 查询标签页
           break
         case 'settings':
           setSettingsVisible(true)
@@ -53,7 +44,7 @@ function App() {
     })
 
     return () => cleanup?.()
-  }, [setActiveTab])
+  }, [])
 
   // Electron IPC — 响应获取选中合约请求
   useEffect(() => {
@@ -81,14 +72,6 @@ function App() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
-
-  const onAppLayout = useCallback((layout: Record<string, number>) => {
-    savePanelSizes('app-layout', { main: layout.main, query: layout.query })
-  }, [])
-
-  const onMainLayout = useCallback((layout: Record<string, number>) => {
-    savePanelSizes('main-layout', { market: layout.market, order: layout.order })
   }, [])
 
   return (
@@ -125,33 +108,10 @@ function App() {
         </div>
         <span className="app-title">SimNow 交易终端</span>
       </header>
-      <Group orientation="vertical" className="main-content" id="app-layout" onLayoutChange={onAppLayout}>
-        <Panel id="main" defaultSize={savedApp?.main ?? 75} minSize={30}>
-          <Group orientation="horizontal" id="main-layout" onLayoutChange={onMainLayout}>
-            <Panel id="market" defaultSize={savedMain?.market ?? 70} minSize={20}>
-              <section className="market-area">
-                <MarketPanel />
-              </section>
-            </Panel>
-            <Separator>
-              <ResizeHandle direction="horizontal" />
-            </Separator>
-            <Panel id="order" defaultSize={savedMain?.order ?? 30} minSize={15}>
-              <section className="order-area">
-                <OrderPanel />
-              </section>
-            </Panel>
-          </Group>
-        </Panel>
-        <Separator>
-          <ResizeHandle direction="vertical" />
-        </Separator>
-        <Panel id="query" defaultSize={savedApp?.query ?? 25} minSize={10}>
-          <footer className="query-area">
-            <QueryPanel />
-          </footer>
-        </Panel>
-      </Group>
+      <TabBar onAddTab={() => {/* TODO: PR-R13 标签页打开方式 */}} />
+      <main className="tab-main">
+        <TabContent />
+      </main>
 
       {settingsVisible && (
         <div className="settings-overlay" onClick={() => setSettingsVisible(false)}>
