@@ -458,7 +458,7 @@ frontend/src/assets/styles/
 | **负责角色** | 角色B |
 | **依赖PR** | PR-R11 |
 | **工作量** | 2小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | 开发完成，待自验证 |
 
 **提交文件**：
 ```
@@ -466,7 +466,7 @@ frontend/src/pages/
 ├── FavoritesPage.tsx        # 新增：自选标签页
 └── FavoritesPage.test.tsx   # 新增：测试
 frontend/src/components/
-└── TabBar/index.tsx         # 更新：添加自选标签页入口
+└── TabContent/index.tsx     # 更新：集成 FavoritesPage
 ```
 
 **PR描述**：
@@ -480,12 +480,12 @@ frontend/src/components/
 5. 状态栏显示 "自选: X"
 
 **验收标准**：
-- [ ] 点击 [⭐ 自选] 按钮能打开自选标签页
-- [ ] 只显示收藏的合约
-- [ ] 全部订阅功能正常
-- [ ] 取消收藏功能正常
-- [ ] 状态栏显示正确
-- [ ] 所有测试通过
+- [x] 点击 [⭐ 自选] 按钮能打开自选标签页
+- [x] 只显示收藏的合约
+- [x] 全部订阅功能正常
+- [x] 取消收藏功能正常
+- [x] 状态栏显示正确
+- [x] 所有测试通过（664 tests passed）
 
 ---
 
