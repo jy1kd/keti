@@ -11,6 +11,10 @@ interface MarketTableProps {
   onRowDoubleClick?: (instrumentID: string, price: number) => void
   /** 可见行变化回调，传入当前可见的合约 ID 列表 */
   onVisibleRangeChange?: (visibleInstrumentIDs: string[]) => void
+  /** 收藏的合约 ID 集合 */
+  favoritedIds?: Set<string>
+  /** 收藏状态变化回调 */
+  onFavoriteChange?: (instrumentID: string, isFavorited: boolean) => void
 }
 
 const PLACEHOLDER = '--'
@@ -45,12 +49,13 @@ const columns = [
   { field: 'askPrice1', title: '卖一', width: 100, style: coloredStyle },
   { field: 'volume', title: '成交量', width: 100 },
   { field: 'openInterest', title: '持仓量', width: 100 },
+  { field: 'favorite', title: '⭐', width: 50 },
 ]
 
 const CTP_INVALID_PRICE = 1.7976931348623157e+308
 const isValidPrice = (p: number) => p > 0 && p < CTP_INVALID_PRICE
 
-function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined) {
+function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, isFavorited: boolean) {
   const productName = getProductName(contract.productID)
   if (!snap) {
     return {
@@ -65,6 +70,7 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined) {
       askPrice1: PLACEHOLDER,
       volume: PLACEHOLDER,
       openInterest: PLACEHOLDER,
+      favorite: isFavorited ? '⭐' : '☆',
     }
   }
   // preSettlementPrice 可能为 0（CTP DBL_MAX 被 sanitize 后），此时 fallback 到昨收
@@ -85,21 +91,26 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined) {
     askPrice1: isValidPrice(snap.askPrice1) ? snap.askPrice1 : PLACEHOLDER,
     volume: snap.volume,
     openInterest: snap.openInterest,
+    favorite: isFavorited ? '⭐' : '☆',
   }
 }
 
-export function MarketTable({ contracts, snapshots, selectedInstrument, onRowClick, onRowDoubleClick, onVisibleRangeChange }: MarketTableProps) {
+export function MarketTable({ contracts, snapshots, selectedInstrument, onRowClick, onRowDoubleClick, onVisibleRangeChange, favoritedIds, onFavoriteChange }: MarketTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
   const onClickRef = useRef(onRowClick)
   const onDblClickRef = useRef(onRowDoubleClick)
   const onVisibleRangeChangeRef = useRef(onVisibleRangeChange)
+  const onFavoriteChangeRef = useRef(onFavoriteChange)
+  const favoritedIdsRef = useRef(favoritedIds)
   const recordsRef = useRef<ReturnType<typeof buildRecord>[]>([])
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
   useEffect(() => { onVisibleRangeChangeRef.current = onVisibleRangeChange }, [onVisibleRangeChange])
+  useEffect(() => { onFavoriteChangeRef.current = onFavoriteChange }, [onFavoriteChange])
+  useEffect(() => { favoritedIdsRef.current = favoritedIds }, [favoritedIds])
 
   // 可见行检测函数（提取为共享），包含预加载
   const notifyVisibleRange = useCallback(() => {
@@ -124,7 +135,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   useEffect(() => {
     if (!containerRef.current) return
 
-    const records = contracts.map((c) => buildRecord(c, snapshots.get(c.instrumentID)))
+    const records = contracts.map((c) => buildRecord(c, snapshots.get(c.instrumentID), favoritedIds?.has(c.instrumentID) ?? false))
     recordsRef.current = records
 
     const table = new ListTable(containerRef.current, {
@@ -194,6 +205,20 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       }
     })
 
+    // 收藏列点击事件
+    table.on('click_cell', (args: any) => {
+      const colIndex = args.col
+      const rowIndex = args.row - 1
+      // 检查是否点击了收藏列（最后一列）
+      if (colIndex === columns.length - 1) {
+        const record = recordsRef.current[rowIndex]
+        if (record && onFavoriteChangeRef.current) {
+          const isFavorited = favoritedIdsRef.current?.has(record.instrumentID) ?? false
+          onFavoriteChangeRef.current(record.instrumentID, !isFavorited)
+        }
+      }
+    })
+
     // 初始渲染后触发一次（延迟确保 vtable 就绪）
     setTimeout(notifyVisibleRange, 0)
 
@@ -214,13 +239,13 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   // Update records when contracts or snapshots change (sync)
   useEffect(() => {
     if (!tableRef.current) return
-    const records = contracts.map((contract) => buildRecord(contract, snapshots.get(contract.instrumentID)))
+    const records = contracts.map((contract) => buildRecord(contract, snapshots.get(contract.instrumentID), favoritedIds?.has(contract.instrumentID) ?? false))
     recordsRef.current = records
     tableRef.current.setRecords(records)
 
     // contracts 变化后触发可见行检测
     setTimeout(notifyVisibleRange, 0)
-  }, [contracts, snapshots, notifyVisibleRange])
+  }, [contracts, snapshots, notifyVisibleRange, favoritedIds])
 
   // 高亮选中合约行（rAF 等 vtable setRecords 渲染完成）
   useEffect(() => {

@@ -161,6 +161,19 @@ export function MarketPanel() {
                 onRowClick={handleClick}
                 onRowDoubleClick={handleDoubleClick}
                 onVisibleRangeChange={setVisibleInstrumentIDs}
+                favoritedIds={favoritedIds}
+                onFavoriteChange={(instrumentID, isFavorited) => {
+                  if (isFavorited) {
+                    const inst = contracts.find(c => c.instrumentID === instrumentID)
+                    if (inst) {
+                      addToFavorites(inst)
+                      toast.success(`已收藏 ${instrumentID}`)
+                    }
+                  } else {
+                    removeFromFavorites(instrumentID)
+                    toast.success(`已移除 ${instrumentID}`)
+                  }
+                }}
               />
             </ErrorBoundary>
           </div>
