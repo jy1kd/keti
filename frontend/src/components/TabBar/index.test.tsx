@@ -273,6 +273,42 @@ describe('TabBar', () => {
     })
   })
 
+  // --- 快捷按钮 ---
+
+  describe('快捷按钮', () => {
+    it('应显示 ⭐ 自选快捷按钮', () => {
+      render(<TabBar />)
+      expect(screen.getByLabelText('⭐ 自选')).toBeInTheDocument()
+    })
+
+    it('点击 ⭐ 按钮应打开自选标签页', () => {
+      const openTab = vi.fn().mockReturnValue(true)
+      useTabStore.setState({ openTab })
+      render(<TabBar />)
+      fireEvent.click(screen.getByLabelText('⭐ 自选'))
+      expect(openTab).toHaveBeenCalledWith({
+        type: 'favorites',
+        title: '⭐ 自选',
+        closable: true,
+      })
+    })
+
+    it('自选标签已打开时，点击 ⭐ 应激活该标签', () => {
+      const setActiveTab = vi.fn()
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-favorites', type: 'favorites', title: '⭐ 自选', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-market',
+        setActiveTab,
+      })
+      render(<TabBar />)
+      fireEvent.click(screen.getByLabelText('⭐ 自选'))
+      expect(setActiveTab).toHaveBeenCalledWith('tab-favorites')
+    })
+  })
+
   // --- 无障碍 ---
 
   describe('无障碍', () => {

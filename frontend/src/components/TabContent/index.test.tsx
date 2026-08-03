@@ -122,7 +122,7 @@ describe('TabContent', () => {
       ['order', '报单标签页'],
       ['query', '查询标签页'],
       ['kline', 'K线标签页'],
-      ['favorites', '自选标签页'],
+      ['favorites', '⭐ 自选合约'],
       ['settings', '设置标签页'],
       ['options', '期权标签页'],
       ['ipc-monitor', 'IPC监控标签页'],
