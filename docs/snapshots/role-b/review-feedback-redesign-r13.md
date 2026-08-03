@@ -70,3 +70,39 @@ PR-R7 规划创建 `components/ContextMenu`（单选/多选菜单 + 批量操作
 ## 审查结论（重申）
 
 **✅ 通过** — 功能正确、测试充分（679 全部通过）、范围合理、文档推迟注记理由成立。🟡 建议项与 🔵 疑问项由开发窗口酌情处理或记录理由。
+
+---
+
+# 二次审查（R2）
+
+## 审查信息
+
+| 项目 | 内容 |
+|------|------|
+| **审查轮次** | R2 |
+| **审查日期** | 2026-08-03 |
+| **审查范围** | `git diff f50a032..HEAD`（`fbb74ca` 修复 + `b20e187` 文档） |
+| **审查方式** | 只读审查 + 全量测试验证（683 passed） |
+
+## 审查结论
+
+**✅ 通过** — 上一轮 🟡/🔵 项均已处理或确认，修复未引入新问题，可进入人工验证。
+
+## 🟡 修复项复核
+
+| 项 | 处理 | 复核结果 |
+|----|------|----------|
+| Y1 代码重复 | 提取 `useContractContextMenu` hook，MarketPanel/FavoritesPage 复用 | ✅ hook 封装状态 + 标签页打开 + 菜单关闭逻辑，两组件仅保留 ~10 行菜单 JSX 标记；新增 4 个 hook 单测 |
+| Y2 TDZ 隐患 | hook 在 `usePointOrder` 前调用（MarketPanel.tsx:29），`openOrderTab` 前置 | ✅ 声明顺序已消除隐患；hook 无条件调用（在 `viewMode === 'options'` 早退之前），hooks 规则合规 |
+| Y3 act 警告 | 本 PR 引入的警告已包裹 `act()`；其余为既有 MarketTable `setTimeout` 计时器泄漏 | ✅ 理由充分，非本 PR 引入 |
+| Y4 文档同步 | 提交文件清单补 `FavoritesPage.tsx`/`FavoritesPage.test.tsx`，`Position.tsx` 标注 ⏸️ | ✅ task-redesign.md 状态同步为「改进建议已处理，待确认合并」 |
+
+## 🔵 疑问项复核
+
+- **B1**：已确认设计 — R14 报单页从行情快照取价，R13 保持仅传 `instrumentID`。✅
+- **B2**：边缘翻转记录推迟，建议后续在 hook 或 PR-R7 ContextMenu 中实现。✅ 记录在案
+- **B3**：PR-R7 应基于 `useContractContextMenu` 扩展菜单项。✅ 记录在案
+
+## 测试验证
+
+全量测试 **65 文件 / 683 测试全部通过**（679 → 683，+4 为 `useContractContextMenu.test.ts`）。✅
