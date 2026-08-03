@@ -3,6 +3,7 @@ import { Group, Panel, Separator } from 'react-resizable-panels'
 import { ResizeHandle } from '@/components/ResizeHandle'
 import { ContractSearch } from '@/components/ContractSearch'
 import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
+import { ContextMenu } from '@/components/ContextMenu'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { OptionPanel } from '@/modules/options/OptionPanel'
 import { MarketTable } from './MarketTable'
@@ -27,7 +28,7 @@ export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, favorites, addToFavorites, removeFromFavorites, loadAllInstruments, loadFavoriteContracts } = useContractsStore()
-  const { contextMenu, openOrderTab, openKlineTab, handleContextMenu } = useContractContextMenu()
+  const { contextMenu, multiSelectMenu, openOrderTab, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu } = useContractContextMenu()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
   const [viewMode, setViewMode] = useState<'market' | 'options'>('market')
@@ -188,6 +189,7 @@ export function MarketPanel() {
                 onRowClick={handleClick}
                 onRowDoubleClick={handleDoubleClick}
                 onContextMenu={handleContextMenu}
+                onMultiSelectContextMenu={handleMultiSelectContextMenu}
                 onVisibleRangeChange={setVisibleInstrumentIDs}
                 favoritedIds={favoritedIds}
                 onFavoriteChange={(instrumentID, isFavorited) => {
@@ -245,25 +247,58 @@ export function MarketPanel() {
         favoritedIds={favoritedIds}
       />
 
-      {/* 右键菜单 */}
+      {/* 单选右键菜单 */}
       {contextMenu && (
-        <div
-          className="context-menu"
-          style={{ position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 1000 }}
-        >
-          <button
-            className="context-menu__item"
-            onClick={() => openOrderTab(contextMenu.instrumentID)}
-          >
-            打开报单
-          </button>
-          <button
-            className="context-menu__item"
-            onClick={() => openKlineTab(contextMenu.instrumentID)}
-          >
-            打开K线
-          </button>
-        </div>
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={[
+            { label: '打开报单', icon: '📝', onClick: () => openOrderTab(contextMenu.instrumentID) },
+            { label: '打开K线', icon: '📈', onClick: () => openKlineTab(contextMenu.instrumentID) },
+            {
+              label: favoritedIds.has(contextMenu.instrumentID) ? '取消收藏' : '收藏',
+              icon: favoritedIds.has(contextMenu.instrumentID) ? '★' : '⭐',
+              onClick: () => {
+                if (favoritedIds.has(contextMenu.instrumentID)) {
+                  removeFromFavorites(contextMenu.instrumentID)
+                  toast.success(`已移除 ${contextMenu.instrumentID}`)
+                } else {
+                  const inst = contracts.find(c => c.instrumentID === contextMenu.instrumentID)
+                  if (inst) {
+                    addToFavorites(inst)
+                    toast.success(`已收藏 ${contextMenu.instrumentID}`)
+                  }
+                }
+              },
+            },
+            { label: '复制合约代码', icon: '📋', onClick: () => navigator.clipboard.writeText(contextMenu.instrumentID) },
+          ]}
+          onClose={() => {}}
+        />
+      )}
+
+      {/* 多选右键菜单 */}
+      {multiSelectMenu && (
+        <ContextMenu
+          x={multiSelectMenu.x}
+          y={multiSelectMenu.y}
+          items={[
+            { label: `批量打开报单 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📝', onClick: () => openOrderTabs(multiSelectMenu.instrumentIDs) },
+            { label: `批量打开K线 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📈', onClick: () => openKlineTabs(multiSelectMenu.instrumentIDs) },
+            { label: `批量收藏 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '⭐', onClick: () => {
+              multiSelectMenu.instrumentIDs.forEach((id) => {
+                const inst = contracts.find(c => c.instrumentID === id)
+                if (inst) addToFavorites(inst)
+              })
+              toast.success(`已收藏 ${multiSelectMenu.instrumentIDs.length} 个合约`)
+            }},
+            { label: `批量取消收藏 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '★', onClick: () => {
+              multiSelectMenu.instrumentIDs.forEach((id) => removeFromFavorites(id))
+              toast.success(`已移除 ${multiSelectMenu.instrumentIDs.length} 个合约`)
+            }},
+          ]}
+          onClose={() => {}}
+        />
       )}
     </section>
   )
