@@ -17,6 +17,10 @@ interface MarketTableProps {
   favoritedIds?: Set<string>
   /** 收藏状态变化回调 */
   onFavoriteChange?: (instrumentID: string, isFavorited: boolean) => void
+  /** 多选的合约 ID 集合 */
+  selectedContracts?: Set<string>
+  /** 多选变化回调 */
+  onSelectionChange?: (selectedIDs: Set<string>) => void
 }
 
 const PLACEHOLDER = '--'
@@ -97,6 +101,7 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, i
   }
 }
 
+export function MarketTable({ contracts, snapshots, selectedInstrument, onRowClick, onRowDoubleClick, onVisibleRangeChange, favoritedIds, onFavoriteChange, selectedContracts, onSelectionChange }: MarketTableProps) {
 export function MarketTable({ contracts, snapshots, selectedInstrument, onRowClick, onRowDoubleClick, onContextMenu, onVisibleRangeChange, favoritedIds, onFavoriteChange }: MarketTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
@@ -106,6 +111,9 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   const onVisibleRangeChangeRef = useRef(onVisibleRangeChange)
   const onFavoriteChangeRef = useRef(onFavoriteChange)
   const favoritedIdsRef = useRef(favoritedIds)
+  const selectedContractsRef = useRef(selectedContracts)
+  const onSelectionChangeRef = useRef(onSelectionChange)
+  const lastClickedIndexRef = useRef<number | null>(null)
   const recordsRef = useRef<ReturnType<typeof buildRecord>[]>([])
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -115,6 +123,8 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   useEffect(() => { onVisibleRangeChangeRef.current = onVisibleRangeChange }, [onVisibleRangeChange])
   useEffect(() => { onFavoriteChangeRef.current = onFavoriteChange }, [onFavoriteChange])
   useEffect(() => { favoritedIdsRef.current = favoritedIds }, [favoritedIds])
+  useEffect(() => { selectedContractsRef.current = selectedContracts }, [selectedContracts])
+  useEffect(() => { onSelectionChangeRef.current = onSelectionChange }, [onSelectionChange])
 
   // 可见行检测函数（提取为共享），包含预加载
   const notifyVisibleRange = useCallback(() => {
@@ -170,7 +180,14 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
           borderColor: '#30363d',
         },
         bodyStyle: {
-          bgColor: '#0d1117',
+          bgColor: (args: any) => {
+            // 多选高亮
+            const record = args.table?.records?.[args.row - 1]
+            if (record && selectedContractsRef.current?.has(record.instrumentID)) {
+              return 'rgba(59, 130, 246, 0.15)' // 蓝色高亮
+            }
+            return '#0d1117'
+          },
           borderColor: '#21262d',
         },
         selectionStyle: {
@@ -193,8 +210,63 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
 
     table.on('click_cell', (args: any) => {
       const rowIndex = args.row - 1 // vtable row 0 = header, row 1 = first data row
+      const colIndex = args.col
       const record = recordsRef.current[rowIndex]
-      if (record && onClickRef.current) {
+      if (!record) return
+
+      // 收藏列点击
+      if (colIndex === columns.length - 1) {
+        if (onFavoriteChangeRef.current) {
+          const isFavorited = favoritedIdsRef.current?.has(record.instrumentID) ?? false
+          onFavoriteChangeRef.current(record.instrumentID, !isFavorited)
+        }
+        return
+      }
+
+      // 多选逻辑
+      const event = args.event as MouseEvent
+      const prevLastClicked = lastClickedIndexRef.current
+
+      // 先记录上次点击的行索引
+      lastClickedIndexRef.current = rowIndex
+
+      console.log('[MarketTable] Click:', {
+        rowIndex,
+        shiftKey: event?.shiftKey,
+        ctrlKey: event?.ctrlKey,
+        lastClicked: prevLastClicked,
+        hasOnSelectionChange: !!onSelectionChangeRef.current,
+      })
+
+      if (onSelectionChangeRef.current) {
+        const currentSelected = new Set(selectedContractsRef.current ?? [])
+
+        if (event?.ctrlKey || event?.metaKey) {
+          // Ctrl+点击：逐个选择/取消选择
+          if (currentSelected.has(record.instrumentID)) {
+            currentSelected.delete(record.instrumentID)
+          } else {
+            currentSelected.add(record.instrumentID)
+          }
+          onSelectionChangeRef.current(currentSelected)
+        } else if (event?.shiftKey && prevLastClicked !== null) {
+          // Shift+点击：范围选择
+          console.log('[MarketTable] Shift+click range:', prevLastClicked, 'to', rowIndex)
+          const start = Math.min(prevLastClicked, rowIndex)
+          const end = Math.max(prevLastClicked, rowIndex)
+          for (let i = start; i <= end; i++) {
+            const r = recordsRef.current[i]
+            if (r) currentSelected.add(r.instrumentID)
+          }
+          onSelectionChangeRef.current(currentSelected)
+        } else {
+          // 普通点击：单选
+          onSelectionChangeRef.current(new Set([record.instrumentID]))
+        }
+      }
+
+      // 触发单击回调
+      if (onClickRef.current) {
         const price = record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
         onClickRef.current(record.instrumentID, price)
       }
@@ -209,6 +281,17 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       }
     })
 
+    // Ctrl+A 全选
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        // 检查焦点是否在表格内
+        const activeElement = document.activeElement
+        if (activeElement && containerRef.current?.contains(activeElement)) {
+          e.preventDefault()
+          if (onSelectionChangeRef.current) {
+            const allIDs = recordsRef.current.map(r => r.instrumentID).filter(Boolean)
+            onSelectionChangeRef.current(new Set(allIDs))
+          }
     // 右键菜单事件
     table.on('contextmenu_cell', (args: any) => {
       const rowIndex = args.row - 1
@@ -231,7 +314,87 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
           onFavoriteChangeRef.current(record.instrumentID, !isFavorited)
         }
       }
-    })
+    }
+    window.addEventListener('keydown', handleKeyDown)
+
+    // 鼠标拖动选择
+    let isDragging = false
+    let dragStartRow = -1
+    let dragSelected = new Set<string>()
+
+    const getRowFromEvent = (e: MouseEvent): number => {
+      // 使用 vtable 的 API 获取准确的行索引
+      const target = e.target as HTMLElement
+      const cell = target?.closest('td') || target?.closest('[data-row]')
+      if (cell) {
+        const rowAttr = cell.getAttribute('data-row') || cell.parentElement?.getAttribute('data-row')
+        if (rowAttr) {
+          return parseInt(rowAttr, 10) - 1 // vtable 的 data-row 从 1 开始
+        }
+      }
+      // 备用方案：通过 vtable 的getCellAt 方法
+      try {
+        const rect = containerRef.current?.getBoundingClientRect()
+        if (rect && tableRef.current) {
+          const x = e.clientX - rect.left
+          const y = e.clientY - rect.top
+          const cellInfo = (tableRef.current as any).getCellAt?.(x, y)
+          if (cellInfo && cellInfo.row !== undefined) {
+            return cellInfo.row - 1
+          }
+        }
+      } catch {
+        // 忽略错误
+      }
+      return -1
+    }
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return // 只处理左键
+      const rowIndex = getRowFromEvent(e)
+      if (rowIndex < 0 || rowIndex >= recordsRef.current.length) return
+
+      isDragging = true
+      dragStartRow = rowIndex
+      dragSelected = new Set(selectedContractsRef.current ?? [])
+
+      // 如果没有按 Ctrl/Shift，开始新的选择
+      if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        dragSelected = new Set()
+      }
+    }
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return
+      const rowIndex = getRowFromEvent(e)
+      if (rowIndex < 0 || rowIndex >= recordsRef.current.length) return
+
+      // 计算选择范围
+      const start = Math.min(dragStartRow, rowIndex)
+      const end = Math.max(dragStartRow, rowIndex)
+
+      const newSelected = new Set(dragSelected)
+      for (let i = start; i <= end; i++) {
+        const record = recordsRef.current[i]
+        if (record) newSelected.add(record.instrumentID)
+      }
+
+      if (onSelectionChangeRef.current) {
+        onSelectionChangeRef.current(newSelected)
+      }
+    }
+
+    const handleMouseUp = () => {
+      isDragging = false
+      dragStartRow = -1
+    }
+
+    const container = containerRef.current
+    if (container) {
+      container.addEventListener('mousedown', handleMouseDown)
+      window.addEventListener('mousemove', handleMouseMove)
+      window.addEventListener('mouseup', handleMouseUp)
+    }
 
     // 初始渲染后触发一次（延迟确保 vtable 就绪）
     setTimeout(notifyVisibleRange, 0)
@@ -245,6 +408,12 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     tableRef.current = table
 
     return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      if (container) {
+        container.removeEventListener('mousedown', handleMouseDown)
+      }
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
       table.release()
     }
@@ -257,9 +426,20 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     recordsRef.current = records
     tableRef.current.setRecords(records)
 
+    // contracts 变化后重置 Shift+点击的索引（避免指向错误的行）
+    lastClickedIndexRef.current = null
+
     // contracts 变化后触发可见行检测
     setTimeout(notifyVisibleRange, 0)
   }, [contracts, snapshots, notifyVisibleRange, favoritedIds])
+
+  // selectedContracts 变化时更新行高亮
+  useEffect(() => {
+    if (!tableRef.current) return
+    // 触发 vtable 重新渲染行样式
+    // vtable 的 bodyStyle.bgColor 函数会在重绘时被调用
+    tableRef.current.invalidate?.() || tableRef.current.setRecords(recordsRef.current)
+  }, [selectedContracts])
 
   // 高亮选中合约行（rAF 等 vtable setRecords 渲染完成）
   useEffect(() => {

@@ -221,12 +221,13 @@ frontend/src/modules/market/
 | **负责角色** | 角色B |
 | **依赖PR** | PR-R2 |
 | **工作量** | 3小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
 
 **提交文件**：
 ```
 frontend/src/modules/market/
 ├── MarketTable.tsx           # 更新：支持多选
+├── MarketPanel.tsx           # 更新：集成多选功能
 └── store.ts                  # 更新：添加选中状态管理
 ```
 
@@ -241,11 +242,11 @@ frontend/src/modules/market/
 5. 选中行高亮显示
 
 **验收标准**：
-- [ ] Ctrl+点击能逐个选择/取消选择
-- [ ] Shift+点击能范围选择
-- [ ] Ctrl+A 能全选当前搜索结果
-- [ ] 选中行高亮显示
-- [ ] 所有测试通过
+- [x] Ctrl+点击能逐个选择/取消选择
+- [x] Shift+点击能范围选择
+- [x] Ctrl+A 能全选当前搜索结果
+- [x] 选中行高亮显示
+- [x] 所有测试通过（682 tests passed）
 
 ---
 

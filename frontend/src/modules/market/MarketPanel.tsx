@@ -24,7 +24,7 @@ import './styles.css'
 const savedMarketTop = loadPanelSizes('market-top-layout')
 
 export function MarketPanel() {
-  const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs } = useMarketStore()
+  const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, favorites, addToFavorites, removeFromFavorites, loadAllInstruments, loadFavoriteContracts } = useContractsStore()
   const { contextMenu, openOrderTab, openKlineTab, handleContextMenu } = useContractContextMenu()
@@ -202,6 +202,8 @@ export function MarketPanel() {
                     toast.success(`已移除 ${instrumentID}`)
                   }
                 }}
+                selectedContracts={selectedContracts}
+                onSelectionChange={setSelectedContracts}
               />
             </ErrorBoundary>
           </div>
