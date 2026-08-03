@@ -103,16 +103,15 @@ frontend/src/modules/market/
 | **负责角色** | 角色B |
 | **依赖PR** | PR-R2 |
 | **工作量** | 4小时 |
-| **状态** | ⏳ 待开始 |
+| **状态** | ✅ 已完成 |
 
 **提交文件**：
 ```
 frontend/src/hooks/
-├── useMarketWs.ts           # 重构：实现按需订阅逻辑
-└── useMarketWs.test.ts      # 更新测试
+├── useSubscriptionManager.ts    # 新增：按需订阅管理器
 frontend/src/modules/market/
-├── MarketPanel.tsx           # 更新：集成按需订阅
-└── store.ts                  # 更新：添加锁定合约管理
+├── MarketPanel.tsx              # 更新：集成订阅管理器
+└── store.ts                     # 更新：添加锁定合约管理
 ```
 
 **PR描述**：
@@ -126,11 +125,11 @@ frontend/src/modules/market/
 5. 批量订阅/退订 + 300ms 防抖
 
 **验收标准**：
-- [ ] 可见区域合约自动订阅
-- [ ] 自选合约始终订阅
-- [ ] 锁定合约永不退订
-- [ ] 滚动出视野的合约自动退订
-- [ ] 所有测试通过
+- [x] 可见区域合约自动订阅
+- [x] 自选合约始终订阅
+- [x] 锁定合约永不退订
+- [x] 滚动出视野的合约自动退订
+- [x] 所有测试通过（638 tests passed）
 
 ---
 

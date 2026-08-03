@@ -13,6 +13,7 @@ import { useContractsStore } from '@/stores/contracts'
 import { usePointOrder } from '@/hooks/usePointOrder'
 import { useOrderStore } from '@/modules/order/store'
 import { useMarketWs } from '@/hooks/useMarketWs'
+import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
 import { API_BASE } from '@/services/api'
 import { toast } from '@/components/Toast'
 import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
@@ -21,13 +22,16 @@ import './styles.css'
 const savedMarketTop = loadPanelSizes('market-top-layout')
 
 export function MarketPanel() {
-  const { snapshots, selectedInstrument, setSelectedInstrument } = useMarketStore()
+  const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, favorites, addToFavorites, removeFromFavorites, loadAllInstruments, loadFavoriteContracts } = useContractsStore()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
   const [viewMode, setViewMode] = useState<'market' | 'options'>('market')
   const loadedRef = useRef(false)
+
+  // 订阅管理器
+  useSubscriptionManager()
 
   // Display contracts based on active tab
   const displayContracts = activeTab === 'all' ? contracts : favorites
@@ -156,6 +160,7 @@ export function MarketPanel() {
                 selectedInstrument={selectedInstrument}
                 onRowClick={handleClick}
                 onRowDoubleClick={handleDoubleClick}
+                onVisibleRangeChange={setVisibleInstrumentIDs}
               />
             </ErrorBoundary>
           </div>

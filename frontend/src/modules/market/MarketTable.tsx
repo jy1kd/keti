@@ -101,16 +101,17 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
   useEffect(() => { onVisibleRangeChangeRef.current = onVisibleRangeChange }, [onVisibleRangeChange])
 
-  // 可见行检测函数（提取为共享）
+  // 可见行检测函数（提取为共享），包含预加载
   const notifyVisibleRange = useCallback(() => {
     if (!onVisibleRangeChangeRef.current || !tableRef.current) return
     try {
       const range = tableRef.current.getBodyVisibleCellRange()
       if (!range) return
-      const startRow = range.rowStart - 1 // vtable row 0 = header
-      const endRow = range.rowEnd - 1
+      const PRELOAD_ROWS = 10
+      const startRow = Math.max(0, range.rowStart - 1 - PRELOAD_ROWS) // vtable row 0 = header，向上预加载
+      const endRow = Math.min(recordsRef.current.length - 1, range.rowEnd - 1 + PRELOAD_ROWS) // 向下预加载
       const visibleIDs: string[] = []
-      for (let i = Math.max(0, startRow); i <= Math.min(recordsRef.current.length - 1, endRow); i++) {
+      for (let i = startRow; i <= endRow; i++) {
         const record = recordsRef.current[i]
         if (record) visibleIDs.push(record.instrumentID)
       }
@@ -196,10 +197,10 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     // 初始渲染后触发一次（延迟确保 vtable 就绪）
     setTimeout(notifyVisibleRange, 0)
 
-    // 滚动时触发（300ms 防抖）
+    // 滚动时触发（100ms 防抖）
     table.on('scroll', () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-      debounceTimerRef.current = setTimeout(notifyVisibleRange, 300)
+      debounceTimerRef.current = setTimeout(notifyVisibleRange, 100)
     })
 
     tableRef.current = table

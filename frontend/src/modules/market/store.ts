@@ -14,6 +14,13 @@ interface MarketStore {
   appendKline: (instrument: string, candle: KLineData, deltaVolume?: number) => void
   currentPeriod: string
   setPeriod: (period: string) => void
+  /** 当前可见的合约 ID 列表 */
+  visibleInstrumentIDs: string[]
+  setVisibleInstrumentIDs: (ids: string[]) => void
+  /** 锁定的合约（打开标签的合约，永不退订） */
+  lockedContracts: Set<string>
+  addLockedContract: (instrumentID: string) => void
+  removeLockedContract: (instrumentID: string) => void
 }
 
 export const useMarketStore = create<MarketStore>((set) => ({
@@ -90,4 +97,19 @@ export const useMarketStore = create<MarketStore>((set) => ({
     }),
   currentPeriod: '5m',
   setPeriod: (period) => set({ currentPeriod: period }),
+  visibleInstrumentIDs: [],
+  setVisibleInstrumentIDs: (ids) => set({ visibleInstrumentIDs: ids }),
+  lockedContracts: new Set(),
+  addLockedContract: (instrumentID) =>
+    set((state) => {
+      const next = new Set(state.lockedContracts)
+      next.add(instrumentID)
+      return { lockedContracts: next }
+    }),
+  removeLockedContract: (instrumentID) =>
+    set((state) => {
+      const next = new Set(state.lockedContracts)
+      next.delete(instrumentID)
+      return { lockedContracts: next }
+    }),
 }))
