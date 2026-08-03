@@ -70,8 +70,8 @@ describe('App Layout — 标签页系统', () => {
       render(<App />)
       const settingsBtn = screen.getByTitle('设置')
       fireEvent.click(settingsBtn)
-      // 设置面板应该显示
-      expect(screen.getByText(/设置/)).toBeInTheDocument()
+      // 验证 settings-overlay 存在
+      expect(document.querySelector('.settings-overlay')).toBeInTheDocument()
     })
   })
 
@@ -83,8 +83,12 @@ describe('App Layout — 标签页系统', () => {
 
     it('Ctrl+Shift+M 切换性能监控', () => {
       render(<App />)
+      const fpsBtn = screen.getByText('⚡FPS').closest('button')
+      expect(fpsBtn).toBeInTheDocument()
+
+      // 触发快捷键后，FPS 按钮背景色应变化（perfVisible=true）
       fireEvent.keyDown(window, { key: 'M', ctrlKey: true, shiftKey: true })
-      // 性能监控应该显示
+      expect(fpsBtn).toHaveStyle({ background: 'rgba(63,185,80,0.12)' })
     })
   })
 })
