@@ -285,20 +285,36 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     let dragSelected = new Set<string>()
 
     const getRowFromEvent = (e: MouseEvent): number => {
-      const rect = containerRef.current?.getBoundingClientRect()
-      if (!rect) return -1
-      // 简单估算：根据鼠标 Y 位置计算行索引
-      const y = e.clientY - rect.top
-      const rowHeight = 28 // vtable 默认行高
-      const headerHeight = 30 // 表头高度
-      const rowIndex = Math.floor((y - headerHeight) / rowHeight)
-      return Math.max(0, Math.min(rowIndex, recordsRef.current.length - 1))
+      // 使用 vtable 的 API 获取准确的行索引
+      const target = e.target as HTMLElement
+      const cell = target?.closest('td') || target?.closest('[data-row]')
+      if (cell) {
+        const rowAttr = cell.getAttribute('data-row') || cell.parentElement?.getAttribute('data-row')
+        if (rowAttr) {
+          return parseInt(rowAttr, 10) - 1 // vtable 的 data-row 从 1 开始
+        }
+      }
+      // 备用方案：通过 vtable 的getCellAt 方法
+      try {
+        const rect = containerRef.current?.getBoundingClientRect()
+        if (rect && tableRef.current) {
+          const x = e.clientX - rect.left
+          const y = e.clientY - rect.top
+          const cellInfo = (tableRef.current as any).getCellAt?.(x, y)
+          if (cellInfo && cellInfo.row !== undefined) {
+            return cellInfo.row - 1
+          }
+        }
+      } catch {
+        // 忽略错误
+      }
+      return -1
     }
 
     const handleMouseDown = (e: MouseEvent) => {
       if (e.button !== 0) return // 只处理左键
       const rowIndex = getRowFromEvent(e)
-      if (rowIndex < 0) return
+      if (rowIndex < 0 || rowIndex >= recordsRef.current.length) return
 
       isDragging = true
       dragStartRow = rowIndex
@@ -313,7 +329,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return
       const rowIndex = getRowFromEvent(e)
-      if (rowIndex < 0) return
+      if (rowIndex < 0 || rowIndex >= recordsRef.current.length) return
 
       // 计算选择范围
       const start = Math.min(dragStartRow, rowIndex)
