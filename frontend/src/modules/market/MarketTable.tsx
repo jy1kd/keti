@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useCallback } from 'react'
 import { ListTable } from '@visactor/vtable'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
 import { getProductName } from '@/utils/productNames'
@@ -9,6 +9,8 @@ interface MarketTableProps {
   selectedInstrument?: string | null
   onRowClick?: (instrumentID: string, price: number) => void
   onRowDoubleClick?: (instrumentID: string, price: number) => void
+  /** 可见行变化回调，传入当前可见的合约 ID 列表 */
+  onVisibleRangeChange?: (visibleInstrumentIDs: string[]) => void
 }
 
 const PLACEHOLDER = '--'
@@ -86,15 +88,37 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined) {
   }
 }
 
-export function MarketTable({ contracts, snapshots, selectedInstrument, onRowClick, onRowDoubleClick }: MarketTableProps) {
+export function MarketTable({ contracts, snapshots, selectedInstrument, onRowClick, onRowDoubleClick, onVisibleRangeChange }: MarketTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
   const onClickRef = useRef(onRowClick)
   const onDblClickRef = useRef(onRowDoubleClick)
+  const onVisibleRangeChangeRef = useRef(onVisibleRangeChange)
   const recordsRef = useRef<ReturnType<typeof buildRecord>[]>([])
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
+  useEffect(() => { onVisibleRangeChangeRef.current = onVisibleRangeChange }, [onVisibleRangeChange])
+
+  // 可见行检测函数（提取为共享）
+  const notifyVisibleRange = useCallback(() => {
+    if (!onVisibleRangeChangeRef.current || !tableRef.current) return
+    try {
+      const range = tableRef.current.getBodyVisibleCellRange()
+      if (!range) return
+      const startRow = range.rowStart - 1 // vtable row 0 = header
+      const endRow = range.rowEnd - 1
+      const visibleIDs: string[] = []
+      for (let i = Math.max(0, startRow); i <= Math.min(recordsRef.current.length - 1, endRow); i++) {
+        const record = recordsRef.current[i]
+        if (record) visibleIDs.push(record.instrumentID)
+      }
+      onVisibleRangeChangeRef.current(visibleIDs)
+    } catch {
+      // vtable 尚未就绪
+    }
+  }, [])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -169,9 +193,19 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       }
     })
 
+    // 初始渲染后触发一次（延迟确保 vtable 就绪）
+    setTimeout(notifyVisibleRange, 0)
+
+    // 滚动时触发（300ms 防抖）
+    table.on('scroll', () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+      debounceTimerRef.current = setTimeout(notifyVisibleRange, 300)
+    })
+
     tableRef.current = table
 
     return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
       table.release()
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -182,7 +216,10 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     const records = contracts.map((contract) => buildRecord(contract, snapshots.get(contract.instrumentID)))
     recordsRef.current = records
     tableRef.current.setRecords(records)
-  }, [contracts, snapshots])
+
+    // contracts 变化后触发可见行检测
+    setTimeout(notifyVisibleRange, 0)
+  }, [contracts, snapshots, notifyVisibleRange])
 
   // 高亮选中合约行（rAF 等 vtable setRecords 渲染完成）
   useEffect(() => {

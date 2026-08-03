@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render } from '@testing-library/react'
 import { MarketTable } from './MarketTable'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
@@ -15,7 +15,12 @@ describe('MarketTable', () => {
   ])
 
   beforeEach(() => {
+    vi.useFakeTimers()
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('renders a container div', () => {
@@ -76,5 +81,74 @@ describe('MarketTable', () => {
     // 不是 490 - 485 = 5（用 preClosePrice）
     expect(record.change).toBe(10)
     expect(record.changePercent).toBeCloseTo((10 / 480) * 100)
+  })
+
+  // --- onVisibleRangeChange tests ---
+
+  it('接受 onVisibleRangeChange 回调', () => {
+    const onVisibleRangeChange = vi.fn()
+    render(
+      <MarketTable
+        contracts={mockContracts}
+        snapshots={mockSnapshots}
+        onVisibleRangeChange={onVisibleRangeChange}
+      />
+    )
+    // 组件渲染成功，回调已传入
+    expect(onVisibleRangeChange).not.toHaveBeenCalled()
+  })
+
+  it('初始渲染后调用 onVisibleRangeChange', async () => {
+    const onVisibleRangeChange = vi.fn()
+    render(
+      <MarketTable
+        contracts={mockContracts}
+        snapshots={mockSnapshots}
+        onVisibleRangeChange={onVisibleRangeChange}
+      />
+    )
+
+    // 等待初始可见行检测
+    await vi.advanceTimersByTimeAsync(100)
+
+    // 应该调用回调，传入可见合约 ID 列表
+    expect(onVisibleRangeChange).toHaveBeenCalled()
+    const calledWith = onVisibleRangeChange.mock.calls[0][0]
+    expect(Array.isArray(calledWith)).toBe(true)
+    // mock 返回 rowStart:1, rowEnd:30，所有合约都可见
+    expect(calledWith).toEqual(expect.arrayContaining(['au2508', 'ag2508']))
+  })
+
+  it('contracts 变化时更新可见行', async () => {
+    const onVisibleRangeChange = vi.fn()
+    const { rerender } = render(
+      <MarketTable
+        contracts={mockContracts}
+        snapshots={mockSnapshots}
+        onVisibleRangeChange={onVisibleRangeChange}
+      />
+    )
+
+    await vi.advanceTimersByTimeAsync(100)
+    onVisibleRangeChange.mockClear()
+
+    // 添加新合约
+    const newContracts = [
+      ...mockContracts,
+      { instrumentID: 'cu2508', instrumentName: '铜2508', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20250815', isTrading: 1, productClass: "1" },
+    ]
+
+    rerender(
+      <MarketTable
+        contracts={newContracts}
+        snapshots={mockSnapshots}
+        onVisibleRangeChange={onVisibleRangeChange}
+      />
+    )
+
+    await vi.advanceTimersByTimeAsync(100)
+
+    // 回调应该被调用
+    expect(onVisibleRangeChange).toHaveBeenCalled()
   })
 })
