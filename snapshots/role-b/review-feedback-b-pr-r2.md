@@ -42,3 +42,34 @@
 ## 审查结论
 
 ✅ **通过** — 无阻断性问题，S1/S2 为可选改进
+
+---
+
+## R2 二次审查（2026-08-01）
+
+### 修复验证
+
+| # | 等级 | 问题 | 修复状态 |
+|---|------|------|:--------:|
+| S1 | 🟡 | notifyVisibleRange 逻辑重复 | ✅ 已修复 |
+| S2 | 🟡 | 测试断言可加强 | ✅ 已修复 |
+
+### 修复详情
+
+**S1 修复**：
+- ✅ 提取 `notifyVisibleRange` 为 `useCallback` 共享函数（line 103-119）
+- ✅ 初始 effect 和 contracts effect 均复用同一函数
+- ✅ 代码减少约 35 行重复
+
+**S2 修复**：
+- ✅ 添加 `expect(calledWith).toEqual(expect.arrayContaining(['au2508', 'ag2508']))`
+- ✅ 验证返回的合约 ID 列表内容
+
+### 测试结果
+61 test files, 609 tests passed ✅
+
+### 新引入问题：0
+
+### 审查结论
+
+✅ **二次审查通过**
