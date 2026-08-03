@@ -3,7 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { TabBar } from './index'
 import { useTabStore } from '@/stores/tabs'
 
-// Mock useTabStore
 const defaultState = {
   tabs: [
     { id: 'tab-market', type: 'market' as const, title: '📊 行情', props: {}, closable: false },
@@ -106,12 +105,24 @@ describe('TabBar', () => {
         activeTabId: 'tab-market',
       })
       render(<TabBar />)
-      // 行情标签没有关闭按钮
       const marketTab = screen.getByText('📊 行情').closest('[role="tab"]')
       expect(marketTab?.querySelector('[aria-label="关闭标签"]')).toBeNull()
-      // 查询标签有关闭按钮
       const queryTab = screen.getByText('📋 查询').closest('[role="tab"]')
       expect(queryTab?.querySelector('[aria-label="关闭标签"]')).toBeInTheDocument()
+    })
+
+    it('关闭按钮应为 button 元素（支持键盘操作）', () => {
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-market',
+      })
+      render(<TabBar />)
+      const closeButton = screen.getByText('📋 查询').closest('[role="tab"]')?.querySelector('[aria-label="关闭标签"]')
+      expect(closeButton?.tagName).toBe('BUTTON')
+      expect(closeButton).toHaveAttribute('type', 'button')
     })
 
     it('点击关闭按钮应调用 closeTab', () => {
@@ -157,6 +168,109 @@ describe('TabBar', () => {
       render(<TabBar />)
       expect(screen.getByLabelText('新增标签')).toBeInTheDocument()
     })
+
+    it('点击 + 按钮应调用 onAddTab', () => {
+      const onAddTab = vi.fn()
+      render(<TabBar onAddTab={onAddTab} />)
+      fireEvent.click(screen.getByLabelText('新增标签'))
+      expect(onAddTab).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  // --- 键盘导航 ---
+
+  describe('键盘导航', () => {
+    it('右箭头应切换到下一个标签', () => {
+      const setActiveTab = vi.fn()
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-market',
+        setActiveTab,
+      })
+      render(<TabBar />)
+      fireEvent.keyDown(screen.getByRole('tablist'), { key: 'ArrowRight' })
+      expect(setActiveTab).toHaveBeenCalledWith('tab-query')
+    })
+
+    it('左箭头应切换到上一个标签', () => {
+      const setActiveTab = vi.fn()
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-query',
+        setActiveTab,
+      })
+      render(<TabBar />)
+      fireEvent.keyDown(screen.getByRole('tablist'), { key: 'ArrowLeft' })
+      expect(setActiveTab).toHaveBeenCalledWith('tab-market')
+    })
+
+    it('右箭头在最后一个标签应循环到第一个', () => {
+      const setActiveTab = vi.fn()
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-query',
+        setActiveTab,
+      })
+      render(<TabBar />)
+      fireEvent.keyDown(screen.getByRole('tablist'), { key: 'ArrowRight' })
+      expect(setActiveTab).toHaveBeenCalledWith('tab-market')
+    })
+
+    it('Home 键应跳转到第一个标签', () => {
+      const setActiveTab = vi.fn()
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-settings',
+        setActiveTab,
+      })
+      render(<TabBar />)
+      fireEvent.keyDown(screen.getByRole('tablist'), { key: 'Home' })
+      expect(setActiveTab).toHaveBeenCalledWith('tab-market')
+    })
+
+    it('End 键应跳转到最后一个标签', () => {
+      const setActiveTab = vi.fn()
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-market',
+        setActiveTab,
+      })
+      render(<TabBar />)
+      fireEvent.keyDown(screen.getByRole('tablist'), { key: 'End' })
+      expect(setActiveTab).toHaveBeenCalledWith('tab-settings')
+    })
+
+    it('其他键不应触发切换', () => {
+      const setActiveTab = vi.fn()
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-market',
+        setActiveTab,
+      })
+      render(<TabBar />)
+      fireEvent.keyDown(screen.getByRole('tablist'), { key: 'Enter' })
+      expect(setActiveTab).not.toHaveBeenCalled()
+    })
   })
 
   // --- 无障碍 ---
@@ -167,6 +281,11 @@ describe('TabBar', () => {
       expect(screen.getByRole('tablist')).toBeInTheDocument()
     })
 
+    it('容器应有 aria-label', () => {
+      render(<TabBar />)
+      expect(screen.getByRole('tablist')).toHaveAttribute('aria-label', '标签栏')
+    })
+
     it('每个标签应有 role="tab"', () => {
       render(<TabBar />)
       expect(screen.getAllByRole('tab')).toHaveLength(1)
@@ -175,6 +294,11 @@ describe('TabBar', () => {
     it('活跃标签应有 aria-selected="true"', () => {
       render(<TabBar />)
       expect(screen.getByRole('tab')).toHaveAttribute('aria-selected', 'true')
+    })
+
+    it('标签应可聚焦（tabIndex=0）', () => {
+      render(<TabBar />)
+      expect(screen.getByRole('tab')).toHaveAttribute('tabindex', '0')
     })
   })
 })
