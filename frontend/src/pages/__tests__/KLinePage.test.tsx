@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { KLinePage } from '../KLinePage';
 import { useContractsStore } from '@/stores/contracts';
 import { useMarketStore } from '@/modules/market/store';
+import type { MarketSnapshot } from '@/services/types';
 
 // Mock the KLineChart component
 vi.mock('@/modules/market/KLineChart', () => ({
@@ -22,6 +23,7 @@ describe('KLinePage', () => {
     // Set up market store with test data
     useMarketStore.setState({
       klineData: new Map(),
+      snapshots: new Map(),
       selectedInstrument: 'IF2608',
       currentPeriod: '5m',
       setPeriod: vi.fn(),
@@ -72,5 +74,55 @@ describe('KLinePage', () => {
   it('should pass instrument ID to KLineChart', () => {
     render(<KLinePage instrumentID="IF2608" />);
     expect(screen.getByTestId('instrument').textContent).toBe('IF2608');
+  });
+
+  // ── 标签页标题栏 ──
+
+  it('should render title bar with K-line label', () => {
+    render(<KLinePage instrumentID="IF2608" />);
+    expect(screen.getByText('📈 K线')).toBeDefined();
+  });
+
+  it('should display instrument ID in title bar subtitle', () => {
+    render(<KLinePage instrumentID="IF2608" />);
+    expect(screen.getAllByText('IF2608').length).toBeGreaterThanOrEqual(1);
+  });
+
+  // ── 合约信息（最新价） ──
+
+  it('should display latest price when snapshot available', () => {
+    useMarketStore.setState({
+      snapshots: new Map([
+        ['IF2608', {
+          instrumentID: 'IF2608',
+          lastPrice: 4585.6,
+          bidPrice1: 0,
+          askPrice1: 0,
+          openPrice: 0,
+          highestPrice: 0,
+          lowestPrice: 0,
+          preSettlementPrice: 0,
+          upperLimitPrice: 0,
+          lowerLimitPrice: 0,
+          volume: 0,
+          openInterest: 0,
+        } as MarketSnapshot],
+      ]),
+    });
+    render(<KLinePage instrumentID="IF2608" />);
+    // priceTick=0.2 → formatPrice 输出 2 位小数（与 OrderPage 约定一致）
+    expect(screen.getByText('4585.60')).toBeDefined();
+  });
+
+  it('should show dash for latest price when snapshot unavailable', () => {
+    render(<KLinePage instrumentID="IF2608" />);
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+  });
+
+  // ── 边界条件 ──
+
+  it('should show placeholder hint when no instrumentID provided', () => {
+    render(<KLinePage />);
+    expect(screen.getByText(/请在行情表格中选择合约/)).toBeDefined();
   });
 });
