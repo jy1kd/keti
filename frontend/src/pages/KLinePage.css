@@ -8,34 +8,6 @@
   background: var(--bg-primary);
 }
 
-/* ── 标题栏 ─────────────────────────────────────────────────── */
-
-.kline-page__title-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 14px;
-  height: 36px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-.kline-page__title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.kline-page__subtitle {
-  font-size: 12px;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-}
-
 /* ── 无合约提示 ─────────────────────────────────────────────── */
 
 .kline-page__no-contract {
@@ -45,52 +17,6 @@
   justify-content: center;
   color: var(--text-muted);
   font-size: 14px;
-}
-
-/* ── 合约信息条 ─────────────────────────────────────────────── */
-
-.kline-page__info {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 8px 14px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  flex-shrink: 0;
-}
-
-.kline-page__code {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-}
-
-.kline-page__name {
-  font-size: 13px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.kline-page__latest {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-left: auto;
-}
-
-.kline-page__latest-label {
-  font-size: 11px;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.kline-page__latest-value {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--accent);
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
 }
 
 /* ── K线图区域 ──────────────────────────────────────────────── */

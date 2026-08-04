@@ -78,6 +78,22 @@ describe('KLineChart', () => {
     expect(screen.getByText('IF2608')).toBeInTheDocument()
   })
 
+  it('renders contract name when provided', () => {
+    render(<KLineChart instrument="IF2608" klineData={[]} period="5m" name="沪深300" />)
+    expect(screen.getByText('沪深300')).toBeInTheDocument()
+  })
+
+  it('renders latest price when provided', () => {
+    render(<KLineChart instrument="IF2608" klineData={[]} period="5m" latestPrice="4585.60" />)
+    expect(screen.getByText('4585.60')).toBeInTheDocument()
+  })
+
+  it('does not render name/latest price when not provided', () => {
+    render(<KLineChart instrument="IF2608" klineData={[]} period="5m" />)
+    expect(screen.queryByText('沪深300')).not.toBeInTheDocument()
+    expect(screen.queryByText('4585.60')).not.toBeInTheDocument()
+  })
+
   it('renders chart canvas when data is provided', () => {
     render(<KLineChart instrument="IF2608" klineData={sampleData} period="5m" />)
     expect(screen.getByTestId('kline-canvas')).toBeInTheDocument()

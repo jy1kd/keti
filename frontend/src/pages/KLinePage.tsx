@@ -2,7 +2,7 @@
  * KLinePage — K线标签页
  *
  * 专业交易终端风格的独立K线页面。
- * 顶部标题栏显示合约代码/名称/最新价，下方集成 KLineChart（多周期 + 技术指标切换）。
+ * 顶部单一展示栏（合约代码/名称/最新价 + 多周期 + 技术指标）由 KLineChart 标题栏承载。
  * 同时兼容 Electron 独立窗口模式。
  */
 
@@ -64,12 +64,6 @@ export function KLinePage({ instrumentID }: KLinePageProps) {
 
   return (
     <div className="kline-page">
-      {/* ── 标题栏 ── */}
-      <div className="kline-page__title-bar">
-        <span className="kline-page__title">📈 K线</span>
-        {instrumentID && <span className="kline-page__subtitle">{instrumentID}</span>}
-      </div>
-
       {/* ── 合约选择提示 ── */}
       {!instrumentID && (
         <div className="kline-page__no-contract">
@@ -77,23 +71,13 @@ export function KLinePage({ instrumentID }: KLinePageProps) {
         </div>
       )}
 
-      {/* ── 合约信息条 ── */}
-      {instrumentID && (
-        <div className="kline-page__info">
-          <span className="kline-page__code">{instrumentID}</span>
-          {contract && <span className="kline-page__name">{contract.instrumentName}</span>}
-          <span className="kline-page__latest">
-            <span className="kline-page__latest-label">最新</span>
-            <span className="kline-page__latest-value">{latestPrice}</span>
-          </span>
-        </div>
-      )}
-
-      {/* ── K线图 ── */}
+      {/* ── K线图（标题栏承载：合约代码/名称/最新价 + 周期 + 指标） ── */}
       {instrumentID && (
         <div className="kline-page__content">
           <KLineChart
             instrument={instrumentID}
+            name={contract?.instrumentName}
+            latestPrice={latestPrice}
             klineData={data}
             period={currentPeriod}
             onPeriodChange={setPeriod}

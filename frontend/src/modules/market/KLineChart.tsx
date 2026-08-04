@@ -8,6 +8,10 @@ export interface KLineChartProps {
   klineData: KLineData[]
   period: string
   onPeriodChange?: (period: string) => void
+  /** 合约名称（显示在标题栏，可选） */
+  name?: string
+  /** 最新价（显示在标题栏，可选；'—' 表示无快照） */
+  latestPrice?: string
 }
 
 /** 主图指标类型 */
@@ -262,7 +266,7 @@ const SUB_INDICATORS: { label: string; value: SubIndicator }[] = [
   { label: 'RSI', value: 'rsi' },
 ]
 
-export function KLineChart({ instrument, klineData, period, onPeriodChange }: KLineChartProps) {
+export function KLineChart({ instrument, klineData, period, onPeriodChange, name, latestPrice }: KLineChartProps) {
   const chartRef = useRef<HTMLDivElement>(null)
   const instanceRef = useRef<echarts.ECharts | null>(null)
   const prevDataLenRef = useRef(0)
@@ -323,7 +327,16 @@ export function KLineChart({ instrument, klineData, period, onPeriodChange }: KL
   return (
     <div className="kline-chart" data-testid="kline-chart">
       <div className="kline-chart__header">
-        <span className="kline-chart__instrument">{instrument}</span>
+        <div className="kline-chart__contract">
+          <span className="kline-chart__instrument">{instrument}</span>
+          {name && <span className="kline-chart__name">{name}</span>}
+        </div>
+        {latestPrice != null && (
+          <span className="kline-chart__latest">
+            <span className="kline-chart__latest-label">最新</span>
+            <span className="kline-chart__latest-value">{latestPrice}</span>
+          </span>
+        )}
         <div className="kline-chart__controls">
           <div className="kline-chart__periods">
             {PERIODS.map((p) => (

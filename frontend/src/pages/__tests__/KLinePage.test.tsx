@@ -7,9 +7,11 @@ import type { MarketSnapshot } from '@/services/types';
 
 // Mock the KLineChart component
 vi.mock('@/modules/market/KLineChart', () => ({
-  KLineChart: vi.fn().mockImplementation(({ instrument, period, onPeriodChange }) => (
+  KLineChart: vi.fn().mockImplementation(({ instrument, period, name, latestPrice, onPeriodChange }) => (
     <div data-testid="kline-chart">
       <span data-testid="instrument">{instrument}</span>
+      {name && <span data-testid="contract-name">{name}</span>}
+      {latestPrice != null && <span data-testid="latest-price">{latestPrice}</span>}
       <span data-testid="period">{period}</span>
       <button data-testid="period-1m" onClick={() => onPeriodChange?.('1m')}>1m</button>
       <button data-testid="period-5m" onClick={() => onPeriodChange?.('5m')}>5m</button>
@@ -60,9 +62,9 @@ describe('KLinePage', () => {
     expect(instrumentElements.length).toBeGreaterThan(0);
   });
 
-  it('should display instrument name', () => {
+  it('should pass contract name to KLineChart header', () => {
     render(<KLinePage instrumentID="IF2608" />);
-    expect(screen.getByText('沪深300')).toBeDefined();
+    expect(screen.getByTestId('contract-name').textContent).toBe('沪深300');
   });
 
   it('should render period selector', () => {
@@ -76,21 +78,14 @@ describe('KLinePage', () => {
     expect(screen.getByTestId('instrument').textContent).toBe('IF2608');
   });
 
-  // ── 标签页标题栏 ──
+  // ── 单一展示栏（合约信息传入 KLineChart 标题栏） ──
 
-  it('should render title bar with K-line label', () => {
-    render(<KLinePage instrumentID="IF2608" />);
-    expect(screen.getByText('📈 K线')).toBeDefined();
-  });
-
-  it('should display instrument ID in title bar subtitle', () => {
+  it('should display instrument ID', () => {
     render(<KLinePage instrumentID="IF2608" />);
     expect(screen.getAllByText('IF2608').length).toBeGreaterThanOrEqual(1);
   });
 
-  // ── 合约信息（最新价） ──
-
-  it('should display latest price when snapshot available', () => {
+  it('should display latest price in KLineChart header when snapshot available', () => {
     useMarketStore.setState({
       snapshots: new Map([
         ['IF2608', {
@@ -111,12 +106,12 @@ describe('KLinePage', () => {
     });
     render(<KLinePage instrumentID="IF2608" />);
     // priceTick=0.2 → formatPrice 输出 2 位小数（与 OrderPage 约定一致）
-    expect(screen.getByText('4585.60')).toBeDefined();
+    expect(screen.getByTestId('latest-price').textContent).toBe('4585.60');
   });
 
-  it('should show dash for latest price when snapshot unavailable', () => {
+  it('should show dash for latest price in KLineChart header when snapshot unavailable', () => {
     render(<KLinePage instrumentID="IF2608" />);
-    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('latest-price').textContent).toBe('—');
   });
 
   // ── 边界条件 ──

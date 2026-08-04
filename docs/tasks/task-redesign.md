@@ -660,15 +660,28 @@ frontend/src/pages/QueryPage.tsx / QueryPage.css / __tests__/QueryPage.test.tsx 
 **提交文件**：
 ```
 frontend/src/pages/
-├── KLinePage.tsx            # 重构：独立K线页面（标题栏 + 合约信息条 + 最新价）
+├── KLinePage.tsx            # 重构：独立K线页面（单一展示栏由 KLineChart 承载）
 ├── KLinePage.css            # 新增：页面样式
-└── __tests__/KLinePage.test.tsx # 更新测试：标题栏/最新价/无合约占位
+└── __tests__/KLinePage.test.tsx # 更新测试：合约信息/最新价/无合约占位
 frontend/src/components/TabContent/
 ├── index.tsx                # 集成 KLinePage，替换占位符
 └── index.test.tsx           # 更新测试：mock KLinePage
+frontend/src/hooks/
+├── useTabContractLocks.ts   # 新增：打开标签（kline/order）的合约锁定订阅
+└── useTabContractLocks.test.ts # 新增：测试
+frontend/src/App.tsx         # 更新：挂载 useTabContractLocks
+frontend/src/modules/market/
+├── KLineChart.tsx           # 更新：新增 name/latestPrice props，标题栏合并
+├── KLineChart.test.tsx      # 更新：+4 测试
+└── styles.css               # 更新：标题栏新元素样式
 ```
 
 > **范围注记（R16 自验证）**：任务「提交文件」清单仅列 KLinePage，但验收标准「K线标签页正常显示」要求 TabContent 集成，故补充 TabContent 相关文件（与 PR-R14 模式一致）。
+
+> **修复注记（R16 审查反馈处理）**：
+> 1. **K线标签无数据**：新增 `useTabContractLocks` 将打开标签的合约锁定订阅（此前仅 OrderPopup 锁定），保证 K线/报单标签合约在视野外仍收 tick → K线聚合正常。依据 redesign-plan 3.5。
+> 2. **顶部展示栏合并**：移除 KLinePage 标题栏+信息条，由 KLineChart 标题栏单一承载（代码/名称/最新价 + 周期 + 指标）。
+> 详见 `docs/snapshots/role-b/review-reply-redesign-r16.md`。
 
 **PR描述**：
 重构 KLinePage 为独立K线标签页。
