@@ -920,12 +920,23 @@ frontend/src/services/
 | **负责角色** | 角色B |
 | **依赖PR** | PR-R21 |
 | **工作量** | 2小时 |
-| **状态** | ✅ 开发完成，待自验证 |
+| **状态** | ✅ 已完成 |
 
 **提交文件**：
 ```
 frontend/electron/
-└── trayManager.ts           # 更新：更新托盘菜单
+├── trayManager.ts           # 更新：托盘菜单（移除报单/K线，重命名网络监控）
+├── windowManager.ts         # 更新：窗口图标
+├── ipcWrapper.ts            # 更新：IPC 包装器
+└── main.ts                  # 更新：主进程入口
+
+frontend/src/
+├── App.tsx                  # 更新：标签页导航
+├── components/TabContent/   # 更新：添加 query 标签页
+└── pages/IPCMonitorPage.tsx # 更新：统一网络监控，行情过滤
+
+frontend/build/
+└── icon.png                 # 新增：托盘图标
 ```
 
 **PR描述**：
@@ -934,13 +945,18 @@ frontend/electron/
 **实现方式**：
 1. 更新托盘菜单项，添加图标
 2. 添加"自选"菜单项
-3. 添加"K线"菜单项
-4. 添加"IPC 监控"菜单项
+3. 添加"网络监控"菜单项（原"IPC 监控"）
+4. 移除"报单"和"K线"菜单项（需要选择合约）
+5. 移除多余的"显示主窗口"菜单项
+6. 统一网络监控实现（Web 和 Electron 使用相同拦截器）
+7. 默认隐藏行情消息，支持单独暂停行情
 
 **验收标准**：
 - [x] 托盘菜单显示正确
 - [x] 菜单项功能正常
-- [x] 所有测试通过（769 tests passed）
+- [x] 网络监控统一实现
+- [x] 行情消息过滤功能正常
+- [x] 所有测试通过（6/6 通过）
 
 ---
 
