@@ -161,44 +161,46 @@ export function IPCMonitorPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // 初始化拦截器（Web 环境）
-    initInterceptors()
+    let cleanup: (() => void) | undefined
 
-    // 加载已有消息
-    setMessages([...globalMessages])
-
-    // 监听新消息（Web 环境）
-    const listener = (msg: MonitorMessage) => {
-      if (!paused) {
-        setMessages((prev) => [...prev, msg])
-      }
-    }
-    globalListeners.add(listener)
-
-    // Electron 环境：监听主进程发送的 IPC 消息
-    let cleanupElectron: (() => void) | undefined
     if (isElectron() && window.electronAPI) {
-      // 监听批量消息（初始加载）
+      // Electron 环境：监听主进程发送的 IPC 消息
       const cleanupBatch = window.electronAPI.onIPCMonitorMessages?.((messages: any[]) => {
         setMessages(messages)
       })
 
-      // 监听实时消息
       const cleanupRealtime = window.electronAPI.onIPCMonitorMessage?.((message: any) => {
         if (!paused) {
           setMessages((prev) => [...prev, message])
         }
       })
 
-      cleanupElectron = () => {
+      cleanup = () => {
         cleanupBatch?.()
         cleanupRealtime?.()
+      }
+    } else {
+      // Web 环境：使用 WebSocket 和 fetch 拦截器
+      initInterceptors()
+
+      // 加载已有消息
+      setMessages([...globalMessages])
+
+      // 监听新消息
+      const listener = (msg: MonitorMessage) => {
+        if (!paused) {
+          setMessages((prev) => [...prev, msg])
+        }
+      }
+      globalListeners.add(listener)
+
+      cleanup = () => {
+        globalListeners.delete(listener)
       }
     }
 
     return () => {
-      globalListeners.delete(listener)
-      cleanupElectron?.()
+      cleanup?.()
     }
   }, [paused])
 
@@ -269,7 +271,9 @@ export function IPCMonitorPage() {
         </div>
         <div className="ipc-monitor-page__stats">
           共 {filteredMessages.length} 条消息
-          {!isElectron() && <span className="ipc-monitor-page__mode">（Web 模式：WebSocket + API）</span>}
+          <span className="ipc-monitor-page__mode">
+            {isElectron() ? '（Electron IPC）' : '（Web：WebSocket + API）'}
+          </span>
         </div>
       </div>
 
@@ -277,7 +281,9 @@ export function IPCMonitorPage() {
         <div className="ipc-monitor-page__list">
           {filteredMessages.length === 0 ? (
             <div className="ipc-monitor-page__empty">
-              暂无消息，等待 WebSocket 连接或 API 请求...
+              {isElectron()
+                ? '暂无 Electron IPC 消息，等待主进程通信...'
+                : '暂无消息，等待 WebSocket 连接或 API 请求...'}
             </div>
           ) : (
             filteredMessages.map((msg) => (
