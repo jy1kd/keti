@@ -4,6 +4,7 @@ export interface ElectronAPI {
     closeWindow: () => Promise<void>;
     openOrderWindow: (instrumentID?: string) => Promise<void>;
     openKLineWindow: (instrumentID: string) => Promise<void>;
+    openTabWindow: (tabType: string, tabId: string, tabTitle: string, props?: Record<string, unknown>) => Promise<void>;
     getAppVersion: () => Promise<string>;
     getPlatform: () => Promise<string>;
     getAppName: () => Promise<string>;

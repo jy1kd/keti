@@ -49,6 +49,10 @@ export async function openKLineWindow(instrumentID: string): Promise<void> {
   return getElectronAPI().openKLineWindow(instrumentID);
 }
 
+export async function openTabWindow(tabType: string, tabId: string, tabTitle: string, props?: Record<string, unknown>): Promise<void> {
+  return getElectronAPI().openTabWindow(tabType, tabId, tabTitle, props);
+}
+
 // App info
 export async function getAppVersion(): Promise<string> {
   return getElectronAPI().getAppVersion();
@@ -96,6 +100,7 @@ declare global {
       // Window management
       openOrderWindow: (instrumentID?: string) => Promise<void>;
       openKLineWindow: (instrumentID: string) => Promise<void>;
+      openTabWindow: (tabType: string, tabId: string, tabTitle: string, props?: Record<string, unknown>) => Promise<void>;
 
       // App info
       getAppVersion: () => Promise<string>;
@@ -116,6 +121,11 @@ declare global {
       // Event listeners
       onOrderUpdate: (callback: (data: any) => void) => () => void;
       onNotification: (callback: (data: any) => void) => () => void;
+
+      // IPC Monitor listeners
+      onIPCMonitorMessages: (callback: (messages: any[]) => void) => () => void;
+      onIPCMonitorMessage: (callback: (message: any) => void) => () => void;
+
       removeAllListeners: (channel: string) => void;
     };
   }

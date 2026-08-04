@@ -6,26 +6,27 @@
  * - Backend management (restart, status)
  */
 
-import { app, ipcMain } from 'electron';
+import { app } from 'electron';
 import { IPC_CHANNELS, BackendStatus } from './index';
 import { BackendManager } from '../backendManager';
+import { handleIPC } from '../ipcWrapper';
 
 /**
  * Register app info IPC handlers
  */
 export function registerAppInfoHandlers(): void {
   // Get app version
-  ipcMain.handle(IPC_CHANNELS.APP_VERSION, () => {
+  handleIPC(IPC_CHANNELS.APP_VERSION, () => {
     return app.getVersion();
   });
 
   // Get platform
-  ipcMain.handle(IPC_CHANNELS.APP_PLATFORM, () => {
+  handleIPC(IPC_CHANNELS.APP_PLATFORM, () => {
     return process.platform;
   });
 
   // Get app name
-  ipcMain.handle(IPC_CHANNELS.APP_NAME, () => {
+  handleIPC(IPC_CHANNELS.APP_NAME, () => {
     return app.getName();
   });
 }
@@ -35,13 +36,13 @@ export function registerAppInfoHandlers(): void {
  */
 export function registerBackendManagementHandlers(backendManager: BackendManager): void {
   // Restart backend
-  ipcMain.handle(IPC_CHANNELS.BACKEND_RESTART, async () => {
+  handleIPC(IPC_CHANNELS.BACKEND_RESTART, async () => {
     const success = await backendManager.restart();
     return { success };
   });
 
   // Get backend status
-  ipcMain.handle(IPC_CHANNELS.BACKEND_STATUS, (): BackendStatus => {
+  handleIPC(IPC_CHANNELS.BACKEND_STATUS, (): BackendStatus => {
     return backendManager.getStatus();
   });
 }
@@ -50,6 +51,7 @@ export function registerBackendManagementHandlers(backendManager: BackendManager
  * Unregister all app IPC handlers
  */
 export function unregisterAppHandlers(): void {
+  const { ipcMain } = require('electron');
   ipcMain.removeHandler(IPC_CHANNELS.APP_VERSION);
   ipcMain.removeHandler(IPC_CHANNELS.APP_PLATFORM);
   ipcMain.removeHandler(IPC_CHANNELS.APP_NAME);

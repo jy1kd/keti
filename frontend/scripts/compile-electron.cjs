@@ -29,22 +29,22 @@ console.log('[compile] Fixing require paths and renaming to .cjs...');
 function processFile(filePath) {
   let content = fs.readFileSync(filePath, 'utf8');
 
-  // Fix require paths: './foo' -> './foo.cjs', './foo.js' -> './foo.cjs'
-  // Handle both single and double quotes
-  content = content.replace(/require\(['"]\.\/([^'"]+?)['"]\)/g, (match, p1) => {
+  // Fix require paths: './foo' -> './foo.cjs', '../foo' -> '../foo.cjs'
+  // Handle both single and double quotes, and both ./ and ../ prefixes
+  content = content.replace(/require\(['"](\.\.?\/[^'"]+)['"]\)/g, (match, p1) => {
     // Don't add .cjs if it already has an extension
     if (p1.endsWith('.cjs') || p1.endsWith('.js')) {
       return match;
     }
-    return `require('./${p1}.cjs')`;
+    return `require('${p1}.cjs')`;
   });
 
   // Fix import paths (for ES modules converted to CJS)
-  content = content.replace(/from ['"]\.\/([^'"]+?)['"]/g, (match, p1) => {
+  content = content.replace(/from ['"](\.\.?\/[^'"]+)['"]/g, (match, p1) => {
     if (p1.endsWith('.cjs') || p1.endsWith('.js')) {
       return match;
     }
-    return `from './${p1}.cjs'`;
+    return `from '${p1}.cjs'`;
   });
 
   fs.writeFileSync(filePath, content);

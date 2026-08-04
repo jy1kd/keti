@@ -8,6 +8,7 @@ import { AutoUpdaterManager } from './autoUpdater';
 import { IPC_CHANNELS } from './ipc/index';
 import { registerWindowControlHandlers, registerWindowManagementHandlers } from './ipc/window';
 import { registerAppInfoHandlers, registerBackendManagementHandlers } from './ipc/app';
+import { sendIPCMonitorToWindow } from './ipcWrapper';
 
 // Check if in development mode
 export const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
@@ -141,6 +142,17 @@ export async function initializeApp(): Promise<void> {
   registerWindowManagementHandlers(windowManager);
   registerAppInfoHandlers();
   registerBackendManagementHandlers(backendManager);
+
+  // Send IPC Monitor to main window (after window is ready)
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('[IPC Monitor] Window loaded, sending monitor data...');
+    try {
+      sendIPCMonitorToWindow(mainWindow);
+      console.log('[IPC Monitor] Monitor data sent successfully');
+    } catch (e) {
+      console.error('[IPC Monitor] Failed to send monitor data:', e);
+    }
+  });
 
   // Cleanup on quit
   app.on('will-quit', () => {

@@ -11,6 +11,7 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     // Window management
     openOrderWindow: (instrumentID) => electron_1.ipcRenderer.invoke('window:open-order', instrumentID),
     openKLineWindow: (instrumentID) => electron_1.ipcRenderer.invoke('window:open-kline', instrumentID),
+    openTabWindow: (tabType, tabId, tabTitle, props) => electron_1.ipcRenderer.invoke('window:open-tab', tabType, tabId, tabTitle, props),
     // App info
     getAppVersion: () => electron_1.ipcRenderer.invoke('app:version'),
     getPlatform: () => electron_1.ipcRenderer.invoke('app:platform'),
@@ -43,6 +44,17 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
         const handler = (_, data) => callback(data);
         electron_1.ipcRenderer.on('notification', handler);
         return () => electron_1.ipcRenderer.removeListener('notification', handler);
+    },
+    // IPC Monitor listeners
+    onIPCMonitorMessages: (callback) => {
+        const handler = (_, messages) => callback(messages);
+        electron_1.ipcRenderer.on('ipc-monitor-messages', handler);
+        return () => electron_1.ipcRenderer.removeListener('ipc-monitor-messages', handler);
+    },
+    onIPCMonitorMessage: (callback) => {
+        const handler = (_, message) => callback(message);
+        electron_1.ipcRenderer.on('ipc-monitor-message', handler);
+        return () => electron_1.ipcRenderer.removeListener('ipc-monitor-message', handler);
     },
     removeAllListeners: (channel) => {
         electron_1.ipcRenderer.removeAllListeners(channel);

@@ -272,6 +272,78 @@ class WindowManager {
             }
         }
     }
+    /**
+     * Open a tab in a new window (detach from main window)
+     */
+    openTabWindow(tabType, tabId, tabTitle, props) {
+        const windowId = `tab-${tabId}`;
+        // Return existing window if it exists
+        const existing = this.windows.get(windowId);
+        if (existing && !existing.isDestroyed()) {
+            existing.focus();
+            return existing;
+        }
+        const config = DEFAULT_CONFIGS[tabType] || DEFAULT_CONFIGS.main;
+        const parent = this.windows.get('main');
+        const tabWindow = new electron_1.BrowserWindow({
+            width: config.width || 800,
+            height: config.height || 600,
+            minWidth: config.minWidth || 400,
+            minHeight: config.minHeight || 300,
+            title: tabTitle,
+            parent,
+            modal: false,
+            webPreferences: {
+                preload: path_1.default.join(__dirname, 'preload.cjs'),
+                contextIsolation: true,
+                nodeIntegration: false,
+            },
+            show: false,
+        });
+        // Load the tab page with props in hash
+        const propsStr = props ? encodeURIComponent(JSON.stringify(props)) : '';
+        const hash = `#/tab/${tabType}/${tabId}${propsStr ? `?props=${propsStr}` : ''}`;
+        if (this.isDev) {
+            tabWindow.loadURL(`http://localhost:5173${hash}`);
+        }
+        else {
+            tabWindow.loadFile(path_1.default.join(__dirname, '../dist/index.html'), { hash });
+        }
+        // Show window when ready
+        tabWindow.once('ready-to-show', () => {
+            tabWindow.show();
+        });
+        // Track window
+        this.windows.set(windowId, tabWindow);
+        // Handle window close - notify main window to update tab state
+        tabWindow.on('closed', () => {
+            this.windows.delete(windowId);
+            // Notify main window that this tab window was closed
+            const mainWindow = this.windows.get('main');
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('tab-window-closed', { tabId, tabType });
+            }
+        });
+        return tabWindow;
+    }
+    /**
+     * Check if a tab is open in a separate window
+     */
+    isTabInWindow(tabId) {
+        const windowId = `tab-${tabId}`;
+        const window = this.windows.get(windowId);
+        return window !== undefined && !window.isDestroyed();
+    }
+    /**
+     * Close a tab window
+     */
+    closeTabWindow(tabId) {
+        const windowId = `tab-${tabId}`;
+        const window = this.windows.get(windowId);
+        if (window && !window.isDestroyed()) {
+            window.close();
+        }
+    }
 }
 exports.WindowManager = WindowManager;
 //# sourceMappingURL=windowManager.js.map

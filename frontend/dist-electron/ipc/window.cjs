@@ -10,18 +10,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerWindowControlHandlers = registerWindowControlHandlers;
 exports.registerWindowManagementHandlers = registerWindowManagementHandlers;
 exports.unregisterWindowHandlers = unregisterWindowHandlers;
-const electron_1 = require("electron");
 const index_1 = require('./index.cjs');
+const ipcWrapper_1 = require('../ipcWrapper.cjs');
 /**
  * Register window control IPC handlers
  */
 function registerWindowControlHandlers(mainWindow) {
     // Minimize window
-    electron_1.ipcMain.handle(index_1.IPC_CHANNELS.WINDOW_MINIMIZE, () => {
+    (0, ipcWrapper_1.handleIPC)(index_1.IPC_CHANNELS.WINDOW_MINIMIZE, () => {
         mainWindow.minimize();
     });
     // Maximize/restore window
-    electron_1.ipcMain.handle(index_1.IPC_CHANNELS.WINDOW_MAXIMIZE, () => {
+    (0, ipcWrapper_1.handleIPC)(index_1.IPC_CHANNELS.WINDOW_MAXIMIZE, () => {
         if (mainWindow.isMaximized()) {
             mainWindow.unmaximize();
         }
@@ -30,7 +30,7 @@ function registerWindowControlHandlers(mainWindow) {
         }
     });
     // Close window
-    electron_1.ipcMain.handle(index_1.IPC_CHANNELS.WINDOW_CLOSE, () => {
+    (0, ipcWrapper_1.handleIPC)(index_1.IPC_CHANNELS.WINDOW_CLOSE, () => {
         mainWindow.close();
     });
 }
@@ -39,22 +39,28 @@ function registerWindowControlHandlers(mainWindow) {
  */
 function registerWindowManagementHandlers(windowManager) {
     // Open order window
-    electron_1.ipcMain.handle(index_1.IPC_CHANNELS.WINDOW_OPEN_ORDER, (_event, instrumentID) => {
+    (0, ipcWrapper_1.handleIPC)(index_1.IPC_CHANNELS.WINDOW_OPEN_ORDER, (_event, instrumentID) => {
         windowManager.openOrderWindow(instrumentID);
     });
     // Open K-line window
-    electron_1.ipcMain.handle(index_1.IPC_CHANNELS.WINDOW_OPEN_KLINE, (_event, instrumentID) => {
+    (0, ipcWrapper_1.handleIPC)(index_1.IPC_CHANNELS.WINDOW_OPEN_KLINE, (_event, instrumentID) => {
         windowManager.openKLineWindow(instrumentID);
+    });
+    // Open tab in new window
+    (0, ipcWrapper_1.handleIPC)(index_1.IPC_CHANNELS.WINDOW_OPEN_TAB, (_event, tabType, tabId, tabTitle, props) => {
+        windowManager.openTabWindow(tabType, tabId, tabTitle, props);
     });
 }
 /**
  * Unregister all window IPC handlers
  */
 function unregisterWindowHandlers() {
-    electron_1.ipcMain.removeHandler(index_1.IPC_CHANNELS.WINDOW_MINIMIZE);
-    electron_1.ipcMain.removeHandler(index_1.IPC_CHANNELS.WINDOW_MAXIMIZE);
-    electron_1.ipcMain.removeHandler(index_1.IPC_CHANNELS.WINDOW_CLOSE);
-    electron_1.ipcMain.removeHandler(index_1.IPC_CHANNELS.WINDOW_OPEN_ORDER);
-    electron_1.ipcMain.removeHandler(index_1.IPC_CHANNELS.WINDOW_OPEN_KLINE);
+    const { ipcMain } = require('electron');
+    ipcMain.removeHandler(index_1.IPC_CHANNELS.WINDOW_MINIMIZE);
+    ipcMain.removeHandler(index_1.IPC_CHANNELS.WINDOW_MAXIMIZE);
+    ipcMain.removeHandler(index_1.IPC_CHANNELS.WINDOW_CLOSE);
+    ipcMain.removeHandler(index_1.IPC_CHANNELS.WINDOW_OPEN_ORDER);
+    ipcMain.removeHandler(index_1.IPC_CHANNELS.WINDOW_OPEN_KLINE);
+    ipcMain.removeHandler(index_1.IPC_CHANNELS.WINDOW_OPEN_TAB);
 }
 //# sourceMappingURL=window.js.map

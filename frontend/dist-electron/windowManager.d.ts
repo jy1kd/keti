@@ -76,5 +76,17 @@ export declare class WindowManager {
      * Restore window state
      */
     restoreWindowState(id: string): void;
+    /**
+     * Open a tab in a new window (detach from main window)
+     */
+    openTabWindow(tabType: string, tabId: string, tabTitle: string, props?: Record<string, unknown>): BrowserWindow;
+    /**
+     * Check if a tab is open in a separate window
+     */
+    isTabInWindow(tabId: string): boolean;
+    /**
+     * Close a tab window
+     */
+    closeTabWindow(tabId: string): void;
 }
 //# sourceMappingURL=windowManager.d.ts.map
