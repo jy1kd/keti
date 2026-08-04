@@ -608,6 +608,9 @@ frontend/src/App.tsx                  # 更新：托盘导航 openTab('query')
 frontend/src/components/TabContent/
 ├── index.tsx                # 更新：集成 QueryPage
 └── index.test.tsx           # 更新：mock QueryPage
+frontend/src/components/TabBar/
+├── index.tsx                # 更新：添加 📋 查询快捷按钮
+└── index.test.tsx           # 更新：快捷按钮测试
 ```
 
 **PR描述**：

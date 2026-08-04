@@ -48,3 +48,20 @@
 | 🔵2 K线 Tab 依赖选中合约 | 🔵 | 确认设计预期，非 R15 引入 |
 
 **无 🔴 阻断性项**。文档修复未涉及代码改动，无需重新跑 TDD 循环；全量测试在上一步已验证通过（742 tests）。
+
+---
+
+## 二次审查期间新增（用户决策）
+
+### 查询标签页浏览器入口缺失 → 已补充
+
+**背景**: 二次审查前用户提出「查询标签页入口在哪？」。排查确认 PR-R15 此前仅有 Electron 托盘导航入口（`App.tsx` `case 'query'`，受 `isElectron()` 保护），**浏览器模式（`npm run dev`）下无任何入口**，查询标签页无法打开、人工验证「查询标签页正常显示」不可行。
+
+**方案选择（AskUserQuestion）**: 用户选择「TabBar 快捷按钮加 📋 查询」（与 ⭐ 自选 一致）。
+
+**实现**:
+- `TabBar/index.tsx`: `QUICK_TABS` 增加 `{ type: 'query', icon: '📋', title: '📋 查询' }`，复用既有快捷按钮通用渲染逻辑（未打开→openTab，已打开→setActiveTab 激活）
+- `TabBar/index.test.tsx`: 新增 3 个测试（渲染/打开/激活）
+
+**验证**: TabBar 29 个测试通过；全量 745 tests 通过；`tsc --noEmit` 无错误。
+**Commit**: `7c98ccb`
