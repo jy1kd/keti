@@ -4,6 +4,7 @@ import { Position } from './Position'
 import { useQueryStore } from './store'
 import { useOrderStore } from '../order/store'
 import { useMarketStore } from '../market/store'
+import { useTabStore } from '@/stores/tabs'
 
 vi.mock('../../services/api', () => ({
   getOrders: vi.fn().mockResolvedValue({ orders: [], count: 0 }),
@@ -23,6 +24,11 @@ vi.mock('../../services/api', () => ({
 describe('Position', () => {
   beforeEach(() => {
     useQueryStore.setState({ positions: [] })
+    // 重置 tabStore：平仓会触发 openTab 副作用，避免用例间顺序依赖
+    useTabStore.setState({
+      tabs: [{ id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false }],
+      activeTabId: 'tab-market',
+    })
   })
 
   it('renders empty state when no positions', () => {
@@ -146,5 +152,29 @@ describe('Position', () => {
     fireEvent.click(screen.getByText('平仓'))
     const form = useOrderStore.getState().orderForm
     expect(form.limitPrice).toBe(0)
+  })
+
+  it('opens an order tab with close params when clicking 平仓', () => {
+    useQueryStore.setState({
+      positions: [
+        { instrumentID: 'IF2608', posiDirection: '2', position: 2, positionCost: 9600, positionProfit: 100, openCost: 9600, useMargin: 96000, todayPosition: 1, ydPosition: 1, tradingDay: '20260727' },
+      ],
+    })
+    render(<Position />)
+    fireEvent.click(screen.getByText('平仓'))
+
+    // 平仓参数填充完整（direction/combOffsetFlag/volumeTotalOriginal 锁定在同一用例）
+    const form = useOrderStore.getState().orderForm
+    expect(form.direction).toBe('sell')
+    expect(form.combOffsetFlag).toBe('close_today')
+    expect(form.volumeTotalOriginal).toBe(2)
+
+    // 报单标签打开（title/props/activeTab 正确）
+    const { tabs, activeTabId } = useTabStore.getState()
+    const orderTab = tabs.find((t) => t.type === 'order')
+    expect(orderTab).toBeDefined()
+    expect(orderTab?.title).toBe('📝 报单-IF2608')
+    expect(orderTab?.props.instrumentID).toBe('IF2608')
+    expect(activeTabId).toBe('tab-order-IF2608')
   })
 })

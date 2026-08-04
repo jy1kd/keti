@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useQueryStore } from './store'
 import { useOrderStore } from '../order/store'
 import { useMarketStore } from '../market/store'
+import { useTabStore } from '@/stores/tabs'
 
 const DIRECTION_MAP: Record<string, string> = { '2': '多', '3': '空' }
 
@@ -34,6 +35,13 @@ export function Position() {
         combOffsetFlag: offsetFlag,
         volumeTotalOriginal: volume,
         limitPrice: price,
+      })
+
+      // 打开报单标签页，OrderPage 挂载时读取 store 中的平仓参数
+      useTabStore.getState().openTab({
+        type: 'order',
+        title: `📝 报单-${instrumentID}`,
+        props: { instrumentID },
       })
     },
     [setSelectedInstrument, setOrderForm]
