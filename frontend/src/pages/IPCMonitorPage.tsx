@@ -42,55 +42,55 @@ function addMessage(msg: Omit<MonitorMessage, 'id'>) {
   globalListeners.forEach((listener) => listener(message))
 }
 
-// 拦截 WebSocket 消息
+// 拦截 WebSocket 消息（仅监听，不修改原始行为）
 function setupWebSocketInterceptor() {
   const originalWebSocket = window.WebSocket
-  const intercepted = new WeakSet<WebSocket>()
 
-  window.WebSocket = function (url: string | URL, protocols?: string | string[]) {
-    const ws = new originalWebSocket(url, protocols)
-    if (intercepted.has(ws)) return ws
-    intercepted.add(ws)
+  // 使用 Proxy 代理 WebSocket 构造函数
+  const handler: ProxyHandler<typeof originalWebSocket> = {
+    construct(target, args) {
+      const ws = new target(...args)
+      const url = args[0]
+      const urlStr = typeof url === 'string' ? url : url.toString()
 
-    const urlStr = typeof url === 'string' ? url : url.toString()
-    let channel = 'ws/unknown'
-    if (urlStr.includes('/ws/market')) channel = 'ws/market'
-    else if (urlStr.includes('/ws/system')) channel = 'ws/system'
-    else if (urlStr.includes('/ws/order')) channel = 'ws/order'
-    else if (urlStr.includes('/ws/position')) channel = 'ws/position'
+      let channel = 'ws/unknown'
+      if (urlStr.includes('/ws/market')) channel = 'ws/market'
+      else if (urlStr.includes('/ws/system')) channel = 'ws/system'
+      else if (urlStr.includes('/ws/order')) channel = 'ws/order'
+      else if (urlStr.includes('/ws/position')) channel = 'ws/position'
 
-    // 拦截 onmessage
-    const originalOnMessage = ws.onmessage
-    ws.addEventListener('message', (event) => {
-      try {
-        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
-        addMessage({ timestamp: Date.now(), direction: 'in', channel, data })
-      } catch {
-        addMessage({ timestamp: Date.now(), direction: 'in', channel, data: event.data })
+      // 监听消息（不修改原始行为）
+      ws.addEventListener('message', (event) => {
+        try {
+          const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+          addMessage({ timestamp: Date.now(), direction: 'in', channel, data })
+        } catch {
+          addMessage({ timestamp: Date.now(), direction: 'in', channel, data: event.data })
+        }
+      })
+
+      // 拦截 send 方法
+      const originalSend = ws.send.bind(ws)
+      ws.send = function (data: string | ArrayBufferLike | Blob | ArrayBufferView) {
+        try {
+          const parsed = typeof data === 'string' ? JSON.parse(data) : data
+          addMessage({ timestamp: Date.now(), direction: 'out', channel, data: parsed })
+        } catch {
+          addMessage({ timestamp: Date.now(), direction: 'out', channel, data })
+        }
+        return originalSend(data)
       }
-    })
 
-    // 拦截 send
-    const originalSend = ws.send
-    ws.send = function (data: string | ArrayBufferLike | Blob | ArrayBufferView) {
-      try {
-        const parsed = typeof data === 'string' ? JSON.parse(data) : data
-        addMessage({ timestamp: Date.now(), direction: 'out', channel, data: parsed })
-      } catch {
-        addMessage({ timestamp: Date.now(), direction: 'out', channel, data })
-      }
-      return originalSend.call(this, data)
-    }
+      return ws
+    },
+  }
 
-    return ws
-  } as any
-
-  // 复制 WebSocket 原型方法
-  window.WebSocket.prototype = originalWebSocket.prototype
-  window.WebSocket.CONNECTING = originalWebSocket.CONNECTING
-  window.WebSocket.OPEN = originalWebSocket.OPEN
-  window.WebSocket.CLOSING = originalWebSocket.CLOSING
-  window.WebSocket.CLOSED = originalWebSocket.CLOSED
+  // 使用 try-catch 处理可能的只读属性错误
+  try {
+    window.WebSocket = new Proxy(originalWebSocket, handler)
+  } catch (e) {
+    console.warn('[IPC Monitor] Failed to intercept WebSocket:', e)
+  }
 }
 
 // 拦截 fetch API
