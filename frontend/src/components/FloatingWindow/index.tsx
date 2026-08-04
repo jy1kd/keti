@@ -23,6 +23,14 @@ function FloatingWindow({ tabId }: FloatingWindowProps) {
   const focus = useFloatingWindowStore((s) => s.focus)
   const closeTab = useTabStore((s) => s.closeTab)
   const dragStartRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null)
+  const activeTeardownRef = useRef<(() => void) | null>(null)
+
+  // 卸载时清理任何活跃的拖拽/缩放 window 监听器
+  useEffect(() => {
+    return () => {
+      activeTeardownRef.current?.()
+    }
+  }, [])
 
   const handleChromePointerDown = useCallback(
     (e: React.PointerEvent) => {
@@ -38,9 +46,13 @@ function FloatingWindow({ tabId }: FloatingWindowProps) {
         move(tabId, { x: nx, y: ny })
       }
       const onUp = () => {
+        activeTeardownRef.current?.()
+      }
+      activeTeardownRef.current = () => {
         dragStartRef.current = null
         window.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)
+        activeTeardownRef.current = null
       }
       window.addEventListener('pointermove', onMove)
       window.addEventListener('pointerup', onUp)
@@ -50,6 +62,7 @@ function FloatingWindow({ tabId }: FloatingWindowProps) {
 
   const handleResizePointerDown = useCallback(
     (e: React.PointerEvent) => {
+      if (e.button !== 0) return
       e.stopPropagation()
       if (!rect) return
       focus(tabId)
@@ -58,13 +71,18 @@ function FloatingWindow({ tabId }: FloatingWindowProps) {
       const ow = rect.w
       const oh = rect.h
       const onMove = (ev: PointerEvent) => {
+        if (!activeTeardownRef.current) return
         const w = Math.max(320, ow + (ev.clientX - startX))
         const h = Math.max(200, oh + (ev.clientY - startY))
         resize(tabId, { w, h })
       }
       const onUp = () => {
+        activeTeardownRef.current?.()
+      }
+      activeTeardownRef.current = () => {
         window.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)
+        activeTeardownRef.current = null
       }
       window.addEventListener('pointermove', onMove)
       window.addEventListener('pointerup', onUp)
