@@ -601,12 +601,17 @@ frontend/src/components/TabContent/
 **提交文件**：
 ```
 frontend/src/pages/
-├── QueryPage.tsx            # 重构：独立查询页面
-└── QueryPage.test.tsx       # 更新测试
+├── QueryPage.tsx            # 新增：独立查询页面
+├── QueryPage.css            # 新增：页面样式
+└── __tests__/QueryPage.test.tsx   # 新增：测试
+frontend/src/App.tsx                  # 更新：托盘导航 openTab('query')
+frontend/src/components/TabContent/
+├── index.tsx                # 更新：集成 QueryPage
+└── index.test.tsx           # 更新：mock QueryPage
 ```
 
 **PR描述**：
-重构 QueryPage 为独立查询标签页。
+新建 QueryPage 为独立查询标签页。
 
 **实现方式**：
 1. 集成 QueryPanel 组件
@@ -614,10 +619,10 @@ frontend/src/pages/
 3. 状态栏显示 "📋 查询"
 
 **验收标准**：
-- [ ] 查询标签页正常显示
-- [ ] Tab 切换功能正常
-- [ ] 数据查询功能正常
-- [ ] 所有测试通过
+- [x] 查询标签页正常显示
+- [x] Tab 切换功能正常
+- [x] 数据查询功能正常
+- [x] 所有测试通过
 
 ---
 
