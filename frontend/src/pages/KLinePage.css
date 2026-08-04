@@ -25,6 +25,10 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  /* 必须是 flex 列容器，否则子元素 .kline-chart 的 flex:1 失效，
+     canvas 高度塌陷为 0 → echarts 无法初始化 → K线区域空白 */
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Electron 提示 ──────────────────────────────────────────── */

@@ -272,6 +272,9 @@ export function KLineChart({ instrument, klineData, period, onPeriodChange, name
   const prevDataLenRef = useRef(0)
   const [mainIndicator, setMainIndicator] = useState<MainIndicator>('ma')
   const [subIndicator, setSubIndicator] = useState<SubIndicator>('volume')
+  // 图表实例就绪信号：标签页 display:none 时挂载 → echarts.init 被推迟到容器可见，
+  // 此时若数据已就绪，需靠该 state 重新触发 setOption，否则 canvas 空白。
+  const [chartReady, setChartReady] = useState(false)
 
   useEffect(() => {
     if (!chartRef.current) return
@@ -279,16 +282,20 @@ export function KLineChart({ instrument, klineData, period, onPeriodChange, name
     let chart: echarts.ECharts | null = null
     let disposed = false
 
-    const tryInit = () => {
+    // deferred=true 表示由 ResizeObserver 在容器可见后才初始化（挂载时不可见的场景）。
+    // 只有这种"晚初始化"才需要 setChartReady 重放 setOption；
+    // 挂载时可见则数据 effect 会自然执行，避免多余的一次 setOption 重跑。
+    const tryInit = (deferred: boolean) => {
       if (disposed || chart || el.offsetWidth === 0 || el.offsetHeight === 0) return
       chart = echarts.init(el)
       instanceRef.current = chart
+      if (deferred) setChartReady(true)
     }
 
-    tryInit()
+    tryInit(false)
 
     const ro = new ResizeObserver(() => {
-      if (!chart) tryInit()
+      if (!chart) tryInit(true)
       else chart.resize()
     })
     ro.observe(el)
@@ -322,7 +329,7 @@ export function KLineChart({ instrument, klineData, period, onPeriodChange, name
 
       prevDataLenRef.current = klineData.length
     }
-  }, [klineData, period, mainIndicator, subIndicator])
+  }, [klineData, period, mainIndicator, subIndicator, chartReady])
 
   return (
     <div className="kline-chart" data-testid="kline-chart">
