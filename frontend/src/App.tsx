@@ -109,6 +109,24 @@ function App() {
           >
             {perfVisible ? <><PerfMonitor visible /> ⚡FPS</> : '⚡FPS'}
           </button>
+          <button
+            className="status-bar__btn"
+            onClick={() => openTab({ type: 'ipc-monitor', title: '🔌 IPC 监控' })}
+            title="IPC 监控"
+            style={{
+              marginLeft: 8,
+              background: 'transparent',
+              color: '#8b949e',
+              border: '1px solid #30363d',
+              borderRadius: 4,
+              padding: '2px 8px',
+              cursor: 'pointer',
+              fontSize: 11,
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
+            🔌IPC
+          </button>
         </div>
         <span className="app-title">SimNow 交易终端</span>
       </header>
