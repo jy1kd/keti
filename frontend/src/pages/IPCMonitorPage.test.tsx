@@ -14,7 +14,7 @@ describe('IPCMonitorPage', () => {
 
   it('renders page title', () => {
     render(<IPCMonitorPage />)
-    expect(screen.getByText('🔌 IPC 监控')).toBeInTheDocument()
+    expect(screen.getByText('📡 网络监控')).toBeInTheDocument()
   })
 
   it('renders filter buttons', () => {

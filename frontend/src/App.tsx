@@ -54,7 +54,7 @@ function App() {
           openTab({ type: 'settings', title: '⚙ 设置' })
           break
         case 'ipc-monitor':
-          openTab({ type: 'ipc-monitor', title: '🔌 IPC 监控' })
+          openTab({ type: 'ipc-monitor', title: '📡 网络监控' })
           break
       }
     })
@@ -123,8 +123,8 @@ function App() {
           </button>
           <button
             className="status-bar__btn"
-            onClick={() => openTab({ type: 'ipc-monitor', title: '🔌 IPC 监控' })}
-            title="IPC 监控"
+            onClick={() => openTab({ type: 'ipc-monitor', title: '📡 网络监控' })}
+            title="网络监控"
             style={{
               marginLeft: 8,
               background: 'transparent',

@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { isElectron } from '@/services/electron'
 import './IPCMonitorPage.css'
 
 interface MonitorMessage {
@@ -148,10 +147,10 @@ function initInterceptors() {
 initInterceptors()
 
 /**
- * IPCMonitorPage — IPC 监控标签页
+ * IPCMonitorPage — 网络监控标签页
  *
- * 用于调试 IPC 通信，支持消息过滤、暂停、清空、导出。
- * Electron 环境下显示 IPC 消息，Web 环境下显示 WebSocket 和 API 消息。
+ * 用于调试网络通信，支持消息过滤、暂停、清空、导出。
+ * 拦截 WebSocket 和 API 请求，显示通信数据。
  */
 export function IPCMonitorPage() {
   const [messages, setMessages] = useState<MonitorMessage[]>([])
@@ -161,50 +160,22 @@ export function IPCMonitorPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    let cleanup: (() => void) | undefined
+    // 统一使用 WebSocket + fetch 拦截器（Web 和 Electron 渲染进程行为一致）
+    initInterceptors()
 
-    if (isElectron() && window.electronAPI) {
-      console.log('[IPC Monitor] Electron environment detected, setting up listeners...')
+    // 加载已有消息
+    setMessages([...globalMessages])
 
-      // Electron 环境：监听主进程发送的 IPC 消息
-      const cleanupBatch = window.electronAPI.onIPCMonitorMessages?.((messages: any[]) => {
-        console.log('[IPC Monitor] Received batch messages:', messages.length)
-        setMessages(messages)
-      })
-
-      const cleanupRealtime = window.electronAPI.onIPCMonitorMessage?.((message: any) => {
-        console.log('[IPC Monitor] Received realtime message:', message)
-        if (!paused) {
-          setMessages((prev) => [...prev, message])
-        }
-      })
-
-      cleanup = () => {
-        cleanupBatch?.()
-        cleanupRealtime?.()
-      }
-    } else {
-      // Web 环境：使用 WebSocket 和 fetch 拦截器
-      initInterceptors()
-
-      // 加载已有消息
-      setMessages([...globalMessages])
-
-      // 监听新消息
-      const listener = (msg: MonitorMessage) => {
-        if (!paused) {
-          setMessages((prev) => [...prev, msg])
-        }
-      }
-      globalListeners.add(listener)
-
-      cleanup = () => {
-        globalListeners.delete(listener)
+    // 监听新消息
+    const listener = (msg: MonitorMessage) => {
+      if (!paused) {
+        setMessages((prev) => [...prev, msg])
       }
     }
+    globalListeners.add(listener)
 
     return () => {
-      cleanup?.()
+      globalListeners.delete(listener)
     }
   }, [paused])
 
@@ -243,7 +214,7 @@ export function IPCMonitorPage() {
   return (
     <div className="ipc-monitor-page">
       <div className="ipc-monitor-page__header">
-        <h2>🔌 IPC 监控</h2>
+        <h2>📡 网络监控</h2>
         <div className="ipc-monitor-page__controls">
           <div className="ipc-monitor-page__filters">
             {(Object.entries(FILTER_LABELS) as [FilterType, string][]).map(([key, label]) => (
@@ -276,7 +247,7 @@ export function IPCMonitorPage() {
         <div className="ipc-monitor-page__stats">
           共 {filteredMessages.length} 条消息
           <span className="ipc-monitor-page__mode">
-            {isElectron() ? '（Electron IPC）' : '（Web：WebSocket + API）'}
+            （WebSocket + API）
           </span>
         </div>
       </div>
@@ -285,9 +256,7 @@ export function IPCMonitorPage() {
         <div className="ipc-monitor-page__list">
           {filteredMessages.length === 0 ? (
             <div className="ipc-monitor-page__empty">
-              {isElectron()
-                ? '暂无 Electron IPC 消息，等待主进程通信...'
-                : '暂无消息，等待 WebSocket 连接或 API 请求...'}
+              暂无消息，等待 WebSocket 连接或 API 请求...
             </div>
           ) : (
             filteredMessages.map((msg) => (

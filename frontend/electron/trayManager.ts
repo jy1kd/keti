@@ -89,7 +89,7 @@ export class TrayManager {
         },
       },
       {
-        label: '🔌 IPC 监控',
+        label: '📡 网络监控',
         click: () => {
           if (this.mainWindow) {
             this.mainWindow.show();
