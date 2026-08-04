@@ -130,8 +130,11 @@ async function initializeApp() {
     (0, window_1.registerWindowManagementHandlers)(windowManager);
     (0, app_1.registerAppInfoHandlers)();
     (0, app_1.registerBackendManagementHandlers)(backendManager);
-    // Send IPC Monitor to main window
-    (0, ipcWrapper_1.sendIPCMonitorToWindow)(mainWindow);
+    // Send IPC Monitor to main window (after window is ready)
+    mainWindow.webContents.on('did-finish-load', () => {
+        console.log('[IPC Monitor] Window loaded, sending monitor data...');
+        (0, ipcWrapper_1.sendIPCMonitorToWindow)(mainWindow);
+    });
     // Cleanup on quit
     electron_1.app.on('will-quit', () => {
         shortcutManager.save();

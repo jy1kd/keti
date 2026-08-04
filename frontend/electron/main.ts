@@ -143,8 +143,11 @@ export async function initializeApp(): Promise<void> {
   registerAppInfoHandlers();
   registerBackendManagementHandlers(backendManager);
 
-  // Send IPC Monitor to main window
-  sendIPCMonitorToWindow(mainWindow);
+  // Send IPC Monitor to main window (after window is ready)
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('[IPC Monitor] Window loaded, sending monitor data...');
+    sendIPCMonitorToWindow(mainWindow);
+  });
 
   // Cleanup on quit
   app.on('will-quit', () => {
