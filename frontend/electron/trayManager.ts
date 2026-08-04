@@ -30,7 +30,7 @@ export class TrayManager {
     this.mainWindow = mainWindow;
 
     // Create tray icon
-    const iconPath = path.join(__dirname, '../assets/tray-icon.png');
+    const iconPath = path.join(__dirname, '../build/icon.png');
 
     // Check if icon file exists
     if (!fs.existsSync(iconPath)) {
