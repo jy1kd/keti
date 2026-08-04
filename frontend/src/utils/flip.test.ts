@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { computeFlipDeltas, flipToRect, getTabPanelRect, type FlipRect } from './flip'
+import { computeFlipDeltas, flipToRect, getRect, getTabPanelRect, type FlipRect } from './flip'
 
 const A: FlipRect = { left: 100, top: 50, width: 200, height: 150 }
 const B: FlipRect = { left: 300, top: 200, width: 400, height: 300 }
@@ -33,14 +33,24 @@ describe('utils/flip', () => {
     expect(onDone).toHaveBeenCalledTimes(1)
   })
 
+  it('getRect 正确映射 getBoundingClientRect 字段', () => {
+    const el = document.createElement('div')
+    const mock = { left: 10, top: 20, width: 100, height: 50, right: 110, bottom: 70, x: 10, y: 20, toJSON: () => ({}) }
+    vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(mock as DOMRect)
+    expect(getRect(el)).toEqual({ left: 10, top: 20, width: 100, height: 50 })
+  })
+
   it('getTabPanelRect 按 aria-labelledby 查询面板矩形', () => {
     const panel = document.createElement('div')
     panel.setAttribute('aria-labelledby', 'tab-order-IF2608')
     document.body.appendChild(panel)
-    const r = getTabPanelRect('tab-order-IF2608')
-    expect(r).not.toBeNull()
-    expect(r).toHaveProperty('left')
-    document.body.removeChild(panel)
+    try {
+      const r = getTabPanelRect('tab-order-IF2608')
+      expect(r).not.toBeNull()
+      expect(r).toHaveProperty('left')
+    } finally {
+      document.body.removeChild(panel)
+    }
   })
 
   it('getTabPanelRect 找不到时返回 null', () => {
