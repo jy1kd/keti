@@ -100,42 +100,32 @@ export class IPCMonitor {
   private setupInterceptors(): void {
     // Intercept all ipcMain.handle calls
     const originalHandle = ipcMain.handle.bind(ipcMain)
+    const monitor = this
+
     ipcMain.handle = (channel: string, handler: (event: any, ...args: any[]) => any) => {
       // Wrap the handler to capture incoming messages
       const wrappedHandler = (event: any, ...args: any[]) => {
-        if (this.enabled) {
-          this.notifyListeners({
+        if (monitor.enabled) {
+          monitor.notifyListeners({
             timestamp: Date.now(),
             direction: 'in',
             channel,
             data: args.length === 1 ? args[0] : args,
-            windowId: this.getWindowId(event.sender),
+            windowId: monitor.getWindowId(event.sender),
           })
         }
         return handler(event, ...args)
       }
 
       // Store original handler for restoration
-      this.originalHandlers.set(channel, handler)
+      monitor.originalHandlers.set(channel, handler)
 
       return originalHandle(channel, wrappedHandler)
     }
 
-    // Intercept webContents.send to capture outgoing messages
-    const originalSend = BrowserWindow.prototype.webContents.send
-    const monitor = this // Capture reference to IPCMonitor instance
-    BrowserWindow.prototype.webContents.send = function (this: any, channel: string, ...args: any[]) {
-      if (monitor.enabled) {
-        monitor.notifyListeners({
-          timestamp: Date.now(),
-          direction: 'out',
-          channel,
-          data: args.length === 1 ? args[0] : args,
-          windowId: 'main',
-        })
-      }
-      return originalSend.call(this, channel, ...args)
-    }
+    // Note: We don't intercept webContents.send to avoid "Object has been destroyed" errors
+    // The ipcMain.handle interceptor captures incoming messages from renderer
+    // Outgoing messages (main → renderer) can be monitored by wrapping specific send calls
   }
 
   /**

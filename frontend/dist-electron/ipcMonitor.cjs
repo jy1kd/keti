@@ -87,39 +87,28 @@ class IPCMonitor {
     setupInterceptors() {
         // Intercept all ipcMain.handle calls
         const originalHandle = electron_1.ipcMain.handle.bind(electron_1.ipcMain);
+        const monitor = this;
         electron_1.ipcMain.handle = (channel, handler) => {
             // Wrap the handler to capture incoming messages
             const wrappedHandler = (event, ...args) => {
-                if (this.enabled) {
-                    this.notifyListeners({
+                if (monitor.enabled) {
+                    monitor.notifyListeners({
                         timestamp: Date.now(),
                         direction: 'in',
                         channel,
                         data: args.length === 1 ? args[0] : args,
-                        windowId: this.getWindowId(event.sender),
+                        windowId: monitor.getWindowId(event.sender),
                     });
                 }
                 return handler(event, ...args);
             };
             // Store original handler for restoration
-            this.originalHandlers.set(channel, handler);
+            monitor.originalHandlers.set(channel, handler);
             return originalHandle(channel, wrappedHandler);
         };
-        // Intercept webContents.send to capture outgoing messages
-        const originalSend = electron_1.BrowserWindow.prototype.webContents.send;
-        const monitor = this; // Capture reference to IPCMonitor instance
-        electron_1.BrowserWindow.prototype.webContents.send = function (channel, ...args) {
-            if (monitor.enabled) {
-                monitor.notifyListeners({
-                    timestamp: Date.now(),
-                    direction: 'out',
-                    channel,
-                    data: args.length === 1 ? args[0] : args,
-                    windowId: 'main',
-                });
-            }
-            return originalSend.call(this, channel, ...args);
-        };
+        // Note: We don't intercept webContents.send to avoid "Object has been destroyed" errors
+        // The ipcMain.handle interceptor captures incoming messages from renderer
+        // Outgoing messages (main → renderer) can be monitored by wrapping specific send calls
     }
     /**
      * Restore original IPC handlers
