@@ -1,6 +1,7 @@
-import { useCallback, type KeyboardEvent } from 'react'
+import { useCallback, useState, useRef, useEffect, type KeyboardEvent } from 'react'
 import { useTabStore } from '@/stores/tabs'
 import { useQueryPopupStore } from '@/modules/query/popupStore'
+import { isElectron } from '@/services/electron'
 import './styles.css'
 
 interface TabBarProps {
@@ -13,11 +14,20 @@ const QUICK_TABS = [
   { type: 'favorites' as const, icon: '⭐', title: '⭐ 自选' },
 ]
 
+interface ContextMenuState {
+  tabId: string
+  tabType: string
+  tabTitle: string
+  x: number
+  y: number
+}
+
 /**
  * 标签栏组件
  *
  * 显示所有打开的标签页，支持切换、关闭、新增。
  * 键盘导航：左/右箭头切换标签，Home/End 跳转首尾。
+ * 右键菜单：在新窗口打开（仅 Electron 环境）
  */
 export function TabBar({ onAddTab }: TabBarProps) {
   const tabs = useTabStore((s) => s.tabs)
@@ -25,6 +35,26 @@ export function TabBar({ onAddTab }: TabBarProps) {
   const setActiveTab = useTabStore((s) => s.setActiveTab)
   const closeTab = useTabStore((s) => s.closeTab)
   const openTab = useTabStore((s) => s.openTab)
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+  const contextMenuRef = useRef<HTMLDivElement>(null)
+
+  // 点击空白处关闭右键菜单
+  useEffect(() => {
+    if (!contextMenu) return
+    const close = () => setContextMenu(null)
+    window.addEventListener('click', close)
+    return () => window.removeEventListener('click', close)
+  }, [contextMenu])
+
+  // 按 Escape 关闭右键菜单
+  useEffect(() => {
+    if (!contextMenu) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setContextMenu(null)
+    }
+    window.addEventListener('keydown', handleKeyDown as any)
+    return () => window.removeEventListener('keydown', handleKeyDown as any)
+  }, [contextMenu])
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -56,6 +86,39 @@ export function TabBar({ onAddTab }: TabBarProps) {
     [tabs, activeTabId, setActiveTab],
   )
 
+  // 右键菜单处理
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent, tab: { id: string; type: string; title: string }) => {
+      e.preventDefault()
+      setContextMenu({
+        tabId: tab.id,
+        tabType: tab.type,
+        tabTitle: tab.title,
+        x: e.clientX,
+        y: e.clientY,
+      })
+    },
+    [],
+  )
+
+  // 在新窗口打开标签
+  const handleOpenInNewWindow = useCallback(async () => {
+    if (!contextMenu) return
+    const { tabType, tabId, tabTitle } = contextMenu
+
+    if (isElectron()) {
+      // Electron 环境：调用 IPC 打开新窗口
+      const { openTabWindow } = await import('@/services/electron')
+      await openTabWindow(tabType, tabId, tabTitle)
+    } else {
+      // Web 环境：在新标签页打开
+      const url = `${window.location.origin}${window.location.pathname}#/tab/${tabType}/${tabId}`
+      window.open(url, '_blank')
+    }
+
+    setContextMenu(null)
+  }, [contextMenu])
+
   return (
     <div
       className="tab-bar"
@@ -71,6 +134,7 @@ export function TabBar({ onAddTab }: TabBarProps) {
           aria-selected={tab.id === activeTabId}
           className={`tab-bar__tab${tab.id === activeTabId ? ' tab-bar__tab--active' : ''}`}
           onClick={() => setActiveTab(tab.id)}
+          onContextMenu={(e) => handleContextMenu(e, tab)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
@@ -137,6 +201,24 @@ export function TabBar({ onAddTab }: TabBarProps) {
       >
         +
       </button>
+
+      {/* 右键菜单 */}
+      {contextMenu && (
+        <div
+          ref={contextMenuRef}
+          className="tab-bar__context-menu"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="tab-bar__context-item"
+            onClick={handleOpenInNewWindow}
+          >
+            🪟 在新窗口打开
+          </button>
+        </div>
+      )}
     </div>
   )
 }
