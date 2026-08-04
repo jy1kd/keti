@@ -586,12 +586,12 @@ frontend/src/components/TabContent/
 
 ---
 
-#### PR-R15: 查询标签页
+#### PR-R15: 查询弹窗（重构）
 
 | 项目 | 内容 |
 |------|------|
 | **PR编号** | PR-R15 |
-| **PR标题** | 查询标签页：独立查询页面 |
+| **PR标题** | 查询弹窗：悬浮查询面板（替代查询标签页） |
 | **PR分支名** | `feature/redesign-r15-query-page` |
 | **负责角色** | 角色B |
 | **依赖PR** | PR-R11 |
@@ -600,31 +600,47 @@ frontend/src/components/TabContent/
 
 **提交文件**：
 ```
-frontend/src/pages/
-├── QueryPage.tsx            # 新增：独立查询页面
-├── QueryPage.css            # 新增：页面样式
-└── __tests__/QueryPage.test.tsx   # 新增：测试
-frontend/src/App.tsx                  # 更新：托盘导航 openTab('query')
+frontend/src/modules/query/
+├── QueryPopup.tsx           # 新增：悬浮查询弹窗（非模态/可拖拽/×/ESC 关闭）
+├── QueryPopup.css           # 新增：弹窗样式
+├── QueryPopup.test.tsx      # 新增：测试
+├── popupStore.ts            # 新增：弹窗开关 + open 传入合约同步选中
+└── popupStore.test.ts       # 新增：测试
+frontend/src/stores/
+├── tabs.ts                  # 更新：移除 query 标签类型
+└── tabs.test.ts             # 更新：替换 query 用例
 frontend/src/components/TabContent/
-├── index.tsx                # 更新：集成 QueryPage
-└── index.test.tsx           # 更新：mock QueryPage
+├── index.tsx                # 更新：移除 query case
+└── index.test.tsx           # 更新：移除 query mock/用例
 frontend/src/components/TabBar/
-├── index.tsx                # 更新：添加 📋 查询快捷按钮
+├── index.tsx                # 更新：📋 按钮改为打开查询弹窗
 └── index.test.tsx           # 更新：快捷按钮测试
+frontend/src/hooks/
+└── useContractContextMenu.ts # 更新：添加 openQueryPopup
+frontend/src/modules/market/
+└── MarketPanel.tsx          # 更新：右键菜单添加「📋 查询」
+frontend/src/pages/
+└── FavoritesPage.tsx        # 更新：右键菜单添加「📋 查询」
+frontend/src/App.tsx         # 更新：渲染 QueryPopup；托盘导航打开弹窗
+frontend/src/pages/QueryPage.tsx / QueryPage.css / __tests__/QueryPage.test.tsx  # 删除：查询标签页形态废弃
 ```
 
 **PR描述**：
-新建 QueryPage 为独立查询标签页。
+将查询面板重构为悬浮弹窗（QueryPopup），移除查询标签页形态（查询面板过大）。右键合约菜单添加「📋 查询」入口，打开弹窗并选中该合约。
 
 **实现方式**：
-1. 集成 QueryPanel 组件
-2. 保留原有的 Tab 切换（报单/成交/持仓/资金/止损单/合约/K线）
-3. 状态栏显示 "📋 查询"
+1. 创建 QueryPopup 悬浮弹窗（参照 OrderPopup：非模态、可拖拽、×/ESC 关闭）
+2. 创建 popupStore 管理弹窗开关；open 可传入合约并同步全局选中（合约/K线子页显示该合约）
+3. 移除 query 标签类型（tabs.ts/TabContent/TabBar），查询不再作为标签页
+4. TabBar 📋 按钮 → 打开查询弹窗
+5. 右键合约菜单添加「📋 查询」→ 打开弹窗并选中该合约
+6. Electron 托盘导航 query → 打开弹窗
 
 **验收标准**：
-- [x] 查询标签页正常显示
-- [x] Tab 切换功能正常
+- [x] 查询弹窗正常显示（浮于标签页之上，行情可见可交互）
+- [x] QueryPanel 内部 Tab 切换功能正常（报单/成交/持仓/资金/止损单/合约/K线）
 - [x] 数据查询功能正常
+- [x] 右键合约菜单「📋 查询」打开弹窗并选中该合约
 - [x] 所有测试通过
 
 ---

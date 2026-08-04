@@ -65,3 +65,24 @@
 
 **验证**: TabBar 29 个测试通过；全量 745 tests 通过；`tsc --noEmit` 无错误。
 **Commit**: `7c98ccb`
+
+---
+
+### 二次审查期间新增 2（用户决策）：查询面板重构为悬浮弹窗
+
+**背景**: 用户反馈「查询面板太大」，希望做成类似报单的悬浮弹窗（OrderPopup 形态），并在右键合约菜单增加查询入口。
+
+**方案选择（AskUserQuestion）**:
+- 查询形态：**替换**——只留弹窗，移除查询标签页（TabContent query case 移除）
+- 右键入口：**打开查询弹窗**——右键合约 →「📋 查询」→ 打开弹窗并选中该合约
+
+**实现**:
+- 新增 `modules/query/QueryPopup.tsx` + `QueryPopup.css` + `popupStore.ts`（参照 OrderPopup：非模态、可拖拽、×/ESC 关闭）
+- `popupStore.open(instrumentID?)` 传入合约时同步全局选中，使查询面板合约/K线子页显示该合约
+- 移除 `query` 标签类型（tabs.ts/TabContent/TabBar），查询不再作为标签页
+- TabBar 📋 按钮改为打开查询弹窗；Electron 托盘导航 query 改为打开弹窗
+- 右键合约菜单（MarketPanel/FavoritesPage）添加「📋 查询」项
+- 删除 QueryPage.tsx/css/test（标签页形态废弃）
+
+**验证**: 全量 73 files / 748 tests 通过；`tsc --noEmit` 无错误。
+**Commit**: `7ed1d2e`
