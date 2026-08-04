@@ -89,7 +89,7 @@ export class WindowManager {
       minHeight: config.minHeight,
       title: config.title,
       webPreferences: {
-        preload: path.join(__dirname, 'preload.js'),
+        preload: path.join(__dirname, 'preload.cjs'),
         contextIsolation: true,
         nodeIntegration: false,
       },
@@ -145,7 +145,7 @@ export class WindowManager {
       parent,
       modal: false,
       webPreferences: {
-        preload: path.join(__dirname, 'preload.js'),
+        preload: path.join(__dirname, 'preload.cjs'),
         contextIsolation: true,
         nodeIntegration: false,
       },
@@ -199,7 +199,7 @@ export class WindowManager {
       minHeight: config.minHeight,
       title: `${config.title} - ${instrumentID}`,
       webPreferences: {
-        preload: path.join(__dirname, 'preload.js'),
+        preload: path.join(__dirname, 'preload.cjs'),
         contextIsolation: true,
         nodeIntegration: false,
       },
