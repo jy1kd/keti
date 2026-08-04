@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTabStore } from '@/stores/tabs'
 import { useOrderPopupStore } from '@/modules/order/popupStore'
+import { useQueryPopupStore } from '@/modules/query/popupStore'
 
 interface ContextMenuState {
   instrumentID: string
@@ -33,6 +34,11 @@ export function useContractContextMenu() {
   // 打开悬浮报单弹窗
   const openOrderPopup = useCallback((instrumentID: string) => {
     useOrderPopupStore.getState().openPopup(instrumentID)
+  }, [])
+
+  // 打开悬浮查询弹窗（传入合约并选中，使合约/K线子页显示该合约）
+  const openQueryPopup = useCallback((instrumentID: string) => {
+    useQueryPopupStore.getState().open(instrumentID)
   }, [])
 
   // 打开单个报单标签页
@@ -105,6 +111,7 @@ export function useContractContextMenu() {
     contextMenu,
     multiSelectMenu,
     openOrderPopup,
+    openQueryPopup,
     openOrderTab,
     openKlineTab,
     openOrderTabs,

@@ -3,6 +3,15 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { TabBar } from './index'
 import { useTabStore } from '@/stores/tabs'
 
+const { mockQueryOpen } = vi.hoisted(() => ({ mockQueryOpen: vi.fn() }))
+
+// Mock 查询弹窗 store（TabBar 📋 按钮打开悬浮弹窗而非标签页）
+vi.mock('@/modules/query/popupStore', () => ({
+  useQueryPopupStore: {
+    getState: () => ({ open: mockQueryOpen, close: vi.fn() }),
+  },
+}))
+
 const defaultState = {
   tabs: [
     { id: 'tab-market', type: 'market' as const, title: '📊 行情', props: {}, closable: false },
@@ -37,14 +46,14 @@ describe('TabBar', () => {
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
           { id: 'tab-order-au2406', type: 'order', title: '📝 报单-au2406', props: { instrumentID: 'au2406' }, closable: true },
-          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
         activeTabId: 'tab-market',
       })
       render(<TabBar />)
       expect(screen.getByText('📊 行情')).toBeInTheDocument()
       expect(screen.getByText('📝 报单-au2406')).toBeInTheDocument()
-      expect(screen.getByText('📋 查询')).toBeInTheDocument()
+      expect(screen.getByText('⚙ 设置')).toBeInTheDocument()
     })
   })
 
@@ -56,26 +65,26 @@ describe('TabBar', () => {
       useTabStore.setState({
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
         activeTabId: 'tab-market',
         setActiveTab,
       })
       render(<TabBar />)
-      fireEvent.click(screen.getByText('📋 查询'))
-      expect(setActiveTab).toHaveBeenCalledWith('tab-query')
+      fireEvent.click(screen.getByText('⚙ 设置'))
+      expect(setActiveTab).toHaveBeenCalledWith('tab-settings')
     })
 
     it('活跃标签应有 active 样式', () => {
       useTabStore.setState({
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
-        activeTabId: 'tab-query',
+        activeTabId: 'tab-settings',
       })
       render(<TabBar />)
-      const queryTab = screen.getByText('📋 查询').closest('[role="tab"]')
+      const queryTab = screen.getByText('⚙ 设置').closest('[role="tab"]')
       expect(queryTab).toHaveAttribute('aria-selected', 'true')
     })
 
@@ -83,12 +92,12 @@ describe('TabBar', () => {
       useTabStore.setState({
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
         activeTabId: 'tab-market',
       })
       render(<TabBar />)
-      const queryTab = screen.getByText('📋 查询').closest('[role="tab"]')
+      const queryTab = screen.getByText('⚙ 设置').closest('[role="tab"]')
       expect(queryTab).toHaveAttribute('aria-selected', 'false')
     })
   })
@@ -100,14 +109,14 @@ describe('TabBar', () => {
       useTabStore.setState({
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
         activeTabId: 'tab-market',
       })
       render(<TabBar />)
       const marketTab = screen.getByText('📊 行情').closest('[role="tab"]')
       expect(marketTab?.querySelector('[aria-label="关闭标签"]')).toBeNull()
-      const queryTab = screen.getByText('📋 查询').closest('[role="tab"]')
+      const queryTab = screen.getByText('⚙ 设置').closest('[role="tab"]')
       expect(queryTab?.querySelector('[aria-label="关闭标签"]')).toBeInTheDocument()
     })
 
@@ -115,12 +124,12 @@ describe('TabBar', () => {
       useTabStore.setState({
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
         activeTabId: 'tab-market',
       })
       render(<TabBar />)
-      const closeButton = screen.getByText('📋 查询').closest('[role="tab"]')?.querySelector('[aria-label="关闭标签"]')
+      const closeButton = screen.getByText('⚙ 设置').closest('[role="tab"]')?.querySelector('[aria-label="关闭标签"]')
       expect(closeButton?.tagName).toBe('BUTTON')
       expect(closeButton).toHaveAttribute('type', 'button')
     })
@@ -130,15 +139,15 @@ describe('TabBar', () => {
       useTabStore.setState({
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
         activeTabId: 'tab-market',
         closeTab,
       })
       render(<TabBar />)
-      const closeButton = screen.getByText('📋 查询').closest('[role="tab"]')?.querySelector('[aria-label="关闭标签"]')
+      const closeButton = screen.getByText('⚙ 设置').closest('[role="tab"]')?.querySelector('[aria-label="关闭标签"]')
       fireEvent.click(closeButton!)
-      expect(closeTab).toHaveBeenCalledWith('tab-query')
+      expect(closeTab).toHaveBeenCalledWith('tab-settings')
     })
 
     it('关闭按钮不应冒泡触发标签切换', () => {
@@ -147,16 +156,16 @@ describe('TabBar', () => {
       useTabStore.setState({
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
         activeTabId: 'tab-market',
         setActiveTab,
         closeTab,
       })
       render(<TabBar />)
-      const closeButton = screen.getByText('📋 查询').closest('[role="tab"]')?.querySelector('[aria-label="关闭标签"]')
+      const closeButton = screen.getByText('⚙ 设置').closest('[role="tab"]')?.querySelector('[aria-label="关闭标签"]')
       fireEvent.click(closeButton!)
-      expect(closeTab).toHaveBeenCalledWith('tab-query')
+      expect(closeTab).toHaveBeenCalledWith('tab-settings')
       expect(setActiveTab).not.toHaveBeenCalled()
     })
   })
@@ -185,14 +194,14 @@ describe('TabBar', () => {
       useTabStore.setState({
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
         activeTabId: 'tab-market',
         setActiveTab,
       })
       render(<TabBar />)
       fireEvent.keyDown(screen.getByRole('tablist'), { key: 'ArrowRight' })
-      expect(setActiveTab).toHaveBeenCalledWith('tab-query')
+      expect(setActiveTab).toHaveBeenCalledWith('tab-settings')
     })
 
     it('左箭头应切换到上一个标签', () => {
@@ -200,9 +209,9 @@ describe('TabBar', () => {
       useTabStore.setState({
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
-        activeTabId: 'tab-query',
+        activeTabId: 'tab-settings',
         setActiveTab,
       })
       render(<TabBar />)
@@ -215,9 +224,9 @@ describe('TabBar', () => {
       useTabStore.setState({
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
-        activeTabId: 'tab-query',
+        activeTabId: 'tab-settings',
         setActiveTab,
       })
       render(<TabBar />)
@@ -230,7 +239,7 @@ describe('TabBar', () => {
       useTabStore.setState({
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
           { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
         activeTabId: 'tab-settings',
@@ -246,7 +255,7 @@ describe('TabBar', () => {
       useTabStore.setState({
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
           { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
         activeTabId: 'tab-market',
@@ -262,7 +271,7 @@ describe('TabBar', () => {
       useTabStore.setState({
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
         activeTabId: 'tab-market',
         setActiveTab,
@@ -313,31 +322,10 @@ describe('TabBar', () => {
       expect(screen.getByLabelText('📋 查询')).toBeInTheDocument()
     })
 
-    it('点击 📋 按钮应打开查询标签页', () => {
-      const openTab = vi.fn().mockReturnValue(true)
-      useTabStore.setState({ openTab })
+    it('点击 📋 按钮应打开查询弹窗', () => {
       render(<TabBar />)
       fireEvent.click(screen.getByLabelText('📋 查询'))
-      expect(openTab).toHaveBeenCalledWith({
-        type: 'query',
-        title: '📋 查询',
-        closable: true,
-      })
-    })
-
-    it('查询标签已打开时，点击 📋 应激活该标签', () => {
-      const setActiveTab = vi.fn()
-      useTabStore.setState({
-        tabs: [
-          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
-        ],
-        activeTabId: 'tab-market',
-        setActiveTab,
-      })
-      render(<TabBar />)
-      fireEvent.click(screen.getByLabelText('📋 查询'))
-      expect(setActiveTab).toHaveBeenCalledWith('tab-query')
+      expect(mockQueryOpen).toHaveBeenCalled()
     })
   })
 

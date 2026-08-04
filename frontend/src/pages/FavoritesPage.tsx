@@ -20,7 +20,7 @@ export function FavoritesPage() {
   const snapshots = useMarketStore((s) => s.snapshots)
   const selectedInstrument = useMarketStore((s) => s.selectedInstrument)
   const setSelectedInstrument = useMarketStore((s) => s.setSelectedInstrument)
-  const { contextMenu, openOrderPopup, openKlineTab, handleContextMenu } = useContractContextMenu()
+  const { contextMenu, openOrderPopup, openQueryPopup, openKlineTab, handleContextMenu } = useContractContextMenu()
 
   const favoritedIds = useMemo(
     () => new Set(favorites.map((c) => c.instrumentID)),
@@ -102,6 +102,12 @@ export function FavoritesPage() {
             onClick={() => openKlineTab(contextMenu.instrumentID)}
           >
             打开K线
+          </button>
+          <button
+            className="context-menu__item"
+            onClick={() => openQueryPopup(contextMenu.instrumentID)}
+          >
+            📋 查询
           </button>
         </div>
       )}

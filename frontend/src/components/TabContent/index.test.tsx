@@ -18,11 +18,6 @@ vi.mock('@/pages/OrderPage', () => ({
   ),
 }))
 
-// Mock QueryPage 组件（避免依赖 QueryPanel 及其子组件）
-vi.mock('@/pages/QueryPage', () => ({
-  QueryPage: () => <div data-testid="query-page">查询页面 Mock</div>,
-}))
-
 // --- 辅助函数 ---
 
 function makeTab(overrides: Partial<Tab> & { type: TabType }): Tab {
@@ -37,7 +32,7 @@ function makeTab(overrides: Partial<Tab> & { type: TabType }): Tab {
 
 const MARKET_TAB = makeTab({ type: 'market', title: '📊 行情', closable: false })
 const ORDER_TAB = makeTab({ type: 'order', title: '📝 报单', props: { instrumentID: 'IF2608' } })
-const QUERY_TAB = makeTab({ type: 'query', title: '📋 查询' })
+const SETTINGS_TAB = makeTab({ type: 'settings', title: '⚙ 设置' })
 
 /** 获取所有面板（包括隐藏的） */
 function getAllPanels() {
@@ -74,7 +69,7 @@ describe('TabContent', () => {
 
     it('应为每个标签渲染面板', () => {
       useTabStore.setState({
-        tabs: [MARKET_TAB, ORDER_TAB, QUERY_TAB],
+        tabs: [MARKET_TAB, ORDER_TAB, SETTINGS_TAB],
         activeTabId: MARKET_TAB.id,
       })
       render(<TabContent />)
@@ -87,7 +82,7 @@ describe('TabContent', () => {
   describe('活跃标签可见性', () => {
     it('活跃标签面板应可见', () => {
       useTabStore.setState({
-        tabs: [MARKET_TAB, QUERY_TAB],
+        tabs: [MARKET_TAB, SETTINGS_TAB],
         activeTabId: MARKET_TAB.id,
       })
       render(<TabContent />)
@@ -98,7 +93,7 @@ describe('TabContent', () => {
 
     it('非活跃标签面板应隐藏（display:none）', () => {
       useTabStore.setState({
-        tabs: [MARKET_TAB, QUERY_TAB],
+        tabs: [MARKET_TAB, SETTINGS_TAB],
         activeTabId: MARKET_TAB.id,
       })
       render(<TabContent />)
@@ -109,12 +104,12 @@ describe('TabContent', () => {
 
     it('切换标签后，新活跃标签应可见', () => {
       useTabStore.setState({
-        tabs: [MARKET_TAB, QUERY_TAB],
+        tabs: [MARKET_TAB, SETTINGS_TAB],
         activeTabId: MARKET_TAB.id,
       })
       const { rerender } = render(<TabContent />)
       // 切换到查询标签
-      useTabStore.getState().setActiveTab(QUERY_TAB.id)
+      useTabStore.getState().setActiveTab(SETTINGS_TAB.id)
       rerender(<TabContent />)
       const panels = getAllPanels()
       expect(panels[0]).toHaveAttribute('aria-hidden', 'true')
@@ -130,7 +125,6 @@ describe('TabContent', () => {
     it.each<[TabType, string]>([
       ['market', '行情面板'],
       ['order', '报单页面'],
-      ['query', '查询页面'],
       ['kline', 'K线标签页'],
       ['favorites', '⭐ 自选合约'],
       ['settings', '⚙ 设置'],
@@ -152,12 +146,12 @@ describe('TabContent', () => {
   describe('状态保持', () => {
     it('切换标签后切回，面板应保持', () => {
       useTabStore.setState({
-        tabs: [MARKET_TAB, QUERY_TAB],
+        tabs: [MARKET_TAB, SETTINGS_TAB],
         activeTabId: MARKET_TAB.id,
       })
       const { rerender } = render(<TabContent />)
       // 切换到查询再切回行情
-      useTabStore.getState().setActiveTab(QUERY_TAB.id)
+      useTabStore.getState().setActiveTab(SETTINGS_TAB.id)
       rerender(<TabContent />)
       useTabStore.getState().setActiveTab(MARKET_TAB.id)
       rerender(<TabContent />)
@@ -174,7 +168,7 @@ describe('TabContent', () => {
   describe('无障碍', () => {
     it('活跃面板应有 aria-hidden=false', () => {
       useTabStore.setState({
-        tabs: [MARKET_TAB, QUERY_TAB],
+        tabs: [MARKET_TAB, SETTINGS_TAB],
         activeTabId: MARKET_TAB.id,
       })
       render(<TabContent />)
@@ -184,7 +178,7 @@ describe('TabContent', () => {
 
     it('非活跃面板应有 aria-hidden=true', () => {
       useTabStore.setState({
-        tabs: [MARKET_TAB, QUERY_TAB],
+        tabs: [MARKET_TAB, SETTINGS_TAB],
         activeTabId: MARKET_TAB.id,
       })
       render(<TabContent />)

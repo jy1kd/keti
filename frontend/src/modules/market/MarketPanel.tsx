@@ -28,7 +28,7 @@ export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, favorites, addToFavorites, removeFromFavorites, loadAllInstruments, loadFavoriteContracts } = useContractsStore()
-  const { contextMenu, multiSelectMenu, openOrderPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
+  const { contextMenu, multiSelectMenu, openOrderPopup, openQueryPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
   const [viewMode, setViewMode] = useState<'market' | 'options'>('market')
@@ -283,6 +283,7 @@ export function MarketPanel() {
           items={[
             { label: '打开报单', icon: '📝', onClick: () => openOrderPopup(contextMenu.instrumentID) },
             { label: '打开K线', icon: '📈', onClick: () => openKlineTab(contextMenu.instrumentID) },
+            { label: '查询', icon: '📋', onClick: () => openQueryPopup(contextMenu.instrumentID) },
             {
               label: favoritedIds.has(contextMenu.instrumentID) ? '取消收藏' : '收藏',
               icon: favoritedIds.has(contextMenu.instrumentID) ? '★' : '⭐',

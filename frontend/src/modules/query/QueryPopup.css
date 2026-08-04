@@ -1,0 +1,67 @@
+/* ── QueryPopup 悬浮查询弹窗 ──────────────────────────────── */
+
+.query-popup {
+  position: fixed;
+  z-index: 1500;
+  width: 880px;
+  max-width: calc(100vw - 24px);
+  height: 620px;
+  max-height: calc(100vh - 24px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+/* ── 标题栏（可拖拽） ── */
+
+.query-popup__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px;
+  height: 32px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-color);
+  cursor: move;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.query-popup__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.query-popup__close {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.query-popup__close:hover {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* ── 主体：查询面板填满，内部滚动 ── */
+
+.query-popup__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
