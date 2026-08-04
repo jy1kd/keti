@@ -78,32 +78,12 @@ export class TrayManager {
         },
       },
       {
-        label: '📝 报单',
-        click: () => {
-          if (this.mainWindow) {
-            this.mainWindow.show();
-            this.mainWindow.focus();
-            this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'order');
-          }
-        },
-      },
-      {
         label: '📋 查询',
         click: () => {
           if (this.mainWindow) {
             this.mainWindow.show();
             this.mainWindow.focus();
             this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'query');
-          }
-        },
-      },
-      {
-        label: '📈 K线',
-        click: () => {
-          if (this.mainWindow) {
-            this.mainWindow.show();
-            this.mainWindow.focus();
-            this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'kline');
           }
         },
       },
