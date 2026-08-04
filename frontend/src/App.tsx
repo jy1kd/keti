@@ -36,7 +36,7 @@ function App() {
           // 报单面板是独立面板，不需要切换 Tab
           break
         case 'query':
-          // TODO: PR-R15 查询标签页
+          openTab({ type: 'query', title: '📋 查询' })
           break
         case 'settings':
           openTab({ type: 'settings', title: '⚙ 设置' })

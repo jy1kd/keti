@@ -2,6 +2,7 @@ import { useTabStore, type Tab } from '@/stores/tabs'
 import { MarketPanel } from '@/modules/market/MarketPanel'
 import { FavoritesPage } from '@/pages/FavoritesPage'
 import { OrderPage } from '@/pages/OrderPage'
+import { QueryPage } from '@/pages/QueryPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import './styles.css'
 
@@ -18,6 +19,7 @@ function getInstrumentID(props: Record<string, unknown>): string | undefined {
  *
  * market 类型已集成 MarketPanel；
  * order 类型已集成 OrderPage；
+ * query 类型已集成 QueryPage；
  * 其他类型使用占位文本，后续 PR 会逐步替换为实际页面组件。
  */
 function renderTabContent(tab: Tab): React.ReactNode {
@@ -27,8 +29,7 @@ function renderTabContent(tab: Tab): React.ReactNode {
     case 'order':
       return <OrderPage instrumentID={getInstrumentID(tab.props)} />
     case 'query':
-      // TODO: PR-R15 查询标签页
-      return <div className="tab-placeholder">📋 查询标签页（PR-R15）</div>
+      return <QueryPage />
     case 'kline':
       // TODO: PR-R16 K线标签页
       return <div className="tab-placeholder">📈 K线标签页（PR-R16）</div>

@@ -18,6 +18,11 @@ vi.mock('@/pages/OrderPage', () => ({
   ),
 }))
 
+// Mock QueryPage 组件（避免依赖 QueryPanel 及其子组件）
+vi.mock('@/pages/QueryPage', () => ({
+  QueryPage: () => <div data-testid="query-page">查询页面 Mock</div>,
+}))
+
 // --- 辅助函数 ---
 
 function makeTab(overrides: Partial<Tab> & { type: TabType }): Tab {
@@ -125,7 +130,7 @@ describe('TabContent', () => {
     it.each<[TabType, string]>([
       ['market', '行情面板'],
       ['order', '报单页面'],
-      ['query', '查询标签页'],
+      ['query', '查询页面'],
       ['kline', 'K线标签页'],
       ['favorites', '⭐ 自选合约'],
       ['settings', '⚙ 设置'],
