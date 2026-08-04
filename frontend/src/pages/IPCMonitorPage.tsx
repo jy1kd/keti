@@ -135,7 +135,7 @@ function setupFetchInterceptor() {
   }
 }
 
-// 初始化拦截器
+// 初始化拦截器（立即执行，确保在 WebSocket 连接之前）
 let interceptorInitialized = false
 function initInterceptors() {
   if (interceptorInitialized) return
@@ -143,6 +143,9 @@ function initInterceptors() {
   setupWebSocketInterceptor()
   setupFetchInterceptor()
 }
+
+// 立即初始化拦截器（模块加载时执行）
+initInterceptors()
 
 /**
  * IPCMonitorPage — IPC 监控标签页
