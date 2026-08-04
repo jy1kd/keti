@@ -125,14 +125,15 @@ async function initializeApp() {
             electron_1.app.quit();
         }
     });
+    // Initialize IPC Monitor (must be before registering IPC handlers)
+    const ipcMonitor = (0, ipcMonitor_1.getIPCMonitor)();
+    ipcMonitor.enable();
     // Register IPC handlers using modular approach
     (0, window_1.registerWindowControlHandlers)(mainWindow);
     (0, window_1.registerWindowManagementHandlers)(windowManager);
     (0, app_1.registerAppInfoHandlers)();
     (0, app_1.registerBackendManagementHandlers)(backendManager);
-    // Initialize IPC Monitor
-    const ipcMonitor = (0, ipcMonitor_1.getIPCMonitor)();
-    ipcMonitor.enable();
+    // Send IPC Monitor to main window
     ipcMonitor.sendToWindow(mainWindow);
     // Cleanup on quit
     electron_1.app.on('will-quit', () => {
