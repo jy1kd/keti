@@ -59,7 +59,7 @@ export class TrayManager {
       },
       { type: 'separator' },
       {
-        label: '行情面板',
+        label: '📊 行情',
         click: () => {
           if (this.mainWindow) {
             this.mainWindow.show();
@@ -69,7 +69,17 @@ export class TrayManager {
         },
       },
       {
-        label: '报单面板',
+        label: '⭐ 自选',
+        click: () => {
+          if (this.mainWindow) {
+            this.mainWindow.show();
+            this.mainWindow.focus();
+            this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'favorites');
+          }
+        },
+      },
+      {
+        label: '📝 报单',
         click: () => {
           if (this.mainWindow) {
             this.mainWindow.show();
@@ -79,7 +89,7 @@ export class TrayManager {
         },
       },
       {
-        label: '查询面板',
+        label: '📋 查询',
         click: () => {
           if (this.mainWindow) {
             this.mainWindow.show();
@@ -88,14 +98,34 @@ export class TrayManager {
           }
         },
       },
+      {
+        label: '📈 K线',
+        click: () => {
+          if (this.mainWindow) {
+            this.mainWindow.show();
+            this.mainWindow.focus();
+            this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'kline');
+          }
+        },
+      },
       { type: 'separator' },
       {
-        label: '设置',
+        label: '⚙ 设置',
         click: () => {
           if (this.mainWindow) {
             this.mainWindow.show();
             this.mainWindow.focus();
             this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'settings');
+          }
+        },
+      },
+      {
+        label: '🔌 IPC 监控',
+        click: () => {
+          if (this.mainWindow) {
+            this.mainWindow.show();
+            this.mainWindow.focus();
+            this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'ipc-monitor');
           }
         },
       },
