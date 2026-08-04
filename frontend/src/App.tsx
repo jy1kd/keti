@@ -36,17 +36,25 @@ function App() {
     const cleanup = window.electronAPI?.onNavigateTab?.((tab: string) => {
       switch (tab) {
         case 'market':
-          // 行情面板是主面板，不需要切换 Tab
+          openTab({ type: 'market', title: '📊 行情' })
+          break
+        case 'favorites':
+          openTab({ type: 'favorites', title: '⭐ 自选' })
           break
         case 'order':
-          // 报单面板是独立面板，不需要切换 Tab
+          openTab({ type: 'order', title: '📝 报单' })
           break
         case 'query':
-          // 查询为悬浮弹窗形态（QueryPopup），非标签页
-          useQueryPopupStore.getState().open()
+          openTab({ type: 'query', title: '📋 查询' })
+          break
+        case 'kline':
+          openTab({ type: 'kline', title: '📈 K线' })
           break
         case 'settings':
           openTab({ type: 'settings', title: '⚙ 设置' })
+          break
+        case 'ipc-monitor':
+          openTab({ type: 'ipc-monitor', title: '🔌 IPC 监控' })
           break
       }
     })
