@@ -86,3 +86,18 @@
 
 **验证**: 全量 73 files / 748 tests 通过；`tsc --noEmit` 无错误。
 **Commit**: `7ed1d2e`
+
+---
+
+### 二次审查期间新增 3（用户决策）：行情标签页移除右侧五档行情栏
+
+**背景**: 用户反馈「将行情标签页右侧的五档行情取消」，选中「移除整个右侧栏，行情表格占满全宽」方案。
+
+**实现**:
+- `MarketPanel.tsx`: 移除右侧 `Panel`（`DepthQuote` 五档 + `SpreadDisplay` 价差），`MarketTable` 占满全宽；同时移除 react-resizable-panels Group/Panel/Separator 拆分、`loadPanelSizes/savePanelSizes` 布局持久化、`selectedSnapshot`
+- `DepthQuote` 组件本身保留（报单弹窗 `OrderQuotePanel` 仍使用）
+- `MarketPanel.test.tsx`: 移除 DepthQuote + resize handle 测试及 react-resizable-panels mock
+- `styles.css`: 清理 `.market-panel__side` 死样式
+
+**验证**: 全量 73 files / 746 tests 通过；`tsc --noEmit` 无错误。
+**Commit**: `c5f395b`
