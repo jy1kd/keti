@@ -146,7 +146,12 @@ export async function initializeApp(): Promise<void> {
   // Send IPC Monitor to main window (after window is ready)
   mainWindow.webContents.on('did-finish-load', () => {
     console.log('[IPC Monitor] Window loaded, sending monitor data...');
-    sendIPCMonitorToWindow(mainWindow);
+    try {
+      sendIPCMonitorToWindow(mainWindow);
+      console.log('[IPC Monitor] Monitor data sent successfully');
+    } catch (e) {
+      console.error('[IPC Monitor] Failed to send monitor data:', e);
+    }
   });
 
   // Cleanup on quit

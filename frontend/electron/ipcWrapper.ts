@@ -80,6 +80,8 @@ export function wrapHandler<T extends (...args: any[]) => any>(
   handler: T
 ): T {
   const wrappedHandler = ((event: any, ...args: any[]) => {
+    console.log('[IPC Wrapper] Handling message:', channel)
+
     // Log incoming message
     notifyListeners({
       timestamp: Date.now(),
@@ -100,6 +102,7 @@ export function wrapHandler<T extends (...args: any[]) => any>(
  * Register an IPC handler with logging
  */
 export function handleIPC(channel: string, handler: (event: any, ...args: any[]) => any): void {
+  console.log('[IPC Wrapper] Registering handler for:', channel)
   ipcMain.handle(channel, wrapHandler(channel, handler))
 }
 
@@ -146,12 +149,15 @@ export function broadcast(channel: string, ...args: any[]): void {
  * Send IPC monitor data to a specific window
  */
 export function sendIPCMonitorToWindow(window: BrowserWindow): void {
+  console.log('[IPC Monitor] Sending messages to window:', messages.length)
+
   // Send current messages
   window.webContents.send('ipc-monitor-messages', messages)
 
   // Set up real-time forwarding
   addIPCListener((msg) => {
     if (!window.isDestroyed()) {
+      console.log('[IPC Monitor] Forwarding message to window:', msg.channel)
       window.webContents.send('ipc-monitor-message', msg)
     }
   })

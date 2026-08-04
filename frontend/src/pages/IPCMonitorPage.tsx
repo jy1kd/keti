@@ -164,12 +164,16 @@ export function IPCMonitorPage() {
     let cleanup: (() => void) | undefined
 
     if (isElectron() && window.electronAPI) {
+      console.log('[IPC Monitor] Electron environment detected, setting up listeners...')
+
       // Electron 环境：监听主进程发送的 IPC 消息
       const cleanupBatch = window.electronAPI.onIPCMonitorMessages?.((messages: any[]) => {
+        console.log('[IPC Monitor] Received batch messages:', messages.length)
         setMessages(messages)
       })
 
       const cleanupRealtime = window.electronAPI.onIPCMonitorMessage?.((message: any) => {
+        console.log('[IPC Monitor] Received realtime message:', message)
         if (!paused) {
           setMessages((prev) => [...prev, message])
         }

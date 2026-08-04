@@ -133,7 +133,13 @@ async function initializeApp() {
     // Send IPC Monitor to main window (after window is ready)
     mainWindow.webContents.on('did-finish-load', () => {
         console.log('[IPC Monitor] Window loaded, sending monitor data...');
-        (0, ipcWrapper_1.sendIPCMonitorToWindow)(mainWindow);
+        try {
+            (0, ipcWrapper_1.sendIPCMonitorToWindow)(mainWindow);
+            console.log('[IPC Monitor] Monitor data sent successfully');
+        }
+        catch (e) {
+            console.error('[IPC Monitor] Failed to send monitor data:', e);
+        }
     });
     // Cleanup on quit
     electron_1.app.on('will-quit', () => {

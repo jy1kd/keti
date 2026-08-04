@@ -70,6 +70,7 @@ function getWindowId(webContents) {
  */
 function wrapHandler(channel, handler) {
     const wrappedHandler = ((event, ...args) => {
+        console.log('[IPC Wrapper] Handling message:', channel);
         // Log incoming message
         notifyListeners({
             timestamp: Date.now(),
@@ -87,6 +88,7 @@ function wrapHandler(channel, handler) {
  * Register an IPC handler with logging
  */
 function handleIPC(channel, handler) {
+    console.log('[IPC Wrapper] Registering handler for:', channel);
     electron_1.ipcMain.handle(channel, wrapHandler(channel, handler));
 }
 /**
@@ -128,11 +130,13 @@ function broadcast(channel, ...args) {
  * Send IPC monitor data to a specific window
  */
 function sendIPCMonitorToWindow(window) {
+    console.log('[IPC Monitor] Sending messages to window:', messages.length);
     // Send current messages
     window.webContents.send('ipc-monitor-messages', messages);
     // Set up real-time forwarding
     addIPCListener((msg) => {
         if (!window.isDestroyed()) {
+            console.log('[IPC Monitor] Forwarding message to window:', msg.channel);
             window.webContents.send('ipc-monitor-message', msg);
         }
     });
