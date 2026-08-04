@@ -49,11 +49,11 @@ export function TabBar({ onAddTab }: TabBarProps) {
   // 按 Escape 关闭右键菜单
   useEffect(() => {
     if (!contextMenu) return
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') setContextMenu(null)
     }
-    window.addEventListener('keydown', handleKeyDown as any)
-    return () => window.removeEventListener('keydown', handleKeyDown as any)
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [contextMenu])
 
   const handleKeyDown = useCallback(
