@@ -48,16 +48,6 @@ export class TrayManager {
     // Build context menu
     const contextMenu = Menu.buildFromTemplate([
       {
-        label: '显示主窗口',
-        click: () => {
-          if (this.mainWindow) {
-            this.mainWindow.show();
-            this.mainWindow.focus();
-          }
-        },
-      },
-      { type: 'separator' },
-      {
         label: '📊 行情',
         click: () => {
           if (this.mainWindow) {
