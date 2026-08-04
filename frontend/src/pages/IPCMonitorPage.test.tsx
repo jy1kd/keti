@@ -19,6 +19,7 @@ describe('IPCMonitorPage', () => {
 
   it('renders filter buttons', () => {
     render(<IPCMonitorPage />)
+    expect(screen.getByText('除行情外')).toBeInTheDocument()
     expect(screen.getByText('全部')).toBeInTheDocument()
     expect(screen.getByText('行情')).toBeInTheDocument()
     expect(screen.getByText('报单')).toBeInTheDocument()
@@ -28,6 +29,7 @@ describe('IPCMonitorPage', () => {
 
   it('renders action buttons', () => {
     render(<IPCMonitorPage />)
+    expect(screen.getByText(/显示行情/)).toBeInTheDocument()
     expect(screen.getByText(/暂停/)).toBeInTheDocument()
     expect(screen.getByText(/清空/)).toBeInTheDocument()
     expect(screen.getByText(/导出/)).toBeInTheDocument()
@@ -43,5 +45,12 @@ describe('IPCMonitorPage', () => {
     const pauseBtn = screen.getByText(/暂停/)
     fireEvent.click(pauseBtn)
     expect(screen.getByText(/继续/)).toBeInTheDocument()
+  })
+
+  it('toggles market pause state', () => {
+    render(<IPCMonitorPage />)
+    const marketPauseBtn = screen.getByText(/显示行情/)
+    fireEvent.click(marketPauseBtn)
+    expect(screen.getByText(/隐藏行情/)).toBeInTheDocument()
   })
 })

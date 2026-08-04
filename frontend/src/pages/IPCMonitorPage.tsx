@@ -9,9 +9,10 @@ interface MonitorMessage {
   data?: unknown
 }
 
-type FilterType = 'all' | 'market' | 'order' | 'system' | 'navigate' | 'api'
+type FilterType = 'non-market' | 'all' | 'market' | 'order' | 'system' | 'navigate' | 'api'
 
 const FILTER_LABELS: Record<FilterType, string> = {
+  'non-market': '除行情外',
   all: '全部',
   market: '行情',
   order: '报单',
@@ -20,9 +21,14 @@ const FILTER_LABELS: Record<FilterType, string> = {
   api: 'API',
 }
 
+function isMarketChannel(channel: string): boolean {
+  return channel.includes('market') || channel.includes('ws/market')
+}
+
 function matchesFilter(channel: string, filter: FilterType): boolean {
   if (filter === 'all') return true
-  if (filter === 'market') return channel.includes('market') || channel.includes('ws/market')
+  if (filter === 'non-market') return !isMarketChannel(channel)
+  if (filter === 'market') return isMarketChannel(channel)
   if (filter === 'order') return channel.includes('order') || channel.includes('trade')
   if (filter === 'system') return channel.includes('system') || channel.includes('connection') || channel.includes('backend') || channel.includes('ws/system')
   if (filter === 'navigate') return channel.includes('navigate') || channel.includes('tab')
@@ -154,8 +160,9 @@ initInterceptors()
  */
 export function IPCMonitorPage() {
   const [messages, setMessages] = useState<MonitorMessage[]>([])
-  const [filter, setFilter] = useState<FilterType>('all')
+  const [filter, setFilter] = useState<FilterType>('non-market')
   const [paused, setPaused] = useState(false)
+  const [marketPaused, setMarketPaused] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -168,16 +175,18 @@ export function IPCMonitorPage() {
 
     // 监听新消息
     const listener = (msg: MonitorMessage) => {
-      if (!paused) {
-        setMessages((prev) => [...prev, msg])
-      }
+      // 全部暂停时跳过所有消息
+      if (paused) return
+      // 行情暂停时跳过行情消息
+      if (marketPaused && isMarketChannel(msg.channel)) return
+      setMessages((prev) => [...prev, msg])
     }
     globalListeners.add(listener)
 
     return () => {
       globalListeners.delete(listener)
     }
-  }, [paused])
+  }, [paused, marketPaused])
 
   // 自动滚动到底部
   useEffect(() => {
@@ -231,6 +240,14 @@ export function IPCMonitorPage() {
           <div className="ipc-monitor-page__actions">
             <button
               type="button"
+              className={`action-btn ${marketPaused ? 'paused' : ''}`}
+              onClick={() => setMarketPaused(!marketPaused)}
+              title={marketPaused ? '显示行情消息' : '隐藏行情消息'}
+            >
+              {marketPaused ? '📊 显示行情' : '📊 隐藏行情'}
+            </button>
+            <button
+              type="button"
               className={`action-btn ${paused ? 'paused' : ''}`}
               onClick={() => setPaused(!paused)}
             >
@@ -249,6 +266,11 @@ export function IPCMonitorPage() {
           <span className="ipc-monitor-page__mode">
             （WebSocket + API）
           </span>
+          {marketPaused && (
+            <span className="ipc-monitor-page__market-paused">
+              · 行情已隐藏
+            </span>
+          )}
         </div>
       </div>
 
