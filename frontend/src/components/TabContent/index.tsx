@@ -3,6 +3,7 @@ import { MarketPanel } from '@/modules/market/MarketPanel'
 import { FavoritesPage } from '@/pages/FavoritesPage'
 import { OrderPage } from '@/pages/OrderPage'
 import { KLinePage } from '@/pages/KLinePage'
+import { QueryPanel } from '@/modules/query/QueryPanel'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { IPCMonitorPage } from '@/pages/IPCMonitorPage'
 import './styles.css'
@@ -34,6 +35,8 @@ function renderTabContent(tab: Tab): React.ReactNode {
       return <KLinePage instrumentID={getInstrumentID(tab.props)} />
     case 'favorites':
       return <FavoritesPage />
+    case 'query':
+      return <QueryPanel />
     case 'settings':
       return <SettingsPage />
     case 'options':

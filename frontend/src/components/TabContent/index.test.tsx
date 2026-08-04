@@ -139,7 +139,7 @@ describe('TabContent', () => {
       ['favorites', '⭐ 自选合约'],
       ['settings', '⚙ 设置'],
       ['options', '期权标签页'],
-      ['ipc-monitor', '🔌 IPC 监控'],
+      ['ipc-monitor', '📡 网络监控'],
     ])('应为 %s 类型渲染对应内容', (type, expectedText) => {
       const tab = makeTab({ type })
       useTabStore.setState({
