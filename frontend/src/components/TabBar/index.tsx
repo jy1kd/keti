@@ -10,6 +10,7 @@ interface TabBarProps {
 /** 可通过快捷按钮打开的标签页类型 */
 const QUICK_TABS = [
   { type: 'favorites' as const, icon: '⭐', title: '⭐ 自选' },
+  { type: 'query' as const, icon: '📋', title: '📋 查询' },
 ]
 
 /**

@@ -307,6 +307,38 @@ describe('TabBar', () => {
       fireEvent.click(screen.getByLabelText('⭐ 自选'))
       expect(setActiveTab).toHaveBeenCalledWith('tab-favorites')
     })
+
+    it('应显示 📋 查询快捷按钮', () => {
+      render(<TabBar />)
+      expect(screen.getByLabelText('📋 查询')).toBeInTheDocument()
+    })
+
+    it('点击 📋 按钮应打开查询标签页', () => {
+      const openTab = vi.fn().mockReturnValue(true)
+      useTabStore.setState({ openTab })
+      render(<TabBar />)
+      fireEvent.click(screen.getByLabelText('📋 查询'))
+      expect(openTab).toHaveBeenCalledWith({
+        type: 'query',
+        title: '📋 查询',
+        closable: true,
+      })
+    })
+
+    it('查询标签已打开时，点击 📋 应激活该标签', () => {
+      const setActiveTab = vi.fn()
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-query', type: 'query', title: '📋 查询', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-market',
+        setActiveTab,
+      })
+      render(<TabBar />)
+      fireEvent.click(screen.getByLabelText('📋 查询'))
+      expect(setActiveTab).toHaveBeenCalledWith('tab-query')
+    })
   })
 
   // --- 无障碍 ---
