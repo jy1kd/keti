@@ -64,6 +64,7 @@ class WindowManager {
             minWidth: config.minWidth,
             minHeight: config.minHeight,
             title: config.title,
+            icon: path_1.default.join(__dirname, '../build/icon.png'),
             webPreferences: {
                 preload: path_1.default.join(__dirname, 'preload.cjs'),
                 contextIsolation: true,
