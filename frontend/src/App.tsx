@@ -119,6 +119,7 @@ function App() {
               padding: '2px 8px',
               cursor: 'pointer',
               fontSize: 11,
+              fontFamily: 'var(--font-mono)',
             }}
           >
             🔌IPC
