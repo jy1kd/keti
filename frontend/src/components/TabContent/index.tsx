@@ -3,6 +3,7 @@ import { MarketPanel } from '@/modules/market/MarketPanel'
 import { FavoritesPage } from '@/pages/FavoritesPage'
 import { OrderPage } from '@/pages/OrderPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { IPCMonitorPage } from '@/pages/IPCMonitorPage'
 import './styles.css'
 
 /**
@@ -39,8 +40,7 @@ function renderTabContent(tab: Tab): React.ReactNode {
     case 'options':
       return <div className="tab-placeholder">📉 期权标签页</div>
     case 'ipc-monitor':
-      // TODO: PR-R18 IPC监控标签页
-      return <div className="tab-placeholder">🔌 IPC监控标签页（PR-R18）</div>
+      return <IPCMonitorPage />
     default:
       return <div className="tab-placeholder">未知标签</div>
   }
