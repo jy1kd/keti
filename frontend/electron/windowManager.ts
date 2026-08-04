@@ -82,12 +82,14 @@ export class WindowManager {
     const config = DEFAULT_CONFIGS.main;
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
+    const iconPath = path.join(__dirname, '../build/icon.png');
     const mainWindow = new BrowserWindow({
       width: Math.min(config.width!, width),
       height: Math.min(config.height!, height),
       minWidth: config.minWidth,
       minHeight: config.minHeight,
       title: config.title,
+      icon: iconPath,
       webPreferences: {
         preload: path.join(__dirname, 'preload.cjs'),
         contextIsolation: true,
@@ -136,12 +138,14 @@ export class WindowManager {
     const config = DEFAULT_CONFIGS.order;
     const parent = this.windows.get('main');
 
+    const iconPath = path.join(__dirname, '../build/icon.png');
     const orderWindow = new BrowserWindow({
       width: config.width,
       height: config.height,
       minWidth: config.minWidth,
       minHeight: config.minHeight,
       title: instrumentID ? `${config.title} - ${instrumentID}` : config.title,
+      icon: iconPath,
       parent,
       modal: false,
       webPreferences: {
@@ -192,12 +196,14 @@ export class WindowManager {
 
     const config = DEFAULT_CONFIGS.kline;
 
+    const iconPath = path.join(__dirname, '../build/icon.png');
     const klineWindow = new BrowserWindow({
       width: config.width,
       height: config.height,
       minWidth: config.minWidth,
       minHeight: config.minHeight,
       title: `${config.title} - ${instrumentID}`,
+      icon: iconPath,
       webPreferences: {
         preload: path.join(__dirname, 'preload.cjs'),
         contextIsolation: true,
