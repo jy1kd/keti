@@ -840,19 +840,23 @@ frontend/src/modules/query/
 ```
 frontend/electron/
 ├── windowManager.ts         # 更新：支持从标签页分离
-└── ipc/window.ts            # 更新：添加窗口分离IPC
+├── ipc/window.ts            # 更新：添加窗口分离IPC
+└── ipcMonitor.ts            # 新增：IPC监控主进程模块
 frontend/src/components/
 └── TabBar/index.tsx         # 更新：添加"在新窗口打开"右键菜单
+frontend/src/pages/
+└── IPCMonitorPage.tsx       # 更新：接入实际 Electron IPC 监听
 ```
 
 **PR描述**：
-实现Electron独立窗口支持，标签页可分离为独立窗口。
+实现Electron独立窗口支持，标签页可分离为独立窗口。同时完善 IPC 监控标签页，接入实际 Electron IPC 通道。
 
 **实现方式**：
 1. 更新 WindowManager，支持从标签页分离
 2. 添加"在新窗口打开"右键菜单
 3. 独立窗口与主窗口数据同步
 4. 独立窗口关闭不影响主窗口
+5. **完善 IPC 监控**：创建 IPCMonitor 主进程模块，接入实际 IPC 通道监听
 
 **验收标准**：
 - [ ] 标签页能分离为独立窗口
