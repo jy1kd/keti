@@ -12,7 +12,7 @@ exports.registerBackendManagementHandlers = registerBackendManagementHandlers;
 exports.unregisterAppHandlers = unregisterAppHandlers;
 const electron_1 = require("electron");
 const index_1 = require('./index.cjs');
-const ipcWrapper_1 = require("../ipcWrapper");
+const ipcWrapper_1 = require('../ipcWrapper.cjs');
 /**
  * Register app info IPC handlers
  */

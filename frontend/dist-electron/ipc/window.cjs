@@ -11,7 +11,7 @@ exports.registerWindowControlHandlers = registerWindowControlHandlers;
 exports.registerWindowManagementHandlers = registerWindowManagementHandlers;
 exports.unregisterWindowHandlers = unregisterWindowHandlers;
 const index_1 = require('./index.cjs');
-const ipcWrapper_1 = require("../ipcWrapper");
+const ipcWrapper_1 = require('../ipcWrapper.cjs');
 /**
  * Register window control IPC handlers
  */
