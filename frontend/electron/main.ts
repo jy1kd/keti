@@ -8,6 +8,7 @@ import { AutoUpdaterManager } from './autoUpdater';
 import { IPC_CHANNELS } from './ipc/index';
 import { registerWindowControlHandlers, registerWindowManagementHandlers } from './ipc/window';
 import { registerAppInfoHandlers, registerBackendManagementHandlers } from './ipc/app';
+import { getIPCMonitor } from './ipcMonitor';
 
 // Check if in development mode
 export const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
@@ -141,6 +142,11 @@ export async function initializeApp(): Promise<void> {
   registerWindowManagementHandlers(windowManager);
   registerAppInfoHandlers();
   registerBackendManagementHandlers(backendManager);
+
+  // Initialize IPC Monitor
+  const ipcMonitor = getIPCMonitor();
+  ipcMonitor.enable();
+  ipcMonitor.sendToWindow(mainWindow);
 
   // Cleanup on quit
   app.on('will-quit', () => {

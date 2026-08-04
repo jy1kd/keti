@@ -46,6 +46,10 @@ function registerWindowManagementHandlers(windowManager) {
     electron_1.ipcMain.handle(index_1.IPC_CHANNELS.WINDOW_OPEN_KLINE, (_event, instrumentID) => {
         windowManager.openKLineWindow(instrumentID);
     });
+    // Open tab in new window
+    electron_1.ipcMain.handle(index_1.IPC_CHANNELS.WINDOW_OPEN_TAB, (_event, tabType, tabId, tabTitle, props) => {
+        windowManager.openTabWindow(tabType, tabId, tabTitle, props);
+    });
 }
 /**
  * Unregister all window IPC handlers
@@ -56,5 +60,6 @@ function unregisterWindowHandlers() {
     electron_1.ipcMain.removeHandler(index_1.IPC_CHANNELS.WINDOW_CLOSE);
     electron_1.ipcMain.removeHandler(index_1.IPC_CHANNELS.WINDOW_OPEN_ORDER);
     electron_1.ipcMain.removeHandler(index_1.IPC_CHANNELS.WINDOW_OPEN_KLINE);
+    electron_1.ipcMain.removeHandler(index_1.IPC_CHANNELS.WINDOW_OPEN_TAB);
 }
 //# sourceMappingURL=window.js.map

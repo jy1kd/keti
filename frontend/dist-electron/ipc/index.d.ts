@@ -13,6 +13,7 @@ export declare const IPC_CHANNELS: {
     readonly WINDOW_CLOSE: "window:close";
     readonly WINDOW_OPEN_ORDER: "window:open-order";
     readonly WINDOW_OPEN_KLINE: "window:open-kline";
+    readonly WINDOW_OPEN_TAB: "window:open-tab";
     readonly APP_VERSION: "app:version";
     readonly APP_PLATFORM: "app:platform";
     readonly APP_NAME: "app:name";

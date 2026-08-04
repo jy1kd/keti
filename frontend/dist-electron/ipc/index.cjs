@@ -19,6 +19,7 @@ exports.IPC_CHANNELS = {
     // Window management
     WINDOW_OPEN_ORDER: 'window:open-order',
     WINDOW_OPEN_KLINE: 'window:open-kline',
+    WINDOW_OPEN_TAB: 'window:open-tab',
     // App info
     APP_VERSION: 'app:version',
     APP_PLATFORM: 'app:platform',

@@ -161,13 +161,13 @@ export function IPCMonitorPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // 初始化拦截器
+    // 初始化拦截器（Web 环境）
     initInterceptors()
 
     // 加载已有消息
     setMessages([...globalMessages])
 
-    // 监听新消息
+    // 监听新消息（Web 环境）
     const listener = (msg: MonitorMessage) => {
       if (!paused) {
         setMessages((prev) => [...prev, msg])
@@ -175,8 +175,32 @@ export function IPCMonitorPage() {
     }
     globalListeners.add(listener)
 
+    // Electron 环境：监听主进程发送的 IPC 消息
+    let cleanupElectron: (() => void) | undefined
+    if (isElectron() && window.electronAPI) {
+      // 监听批量消息（初始加载）
+      const cleanupBatch = window.electronAPI.onNotification?.((data: any) => {
+        if (data.type === 'ipc-monitor-messages') {
+          setMessages(data.messages || [])
+        }
+      })
+
+      // 监听实时消息
+      const cleanupRealtime = window.electronAPI.onNotification?.((data: any) => {
+        if (data.type === 'ipc-monitor-message' && !paused) {
+          setMessages((prev) => [...prev, data.message])
+        }
+      })
+
+      cleanupElectron = () => {
+        cleanupBatch?.()
+        cleanupRealtime?.()
+      }
+    }
+
     return () => {
       globalListeners.delete(listener)
+      cleanupElectron?.()
     }
   }, [paused])
 

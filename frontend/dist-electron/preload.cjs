@@ -11,6 +11,7 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     // Window management
     openOrderWindow: (instrumentID) => electron_1.ipcRenderer.invoke('window:open-order', instrumentID),
     openKLineWindow: (instrumentID) => electron_1.ipcRenderer.invoke('window:open-kline', instrumentID),
+    openTabWindow: (tabType, tabId, tabTitle, props) => electron_1.ipcRenderer.invoke('window:open-tab', tabType, tabId, tabTitle, props),
     // App info
     getAppVersion: () => electron_1.ipcRenderer.invoke('app:version'),
     getPlatform: () => electron_1.ipcRenderer.invoke('app:platform'),
