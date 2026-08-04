@@ -19,6 +19,7 @@ function getInstrumentID(props: Record<string, unknown>): string | undefined {
  * market 类型已集成 MarketPanel；
  * order 类型已集成 OrderPage；
  * 其他类型使用占位文本，后续 PR 会逐步替换为实际页面组件。
+ * （query 自重构后为悬浮弹窗形态，见 QueryPopup，不再是标签页。）
  */
 function renderTabContent(tab: Tab): React.ReactNode {
   switch (tab.type) {
@@ -26,9 +27,6 @@ function renderTabContent(tab: Tab): React.ReactNode {
       return <MarketPanel />
     case 'order':
       return <OrderPage instrumentID={getInstrumentID(tab.props)} />
-    case 'query':
-      // TODO: PR-R15 查询标签页
-      return <div className="tab-placeholder">📋 查询标签页（PR-R15）</div>
     case 'kline':
       // TODO: PR-R16 K线标签页
       return <div className="tab-placeholder">📈 K线标签页（PR-R16）</div>

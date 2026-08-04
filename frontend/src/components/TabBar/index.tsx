@@ -1,5 +1,6 @@
 import { useCallback, type KeyboardEvent } from 'react'
 import { useTabStore } from '@/stores/tabs'
+import { useQueryPopupStore } from '@/modules/query/popupStore'
 import './styles.css'
 
 interface TabBarProps {
@@ -117,6 +118,16 @@ export function TabBar({ onAddTab }: TabBarProps) {
           </button>
         )
       })}
+      {/* 查询弹窗快捷按钮（查询为悬浮弹窗形态，非标签页） */}
+      <button
+        type="button"
+        className="tab-bar__quick"
+        aria-label="📋 查询"
+        title="📋 查询"
+        onClick={() => useQueryPopupStore.getState().open()}
+      >
+        📋
+      </button>
       <button
         type="button"
         className="tab-bar__add"

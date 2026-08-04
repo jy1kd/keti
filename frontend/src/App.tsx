@@ -8,6 +8,8 @@ import { useSystemWs } from '@/hooks/useSystemWs'
 import { useConnectionPoll } from '@/hooks/useConnectionPoll'
 import { useMarketStore } from '@/modules/market/store'
 import { OrderPopup } from '@/modules/order/OrderPopup'
+import { QueryPopup } from '@/modules/query/QueryPopup'
+import { useQueryPopupStore } from '@/modules/query/popupStore'
 import { useTabStore } from '@/stores/tabs'
 import { API_BASE } from '@/services/api'
 import { isElectron } from '@/services/electron'
@@ -36,7 +38,8 @@ function App() {
           // 报单面板是独立面板，不需要切换 Tab
           break
         case 'query':
-          // TODO: PR-R15 查询标签页
+          // 查询为悬浮弹窗形态（QueryPopup），非标签页
+          useQueryPopupStore.getState().open()
           break
         case 'settings':
           openTab({ type: 'settings', title: '⚙ 设置' })
@@ -116,6 +119,9 @@ function App() {
 
       {/* 悬浮报单弹窗（非模态，浮于所有标签页之上） */}
       <OrderPopup />
+
+      {/* 悬浮查询弹窗（非模态，浮于所有标签页之上） */}
+      <QueryPopup />
     </div>
   )
 }

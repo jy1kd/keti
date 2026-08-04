@@ -43,7 +43,6 @@ describe('useTabStore', () => {
         'market',
         'favorites',
         'order',
-        'query',
         'kline',
         'options',
         'ipc-monitor',
@@ -95,7 +94,7 @@ describe('useTabStore', () => {
 
     it('打开标签页时默认 closable 为 true', () => {
       const { openTab } = useTabStore.getState()
-      openTab({ type: 'query', title: '📋 查询' })
+      openTab({ type: 'favorites', title: '⭐ 自选' })
 
       const state = useTabStore.getState()
       expect(state.tabs[1].closable).toBe(true)
@@ -134,45 +133,45 @@ describe('useTabStore', () => {
   describe('closeTab', () => {
     it('应关闭指定标签页', () => {
       const { openTab, closeTab } = useTabStore.getState()
-      openTab({ type: 'query', title: '📋 查询' })
+      openTab({ type: 'favorites', title: '⭐ 自选' })
 
       expect(useTabStore.getState().tabs).toHaveLength(2)
 
-      const queryTabId = useTabStore.getState().tabs[1].id
-      closeTab(queryTabId)
+      const favTabId = useTabStore.getState().tabs[1].id
+      closeTab(favTabId)
 
       const state = useTabStore.getState()
       expect(state.tabs).toHaveLength(1)
-      expect(state.tabs.find((t) => t.id === queryTabId)).toBeUndefined()
+      expect(state.tabs.find((t) => t.id === favTabId)).toBeUndefined()
     })
 
     it('关闭活跃标签页时应激活相邻标签页', () => {
       const { openTab, closeTab } = useTabStore.getState()
-      openTab({ type: 'query', title: '📋 查询' })
+      openTab({ type: 'favorites', title: '⭐ 自选' })
       openTab({ type: 'settings', title: '⚙ 设置' })
 
-      // 当前：market, query, settings (active)
+      // 当前：market, favorites, settings (active)
       expect(useTabStore.getState().activeTabId).toBe('tab-settings')
 
       const settingsTabId = useTabStore.getState().tabs[2].id
       closeTab(settingsTabId)
 
-      // 关闭 settings 后，应激活 query（前一个）
-      expect(useTabStore.getState().activeTabId).toBe('tab-query')
+      // 关闭 settings 后，应激活 favorites（前一个）
+      expect(useTabStore.getState().activeTabId).toBe('tab-favorites')
     })
 
     it('关闭中间活跃标签页时应激活后一个标签页', () => {
       const { openTab, closeTab, setActiveTab } = useTabStore.getState()
-      openTab({ type: 'query', title: '📋 查询' })
+      openTab({ type: 'favorites', title: '⭐ 自选' })
       openTab({ type: 'settings', title: '⚙ 设置' })
 
-      const queryTabId = useTabStore.getState().tabs[1].id
-      setActiveTab(queryTabId)
+      const favTabId = useTabStore.getState().tabs[1].id
+      setActiveTab(favTabId)
 
-      // 当前：market, query (active), settings
-      closeTab(queryTabId)
+      // 当前：market, favorites (active), settings
+      closeTab(favTabId)
 
-      // 关闭中间的 query，应激活 settings（后一个）
+      // 关闭中间的 favorites，应激活 settings（后一个）
       expect(useTabStore.getState().activeTabId).toBe('tab-settings')
     })
 
@@ -199,12 +198,12 @@ describe('useTabStore', () => {
   describe('setActiveTab', () => {
     it('应设置指定标签页为活跃', () => {
       const { openTab, setActiveTab } = useTabStore.getState()
-      openTab({ type: 'query', title: '📋 查询' })
+      openTab({ type: 'favorites', title: '⭐ 自选' })
 
-      const queryTabId = useTabStore.getState().tabs[1].id
-      setActiveTab(queryTabId)
+      const favTabId = useTabStore.getState().tabs[1].id
+      setActiveTab(favTabId)
 
-      expect(useTabStore.getState().activeTabId).toBe(queryTabId)
+      expect(useTabStore.getState().activeTabId).toBe(favTabId)
     })
 
     it('设置不存在的标签页为活跃应无操作', () => {
@@ -236,11 +235,11 @@ describe('useTabStore', () => {
 
     it('不传 props 时应返回同类型的第一个标签页', () => {
       const { openTab, getTabByType } = useTabStore.getState()
-      openTab({ type: 'query', title: '📋 查询' })
+      openTab({ type: 'favorites', title: '⭐ 自选' })
 
-      const tab = getTabByType('query')
+      const tab = getTabByType('favorites')
       expect(tab).toBeDefined()
-      expect(tab?.type).toBe('query')
+      expect(tab?.type).toBe('favorites')
     })
   })
 })

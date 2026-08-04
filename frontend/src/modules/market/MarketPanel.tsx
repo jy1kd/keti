@@ -1,14 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Group, Panel, Separator } from 'react-resizable-panels'
-import { ResizeHandle } from '@/components/ResizeHandle'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ContractSearch } from '@/components/ContractSearch'
 import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
 import { ContextMenu } from '@/components/ContextMenu'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { OptionPanel } from '@/modules/options/OptionPanel'
 import { MarketTable } from './MarketTable'
-import { DepthQuote } from './DepthQuote'
-import { SpreadDisplay } from '@/components/SpreadDisplay'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
 import { useContractContextMenu } from '@/hooks/useContractContextMenu'
@@ -19,16 +15,13 @@ import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
 import { getProductName } from '@/utils/productNames'
 import { API_BASE } from '@/services/api'
 import { toast } from '@/components/Toast'
-import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
 import './styles.css'
-
-const savedMarketTop = loadPanelSizes('market-top-layout')
 
 export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, favorites, addToFavorites, removeFromFavorites, loadAllInstruments, loadFavoriteContracts } = useContractsStore()
-  const { contextMenu, multiSelectMenu, openOrderPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
+  const { contextMenu, multiSelectMenu, openOrderPopup, openQueryPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
   const [viewMode, setViewMode] = useState<'market' | 'options'>('market')
@@ -70,10 +63,6 @@ export function MarketPanel() {
     [contracts]
   )
 
-  const onMarketTopLayout = useCallback((layout: Record<string, number>) => {
-    savePanelSizes('market-top-layout', { table: layout['market-table'], side: layout['market-side'] })
-  }, [])
-
   // WebSocket 行情推送（单例模式）
   useMarketWs(API_BASE.replace('http', 'ws'))
 
@@ -103,8 +92,6 @@ export function MarketPanel() {
     setSelectedInstrument(instrumentID)
     setOrderInstrument(instrumentID)
   }
-
-  const selectedSnapshot = selectedInstrument ? snapshots.get(selectedInstrument) ?? null : null
 
   // T型期权报价模式：直接渲染 OptionPanel
   if (viewMode === 'options') {
@@ -206,65 +193,35 @@ export function MarketPanel() {
         </div>
       </div>
 
-      <Group orientation="horizontal" className="panel-content" id="market-top-layout" onLayoutChange={onMarketTopLayout}>
-        <Panel id="market-table" defaultSize={savedMarketTop?.table ?? 75} minSize={30}>
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <ErrorBoundary>
-              <MarketTable
-                contracts={displayContracts}
-                snapshots={snapshots}
-                selectedInstrument={selectedInstrument}
-                onRowClick={handleClick}
-                onRowDoubleClick={handleDoubleClick}
-                onContextMenu={handleContextMenu}
-                onMultiSelectContextMenu={handleMultiSelectContextMenu}
-                onVisibleRangeChange={setVisibleInstrumentIDs}
-                favoritedIds={favoritedIds}
-                onFavoriteChange={(instrumentID, isFavorited) => {
-                  if (isFavorited) {
-                    const inst = contracts.find(c => c.instrumentID === instrumentID)
-                    if (inst) {
-                      addToFavorites(inst)
-                      toast.success(`已收藏 ${instrumentID}`)
-                    }
-                  } else {
-                    removeFromFavorites(instrumentID)
-                    toast.success(`已移除 ${instrumentID}`)
-                  }
-                }}
-                selectedContracts={selectedContracts}
-                onSelectionChange={setSelectedContracts}
-              />
-            </ErrorBoundary>
-          </div>
-        </Panel>
-        <Separator>
-          <ResizeHandle direction="horizontal" />
-        </Separator>
-        <Panel id="market-side" defaultSize={savedMarketTop?.side ?? 25} minSize={10}>
-          <div className="market-panel__side">
-            <DepthQuote
-              snapshot={selectedSnapshot}
-              onBuyClick={(price) => {
-                if (selectedInstrument) {
-                  setOrderInstrument(selectedInstrument)
-                  setOrderForm({ direction: 'buy', limitPrice: price })
+      <div className="panel-content">
+        <ErrorBoundary>
+          <MarketTable
+            contracts={displayContracts}
+            snapshots={snapshots}
+            selectedInstrument={selectedInstrument}
+            onRowClick={handleClick}
+            onRowDoubleClick={handleDoubleClick}
+            onContextMenu={handleContextMenu}
+            onMultiSelectContextMenu={handleMultiSelectContextMenu}
+            onVisibleRangeChange={setVisibleInstrumentIDs}
+            favoritedIds={favoritedIds}
+            onFavoriteChange={(instrumentID, isFavorited) => {
+              if (isFavorited) {
+                const inst = contracts.find(c => c.instrumentID === instrumentID)
+                if (inst) {
+                  addToFavorites(inst)
+                  toast.success(`已收藏 ${instrumentID}`)
                 }
-              }}
-              onSellClick={(price) => {
-                if (selectedInstrument) {
-                  setOrderInstrument(selectedInstrument)
-                  setOrderForm({ direction: 'sell', limitPrice: price })
-                }
-              }}
-            />
-            <SpreadDisplay
-              bidPrice={selectedSnapshot?.bidPrice1 ?? 0}
-              askPrice={selectedSnapshot?.askPrice1 ?? 0}
-            />
-          </div>
-        </Panel>
-      </Group>
+              } else {
+                removeFromFavorites(instrumentID)
+                toast.success(`已移除 ${instrumentID}`)
+              }
+            }}
+            selectedContracts={selectedContracts}
+            onSelectionChange={setSelectedContracts}
+          />
+        </ErrorBoundary>
+      </div>
 
       <InstrumentSearchModal
         isOpen={searchModalOpen}
@@ -283,6 +240,7 @@ export function MarketPanel() {
           items={[
             { label: '打开报单', icon: '📝', onClick: () => openOrderPopup(contextMenu.instrumentID) },
             { label: '打开K线', icon: '📈', onClick: () => openKlineTab(contextMenu.instrumentID) },
+            { label: '查询', icon: '📋', onClick: () => openQueryPopup(contextMenu.instrumentID) },
             {
               label: favoritedIds.has(contextMenu.instrumentID) ? '取消收藏' : '收藏',
               icon: favoritedIds.has(contextMenu.instrumentID) ? '★' : '⭐',

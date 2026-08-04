@@ -1,0 +1,103 @@
+# 审查回复 — PR-R15: 查询标签页
+
+**回复时间**: 2026-08-04
+**审查文件**: `docs/snapshots/role-b/review-feedback-redesign-r15.md`
+**审查结论**: ✅ 通过（无阻断性问题）
+
+---
+
+## 🟡 改进建议处理
+
+### 🟡1 — 验收标准 checkbox 未勾选 ✅ 已修复
+
+**处理**: 认同。自验证已通过，验收标准应同步勾选以反映实际验证结果。
+**改动**: `docs/tasks/task-redesign.md` PR-R15 验收标准 4 项全部 `[ ]` → `[x]`。
+
+### 🟡2 — 提交文件列表不准确 ✅ 已修复
+
+**处理**: 认同。实际改动为 7 个文件，测试位于 `__tests__/` 子目录，且含 `QueryPage.css`。
+**改动**: `docs/tasks/task-redesign.md` PR-R15「提交文件」更新为实际文件清单（新增 QueryPage.css、修正测试路径、补充 App.tsx 与 TabContent 文件），同步将 PR描述中「重构 QueryPage」修正为「新建 QueryPage」。
+
+---
+
+## 🔵 疑问确认
+
+### 🔵1 — 打开但非激活的查询标签会持续 10s 轮询
+
+**确认**: 预期行为，非本 PR 引入。TabContent 采用 `display:none` 常驻挂载是 PR-R10 的既有设计（保证切换标签不丢失状态），QueryPanel 挂载后其 10s 自动刷新 `useEffect` 在非激活时继续运行，关闭标签卸载时才停止。
+
+**说明**:
+- 与行情 MarketPanel 的 WebSocket 常驻行为一致
+- 10s 轮询频率较低，不构成性能/网络阻塞问题
+- 「仅激活标签轮询」为后续优化方向，非 PR-R15 范围，记录为观察项
+
+### 🔵2 — 查询页 K线 Tab 依赖全局选中合约
+
+**确认**: 设计预期，非 R15 引入。查询面板「合约/K线」Tab 的 `selectedInstrument` 来自 `useMarketStore` 全局状态（行情表格选中），与既有 QueryPanel 行为一致。查询标签打开时若未在行情表格选中合约，K线 Tab 显示「选择合约查看K线图」占位。
+**人工验证覆盖项**: 未选合约打开查询页场景（已记录到人工验证清单）。
+
+---
+
+## 处理总结
+
+| 项 | 级别 | 处理结果 |
+|----|:----:|----------|
+| 🟡1 验收标准 checkbox | 🟡 | ✅ 已修复 |
+| 🟡2 提交文件列表 | 🟡 | ✅ 已修复 |
+| 🔵1 10s 轮询常驻 | 🔵 | 确认预期行为，非 R15 范围 |
+| 🔵2 K线 Tab 依赖选中合约 | 🔵 | 确认设计预期，非 R15 引入 |
+
+**无 🔴 阻断性项**。文档修复未涉及代码改动，无需重新跑 TDD 循环；全量测试在上一步已验证通过（742 tests）。
+
+---
+
+## 二次审查期间新增（用户决策）
+
+### 查询标签页浏览器入口缺失 → 已补充
+
+**背景**: 二次审查前用户提出「查询标签页入口在哪？」。排查确认 PR-R15 此前仅有 Electron 托盘导航入口（`App.tsx` `case 'query'`，受 `isElectron()` 保护），**浏览器模式（`npm run dev`）下无任何入口**，查询标签页无法打开、人工验证「查询标签页正常显示」不可行。
+
+**方案选择（AskUserQuestion）**: 用户选择「TabBar 快捷按钮加 📋 查询」（与 ⭐ 自选 一致）。
+
+**实现**:
+- `TabBar/index.tsx`: `QUICK_TABS` 增加 `{ type: 'query', icon: '📋', title: '📋 查询' }`，复用既有快捷按钮通用渲染逻辑（未打开→openTab，已打开→setActiveTab 激活）
+- `TabBar/index.test.tsx`: 新增 3 个测试（渲染/打开/激活）
+
+**验证**: TabBar 29 个测试通过；全量 745 tests 通过；`tsc --noEmit` 无错误。
+**Commit**: `7c98ccb`
+
+---
+
+### 二次审查期间新增 2（用户决策）：查询面板重构为悬浮弹窗
+
+**背景**: 用户反馈「查询面板太大」，希望做成类似报单的悬浮弹窗（OrderPopup 形态），并在右键合约菜单增加查询入口。
+
+**方案选择（AskUserQuestion）**:
+- 查询形态：**替换**——只留弹窗，移除查询标签页（TabContent query case 移除）
+- 右键入口：**打开查询弹窗**——右键合约 →「📋 查询」→ 打开弹窗并选中该合约
+
+**实现**:
+- 新增 `modules/query/QueryPopup.tsx` + `QueryPopup.css` + `popupStore.ts`（参照 OrderPopup：非模态、可拖拽、×/ESC 关闭）
+- `popupStore.open(instrumentID?)` 传入合约时同步全局选中，使查询面板合约/K线子页显示该合约
+- 移除 `query` 标签类型（tabs.ts/TabContent/TabBar），查询不再作为标签页
+- TabBar 📋 按钮改为打开查询弹窗；Electron 托盘导航 query 改为打开弹窗
+- 右键合约菜单（MarketPanel/FavoritesPage）添加「📋 查询」项
+- 删除 QueryPage.tsx/css/test（标签页形态废弃）
+
+**验证**: 全量 73 files / 748 tests 通过；`tsc --noEmit` 无错误。
+**Commit**: `7ed1d2e`
+
+---
+
+### 二次审查期间新增 3（用户决策）：行情标签页移除右侧五档行情栏
+
+**背景**: 用户反馈「将行情标签页右侧的五档行情取消」，选中「移除整个右侧栏，行情表格占满全宽」方案。
+
+**实现**:
+- `MarketPanel.tsx`: 移除右侧 `Panel`（`DepthQuote` 五档 + `SpreadDisplay` 价差），`MarketTable` 占满全宽；同时移除 react-resizable-panels Group/Panel/Separator 拆分、`loadPanelSizes/savePanelSizes` 布局持久化、`selectedSnapshot`
+- `DepthQuote` 组件本身保留（报单弹窗 `OrderQuotePanel` 仍使用）
+- `MarketPanel.test.tsx`: 移除 DepthQuote + resize handle 测试及 react-resizable-panels mock
+- `styles.css`: 清理 `.market-panel__side` 死样式
+
+**验证**: 全量 73 files / 746 tests 通过；`tsc --noEmit` 无错误。
+**Commit**: `c5f395b`

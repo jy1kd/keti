@@ -15,15 +15,6 @@ globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
   disconnect: vi.fn(),
 }))
 
-// Mock react-resizable-panels
-vi.mock('react-resizable-panels', () => ({
-  Group: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={className}>{children}</div>
-  ),
-  Panel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  Separator: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}))
-
 // Mock api module
 const mockSubscribeMarket = vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] })
 vi.mock('@/services/api', () => ({
@@ -134,22 +125,6 @@ describe('MarketPanel', () => {
   it('启动时调用 useMarketWs 连接 WebSocket 行情推送', () => {
     render(<MarketPanel />)
     expect(mockUseMarketWs).toHaveBeenCalledWith('ws://localhost:8000')
-  })
-
-  it('renders DepthQuote for selected instrument', () => {
-    useMarketStore.setState({
-      selectedInstrument: 'IF2608',
-      snapshots: new Map([['IF2608', makeSnapshot()]]),
-    })
-    render(<MarketPanel />)
-    expect(screen.getByTestId('bid-1')).toBeInTheDocument()
-    expect(screen.getByTestId('ask-1')).toBeInTheDocument()
-  })
-
-  it('renders resize handle for main/side panel split', () => {
-    render(<MarketPanel />)
-    const handles = document.querySelectorAll('.resize-handle')
-    expect(handles.length).toBeGreaterThanOrEqual(1)
   })
 
   it('renders 全部合约 and 自选合约 tabs', () => {

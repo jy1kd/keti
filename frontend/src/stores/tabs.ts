@@ -2,12 +2,11 @@ import { create } from 'zustand'
 
 // --- 类型定义 ---
 
-/** 标签页类型 */
+/** 标签页类型（query 自重构后为悬浮弹窗形态，不再是标签页） */
 export type TabType =
   | 'market'
   | 'favorites'
   | 'order'
-  | 'query'
   | 'kline'
   | 'options'
   | 'ipc-monitor'
@@ -18,7 +17,6 @@ export const TAB_TYPES: TabType[] = [
   'market',
   'favorites',
   'order',
-  'query',
   'kline',
   'options',
   'ipc-monitor',
