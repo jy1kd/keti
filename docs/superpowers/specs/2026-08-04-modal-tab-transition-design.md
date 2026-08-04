@@ -142,7 +142,7 @@ style={{
 - 标题条：tab 标题 + `⇩` 停靠（`dock`）+ `×` 关闭（`closeTab`，与标签生命周期一致）。
 - 拖标题条 → `move()`；`pointerdown` → `focus()` 置顶。
 - 右下角复用现有 `components/ResizeHandle` → `resize()`。
-- 壳 z-index 略低于面板（`z - 1`），保证面板盖在 body 上而标题条按钮仍可点击（标题条 z 高于面板）。
+- z-index：标题条与面板**上下相邻不重叠**（面板 `top = rect.y + CHROME_H`），故壳整体 `z` 取 `rect.z - 1` 即可，面板视觉盖在壳 body 上、标题条控件始终可点。
 
 `App.tsx` 增加 `<FloatingWindows />`：遍历 `windows` 表，为每个 tabId 渲染 `<FloatingWindow>`，从 `tabs` 读取标题，从 `windows` 读取几何。
 
@@ -195,6 +195,7 @@ pointercancel / Esc → 取消，清理 ghost
 | 固定 market 标签被拖出 | `detach` 直接返回 false（守卫在 store） |
 | 拖离活跃标签 | 活跃自动切到 market |
 | 窗口尺寸越界 | 夹取到视口内 |
+| `position: fixed` 受祖先 `transform` 影响 | 确认 `.tab-content` / `.app` 无 transform；若有则改用该祖先作定位上下文 |
 | 多窗口重叠 | 点击窗口 `focus()` 置顶，z 递增 |
 | 页头内按钮/输入框 | 事件委托过滤，不触发拖拽 |
 | 拖拽中途 pointercancel / Esc | 取消并清理 ghost |
