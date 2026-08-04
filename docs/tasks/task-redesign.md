@@ -655,7 +655,7 @@ frontend/src/pages/QueryPage.tsx / QueryPage.css / __tests__/QueryPage.test.tsx 
 | **负责角色** | 角色B |
 | **依赖PR** | PR-R11 |
 | **工作量** | 2小时 |
-| **状态** | 开发完成，待审查 |
+| **状态** | ✅ 已完成 |
 
 **提交文件**：
 ```
