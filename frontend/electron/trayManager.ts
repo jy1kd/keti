@@ -29,9 +29,19 @@ export class TrayManager {
   initialize(mainWindow: BrowserWindow): void {
     this.mainWindow = mainWindow;
 
-    // Create tray icon (use empty icon as fallback since build/icon.png was removed)
-    const fallbackIcon = nativeImage.createEmpty();
-    this.tray = new Tray(fallbackIcon);
+    // Create tray icon
+    const iconPath = path.join(__dirname, '../build/icon.png');
+
+    // Check if icon file exists
+    if (!fs.existsSync(iconPath)) {
+      console.warn('[TrayManager] Tray icon not found:', iconPath);
+      // Create a simple 16x16 transparent icon as fallback
+      const fallbackIcon = nativeImage.createEmpty();
+      this.tray = new Tray(fallbackIcon);
+    } else {
+      const icon = nativeImage.createFromPath(iconPath);
+      this.tray = new Tray(icon);
+    }
 
     this.tray.setToolTip('SimNow 交易终端');
 
