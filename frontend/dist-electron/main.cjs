@@ -18,7 +18,7 @@ const autoUpdater_1 = require('./autoUpdater.cjs');
 const index_1 = require('./ipc/index.cjs');
 const window_1 = require('./ipc/window.cjs');
 const app_1 = require('./ipc/app.cjs');
-const ipcMonitor_1 = require('./ipcMonitor.cjs');
+const ipcWrapper_1 = require('./ipcWrapper.cjs');
 // Check if in development mode
 exports.isDev = process.env.NODE_ENV === 'development' || !electron_1.app.isPackaged;
 // Global manager instances
@@ -125,16 +125,13 @@ async function initializeApp() {
             electron_1.app.quit();
         }
     });
-    // Initialize IPC Monitor (must be before registering IPC handlers)
-    const ipcMonitor = (0, ipcMonitor_1.getIPCMonitor)();
-    ipcMonitor.enable();
     // Register IPC handlers using modular approach
     (0, window_1.registerWindowControlHandlers)(mainWindow);
     (0, window_1.registerWindowManagementHandlers)(windowManager);
     (0, app_1.registerAppInfoHandlers)();
     (0, app_1.registerBackendManagementHandlers)(backendManager);
     // Send IPC Monitor to main window
-    ipcMonitor.sendToWindow(mainWindow);
+    (0, ipcWrapper_1.sendIPCMonitorToWindow)(mainWindow);
     // Cleanup on quit
     electron_1.app.on('will-quit', () => {
         shortcutManager.save();
