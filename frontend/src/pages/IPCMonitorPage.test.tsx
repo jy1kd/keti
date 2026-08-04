@@ -33,9 +33,9 @@ describe('IPCMonitorPage', () => {
     expect(screen.getByText(/导出/)).toBeInTheDocument()
   })
 
-  it('shows empty message when not in Electron', () => {
+  it('shows empty message when no messages', () => {
     render(<IPCMonitorPage />)
-    expect(screen.getByText('IPC 监控仅在 Electron 环境下可用')).toBeInTheDocument()
+    expect(screen.getByText('暂无消息，等待 WebSocket 连接或 API 请求...')).toBeInTheDocument()
   })
 
   it('toggles pause state', () => {

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { isElectron } from '@/services/electron'
 import './IPCMonitorPage.css'
 
-interface IPCMessage {
+interface MonitorMessage {
   id: string
   timestamp: number
   direction: 'in' | 'out'
@@ -10,7 +10,7 @@ interface IPCMessage {
   data?: unknown
 }
 
-type FilterType = 'all' | 'market' | 'order' | 'system' | 'navigate'
+type FilterType = 'all' | 'market' | 'order' | 'system' | 'navigate' | 'api'
 
 const FILTER_LABELS: Record<FilterType, string> = {
   all: '全部',
@@ -18,44 +18,164 @@ const FILTER_LABELS: Record<FilterType, string> = {
   order: '报单',
   system: '系统',
   navigate: '导航',
+  api: 'API',
 }
 
 function matchesFilter(channel: string, filter: FilterType): boolean {
   if (filter === 'all') return true
-  if (filter === 'market') return channel.includes('market') || channel.includes('ws')
+  if (filter === 'market') return channel.includes('market') || channel.includes('ws/market')
   if (filter === 'order') return channel.includes('order') || channel.includes('trade')
-  if (filter === 'system') return channel.includes('system') || channel.includes('connection') || channel.includes('backend')
+  if (filter === 'system') return channel.includes('system') || channel.includes('connection') || channel.includes('backend') || channel.includes('ws/system')
   if (filter === 'navigate') return channel.includes('navigate') || channel.includes('tab')
+  if (filter === 'api') return channel.startsWith('api/')
   return true
+}
+
+// 全局消息存储（跨组件共享）
+let globalMessages: MonitorMessage[] = []
+let globalListeners: Set<(msg: MonitorMessage) => void> = new Set()
+let idCounter = 0
+
+function addMessage(msg: Omit<MonitorMessage, 'id'>) {
+  const message: MonitorMessage = { ...msg, id: String(++idCounter) }
+  globalMessages = [...globalMessages.slice(-999), message] // 保留最近 1000 条
+  globalListeners.forEach((listener) => listener(message))
+}
+
+// 拦截 WebSocket 消息
+function setupWebSocketInterceptor() {
+  const originalWebSocket = window.WebSocket
+  const intercepted = new WeakSet<WebSocket>()
+
+  window.WebSocket = function (url: string | URL, protocols?: string | string[]) {
+    const ws = new originalWebSocket(url, protocols)
+    if (intercepted.has(ws)) return ws
+    intercepted.add(ws)
+
+    const urlStr = typeof url === 'string' ? url : url.toString()
+    let channel = 'ws/unknown'
+    if (urlStr.includes('/ws/market')) channel = 'ws/market'
+    else if (urlStr.includes('/ws/system')) channel = 'ws/system'
+    else if (urlStr.includes('/ws/order')) channel = 'ws/order'
+    else if (urlStr.includes('/ws/position')) channel = 'ws/position'
+
+    // 拦截 onmessage
+    const originalOnMessage = ws.onmessage
+    ws.addEventListener('message', (event) => {
+      try {
+        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+        addMessage({ timestamp: Date.now(), direction: 'in', channel, data })
+      } catch {
+        addMessage({ timestamp: Date.now(), direction: 'in', channel, data: event.data })
+      }
+    })
+
+    // 拦截 send
+    const originalSend = ws.send
+    ws.send = function (data: string | ArrayBufferLike | Blob | ArrayBufferView) {
+      try {
+        const parsed = typeof data === 'string' ? JSON.parse(data) : data
+        addMessage({ timestamp: Date.now(), direction: 'out', channel, data: parsed })
+      } catch {
+        addMessage({ timestamp: Date.now(), direction: 'out', channel, data })
+      }
+      return originalSend.call(this, data)
+    }
+
+    return ws
+  } as any
+
+  // 复制 WebSocket 原型方法
+  window.WebSocket.prototype = originalWebSocket.prototype
+  window.WebSocket.CONNECTING = originalWebSocket.CONNECTING
+  window.WebSocket.OPEN = originalWebSocket.OPEN
+  window.WebSocket.CLOSING = originalWebSocket.CLOSING
+  window.WebSocket.CLOSED = originalWebSocket.CLOSED
+}
+
+// 拦截 fetch API
+function setupFetchInterceptor() {
+  const originalFetch = window.fetch
+  window.fetch = async function (input: RequestInfo | URL, init?: RequestInit) {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    const method = init?.method || 'GET'
+    const startTime = Date.now()
+
+    // 记录请求
+    addMessage({
+      timestamp: startTime,
+      direction: 'out',
+      channel: `api/${method}`,
+      data: { url, method, body: init?.body },
+    })
+
+    try {
+      const response = await originalFetch(input, init)
+      const endTime = Date.now()
+
+      // 记录响应
+      addMessage({
+        timestamp: endTime,
+        direction: 'in',
+        channel: `api/${method}`,
+        data: { url, status: response.status, duration: endTime - startTime },
+      })
+
+      return response
+    } catch (error) {
+      const endTime = Date.now()
+      addMessage({
+        timestamp: endTime,
+        direction: 'in',
+        channel: `api/${method}`,
+        data: { url, error: String(error), duration: endTime - startTime },
+      })
+      throw error
+    }
+  }
+}
+
+// 初始化拦截器
+let interceptorInitialized = false
+function initInterceptors() {
+  if (interceptorInitialized) return
+  interceptorInitialized = true
+  setupWebSocketInterceptor()
+  setupFetchInterceptor()
 }
 
 /**
  * IPCMonitorPage — IPC 监控标签页
  *
  * 用于调试 IPC 通信，支持消息过滤、暂停、清空、导出。
+ * Electron 环境下显示 IPC 消息，Web 环境下显示 WebSocket 和 API 消息。
  */
 export function IPCMonitorPage() {
-  const [messages, setMessages] = useState<IPCMessage[]>([])
+  const [messages, setMessages] = useState<MonitorMessage[]>([])
   const [filter, setFilter] = useState<FilterType>('all')
   const [paused, setPaused] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const idCounterRef = useRef(0)
 
-  // 模拟 IPC 消息（实际项目中应该从 Electron IPC 获取）
   useEffect(() => {
-    if (!isElectron()) return
+    // 初始化拦截器
+    initInterceptors()
 
-    // 这里应该监听实际的 IPC 消息
-    // 目前使用模拟数据进行演示
-    const mockMessages: IPCMessage[] = [
-      { id: '1', timestamp: Date.now(), direction: 'in', channel: 'market:data', data: { instrumentID: 'IF2608', lastPrice: 4585.6 } },
-      { id: '2', timestamp: Date.now() + 100, direction: 'out', channel: 'order:submit', data: { instrumentID: 'IF2608', direction: 'buy' } },
-      { id: '3', timestamp: Date.now() + 200, direction: 'in', channel: 'system:status', data: { connected: true } },
-    ]
+    // 加载已有消息
+    setMessages([...globalMessages])
 
-    setMessages(mockMessages)
-  }, [])
+    // 监听新消息
+    const listener = (msg: MonitorMessage) => {
+      if (!paused) {
+        setMessages((prev) => [...prev, msg])
+      }
+    }
+    globalListeners.add(listener)
+
+    return () => {
+      globalListeners.delete(listener)
+    }
+  }, [paused])
 
   // 自动滚动到底部
   useEffect(() => {
@@ -69,6 +189,7 @@ export function IPCMonitorPage() {
 
   // 清空消息
   const handleClear = useCallback(() => {
+    globalMessages = []
     setMessages([])
     setSelectedId(null)
   }, [])
@@ -123,6 +244,7 @@ export function IPCMonitorPage() {
         </div>
         <div className="ipc-monitor-page__stats">
           共 {filteredMessages.length} 条消息
+          {!isElectron() && <span className="ipc-monitor-page__mode">（Web 模式：WebSocket + API）</span>}
         </div>
       </div>
 
@@ -130,7 +252,7 @@ export function IPCMonitorPage() {
         <div className="ipc-monitor-page__list">
           {filteredMessages.length === 0 ? (
             <div className="ipc-monitor-page__empty">
-              {isElectron() ? '暂无 IPC 消息' : 'IPC 监控仅在 Electron 环境下可用'}
+              暂无消息，等待 WebSocket 连接或 API 请求...
             </div>
           ) : (
             filteredMessages.map((msg) => (
