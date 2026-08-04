@@ -47,6 +47,11 @@ export function registerWindowManagementHandlers(windowManager: WindowManager): 
   ipcMain.handle(IPC_CHANNELS.WINDOW_OPEN_KLINE, (_event, instrumentID: string) => {
     windowManager.openKLineWindow(instrumentID);
   });
+
+  // Open tab in new window
+  ipcMain.handle(IPC_CHANNELS.WINDOW_OPEN_TAB, (_event, tabType: string, tabId: string, tabTitle: string, props?: Record<string, unknown>) => {
+    windowManager.openTabWindow(tabType, tabId, tabTitle, props);
+  });
 }
 
 /**
@@ -58,4 +63,5 @@ export function unregisterWindowHandlers(): void {
   ipcMain.removeHandler(IPC_CHANNELS.WINDOW_CLOSE);
   ipcMain.removeHandler(IPC_CHANNELS.WINDOW_OPEN_ORDER);
   ipcMain.removeHandler(IPC_CHANNELS.WINDOW_OPEN_KLINE);
+  ipcMain.removeHandler(IPC_CHANNELS.WINDOW_OPEN_TAB);
 }
