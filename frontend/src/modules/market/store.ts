@@ -17,8 +17,8 @@ interface MarketStore {
   /** 当前可见的合约 ID 列表 */
   visibleInstrumentIDs: string[]
   setVisibleInstrumentIDs: (ids: string[]) => void
-  /** 锁定的合约（打开标签的合约，永不退订） */
-  lockedContracts: Set<string>
+  /** 锁定的合约 — 引用计数，多个锁定源独立增减，归零才解锁 */
+  lockedContracts: Map<string, number>
   addLockedContract: (instrumentID: string) => void
   removeLockedContract: (instrumentID: string) => void
   /** 多选的合约 ID 集合 */
@@ -104,17 +104,22 @@ export const useMarketStore = create<MarketStore>((set) => ({
   setPeriod: (period) => set({ currentPeriod: period }),
   visibleInstrumentIDs: [],
   setVisibleInstrumentIDs: (ids) => set({ visibleInstrumentIDs: ids }),
-  lockedContracts: new Set(),
+  lockedContracts: new Map(),
   addLockedContract: (instrumentID) =>
     set((state) => {
-      const next = new Set(state.lockedContracts)
-      next.add(instrumentID)
+      const next = new Map(state.lockedContracts)
+      next.set(instrumentID, (next.get(instrumentID) ?? 0) + 1)
       return { lockedContracts: next }
     }),
   removeLockedContract: (instrumentID) =>
     set((state) => {
-      const next = new Set(state.lockedContracts)
-      next.delete(instrumentID)
+      const next = new Map(state.lockedContracts)
+      const count = next.get(instrumentID) ?? 0
+      if (count <= 1) {
+        next.delete(instrumentID)
+      } else {
+        next.set(instrumentID, count - 1)
+      }
       return { lockedContracts: next }
     }),
   selectedContracts: new Set(),

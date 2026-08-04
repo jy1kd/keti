@@ -45,7 +45,7 @@ export function useSubscriptionManager() {
     }
 
     // 添加锁定合约
-    for (const id of lockedContracts) {
+    for (const id of lockedContracts.keys()) {
       shouldSubscribe.add(id)
     }
 

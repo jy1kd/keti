@@ -17,10 +17,12 @@ const LOCKABLE_TAB_TYPES = new Set(['kline', 'order'])
  * 设计依据：docs/specs/redesign-plan.md 3.5 锁定合约机制
  *   "📈 打开标签的合约（报单/K线窗口）永不退订"
  *
- * 与 useSubscriptionManager 配合：lockedContracts 内的合约被加入订阅集合。
+ * 与 useSubscriptionManager 配合：lockedContracts（Map<string, number> 引用计数）
+ * 内的合约被加入订阅集合，归零自动解锁。
  *
- * 注意：只解锁本 hook 曾锁定的合约（prevRef 追踪），
- * 不干扰 OrderPopup 等其他来源的锁定，避免误删。
+ * 注意：lockedContracts 已改为引用计数（Map），
+ * 本 hook 的 addLockedContract/removeLockedContract 与 OrderPopup 等来源
+ * 安全叠加——同合约被多方锁定时，仅当所有来源释放后才真正解锁。
  */
 export function useTabContractLocks() {
   const tabs = useTabStore((s) => s.tabs)

@@ -32,7 +32,7 @@ function closeTabOfType(type: 'kline' | 'order') {
 describe('useTabContractLocks', () => {
   beforeEach(() => {
     resetTabs()
-    useMarketStore.setState({ lockedContracts: new Set() })
+    useMarketStore.setState({ lockedContracts: new Map() })
   })
 
   it('kline 标签打开时锁定合约', () => {
@@ -70,5 +70,24 @@ describe('useTabContractLocks', () => {
     const locked = useMarketStore.getState().lockedContracts
     expect(locked.has('IF2608')).toBe(true)
     expect(locked.has('AU2608')).toBe(true)
+  })
+
+  it('同合约被 OrderPopup + kline 标签同时锁定，关标签后仍锁定（引用计数）', () => {
+    renderHook(() => useTabContractLocks())
+    // OrderPopup 先锁定 IF2608
+    act(() => {
+      useMarketStore.getState().addLockedContract('IF2608')
+    })
+    // 再打开 IF2608 的 kline 标签（hook 会增加引用计数）
+    openTab('kline', 'IF2608')
+    expect(useMarketStore.getState().lockedContracts.get('IF2608')).toBe(2)
+    // 关闭 kline 标签后 count 减为 1，合约仍锁定
+    closeTabOfType('kline')
+    expect(useMarketStore.getState().lockedContracts.get('IF2608')).toBe(1)
+    // 再释放 OrderPopup 的锁定 → count 归零，合约解锁
+    act(() => {
+      useMarketStore.getState().removeLockedContract('IF2608')
+    })
+    expect(useMarketStore.getState().lockedContracts.has('IF2608')).toBe(false)
   })
 })

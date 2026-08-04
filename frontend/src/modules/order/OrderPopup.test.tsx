@@ -55,7 +55,7 @@ describe('OrderPopup', () => {
       favorites: [],
       isLoaded: true,
     })
-    useMarketStore.setState({ snapshots: new Map(), lockedContracts: new Set() })
+    useMarketStore.setState({ snapshots: new Map(), lockedContracts: new Map() })
   })
 
   it('弹窗关闭时不渲染', () => {
