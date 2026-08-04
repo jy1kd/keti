@@ -643,6 +643,8 @@ frontend/src/pages/QueryPage.tsx / QueryPage.css / __tests__/QueryPage.test.tsx 
 - [x] 右键合约菜单「📋 查询」打开弹窗并选中该合约
 - [x] 所有测试通过
 
+> **合并注记**：R15 已通过 PR #74 合并到 main（`26de960`）。人工验证 9 项全部通过，详见 `docs/snapshots/role-b/verify-discussion-redesign-r15.md`。
+
 ---
 
 #### PR-R16: K线标签页
