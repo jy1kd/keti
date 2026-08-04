@@ -36,8 +36,9 @@ describe('utils/flip', () => {
   it('getRect 正确映射 getBoundingClientRect 字段', () => {
     const el = document.createElement('div')
     const mock = { left: 10, top: 20, width: 100, height: 50, right: 110, bottom: 70, x: 10, y: 20, toJSON: () => ({}) }
-    vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(mock as DOMRect)
+    const spy = vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(mock as DOMRect)
     expect(getRect(el)).toEqual({ left: 10, top: 20, width: 100, height: 50 })
+    spy.mockRestore()
   })
 
   it('getTabPanelRect 按 aria-labelledby 查询面板矩形', () => {
