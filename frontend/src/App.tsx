@@ -11,6 +11,7 @@ import { useMarketStore } from '@/modules/market/store'
 import { OrderPopup } from '@/modules/order/OrderPopup'
 import { QueryPopup } from '@/modules/query/QueryPopup'
 import { useQueryPopupStore } from '@/modules/query/popupStore'
+import { FloatingWindows } from '@/components/FloatingWindow'
 import { useTabStore } from '@/stores/tabs'
 import { API_BASE } from '@/services/api'
 import { isElectron } from '@/services/electron'
@@ -144,6 +145,9 @@ function App() {
 
       {/* 悬浮查询弹窗（非模态，浮于所有标签页之上） */}
       <QueryPopup />
+
+      {/* 浮动标签窗口（chrome 壳；内容由 TabContent 位移覆盖） */}
+      <FloatingWindows />
     </div>
   )
 }
