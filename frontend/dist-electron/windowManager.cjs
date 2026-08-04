@@ -58,12 +58,14 @@ class WindowManager {
     createMainWindow() {
         const config = DEFAULT_CONFIGS.main;
         const { width, height } = electron_1.screen.getPrimaryDisplay().workAreaSize;
+        const iconPath = path_1.default.join(__dirname, '../build/icon.png');
         const mainWindow = new electron_1.BrowserWindow({
             width: Math.min(config.width, width),
             height: Math.min(config.height, height),
             minWidth: config.minWidth,
             minHeight: config.minHeight,
             title: config.title,
+            icon: iconPath,
             webPreferences: {
                 preload: path_1.default.join(__dirname, 'preload.cjs'),
                 contextIsolation: true,
@@ -104,12 +106,14 @@ class WindowManager {
         }
         const config = DEFAULT_CONFIGS.order;
         const parent = this.windows.get('main');
+        const iconPath = path_1.default.join(__dirname, '../build/icon.png');
         const orderWindow = new electron_1.BrowserWindow({
             width: config.width,
             height: config.height,
             minWidth: config.minWidth,
             minHeight: config.minHeight,
             title: instrumentID ? `${config.title} - ${instrumentID}` : config.title,
+            icon: iconPath,
             parent,
             modal: false,
             webPreferences: {
@@ -152,12 +156,14 @@ class WindowManager {
             return existing;
         }
         const config = DEFAULT_CONFIGS.kline;
+        const iconPath = path_1.default.join(__dirname, '../build/icon.png');
         const klineWindow = new electron_1.BrowserWindow({
             width: config.width,
             height: config.height,
             minWidth: config.minWidth,
             minHeight: config.minHeight,
             title: `${config.title} - ${instrumentID}`,
+            icon: iconPath,
             webPreferences: {
                 preload: path_1.default.join(__dirname, 'preload.cjs'),
                 contextIsolation: true,

@@ -5,9 +5,14 @@
  * Manages the system tray for the Electron application.
  * Supports tray icon, context menu, and notifications.
  */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TrayManager = void 0;
 const electron_1 = require("electron");
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
 const index_1 = require('./ipc/index.cjs');
 /**
  * TrayManager class
@@ -22,22 +27,22 @@ class TrayManager {
      */
     initialize(mainWindow) {
         this.mainWindow = mainWindow;
-        // Create tray icon (use empty icon as fallback since build/icon.png was removed)
-        const fallbackIcon = electron_1.nativeImage.createEmpty();
-        this.tray = new electron_1.Tray(fallbackIcon);
+        // Create tray icon
+        const iconPath = path_1.default.join(__dirname, '../build/icon.png');
+        // Check if icon file exists
+        if (!fs_1.default.existsSync(iconPath)) {
+            console.warn('[TrayManager] Tray icon not found:', iconPath);
+            // Create a simple 16x16 transparent icon as fallback
+            const fallbackIcon = electron_1.nativeImage.createEmpty();
+            this.tray = new electron_1.Tray(fallbackIcon);
+        }
+        else {
+            const icon = electron_1.nativeImage.createFromPath(iconPath);
+            this.tray = new electron_1.Tray(icon);
+        }
         this.tray.setToolTip('SimNow 交易终端');
         // Build context menu
         const contextMenu = electron_1.Menu.buildFromTemplate([
-            {
-                label: '显示主窗口',
-                click: () => {
-                    if (this.mainWindow) {
-                        this.mainWindow.show();
-                        this.mainWindow.focus();
-                    }
-                },
-            },
-            { type: 'separator' },
             {
                 label: '📊 行情',
                 click: () => {
@@ -59,32 +64,12 @@ class TrayManager {
                 },
             },
             {
-                label: '📝 报单',
-                click: () => {
-                    if (this.mainWindow) {
-                        this.mainWindow.show();
-                        this.mainWindow.focus();
-                        this.mainWindow.webContents.send(index_1.IPC_CHANNELS.NAVIGATE_TAB, 'order');
-                    }
-                },
-            },
-            {
                 label: '📋 查询',
                 click: () => {
                     if (this.mainWindow) {
                         this.mainWindow.show();
                         this.mainWindow.focus();
                         this.mainWindow.webContents.send(index_1.IPC_CHANNELS.NAVIGATE_TAB, 'query');
-                    }
-                },
-            },
-            {
-                label: '📈 K线',
-                click: () => {
-                    if (this.mainWindow) {
-                        this.mainWindow.show();
-                        this.mainWindow.focus();
-                        this.mainWindow.webContents.send(index_1.IPC_CHANNELS.NAVIGATE_TAB, 'kline');
                     }
                 },
             },
@@ -100,7 +85,7 @@ class TrayManager {
                 },
             },
             {
-                label: '🔌 IPC 监控',
+                label: '📡 网络监控',
                 click: () => {
                     if (this.mainWindow) {
                         this.mainWindow.show();
