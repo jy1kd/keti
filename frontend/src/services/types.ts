@@ -325,12 +325,17 @@ export interface ApiResponse<T = unknown> {
 // --- 用户偏好 ---
 
 export interface HotKeyConfig {
+  // 交易快捷键
   buy: string
   sell: string
   cancel: string
   reverse: string
   lock: string
   batchCancel: string
+  // 导航快捷键
+  openOrder: string
+  openKline: string
+  openSettings: string
   [action: string]: string
 }
 

@@ -9,11 +9,14 @@ interface UseHotKeysOptions {
   onReverse?: () => void
   onLock?: () => void
   onBatchCancel?: () => void
+  onOpenOrder?: () => void
+  onOpenKline?: () => void
+  onOpenSettings?: () => void
   enabled: boolean
   hotKeys?: HotKeyConfig
 }
 
-type ActionKey = 'buy' | 'sell' | 'cancel' | 'reverse' | 'lock' | 'batchCancel'
+type ActionKey = 'buy' | 'sell' | 'cancel' | 'reverse' | 'lock' | 'batchCancel' | 'openOrder' | 'openKline' | 'openSettings'
 
 export function useHotKeys({
   onBuy,
@@ -22,6 +25,9 @@ export function useHotKeys({
   onReverse,
   onLock,
   onBatchCancel,
+  onOpenOrder,
+  onOpenKline,
+  onOpenSettings,
   enabled,
   hotKeys,
 }: UseHotKeysOptions) {
@@ -65,9 +71,12 @@ export function useHotKeys({
       if (action === 'reverse') onReverse?.()
       if (action === 'lock') onLock?.()
       if (action === 'batchCancel') onBatchCancel?.()
+      if (action === 'openOrder') onOpenOrder?.()
+      if (action === 'openKline') onOpenKline?.()
+      if (action === 'openSettings') onOpenSettings?.()
     }
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [enabled, keyToAction, onBuy, onSell, onCancelAll, onReverse, onLock, onBatchCancel])
+  }, [enabled, keyToAction, onBuy, onSell, onCancelAll, onReverse, onLock, onBatchCancel, onOpenOrder, onOpenKline, onOpenSettings])
 }

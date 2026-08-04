@@ -4,12 +4,17 @@ import type { HotKeyConfig, QuickTradeConfig } from '@/services/types'
 const STORAGE_KEY = 'simnow-user-prefs'
 
 export const DEFAULT_HOT_KEYS: HotKeyConfig = {
+  // 交易快捷键
   buy: 'b',
   sell: 's',
   cancel: 'c',
   reverse: '',
   lock: '',
   batchCancel: 'Escape',
+  // 导航快捷键
+  openOrder: '',
+  openKline: '',
+  openSettings: ',',
 }
 
 export const DEFAULT_QUICK_TRADE_CONFIG: QuickTradeConfig = {

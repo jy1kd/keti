@@ -10,12 +10,17 @@ interface HotKeyTabProps {
 const MODIFIER_KEYS = new Set(['Control', 'Shift', 'Alt', 'Meta', 'Tab', 'Escape'])
 
 const LABELS: Record<string, string> = {
+  // 交易快捷键
   buy: '买入',
   sell: '卖出',
   cancel: '撤单',
   reverse: '一键反向',
   lock: '一键锁仓',
   batchCancel: '批量撤单',
+  // 导航快捷键
+  openOrder: '打开报单',
+  openKline: '打开K线',
+  openSettings: '打开设置',
 }
 
 export function HotKeyTab({ hotKeys, onSave }: HotKeyTabProps) {
