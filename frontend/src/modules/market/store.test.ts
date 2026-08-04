@@ -243,7 +243,7 @@ describe('MarketStore - currentPeriod', () => {
 describe('MarketStore - lockedContracts', () => {
   beforeEach(() => {
     useMarketStore.setState({
-      lockedContracts: new Set(),
+      lockedContracts: new Map(),
       visibleInstrumentIDs: [],
     })
   })
@@ -252,24 +252,33 @@ describe('MarketStore - lockedContracts', () => {
     expect(useMarketStore.getState().lockedContracts.size).toBe(0)
   })
 
-  it('addLockedContract adds contract to locked set', () => {
+  it('addLockedContract adds contract with count 1', () => {
     useMarketStore.getState().addLockedContract('IF2608')
-    expect(useMarketStore.getState().lockedContracts.has('IF2608')).toBe(true)
+    expect(useMarketStore.getState().lockedContracts.get('IF2608')).toBe(1)
   })
 
-  it('addLockedContract is idempotent', () => {
+  it('addLockedContract increments count when called twice (reference counting)', () => {
     useMarketStore.getState().addLockedContract('IF2608')
     useMarketStore.getState().addLockedContract('IF2608')
+    expect(useMarketStore.getState().lockedContracts.get('IF2608')).toBe(2)
     expect(useMarketStore.getState().lockedContracts.size).toBe(1)
   })
 
-  it('removeLockedContract removes contract from locked set', () => {
+  it('removeLockedContract decrements count; key remains when count > 1', () => {
+    useMarketStore.getState().addLockedContract('IF2608')
+    useMarketStore.getState().addLockedContract('IF2608')
+    useMarketStore.getState().removeLockedContract('IF2608')
+    expect(useMarketStore.getState().lockedContracts.get('IF2608')).toBe(1)
+  })
+
+  it('removeLockedContract deletes key when count reaches 0', () => {
     useMarketStore.getState().addLockedContract('IF2608')
     useMarketStore.getState().removeLockedContract('IF2608')
     expect(useMarketStore.getState().lockedContracts.has('IF2608')).toBe(false)
+    expect(useMarketStore.getState().lockedContracts.size).toBe(0)
   })
 
-  it('removeLockedContract is idempotent', () => {
+  it('removeLockedContract on missing key is safe', () => {
     useMarketStore.getState().removeLockedContract('IF2608')
     expect(useMarketStore.getState().lockedContracts.size).toBe(0)
   })

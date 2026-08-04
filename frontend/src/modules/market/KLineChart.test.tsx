@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import { KLineChart } from './KLineChart'
 import type { KLineData } from '@/services/types'
 
@@ -8,10 +8,12 @@ const { mockSetOption, mockDispose, mockInit } = vi.hoisted(() => {
   const mockSetOption = vi.fn()
   const mockResize = vi.fn() // used inside mockInit closure
   const mockDispose = vi.fn()
+  const mockGetOption = vi.fn(() => ({})) // 与真实 echarts 一致；K线数据更新时用于保留缩放
   const mockInit = vi.fn(() => ({
     setOption: mockSetOption,
     resize: mockResize,
     dispose: mockDispose,
+    getOption: mockGetOption,
   }))
   return { mockSetOption, mockDispose, mockInit }
 })
@@ -76,6 +78,22 @@ describe('KLineChart', () => {
   it('renders instrument name in header', () => {
     render(<KLineChart instrument="IF2608" klineData={sampleData} period="5m" />)
     expect(screen.getByText('IF2608')).toBeInTheDocument()
+  })
+
+  it('renders contract name when provided', () => {
+    render(<KLineChart instrument="IF2608" klineData={[]} period="5m" name="沪深300" />)
+    expect(screen.getByText('沪深300')).toBeInTheDocument()
+  })
+
+  it('renders latest price when provided', () => {
+    render(<KLineChart instrument="IF2608" klineData={[]} period="5m" latestPrice="4585.60" />)
+    expect(screen.getByText('4585.60')).toBeInTheDocument()
+  })
+
+  it('does not render name/latest price when not provided', () => {
+    render(<KLineChart instrument="IF2608" klineData={[]} period="5m" />)
+    expect(screen.queryByText('沪深300')).not.toBeInTheDocument()
+    expect(screen.queryByText('4585.60')).not.toBeInTheDocument()
   })
 
   it('renders chart canvas when data is provided', () => {
@@ -204,5 +222,43 @@ describe('KLineChart', () => {
     const option = mockSetOption.mock.calls[mockSetOption.mock.calls.length - 1][0]
     expect(option.grid.length).toBe(2)
     expect(option.yAxis.length).toBe(2)
+  })
+
+  it('applies data when chart initializes after container becomes visible (懒初始化竞态)', () => {
+    vi.clearAllMocks()
+    // 覆盖 ResizeObserver：捕获回调但不立即触发 —— 模拟容器挂载时为 display:none（0 尺寸）
+    const roCallbacks: ResizeObserverCallback[] = []
+    const origRO = globalThis.ResizeObserver
+    globalThis.ResizeObserver = vi.fn().mockImplementation((cb: ResizeObserverCallback) => {
+      roCallbacks.push(cb)
+      return { observe: vi.fn(), unobserve: vi.fn(), disconnect: vi.fn() }
+    })
+
+    try {
+      const { unmount } = render(<KLineChart instrument="IF2608" klineData={sampleData} period="5m" />)
+      // 挂载时容器无尺寸 → echarts 未初始化，setOption 不应被调用
+      expect(mockInit).not.toHaveBeenCalled()
+      expect(mockSetOption).not.toHaveBeenCalled()
+
+      // 模拟切换到该标签页：容器获得尺寸，ResizeObserver 触发懒初始化
+      const el = screen.getByTestId('kline-canvas')
+      Object.defineProperty(el, 'offsetWidth', { value: 800, configurable: true })
+      Object.defineProperty(el, 'offsetHeight', { value: 600, configurable: true })
+      act(() => {
+        roCallbacks.forEach((cb) =>
+          cb(
+            [{ contentRect: { width: 800, height: 600 }, target: el }] as unknown as ResizeObserverEntry[],
+            {} as ResizeObserver,
+          ),
+        )
+      })
+
+      // 实例此时才创建，必须把已有数据画上去，否则该标签页空白
+      expect(mockInit).toHaveBeenCalled()
+      expect(mockSetOption).toHaveBeenCalled()
+      unmount()
+    } finally {
+      globalThis.ResizeObserver = origRO
+    }
   })
 })

@@ -18,6 +18,16 @@ vi.mock('@/pages/OrderPage', () => ({
   ),
 }))
 
+// Mock KLinePage 组件（避免依赖 stores）
+vi.mock('@/pages/KLinePage', () => ({
+  KLinePage: ({ instrumentID }: { instrumentID?: string }) => (
+    <div data-testid="kline-page">
+      K线页面 Mock
+      {instrumentID && <span>合约: {instrumentID}</span>}
+    </div>
+  ),
+}))
+
 // --- 辅助函数 ---
 
 function makeTab(overrides: Partial<Tab> & { type: TabType }): Tab {
@@ -125,7 +135,7 @@ describe('TabContent', () => {
     it.each<[TabType, string]>([
       ['market', '行情面板'],
       ['order', '报单页面'],
-      ['kline', 'K线标签页'],
+      ['kline', 'K线页面'],
       ['favorites', '⭐ 自选合约'],
       ['settings', '⚙ 设置'],
       ['options', '期权标签页'],

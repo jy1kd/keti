@@ -1,8 +1,9 @@
 /**
- * KLinePage
+ * KLinePage — K线标签页
  *
- * Standalone K-line page for Electron windows.
- * This page can be opened in a separate window via WindowManager.
+ * 专业交易终端风格的独立K线页面。
+ * 顶部单一展示栏（合约代码/名称/最新价 + 多周期 + 技术指标）由 KLineChart 标题栏承载。
+ * 同时兼容 Electron 独立窗口模式。
  */
 
 import { useEffect } from 'react';
@@ -12,9 +13,16 @@ import { useContractsStore } from '@/stores/contracts';
 import { getKlineData } from '@/services/api';
 import { PERIOD_MS } from '@/hooks/useMarketWs';
 import { isElectron } from '@/services/electron';
+import './KLinePage.css';
 
 interface KLinePageProps {
-  instrumentID: string;
+  instrumentID?: string;
+}
+
+/** 价格格式化：保留到 priceTick 精度 */
+function formatPrice(n: number, tick: number): string {
+  const decimals = tick < 1 ? String(tick).length - 1 : 0;
+  return n.toFixed(decimals);
 }
 
 export function KLinePage({ instrumentID }: KLinePageProps) {
@@ -22,10 +30,14 @@ export function KLinePage({ instrumentID }: KLinePageProps) {
   const currentPeriod = useMarketStore((s) => s.currentPeriod);
   const setPeriod = useMarketStore((s) => s.setPeriod);
   const setKlineData = useMarketStore((s) => s.setKlineData);
+  const snapshots = useMarketStore((s) => s.snapshots);
   const contracts = useContractsStore((s) => s.contracts);
 
   // Get contract info
   const contract = contracts.find((c) => c.instrumentID === instrumentID);
+  const snapshot = instrumentID ? snapshots.get(instrumentID) : null;
+  const priceTick = contract?.priceTick ?? 0.2;
+  const latestPrice = snapshot?.lastPrice != null ? formatPrice(snapshot.lastPrice, priceTick) : '—';
 
   // Fetch K-line data on mount and when period changes
   useEffect(() => {
@@ -48,36 +60,37 @@ export function KLinePage({ instrumentID }: KLinePageProps) {
   }, [instrumentID, currentPeriod, setKlineData]);
 
   // Get K-line data for the instrument
-  const data = klineData.get(instrumentID) ?? [];
+  const data = instrumentID ? (klineData.get(instrumentID) ?? []) : [];
 
   return (
     <div className="kline-page">
-      <div className="kline-page__header">
-        <h1>K线图</h1>
-        <div className="kline-page__instrument">
-          <span className="instrument-id">{instrumentID}</span>
-          {contract && (
-            <span className="instrument-name">{contract.instrumentName}</span>
-          )}
+      {/* ── 合约选择提示 ── */}
+      {!instrumentID && (
+        <div className="kline-page__no-contract">
+          请在行情表格中选择合约后打开K线标签
         </div>
-      </div>
+      )}
 
-      <div className="kline-page__content">
-        <KLineChart
-          instrument={instrumentID}
-          klineData={data}
-          period={currentPeriod}
-          onPeriodChange={setPeriod}
-        />
-      </div>
+      {/* ── K线图（标题栏承载：合约代码/名称/最新价 + 周期 + 指标） ── */}
+      {instrumentID && (
+        <div className="kline-page__content">
+          <KLineChart
+            instrument={instrumentID}
+            name={contract?.instrumentName}
+            latestPrice={latestPrice}
+            klineData={data}
+            period={currentPeriod}
+            onPeriodChange={setPeriod}
+          />
+        </div>
+      )}
 
-      <div className="kline-page__footer">
-        {isElectron() && (
-          <div className="kline-page__electron-info">
-            <span>独立窗口模式</span>
-          </div>
-        )}
-      </div>
+      {/* ── Electron 提示 ── */}
+      {isElectron() && (
+        <div className="kline-page__electron-info">
+          独立窗口模式
+        </div>
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { PerfMonitor } from '@/components/PerfMonitor'
 import { ToastContainer } from '@/components/Toast'
 import { useSystemWs } from '@/hooks/useSystemWs'
 import { useConnectionPoll } from '@/hooks/useConnectionPoll'
+import { useTabContractLocks } from '@/hooks/useTabContractLocks'
 import { useMarketStore } from '@/modules/market/store'
 import { OrderPopup } from '@/modules/order/OrderPopup'
 import { QueryPopup } from '@/modules/query/QueryPopup'
@@ -24,6 +25,9 @@ function App() {
 
   // 轮询 /api/connection/status — MD/TD 状态的权威来源
   useConnectionPoll()
+
+  // 打开标签的合约锁定订阅（K线/报单标签的合约永不退订，保证数据流）
+  useTabContractLocks()
 
   // Electron IPC — 监听托盘菜单导航消息
   useEffect(() => {

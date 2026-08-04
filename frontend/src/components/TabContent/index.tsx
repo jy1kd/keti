@@ -2,6 +2,7 @@ import { useTabStore, type Tab } from '@/stores/tabs'
 import { MarketPanel } from '@/modules/market/MarketPanel'
 import { FavoritesPage } from '@/pages/FavoritesPage'
 import { OrderPage } from '@/pages/OrderPage'
+import { KLinePage } from '@/pages/KLinePage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { IPCMonitorPage } from '@/pages/IPCMonitorPage'
 import './styles.css'
@@ -19,6 +20,7 @@ function getInstrumentID(props: Record<string, unknown>): string | undefined {
  *
  * market 类型已集成 MarketPanel；
  * order 类型已集成 OrderPage；
+ * kline 类型已集成 KLinePage；
  * 其他类型使用占位文本，后续 PR 会逐步替换为实际页面组件。
  * （query 自重构后为悬浮弹窗形态，见 QueryPopup，不再是标签页。）
  */
@@ -29,8 +31,7 @@ function renderTabContent(tab: Tab): React.ReactNode {
     case 'order':
       return <OrderPage instrumentID={getInstrumentID(tab.props)} />
     case 'kline':
-      // TODO: PR-R16 K线标签页
-      return <div className="tab-placeholder">📈 K线标签页（PR-R16）</div>
+      return <KLinePage instrumentID={getInstrumentID(tab.props)} />
     case 'favorites':
       return <FavoritesPage />
     case 'settings':

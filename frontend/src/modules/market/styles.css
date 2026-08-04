@@ -109,15 +109,51 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 6px 10px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-secondary);
+}
+
+.kline-chart__contract {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
 }
 
 .kline-chart__instrument {
   font-weight: 600;
   font-size: 14px;
   color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.kline-chart__name {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.kline-chart__latest {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.kline-chart__latest-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.kline-chart__latest-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
 }
 
 .kline-chart__controls {

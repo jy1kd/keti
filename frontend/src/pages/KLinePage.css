@@ -1,0 +1,43 @@
+/* ── KLinePage ──────────────────────────────────────────────── */
+
+.kline-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+/* ── 无合约提示 ─────────────────────────────────────────────── */
+
+.kline-page__no-contract {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ── K线图区域 ──────────────────────────────────────────────── */
+
+.kline-page__content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  /* 必须是 flex 列容器，否则子元素 .kline-chart 的 flex:1 失效，
+     canvas 高度塌陷为 0 → echarts 无法初始化 → K线区域空白 */
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Electron 提示 ──────────────────────────────────────────── */
+
+.kline-page__electron-info {
+  padding: 4px 14px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
