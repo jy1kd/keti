@@ -179,16 +179,14 @@ export function IPCMonitorPage() {
     let cleanupElectron: (() => void) | undefined
     if (isElectron() && window.electronAPI) {
       // 监听批量消息（初始加载）
-      const cleanupBatch = window.electronAPI.onNotification?.((data: any) => {
-        if (data.type === 'ipc-monitor-messages') {
-          setMessages(data.messages || [])
-        }
+      const cleanupBatch = window.electronAPI.onIPCMonitorMessages?.((messages: any[]) => {
+        setMessages(messages)
       })
 
       // 监听实时消息
-      const cleanupRealtime = window.electronAPI.onNotification?.((data: any) => {
-        if (data.type === 'ipc-monitor-message' && !paused) {
-          setMessages((prev) => [...prev, data.message])
+      const cleanupRealtime = window.electronAPI.onIPCMonitorMessage?.((message: any) => {
+        if (!paused) {
+          setMessages((prev) => [...prev, message])
         }
       })
 

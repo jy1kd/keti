@@ -121,6 +121,11 @@ declare global {
       // Event listeners
       onOrderUpdate: (callback: (data: any) => void) => () => void;
       onNotification: (callback: (data: any) => void) => () => void;
+
+      // IPC Monitor listeners
+      onIPCMonitorMessages: (callback: (messages: any[]) => void) => () => void;
+      onIPCMonitorMessage: (callback: (message: any) => void) => () => void;
+
       removeAllListeners: (channel: string) => void;
     };
   }

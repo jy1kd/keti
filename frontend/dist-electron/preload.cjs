@@ -45,6 +45,17 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
         electron_1.ipcRenderer.on('notification', handler);
         return () => electron_1.ipcRenderer.removeListener('notification', handler);
     },
+    // IPC Monitor listeners
+    onIPCMonitorMessages: (callback) => {
+        const handler = (_, messages) => callback(messages);
+        electron_1.ipcRenderer.on('ipc-monitor-messages', handler);
+        return () => electron_1.ipcRenderer.removeListener('ipc-monitor-messages', handler);
+    },
+    onIPCMonitorMessage: (callback) => {
+        const handler = (_, message) => callback(message);
+        electron_1.ipcRenderer.on('ipc-monitor-message', handler);
+        return () => electron_1.ipcRenderer.removeListener('ipc-monitor-message', handler);
+    },
     removeAllListeners: (channel) => {
         electron_1.ipcRenderer.removeAllListeners(channel);
     },

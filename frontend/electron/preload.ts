@@ -91,6 +91,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('notification', handler);
     return () => ipcRenderer.removeListener('notification', handler);
   },
+
+  // IPC Monitor listeners
+  onIPCMonitorMessages: (callback: (messages: any[]) => void) => {
+    const handler = (_: any, messages: any[]) => callback(messages);
+    ipcRenderer.on('ipc-monitor-messages', handler);
+    return () => ipcRenderer.removeListener('ipc-monitor-messages', handler);
+  },
+  onIPCMonitorMessage: (callback: (message: any) => void) => {
+    const handler = (_: any, message: any) => callback(message);
+    ipcRenderer.on('ipc-monitor-message', handler);
+    return () => ipcRenderer.removeListener('ipc-monitor-message', handler);
+  },
+
   removeAllListeners: (channel: string) => {
     ipcRenderer.removeAllListeners(channel);
   },
