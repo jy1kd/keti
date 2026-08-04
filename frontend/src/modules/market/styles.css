@@ -85,15 +85,6 @@
   background: var(--bg-primary);
 }
 
-.market-panel__side {
-  height: 100%;
-  border-left: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  background: var(--bg-secondary);
-}
-
 .market-table-container {
   flex: 1;
   min-height: 0;
