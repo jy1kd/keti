@@ -8,6 +8,11 @@ vi.mock('@/modules/market/MarketPanel', () => ({
   MarketPanel: () => <div data-testid="market-panel">行情面板 Mock</div>,
 }))
 
+// Mock QueryPanel 组件（避免依赖复杂子组件）
+vi.mock('@/modules/query/QueryPanel', () => ({
+  QueryPanel: () => <div data-testid="query-panel">查询面板 Mock</div>,
+}))
+
 // Mock OrderPage 组件（避免依赖 stores）
 vi.mock('@/pages/OrderPage', () => ({
   OrderPage: ({ instrumentID }: { instrumentID?: string }) => (
@@ -140,6 +145,7 @@ describe('TabContent', () => {
       ['settings', '⚙ 设置'],
       ['options', '期权标签页'],
       ['ipc-monitor', '🔌 IPC 监控'],
+      ['query', '查询面板 Mock'],
     ])('应为 %s 类型渲染对应内容', (type, expectedText) => {
       const tab = makeTab({ type })
       useTabStore.setState({
