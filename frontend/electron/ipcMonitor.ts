@@ -123,9 +123,10 @@ export class IPCMonitor {
 
     // Intercept webContents.send to capture outgoing messages
     const originalSend = BrowserWindow.prototype.webContents.send
-    BrowserWindow.prototype.webContents.send = function (channel: string, ...args: any[]) {
-      if (this.enabled) {
-        this.notifyListeners({
+    const monitor = this // Capture reference to IPCMonitor instance
+    BrowserWindow.prototype.webContents.send = function (this: any, channel: string, ...args: any[]) {
+      if (monitor.enabled) {
+        monitor.notifyListeners({
           timestamp: Date.now(),
           direction: 'out',
           channel,
@@ -134,7 +135,7 @@ export class IPCMonitor {
         })
       }
       return originalSend.call(this, channel, ...args)
-    }.bind(this)
+    }
   }
 
   /**
