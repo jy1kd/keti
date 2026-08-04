@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { TabContent } from './index'
 import { useTabStore, type Tab, type TabType } from '@/stores/tabs'
+import { useFloatingWindowStore } from '@/stores/floatingWindows'
 
 // Mock MarketPanel 组件（避免依赖复杂子组件）
 vi.mock('@/modules/market/MarketPanel', () => ({
@@ -211,5 +212,42 @@ describe('TabContent', () => {
       const panel = screen.getByRole('tabpanel')
       expect(panel).toHaveAttribute('aria-labelledby', MARKET_TAB.id)
     })
+  })
+})
+
+describe('浮动面板', () => {
+  beforeEach(() => {
+    useFloatingWindowStore.setState({ windows: {} })
+  })
+
+  it('浮动标签面板应固定定位并可见（即使非活跃）', () => {
+    useTabStore.setState({
+      tabs: [MARKET_TAB, SETTINGS_TAB],
+      activeTabId: MARKET_TAB.id,
+    })
+    useFloatingWindowStore.setState({
+      windows: { 'tab-settings': { x: 10, y: 20, w: 400, h: 300, z: 1401 } },
+    })
+    render(<TabContent />)
+    const panel = getAllPanels()[1] // [market, settings]，settings 在下标 1
+    expect(panel).toHaveClass('tab-content__panel--floating')
+    expect(panel).toHaveStyle({ position: 'fixed', left: '10px', top: '52px', width: '400px', height: '268px' })
+    expect(panel).toHaveAttribute('aria-hidden', 'false')
+  })
+
+  it('停靠（dock）后浮动面板恢复内联样式', () => {
+    useTabStore.setState({
+      tabs: [MARKET_TAB, SETTINGS_TAB],
+      activeTabId: MARKET_TAB.id,
+    })
+    useFloatingWindowStore.setState({
+      windows: { 'tab-settings': { x: 10, y: 20, w: 400, h: 300, z: 1401 } },
+    })
+    const { rerender } = render(<TabContent />)
+    useFloatingWindowStore.getState().dock('tab-settings')
+    rerender(<TabContent />)
+    const panel = getAllPanels()[1]
+    expect(panel).not.toHaveClass('tab-content__panel--floating')
+    expect(panel).toHaveStyle({ display: 'none' }) // 非活跃且已停靠
   })
 })

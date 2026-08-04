@@ -1,4 +1,5 @@
 import { useTabStore, type Tab } from '@/stores/tabs'
+import { useFloatingWindowStore, FLOATING_CHROME_H } from '@/stores/floatingWindows'
 import { MarketPanel } from '@/modules/market/MarketPanel'
 import { QueryPanel } from '@/modules/query/QueryPanel'
 import { FavoritesPage } from '@/pages/FavoritesPage'
@@ -57,19 +58,35 @@ function renderTabContent(tab: Tab): React.ReactNode {
 export function TabContent() {
   const tabs = useTabStore((s) => s.tabs)
   const activeTabId = useTabStore((s) => s.activeTabId)
+  const windows = useFloatingWindowStore((s) => s.windows)
 
   return (
     <div className="tab-content">
       {tabs.map((tab) => {
         const isActive = tab.id === activeTabId
+        const floating = windows[tab.id]
         return (
           <div
             key={tab.id}
             role="tabpanel"
             aria-labelledby={tab.id}
-            aria-hidden={!isActive}
-            className="tab-content__panel"
-            style={{ display: isActive ? 'block' : 'none' }}
+            aria-hidden={floating ? false : !isActive}
+            className={`tab-content__panel${floating ? ' tab-content__panel--floating' : ''}`}
+            onPointerDown={() => {
+              // 浮动面板点击置顶；拖拽委托见 Task 8
+              if (floating) useFloatingWindowStore.getState().focus(tab.id)
+            }}
+            style={{
+              display: floating ? 'block' : isActive ? 'block' : 'none',
+              ...(floating && {
+                position: 'fixed',
+                left: floating.x,
+                top: floating.y + FLOATING_CHROME_H,
+                width: floating.w,
+                height: floating.h - FLOATING_CHROME_H,
+                zIndex: floating.z,
+              }),
+            }}
           >
             {renderTabContent(tab)}
           </div>
