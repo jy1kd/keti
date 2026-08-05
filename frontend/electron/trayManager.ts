@@ -30,12 +30,11 @@ export class TrayManager {
     this.mainWindow = mainWindow;
 
     // Create tray icon
-    const iconPath = path.join(__dirname, '../assets/tray-icon.png');
+    const iconPath = path.join(__dirname, '../build/icon.png');
 
     // Check if icon file exists
     if (!fs.existsSync(iconPath)) {
       console.warn('[TrayManager] Tray icon not found:', iconPath);
-      console.warn('[TrayManager] Tray functionality will be limited');
       // Create a simple 16x16 transparent icon as fallback
       const fallbackIcon = nativeImage.createEmpty();
       this.tray = new Tray(fallbackIcon);
@@ -49,17 +48,7 @@ export class TrayManager {
     // Build context menu
     const contextMenu = Menu.buildFromTemplate([
       {
-        label: '显示主窗口',
-        click: () => {
-          if (this.mainWindow) {
-            this.mainWindow.show();
-            this.mainWindow.focus();
-          }
-        },
-      },
-      { type: 'separator' },
-      {
-        label: '行情面板',
+        label: '📊 行情',
         click: () => {
           if (this.mainWindow) {
             this.mainWindow.show();
@@ -69,17 +58,17 @@ export class TrayManager {
         },
       },
       {
-        label: '报单面板',
+        label: '⭐ 自选',
         click: () => {
           if (this.mainWindow) {
             this.mainWindow.show();
             this.mainWindow.focus();
-            this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'order');
+            this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'favorites');
           }
         },
       },
       {
-        label: '查询面板',
+        label: '📋 查询',
         click: () => {
           if (this.mainWindow) {
             this.mainWindow.show();
@@ -90,12 +79,22 @@ export class TrayManager {
       },
       { type: 'separator' },
       {
-        label: '设置',
+        label: '⚙ 设置',
         click: () => {
           if (this.mainWindow) {
             this.mainWindow.show();
             this.mainWindow.focus();
             this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'settings');
+          }
+        },
+      },
+      {
+        label: '📡 网络监控',
+        click: () => {
+          if (this.mainWindow) {
+            this.mainWindow.show();
+            this.mainWindow.focus();
+            this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'ipc-monitor');
           }
         },
       },

@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { isElectron } from '@/services/electron'
 import './IPCMonitorPage.css'
 
 interface MonitorMessage {
@@ -10,9 +9,10 @@ interface MonitorMessage {
   data?: unknown
 }
 
-type FilterType = 'all' | 'market' | 'order' | 'system' | 'navigate' | 'api'
+type FilterType = 'non-market' | 'all' | 'market' | 'order' | 'system' | 'navigate' | 'api'
 
 const FILTER_LABELS: Record<FilterType, string> = {
+  'non-market': '除行情外',
   all: '全部',
   market: '行情',
   order: '报单',
@@ -21,9 +21,14 @@ const FILTER_LABELS: Record<FilterType, string> = {
   api: 'API',
 }
 
+function isMarketChannel(channel: string): boolean {
+  return channel.includes('market') || channel.includes('ws/market')
+}
+
 function matchesFilter(channel: string, filter: FilterType): boolean {
   if (filter === 'all') return true
-  if (filter === 'market') return channel.includes('market') || channel.includes('ws/market')
+  if (filter === 'non-market') return !isMarketChannel(channel)
+  if (filter === 'market') return isMarketChannel(channel)
   if (filter === 'order') return channel.includes('order') || channel.includes('trade')
   if (filter === 'system') return channel.includes('system') || channel.includes('connection') || channel.includes('backend') || channel.includes('ws/system')
   if (filter === 'navigate') return channel.includes('navigate') || channel.includes('tab')
@@ -148,65 +153,40 @@ function initInterceptors() {
 initInterceptors()
 
 /**
- * IPCMonitorPage — IPC 监控标签页
+ * IPCMonitorPage — 网络监控标签页
  *
- * 用于调试 IPC 通信，支持消息过滤、暂停、清空、导出。
- * Electron 环境下显示 IPC 消息，Web 环境下显示 WebSocket 和 API 消息。
+ * 用于调试网络通信，支持消息过滤、暂停、清空、导出。
+ * 拦截 WebSocket 和 API 请求，显示通信数据。
  */
 export function IPCMonitorPage() {
   const [messages, setMessages] = useState<MonitorMessage[]>([])
-  const [filter, setFilter] = useState<FilterType>('all')
+  const [filter, setFilter] = useState<FilterType>('non-market')
   const [paused, setPaused] = useState(false)
+  const [marketPaused, setMarketPaused] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    let cleanup: (() => void) | undefined
+    // 统一使用 WebSocket + fetch 拦截器（Web 和 Electron 渲染进程行为一致）
+    initInterceptors()
 
-    if (isElectron() && window.electronAPI) {
-      console.log('[IPC Monitor] Electron environment detected, setting up listeners...')
+    // 加载已有消息
+    setMessages([...globalMessages])
 
-      // Electron 环境：监听主进程发送的 IPC 消息
-      const cleanupBatch = window.electronAPI.onIPCMonitorMessages?.((messages: any[]) => {
-        console.log('[IPC Monitor] Received batch messages:', messages.length)
-        setMessages(messages)
-      })
-
-      const cleanupRealtime = window.electronAPI.onIPCMonitorMessage?.((message: any) => {
-        console.log('[IPC Monitor] Received realtime message:', message)
-        if (!paused) {
-          setMessages((prev) => [...prev, message])
-        }
-      })
-
-      cleanup = () => {
-        cleanupBatch?.()
-        cleanupRealtime?.()
-      }
-    } else {
-      // Web 环境：使用 WebSocket 和 fetch 拦截器
-      initInterceptors()
-
-      // 加载已有消息
-      setMessages([...globalMessages])
-
-      // 监听新消息
-      const listener = (msg: MonitorMessage) => {
-        if (!paused) {
-          setMessages((prev) => [...prev, msg])
-        }
-      }
-      globalListeners.add(listener)
-
-      cleanup = () => {
-        globalListeners.delete(listener)
-      }
+    // 监听新消息
+    const listener = (msg: MonitorMessage) => {
+      // 全部暂停时跳过所有消息
+      if (paused) return
+      // 行情暂停时跳过行情消息
+      if (marketPaused && isMarketChannel(msg.channel)) return
+      setMessages((prev) => [...prev, msg])
     }
+    globalListeners.add(listener)
 
     return () => {
-      cleanup?.()
+      globalListeners.delete(listener)
     }
-  }, [paused])
+  }, [paused, marketPaused])
 
   // 自动滚动到底部
   useEffect(() => {
@@ -260,6 +240,14 @@ export function IPCMonitorPage() {
           <div className="ipc-monitor-page__actions">
             <button
               type="button"
+              className={`action-btn ${marketPaused ? 'paused' : ''}`}
+              onClick={() => setMarketPaused(!marketPaused)}
+              title={marketPaused ? '显示行情消息' : '隐藏行情消息'}
+            >
+              {marketPaused ? '📊 显示行情' : '📊 隐藏行情'}
+            </button>
+            <button
+              type="button"
               className={`action-btn ${paused ? 'paused' : ''}`}
               onClick={() => setPaused(!paused)}
             >
@@ -276,8 +264,13 @@ export function IPCMonitorPage() {
         <div className="ipc-monitor-page__stats">
           共 {filteredMessages.length} 条消息
           <span className="ipc-monitor-page__mode">
-            {isElectron() ? '（Electron IPC）' : '（Web：WebSocket + API）'}
+            （WebSocket + API）
           </span>
+          {marketPaused && (
+            <span className="ipc-monitor-page__market-paused">
+              · 行情已隐藏
+            </span>
+          )}
         </div>
       </div>
 
@@ -285,9 +278,7 @@ export function IPCMonitorPage() {
         <div className="ipc-monitor-page__list">
           {filteredMessages.length === 0 ? (
             <div className="ipc-monitor-page__empty">
-              {isElectron()
-                ? '暂无 Electron IPC 消息，等待主进程通信...'
-                : '暂无消息，等待 WebSocket 连接或 API 请求...'}
+              暂无消息，等待 WebSocket 连接或 API 请求...
             </div>
           ) : (
             filteredMessages.map((msg) => (

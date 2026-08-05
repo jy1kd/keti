@@ -28,11 +28,10 @@ class TrayManager {
     initialize(mainWindow) {
         this.mainWindow = mainWindow;
         // Create tray icon
-        const iconPath = path_1.default.join(__dirname, '../assets/tray-icon.png');
+        const iconPath = path_1.default.join(__dirname, '../build/icon.png');
         // Check if icon file exists
         if (!fs_1.default.existsSync(iconPath)) {
             console.warn('[TrayManager] Tray icon not found:', iconPath);
-            console.warn('[TrayManager] Tray functionality will be limited');
             // Create a simple 16x16 transparent icon as fallback
             const fallbackIcon = electron_1.nativeImage.createEmpty();
             this.tray = new electron_1.Tray(fallbackIcon);
@@ -45,17 +44,7 @@ class TrayManager {
         // Build context menu
         const contextMenu = electron_1.Menu.buildFromTemplate([
             {
-                label: '显示主窗口',
-                click: () => {
-                    if (this.mainWindow) {
-                        this.mainWindow.show();
-                        this.mainWindow.focus();
-                    }
-                },
-            },
-            { type: 'separator' },
-            {
-                label: '行情面板',
+                label: '📊 行情',
                 click: () => {
                     if (this.mainWindow) {
                         this.mainWindow.show();
@@ -65,17 +54,17 @@ class TrayManager {
                 },
             },
             {
-                label: '报单面板',
+                label: '⭐ 自选',
                 click: () => {
                     if (this.mainWindow) {
                         this.mainWindow.show();
                         this.mainWindow.focus();
-                        this.mainWindow.webContents.send(index_1.IPC_CHANNELS.NAVIGATE_TAB, 'order');
+                        this.mainWindow.webContents.send(index_1.IPC_CHANNELS.NAVIGATE_TAB, 'favorites');
                     }
                 },
             },
             {
-                label: '查询面板',
+                label: '📋 查询',
                 click: () => {
                     if (this.mainWindow) {
                         this.mainWindow.show();
@@ -86,12 +75,22 @@ class TrayManager {
             },
             { type: 'separator' },
             {
-                label: '设置',
+                label: '⚙ 设置',
                 click: () => {
                     if (this.mainWindow) {
                         this.mainWindow.show();
                         this.mainWindow.focus();
                         this.mainWindow.webContents.send(index_1.IPC_CHANNELS.NAVIGATE_TAB, 'settings');
+                    }
+                },
+            },
+            {
+                label: '📡 网络监控',
+                click: () => {
+                    if (this.mainWindow) {
+                        this.mainWindow.show();
+                        this.mainWindow.focus();
+                        this.mainWindow.webContents.send(index_1.IPC_CHANNELS.NAVIGATE_TAB, 'ipc-monitor');
                     }
                 },
             },
