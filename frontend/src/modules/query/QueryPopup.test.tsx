@@ -100,3 +100,58 @@ describe('⤢ 放大为标签页', () => {
     expect(toastErrorMock).toHaveBeenCalledWith('标签页数量已达上限（15），请先关闭部分标签页')
   })
 })
+
+function pointerEvent(type: string, init: MouseEventInit): PointerEvent {
+  return new MouseEvent(type, init) as unknown as PointerEvent
+}
+
+describe('缩放调整大小', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // jsdom 无真实布局：物化 getBoundingClientRect 为 880×620 居中矩形
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 72, top: 74, width: 880, height: 620,
+      right: 952, bottom: 694,
+    } as DOMRect)
+  })
+
+  it('渲染 8 个方向缩放手柄', () => {
+    useQueryPopupStore.setState({ isOpen: true })
+    render(<QueryPopup />)
+    ;['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].forEach((dir) => {
+      expect(screen.getByLabelText(`调整弹窗大小 ${dir}`)).toBeInTheDocument()
+    })
+  })
+
+  it('拖 e 手柄：更新宽度并物化位置', () => {
+    useQueryPopupStore.setState({ isOpen: true })
+    render(<QueryPopup />)
+    fireEvent(screen.getByLabelText('调整弹窗大小 e'), pointerEvent('pointerdown', { clientX: 952, clientY: 300, button: 0, bubbles: true }))
+    fireEvent(window, pointerEvent('pointermove', { clientX: 1000, clientY: 300 }))
+    fireEvent(window, pointerEvent('pointerup', { clientX: 1000, clientY: 300 }))
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.style.width).toBe('928px')
+    expect(dialog.style.left).toBe('72px') // 居中态已物化为绝对定位
+  })
+
+  it('拖 w 手柄：左缘跟随、右缘锚定（x 与宽同时变）', () => {
+    useQueryPopupStore.setState({ isOpen: true })
+    render(<QueryPopup />)
+    fireEvent(screen.getByLabelText('调整弹窗大小 w'), pointerEvent('pointerdown', { clientX: 72, clientY: 300, button: 0, bubbles: true }))
+    fireEvent(window, pointerEvent('pointermove', { clientX: 40, clientY: 300 }))
+    fireEvent(window, pointerEvent('pointerup', { clientX: 40, clientY: 300 }))
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.style.left).toBe('40px')
+    expect(dialog.style.width).toBe('912px')
+  })
+
+  it('缩到小于最小宽度时钳制到 480', () => {
+    useQueryPopupStore.setState({ isOpen: true })
+    render(<QueryPopup />)
+    fireEvent(screen.getByLabelText('调整弹窗大小 e'), pointerEvent('pointerdown', { clientX: 952, clientY: 300, button: 0, bubbles: true }))
+    fireEvent(window, pointerEvent('pointermove', { clientX: 500, clientY: 300 }))
+    fireEvent(window, pointerEvent('pointerup', { clientX: 500, clientY: 300 }))
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.style.width).toBe('480px')
+  })
+})
