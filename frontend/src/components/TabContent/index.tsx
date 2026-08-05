@@ -79,6 +79,7 @@ export function TabContent() {
                 return
               }
               if (!tab.closable) return
+              if (e.button !== 0) return
               const target = e.target as HTMLElement
               if (target.closest('button, input, select, a, [data-no-drag]')) return
               if (!target.closest('[data-drag-handle]')) return

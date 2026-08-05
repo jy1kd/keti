@@ -270,6 +270,18 @@ describe('TabContent', () => {
       fireEvent(panel, pointerEvent('pointerdown', { clientX: 10, clientY: 10, button: 0, bubbles: true }))
       expect(detachMock.startDetachDrag).not.toHaveBeenCalled()
     })
+
+    it('右键命中 [data-drag-handle] 不调用 startDetachDrag', () => {
+      useTabStore.setState({ tabs: [MARKET_TAB, SETTINGS_TAB], activeTabId: MARKET_TAB.id })
+      render(<TabContent />)
+      const panel = getAllPanels()[1]
+      const handle = document.createElement('div')
+      handle.setAttribute('data-drag-handle', '')
+      panel.appendChild(handle)
+      // pointerdown with button: 2 (right button)
+      fireEvent(handle, pointerEvent('pointerdown', { clientX: 10, clientY: 10, button: 2, bubbles: true }))
+      expect(detachMock.startDetachDrag).not.toHaveBeenCalled()
+    })
   })
 })
 
