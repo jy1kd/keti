@@ -47,7 +47,10 @@ export const useFloatingWindowStore = create<FloatingWindowStore>((set) => ({
   },
   dock: (tabId) => {
     set((s) => {
-      const { [tabId]: _removed, ...rest } = s.windows
+      // 未知标签视为 no-op，避免恒等新引用触发订阅者
+      if (!(tabId in s.windows)) return s
+      const rest = { ...s.windows }
+      delete rest[tabId]
       return { windows: rest }
     })
   },
