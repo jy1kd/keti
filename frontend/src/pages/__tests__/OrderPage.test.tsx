@@ -136,4 +136,12 @@ describe('OrderPage', () => {
     expect(screen.getByText('20,892')).toBeDefined();
     expect(screen.getByText('45,105')).toBeDefined();
   });
+
+  // ── 拖拽句柄 ──
+
+  it('标题栏应带 data-drag-handle（可拖为弹窗）', () => {
+    const { container } = render(<OrderPage instrumentID="IF2608" />);
+    const bar = container.querySelector('.order-page__title-bar');
+    expect(bar).toHaveAttribute('data-drag-handle');
+  });
 });

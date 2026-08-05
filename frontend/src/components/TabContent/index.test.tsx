@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { TabContent } from './index'
 import { useTabStore, type Tab, type TabType } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
@@ -34,6 +34,10 @@ vi.mock('@/pages/KLinePage', () => ({
   ),
 }))
 
+// Mock detachDrag 工具（Task 5 拖拽脱离）
+const detachMock = vi.hoisted(() => ({ startDetachDrag: vi.fn(), detachTabAt: vi.fn() }))
+vi.mock('@/utils/detachDrag', () => detachMock)
+
 // --- 辅助函数 ---
 
 function makeTab(overrides: Partial<Tab> & { type: TabType }): Tab {
@@ -55,10 +59,17 @@ function getAllPanels() {
   return screen.getAllByRole('tabpanel', { hidden: true })
 }
 
+/** jsdom 24 不提供 PointerEvent 构造器；用 MouseEvent 保留 clientX/clientY/button */
+function pointerEvent(type: string, init: MouseEventInit): PointerEvent {
+  return new MouseEvent(type, init) as unknown as PointerEvent
+}
+
 // --- 测试 ---
 
 describe('TabContent', () => {
   beforeEach(() => {
+    detachMock.startDetachDrag.mockReset()
+    useFloatingWindowStore.setState({ windows: {} })
     useTabStore.setState({
       tabs: [MARKET_TAB],
       activeTabId: MARKET_TAB.id,
@@ -211,6 +222,53 @@ describe('TabContent', () => {
       render(<TabContent />)
       const panel = screen.getByRole('tabpanel')
       expect(panel).toHaveAttribute('aria-labelledby', MARKET_TAB.id)
+    })
+  })
+
+  // --- 页面标题栏拖拽委托 ---
+
+  describe('页面标题栏拖拽委托', () => {
+    it('命中 [data-drag-handle] 且可关闭时调用 startDetachDrag（content ghost）', () => {
+      useTabStore.setState({ tabs: [MARKET_TAB, SETTINGS_TAB], activeTabId: MARKET_TAB.id })
+      render(<TabContent />)
+      const panel = getAllPanels()[1] // [market, settings]
+      const handle = document.createElement('div')
+      handle.setAttribute('data-drag-handle', '')
+      panel.appendChild(handle)
+      fireEvent(handle, pointerEvent('pointerdown', { clientX: 10, clientY: 10, button: 0, bubbles: true }))
+      expect(detachMock.startDetachDrag).toHaveBeenCalledTimes(1)
+      const params = detachMock.startDetachDrag.mock.calls[0][0]
+      expect(params.ghostKind).toBe('content')
+      expect(params.canDetach()).toBe(true)
+    })
+
+    it('命中按钮时不调用 startDetachDrag', () => {
+      useTabStore.setState({ tabs: [MARKET_TAB, SETTINGS_TAB], activeTabId: MARKET_TAB.id })
+      render(<TabContent />)
+      const panel = getAllPanels()[1]
+      const btn = document.createElement('button')
+      btn.setAttribute('data-drag-handle', '')
+      panel.appendChild(btn)
+      fireEvent(btn, pointerEvent('pointerdown', { clientX: 10, clientY: 10, button: 0, bubbles: true }))
+      expect(detachMock.startDetachDrag).not.toHaveBeenCalled()
+    })
+
+    it('固定标签（market）不调用 startDetachDrag', () => {
+      render(<TabContent />)
+      const panel = getAllPanels()[0]
+      const handle = document.createElement('div')
+      handle.setAttribute('data-drag-handle', '')
+      panel.appendChild(handle)
+      fireEvent(handle, pointerEvent('pointerdown', { clientX: 10, clientY: 10, button: 0, bubbles: true }))
+      expect(detachMock.startDetachDrag).not.toHaveBeenCalled()
+    })
+
+    it('非 [data-drag-handle] 区域不调用 startDetachDrag', () => {
+      useTabStore.setState({ tabs: [MARKET_TAB, SETTINGS_TAB], activeTabId: MARKET_TAB.id })
+      render(<TabContent />)
+      const panel = getAllPanels()[1]
+      fireEvent(panel, pointerEvent('pointerdown', { clientX: 10, clientY: 10, button: 0, bubbles: true }))
+      expect(detachMock.startDetachDrag).not.toHaveBeenCalled()
     })
   })
 })

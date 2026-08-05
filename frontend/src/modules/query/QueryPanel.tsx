@@ -135,7 +135,7 @@ export function QueryPanel() {
 
   return (
     <section className="query-panel" data-testid="query-panel">
-      <div className="panel-header">
+      <div className="panel-header" data-drag-handle>
         <h2>查询面板</h2>
         <div className="tab-bar">
           {TABS.map((tab) => (

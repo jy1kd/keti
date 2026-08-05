@@ -1,5 +1,6 @@
 import { useTabStore, type Tab } from '@/stores/tabs'
 import { useFloatingWindowStore, FLOATING_CHROME_H } from '@/stores/floatingWindows'
+import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
 import { MarketPanel } from '@/modules/market/MarketPanel'
 import { QueryPanel } from '@/modules/query/QueryPanel'
 import { FavoritesPage } from '@/pages/FavoritesPage'
@@ -72,9 +73,23 @@ export function TabContent() {
             aria-labelledby={tab.id}
             aria-hidden={floating ? false : !isActive}
             className={`tab-content__panel${floating ? ' tab-content__panel--floating' : ''}`}
-            onPointerDown={() => {
-              // 浮动面板点击置顶；拖拽委托见 Task 8
-              if (floating) useFloatingWindowStore.getState().focus(tab.id)
+            onPointerDown={(e) => {
+              if (floating) {
+                useFloatingWindowStore.getState().focus(tab.id)
+                return
+              }
+              if (!tab.closable) return
+              const target = e.target as HTMLElement
+              if (target.closest('button, input, select, a, [data-no-drag]')) return
+              if (!target.closest('[data-drag-handle]')) return
+              startDetachDrag({
+                event: e.nativeEvent,
+                sourceEl: e.currentTarget,
+                canDetach: () => tab.closable,
+                ghostKind: 'content',
+                getContentNode: () => e.currentTarget,
+                onDetach: (pos) => detachTabAt(tab.id, pos),
+              })
             }}
             style={{
               display: floating ? 'block' : isActive ? 'block' : 'none',

@@ -31,3 +31,13 @@
   font-size: 16px;
   background: var(--bg-primary);
 }
+
+/* ── 页面标题栏拖拽句柄（转换为浮动弹窗的手势区） ── */
+[data-drag-handle] {
+  cursor: grab;
+  user-select: none;
+}
+
+[data-drag-handle]:active {
+  cursor: grabbing;
+}

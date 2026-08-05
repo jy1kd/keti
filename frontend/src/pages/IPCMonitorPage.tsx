@@ -242,7 +242,7 @@ export function IPCMonitorPage() {
 
   return (
     <div className="ipc-monitor-page">
-      <div className="ipc-monitor-page__header">
+      <div className="ipc-monitor-page__header" data-drag-handle>
         <h2>🔌 IPC 监控</h2>
         <div className="ipc-monitor-page__controls">
           <div className="ipc-monitor-page__filters">
