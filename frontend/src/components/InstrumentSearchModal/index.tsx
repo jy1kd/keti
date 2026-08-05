@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { ContractInfo } from '@/services/types'
-import { getExchanges, getProducts, getInstruments, searchInstruments, refreshInstruments, refreshPresetInstruments } from '@/services/api'
-import { useContractsStore } from '@/stores/contracts'
+import { getExchanges, getProducts, getInstruments, searchInstruments, refreshInstruments } from '@/services/api'
 import { PRODUCT_NAMES, getProductName } from '@/utils/productNames'
-import { toast } from '@/components/Toast'
 import './index.css'
 
 /** 判断字符串是否包含中文 */
@@ -40,7 +38,6 @@ export function InstrumentSearchModal({ isOpen, onClose, onAddToFavorite, onRemo
   const [selectedProduct, setSelectedProduct] = useState('')
   const [keyword, setKeyword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [refreshing, setRefreshing] = useState(false)
   const [refreshingInstruments, setRefreshingInstruments] = useState(false)
   const [error, setError] = useState('')
 
@@ -280,28 +277,6 @@ export function InstrumentSearchModal({ isOpen, onClose, onAddToFavorite, onRemo
               }}
             >
               {refreshingInstruments ? '刷新中...' : '刷新合约(CTP)'}
-            </button>
-            <button
-              className="btn-refresh"
-              disabled={refreshing}
-              onClick={async () => {
-                setRefreshing(true)
-                setError('')
-                try {
-                  const result = await refreshPresetInstruments()
-                  if (result.success && result.instruments) {
-                    toast.success(`已更新 ${result.instruments.length} 个预设合约`)
-                    // 重新加载全量合约列表
-                    useContractsStore.getState().loadAllInstruments()
-                  }
-                } catch {
-                  setError('刷新预设合约失败')
-                } finally {
-                  setRefreshing(false)
-                }
-              }}
-            >
-              {refreshing ? '刷新中...' : '刷新预设合约'}
             </button>
           </div>
         </div>
