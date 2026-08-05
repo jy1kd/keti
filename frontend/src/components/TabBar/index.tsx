@@ -1,5 +1,7 @@
 import { useCallback, useState, useRef, useEffect, type KeyboardEvent } from 'react'
-import { useTabStore } from '@/stores/tabs'
+import { useTabStore, type Tab } from '@/stores/tabs'
+import { useFloatingWindowStore } from '@/stores/floatingWindows'
+import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
 import { useQueryPopupStore } from '@/modules/query/popupStore'
 import { isElectron } from '@/services/electron'
 import './styles.css'
@@ -35,8 +37,26 @@ export function TabBar({ onAddTab }: TabBarProps) {
   const setActiveTab = useTabStore((s) => s.setActiveTab)
   const closeTab = useTabStore((s) => s.closeTab)
   const openTab = useTabStore((s) => s.openTab)
+  const windows = useFloatingWindowStore((s) => s.windows)
+  const suppressClickRef = useRef(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
+
+  // 排除已拖入浮动窗口的标签（浮动标签从标签栏隐藏）
+  const visibleTabs = tabs.filter((t) => !windows[t.id])
+
+  // 标签栏拖拽脱离（药丸 ghost）；阈值由 startDetachDrag 内部判定
+  const handleTabPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>, tab: Tab) => {
+    if (e.button !== 0 || !tab.closable) return
+    startDetachDrag({
+      event: e.nativeEvent,
+      sourceEl: e.currentTarget,
+      canDetach: () => tab.closable,
+      ghostKind: 'pill',
+      onDetaching: () => { suppressClickRef.current = true },
+      onDetach: (pos) => detachTabAt(tab.id, pos),
+    })
+  }, [])
 
   // 点击空白处关闭右键菜单
   useEffect(() => {
@@ -58,32 +78,32 @@ export function TabBar({ onAddTab }: TabBarProps) {
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      const currentIndex = tabs.findIndex((t) => t.id === activeTabId)
+      const currentIndex = visibleTabs.findIndex((t) => t.id === activeTabId)
       if (currentIndex === -1) return
 
       let nextIndex: number | null = null
 
       switch (e.key) {
         case 'ArrowRight':
-          nextIndex = (currentIndex + 1) % tabs.length
+          nextIndex = (currentIndex + 1) % visibleTabs.length
           break
         case 'ArrowLeft':
-          nextIndex = (currentIndex - 1 + tabs.length) % tabs.length
+          nextIndex = (currentIndex - 1 + visibleTabs.length) % visibleTabs.length
           break
         case 'Home':
           nextIndex = 0
           break
         case 'End':
-          nextIndex = tabs.length - 1
+          nextIndex = visibleTabs.length - 1
           break
         default:
           return
       }
 
       e.preventDefault()
-      setActiveTab(tabs[nextIndex].id)
+      setActiveTab(visibleTabs[nextIndex].id)
     },
-    [tabs, activeTabId, setActiveTab],
+    [visibleTabs, activeTabId, setActiveTab],
   )
 
   // 右键菜单处理
@@ -126,14 +146,21 @@ export function TabBar({ onAddTab }: TabBarProps) {
       aria-label="标签栏"
       onKeyDown={handleKeyDown}
     >
-      {tabs.map((tab) => (
+      {visibleTabs.map((tab) => (
         <div
           key={tab.id}
           role="tab"
           tabIndex={0}
           aria-selected={tab.id === activeTabId}
           className={`tab-bar__tab${tab.id === activeTabId ? ' tab-bar__tab--active' : ''}`}
-          onClick={() => setActiveTab(tab.id)}
+          onClick={() => {
+            if (suppressClickRef.current) {
+              suppressClickRef.current = false
+              return
+            }
+            setActiveTab(tab.id)
+          }}
+          onPointerDown={(e) => handleTabPointerDown(e, tab)}
           onContextMenu={(e) => handleContextMenu(e, tab)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
