@@ -290,6 +290,29 @@
   gap: 8px;
 }
 
+/* 过滤开关（仅交易中 / 显示全部）— 与搜索合约按钮留出间隙 */
+.btn-filter-status {
+  padding: 4px 12px;
+  background: transparent;
+  border: 1px solid var(--accent-color, #4a9eff);
+  border-radius: 4px;
+  color: var(--accent-color, #4a9eff);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  margin-right: 12px;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.btn-filter-status:hover {
+  opacity: 0.85;
+}
+
+.btn-filter-status.active {
+  background: rgba(74, 158, 255, 0.15);
+  color: var(--accent-color, #4a9eff);
+}
+
 .btn-refresh-instruments {
   padding: 4px 12px;
   border: 1px solid var(--border-color, #444);

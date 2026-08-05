@@ -193,7 +193,7 @@ async def refresh_instruments(request: Request):
         ws_manager = getattr(request.app.state, "ws_manager", None)
         if ws_manager:
             asyncio.run_coroutine_threadsafe(
-                ws_manager.broadcast("system", "instruments_refreshed", {
+                ws_manager.broadcast("market", "instruments_refreshed", {
                     "count": count,
                 }),
                 loop,

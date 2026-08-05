@@ -13,6 +13,7 @@ import { useOrderStore } from '@/modules/order/store'
 import { useMarketWs } from '@/hooks/useMarketWs'
 import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
 import { getProductName } from '@/utils/productNames'
+import { isContractActive } from '@/utils/contractStatus'
 import { API_BASE } from '@/services/api'
 import { toast } from '@/components/Toast'
 import './styles.css'
@@ -25,6 +26,8 @@ export function MarketPanel() {
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
   const [viewMode, setViewMode] = useState<'market' | 'options'>('market')
+  // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
+  const [filterActive, setFilterActive] = useState(false)
   const loadedRef = useRef(false)
 
   // 订阅管理器
@@ -36,9 +39,11 @@ export function MarketPanel() {
   // 搜索过滤
   const [searchQuery, setSearchQuery] = useState('')
   const displayContracts = useMemo(() => {
-    if (!searchQuery.trim()) return baseContracts
+    // 过滤开关：默认仅显示交易中合约
+    let base = filterActive ? baseContracts.filter(isContractActive) : baseContracts
+    if (!searchQuery.trim()) return base
     const q = searchQuery.toLowerCase()
-    return baseContracts.filter((c) => {
+    return base.filter((c) => {
       const instrumentID = c.instrumentID?.toLowerCase() ?? ''
       const instrumentName = c.instrumentName?.toLowerCase() ?? ''
       const productID = c.productID?.toLowerCase() ?? ''
@@ -50,7 +55,7 @@ export function MarketPanel() {
         productName.includes(q)
       )
     })
-  }, [baseContracts, searchQuery])
+  }, [baseContracts, searchQuery, filterActive])
 
   // User-favorited IDs (for modal "已订阅" badge and button state)
   const favoritedIds = useMemo(
@@ -137,6 +142,13 @@ export function MarketPanel() {
           </button>
         </div>
         <div className="panel-header__actions">
+          <button
+            className={`btn-filter-status${filterActive ? ' active' : ''}`}
+            onClick={() => setFilterActive((v) => !v)}
+            title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
+          >
+            {filterActive ? '仅交易中' : '显示全部'}
+          </button>
           <button
             className="btn-search-instruments"
             onClick={() => setSearchModalOpen(true)}

@@ -83,6 +83,83 @@ describe('MarketTable', () => {
     expect(record.changePercent).toBeCloseTo((10 / 480) * 100)
   })
 
+  // --- 状态列 tests ---
+
+  it('状态列为到期日右侧的列', async () => {
+    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    const { ListTable } = await import('@visactor/vtable')
+    const options = (ListTable as any).mock.calls[0][1]
+    const titles = options.columns.map((c: { title: string }) => c.title)
+    const expireIdx = titles.indexOf('到期日')
+    expect(expireIdx).toBeGreaterThanOrEqual(0)
+    expect(titles[expireIdx + 1]).toBe('状态')
+  })
+
+  it('已停牌合约（isTrading=0）状态为 已停牌', async () => {
+    const contracts: ContractInfo[] = [
+      { instrumentID: 'au9999', instrumentName: '测试', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 0, productClass: "1" },
+    ]
+    render(<MarketTable contracts={contracts} snapshots={new Map()} />)
+    const { ListTable } = await import('@visactor/vtable')
+    const options = (ListTable as any).mock.calls[0][1]
+    expect(options.records[0].status).toBe('已停牌')
+  })
+
+  it('已到期合约（isTrading=1 但已过到期日）状态为 已到期', async () => {
+    const contracts: ContractInfo[] = [
+      { instrumentID: 'au2501', instrumentName: '测试', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '20240101', isTrading: 1, productClass: "1" },
+    ]
+    render(<MarketTable contracts={contracts} snapshots={new Map()} />)
+    const { ListTable } = await import('@visactor/vtable')
+    const options = (ListTable as any).mock.calls[0][1]
+    expect(options.records[0].status).toBe('已到期')
+  })
+
+  it('交易中合约（isTrading=1 且未到期）状态为 交易中', async () => {
+    const contracts: ContractInfo[] = [
+      { instrumentID: 'au2612', instrumentName: '测试', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 1, productClass: "1" },
+    ]
+    render(<MarketTable contracts={contracts} snapshots={new Map()} />)
+    const { ListTable } = await import('@visactor/vtable')
+    const options = (ListTable as any).mock.calls[0][1]
+    expect(options.records[0].status).toBe('交易中')
+  })
+
+  it('状态列着色：vtable row=1（首条数据行）正确读取 records[0]，最后一行不落入灰色兜底', async () => {
+    const contracts: ContractInfo[] = [
+      { instrumentID: 'au2612', instrumentName: '测试A', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 1, productClass: "1" },
+      { instrumentID: 'au2613', instrumentName: '测试B', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 1, productClass: "1" },
+    ]
+    render(<MarketTable contracts={contracts} snapshots={new Map()} />)
+    const { ListTable } = await import('@visactor/vtable')
+    const options = (ListTable as any).mock.calls[0][1]
+    // 状态列 style 函数应存在
+    const statusCol = options.columns.find((c: { title: string }) => c.title === '状态')
+    expect(typeof statusCol.style).toBe('function')
+
+    const records = options.records
+    // 模拟 vtable style 回调：args.row 是物理行号（0=表头，首条数据为 1）
+    const styleArg = (row: number) => ({ table: { records }, row, col: 4 })
+    // 首条数据行（row=1）→ records[0] 交易中 → 绿色
+    expect(statusCol.style(styleArg(1))).toEqual({ color: '#3fb950' })
+    // 最后一条数据行（row=2）→ records[1] 交易中 → 绿色（不应是灰色兜底 #8b949e）
+    expect(statusCol.style(styleArg(2))).toEqual({ color: '#3fb950' })
+  })
+
+  it('状态列着色：已停牌行显示橙色', async () => {
+    const contracts: ContractInfo[] = [
+      { instrumentID: 'au2612', instrumentName: '测试A', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 1, productClass: "1" },
+      { instrumentID: 'au2613', instrumentName: '测试B', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 0, productClass: "1" },
+    ]
+    render(<MarketTable contracts={contracts} snapshots={new Map()} />)
+    const { ListTable } = await import('@visactor/vtable')
+    const options = (ListTable as any).mock.calls[0][1]
+    const statusCol = options.columns.find((c: { title: string }) => c.title === '状态')
+    const records = options.records
+    // 第二条数据（row=2）→ records[1] 已停牌 → 橙色
+    expect(statusCol.style({ table: { records }, row: 2, col: 4 })).toEqual({ color: '#d29922' })
+  })
+
   // --- onVisibleRangeChange tests ---
 
   it('接受 onVisibleRangeChange 回调', () => {

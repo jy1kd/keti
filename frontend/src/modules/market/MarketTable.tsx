@@ -2,6 +2,7 @@ import { useRef, useEffect, useCallback } from 'react'
 import { ListTable } from '@visactor/vtable'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
 import { getProductName } from '@/utils/productNames'
+import { getContractStatus, type ContractStatus } from '@/utils/contractStatus'
 
 interface MarketTableProps {
   contracts: ContractInfo[]
@@ -39,10 +40,20 @@ function priceColor(record: any): string {
   return FLAT_COLOR
 }
 
-/** 列级 style 回调：通过 table.records 拿到行数据，按涨跌着色 */
+/** 列级 style 回调：通过 table.records 拿到行数据，按涨跌着色
+ * 注意：args.row 是 vtable 物理行号（0=表头），records 是 0 起始数据数组，需 -1 */
 function coloredStyle(args: any) {
-  const record = args.table?.records?.[args.row]
+  const record = args.table?.records?.[args.row - 1]
   return { color: priceColor(record) }
+}
+
+/** 状态列着色：交易中绿色 / 已停牌橙色 / 已到期灰色（row 需 -1，理由同上） */
+function statusStyle(args: any) {
+  const record = args.table?.records?.[args.row - 1]
+  const status = record?.status as ContractStatus | undefined
+  if (status === '交易中') return { color: '#3fb950' }
+  if (status === '已停牌') return { color: '#d29922' }
+  return { color: '#8b949e' }
 }
 
 const columns = [
@@ -50,6 +61,7 @@ const columns = [
   { field: 'productName', title: '合约品种', width: 100 },
   { field: 'exchangeID', title: '交易所', width: 70 },
   { field: 'expireDate', title: '到期日', width: 90 },
+  { field: 'status', title: '状态', width: 70, style: statusStyle },
   { field: 'lastPrice', title: '最新价', width: 100, style: coloredStyle },
   { field: 'change', title: '涨跌', width: 80, style: coloredStyle },
   { field: 'changePercent', title: '涨跌%', width: 80, style: coloredStyle },
@@ -65,12 +77,14 @@ const isValidPrice = (p: number) => p > 0 && p < CTP_INVALID_PRICE
 
 function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, isFavorited: boolean) {
   const productName = getProductName(contract.productID)
+  const status = getContractStatus(contract)
   if (!snap) {
     return {
       instrumentID: contract.instrumentID,
       productName,
       exchangeID: contract.exchangeID || PLACEHOLDER,
       expireDate: contract.expireDate || PLACEHOLDER,
+      status,
       lastPrice: PLACEHOLDER,
       change: PLACEHOLDER,
       changePercent: PLACEHOLDER,
@@ -92,6 +106,7 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, i
     productName,
     exchangeID: contract.exchangeID || PLACEHOLDER,
     expireDate: contract.expireDate || PLACEHOLDER,
+    status,
     lastPrice: isValidPrice(snap.lastPrice) ? snap.lastPrice : PLACEHOLDER,
     change: isValidPrice(snap.lastPrice) && isValidPrice(preSettlement) ? change : PLACEHOLDER,
     changePercent: isValidPrice(snap.lastPrice) && isValidPrice(preSettlement) ? changePercent : PLACEHOLDER,
