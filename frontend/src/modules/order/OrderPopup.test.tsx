@@ -179,3 +179,47 @@ describe('⤢ 放大为标签页', () => {
     expect(toastErrorMock).toHaveBeenCalledWith('标签页数量已达上限（15），请先关闭部分标签页')
   })
 })
+
+function pointerEvent(type: string, init: MouseEventInit): PointerEvent {
+  return new MouseEvent(type, init) as unknown as PointerEvent
+}
+
+describe('缩放调整大小', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // jsdom 无真实布局：物化 getBoundingClientRect 为 740×500 居中矩形
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 142, top: 134, width: 740, height: 500,
+      right: 882, bottom: 634,
+    } as DOMRect)
+  })
+
+  it('渲染 8 个方向缩放手柄', () => {
+    useOrderPopupStore.setState({ instrumentID: 'IF2608' })
+    render(<OrderPopup />)
+    ;['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].forEach((dir) => {
+      expect(screen.getByLabelText(`调整弹窗大小 ${dir}`)).toBeInTheDocument()
+    })
+  })
+
+  it('拖 e 手柄：更新宽度并物化位置', () => {
+    useOrderPopupStore.setState({ instrumentID: 'IF2608' })
+    render(<OrderPopup />)
+    fireEvent(screen.getByLabelText('调整弹窗大小 e'), pointerEvent('pointerdown', { clientX: 882, clientY: 300, button: 0, bubbles: true }))
+    fireEvent(window, pointerEvent('pointermove', { clientX: 920, clientY: 300 }))
+    fireEvent(window, pointerEvent('pointerup', { clientX: 920, clientY: 300 }))
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.style.width).toBe('778px')
+    expect(dialog.style.left).toBe('142px')
+  })
+
+  it('缩到小于最小宽度时钳制到 680', () => {
+    useOrderPopupStore.setState({ instrumentID: 'IF2608' })
+    render(<OrderPopup />)
+    fireEvent(screen.getByLabelText('调整弹窗大小 e'), pointerEvent('pointerdown', { clientX: 882, clientY: 300, button: 0, bubbles: true }))
+    fireEvent(window, pointerEvent('pointermove', { clientX: 500, clientY: 300 }))
+    fireEvent(window, pointerEvent('pointerup', { clientX: 500, clientY: 300 }))
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.style.width).toBe('680px')
+  })
+})
