@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
+import { flushSync } from 'react-dom'
 import { useOrderPopupStore } from './popupStore'
 import { useOrderStore } from './store'
 import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
+import { useTabStore } from '@/stores/tabs'
+import { getRect, flipToRect, getTabPanelRect } from '@/utils/flip'
+import { toast } from '@/components/Toast'
 import { OrderQuotePanel } from './OrderQuotePanel'
 import { OrderForm } from './OrderForm'
 import './OrderPopup.css'
@@ -77,6 +81,35 @@ export function OrderPopup() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [instrumentID, closePopup])
 
+  // ── 放大为标签页 ──
+  const handleMaximize = useCallback(() => {
+    if (!instrumentID) return
+    const popupEl = popupRef.current
+    if (!popupEl) {
+      closePopup()
+      return
+    }
+    const from = getRect(popupEl)
+    let opened = false
+    flushSync(() => {
+      opened = useTabStore.getState().openTab({
+        type: 'order',
+        title: `📝 报单-${instrumentID}`,
+        props: { instrumentID },
+      })
+    })
+    if (!opened) {
+      toast.error('标签页数量已达上限（15），请先关闭部分标签页')
+      return
+    }
+    const to = getTabPanelRect(`tab-order-${instrumentID}`)
+    if (!to) {
+      closePopup()
+      return
+    }
+    flipToRect(popupEl, from, to, { onDone: () => closePopup() })
+  }, [instrumentID, closePopup])
+
   if (!instrumentID) return null
 
   const popupStyle: CSSProperties = position
@@ -92,7 +125,18 @@ export function OrderPopup() {
       style={popupStyle}
     >
       <div className="order-popup__header" onMouseDown={handleHeaderMouseDown}>
-        <span className="order-popup__title">📝 报单-{instrumentID}</span>
+        <span className="order-popup__header-left">
+          <span className="order-popup__title">📝 报单-{instrumentID}</span>
+          <button
+            type="button"
+            className="order-popup__max"
+            onClick={handleMaximize}
+            aria-label="放大为标签页"
+            title="放大为标签页"
+          >
+            ⤢
+          </button>
+        </span>
         <button
           type="button"
           className="order-popup__close"

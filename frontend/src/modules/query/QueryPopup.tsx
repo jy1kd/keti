@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
+import { flushSync } from 'react-dom'
 import { useQueryPopupStore } from './popupStore'
+import { useTabStore } from '@/stores/tabs'
+import { getRect, flipToRect, getTabPanelRect } from '@/utils/flip'
+import { toast } from '@/components/Toast'
 import { QueryPanel } from './QueryPanel'
 import './QueryPopup.css'
 
@@ -50,6 +54,30 @@ export function QueryPopup() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [isOpen, close])
 
+  // ── 放大为标签页 ──
+  const handleMaximize = useCallback(() => {
+    const popupEl = popupRef.current
+    if (!popupEl) {
+      close()
+      return
+    }
+    const from = getRect(popupEl)
+    let opened = false
+    flushSync(() => {
+      opened = useTabStore.getState().openTab({ type: 'query', title: '📋 查询' })
+    })
+    if (!opened) {
+      toast.error('标签页数量已达上限（15），请先关闭部分标签页')
+      return
+    }
+    const to = getTabPanelRect('tab-query')
+    if (!to) {
+      close()
+      return
+    }
+    flipToRect(popupEl, from, to, { onDone: () => close() })
+  }, [close])
+
   if (!isOpen) return null
 
   const popupStyle: CSSProperties = position
@@ -65,7 +93,18 @@ export function QueryPopup() {
       style={popupStyle}
     >
       <div className="query-popup__header" onMouseDown={handleHeaderMouseDown}>
-        <span className="query-popup__title">📋 查询</span>
+        <span className="query-popup__header-left">
+          <span className="query-popup__title">📋 查询</span>
+          <button
+            type="button"
+            className="query-popup__max"
+            onClick={handleMaximize}
+            aria-label="放大为标签页"
+            title="放大为标签页"
+          >
+            ⤢
+          </button>
+        </span>
         <button
           type="button"
           className="query-popup__close"

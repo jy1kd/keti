@@ -2,6 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { QueryPopup } from './QueryPopup'
 import { useQueryPopupStore } from './popupStore'
+import { useTabStore } from '@/stores/tabs'
+
+// Mock FLIP 工具：jsdom 无真实布局，同步触发 onDone
+vi.mock('@/utils/flip', () => ({
+  getRect: () => ({ left: 0, top: 0, width: 880, height: 620 }),
+  flipToRect: (_el: HTMLElement, _from: unknown, _to: unknown, opts: { onDone?: () => void } = {}) => {
+    opts.onDone?.()
+  },
+  getTabPanelRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
+}))
 
 // Mock QueryPanel（QueryPanel 自身行为由 QueryPanel.test.tsx 覆盖）
 vi.mock('./QueryPanel', () => ({
@@ -37,6 +47,33 @@ describe('QueryPopup', () => {
     useQueryPopupStore.setState({ isOpen: true })
     render(<QueryPopup />)
     fireEvent.keyDown(window, { key: 'Escape' })
+    expect(useQueryPopupStore.getState().isOpen).toBe(false)
+  })
+})
+
+describe('⤢ 放大为标签页', () => {
+  beforeEach(() => {
+    useTabStore.setState({
+      tabs: [
+        { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+      ],
+      activeTabId: 'tab-market',
+    })
+  })
+
+  it('应渲染放大按钮', () => {
+    useQueryPopupStore.setState({ isOpen: true })
+    render(<QueryPopup />)
+    expect(screen.getByLabelText('放大为标签页')).toBeInTheDocument()
+  })
+
+  it('点击放大应打开 query 标签并关闭弹窗', () => {
+    useQueryPopupStore.setState({ isOpen: true })
+    render(<QueryPopup />)
+    fireEvent.click(screen.getByLabelText('放大为标签页'))
+    const { tabs, activeTabId } = useTabStore.getState()
+    expect(tabs.some((t) => t.type === 'query')).toBe(true)
+    expect(activeTabId).toBe('tab-query')
     expect(useQueryPopupStore.getState().isOpen).toBe(false)
   })
 })

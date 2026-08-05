@@ -5,7 +5,17 @@ import { useOrderPopupStore } from './popupStore'
 import { useOrderStore } from './store'
 import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
+import { useTabStore } from '@/stores/tabs'
 import type { MarketSnapshot } from '@/services/types'
+
+// Mock FLIP 工具：jsdom 无真实布局，同步触发 onDone
+vi.mock('@/utils/flip', () => ({
+  getRect: () => ({ left: 0, top: 0, width: 740, height: 500 }),
+  flipToRect: (_el: HTMLElement, _from: unknown, _to: unknown, opts: { onDone?: () => void } = {}) => {
+    opts.onDone?.()
+  },
+  getTabPanelRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
+}))
 
 function makeSnapshot(overrides?: Partial<MarketSnapshot>): MarketSnapshot {
   return {
@@ -117,5 +127,44 @@ describe('OrderPopup', () => {
     const form = useOrderStore.getState().orderForm
     expect(form.direction).toBe('buy')
     expect(form.limitPrice).toBe(4696)
+  })
+})
+
+describe('⤢ 放大为标签页', () => {
+  beforeEach(() => {
+    useTabStore.setState({
+      tabs: [
+        { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+      ],
+      activeTabId: 'tab-market',
+    })
+  })
+
+  it('应渲染放大按钮', () => {
+    useOrderPopupStore.setState({ instrumentID: 'IF2608' })
+    render(<OrderPopup />)
+    expect(screen.getByLabelText('放大为标签页')).toBeInTheDocument()
+  })
+
+  it('点击放大应打开 order 标签并关闭弹窗', () => {
+    useOrderPopupStore.setState({ instrumentID: 'IF2608' })
+    render(<OrderPopup />)
+    fireEvent.click(screen.getByLabelText('放大为标签页'))
+    const { tabs, activeTabId } = useTabStore.getState()
+    expect(tabs.some((t) => t.type === 'order' && t.props.instrumentID === 'IF2608')).toBe(true)
+    expect(activeTabId).toBe('tab-order-IF2608')
+    expect(useOrderPopupStore.getState().instrumentID).toBeNull()
+  })
+
+  it('标签页达上限时 toast 提示且弹窗保持', () => {
+    const { openTab } = useTabStore.getState()
+    // 占满 15 个
+    for (let i = 0; i < 14; i++) {
+      openTab({ type: 'order', title: `合约${i}`, props: { instrumentID: `c${i}` } })
+    }
+    useOrderPopupStore.setState({ instrumentID: 'IF2608' })
+    render(<OrderPopup />)
+    fireEvent.click(screen.getByLabelText('放大为标签页'))
+    expect(useOrderPopupStore.getState().instrumentID).toBe('IF2608') // 弹窗保持
   })
 })
