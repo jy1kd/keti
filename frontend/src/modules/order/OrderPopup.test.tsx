@@ -8,6 +8,15 @@ import { useContractsStore } from '@/stores/contracts'
 import { useTabStore } from '@/stores/tabs'
 import type { MarketSnapshot } from '@/services/types'
 
+// Mock toast，使上限路径可断言 toast.error
+const { toastErrorMock } = vi.hoisted(() => ({
+  toastErrorMock: vi.fn(),
+}))
+
+vi.mock('@/components/Toast', () => ({
+  toast: { error: toastErrorMock },
+}))
+
 // Mock FLIP 工具：jsdom 无真实布局，同步触发 onDone
 vi.mock('@/utils/flip', () => ({
   getRect: () => ({ left: 0, top: 0, width: 740, height: 500 }),
@@ -132,6 +141,7 @@ describe('OrderPopup', () => {
 
 describe('⤢ 放大为标签页', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     useTabStore.setState({
       tabs: [
         { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
@@ -166,5 +176,6 @@ describe('⤢ 放大为标签页', () => {
     render(<OrderPopup />)
     fireEvent.click(screen.getByLabelText('放大为标签页'))
     expect(useOrderPopupStore.getState().instrumentID).toBe('IF2608') // 弹窗保持
+    expect(toastErrorMock).toHaveBeenCalledWith('标签页数量已达上限（15），请先关闭部分标签页')
   })
 })

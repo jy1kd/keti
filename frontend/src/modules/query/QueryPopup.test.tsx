@@ -18,6 +18,15 @@ vi.mock('./QueryPanel', () => ({
   QueryPanel: () => <div data-testid="query-panel">查询面板 Mock</div>,
 }))
 
+// Mock toast，使上限路径可断言 toast.error
+const { toastErrorMock } = vi.hoisted(() => ({
+  toastErrorMock: vi.fn(),
+}))
+
+vi.mock('@/components/Toast', () => ({
+  toast: { error: toastErrorMock },
+}))
+
 describe('QueryPopup', () => {
   beforeEach(() => {
     useQueryPopupStore.setState({ isOpen: false })
@@ -53,6 +62,7 @@ describe('QueryPopup', () => {
 
 describe('⤢ 放大为标签页', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     useTabStore.setState({
       tabs: [
         { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
@@ -75,5 +85,18 @@ describe('⤢ 放大为标签页', () => {
     expect(tabs.some((t) => t.type === 'query')).toBe(true)
     expect(activeTabId).toBe('tab-query')
     expect(useQueryPopupStore.getState().isOpen).toBe(false)
+  })
+
+  it('标签页达上限时 toast 提示且弹窗保持', () => {
+    const { openTab } = useTabStore.getState()
+    // 占满 15 个（query 无 instrumentID 后缀会去重，故用 order 合约填充唯一 id）
+    for (let i = 0; i < 14; i++) {
+      openTab({ type: 'order', title: `合约${i}`, props: { instrumentID: `c${i}` } })
+    }
+    useQueryPopupStore.setState({ isOpen: true })
+    render(<QueryPopup />)
+    fireEvent.click(screen.getByLabelText('放大为标签页'))
+    expect(useQueryPopupStore.getState().isOpen).toBe(true) // 弹窗保持
+    expect(toastErrorMock).toHaveBeenCalledWith('标签页数量已达上限（15），请先关闭部分标签页')
   })
 })
