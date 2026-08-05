@@ -1,5 +1,4 @@
-/** 缩放方向：8 个边/角 + 兼容别名（Task 4 迁移 FloatingWindow 后移除别名） */
-export type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw' | 'horizontal' | 'vertical'
+export type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
 
 /** 真实可用的 8 个方向（FloatingWindow / QueryPopup / OrderPopup 共用） */
 export const RESIZE_DIRECTIONS: ResizeDirection[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']
@@ -50,11 +49,6 @@ export function computeResizeRect(
   const minH = bounds.minH ?? 200
   const vw = bounds.viewportW ?? Infinity
   const vh = bounds.viewportH ?? Infinity
-
-  // 'horizontal'/'vertical' 为 Task 4 前的兼容别名，无缩放语义；显式 no-op 防 includes 误命中
-  if (dir === 'horizontal' || dir === 'vertical') {
-    return { x: ox, y: oy, w: ow, h: oh }
-  }
 
   let x = ox
   let y = oy

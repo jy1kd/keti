@@ -63,11 +63,6 @@ describe('computeResizeRect', () => {
   it('sw: 左下角，左缘跟随光标，右缘锚定', () => {
     expect(computeResizeRect('sw', RECT, 30, 60, BOUNDS)).toEqual({ x: 130, y: 50, w: 370, h: 360 })
   })
-
-  it('兼容别名 horizontal/vertical：no-op 原样返回', () => {
-    expect(computeResizeRect('horizontal', RECT, 100, 100, BOUNDS)).toEqual(RECT)
-    expect(computeResizeRect('vertical', RECT, 100, 100, BOUNDS)).toEqual(RECT)
-  })
 })
 
 describe('startResizeDrag', () => {

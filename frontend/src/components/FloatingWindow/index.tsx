@@ -1,18 +1,38 @@
 import { useCallback, useRef, useEffect } from 'react'
+import type { CSSProperties } from 'react'
 import { useTabStore } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import { ResizeHandle } from '@/components/ResizeHandle'
+import { startResizeDrag, RESIZE_DIRECTIONS, type ResizeDirection } from '@/utils/resizeDrag'
 import './styles.css'
 
 interface FloatingWindowProps {
   tabId: string
 }
 
+const MIN_W = 320
+const MIN_H = 200
+
+/** 每个方向手柄的 fixed 定位（相对窗口 rect） */
+function handleStyle(rect: { x: number; y: number; w: number; h: number }, dir: ResizeDirection, z: number): CSSProperties {
+  switch (dir) {
+    case 'n': return { left: rect.x, top: rect.y - 3, width: rect.w, height: 6, zIndex: z }
+    case 's': return { left: rect.x, top: rect.y + rect.h - 3, width: rect.w, height: 6, zIndex: z }
+    case 'e': return { left: rect.x + rect.w - 3, top: rect.y, width: 6, height: rect.h, zIndex: z }
+    case 'w': return { left: rect.x - 3, top: rect.y, width: 6, height: rect.h, zIndex: z }
+    case 'ne': return { left: rect.x + rect.w - 6, top: rect.y - 6, width: 12, height: 12, zIndex: z }
+    case 'nw': return { left: rect.x - 6, top: rect.y - 6, width: 12, height: 12, zIndex: z }
+    case 'se': return { left: rect.x + rect.w - 6, top: rect.y + rect.h - 6, width: 12, height: 12, zIndex: z }
+    case 'sw': return { left: rect.x - 6, top: rect.y + rect.h - 6, width: 12, height: 12, zIndex: z }
+    default: return {}
+  }
+}
+
 /**
  * FloatingWindow — 浮动窗口 chrome 壳（不含业务内容）
  *
  * 业务内容由 TabContent 以 position:fixed 位移盖在壳上；壳只画标题条
- * （拖拽移动 / ⇩ 停靠 / × 关闭）与右下角缩放柄。
+ * （拖拽移动 / ⇩ 停靠 / × 关闭）与 8 个方向缩放手柄。
  */
 function FloatingWindow({ tabId }: FloatingWindowProps) {
   const tab = useTabStore((s) => s.tabs.find((t) => t.id === tabId))
@@ -61,31 +81,19 @@ function FloatingWindow({ tabId }: FloatingWindowProps) {
   )
 
   const handleResizePointerDown = useCallback(
-    (e: React.PointerEvent) => {
+    (e: React.PointerEvent, dir: ResizeDirection) => {
       if (e.button !== 0) return
       e.stopPropagation()
       if (!rect) return
       focus(tabId)
-      const startX = e.clientX
-      const startY = e.clientY
-      const ow = rect.w
-      const oh = rect.h
-      const onMove = (ev: PointerEvent) => {
-        if (!activeTeardownRef.current) return
-        const w = Math.max(320, ow + (ev.clientX - startX))
-        const h = Math.max(200, oh + (ev.clientY - startY))
-        resize(tabId, { w, h })
-      }
-      const onUp = () => {
-        activeTeardownRef.current?.()
-      }
-      activeTeardownRef.current = () => {
-        window.removeEventListener('pointermove', onMove)
-        window.removeEventListener('pointerup', onUp)
-        activeTeardownRef.current = null
-      }
-      window.addEventListener('pointermove', onMove)
-      window.addEventListener('pointerup', onUp)
+      activeTeardownRef.current = startResizeDrag({
+        event: e.nativeEvent,
+        dir,
+        rect,
+        minW: MIN_W,
+        minH: MIN_H,
+        onResize: (r) => resize(tabId, r),
+      })
     },
     [tabId, rect, focus, resize],
   )
@@ -122,13 +130,16 @@ function FloatingWindow({ tabId }: FloatingWindowProps) {
           </button>
         </div>
       </div>
-      <ResizeHandle
-        className="floating-window__resize"
-        direction="horizontal"
-        aria-label="调整窗口大小"
-        style={{ left: rect.x + rect.w - 12, top: rect.y + rect.h - 12, zIndex: rect.z + 1 }}
-        onPointerDown={handleResizePointerDown}
-      />
+      {RESIZE_DIRECTIONS.map((dir) => (
+        <ResizeHandle
+          key={dir}
+          direction={dir}
+          className="floating-window__resize"
+          aria-label={`调整窗口大小 ${dir}`}
+          style={handleStyle(rect, dir, rect.z + 1)}
+          onPointerDown={(e) => handleResizePointerDown(e, dir)}
+        />
+      ))}
     </>
   )
 }

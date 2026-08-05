@@ -301,31 +301,11 @@ input:focus-visible, select:focus-visible {
   z-index: 10;
 }
 
-.resize-handle--horizontal {
-  width: 6px;
-  cursor: col-resize;
-}
-
-.resize-handle--vertical {
-  height: 6px;
-  cursor: row-resize;
-}
-
 .resize-handle__indicator {
   border-radius: 2px;
   background: var(--border-color);
   opacity: 0.4;
   transition: opacity 0.15s, background-color 0.15s;
-}
-
-.resize-handle--horizontal .resize-handle__indicator {
-  width: 2px;
-  height: 24px;
-}
-
-.resize-handle--vertical .resize-handle__indicator {
-  width: 24px;
-  height: 2px;
 }
 
 .resize-handle:hover .resize-handle__indicator {
