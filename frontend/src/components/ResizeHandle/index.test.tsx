@@ -1,24 +1,21 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ResizeHandle } from './index'
+import { RESIZE_DIRECTIONS } from '@/utils/resizeDrag'
 
 describe('ResizeHandle', () => {
-  it('renders with horizontal direction by default', () => {
+  it('renders with se direction by default', () => {
     render(<ResizeHandle data-testid="handle" />)
-    const handle = screen.getByTestId('handle')
-    expect(handle).toBeInTheDocument()
-    expect(handle.className).toContain('resize-handle--horizontal')
+    expect(screen.getByTestId('handle').className).toContain('resize-handle--se')
   })
 
-  it('renders with vertical direction when specified', () => {
-    render(<ResizeHandle direction="vertical" data-testid="handle" />)
-    const handle = screen.getByTestId('handle')
-    expect(handle.className).toContain('resize-handle--vertical')
+  it.each(RESIZE_DIRECTIONS)('renders direction class for %s', (dir) => {
+    render(<ResizeHandle direction={dir} data-testid={`handle-${dir}`} />)
+    expect(screen.getByTestId(`handle-${dir}`).className).toContain(`resize-handle--${dir}`)
   })
 
   it('renders drag indicator', () => {
     render(<ResizeHandle data-testid="handle" />)
-    const handle = screen.getByTestId('handle')
-    expect(handle.querySelector('.resize-handle__indicator')).toBeInTheDocument()
+    expect(screen.getByTestId('handle').querySelector('.resize-handle__indicator')).toBeInTheDocument()
   })
 })
