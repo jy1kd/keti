@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { fireEvent } from '@testing-library/react'
 import { computeResizeRect, startResizeDrag } from './resizeDrag'
 
@@ -66,10 +66,6 @@ describe('computeResizeRect', () => {
 })
 
 describe('startResizeDrag', () => {
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
   it('pointermove 按方向回调 onResize，pointerup 后清理监听', () => {
     const onResize = vi.fn()
     startResizeDrag({

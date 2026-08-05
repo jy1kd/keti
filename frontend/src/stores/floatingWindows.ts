@@ -61,7 +61,6 @@ export const useFloatingWindowStore = create<FloatingWindowStore>((set) => ({
       return { windows: { ...s.windows, [tabId]: { ...cur, x: pos.x, y: pos.y } } }
     })
   },
-  /** 缩放窗口（含移动，从任意边/角调整） */
   resize: (tabId, rect) => {
     set((s) => {
       const cur = s.windows[tabId]

@@ -29,6 +29,7 @@ export function QueryPopup() {
     popupRef,
     minW: MIN_W,
     minH: MIN_H,
+    active: isOpen,
   })
 
   // ── 拖拽移动 ──

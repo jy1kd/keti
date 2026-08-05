@@ -24,7 +24,11 @@ function handleStyle(rect: { x: number; y: number; w: number; h: number }, dir: 
     case 'nw': return { left: rect.x - 6, top: rect.y - 6, width: 12, height: 12, zIndex: z }
     case 'se': return { left: rect.x + rect.w - 6, top: rect.y + rect.h - 6, width: 12, height: 12, zIndex: z }
     case 'sw': return { left: rect.x - 6, top: rect.y + rect.h - 6, width: 12, height: 12, zIndex: z }
-    default: return {}
+    default: {
+      const _exhaustive: never = dir
+      void _exhaustive
+      return {}
+    }
   }
 }
 
@@ -130,6 +134,7 @@ function FloatingWindow({ tabId }: FloatingWindowProps) {
           </button>
         </div>
       </div>
+      {/* corners render after edges → DOM sibling order ensures corners paint over edge strips */}
       {RESIZE_DIRECTIONS.map((dir) => (
         <ResizeHandle
           key={dir}

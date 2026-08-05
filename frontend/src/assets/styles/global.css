@@ -366,6 +366,13 @@ input:focus-visible, select:focus-visible {
   display: none;
 }
 
+.resize-handle--ne:hover,
+.resize-handle--nw:hover,
+.resize-handle--se:hover,
+.resize-handle--sw:hover {
+  background: var(--accent-dim);
+}
+
 /* 共享 Panel 基础样式 */
 .panel-header {
   display: flex;

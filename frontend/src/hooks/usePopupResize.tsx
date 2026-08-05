@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties, RefObject } from 'react'
 import { ResizeHandle } from '@/components/ResizeHandle'
 import { startResizeDrag, RESIZE_DIRECTIONS, type ResizeDirection } from '@/utils/resizeDrag'
@@ -14,7 +14,11 @@ export function innerResizeHandleStyle(dir: ResizeDirection): CSSProperties {
     case 'ne': return { right: 0, top: 0, width: 12, height: 12 }
     case 'sw': return { left: 0, bottom: 0, width: 12, height: 12 }
     case 'se': return { right: 0, bottom: 0, width: 12, height: 12 }
-    default: return {}
+    default: {
+      const _exhaustive: never = dir
+      void _exhaustive
+      return {}
+    }
   }
 }
 
@@ -43,13 +47,16 @@ export interface UsePopupResizeOptions {
   popupRef: RefObject<HTMLDivElement | null>
   minW: number
   minH: number
+  active: boolean
 }
 
 /**
  * 弹窗自由缩放：管理 position/size 局部 state，物化居中态为绝对定位，
  * 并接入 8 方向缩放手势（QueryPopup / OrderPopup 共用）。
+ *
+ * 关闭时自动重置 position/size → 每次打开都回到默认居中 + CSS 默认尺寸。
  */
-export function usePopupResize({ popupRef, minW, minH }: UsePopupResizeOptions): {
+export function usePopupResize({ popupRef, minW, minH, active }: UsePopupResizeOptions): {
   position: { x: number; y: number } | null
   setPosition: (p: { x: number; y: number } | null) => void
   size: { w: number; h: number } | null
@@ -57,6 +64,20 @@ export function usePopupResize({ popupRef, minW, minH }: UsePopupResizeOptions):
 } {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null)
   const [size, setSize] = useState<{ w: number; h: number } | null>(null)
+  const resizeCleanupRef = useRef<(() => void) | null>(null)
+
+  // 重开回到默认尺寸与居中位置（关闭时重置，保证每次打开都是默认态）
+  useEffect(() => {
+    if (!active) {
+      setPosition(null)
+      setSize(null)
+    }
+  }, [active, setPosition, setSize])
+
+  // 卸载时清理拖拽残留监听（防止卸载中还有 pointermove/keydown 挂载）
+  useEffect(() => {
+    return () => resizeCleanupRef.current?.()
+  }, [])
 
   const handleResizePointerDown = useCallback(
     (e: React.PointerEvent, dir: ResizeDirection) => {
@@ -69,7 +90,7 @@ export function usePopupResize({ popupRef, minW, minH }: UsePopupResizeOptions):
       const rect = { x: r.left, y: r.top, w: r.width, h: r.height }
       setPosition({ x: r.left, y: r.top })
       setSize({ w: r.width, h: r.height })
-      startResizeDrag({
+      resizeCleanupRef.current = startResizeDrag({
         event: e.nativeEvent,
         dir,
         rect,

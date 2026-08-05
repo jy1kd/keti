@@ -55,6 +55,7 @@ export function OrderPopup() {
     popupRef,
     minW: MIN_W,
     minH: MIN_H,
+    active: !!instrumentID,
   })
   const dragRef = useRef<{ dx: number; dy: number } | null>(null)
 

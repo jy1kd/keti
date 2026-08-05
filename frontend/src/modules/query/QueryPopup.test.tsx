@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { QueryPopup } from './QueryPopup'
 import { useQueryPopupStore } from './popupStore'
 import { useTabStore } from '@/stores/tabs'
@@ -115,6 +115,10 @@ describe('缩放调整大小', () => {
     } as DOMRect)
   })
 
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('渲染 8 个方向缩放手柄', () => {
     useQueryPopupStore.setState({ isOpen: true })
     render(<QueryPopup />)
@@ -153,5 +157,24 @@ describe('缩放调整大小', () => {
     fireEvent(window, pointerEvent('pointerup', { clientX: 500, clientY: 300 }))
     const dialog = screen.getByRole('dialog')
     expect(dialog.style.width).toBe('480px')
+  })
+
+  it('重开回到默认尺寸与居中位置', async () => {
+    useQueryPopupStore.setState({ isOpen: true })
+    render(<QueryPopup />)
+    // 放大（拖 e 手柄）
+    fireEvent(screen.getByLabelText('调整弹窗大小 e'), pointerEvent('pointerdown', { clientX: 952, clientY: 300, button: 0, bubbles: true }))
+    fireEvent(window, pointerEvent('pointermove', { clientX: 1000, clientY: 300 }))
+    fireEvent(window, pointerEvent('pointerup', { clientX: 1000, clientY: 300 }))
+    // 关闭 → 等待 effect 重置 position/size → 再打开
+    await act(() => {
+      useQueryPopupStore.setState({ isOpen: false })
+    })
+    await act(() => {
+      useQueryPopupStore.setState({ isOpen: true })
+    })
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.style.width).toBe('')     // 无内联宽度 → 回到默认 CSS 尺寸
+    expect(dialog.style.left).toBe('50%')   // 回到默认居中（position=null 时走 transform 居中）
   })
 })
