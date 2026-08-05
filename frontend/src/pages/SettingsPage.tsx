@@ -35,7 +35,7 @@ export function SettingsPage() {
 
   return (
     <div className="settings-page">
-      <div className="settings-page__header">
+      <div className="settings-page__header" data-drag-handle>
         <h2>⚙ 设置</h2>
         <div className="settings-page__tabs">
           <button

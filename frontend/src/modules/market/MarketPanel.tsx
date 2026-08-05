@@ -97,7 +97,7 @@ export function MarketPanel() {
   if (viewMode === 'options') {
     return (
       <section className="market-panel">
-        <div className="market-tabs">
+        <div className="market-tabs" data-drag-handle>
           <button className="market-tab" onClick={() => setViewMode('market')}>行情</button>
           <button className="market-tab active" onClick={() => setViewMode('options')}>T型期权报价</button>
         </div>
@@ -108,7 +108,7 @@ export function MarketPanel() {
 
   return (
     <section className="market-panel">
-      <div className="market-tabs">
+      <div className="market-tabs" data-drag-handle>
         <button className="market-tab active" onClick={() => setViewMode('market')}>行情</button>
         <button className="market-tab" onClick={() => setViewMode('options')}>T型期权报价</button>
       </div>

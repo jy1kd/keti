@@ -62,6 +62,7 @@ export interface WindowControlAPI {
 export interface WindowManagementAPI {
   openOrderWindow: (instrumentID?: string) => Promise<void>;
   openKLineWindow: (instrumentID: string) => Promise<void>;
+  openTabWindow: (tabType: string, tabId: string, tabTitle: string, props?: Record<string, unknown>) => Promise<void>;
 }
 
 // App info types

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { TabBar } from './index'
 import { useTabStore } from '@/stores/tabs'
+import { useFloatingWindowStore } from '@/stores/floatingWindows'
 
 const { mockQueryOpen } = vi.hoisted(() => ({ mockQueryOpen: vi.fn() }))
 
@@ -11,6 +12,16 @@ vi.mock('@/modules/query/popupStore', () => ({
     getState: () => ({ open: mockQueryOpen, close: vi.fn() }),
   },
 }))
+
+const detachMock = vi.hoisted(() => ({
+  startDetachDrag: vi.fn(),
+  detachTabAt: vi.fn(),
+}))
+
+vi.mock('@/utils/detachDrag', () => detachMock)
+
+// beforeEach 会把 setActiveTab 重置为空操作；此处保存真实实现供浮动停靠测试验证 store 状态
+const realSetActiveTab = useTabStore.getState().setActiveTab
 
 const defaultState = {
   tabs: [
@@ -23,8 +34,22 @@ const defaultState = {
   getTabByType: () => undefined,
 }
 
+/** jsdom 24 无 PointerEvent 构造器；沿用 detachDrag.test 的 MouseEvent 方案保留 clientX/clientY/button */
+function pointerDownOn(el: Element, init: MouseEventInit = {}): void {
+  const ev = new MouseEvent('pointerdown', {
+    bubbles: true,
+    cancelable: true,
+    button: 0,
+    ...init,
+  }) as unknown as PointerEvent
+  fireEvent(el, ev)
+}
+
 describe('TabBar', () => {
   beforeEach(() => {
+    detachMock.startDetachDrag.mockReset()
+    detachMock.detachTabAt.mockReset()
+    useFloatingWindowStore.setState({ windows: {} })
     useTabStore.setState(defaultState)
   })
 
@@ -317,6 +342,22 @@ describe('TabBar', () => {
       expect(setActiveTab).toHaveBeenCalledWith('tab-favorites')
     })
 
+    it('自选标签浮动时点击 ⭐ 应停靠回标签栏并激活', () => {
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-favorites', type: 'favorites', title: '⭐ 自选', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-market',
+        setActiveTab: realSetActiveTab,
+      })
+      useFloatingWindowStore.setState({ windows: { 'tab-favorites': { x: 0, y: 0, w: 400, h: 300, z: 1401 } } })
+      render(<TabBar />)
+      fireEvent.click(screen.getByLabelText('⭐ 自选'))
+      expect(useFloatingWindowStore.getState().windows['tab-favorites']).toBeUndefined()
+      expect(useTabStore.getState().activeTabId).toBe('tab-favorites')
+    })
+
     it('应显示 📋 查询快捷按钮', () => {
       render(<TabBar />)
       expect(screen.getByLabelText('📋 查询')).toBeInTheDocument()
@@ -355,6 +396,69 @@ describe('TabBar', () => {
     it('标签应可聚焦（tabIndex=0）', () => {
       render(<TabBar />)
       expect(screen.getByRole('tab')).toHaveAttribute('tabindex', '0')
+    })
+  })
+
+  // --- 拖拽脱离 ---
+
+  describe('拖拽脱离', () => {
+    it('可关闭标签按下时调用 startDetachDrag（pill ghost）', () => {
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-market',
+      })
+      render(<TabBar />)
+      pointerDownOn(screen.getByText('⚙ 设置'), { clientX: 10, clientY: 10 })
+      expect(detachMock.startDetachDrag).toHaveBeenCalledTimes(1)
+      const params = detachMock.startDetachDrag.mock.calls[0][0]
+      expect(params.ghostKind).toBe('pill')
+      expect(params.canDetach()).toBe(true)
+    })
+
+    it('固定标签不调用 startDetachDrag', () => {
+      render(<TabBar />)
+      pointerDownOn(screen.getByText('📊 行情'), { clientX: 10, clientY: 10 })
+      expect(detachMock.startDetachDrag).not.toHaveBeenCalled()
+    })
+
+    it('拖离后抑制随后的 click（不切换标签）', () => {
+      const setActiveTab = vi.fn()
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-market',
+        setActiveTab,
+      })
+      render(<TabBar />)
+      pointerDownOn(screen.getByText('⚙ 设置'), { clientX: 10, clientY: 10 })
+      const params = detachMock.startDetachDrag.mock.calls[0][0]
+      params.onDetaching?.() // 模拟拖拽超阈值
+      fireEvent.click(screen.getByText('⚙ 设置'))
+      expect(setActiveTab).not.toHaveBeenCalled()
+      // 下一次正常点击应恢复
+      fireEvent.click(screen.getByText('⚙ 设置'))
+      expect(setActiveTab).toHaveBeenCalledWith('tab-settings')
+    })
+
+    it('浮动标签应从标签栏隐藏', () => {
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-market',
+      })
+      useFloatingWindowStore.setState({
+        windows: { 'tab-settings': { x: 0, y: 0, w: 400, h: 300, z: 1401 } },
+      })
+      render(<TabBar />)
+      expect(screen.queryByText('⚙ 设置')).toBeNull()
+      expect(screen.getByText('📊 行情')).toBeInTheDocument()
     })
   })
 })

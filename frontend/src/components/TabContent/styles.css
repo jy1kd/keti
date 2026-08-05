@@ -11,6 +11,17 @@
   min-height: 0;
 }
 
+/* ── 浮动面板（与 FloatingWindow chrome 构成窗口整体） ── */
+.tab-content__panel--floating {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
 .tab-placeholder {
   display: flex;
   align-items: center;
@@ -19,4 +30,14 @@
   color: var(--text-secondary);
   font-size: 16px;
   background: var(--bg-primary);
+}
+
+/* ── 页面标题栏拖拽句柄（转换为浮动弹窗的手势区） ── */
+[data-drag-handle] {
+  cursor: grab;
+  user-select: none;
+}
+
+[data-drag-handle]:active {
+  cursor: grabbing;
 }

@@ -10,6 +10,9 @@ const defaultHotKeys: HotKeyConfig = {
   reverse: '',
   lock: '',
   batchCancel: 'Escape',
+  openOrder: '',
+  openKline: '',
+  openSettings: '',
 }
 
 describe('QuickKeys', () => {
@@ -124,6 +127,9 @@ describe('QuickKeys', () => {
       reverse: '',
       lock: '',
       batchCancel: 'Escape',
+      openOrder: '',
+      openKline: '',
+      openSettings: '',
     })
   })
 

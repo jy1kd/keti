@@ -1,11 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { TabContent } from './index'
 import { useTabStore, type Tab, type TabType } from '@/stores/tabs'
+import { useFloatingWindowStore } from '@/stores/floatingWindows'
 
 // Mock MarketPanel 组件（避免依赖复杂子组件）
 vi.mock('@/modules/market/MarketPanel', () => ({
   MarketPanel: () => <div data-testid="market-panel">行情面板 Mock</div>,
+}))
+
+// Mock QueryPanel 组件（避免依赖复杂子组件）
+vi.mock('@/modules/query/QueryPanel', () => ({
+  QueryPanel: () => <div data-testid="query-panel">查询面板 Mock</div>,
 }))
 
 // Mock OrderPage 组件（避免依赖 stores）
@@ -28,6 +34,10 @@ vi.mock('@/pages/KLinePage', () => ({
   ),
 }))
 
+// Mock detachDrag 工具（Task 5 拖拽脱离）
+const detachMock = vi.hoisted(() => ({ startDetachDrag: vi.fn(), detachTabAt: vi.fn() }))
+vi.mock('@/utils/detachDrag', () => detachMock)
+
 // --- 辅助函数 ---
 
 function makeTab(overrides: Partial<Tab> & { type: TabType }): Tab {
@@ -49,10 +59,17 @@ function getAllPanels() {
   return screen.getAllByRole('tabpanel', { hidden: true })
 }
 
+/** jsdom 24 不提供 PointerEvent 构造器；用 MouseEvent 保留 clientX/clientY/button */
+function pointerEvent(type: string, init: MouseEventInit): PointerEvent {
+  return new MouseEvent(type, init) as unknown as PointerEvent
+}
+
 // --- 测试 ---
 
 describe('TabContent', () => {
   beforeEach(() => {
+    detachMock.startDetachDrag.mockReset()
+    useFloatingWindowStore.setState({ windows: {} })
     useTabStore.setState({
       tabs: [MARKET_TAB],
       activeTabId: MARKET_TAB.id,
@@ -139,7 +156,8 @@ describe('TabContent', () => {
       ['favorites', '⭐ 自选合约'],
       ['settings', '⚙ 设置'],
       ['options', '期权标签页'],
-      ['ipc-monitor', '📡 网络监控'],
+      ['ipc-monitor', '🔌 IPC 监控'],
+      ['query', '查询面板 Mock'],
     ])('应为 %s 类型渲染对应内容', (type, expectedText) => {
       const tab = makeTab({ type })
       useTabStore.setState({
@@ -205,5 +223,101 @@ describe('TabContent', () => {
       const panel = screen.getByRole('tabpanel')
       expect(panel).toHaveAttribute('aria-labelledby', MARKET_TAB.id)
     })
+  })
+
+  // --- 页面标题栏拖拽委托 ---
+
+  describe('页面标题栏拖拽委托', () => {
+    it('命中 [data-drag-handle] 且可关闭时调用 startDetachDrag（content ghost）', () => {
+      useTabStore.setState({ tabs: [MARKET_TAB, SETTINGS_TAB], activeTabId: MARKET_TAB.id })
+      render(<TabContent />)
+      const panel = getAllPanels()[1] // [market, settings]
+      const handle = document.createElement('div')
+      handle.setAttribute('data-drag-handle', '')
+      panel.appendChild(handle)
+      fireEvent(handle, pointerEvent('pointerdown', { clientX: 10, clientY: 10, button: 0, bubbles: true }))
+      expect(detachMock.startDetachDrag).toHaveBeenCalledTimes(1)
+      const params = detachMock.startDetachDrag.mock.calls[0][0]
+      expect(params.ghostKind).toBe('content')
+      expect(params.canDetach()).toBe(true)
+    })
+
+    it('命中按钮时不调用 startDetachDrag', () => {
+      useTabStore.setState({ tabs: [MARKET_TAB, SETTINGS_TAB], activeTabId: MARKET_TAB.id })
+      render(<TabContent />)
+      const panel = getAllPanels()[1]
+      const btn = document.createElement('button')
+      btn.setAttribute('data-drag-handle', '')
+      panel.appendChild(btn)
+      fireEvent(btn, pointerEvent('pointerdown', { clientX: 10, clientY: 10, button: 0, bubbles: true }))
+      expect(detachMock.startDetachDrag).not.toHaveBeenCalled()
+    })
+
+    it('固定标签（market）不调用 startDetachDrag', () => {
+      render(<TabContent />)
+      const panel = getAllPanels()[0]
+      const handle = document.createElement('div')
+      handle.setAttribute('data-drag-handle', '')
+      panel.appendChild(handle)
+      fireEvent(handle, pointerEvent('pointerdown', { clientX: 10, clientY: 10, button: 0, bubbles: true }))
+      expect(detachMock.startDetachDrag).not.toHaveBeenCalled()
+    })
+
+    it('非 [data-drag-handle] 区域不调用 startDetachDrag', () => {
+      useTabStore.setState({ tabs: [MARKET_TAB, SETTINGS_TAB], activeTabId: MARKET_TAB.id })
+      render(<TabContent />)
+      const panel = getAllPanels()[1]
+      fireEvent(panel, pointerEvent('pointerdown', { clientX: 10, clientY: 10, button: 0, bubbles: true }))
+      expect(detachMock.startDetachDrag).not.toHaveBeenCalled()
+    })
+
+    it('右键命中 [data-drag-handle] 不调用 startDetachDrag', () => {
+      useTabStore.setState({ tabs: [MARKET_TAB, SETTINGS_TAB], activeTabId: MARKET_TAB.id })
+      render(<TabContent />)
+      const panel = getAllPanels()[1]
+      const handle = document.createElement('div')
+      handle.setAttribute('data-drag-handle', '')
+      panel.appendChild(handle)
+      // pointerdown with button: 2 (right button)
+      fireEvent(handle, pointerEvent('pointerdown', { clientX: 10, clientY: 10, button: 2, bubbles: true }))
+      expect(detachMock.startDetachDrag).not.toHaveBeenCalled()
+    })
+  })
+})
+
+describe('浮动面板', () => {
+  beforeEach(() => {
+    useFloatingWindowStore.setState({ windows: {} })
+  })
+
+  it('浮动标签面板应固定定位并可见（即使非活跃）', () => {
+    useTabStore.setState({
+      tabs: [MARKET_TAB, SETTINGS_TAB],
+      activeTabId: MARKET_TAB.id,
+    })
+    useFloatingWindowStore.setState({
+      windows: { 'tab-settings': { x: 10, y: 20, w: 400, h: 300, z: 1401 } },
+    })
+    render(<TabContent />)
+    const panel = getAllPanels()[1] // [market, settings]，settings 在下标 1
+    expect(panel).toHaveClass('tab-content__panel--floating')
+    expect(panel).toHaveStyle({ position: 'fixed', left: '10px', top: '52px', width: '400px', height: '268px' })
+    expect(panel).toHaveAttribute('aria-hidden', 'false')
+  })
+
+  it('停靠（dock）后浮动面板恢复内联样式', () => {
+    useTabStore.setState({
+      tabs: [MARKET_TAB, SETTINGS_TAB],
+      activeTabId: MARKET_TAB.id,
+    })
+    useFloatingWindowStore.setState({
+      windows: { 'tab-settings': { x: 10, y: 20, w: 400, h: 300, z: 1401 } },
+    })
+    const { rerender } = render(<TabContent />)
+    useFloatingWindowStore.getState().dock('tab-settings')
+    rerender(<TabContent />)
+    const panel = getAllPanels()[1]
+    expect(panel).not.toHaveClass('tab-content__panel--floating')
+    expect(panel).toHaveStyle({ display: 'none' }) // 非活跃且已停靠
   })
 })

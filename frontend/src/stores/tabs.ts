@@ -2,7 +2,7 @@ import { create } from 'zustand'
 
 // --- 类型定义 ---
 
-/** 标签页类型（query 自重构后为悬浮弹窗形态，不再是标签页） */
+/** 标签页类型 */
 export type TabType =
   | 'market'
   | 'favorites'
@@ -11,6 +11,7 @@ export type TabType =
   | 'options'
   | 'ipc-monitor'
   | 'settings'
+  | 'query' // 新增：查询（全局账户查询，放大自 QueryPopup）
 
 /** 所有标签页类型 */
 export const TAB_TYPES: TabType[] = [
@@ -21,6 +22,7 @@ export const TAB_TYPES: TabType[] = [
   'options',
   'ipc-monitor',
   'settings',
+  'query',
 ]
 
 /** 固定标签页类型（始终存在，不可关闭） */

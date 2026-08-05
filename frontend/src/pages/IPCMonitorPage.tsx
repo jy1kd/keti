@@ -54,7 +54,7 @@ function setupWebSocketInterceptor() {
   // 使用 Proxy 代理 WebSocket 构造函数
   const handler: ProxyHandler<typeof originalWebSocket> = {
     construct(target, args) {
-      const ws = new target(...args)
+      const ws = new target(...args as ConstructorParameters<typeof WebSocket>)
       const url = args[0]
       const urlStr = typeof url === 'string' ? url : url.toString()
 
@@ -222,8 +222,8 @@ export function IPCMonitorPage() {
 
   return (
     <div className="ipc-monitor-page">
-      <div className="ipc-monitor-page__header">
-        <h2>📡 网络监控</h2>
+      <div className="ipc-monitor-page__header" data-drag-handle>
+        <h2>🔌 IPC 监控</h2>
         <div className="ipc-monitor-page__controls">
           <div className="ipc-monitor-page__filters">
             {(Object.entries(FILTER_LABELS) as [FilterType, string][]).map(([key, label]) => (
@@ -322,7 +322,7 @@ export function IPCMonitorPage() {
                 {new Date(selectedMessage.timestamp).toLocaleString()}
               </span>
             </div>
-            {selectedMessage.data && (
+            {selectedMessage.data != null && (
               <div className="detail-row">
                 <span className="detail-label">数据：</span>
                 <pre className="detail-value detail-data">

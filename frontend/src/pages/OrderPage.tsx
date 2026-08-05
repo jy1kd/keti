@@ -64,7 +64,7 @@ export function OrderPage({ instrumentID }: OrderPageProps) {
   return (
     <div className="order-page">
       {/* ── 标题栏 ── */}
-      <div className="order-page__title-bar">
+      <div className="order-page__title-bar" data-drag-handle>
         <span className="order-page__title">📝 报单</span>
         {instrumentID && (
           <span className="order-page__subtitle">{instrumentID}</span>
