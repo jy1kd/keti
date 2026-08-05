@@ -20,6 +20,9 @@ const detachMock = vi.hoisted(() => ({
 
 vi.mock('@/utils/detachDrag', () => detachMock)
 
+// beforeEach 会把 setActiveTab 重置为空操作；此处保存真实实现供浮动停靠测试验证 store 状态
+const realSetActiveTab = useTabStore.getState().setActiveTab
+
 const defaultState = {
   tabs: [
     { id: 'tab-market', type: 'market' as const, title: '📊 行情', props: {}, closable: false },
@@ -337,6 +340,22 @@ describe('TabBar', () => {
       render(<TabBar />)
       fireEvent.click(screen.getByLabelText('⭐ 自选'))
       expect(setActiveTab).toHaveBeenCalledWith('tab-favorites')
+    })
+
+    it('自选标签浮动时点击 ⭐ 应停靠回标签栏并激活', () => {
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-favorites', type: 'favorites', title: '⭐ 自选', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-market',
+        setActiveTab: realSetActiveTab,
+      })
+      useFloatingWindowStore.setState({ windows: { 'tab-favorites': { x: 0, y: 0, w: 400, h: 300, z: 1401 } } })
+      render(<TabBar />)
+      fireEvent.click(screen.getByLabelText('⭐ 自选'))
+      expect(useFloatingWindowStore.getState().windows['tab-favorites']).toBeUndefined()
+      expect(useTabStore.getState().activeTabId).toBe('tab-favorites')
     })
 
     it('应显示 📋 查询快捷按钮', () => {

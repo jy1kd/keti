@@ -38,6 +38,7 @@ export function TabBar({ onAddTab }: TabBarProps) {
   const closeTab = useTabStore((s) => s.closeTab)
   const openTab = useTabStore((s) => s.openTab)
   const windows = useFloatingWindowStore((s) => s.windows)
+  const dock = useFloatingWindowStore((s) => s.dock)
   const suppressClickRef = useRef(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
@@ -187,7 +188,8 @@ export function TabBar({ onAddTab }: TabBarProps) {
       ))}
       <div className="tab-bar__separator" />
       {QUICK_TABS.map(({ type, icon, title }) => {
-        const isOpen = tabs.some((t) => t.type === type)
+        const tab = tabs.find((t) => t.type === type)
+        const isOpen = visibleTabs.some((t) => t.type === type)
         return (
           <button
             key={type}
@@ -196,12 +198,14 @@ export function TabBar({ onAddTab }: TabBarProps) {
             aria-label={title}
             title={title}
             onClick={() => {
-              if (isOpen) {
-                // 已打开则激活
-                const tab = tabs.find((t) => t.type === type)
-                if (tab) setActiveTab(tab.id)
-              } else {
+              if (!tab) {
                 openTab({ type, title, closable: true })
+              } else if (windows[tab.id]) {
+                // 浮动中的目标标签：停靠回标签栏并激活
+                dock(tab.id)
+                setActiveTab(tab.id)
+              } else {
+                setActiveTab(tab.id)
               }
             }}
           >
