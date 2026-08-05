@@ -55,6 +55,19 @@ describe('computeResizeRect', () => {
     const r = computeResizeRect('e', RECT, 5000, 0)
     expect(r.w).toBe(5400)
   })
+
+  it('ne: 右上角，上缘跟随光标，下缘锚定', () => {
+    expect(computeResizeRect('ne', RECT, 50, 40, BOUNDS)).toEqual({ x: 100, y: 90, w: 450, h: 260 })
+  })
+
+  it('sw: 左下角，左缘跟随光标，右缘锚定', () => {
+    expect(computeResizeRect('sw', RECT, 30, 60, BOUNDS)).toEqual({ x: 130, y: 50, w: 370, h: 360 })
+  })
+
+  it('兼容别名 horizontal/vertical：no-op 原样返回', () => {
+    expect(computeResizeRect('horizontal', RECT, 100, 100, BOUNDS)).toEqual(RECT)
+    expect(computeResizeRect('vertical', RECT, 100, 100, BOUNDS)).toEqual(RECT)
+  })
 })
 
 describe('startResizeDrag', () => {
@@ -107,5 +120,15 @@ describe('startResizeDrag', () => {
     onResize.mockClear()
     fireEvent(window, pointerEvent('pointermove', { clientX: 200, clientY: 50 }))
     expect(onResize).not.toHaveBeenCalled()
+  })
+
+  it('返回清理函数（卸载时用于移除监听）', () => {
+    const cleanup = startResizeDrag({
+      event: pointerEvent('pointerdown', { clientX: 100, clientY: 50, button: 0, bubbles: true }),
+      dir: 'e',
+      rect: RECT,
+      onResize: vi.fn(),
+    })
+    expect(typeof cleanup).toBe('function')
   })
 })

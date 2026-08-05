@@ -51,6 +51,11 @@ export function computeResizeRect(
   const vw = bounds.viewportW ?? Infinity
   const vh = bounds.viewportH ?? Infinity
 
+  // 'horizontal'/'vertical' 为 Task 4 前的兼容别名，无缩放语义；显式 no-op 防 includes 误命中
+  if (dir === 'horizontal' || dir === 'vertical') {
+    return { x: ox, y: oy, w: ow, h: oh }
+  }
+
   let x = ox
   let y = oy
   let w = ow
