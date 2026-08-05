@@ -899,16 +899,21 @@ git commit -m "feat(resize): FloatingWindow 支持 8 方向缩放，移除 horiz
 
 ---
 
-### Task 5: `QueryPopup` 支持缩放
+### Task 5: `QueryPopup` 支持缩放（创建共享 `usePopupResize` hook）
 
 **Files:**
+- Create: `frontend/src/hooks/usePopupResize.ts`
 - Modify: `frontend/src/modules/query/QueryPopup.tsx`
 - Modify: `frontend/src/modules/query/QueryPopup.css`
 - Modify: `frontend/src/modules/query/QueryPopup.test.tsx`
 
 **Interfaces:**
 - Consumes: `startResizeDrag`, `RESIZE_DIRECTIONS`, `ResizeDirection` from `@/utils/resizeDrag`; `ResizeHandle` from `@/components/ResizeHandle`
-- Produces: 弹窗内 `.query-popup__handles` 覆盖层（`pointer-events: none`，子手柄 `auto`），8 个手柄 `aria-label="调整弹窗大小 {dir}"`；局部 `size` state
+- Produces:
+  - `usePopupResize({ popupRef, minW, minH })` → `{ position, setPosition, size, handleResizePointerDown }`（Task 6 复用）
+  - `PopupResizeHandles({ onPointerDown })` — 渲染 8 个手柄，`aria-label="调整弹窗大小 {dir}"`
+  - `innerResizeHandleStyle(dir)` — 弹窗内部手柄绝对定位
+  - 弹窗内 `.query-popup__handles` 覆盖层（`pointer-events: none`，子手柄 `auto`）
 
 - [ ] **Step 1: 写失败测试**
 
@@ -978,28 +983,18 @@ describe('缩放调整大小', () => {
 Run: `cd frontend && npx vitest run src/modules/query/QueryPopup.test.tsx`
 Expected: FAIL — 弹窗还没有手柄（`getByLabelText('调整弹窗大小 …')` 找不到）。
 
-- [ ] **Step 3: 改 QueryPopup 组件**
+- [ ] **Step 3: 创建共享 hook + 改 QueryPopup 组件**
 
-Replace `frontend/src/modules/query/QueryPopup.tsx` with:
+Create `frontend/src/hooks/usePopupResize.ts`:
 
 ```tsx
-import { useCallback, useEffect, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
-import { flushSync } from 'react-dom'
-import { useQueryPopupStore } from './popupStore'
-import { useTabStore } from '@/stores/tabs'
-import { getRect, flipToRect, getTabPanelRect } from '@/utils/flip'
-import { toast } from '@/components/Toast'
+import { useCallback, useState } from 'react'
+import type { CSSProperties, RefObject } from 'react'
 import { ResizeHandle } from '@/components/ResizeHandle'
 import { startResizeDrag, RESIZE_DIRECTIONS, type ResizeDirection } from '@/utils/resizeDrag'
-import { QueryPanel } from './QueryPanel'
-import './QueryPopup.css'
-
-const MIN_W = 480
-const MIN_H = 320
 
 /** 弹窗内部手柄的绝对定位（贴内沿，overflow:hidden 不出界） */
-function innerHandleStyle(dir: ResizeDirection): CSSProperties {
+export function innerResizeHandleStyle(dir: ResizeDirection): CSSProperties {
   switch (dir) {
     case 'n': return { top: 0, left: 0, right: 0, height: 6 }
     case 's': return { bottom: 0, left: 0, right: 0, height: 6 }
@@ -1013,6 +1008,93 @@ function innerHandleStyle(dir: ResizeDirection): CSSProperties {
   }
 }
 
+/** 弹窗 8 方向缩放手柄组（放入各弹窗自己的 handles 覆盖层） */
+export function PopupResizeHandles({
+  onPointerDown,
+}: {
+  onPointerDown: (e: React.PointerEvent, dir: ResizeDirection) => void
+}) {
+  return (
+    <>
+      {RESIZE_DIRECTIONS.map((dir) => (
+        <ResizeHandle
+          key={dir}
+          direction={dir}
+          aria-label={`调整弹窗大小 ${dir}`}
+          style={innerResizeHandleStyle(dir)}
+          onPointerDown={(e) => onPointerDown(e, dir)}
+        />
+      ))}
+    </>
+  )
+}
+
+export interface UsePopupResizeOptions {
+  popupRef: RefObject<HTMLDivElement | null>
+  minW: number
+  minH: number
+}
+
+/**
+ * 弹窗自由缩放：管理 position/size 局部 state，物化居中态为绝对定位，
+ * 并接入 8 方向缩放手势（QueryPopup / OrderPopup 共用）。
+ */
+export function usePopupResize({ popupRef, minW, minH }: UsePopupResizeOptions): {
+  position: { x: number; y: number } | null
+  setPosition: (p: { x: number; y: number } | null) => void
+  size: { w: number; h: number } | null
+  handleResizePointerDown: (e: React.PointerEvent, dir: ResizeDirection) => void
+} {
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null)
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null)
+
+  const handleResizePointerDown = useCallback(
+    (e: React.PointerEvent, dir: ResizeDirection) => {
+      if (e.button !== 0) return
+      e.stopPropagation()
+      const el = popupRef.current
+      if (!el) return
+      // 物化当前实际矩形：居中态（transform）不提供真实 left/top，先转绝对定位避免跳动
+      const r = el.getBoundingClientRect()
+      const rect = { x: r.left, y: r.top, w: r.width, h: r.height }
+      setPosition({ x: r.left, y: r.top })
+      setSize({ w: r.width, h: r.height })
+      startResizeDrag({
+        event: e.nativeEvent,
+        dir,
+        rect,
+        minW,
+        minH,
+        onResize: (next) => {
+          setPosition({ x: next.x, y: next.y })
+          setSize({ w: next.w, h: next.h })
+        },
+      })
+    },
+    [popupRef, minW, minH],
+  )
+
+  return { position, setPosition, size, handleResizePointerDown }
+}
+```
+
+Replace `frontend/src/modules/query/QueryPopup.tsx` with:
+
+```tsx
+import { useCallback, useEffect, useRef } from 'react'
+import type { CSSProperties } from 'react'
+import { flushSync } from 'react-dom'
+import { useQueryPopupStore } from './popupStore'
+import { useTabStore } from '@/stores/tabs'
+import { getRect, flipToRect, getTabPanelRect } from '@/utils/flip'
+import { toast } from '@/components/Toast'
+import { usePopupResize, PopupResizeHandles } from '@/hooks/usePopupResize'
+import { QueryPanel } from './QueryPanel'
+import './QueryPopup.css'
+
+const MIN_W = 480
+const MIN_H = 320
+
 /**
  * QueryPopup — 悬浮查询弹窗（非模态）
  *
@@ -1023,57 +1105,41 @@ export function QueryPopup() {
   const isOpen = useQueryPopupStore((s) => s.isOpen)
   const close = useQueryPopupStore((s) => s.close)
 
-  // ── 拖拽移动 ──
-  const [position, setPosition] = useState<{ x: number; y: number } | null>(null)
-  const dragRef = useRef<{ dx: number; dy: number } | null>(null)
   const popupRef = useRef<HTMLDivElement | null>(null)
 
-  // ── 自由缩放（尺寸为局部 state，重开回到默认）──
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null)
+  // ── 自由缩放 + 位置（共享 hook：物化居中态 + 8 方向手势，重开回到默认尺寸）──
+  const { position, setPosition, size, handleResizePointerDown } = usePopupResize({
+    popupRef,
+    minW: MIN_W,
+    minH: MIN_H,
+  })
 
-  const handleHeaderMouseDown = useCallback((e: React.MouseEvent) => {
-    const el = popupRef.current
-    if (!el || e.button !== 0) return
-    const rect = el.getBoundingClientRect()
-    dragRef.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top }
+  // ── 拖拽移动 ──
+  const dragRef = useRef<{ dx: number; dy: number } | null>(null)
 
-    const onMove = (ev: MouseEvent) => {
-      if (!dragRef.current) return
-      const x = Math.min(Math.max(0, ev.clientX - dragRef.current.dx), window.innerWidth - 40)
-      const y = Math.min(Math.max(0, ev.clientY - dragRef.current.dy), window.innerHeight - 40)
-      setPosition({ x, y })
-    }
-    const onUp = () => {
-      dragRef.current = null
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-    }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }, [])
+  const handleHeaderMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      const el = popupRef.current
+      if (!el || e.button !== 0) return
+      const rect = el.getBoundingClientRect()
+      dragRef.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top }
 
-  const handleResizePointerDown = useCallback((e: React.PointerEvent, dir: ResizeDirection) => {
-    if (e.button !== 0) return
-    e.stopPropagation()
-    const el = popupRef.current
-    if (!el) return
-    // 物化当前实际矩形：居中态（transform）不提供真实 left/top，先转绝对定位避免跳动
-    const r = el.getBoundingClientRect()
-    const rect = { x: r.left, y: r.top, w: r.width, h: r.height }
-    setPosition({ x: r.left, y: r.top })
-    setSize({ w: r.width, h: r.height })
-    startResizeDrag({
-      event: e.nativeEvent,
-      dir,
-      rect,
-      minW: MIN_W,
-      minH: MIN_H,
-      onResize: (next) => {
-        setPosition({ x: next.x, y: next.y })
-        setSize({ w: next.w, h: next.h })
-      },
-    })
-  }, [])
+      const onMove = (ev: MouseEvent) => {
+        if (!dragRef.current) return
+        const x = Math.min(Math.max(0, ev.clientX - dragRef.current.dx), window.innerWidth - 40)
+        const y = Math.min(Math.max(0, ev.clientY - dragRef.current.dy), window.innerHeight - 40)
+        setPosition({ x, y })
+      }
+      const onUp = () => {
+        dragRef.current = null
+        window.removeEventListener('mousemove', onMove)
+        window.removeEventListener('mouseup', onUp)
+      }
+      window.addEventListener('mousemove', onMove)
+      window.addEventListener('mouseup', onUp)
+    },
+    [setPosition],
+  )
 
   // ── ESC 关闭 ──
   useEffect(() => {
@@ -1153,15 +1219,7 @@ export function QueryPopup() {
         <QueryPanel />
       </div>
       <div className="query-popup__handles">
-        {RESIZE_DIRECTIONS.map((dir) => (
-          <ResizeHandle
-            key={dir}
-            direction={dir}
-            aria-label={`调整弹窗大小 ${dir}`}
-            style={innerHandleStyle(dir)}
-            onPointerDown={(e) => handleResizePointerDown(e, dir)}
-          />
-        ))}
+        <PopupResizeHandles onPointerDown={handleResizePointerDown} />
       </div>
     </div>
   )
@@ -1194,8 +1252,8 @@ Expected: PASS（原有用例 + 4 个新增缩放用例）。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add frontend/src/modules/query/QueryPopup.tsx frontend/src/modules/query/QueryPopup.css frontend/src/modules/query/QueryPopup.test.tsx
-git commit -m "feat(resize): QueryPopup 支持 8 方向自由缩放"
+git add frontend/src/hooks/usePopupResize.ts frontend/src/modules/query/QueryPopup.tsx frontend/src/modules/query/QueryPopup.css frontend/src/modules/query/QueryPopup.test.tsx
+git commit -m "feat(resize): QueryPopup 支持 8 方向自由缩放（共享 usePopupResize hook）"
 ```
 
 ---
@@ -1208,7 +1266,7 @@ git commit -m "feat(resize): QueryPopup 支持 8 方向自由缩放"
 - Modify: `frontend/src/modules/order/OrderPopup.test.tsx`
 
 **Interfaces:**
-- Consumes: 同 Task 5；`MIN_W = 680` / `MIN_H = 400`
+- Consumes: `usePopupResize`, `PopupResizeHandles` from `@/hooks/usePopupResize`（Task 5 创建）；`MIN_W = 680` / `MIN_H = 400`
 
 - [ ] **Step 1: 写失败测试**
 
@@ -1267,70 +1325,35 @@ Expected: FAIL — 弹窗还没有手柄。
 
 - [ ] **Step 3: 改 OrderPopup 组件**
 
-在 `frontend/src/modules/order/OrderPopup.tsx`：
+在 `frontend/src/modules/order/OrderPopup.tsx`（复用 Task 5 的共享 hook）：
 
 1. 顶部 import 追加两行（在 `import { OrderForm } from './OrderForm'` 之前）：
 
 ```tsx
-import { ResizeHandle } from '@/components/ResizeHandle'
-import { startResizeDrag, RESIZE_DIRECTIONS, type ResizeDirection } from '@/utils/resizeDrag'
+import { usePopupResize, PopupResizeHandles } from '@/hooks/usePopupResize'
 ```
 
-2. 文件顶部（import 之后）新增常量与手柄定位函数：
+2. 文件顶部（import 之后）新增常量：
 
 ```tsx
 const MIN_W = 680
 const MIN_H = 400
-
-/** 弹窗内部手柄的绝对定位（贴内沿，overflow:hidden 不出界） */
-function innerHandleStyle(dir: ResizeDirection): CSSProperties {
-  switch (dir) {
-    case 'n': return { top: 0, left: 0, right: 0, height: 6 }
-    case 's': return { bottom: 0, left: 0, right: 0, height: 6 }
-    case 'e': return { right: 0, top: 0, bottom: 0, width: 6 }
-    case 'w': return { left: 0, top: 0, bottom: 0, width: 6 }
-    case 'nw': return { left: 0, top: 0, width: 12, height: 12 }
-    case 'ne': return { right: 0, top: 0, width: 12, height: 12 }
-    case 'sw': return { left: 0, bottom: 0, width: 12, height: 12 }
-    case 'se': return { right: 0, bottom: 0, width: 12, height: 12 }
-    default: return {}
-  }
-}
 ```
 
-3. 在 `const [position, setPosition] = useState<{ x: number; y: number } | null>(null)` 之后加尺寸 state：
+3. 删除本地 `position` state 声明（`const [position, setPosition] = useState<{ x: number; y: number } | null>(null)` 这一行），改为从共享 hook 取位置与尺寸：
 
 ```tsx
-  // ── 自由缩放（尺寸为局部 state，重开回到默认）──
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null)
+  // ── 自由缩放 + 位置（共享 hook：物化居中态 + 8 方向手势，重开回到默认尺寸）──
+  const { position, setPosition, size, handleResizePointerDown } = usePopupResize({
+    popupRef,
+    minW: MIN_W,
+    minH: MIN_H,
+  })
 ```
 
-4. 在 `handleHeaderMouseDown` 之后加缩放处理（与 QueryPopup 相同模式）：
+（`popupRef` 为组件内已有声明，勿重复声明；`useState` 若因此不再使用，需从 `import { useCallback, useEffect, useRef, useState } from 'react'` 中移除 `useState`，避免未使用变量 lint。）
 
-```tsx
-  const handleResizePointerDown = useCallback((e: React.PointerEvent, dir: ResizeDirection) => {
-    if (e.button !== 0) return
-    e.stopPropagation()
-    const el = popupRef.current
-    if (!el) return
-    // 物化当前实际矩形：居中态（transform）不提供真实 left/top，先转绝对定位避免跳动
-    const r = el.getBoundingClientRect()
-    const rect = { x: r.left, y: r.top, w: r.width, h: r.height }
-    setPosition({ x: r.left, y: r.top })
-    setSize({ w: r.width, h: r.height })
-    startResizeDrag({
-      event: e.nativeEvent,
-      dir,
-      rect,
-      minW: MIN_W,
-      minH: MIN_H,
-      onResize: (next) => {
-        setPosition({ x: next.x, y: next.y })
-        setSize({ w: next.w, h: next.h })
-      },
-    })
-  }, [])
-```
+4. `handleHeaderMouseDown` 的 `useCallback` 依赖数组由 `[]` 改为 `[setPosition]`（`setPosition` 现来自 hook）。
 
 5. `popupStyle` 追加尺寸：
 
@@ -1347,15 +1370,7 @@ function innerHandleStyle(dir: ResizeDirection): CSSProperties {
 
 ```tsx
       <div className="order-popup__handles">
-        {RESIZE_DIRECTIONS.map((dir) => (
-          <ResizeHandle
-            key={dir}
-            direction={dir}
-            aria-label={`调整弹窗大小 ${dir}`}
-            style={innerHandleStyle(dir)}
-            onPointerDown={(e) => handleResizePointerDown(e, dir)}
-          />
-        ))}
+        <PopupResizeHandles onPointerDown={handleResizePointerDown} />
       </div>
 ```
 
