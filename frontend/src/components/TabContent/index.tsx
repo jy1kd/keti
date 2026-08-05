@@ -6,7 +6,6 @@ import { QueryPanel } from '@/modules/query/QueryPanel'
 import { FavoritesPage } from '@/pages/FavoritesPage'
 import { OrderPage } from '@/pages/OrderPage'
 import { KLinePage } from '@/pages/KLinePage'
-import { QueryPanel } from '@/modules/query/QueryPanel'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { IPCMonitorPage } from '@/pages/IPCMonitorPage'
 import './styles.css'
@@ -46,8 +45,6 @@ function renderTabContent(tab: Tab): React.ReactNode {
       return <div className="tab-placeholder">📉 期权标签页</div>
     case 'ipc-monitor':
       return <IPCMonitorPage />
-    case 'query':
-      return <QueryPanel />
     default:
       return <div className="tab-placeholder">未知标签</div>
   }
