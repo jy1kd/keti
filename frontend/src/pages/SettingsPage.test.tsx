@@ -33,7 +33,7 @@ vi.mock('@/components/Toast', () => ({
 describe('SettingsPage', () => {
   beforeEach(() => {
     useUserPrefsStore.setState({
-      hotKeys: { buy: 'b', sell: 's', cancel: 'c', reverse: '', lock: '', batchCancel: 'Escape' },
+      hotKeys: { buy: 'b', sell: 's', cancel: 'c', reverse: '', lock: '', batchCancel: 'Escape', openOrder: '', openKline: '', openSettings: '' },
       quickTradeConfig: {
         lock: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' },
         reverse: {
