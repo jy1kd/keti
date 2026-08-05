@@ -33,6 +33,38 @@ describe('utils/flip', () => {
     expect(onDone).toHaveBeenCalledTimes(1)
   })
 
+  it('flipToRect forward 模式设置前向变换（从 A 过渡到 B），transitionend 后清理并回调', () => {
+    const el = document.createElement('div')
+    const onDone = vi.fn()
+    flipToRect(el, A, B, { direction: 'forward', onDone })
+    // jsdom 无真实动画，最后赋值的 transform 即为目标值
+    expect(el.style.transform).toBe('translate(200px, 150px) scale(2, 2)')
+    expect(el.style.left).toBe('100px')
+    expect(el.style.top).toBe('50px')
+    expect(el.style.transformOrigin).toBe('0 0')
+    expect(el.style.transition).toContain('transform')
+    el.dispatchEvent(new Event('transitionend'))
+    expect(el.style.transform).toBe('')
+    expect(el.style.transition).toBe('')
+    expect(el.style.left).toBe('')
+    expect(el.style.top).toBe('')
+    expect(onDone).toHaveBeenCalledTimes(1)
+  })
+
+  it('flipToRect forward 模式 transitionend 丢失时通过定时器兜底', () => {
+    vi.useFakeTimers()
+    const el = document.createElement('div')
+    const onDone = vi.fn()
+    flipToRect(el, A, B, { direction: 'forward', duration: 220, onDone })
+    // 不触发 transitionend，仅快进定时器
+    expect(onDone).toHaveBeenCalledTimes(0)
+    vi.advanceTimersByTime(270) // 220 + 50
+    expect(onDone).toHaveBeenCalledTimes(1)
+    expect(el.style.transform).toBe('')
+    expect(el.style.transition).toBe('')
+    vi.useRealTimers()
+  })
+
   it('getRect 正确映射 getBoundingClientRect 字段', () => {
     const el = document.createElement('div')
     const mock = { left: 10, top: 20, width: 100, height: 50, right: 110, bottom: 70, x: 10, y: 20, toJSON: () => ({}) }

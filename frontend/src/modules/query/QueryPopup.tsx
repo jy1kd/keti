@@ -75,7 +75,7 @@ export function QueryPopup() {
       close()
       return
     }
-    flipToRect(popupEl, from, to, { onDone: () => close() })
+    flipToRect(popupEl, from, to, { direction: 'forward', onDone: () => close() })
   }, [close])
 
   if (!isOpen) return null

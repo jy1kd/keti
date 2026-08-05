@@ -107,7 +107,7 @@ export function OrderPopup() {
       closePopup()
       return
     }
-    flipToRect(popupEl, from, to, { onDone: () => closePopup() })
+    flipToRect(popupEl, from, to, { direction: 'forward', onDone: () => closePopup() })
   }, [instrumentID, closePopup])
 
   if (!instrumentID) return null

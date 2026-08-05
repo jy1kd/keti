@@ -22,21 +22,76 @@ export function computeFlipDeltas(from: FlipRect, to: FlipRect) {
 }
 
 /**
- * 对元素执行 FLIP 动画：元素已处于 to 位置，先施加 from→to 的反向 transform，
- * 强制 reflow 后过渡到恒等变换，动画结束清除内联样式并回调 onDone。
+ * 对元素执行 FLIP 动画：
+ * - invert（默认）：元素已处于 to 位置，先施加 from→to 的反向 transform，
+ *   强制 reflow 后过渡到恒等变换，动画结束清除内联样式并回调 onDone。
+ * - forward：元素处于 from 位置，先补偿居中定位（若有）使起点无缝，
+ *   然后过渡到 to 位置/尺寸，动画结束清除内联样式并回调 onDone。
  */
 export function flipToRect(
   el: HTMLElement,
   from: FlipRect,
   to: FlipRect,
-  opts: { duration?: number; onDone?: () => void } = {},
+  opts: { duration?: number; direction?: 'invert' | 'forward'; onDone?: () => void } = {},
 ): void {
+  const duration = opts.duration ?? 220
+  const done = opts.onDone
+
+  if (opts.direction === 'forward') {
+    // 正向：元素从 from 过渡到 to
+    const dx = to.left - from.left
+    const dy = to.top - from.top
+    const sx = from.width > 0 ? to.width / from.width : 1
+    const sy = from.height > 0 ? to.height / from.height : 1
+
+    // 补偿居中定位（如 translate(-50%,-50%) + left:50%/top:50%），
+    // 确保正向动画从元素当前视觉位置无缝开始。
+    el.style.transition = 'none'
+    el.style.transformOrigin = '0 0'
+    el.style.left = `${from.left}px`
+    el.style.top = `${from.top}px`
+    el.style.transform = 'translate(0, 0) scale(1, 1)'
+
+    void el.offsetWidth // 强制 reflow
+
+    el.style.transition = `transform ${duration}ms cubic-bezier(0.2, 0.8, 0.2, 1)`
+    el.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`
+
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const cleanup = (): void => {
+      if (timer !== undefined) {
+        clearTimeout(timer)
+        timer = undefined
+      }
+      el.style.transition = ''
+      el.style.transformOrigin = ''
+      el.style.transform = ''
+      el.style.left = ''
+      el.style.top = ''
+      done?.()
+    }
+
+    const onTransitionEnd = (): void => {
+      cleanup()
+    }
+
+    el.addEventListener('transitionend', onTransitionEnd, { once: true })
+    timer = setTimeout(() => {
+      timer = undefined
+      el.removeEventListener('transitionend', onTransitionEnd)
+      cleanup()
+    }, duration + 50)
+
+    return
+  }
+
+  // invert（默认）：元素已处于 to，先反向 transform 到 from 视觉位置，再过渡回恒等
   const { dx, dy, sx, sy } = computeFlipDeltas(from, to)
   el.style.transition = 'none'
   el.style.transformOrigin = '0 0'
   el.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`
   void el.offsetWidth // 强制 reflow
-  el.style.transition = `transform ${opts.duration ?? 220}ms cubic-bezier(0.2, 0.8, 0.2, 1)`
+  el.style.transition = `transform ${duration}ms cubic-bezier(0.2, 0.8, 0.2, 1)`
   el.style.transform = 'translate(0, 0) scale(1, 1)'
   el.addEventListener(
     'transitionend',
@@ -44,7 +99,7 @@ export function flipToRect(
       el.style.transition = ''
       el.style.transformOrigin = ''
       el.style.transform = ''
-      opts.onDone?.()
+      done?.()
     },
     { once: true },
   )
