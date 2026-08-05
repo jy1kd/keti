@@ -28,8 +28,8 @@ interface FloatingWindowStore {
   dock: (tabId: string) => void
   /** 拖标题条移动窗口 */
   move: (tabId: string, pos: { x: number; y: number }) => void
-  /** 右下角缩放窗口 */
-  resize: (tabId: string, size: { w: number; h: number }) => void
+  /** 缩放窗口（含移动，从任意边/角调整） */
+  resize: (tabId: string, rect: { x: number; y: number; w: number; h: number }) => void
   /** 点击窗口置顶（z 递增） */
   focus: (tabId: string) => void
 }
@@ -61,11 +61,11 @@ export const useFloatingWindowStore = create<FloatingWindowStore>((set) => ({
       return { windows: { ...s.windows, [tabId]: { ...cur, x: pos.x, y: pos.y } } }
     })
   },
-  resize: (tabId, size) => {
+  resize: (tabId, rect) => {
     set((s) => {
       const cur = s.windows[tabId]
       if (!cur) return s
-      return { windows: { ...s.windows, [tabId]: { ...cur, w: size.w, h: size.h } } }
+      return { windows: { ...s.windows, [tabId]: { ...cur, x: rect.x, y: rect.y, w: rect.w, h: rect.h } } }
     })
   },
   focus: (tabId) => {

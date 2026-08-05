@@ -61,9 +61,19 @@ describe('useFloatingWindowStore', () => {
 
   it('resize 更新宽高', () => {
     useFloatingWindowStore.getState().detach('tab-settings', { x: 0, y: 0, w: 400, h: 300 })
-    useFloatingWindowStore.getState().resize('tab-settings', { w: 600, h: 400 })
+    useFloatingWindowStore.getState().resize('tab-settings', { x: 0, y: 0, w: 600, h: 400 })
     expect(useFloatingWindowStore.getState().windows['tab-settings'].w).toBe(600)
     expect(useFloatingWindowStore.getState().windows['tab-settings'].h).toBe(400)
+  })
+
+  it('resize 支持移动（从左边/上边缩放）', () => {
+    useFloatingWindowStore.getState().detach('tab-settings', { x: 10, y: 20, w: 400, h: 300 })
+    useFloatingWindowStore.getState().resize('tab-settings', { x: 40, y: 60, w: 370, h: 260 })
+    const w = useFloatingWindowStore.getState().windows['tab-settings']
+    expect(w.x).toBe(40)
+    expect(w.y).toBe(60)
+    expect(w.w).toBe(370)
+    expect(w.h).toBe(260)
   })
 
   it('focus 递增 z', () => {
@@ -77,7 +87,7 @@ describe('useFloatingWindowStore', () => {
   it('move/resize/focus 不存在的标签：no-op 不抛错且 windows 不变', () => {
     expect(() => {
       useFloatingWindowStore.getState().move('tab-nope', { x: 10, y: 20 })
-      useFloatingWindowStore.getState().resize('tab-nope', { w: 400, h: 300 })
+      useFloatingWindowStore.getState().resize('tab-nope', { x: 0, y: 0, w: 400, h: 300 })
       useFloatingWindowStore.getState().focus('tab-nope')
     }).not.toThrow()
     expect(useFloatingWindowStore.getState().windows).toEqual({})

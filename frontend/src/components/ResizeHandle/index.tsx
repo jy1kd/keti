@@ -1,12 +1,13 @@
 import { forwardRef } from 'react'
 import type { HTMLAttributes } from 'react'
+import type { ResizeDirection } from '@/utils/resizeDrag'
 
 interface ResizeHandleProps extends HTMLAttributes<HTMLDivElement> {
-  direction?: 'horizontal' | 'vertical'
+  direction?: ResizeDirection
 }
 
 export const ResizeHandle = forwardRef<HTMLDivElement, ResizeHandleProps>(
-  ({ direction = 'horizontal', className = '', ...props }, ref) => {
+  ({ direction = 'se', className = '', ...props }, ref) => {
     return (
       <div
         ref={ref}

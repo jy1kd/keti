@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import type { CSSProperties } from 'react'
 import { flushSync } from 'react-dom'
 import { useOrderPopupStore } from './popupStore'
@@ -7,10 +7,14 @@ import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
 import { useTabStore } from '@/stores/tabs'
 import { getRect, flipToRect, getTabPanelRect } from '@/utils/flip'
+import { usePopupResize, PopupResizeHandles } from '@/hooks/usePopupResize'
 import { toast } from '@/components/Toast'
 import { OrderQuotePanel } from './OrderQuotePanel'
 import { OrderForm } from './OrderForm'
 import './OrderPopup.css'
+
+const MIN_W = 680
+const MIN_H = 400
 
 /**
  * OrderPopup — 悬浮报单弹窗（非模态）
@@ -45,10 +49,15 @@ export function OrderPopup() {
   const contract = instrumentID ? contracts.find((c) => c.instrumentID === instrumentID) : null
   const priceTick = contract?.priceTick ?? 0.2
 
-  // ── 拖拽移动 ──
-  const [position, setPosition] = useState<{ x: number; y: number } | null>(null)
-  const dragRef = useRef<{ dx: number; dy: number } | null>(null)
+  // ── 自由缩放 + 位置（共享 hook：物化居中态 + 8 方向手势，重开回到默认尺寸）──
   const popupRef = useRef<HTMLDivElement | null>(null)
+  const { position, setPosition, size, handleResizePointerDown } = usePopupResize({
+    popupRef,
+    minW: MIN_W,
+    minH: MIN_H,
+    active: !!instrumentID,
+  })
+  const dragRef = useRef<{ dx: number; dy: number } | null>(null)
 
   const handleHeaderMouseDown = useCallback((e: React.MouseEvent) => {
     const el = popupRef.current
@@ -69,7 +78,7 @@ export function OrderPopup() {
     }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
-  }, [])
+  }, [setPosition])
 
   // ── ESC 关闭 ──
   useEffect(() => {
@@ -112,9 +121,12 @@ export function OrderPopup() {
 
   if (!instrumentID) return null
 
-  const popupStyle: CSSProperties = position
-    ? { left: position.x, top: position.y }
-    : { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }
+  const popupStyle: CSSProperties = {
+    ...(position
+      ? { left: position.x, top: position.y }
+      : { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }),
+    ...(size ? { width: size.w, height: size.h } : {}),
+  }
 
   return (
     <div
@@ -154,6 +166,9 @@ export function OrderPopup() {
         <div className="order-popup__form">
           <OrderForm priceTick={priceTick} />
         </div>
+      </div>
+      <div className="order-popup__handles">
+        <PopupResizeHandles onPointerDown={handleResizePointerDown} />
       </div>
     </div>
   )

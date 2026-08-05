@@ -91,3 +91,17 @@
   flex-direction: column;
   overflow: hidden;
 }
+
+/* ── 8 方向缩放手柄（内部覆盖层，不拦截非手柄区域的点击） ── */
+
+.query-popup__handles {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.query-popup__handles .resize-handle {
+  position: absolute;
+  pointer-events: auto;
+}

@@ -5,13 +5,20 @@ import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import { useTabStore } from '@/stores/tabs'
 
 // Mock 面板内容：浮动面板由 TabContent 渲染，此处只测 chrome 壳
+// ResizeHandle 按 direction 渲染可定位的测试柄
 vi.mock('@/components/ResizeHandle', () => ({
-  ResizeHandle: ({ onPointerDown, 'aria-label': label }: { onPointerDown?: (e: React.PointerEvent) => void; 'aria-label'?: string }) => (
-    <div data-testid="resize-handle" aria-label={label} onPointerDown={onPointerDown} />
-  ),
+  ResizeHandle: ({
+    direction,
+    onPointerDown,
+    'aria-label': label,
+  }: {
+    direction: string
+    onPointerDown?: (e: React.PointerEvent) => void
+    'aria-label'?: string
+  }) => <div data-testid={`resize-handle-${direction}`} aria-label={label} onPointerDown={onPointerDown} />,
 }))
 
-/** jsdom 24 不提供 PointerEvent 构造器；用 MouseEvent 保留 clientX/clientY/button（与 utils/detachDrag.test.ts 同款回退） */
+/** jsdom 24 不提供 PointerEvent 构造器；用 MouseEvent 保留 clientX/clientY/button */
 function pointerEvent(type: string, init: MouseEventInit): PointerEvent {
   return new MouseEvent(type, init) as unknown as PointerEvent
 }
@@ -67,14 +74,55 @@ describe('FloatingWindows', () => {
     expect(w.y).toBe(50)
   })
 
-  it('拖右下角缩放柄应 resize 窗口', () => {
+  it('渲染 8 个方向缩放手柄', () => {
     useFloatingWindowStore.getState().detach('tab-settings', { x: 10, y: 20, w: 400, h: 300 })
     render(<FloatingWindows />)
-    fireEvent(screen.getByTestId('resize-handle'), pointerEvent('pointerdown', { clientX: 400, clientY: 320, button: 0, bubbles: true }))
+    ;['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].forEach((dir) => {
+      expect(screen.getByTestId(`resize-handle-${dir}`)).toBeInTheDocument()
+    })
+  })
+
+  it('拖 se 角应同时改 w/h', () => {
+    useFloatingWindowStore.getState().detach('tab-settings', { x: 10, y: 20, w: 400, h: 300 })
+    render(<FloatingWindows />)
+    fireEvent(screen.getByTestId('resize-handle-se'), pointerEvent('pointerdown', { clientX: 400, clientY: 320, button: 0, bubbles: true }))
     fireEvent(window, pointerEvent('pointermove', { clientX: 500, clientY: 400 }))
     fireEvent(window, pointerEvent('pointerup', { clientX: 500, clientY: 400 }))
     const w = useFloatingWindowStore.getState().windows['tab-settings']
     expect(w.w).toBe(500)
     expect(w.h).toBe(380)
+  })
+
+  it('拖 w 边应同时改 x 与 w（右缘锚定）', () => {
+    useFloatingWindowStore.getState().detach('tab-settings', { x: 100, y: 20, w: 400, h: 300 })
+    render(<FloatingWindows />)
+    fireEvent(screen.getByTestId('resize-handle-w'), pointerEvent('pointerdown', { clientX: 100, clientY: 100, button: 0, bubbles: true }))
+    fireEvent(window, pointerEvent('pointermove', { clientX: 60, clientY: 100 }))
+    fireEvent(window, pointerEvent('pointerup', { clientX: 60, clientY: 100 }))
+    const w = useFloatingWindowStore.getState().windows['tab-settings']
+    expect(w.x).toBe(60)
+    expect(w.w).toBe(440)
+  })
+
+  it('拖 n 边应同时改 y 与 h（下缘锚定）', () => {
+    useFloatingWindowStore.getState().detach('tab-settings', { x: 100, y: 20, w: 400, h: 300 })
+    render(<FloatingWindows />)
+    fireEvent(screen.getByTestId('resize-handle-n'), pointerEvent('pointerdown', { clientX: 200, clientY: 20, button: 0, bubbles: true }))
+    fireEvent(window, pointerEvent('pointermove', { clientX: 200, clientY: -10 }))
+    fireEvent(window, pointerEvent('pointerup', { clientX: 200, clientY: -10 }))
+    const w = useFloatingWindowStore.getState().windows['tab-settings']
+    expect(w.y).toBe(0)
+    expect(w.h).toBe(320)
+  })
+
+  it('拖 e 边只改 w，不移动 x', () => {
+    useFloatingWindowStore.getState().detach('tab-settings', { x: 10, y: 20, w: 400, h: 300 })
+    render(<FloatingWindows />)
+    fireEvent(screen.getByTestId('resize-handle-e'), pointerEvent('pointerdown', { clientX: 410, clientY: 100, button: 0, bubbles: true }))
+    fireEvent(window, pointerEvent('pointermove', { clientX: 460, clientY: 100 }))
+    fireEvent(window, pointerEvent('pointerup', { clientX: 460, clientY: 100 }))
+    const w = useFloatingWindowStore.getState().windows['tab-settings']
+    expect(w.x).toBe(10)
+    expect(w.w).toBe(450)
   })
 })
