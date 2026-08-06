@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render } from '@testing-library/react'
 import { MarketTable } from './MarketTable'
+import { useMarketStore } from './store'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
 
 describe('MarketTable', () => {
@@ -289,5 +290,48 @@ describe('MarketTable', () => {
     contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200 } })
 
     expect(onContextMenu).toHaveBeenCalledWith('au2508', 0, expect.any(Object))
+  })
+
+  // --- 局部更新 tests ---
+
+  describe('MarketTable 局部更新', () => {
+    it('snapshots 变化时调用 updateRecords 而非 setRecords', async () => {
+      const { ListTable } = await import('@visactor/vtable')
+      const { rerender } = render(
+        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} />
+      )
+
+      // 初始渲染调用了 setRecords
+      const instance = (ListTable as any).mock.results[0].value
+      expect(instance.setRecords).toHaveBeenCalled()
+      instance.setRecords.mockClear()
+
+      // 新的快照（au2508 价格变化）
+      const newSnapshots = new Map(mockSnapshots)
+      newSnapshots.set('au2508', { ...newSnapshots.get('au2508')!, lastPrice: 490 } as any)
+      useMarketStore.setState({ recentlyUpdated: new Set(['au2508']) })
+      rerender(<MarketTable contracts={mockContracts} snapshots={newSnapshots} />)
+
+      expect(instance.updateRecords).toHaveBeenCalled()
+      expect(instance.setRecords).not.toHaveBeenCalled()
+      // 只更新 1 行
+      const updateCalls = instance.updateRecords.mock.calls as [any[], number[]][]
+      expect(updateCalls[0][1]).toHaveLength(1)
+    })
+
+    it('selectedContracts 变化时仍走 setRecords 全量', async () => {
+      const { ListTable } = await import('@visactor/vtable')
+      const { rerender } = render(
+        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={() => {}} />
+      )
+      const instance = (ListTable as any).mock.results[0].value
+      instance.setRecords.mockClear()
+
+      rerender(
+        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set(['au2508'])} onSelectionChange={() => {}} />
+      )
+
+      expect(instance.setRecords).toHaveBeenCalled()
+    })
   })
 })
