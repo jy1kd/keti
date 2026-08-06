@@ -3,7 +3,6 @@ import { ListTable } from '@visactor/vtable'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
 import { getProductName } from '@/utils/productNames'
 import { getContractStatus, type ContractStatus } from '@/utils/contractStatus'
-import { useMarketStore } from './store'
 
 interface MarketTableProps {
   contracts: ContractInfo[]
@@ -447,21 +446,23 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contracts, favoritedIds])
 
-  // snapshots 变化 → 局部 updateRecords（高频 tick）
+  // snapshots 变化 → 局部 updateRecords（高频 tick，自 diff 找变化行，避免多实例争用 store）
   useEffect(() => {
     if (!tableRef.current) return
-    const updatedIDs = useMarketStore.getState().consumeRecentUpdates()
-    if (updatedIDs.length === 0) return
+    const prev = prevSnapshotsRef.current
+    if (!prev) return
 
     const rowIndexes: number[] = []
-    const updatedRecords: any[] = []
-    for (const id of updatedIDs) {
+    const updatedRecords: ReturnType<typeof buildRecord>[] = []
+    // 遍历新 snapshots，与旧 Map 按引用比较，找出真正变化的合约行
+    for (const [id, snap] of snapshots) {
+      if (prev.get(id) === snap) continue // 引用相同，未变化
       const rowIndex = contracts.findIndex((c) => c.instrumentID === id)
       if (rowIndex < 0) continue
-      const record = buildRecord(contracts[rowIndex], snapshots.get(id), favoritedIds?.has(id) ?? false)
+      const record = buildRecord(contracts[rowIndex], snap, favoritedIds?.has(id) ?? false)
       recordsRef.current[rowIndex] = record
       updatedRecords.push(record)
-      rowIndexes.push(rowIndex + 1) // vtable 行号（0=表头，数据从 1 开始）
+      rowIndexes.push(rowIndex) // updateRecords 第二参数是 0-based 记录索引（表头偏移由 vtable 内部处理）
     }
     if (updatedRecords.length > 0) {
       tableRef.current.updateRecords(updatedRecords, rowIndexes)

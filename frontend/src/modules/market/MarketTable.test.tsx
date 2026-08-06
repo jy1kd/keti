@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render } from '@testing-library/react'
 import { MarketTable } from './MarketTable'
-import { useMarketStore } from './store'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
 
 describe('MarketTable', () => {
@@ -306,17 +305,34 @@ describe('MarketTable', () => {
       expect(instance.setRecords).toHaveBeenCalled()
       instance.setRecords.mockClear()
 
-      // 新的快照（au2508 价格变化）
+      // 新的快照（au2508 价格变化，自 diff 检测到该行变化）
       const newSnapshots = new Map(mockSnapshots)
       newSnapshots.set('au2508', { ...newSnapshots.get('au2508')!, lastPrice: 490 } as any)
-      useMarketStore.setState({ recentlyUpdated: new Set(['au2508']) })
       rerender(<MarketTable contracts={mockContracts} snapshots={newSnapshots} />)
 
       expect(instance.updateRecords).toHaveBeenCalled()
       expect(instance.setRecords).not.toHaveBeenCalled()
-      // 只更新 1 行
+      // 只更新 1 行，且索引为 0-based 记录索引 [0]（au2508 在 contracts 中 index 0）
       const updateCalls = instance.updateRecords.mock.calls as [any[], number[]][]
-      expect(updateCalls[0][1]).toHaveLength(1)
+      expect(updateCalls[0][1]).toEqual([0])
+    })
+
+    it('更新第二个合约时索引为 1（0-based 记录索引）', async () => {
+      const { ListTable } = await import('@visactor/vtable')
+      const { rerender } = render(
+        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} />
+      )
+      const instance = (ListTable as any).mock.results[0].value
+      instance.updateRecords.mockClear()
+
+      // 新的快照（ag2508 价格变化，ag2508 在 contracts 中 index 1）
+      const newSnapshots = new Map(mockSnapshots)
+      newSnapshots.set('ag2508', { ...newSnapshots.get('ag2508')!, lastPrice: 6600 } as any)
+      rerender(<MarketTable contracts={mockContracts} snapshots={newSnapshots} />)
+
+      expect(instance.updateRecords).toHaveBeenCalled()
+      const updateCalls = instance.updateRecords.mock.calls as [any[], number[]][]
+      expect(updateCalls[0][1]).toEqual([1])
     })
 
     it('selectedContracts 变化时仍走 setRecords 全量', async () => {

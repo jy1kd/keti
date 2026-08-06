@@ -16,7 +16,6 @@ describe('useSubscriptionManager 延迟退订', () => {
     useMarketStore.setState({
       visibleInstrumentIDs: [],
       lockedContracts: new Map(),
-      recentlyUpdated: new Set(),
       selectedContracts: new Set(),
     })
   })
@@ -74,7 +73,6 @@ describe('useSubscriptionManager 拖动与 LRU', () => {
     useMarketStore.setState({
       visibleInstrumentIDs: [],
       lockedContracts: new Map(),
-      recentlyUpdated: new Set(),
       selectedContracts: new Set(),
     })
   })
