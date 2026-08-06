@@ -18,6 +18,23 @@ vi.mock('@/components/Toast', () => ({
   toast: { error: toastErrorMock },
 }))
 
+// Mock API：AccountBar 挂载即拉取持仓/账户（jsdom 无后端，返回空即静默）
+const { refreshPositionsMock, refreshAccountMock, lockPositionMock } = vi.hoisted(() => ({
+  refreshPositionsMock: vi.fn(),
+  refreshAccountMock: vi.fn(),
+  lockPositionMock: vi.fn(),
+}))
+
+vi.mock('@/services/api', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('@/services/api')>()
+  return {
+    ...mod,
+    refreshPositions: refreshPositionsMock,
+    refreshAccount: refreshAccountMock,
+    lockPosition: lockPositionMock,
+  }
+})
+
 // Mock FLIP 工具：jsdom 无真实布局，同步触发 onDone
 vi.mock('@/utils/flip', () => ({
   getRect: () => ({ left: 0, top: 0, width: 740, height: 500 }),
@@ -68,7 +85,11 @@ const IF2608_CONTRACT = {
 describe('OrderPopup', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useOrderPopupStore.setState({ instrumentID: null })
+    localStorage.clear()
+    useOrderPopupStore.setState({ instrumentID: null, expanded: false })
+    refreshPositionsMock.mockResolvedValue({})
+    refreshAccountMock.mockResolvedValue({})
+    lockPositionMock.mockResolvedValue({ success: true })
     useOrderStore.getState().resetOrderForm()
     useContractsStore.setState({
       contracts: [IF2608_CONTRACT],
@@ -133,6 +154,32 @@ describe('OrderPopup', () => {
     expect(useOrderPopupStore.getState().instrumentID).toBeNull()
   })
 
+  it('确认框打开时按 Esc 取消确认框而非关闭弹窗（不丢失待确认报单意图）', () => {
+    useOrderPopupStore.setState({ instrumentID: 'IF2608' })
+    useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) })
+    render(<OrderPopup />)
+    // 点卖一档打开确认框
+    fireEvent.click(screen.getByTestId('ask-1').querySelector('.depth-row__buy')!)
+    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    // Esc 取消确认框（ConfirmDialog onCancel）……
+    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
+    // ……而非关闭整个弹窗
+    expect(useOrderPopupStore.getState().instrumentID).toBe('IF2608')
+  })
+
+  it('确认框关闭后 Esc 恢复关闭弹窗', () => {
+    useOrderPopupStore.setState({ instrumentID: 'IF2608' })
+    render(<OrderPopup />)
+    // 模拟确认框已打开再关闭后的状态（store 守卫仅依赖 confirmOpen 瞬态）
+    useOrderPopupStore.getState().setConfirmOpen(true)
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(useOrderPopupStore.getState().instrumentID).toBe('IF2608')
+    useOrderPopupStore.getState().setConfirmOpen(false)
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(useOrderPopupStore.getState().instrumentID).toBeNull()
+  })
+
   it('打开弹窗即置顶（bringToFront order 写入统一 z）', () => {
     useFloatingWindowStore.setState({ popupZ: {}, windows: {} })
     useOrderPopupStore.setState({ instrumentID: 'IF2608' })
@@ -167,11 +214,69 @@ describe('OrderPopup', () => {
     // 确认前订单表单未被改写
     expect(useOrderStore.getState().orderForm.limitPrice).toBe(0)
   })
+
+  // ── P2 完整态与账户栏 ────────────────────────────────────────
+
+  it('渲染账户栏 AccountBar（精简态也显示）与底部工具条 FooterBar', () => {
+    useOrderPopupStore.setState({ instrumentID: 'IF2608' })
+    render(<OrderPopup />)
+    expect(screen.getByTestId('account-bar')).toBeInTheDocument()
+    expect(screen.getByTestId('order-popup-footer')).toBeInTheDocument()
+    expect(screen.getByTestId('op-footer-toggle')).toBeInTheDocument()
+  })
+
+  it('精简态默认不渲染行情统计栏 QuoteStatsBar', () => {
+    useOrderPopupStore.setState({ instrumentID: 'IF2608', expanded: false })
+    useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) })
+    render(<OrderPopup />)
+    expect(screen.queryByTestId('quote-stats-bar')).not.toBeInTheDocument()
+  })
+
+  it('FooterBar ∧/∨ 切换精简/完整态：展开渲染 QuoteStatsBar，收起还原', () => {
+    useOrderPopupStore.setState({ instrumentID: 'IF2608', expanded: false })
+    useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) })
+    render(<OrderPopup />)
+    expect(screen.queryByTestId('quote-stats-bar')).not.toBeInTheDocument()
+    // ∧ 展开完整态
+    fireEvent.click(screen.getByTestId('op-footer-toggle'))
+    expect(useOrderPopupStore.getState().expanded).toBe(true)
+    expect(screen.getByTestId('quote-stats-bar')).toBeInTheDocument()
+    expect(screen.getByText('今开')).toBeInTheDocument()
+    expect(screen.getByText('成交量')).toBeInTheDocument()
+    expect(screen.getByTestId('op-footer-toggle').textContent).toContain('收起')
+    // ∨ 收起
+    fireEvent.click(screen.getByTestId('op-footer-toggle'))
+    expect(useOrderPopupStore.getState().expanded).toBe(false)
+    expect(screen.queryByTestId('quote-stats-bar')).not.toBeInTheDocument()
+  })
+
+  it('标题栏 — 按钮收起完整态（等价 FooterBar ∨）', () => {
+    useOrderPopupStore.setState({ instrumentID: 'IF2608', expanded: true })
+    useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) })
+    render(<OrderPopup />)
+    expect(screen.getByTestId('quote-stats-bar')).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText('收起为精简态'))
+    expect(screen.queryByTestId('quote-stats-bar')).not.toBeInTheDocument()
+    expect(useOrderPopupStore.getState().expanded).toBe(false)
+  })
+
+  it('完整态展开状态持久化到 localStorage', () => {
+    useOrderPopupStore.setState({ instrumentID: 'IF2608', expanded: false })
+    render(<OrderPopup />)
+    fireEvent.click(screen.getByTestId('op-footer-toggle'))
+    const raw = localStorage.getItem('simnow-order-popup')
+    expect(raw).not.toBeNull()
+    expect(JSON.parse(raw!).state.expanded).toBe(true)
+  })
 })
 
 describe('⤢ 放大为标签页', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
+    useOrderPopupStore.setState({ instrumentID: null, expanded: false })
+    refreshPositionsMock.mockResolvedValue({})
+    refreshAccountMock.mockResolvedValue({})
     useTabStore.setState({
       tabs: [
         { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
@@ -217,6 +322,10 @@ function pointerEvent(type: string, init: MouseEventInit): PointerEvent {
 describe('缩放调整大小', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
+    useOrderPopupStore.setState({ instrumentID: null, expanded: false })
+    refreshPositionsMock.mockResolvedValue({})
+    refreshAccountMock.mockResolvedValue({})
     // jsdom 无真实布局：物化 getBoundingClientRect 为 740×500 居中矩形
     vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
       left: 142, top: 134, width: 740, height: 500,

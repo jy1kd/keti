@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { MarketSnapshot } from '@/services/types'
 import { useOrderStore } from './store'
+import { useOrderPopupStore } from './popupStore'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import type { OrderRequestForm } from '@/utils/orderMapping'
 import './MarketDepth.css'
@@ -129,6 +130,12 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
   useEffect(() => {
     if (quickDefault !== null && quickPrice === 0) setQuickPrice(quickDefault)
   }, [quickDefault, quickPrice])
+
+  // 点价确认框打开 → 同步 popupStore.confirmOpen：弹窗内 Esc 优先取消确认框而非关弹窗
+  useEffect(() => {
+    useOrderPopupStore.getState().setConfirmOpen(!!intent)
+    return () => useOrderPopupStore.getState().setConfirmOpen(false)
+  }, [intent])
 
   if (!snapshot) {
     return <div className="market-depth market-depth--empty">--</div>
