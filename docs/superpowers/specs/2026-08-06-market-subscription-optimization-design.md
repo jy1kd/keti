@@ -25,12 +25,13 @@
 
 | 决策点 | 结论 |
 |--------|------|
-| 优化范围 | 仅前端，后端零改动 |
+| 优化范围 | 仅前端，后端零改动（快照回填复用后端已有 `_snapshots` 缓存） |
 | 退订策略 | 延迟退订（30s 宽限期），不再立即退订 |
 | 拖动策略 | 拖动中只增不减，停止后统一 diff |
 | 上限保护 | `SOFT_LIMIT = 480 < 500`，LRU 淘汰最久未见的低优先级合约 |
 | 更新方式 | `setRecords`（全量）→ `updateRecords`（局部） |
 | 触发方式 | 用 `visibleInstrumentIDs` 短窗口内多次变化推断拖动态，不改 `MarketTable` 滚动接线 |
+| **快照回填** | **订阅成功后立即 `getSnapshots(订阅列表)`，用后端缓存快照先填表，实时 tick 再覆盖（方案 A）** |
 
 ---
 
@@ -46,14 +47,16 @@ tick 更新  → contracts.map 全量重建 → setRecords 全量替换
 改造后：
 可见区变化 → 200ms防抖 → 更新"应该订阅"集合
            ├─ subscribe（立即，100ms 防抖）
-           └─ unsubscribe（延迟 30s 宽限期，500ms 防抖，拖动中暂停）
+           ├─ 订阅成功 → getSnapshots 回填缓存快照（方案 A，立即有数据）
+           ├─ unsubscribe（延迟 30s 宽限期，500ms 防抖，拖动中暂停）
            └─ 订阅数 > SOFT_LIMIT(480) → LRU 淘汰最久未见
 tick 更新  → 只 rebuild 变化的合约 → updateRecords 局部重绘
 ```
 
 - **订阅管理**集中在 `useSubscriptionManager.ts` 一个 Hook，用 `Map<instrumentID, lastVisibleTime>` 替代 `Set<string>`。
 - **局部更新**在 `MarketTable.tsx` + `useMarketWs.ts` + `store.ts` 三处配合。
-- 五个机制（下表）彼此独立、可叠加。
+- **快照回填**在 `useSubscriptionManager.ts` 内、subscribe 成功后触发，复用后端 `getSnapshots` 接口 + 后端 `_snapshots` 缓存，后端零改动。
+- 六个机制（下表）彼此独立、可叠加。
 
 | # | 机制 | 文件 | 解决 |
 |---|------|------|------|
@@ -62,6 +65,7 @@ tick 更新  → 只 rebuild 变化的合约 → updateRecords 局部重绘
 | 3 | 拖动中只增不减 | useSubscriptionManager | 请求风暴 |
 | 4 | LRU 上限保护（SOFT_LIMIT=480） | useSubscriptionManager | 500 上限 |
 | 5 | 局部更新（updateRecords） | MarketTable + useMarketWs + store | 全量重建开销 |
+| 6 | 快照回填（subscribe 后 getSnapshots） | useSubscriptionManager | 停止后填满慢 |
 
 ---
 
@@ -218,6 +222,40 @@ useEffect(() => {
 
 ---
 
+## 4.5 快照回填（机制 6，方案 A）
+
+**问题：** 订阅停止后要等 CTP 异步回包才有数据，期间表格显示 `--`。17488 条合约场景下，从顶拖到底停住后，可见区合约全部要等 tick 才填满。
+
+**方案：** subscribe 成功后立即 `getSnapshots(订阅列表)`，用后端 `_snapshots` 缓存里已有的最后快照先填表，实时 tick 再覆盖。
+
+**关键事实（已核实）：** 后端 `market_service` 的 `_snapshots` 缓存持续存在——每次 CTP `OnRtnDepthMarketData` 回调都 `update_snapshot` 写缓存，**订阅/退订不清缓存**。所以任何 tick 过的合约，缓存里都有其最后价格。订阅后立即拉，多数可见合约能立刻显示最后已知价。
+
+### 数据流
+
+```
+subscribe 成功
+  → getSnapshots(订阅列表)          // 复用现有 /api/market/snapshots
+  → 返回 { snapshots: { id: {...} } }
+  → batchUpdate(缓存快照)            // 写入 market store
+  → MarketTable prevSnapshotsRef 自 diff → updateRecords 局部重绘
+  → 实时 tick 到来 → WS → batchUpdate → 覆盖为最新价
+```
+
+### 实现要点
+
+- 在 `useSubscriptionManager` 的 subscribe 成功回调里、`subscribedRef.set` 之后，对 `toSubscribe` 调 `getSnapshots(toSubscribe)`。
+- 返回值 `{ snapshots }` 转成 `MarketSnapshot[]` 调 `useMarketStore.getState().batchUpdate(...)`。
+- **不改变订阅/退订逻辑**——回填是「订阅成功后的附加动作」，失败静默（`catch` 忽略），实时 tick 兜底。
+- 缓存快照可能过期（最后价格是几分钟前的），但**显示旧价 > 显示 `--`**，实时 tick 会在毫秒级内覆盖。
+
+### 与既有机制的衔接
+
+- 复用 Task 1 已实现并保留的 `batchUpdate`（它 `set` 新快照对象，MarketTable 引用比较自 diff 能识别为变化行）。
+- 快照回填走 `batchUpdate` 写入 store，`recentlyUpdated` 无需恢复（MarketTable 自 diff 已够用）。
+- 只在「订阅成功的合约」上回填，避免对未订阅合约拉缓存。
+
+---
+
 ## 5. 数据流
 
 ```
@@ -259,13 +297,16 @@ WS market_data → useMarketWs 缓冲 → batchUpdate(snaps) → store 更新 sn
 5. **updateRecords 局部更新**：mock vtable 的 `updateRecords`/`setRecords`，断言 tick 更新只调 `updateRecords`（不调 `setRecords`）；选中变化仍调 `setRecords`。
 6. **行索引映射保持**：局部更新后单击/右键/收藏仍能取到正确行。
 
-**mock 方式：** `vi.mock('@/services/api')` 记录 `subscribeMarket`/`unsubscribeMarket` 调用；`vi.useFakeTimers()` 控制时间推进；`setupTests.ts` 已有 `setRecords: vi.fn()`，需补充 `updateRecords: vi.fn()`。
+**快照回填（方案 A，`useSubscriptionManager.test.ts` 追加）**
+
+7. **订阅成功后回填缓存快照**：mock `getSnapshots` 返回缓存快照，断言 subscribe 成功后 `getSnapshots(订阅列表)` 被调用、返回的快照经 `batchUpdate` 写入 store；`getSnapshots` 失败时静默（不抛错，实时 tick 兜底）。
+
+**mock 方式：** `vi.mock('@/services/api')` 记录 `subscribeMarket`/`unsubscribeMarket`/`getSnapshots` 调用；`vi.useFakeTimers()` 控制时间推进；`setupTests.ts` 已有 `setRecords: vi.fn()`，需补充 `updateRecords: vi.fn()`。
 
 ---
 
 ## 8. 非目标
 
 - 后端订阅/退订接口改造（合并去抖、批量优化）——本轮不动后端
-- 快照缓存回填（subscribe 后立即 `getSnapshots`）——用户未选择
 - K 线、期权链等其他表格的局部更新改造
 - 虚拟滚动按需订阅之外的渲染优化
