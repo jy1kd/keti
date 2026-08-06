@@ -39,7 +39,40 @@ export function useSubscriptionManager() {
     return shouldSubscribe
   }, [visibleInstrumentIDs, favorites, lockedContracts])
 
-  /** 立即订阅缺失合约（subscribe 防抖 100ms，拖动中也执行） */
+  /**
+   * LRU 上限保护（共享）：当 subscribedRef 超过 SOFT_LIMIT 时，返回最久未见且
+   * 已不在 should（可见/自选/锁定）中的合约 ID，按 lastVisible 从旧到新淘汰。
+   * extra 为「即将加入但尚未写入 subscribedRef」的订阅数（runFullDiff 用）；
+   * 拖动路径订阅成功后 extra=0（新合约已写入）。
+   * 语义：不减掉刚滑入/可见的合约；淘汰的是早已滑出且最久未见的低优先级合约，
+   * 是拖动持续期间的必要的上限保护。仅计算候选，退订统一走 doUnsubscribe。
+   */
+  const computeLruEvictions = useCallback((should: Set<string>, extra = 0): string[] => {
+    const over = subscribedRef.current.size + extra - SOFT_LIMIT
+    if (over <= 0) return []
+
+    const candidates: { id: string; lastVisible: number }[] = []
+    for (const [id, lastVisible] of subscribedRef.current) {
+      if (should.has(id)) continue // 跳过当前应订阅（可见/自选/锁定）
+      candidates.push({ id, lastVisible })
+    }
+    candidates.sort((a, b) => a.lastVisible - b.lastVisible)
+    return candidates.slice(0, over).map((c) => c.id)
+  }, [])
+
+  /** 退订并 success 门控：仅成功后从 subscribedRef 删除（失败保留，等待下次重试） */
+  const doUnsubscribe = useCallback((ids: string[]) => {
+    if (ids.length === 0) return
+    unsubscribeMarket(ids)
+      .then((resp) => {
+        if (resp?.success) {
+          for (const id of ids) subscribedRef.current.delete(id)
+        }
+      })
+      .catch((err) => console.error('[SubscriptionManager] Unsubscribe failed:', err))
+  }, [])
+
+  /** 立即订阅缺失合约（subscribe 防抖 100ms，拖动中也执行；订阅成功后做 LRU 上限控制） */
   const debouncedSubscribe = useCallback(() => {
     if (subTimerRef.current) clearTimeout(subTimerRef.current)
     subTimerRef.current = setTimeout(() => {
@@ -50,12 +83,18 @@ export function useSubscriptionManager() {
       }
       if (toSubscribe.length === 0) return
       subscribeMarket(toSubscribe)
-        .then(() => {
-          for (const id of toSubscribe) subscribedRef.current.set(id, Date.now())
+        .then((resp) => {
+          // success 门控：被后端整批拒绝的合约不入 subscribedRef，留在待订阅状态下次重试
+          if (resp?.success) {
+            for (const id of toSubscribe) subscribedRef.current.set(id, Date.now())
+            // 拖动中也执行 LRU 上限控制：订阅后若超 SOFT_LIMIT，立即淘汰最久未见且已滑出的合约
+            const lruEvict = computeLruEvictions(should)
+            doUnsubscribe(lruEvict)
+          }
         })
         .catch((err) => console.error('[SubscriptionManager] Subscribe failed:', err))
     }, SUB_DEBOUNCE_MS)
-  }, [calculateShouldSubscribe])
+  }, [calculateShouldSubscribe, computeLruEvictions, doUnsubscribe])
 
   /** 是否处于拖动态：300ms 窗口内可见区变化 ≥ 2 次 */
   const isDragging = useCallback((): boolean => {
@@ -73,15 +112,17 @@ export function useSubscriptionManager() {
     const should = calculateShouldSubscribe()
     const now = Date.now()
 
-    // 1. subscribe 缺失合约
+    // 1. subscribe 缺失合约（success 门控，被拒不入 subscribedRef 下次重试）
     const toSubscribe: string[] = []
     for (const id of should) {
       if (!subscribedRef.current.has(id)) toSubscribe.push(id)
     }
     if (toSubscribe.length > 0) {
       subscribeMarket(toSubscribe)
-        .then(() => {
-          for (const id of toSubscribe) subscribedRef.current.set(id, Date.now())
+        .then((resp) => {
+          if (resp?.success) {
+            for (const id of toSubscribe) subscribedRef.current.set(id, Date.now())
+          }
         })
         .catch((err) => console.error('[SubscriptionManager] Subscribe failed:', err))
     }
@@ -99,44 +140,22 @@ export function useSubscriptionManager() {
       }
     }
 
-    // 3. LRU 淘汰：若超限，按 lastVisibleTime 从旧到新淘汰低优先级合约
-    const unsubscribed = new Set<string>()
-    const projectedTotal = subscribedRef.current.size + toSubscribe.length
-    if (projectedTotal > SOFT_LIMIT) {
-      const candidates = graceCandidates
-        .filter((c) => !should.has(c.id))
-        .sort((a, b) => a.lastVisible - b.lastVisible)
-      let over = projectedTotal - SOFT_LIMIT
-      for (const c of candidates) {
-        if (over <= 0) break
-        unsubscribed.add(c.id)
-        over--
-      }
-    }
-
-    // 4. 合并宽限期过期 + LRU 淘汰
-    const toUnsubscribe: string[] = []
+    // 3. 合并宽限期过期 + LRU 上限淘汰（复用共享 computeLruEvictions，extra 覆盖待订阅数）
+    const toUnsubscribe = new Set<string>()
     for (const c of graceCandidates) {
-      if (now - c.lastVisible > GRACE_MS) toUnsubscribe.push(c.id)
+      if (now - c.lastVisible > GRACE_MS) toUnsubscribe.add(c.id)
     }
-    for (const id of unsubscribed) {
-      if (!toUnsubscribe.includes(id)) toUnsubscribe.push(id)
+    for (const id of computeLruEvictions(should, toSubscribe.length)) {
+      toUnsubscribe.add(id)
     }
+    if (toUnsubscribe.size > 0) doUnsubscribe(Array.from(toUnsubscribe))
 
-    if (toUnsubscribe.length > 0) {
-      unsubscribeMarket(toUnsubscribe)
-        .then(() => {
-          for (const id of toUnsubscribe) subscribedRef.current.delete(id)
-        })
-        .catch((err) => console.error('[SubscriptionManager] Unsubscribe failed:', err))
-    }
-
-    // 5. 宽限期尚未到期的合约：等到期后再检查一次（保留 Task 2 的到期重排链）
+    // 4. 宽限期尚未到期的合约：等到期后再检查一次（保留 Task 2 的到期重排链）
     if (nextCheckIn !== null) {
       if (unsubTimerRef.current) clearTimeout(unsubTimerRef.current)
       unsubTimerRef.current = setTimeout(() => runFullDiffRef.current(), nextCheckIn)
     }
-  }, [calculateShouldSubscribe])
+  }, [calculateShouldSubscribe, computeLruEvictions, doUnsubscribe])
 
   runFullDiffRef.current = runFullDiff
 
@@ -149,7 +168,7 @@ export function useSubscriptionManager() {
     }
 
     if (isDragging()) {
-      // 拖动中：只订阅，不触发退订/LRU；停止后 500ms 做完整 diff
+      // 拖动中：订阅（含 LRU 上限保护）；不触发宽限期退订；停止后 500ms 做完整 diff
       debouncedSubscribe()
       if (fullDiffTimerRef.current) clearTimeout(fullDiffTimerRef.current)
       fullDiffTimerRef.current = setTimeout(runFullDiff, 500)

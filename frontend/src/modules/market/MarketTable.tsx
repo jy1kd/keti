@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, useMemo } from 'react'
 import { ListTable } from '@visactor/vtable'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
 import { getProductName } from '@/utils/productNames'
@@ -136,6 +136,12 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   const recordsRef = useRef<ReturnType<typeof buildRecord>[]>([])
   const prevSnapshotsRef = useRef<Map<string, MarketSnapshot> | null>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** instrumentID → 行索引（0-based）映射：contracts 变化时重建，供局部更新 O(1) 查索引 */
+  const rowIndexByInstrument = useMemo(() => {
+    const map = new Map<string, number>()
+    for (let i = 0; i < contracts.length; i++) map.set(contracts[i].instrumentID, i)
+    return map
+  }, [contracts])
 
   useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
@@ -457,8 +463,8 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     // 遍历新 snapshots，与旧 Map 按引用比较，找出真正变化的合约行
     for (const [id, snap] of snapshots) {
       if (prev.get(id) === snap) continue // 引用相同，未变化
-      const rowIndex = contracts.findIndex((c) => c.instrumentID === id)
-      if (rowIndex < 0) continue
+      const rowIndex = rowIndexByInstrument.get(id) // O(1) 查行号，替代 contracts.findIndex
+      if (rowIndex === undefined) continue
       const record = buildRecord(contracts[rowIndex], snap, favoritedIds?.has(id) ?? false)
       recordsRef.current[rowIndex] = record
       updatedRecords.push(record)
@@ -469,7 +475,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     }
     prevSnapshotsRef.current = snapshots
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshots])
+  }, [snapshots, rowIndexByInstrument])
 
   // selectedContracts 变化时更新行高亮
   useEffect(() => {

@@ -149,3 +149,38 @@ describe('useSubscriptionManager 拖动与 LRU', () => {
     expect(unsubscribed).not.toContain('au2508')
   })
 })
+
+describe('useSubscriptionManager success 门控', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.clearAllMocks()
+    useMarketStore.setState({
+      visibleInstrumentIDs: [],
+      lockedContracts: new Map(),
+      selectedContracts: new Set(),
+    })
+  })
+  afterEach(() => { vi.useRealTimers() })
+
+  it('subscribe 返回 success:false 时不加入已订阅集合（后续仍会重试）', async () => {
+    vi.mocked(subscribeMarket).mockResolvedValueOnce({ success: false } as any)
+    const { result } = renderHook(() => useSubscriptionManager())
+
+    // 第一次订阅被后端整批拒绝（如触顶 500 上限）
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608']))
+    await act(async () => { vi.advanceTimersByTime(110) })
+
+    expect(vi.mocked(subscribeMarket)).toHaveBeenCalledWith(['IF2608'])
+    // 被拒合约未标记为已订阅 → 留在待订阅状态
+    expect(result.current.subscribed.has('IF2608')).toBe(false)
+
+    // 再次触发可见区变化 → 重新尝试订阅（mock 恢复默认 success:true）
+    vi.mocked(subscribeMarket).mockClear()
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs([]))
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608']))
+    await act(async () => { vi.advanceTimersByTime(110) })
+
+    expect(vi.mocked(subscribeMarket)).toHaveBeenCalledWith(['IF2608'])
+    expect(result.current.subscribed.has('IF2608')).toBe(true)
+  })
+})
