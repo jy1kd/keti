@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, useMemo } from 'react'
 import { ListTable } from '@visactor/vtable'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
 import { getProductName } from '@/utils/productNames'
@@ -134,7 +134,14 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   const lastClickTimeRef = useRef<number>(0)
   const lastClickRowRef = useRef<number>(-1)
   const recordsRef = useRef<ReturnType<typeof buildRecord>[]>([])
+  const prevSnapshotsRef = useRef<Map<string, MarketSnapshot> | null>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** instrumentID → 行索引（0-based）映射：contracts 变化时重建，供局部更新 O(1) 查索引 */
+  const rowIndexByInstrument = useMemo(() => {
+    const map = new Map<string, number>()
+    for (let i = 0; i < contracts.length; i++) map.set(contracts[i].instrumentID, i)
+    return map
+  }, [contracts])
 
   useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
@@ -433,19 +440,42 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Update records when contracts or snapshots change (sync)
+  // 合约列表或收藏变化 → 全量 setRecords（低频）
   useEffect(() => {
     if (!tableRef.current) return
     const records = contracts.map((contract) => buildRecord(contract, snapshots.get(contract.instrumentID), favoritedIds?.has(contract.instrumentID) ?? false))
     recordsRef.current = records
     tableRef.current.setRecords(records)
-
-    // contracts 变化后重置 Shift+点击的索引（避免指向错误的行）
+    prevSnapshotsRef.current = snapshots
     lastClickedIndexRef.current = null
-
-    // contracts 变化后触发可见行检测
     setTimeout(notifyVisibleRange, 0)
-  }, [contracts, snapshots, notifyVisibleRange, favoritedIds])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contracts, favoritedIds])
+
+  // snapshots 变化 → 局部 updateRecords（高频 tick，自 diff 找变化行，避免多实例争用 store）
+  useEffect(() => {
+    if (!tableRef.current) return
+    const prev = prevSnapshotsRef.current
+    if (!prev) return
+
+    const rowIndexes: number[] = []
+    const updatedRecords: ReturnType<typeof buildRecord>[] = []
+    // 遍历新 snapshots，与旧 Map 按引用比较，找出真正变化的合约行
+    for (const [id, snap] of snapshots) {
+      if (prev.get(id) === snap) continue // 引用相同，未变化
+      const rowIndex = rowIndexByInstrument.get(id) // O(1) 查行号，替代 contracts.findIndex
+      if (rowIndex === undefined) continue
+      const record = buildRecord(contracts[rowIndex], snap, favoritedIds?.has(id) ?? false)
+      recordsRef.current[rowIndex] = record
+      updatedRecords.push(record)
+      rowIndexes.push(rowIndex) // updateRecords 第二参数是 0-based 记录索引（表头偏移由 vtable 内部处理）
+    }
+    if (updatedRecords.length > 0) {
+      tableRef.current.updateRecords(updatedRecords, rowIndexes)
+    }
+    prevSnapshotsRef.current = snapshots
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshots, rowIndexByInstrument])
 
   // selectedContracts 变化时更新行高亮
   useEffect(() => {

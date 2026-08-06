@@ -290,4 +290,92 @@ describe('MarketTable', () => {
 
     expect(onContextMenu).toHaveBeenCalledWith('au2508', 0, expect.any(Object))
   })
+
+  // --- 局部更新 tests ---
+
+  describe('MarketTable 局部更新', () => {
+    it('snapshots 变化时调用 updateRecords 而非 setRecords', async () => {
+      const { ListTable } = await import('@visactor/vtable')
+      const { rerender } = render(
+        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} />
+      )
+
+      // 初始渲染调用了 setRecords
+      const instance = (ListTable as any).mock.results[0].value
+      expect(instance.setRecords).toHaveBeenCalled()
+      instance.setRecords.mockClear()
+
+      // 新的快照（au2508 价格变化，自 diff 检测到该行变化）
+      const newSnapshots = new Map(mockSnapshots)
+      newSnapshots.set('au2508', { ...newSnapshots.get('au2508')!, lastPrice: 490 } as any)
+      rerender(<MarketTable contracts={mockContracts} snapshots={newSnapshots} />)
+
+      expect(instance.updateRecords).toHaveBeenCalled()
+      expect(instance.setRecords).not.toHaveBeenCalled()
+      // 只更新 1 行，且索引为 0-based 记录索引 [0]（au2508 在 contracts 中 index 0）
+      const updateCalls = instance.updateRecords.mock.calls as [any[], number[]][]
+      expect(updateCalls[0][1]).toEqual([0])
+    })
+
+    it('更新第二个合约时索引为 1（0-based 记录索引）', async () => {
+      const { ListTable } = await import('@visactor/vtable')
+      const { rerender } = render(
+        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} />
+      )
+      const instance = (ListTable as any).mock.results[0].value
+      instance.updateRecords.mockClear()
+
+      // 新的快照（ag2508 价格变化，ag2508 在 contracts 中 index 1）
+      const newSnapshots = new Map(mockSnapshots)
+      newSnapshots.set('ag2508', { ...newSnapshots.get('ag2508')!, lastPrice: 6600 } as any)
+      rerender(<MarketTable contracts={mockContracts} snapshots={newSnapshots} />)
+
+      expect(instance.updateRecords).toHaveBeenCalled()
+      const updateCalls = instance.updateRecords.mock.calls as [any[], number[]][]
+      expect(updateCalls[0][1]).toEqual([1])
+    })
+
+    it('多次 tick 后行索引映射保持（局部更新仍更新正确行）', async () => {
+      const { ListTable } = await import('@visactor/vtable')
+      const { rerender } = render(
+        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} />
+      )
+      const instance = (ListTable as any).mock.results[0].value
+      instance.updateRecords.mockClear()
+
+      // 第 1 次 tick：au2508 价格变化 → 0-based 行索引 [0]
+      const snapshots1 = new Map(mockSnapshots)
+      snapshots1.set('au2508', { ...snapshots1.get('au2508')!, lastPrice: 490 } as any)
+      rerender(<MarketTable contracts={mockContracts} snapshots={snapshots1} />)
+
+      const calls1 = instance.updateRecords.mock.calls as [any[], number[]][]
+      expect(calls1.length).toBeGreaterThan(0)
+      expect(calls1[0][1]).toEqual([0])
+      instance.updateRecords.mockClear()
+
+      // 第 2 次 tick：ag2508 价格变化 → 0-based 行索引 [1]（映射未因上次局部更新而错位）
+      const snapshots2 = new Map(snapshots1)
+      snapshots2.set('ag2508', { ...snapshots2.get('ag2508')!, lastPrice: 6600 } as any)
+      rerender(<MarketTable contracts={mockContracts} snapshots={snapshots2} />)
+
+      const calls2 = instance.updateRecords.mock.calls as [any[], number[]][]
+      expect(calls2.length).toBeGreaterThan(0)
+      expect(calls2[0][1]).toEqual([1])
+    })
+
+    it('selectedContracts 变化时仍走 setRecords 全量', async () => {
+      const { ListTable } = await import('@visactor/vtable')
+      const { rerender } = render(
+        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={() => {}} />
+      )
+      const instance = (ListTable as any).mock.results[0].value
+      instance.setRecords.mockClear()
+
+      rerender(
+        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set(['au2508'])} onSelectionChange={() => {}} />
+      )
+
+      expect(instance.setRecords).toHaveBeenCalled()
+    })
+  })
 })
