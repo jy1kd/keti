@@ -5,6 +5,15 @@ import type { ResolvedLevel } from './MarketDepth'
 import { useOrderStore, DEFAULT_ORDER_FORM } from './store'
 import type { MarketSnapshot } from '@/services/types'
 
+// Mock API 模块：真实 submitOrder 集成用例需要可控的成功响应
+// （auto-mock 同时覆盖 contracts/market 等对 services/api 的传递导入）
+vi.mock('../../services/api')
+
+import { submitOrder as apiSubmitOrder } from '../../services/api'
+
+// 捕获真实 submitOrder：「点价确认闭环」用例会用 submitSpy 覆盖 store action，集成用例需在 beforeEach 恢复
+const realSubmitOrder = useOrderStore.getState().submitOrder
+
 function makeSnapshot(overrides?: Partial<MarketSnapshot>): MarketSnapshot {
   return {
     instrumentID: 'IF2608',
@@ -50,13 +59,13 @@ describe('MarketDepth（任务#1：骨架 + 数据接入）', () => {
 
   it('渲染档位价格与数量：卖档卖出列显示卖量、买档买入列显示买量', () => {
     render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
-    // 卖一~卖五价格
+    // 卖一~卖五价格（真实档按 tick 0.2 → 1 位小数还原）
     for (let i = 1; i <= 5; i++) {
-      expect(screen.getByText(String(4695 + i))).toBeInTheDocument()
+      expect(screen.getByText((4695 + i).toFixed(1))).toBeInTheDocument()
     }
     // 买一~买五价格
     for (let i = 0; i < 5; i++) {
-      expect(screen.getByText(String(4694 - i))).toBeInTheDocument()
+      expect(screen.getByText((4694 - i).toFixed(1))).toBeInTheDocument()
     }
     // 卖档量（卖出列）
     expect(screen.getByText('15')).toBeInTheDocument()
@@ -74,8 +83,8 @@ describe('MarketDepth（任务#1：骨架 + 数据接入）', () => {
     expect(screen.getByText('150')).toBeInTheDocument()
     // 委卖总量 = 15+25+35+45+55
     expect(screen.getByText('175')).toBeInTheDocument()
-    // 最新价
-    expect(screen.getByText('4695')).toBeInTheDocument()
+    // 最新价（按 tick 0.2 → 1 位小数还原）
+    expect(screen.getByText('4695.0')).toBeInTheDocument()
     // 涨跌 = 4695 - 4690 = +5.0（tick 0.2 → 1 位小数）
     expect(screen.getByText('+5.0')).toBeInTheDocument()
   })
@@ -131,10 +140,10 @@ describe('MarketDepth（任务#1：骨架 + 数据接入）', () => {
         askPrice5: 0, askVolume5: 0,
       })
       render(<MarketDepth snapshot={snap} priceTick={0.2} />)
-      expect(screen.getByText('4694')).toBeInTheDocument() // 买一真实价
+      expect(screen.getByText('4694.0')).toBeInTheDocument() // 买一真实价（tick 还原）
       expect(screen.getByText('4693.8')).toBeInTheDocument() // 买二 = 买一 - 0.2
       expect(screen.getByText('4693.2')).toBeInTheDocument() // 买五
-      expect(screen.getByText('4696')).toBeInTheDocument() // 卖一真实价
+      expect(screen.getByText('4696.0')).toBeInTheDocument() // 卖一真实价（tick 还原）
       expect(screen.getByText('4696.2')).toBeInTheDocument() // 卖二 = 卖一 + 0.2
       expect(screen.getByText('4696.8')).toBeInTheDocument() // 卖五
     })
@@ -383,6 +392,8 @@ describe('QuickTradeBar（任务#3）', () => {
 describe('点价确认闭环（任务#5）', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // 恢复真实 submitOrder（本 describe 的用例会用 submitSpy 覆盖 store action）
+    useOrderStore.setState({ submitOrder: realSubmitOrder })
     useOrderStore.setState({
       orderForm: {
         ...DEFAULT_ORDER_FORM,
@@ -434,6 +445,34 @@ describe('点价确认闭环（任务#5）', () => {
     expect(form.volumeTotalOriginal).toBe(3)
   })
 
+  it('连续两单：真实 submitOrder 第一单成功后保留合约/手数，第二单仍能发起（🔴-1 回归）', async () => {
+    const apiSubmit = vi.mocked(apiSubmitOrder)
+    apiSubmit.mockResolvedValue({ success: true, orderRef: 'ORD-001' })
+
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+
+    // 第一单：点买一档 → 确认 → 真实 submitOrder 成功
+    fireEvent.click(screen.getByTestId('bid-1').querySelector('.depth-row__buy')!)
+    fireEvent.click(screen.getByText('确认执行'))
+    await act(async () => {})
+    expect(apiSubmit).toHaveBeenCalledTimes(1)
+
+    // 成功后保留交易上下文（手数记忆），instrumentID 未被清空
+    const formAfterFirst = useOrderStore.getState().orderForm
+    expect(formAfterFirst.instrumentID).toBe('IF2608')
+    expect(formAfterFirst.volumeTotalOriginal).toBe(3)
+
+    // 第二单：再次点价 → 确认框正常弹出 → 确认 → 仍成功（不再「请选择合约」）
+    fireEvent.click(screen.getByTestId('ask-1').querySelector('.depth-row__buy')!)
+    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('确认执行'))
+    await act(async () => {})
+    expect(apiSubmit).toHaveBeenCalledTimes(2)
+    // 第二单以当前弹窗合约 + 档位价发起（instrumentID 未因第一单重置而清空）
+    expect(apiSubmit.mock.calls[1][0].instrumentID).toBe('IF2608')
+    expect(apiSubmit.mock.calls[1][0].limitPrice).toBe(4696)
+  })
+
   it('取消 → 不提交，确认框关闭', () => {
     const submitSpy = vi.fn().mockResolvedValue(true)
     useOrderStore.setState({ submitOrder: submitSpy as () => Promise<boolean> })
@@ -450,6 +489,29 @@ describe('点价确认闭环（任务#5）', () => {
     fireEvent.click(screen.getByTestId('ask-2').querySelector('.depth-row__price')!)
     expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
     expect((screen.getByTestId('qtb-price') as HTMLInputElement).value).toBe('4697.0')
+  })
+
+  it('改价后行情 tick 更新不覆写改价框（🟡-1：仅首帧/合约变更跟随默认价）', () => {
+    const { rerender } = render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    const input = screen.getByTestId('qtb-price') as HTMLInputElement
+    expect(input.value).toBe('4696.0') // 初始默认对手价（卖一）
+
+    // 价格列点击改价 → 4697
+    fireEvent.click(screen.getByTestId('ask-2').querySelector('.depth-row__price')!)
+    expect(input.value).toBe('4697.0')
+
+    // 行情 tick 更新（卖一/最新价变化，同合约）→ 不覆写用户改价
+    rerender(<MarketDepth snapshot={makeSnapshot({ askPrice1: 4700, lastPrice: 4699 })} priceTick={0.2} />)
+    expect(input.value).toBe('4697.0')
+
+    // 切换合约 → 重新跟随新合约默认对手价
+    rerender(
+      <MarketDepth
+        snapshot={makeSnapshot({ instrumentID: 'IF2609', askPrice1: 4800, lastPrice: 4799 })}
+        priceTick={0.2}
+      />,
+    )
+    expect(input.value).toBe('4800.0')
   })
 
   it('QuickTradeBar 买入 → 弹确认框（改价框价格 + 当前手数）', () => {

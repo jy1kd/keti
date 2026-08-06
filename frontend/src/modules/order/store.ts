@@ -134,7 +134,21 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       const result = await apiSubmitOrder(submitForm)
       if (result.success) {
         toast.success(`报单成功 ${result.orderRef}`)
-        set({ orderForm: { ...DEFAULT_ORDER_FORM }, isSubmitting: false })
+        // 成功后保留交易上下文（合约/开平/投保/有效期/手数记忆），仅清空价格类字段。
+        // 否则 instrumentID 被清空后，弹窗内连续点价报单第二单必失败「请选择合约」。
+        // 用 form（而非 submitForm）保留合约：套利场景 instrumentID 由 SPD 自动生成，不应写回表单。
+        set({
+          orderForm: {
+            ...DEFAULT_ORDER_FORM,
+            instrumentID: form.instrumentID,
+            exchangeID: form.exchangeID,
+            combOffsetFlag: form.combOffsetFlag,
+            combHedgeFlag: form.combHedgeFlag,
+            timeCondition: form.timeCondition,
+            volumeTotalOriginal: form.volumeTotalOriginal,
+          },
+          isSubmitting: false,
+        })
         return true
       } else {
         const errMsg = result.message || result.error || '未知错误'

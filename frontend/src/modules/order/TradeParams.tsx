@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useOrderStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
-import { validateVolumeWithLimit } from '@/utils/validators'
+import { validateVolumeWithLimit, getVolumeLimit } from '@/utils/validators'
 import type { OrderRequestForm } from '@/utils/orderMapping'
 import './TradeParams.css'
 
@@ -28,9 +28,7 @@ export function TradeParams({ instrumentID }: TradeParamsProps) {
     return contract?.productClass ?? '1'
   }, [contracts, activeInstrument])
 
-  const isMarket = orderForm.orderPriceType === 'market'
-  const isOption = productClass === '2'
-  const volumeLimit = isMarket ? (isOption ? 30 : 60) : (isOption ? 100 : 500)
+  const volumeLimit = getVolumeLimit(orderForm.orderPriceType, productClass)
   const volumeError = validateVolumeWithLimit(
     orderForm.volumeTotalOriginal,
     orderForm.orderPriceType,
@@ -117,7 +115,12 @@ export function TradeParams({ instrumentID }: TradeParamsProps) {
             className="tp-stepper__btn"
             data-testid="tp-volume-up"
             aria-label="加手数"
-            onClick={() => setOrderForm({ volumeTotalOriginal: orderForm.volumeTotalOriginal + 1 })}
+            disabled={orderForm.volumeTotalOriginal >= volumeLimit}
+            onClick={() =>
+              setOrderForm({
+                volumeTotalOriginal: Math.min(volumeLimit, orderForm.volumeTotalOriginal + 1),
+              })
+            }
           >
             +
           </button>

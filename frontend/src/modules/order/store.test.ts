@@ -107,8 +107,38 @@ describe('OrderStore', () => {
     expect(mockSubmitOrder).toHaveBeenCalledTimes(1)
     expect(toast.success).toHaveBeenCalledWith('报单成功 ORD-001')
 
-    // form should reset after success
-    expect(useOrderStore.getState().orderForm.instrumentID).toBe('')
+    // 成功后保留交易上下文（合约/手数记忆），仅价格类字段清空
+    const form = useOrderStore.getState().orderForm
+    expect(form.instrumentID).toBe('IF2608')
+    expect(form.limitPrice).toBe(0)
+    expect(form.volumeTotalOriginal).toBe(1) // 本例未设置手数，回默认
+  })
+
+  it('submitOrder 成功后保留 合约/开平/投保/有效期/手数（手数记忆），仅清空价格', async () => {
+    vi.mocked(mockSubmitOrder).mockResolvedValue({ success: true, orderRef: 'ORD-002' })
+
+    useOrderStore.getState().setOrderForm({
+      instrumentID: 'IF2608',
+      exchangeID: 'CFFEX',
+      limitPrice: 4800,
+      volumeTotalOriginal: 3,
+      combOffsetFlag: 'close_today',
+      combHedgeFlag: 'hedge',
+      timeCondition: 'fak',
+    })
+
+    await useOrderStore.getState().submitOrder()
+
+    const form = useOrderStore.getState().orderForm
+    expect(form.instrumentID).toBe('IF2608')
+    expect(form.exchangeID).toBe('CFFEX')
+    expect(form.volumeTotalOriginal).toBe(3)
+    expect(form.combOffsetFlag).toBe('close_today')
+    expect(form.combHedgeFlag).toBe('hedge')
+    expect(form.timeCondition).toBe('fak')
+    // 价格类字段清空（下次报单重新定价）
+    expect(form.limitPrice).toBe(0)
+    expect(form.orderPriceType).toBe('limit')
   })
 
   it('submitOrder shows error toast on failure', async () => {

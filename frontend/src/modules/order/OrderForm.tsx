@@ -1,7 +1,7 @@
 import { useOrderStore } from './store'
 import { useContractsStore } from '../../stores/contracts'
 import { usePriceStep } from '../../hooks/usePriceStep'
-import { validateVolumeWithLimit } from '../../utils/validators'
+import { validateVolumeWithLimit, getVolumeLimit } from '../../utils/validators'
 import { ContractSearch } from '../../components/ContractSearch'
 import { useMemo, useState } from 'react'
 import './styles.css'
@@ -36,11 +36,11 @@ export function OrderForm({ priceTick = 0.2 }: OrderFormProps) {
     return contract?.productClass ?? '1'
   }, [contracts, orderForm.instrumentID])
 
-  // 数量上限提示
-  const volumeLimit = useMemo(() => {
-    const isOption = productClass === '2'
-    return isMarket ? (isOption ? 30 : 60) : (isOption ? 100 : 500)
-  }, [productClass, isMarket])
+  // 数量上限提示（与 TradeParams/validators 共享 getVolumeLimit，避免规则漂移）
+  const volumeLimit = useMemo(
+    () => getVolumeLimit(orderPriceType, productClass),
+    [orderPriceType, productClass],
+  )
 
   // 数量校验
   const volumeError = useMemo(() => {

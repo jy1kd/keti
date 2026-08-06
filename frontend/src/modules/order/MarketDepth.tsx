@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { MarketSnapshot } from '@/services/types'
 import { useOrderStore } from './store'
@@ -115,9 +115,20 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
     if (isValidPrice(snapshot.lastPrice)) return snapshot.lastPrice
     return null
   }, [snapshot])
+  // 合约变更重置：仅首帧/合约切换时重新跟随默认价。
+  // 否则每次 WS tick 更新 snapshot 都会重置改价框，手动改价/点价格列后即被覆写（🟡-1）。
+  const prevInstrRef = useRef<string | null>(null)
   useEffect(() => {
-    if (quickDefault !== null) setQuickPrice(quickDefault)
-  }, [quickDefault])
+    const instr = snapshot?.instrumentID ?? null
+    if (instr !== prevInstrRef.current) {
+      prevInstrRef.current = instr
+      setQuickPrice(0)
+    }
+  }, [snapshot])
+  // 仅当用户尚未改价（quickPrice === 0）时同步默认价；用户改价/点价格列后停止自动跟随
+  useEffect(() => {
+    if (quickDefault !== null && quickPrice === 0) setQuickPrice(quickDefault)
+  }, [quickDefault, quickPrice])
 
   if (!snapshot) {
     return <div className="market-depth market-depth--empty">--</div>
@@ -142,7 +153,7 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
   if (last !== null && preSettle !== null && preSettle > 0) {
     const diff = last - preSettle
     const decimals = tick !== null ? tickDecimals(tick) : 0
-    changeText = (diff >= 0 ? '+' : '') + diff.toFixed(decimals)
+    changeText = (diff > 0 ? '+' : '') + diff.toFixed(decimals)
     changeClass = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat'
   }
 
@@ -178,7 +189,7 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
       <DepthSummaryRow
         totalBidVol={totalBidVol}
         totalAskVol={totalAskVol}
-        lastText={last !== null ? String(last) : '--'}
+        lastText={last !== null ? (tick !== null ? formatTickPrice(last, tick) : String(last)) : '--'}
         changeText={changeText}
         changeClass={changeClass}
       />
@@ -351,11 +362,13 @@ export function DepthRow({
   onSellClick?: (price: number) => void
   onPriceClick?: (price: number) => void
 }) {
-  const priceText = level.valid
-    ? String(level.price)
-    : level.fallback !== null && tick !== null
+  // 真实档与合成档统一按 tickSize 还原展示精度（设计 §6），避免 4696 与 4696.6 列不对齐
+  const hasPrice = level.valid || level.fallback !== null
+  const priceText = hasPrice
+    ? tick !== null
       ? formatTickPrice(level.price, tick)
-      : '--'
+      : String(level.price)
+    : '--'
   const volText = level.valid ? String(level.volume) : '--'
   const buyText = kind === 'bid' ? volText : '--'
   const sellText = kind === 'ask' ? volText : '--'

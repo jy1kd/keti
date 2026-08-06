@@ -99,4 +99,12 @@ describe('TradeParams（任务#4）', () => {
     expect(screen.getByText('数量不能超过500手')).toBeInTheDocument()
     expect(screen.getByTestId('tp-volume-hint').className).toContain('tp-hint--error')
   })
+
+  it('手数 + 达上限时禁用步进按钮，不再越界累加（🟡-4）', () => {
+    setForm({ volumeTotalOriginal: 500 })
+    render(<TradeParams />)
+    expect(screen.getByTestId('tp-volume-up')).toBeDisabled()
+    fireEvent.click(screen.getByTestId('tp-volume-up'))
+    expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(500)
+  })
 })
