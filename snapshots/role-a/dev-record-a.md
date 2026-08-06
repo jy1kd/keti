@@ -14,7 +14,7 @@
 - [x] **P1-1 `MarketDepth` 骨架 + 数据接入**
 - [x] **P1-2 `DepthRow` 三列语义**
 - [x] **P1-3 `QuickTradeBar`（内嵌改价+买卖按钮）**
-- [ ] P1-4 `TradeParams` 压缩参数区
+- [x] **P1-4 `TradeParams` 压缩参数区**
 - [ ] P1-5 点价确认闭环
 - [ ] P1-6 `OrderPopup` 布局重排
 - [ ] P1-7 TDD 测试（含全量回归）
@@ -101,3 +101,31 @@
 
 - TS 报 `e.target` 类型（EventTarget 无 value）：onBlur/onKeyDown 改用 `e.currentTarget.value`。
 - 步进通过「re-parse 已格式化字符串」避免浮点累积误差。
+
+### P1-4 实现记录
+
+**测试用例（`TradeParams.test.tsx`，10 个，全绿）**
+
+1. 渲染 开平/投保/有效期 三个下拉与手数步进
+2. 开平下拉当前值 = combOffsetFlag，选项映射正确（open/close/close_today）
+3. 选择开平 → `setOrderForm({ combOffsetFlag })`
+4. 选择投保 → `setOrderForm({ combHedgeFlag })`
+5. 选择有效期 → `setOrderForm({ timeCondition })`
+6. 手数 +/- 步进（最小 1）
+7. 期货限价单上限 500 手提示
+8. 市价单上限 60 手提示
+9. 期权限价单上限 100 手提示
+10. 手数超限 → 错误提示（`数量不能超过500手` + `tp-hint--error`）
+
+**改动**
+
+- `TradeParams.tsx`（新）：紧凑参数区；开平/投保/有效期下拉 + 手数步进；`validateVolumeWithLimit` 兜底校验；`instrumentID` 可选覆盖（默认取 orderForm）
+- `TradeParams.css`（新）：紧凑行布局、下拉、步进控件、错误提示样式
+
+**Commit**
+
+- `feat(task-order-popup-p1): TradeParams 压缩参数区（下拉 ×3 + 手数步进 + 数量上限校验）`
+
+**问题与解决方案**
+
+- 无。数量上限直接复用 `validateVolumeWithLimit` 与 OrderForm 同一套规则，保证前后一致。
