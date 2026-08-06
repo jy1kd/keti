@@ -137,3 +137,41 @@ P2 五项任务实现完整、测试全绿、范围控制良好、标签页/弹�
 - 🔴-2 `LockResponse` 类型缺 `message` 导致 `tsc --noEmit` exit 2、生产构建 `tsc && vite build` 直接失败。
 
 请开发窗口处理 🔴-1、🔴-2（各自单独 commit，含补测试），并酌情处理 🟡-1~3 与 🔵-1~2 答复。处理后重新提交二次审查。
+
+---
+
+# 第二轮审查（2026-08-06）
+
+> 修复提交：`56fe5c0`（🔴-2）、`22bb0de`（🔴-1+🟡-3）、`2234260`（🟡-1）、`0b14995`（🟡-2）、`ce22000`（docs 状态+回复）、`3af1c74`（feedback 提交）
+> 复验基线：`c80f72f` 起 HEAD（14 文件，+443/−17）
+
+## 逐条复验
+
+| 反馈 | 处理 | 复验结论 |
+|---|---|---|
+| 🔴-1 锁仓/解锁语义 | 方案 A：一次性「锁仓」+ `ConfirmDialog` 强制确认 + `lockPending` 防重 + 成功后 `fetchPositions` 刷新持仓 | ✅ 通过。按钮永不变「解锁」，无二次重复锁仓路径；取消不触发下单；「取消/确认/刷新持仓」三测试覆盖 |
+| 🔴-2 tsc 类型错误 | `LockResponse` 补 `message?: string`（对齐 ReverseResponse） | ✅ 通过。`tsc --noEmit` exit 0，`tsc && vite build` 不再失败 |
+| 🟡-1 双重轮询 | `load` 循环读取 `isPaused`，暂停挂起本轮仅调度下一轮 | ✅ 通过。与 QueryPanel 语义对齐；「暂停不发起查询/恢复继续」测试覆盖 |
+| 🟡-2 confirmOpen | `popupStore.confirmOpen` 瞬态（不持久化）+ `OrderPopup` Esc 守卫 + `ConfirmDialog` Esc→onCancel + MarketDepth/AccountBar 同步 | ✅ 通过。集成测试：确认框 Esc 取消且弹窗保持；确认框关闭后 Esc 恢复关弹窗 |
+| 🟡-3 锁仓无确认 | 随 🔴-1 一并处理：强制确认 | ✅ 通过 |
+| 🔵-1 最高/最低着色 | 答复：与 OrderQuotePanel 既有约定一致，最高恒 up/最低恒 down | ✅ 接受 |
+| 🔵-2 账户下拉范围 | 答复：非 P2 验收（仅超长省略），资金明细延后 P3，任务文件已注明 | ✅ 接受 |
+
+## 复验结果
+
+- ✅ 前端全量回归：**964 passed / 88 files**（复验确认，与回复声明一致）
+- ✅ `tsc --noEmit` **exit 0**（复验确认，修复纳入构建基线）
+- ✅ 文档同步：任务文件状态「修复完成，待二次审查（964 单测全绿，tsc 0）」；🔵-2 延后项已在 P3 任务清单注明
+- ✅ 修复未改保留文件（OrderForm / DepthQuote / OrderQuotePanel）；后端无改动（108 单测不受影响）
+
+## 二轮新增观察（🔵，不阻塞）
+
+- `ConfirmDialog` 新增全局 Esc→onCancel 处理器，共享组件（`OrderPanel` 亦使用）。已确认 OrderPanel 无自有 Esc 监听，此前 Esc 无行为、现 Esc 取消确认框，属纯增强，无回归。
+
+## 二轮审查结论
+
+**✅ 通过（建议合入）**
+
+🔴-1、🔴-2 已修复并含语义测试（锁仓确认/取消/刷新 + LockResponse 类型）；🟡-1~3 全部落地（isPaused 挂起、confirmOpen Esc 语义、锁仓强制确认）；🔵-1~2 已答复或注明延后。复验 964 全绿 + tsc 干净。P2 可进入人工验证。
+
+> 提示：任务文件 P2 状态现为「修复完成，待二次审查」，人工验证通过后更新为「人工验证通过，待收尾」。
