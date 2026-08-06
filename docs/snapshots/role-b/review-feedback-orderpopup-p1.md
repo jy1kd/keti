@@ -126,3 +126,43 @@
 P1 七项任务实现完整、测试全绿、范围控制良好、回退安全成立，但核心报单闭环存在「连续点价第二单必失败」的硬缺陷（`submitOrder` 成功后重置表单 + 弹窗不重新同步 instrumentID），直接破坏 P1 验收「点档位弹确认 → 确认后报单成功」的多笔场景与设计「手数记忆」要求。
 
 请开发窗口处理 🔴-1（含补测试），并酌情处理 🟡-1~4 与 🔵-1~4 答复。处理后重新提交二次审查。
+
+---
+
+# 第二轮审查（2026-08-06）
+
+> 修复提交：`0c4f5bf`（fix 🔴-1~🟡-4）、`0657282`（docs 状态 + 回复）
+> 复验基线：`0c4f5bf` 起 HEAD
+
+## 逐条复验
+
+| 反馈 | 处理 | 复验结论 |
+|---|---|---|
+| 🔴-1 连续两单第二单失败 | 方案 A：成功保留 合约/开平/投保/有效期/手数，仅清空价格；用 `form` 而非 `submitForm` 规避套利 SPD 虚拟合约写回 | ✅ 通过。`store.ts:137-150` 正确；「连续两单真实 submitOrder 集成用例」（`MarketDepth.test.tsx`）覆盖了成功→保留→第二单发起全链路 |
+| 🟡-1 改价框被 tick 覆写 | `prevInstrRef` 合约变更重置 + `quickPrice === 0` 哨兵 | ✅ 通过。效果执行顺序经推演无竞态；「改价后 tick 不覆写 + 切合约重新跟随」用例覆盖 |
+| 🟡-2 价格列精度 | 真实档/合成档统一 `formatTickPrice`，`lastText` 同处理 | ✅ 通过。测试断言同步更新（4696→4696.0） |
+| 🟡-3 上限规则三处重复 | `validators.ts` 新增 `getVolumeLimit` 单一事实来源 | ✅ 通过。TradeParams / OrderForm / validateVolumeWithLimit 三处统一引用 |
+| 🟡-4 手数 `+` 越界 | 达上限禁用 + `Math.min` 双保险封顶 | ✅ 通过。新增封顶用例 |
+| 🔵-1 Esc 关闭整个弹窗 | 答复：承认体验问题，提议 P2 引入 `popupStore.confirmOpen` | ✅ 接受（本期未实现，已明确延后理由与方案，不阻塞） |
+| 🔵-2 空快照隐藏 QTB | 答复：刻意选择空态 `--`；QTB 内部已有 `disabled={!snapshot}` | ✅ 接受 |
+| 🔵-3 合成档可点价 | 答复：刻意「所见即所下」+ 必弹确认 | ✅ 接受 |
+| 🔵-4 平盘显示 `+0.0` | `diff > 0` 判断，平盘 `0.0` | ✅ 通过 |
+
+## 复验结果
+
+- ✅ 前端全量回归：**932 passed / 85 files**（复验确认，与回复声明一致）
+- ✅ `tsc --noEmit` exit 0（复验确认）
+- ✅ 文档同步：任务文件 `order-popup-redesign-tasks.md` 已加状态列（P1 待二次审查）、验收数字 469→932；review-feedback / review-reply 均已入仓
+- ✅ 修复未改保留文件（OrderForm/DepthQuote/OrderQuotePanel）
+
+## 二轮新增观察（🔵，不阻塞）
+
+- `MarketDepth.tsx` 哨兵 `quickPrice === 0` 下：若快照存在但 卖一/最新价 均无效（`quickDefault === null`），`quickPrice` 保持 0，QTB 的 `canTrade`（`parseFloat("0.0")` 有限 + volume≥1 + snapshot 非空）为 true，买卖按钮可点但会以价格 0 发起 → `submitOrder` 校验「请输入有效价格」拒绝。属边缘场景且修复前同样存在（初始态即 0），建议后续在 `canTrade` 增加 `quickPrice > 0` 约束，本期不强制。
+
+## 二轮审查结论
+
+**✅ 通过（建议合入）**
+
+🔴-1 已修复并有真实 `submitOrder` 集成用例兜底；🟡-1~4 全部落地；🔵-1~4 已答复或修复。复验 932 全绿 + tsc 干净。P1 可进入人工验证。
+
+> 提示：任务文件 P1 状态现为「待二次审查」，人工验证通过后更新为「人工验证通过，待收尾」。
