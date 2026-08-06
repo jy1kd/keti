@@ -82,6 +82,7 @@
 - **技术指标**：MA、BOLL、成交量、MACD、KDJ、RSI（主图/副图切换）
 - **报单模块**：限价/市价/止损单、套利指令、点价报单、一键反向/锁仓
 - **查询模块**：报单流水、成交、持仓、资金、合约信息
+- **弹窗/浮窗系统**：报单/查询标签可拖出为独立浮动弹窗，支持 8 方向自由缩放、顶层渲染与停靠回标签栏
 - **系统连接**：SimNow 登录、连接状态监控、断线重连
 - **桌面应用**：Electron 桌面端、系统托盘、全局快捷键、原生通知、自动更新
 
@@ -100,13 +101,21 @@
 - **指标切换**：下拉菜单切换主图/副图指标，不堆砌按钮，保持界面简洁
 - **动态计算**：前端实时计算指标值，支持空数据和数据不足时的优雅降级（显示null）
 
-### 3. CTP 协议封装
+### 3. 浮动弹窗系统
+
+- **拖出为弹窗**：报单/查询等标签可拖出标签栏，成为独立浮动弹窗，主窗口自动切回行情不空白
+- **8 方向自由缩放**：浮动弹窗支持四边四角 8 个方向的缩放手柄，最小尺寸约束
+- **顶层渲染**：弹窗内容通过 portal 渲染到顶层 overlay，脱离主内容区的 flex/overflow 层叠上下文，避免错位/裁剪
+- **统一置顶**：捕获阶段指针事件保证弹窗聚焦置顶，内部组件 stopPropagation 不影响弹窗层级
+- **停靠回收**：弹窗可一键停靠回标签栏，关闭标签后自动清理浮动登记
+
+### 4. CTP 协议封装
 
 - **ctp-python SWIG 绑定**：封装 CTP 行情/交易 API，处理回调 SPI 设计
 - **字段映射层**：CTP PascalCase → 前端 camelCase 自动转换（50+ 字段）
 - **回调穿透**：组合模式 SPI 基类，支持事件日志 + 自定义 handler 注册
 
-### 4. 交易指令合规性
+### 5. 交易指令合规性
 
 对齐上期所交易规则，前后端双重校验：
 
@@ -120,7 +129,7 @@
 - **保护价校验**：市价指令必须填写保护价，在涨跌停板范围内，priceTick 整数倍对齐
 - **后端权威校验**：Pydantic field_validator 兜底，防止前端绕过
 
-### 5. Electron 桌面应用
+### 6. Electron 桌面应用
 
 基于 Electron 构建桌面应用，提供原生桌面体验：
 
@@ -131,7 +140,7 @@
 - **自动更新**：集成 electron-updater，支持检查更新、下载、安装
 - **多平台打包**：支持 Windows（NSIS）、macOS（DMG）、Linux（AppImage）
 
-### 6. 双窗口协作开发
+### 7. 双窗口协作开发
 
 项目采用角色 A（后端）/ 角色 B（前端）双窗口协作模式：
 
@@ -215,10 +224,10 @@ npm run electron:build -- --linux  # 打包 Linux
 ### 4. 运行测试
 
 ```bash
-# 后端测试（108 个单元测试）
+# 后端测试（711 个单元测试）
 cd server && python -m pytest tests/ -v
 
-# 前端测试（469 个单元测试）
+# 前端测试（809 个单元测试）
 cd frontend && npm test
 ```
 
@@ -230,7 +239,9 @@ keti/
 │   ├── specs/                # 需求与设计（prd/design/dev/trading-instructions/ctp-*/）
 │   ├── tasks/                # 任务与流程（task/task-dev-flow/修复记录）
 │   ├── reviews/              # 审查报告（compliance-review/testing-guide/check*）
-│   └── dev-records/          # 开发记录（role-a/role-b 双窗口协作快照）
+│   ├── dev-records/          # 开发记录（role-a/role-b 双窗口协作快照）
+│   ├── snapshots/            # 双窗口协作快照（review-feedback/review-reply/verify-discussion）
+│   └── superpowers/          # 规划与设计文档（plans/specs）
 ├── examples/                 # CTP 示例脚本
 │   ├── ctp_connection_demo.py    # CTP 连接验证
 │   ├── field_structure_demo.py   # CTP 字段结构探测
@@ -239,12 +250,12 @@ keti/
 │   ├── src/
 │   │   ├── modules/          # 业务模块（market/order/query/options）
 │   │   │   └── market/       # 行情模块（KLineChart/indicators/MarketTable）
-│   │   ├── components/       # 通用组件（ContractSearch/Toast/...）
+│   │   ├── components/       # 通用组件（ContractSearch/Toast/FloatingWindow/...）
 │   │   ├── services/         # API 层 + 类型定义
-│   │   ├── stores/           # Zustand 状态管理
-│   │   ├── hooks/            # 自定义 Hooks（useMarketWs/useReconnect/...）
+│   │   ├── stores/           # Zustand 状态管理（connection/contracts/tabs/floatingWindows）
+│   │   ├── hooks/            # 自定义 Hooks（useMarketWs/useReconnect/useTabContractLocks/...）
 │   │   ├── pages/            # 独立页面（OrderPage/KLinePage，用于 Electron 窗口）
-│   │   └── utils/            # 工具函数（validators/orderMapping）
+│   │   └── utils/            # 工具函数（validators/orderMapping/detachDrag/resizeDrag）
 │   ├── electron/             # Electron 主进程代码
 │   │   ├── main.ts           # 主进程入口
 │   │   ├── preload.ts        # 预加载脚本（IPC 桥接）
@@ -254,7 +265,9 @@ keti/
 │   │   ├── notificationManager.ts  # 通知管理器
 │   │   ├── backendManager.ts # 后端进程管理器
 │   │   ├── autoUpdater.ts    # 自动更新管理器
-│   │   └── ipc/              # IPC 通道定义和处理器
+│   │   ├── ipcMonitor.ts     # IPC 通道监控
+│   │   ├── ipcWrapper.ts     # IPC 调用包装
+│   │   └── ipc/              # IPC 通道定义和处理器（app/index/window）
 │   ├── scripts/              # 构建脚本
 │   │   ├── compile-electron.cjs  # Electron 编译脚本
 │   │   ├── build-electron.cjs    # 多平台打包脚本
@@ -264,7 +277,7 @@ keti/
 │   └── package.json
 ├── server/                   # 后端代码
 │   ├── api/                  # REST API 路由（connection/market/order/query）
-│   ├── services/             # 业务服务（order_manager/stop_order/market_service/kline_service）
+│   ├── services/             # 业务服务（order_manager/stop_order/market_service/kline_service/reconnect）
 │   ├── ctp_wrapper/          # CTP API 封装层（md_user_api/trader_api/callback/types）
 │   ├── models/               # 数据模型（market/order/account/contract）
 │   ├── ws/                   # WebSocket 管理（manager/handlers）
@@ -272,7 +285,7 @@ keti/
 │   ├── main.py               # FastAPI 应用入口
 │   ├── start.py              # 智能启动脚本（自动选择 CTP 地址）
 │   ├── pyinstaller.spec      # PyInstaller 打包配置
-│   └── tests/                # 108 个单元测试（pytest）
+│   └── tests/                # 711 个单元测试（pytest）
 ├── scripts/                  # 项目脚本
 │   ├── prepare-electron.sh   # Electron 环境检查脚本
 │   └── build-backend.py      # 后端打包脚本
@@ -298,6 +311,8 @@ keti/
 | `role-b-dev-flow` | 角色B（前端）完整开发流程 | 同上，针对 frontend/ 目录 |
 | `simnow-bug-fix` | Bug 修复流程 | 根因分析→TDD 修复→验证 |
 | `simnow-consistency-check` | 前后端一致性检查 | 自动扫描类型/字段/API 不一致 |
+| `simnow-resume` | 简历内容生成 | 根据项目代码和提交记录生成简历 |
+| `simnow-weekly` | 周报生成 | 根据 git 提交记录生成周报 |
 
 技能文件位于 `.claude/skills/`，通过 Claude Code 的 `/skill-name` 命令触发。
 
@@ -333,6 +348,10 @@ UA 提供以下指令：
 |------|------|
 | `/understand` | 分析项目代码，生成/更新知识图谱 |
 | `/understand-chat` | 基于知识图谱进行对话，回答项目相关问题 |
+| `/understand-domain` | 提取业务领域知识（领域、流程、步骤） |
+| `/understand-dashboard` | 启动可视化仪表盘 |
+| `/understand-diff` | 分析 git diff / PR 变更影响 |
+| `/understand-explain` | 深度讲解指定文件/函数/模块 |
 | `/understand-onboard` | 新人引导，生成项目概览和上手指南 |
 
 
@@ -351,10 +370,10 @@ git clone <repo-url> && cd keti
 # 4. 提取业务领域知识（领域、流程、步骤）
 /understand-domain
 
-# 4. 打开UA面板
-/understand-onboard
+# 5. 打开UA仪表盘
+/understand-dashboard
 
-# 5. 询问任意代码库的问题
+# 6. 询问任意代码库的问题
 /understand-chat How does the payment flow work?
 ```
 
@@ -410,8 +429,10 @@ npm run electron:build -- --linux   # Linux (AppImage)
 - [产品需求文档](docs/specs/prd.md) — 功能需求、非目标、用户画像
 - [技术架构设计](docs/specs/design.md) — 接口设计、数据模型、WebSocket 端点
 - [项目设计稿](docs/specs/dev.md) — 代码结构、技术规范、CTP 连接流程
+- [重构方案](docs/specs/redesign-plan.md) — 标签页系统 + 虚拟滚动按需订阅重构方案
 - [任务拆分](docs/tasks/task.md) — 21 个 PR，5 个阶段
 - [Electron 迁移任务](docs/tasks/task-electron-migration.md) — 10 个 PR，桌面应用迁移
+- [标签页重构任务](docs/tasks/task-redesign.md) — 多页面架构 + 虚拟滚动按需订阅 PR 拆分
 - [一致性检查修复](docs/tasks/consistency-check-records.md) — 13 个 PR，前后端类型对齐
 - [交易指令合规性修复](docs/tasks/compliance-fix-records.md) — 保护价/数量上限/套利指令
 - [交易指令合规审查](docs/reviews/compliance-review.md) — 11 个合规性问题清单
