@@ -143,6 +143,11 @@ function App() {
         <span className="app-title">SimNow 交易终端</span>
       </header>
       <TabBar onAddTab={() => openTab({ type: 'settings', title: '⚙ 设置' })} />
+
+      {/* 浮动窗口内容 overlay：TabContent 将浮动标签内容 portal 到这里，
+          与 FloatingWindow chrome 同层，脱离 .tab-content 布局/溢出/层叠干扰 */}
+      <div id="floating-overlay" />
+
       <main className="tab-main">
         <TabContent />
       </main>

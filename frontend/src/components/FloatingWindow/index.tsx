@@ -13,17 +13,23 @@ interface FloatingWindowProps {
 const MIN_W = 320
 const MIN_H = 200
 
-/** 每个方向手柄的 fixed 定位（相对窗口 rect） */
+/**
+ * 每个方向手柄的 fixed 定位（相对窗口 rect）。
+ * position 必须内联 fixed：全局 .resize-handle 默认 position:relative（global.css），
+ * 与 .floating-window__resize 同优先级且级联靠后会覆盖它；若手柄退化为 relative，
+ * 会作为 .app flex 列的 item 占位，把 .tab-main 挤压成 0 高 → 拖出弹窗后主内容空白。
+ */
 function handleStyle(rect: { x: number; y: number; w: number; h: number }, dir: ResizeDirection, z: number): CSSProperties {
+  const base: CSSProperties = { position: 'fixed', zIndex: z }
   switch (dir) {
-    case 'n': return { left: rect.x, top: rect.y - 3, width: rect.w, height: 6, zIndex: z }
-    case 's': return { left: rect.x, top: rect.y + rect.h - 3, width: rect.w, height: 6, zIndex: z }
-    case 'e': return { left: rect.x + rect.w - 3, top: rect.y, width: 6, height: rect.h, zIndex: z }
-    case 'w': return { left: rect.x - 3, top: rect.y, width: 6, height: rect.h, zIndex: z }
-    case 'ne': return { left: rect.x + rect.w - 6, top: rect.y - 6, width: 12, height: 12, zIndex: z }
-    case 'nw': return { left: rect.x - 6, top: rect.y - 6, width: 12, height: 12, zIndex: z }
-    case 'se': return { left: rect.x + rect.w - 6, top: rect.y + rect.h - 6, width: 12, height: 12, zIndex: z }
-    case 'sw': return { left: rect.x - 6, top: rect.y + rect.h - 6, width: 12, height: 12, zIndex: z }
+    case 'n': return { ...base, left: rect.x, top: rect.y - 3, width: rect.w, height: 6 }
+    case 's': return { ...base, left: rect.x, top: rect.y + rect.h - 3, width: rect.w, height: 6 }
+    case 'e': return { ...base, left: rect.x + rect.w - 3, top: rect.y, width: 6, height: rect.h }
+    case 'w': return { ...base, left: rect.x - 3, top: rect.y, width: 6, height: rect.h }
+    case 'ne': return { ...base, left: rect.x + rect.w - 6, top: rect.y - 6, width: 12, height: 12 }
+    case 'nw': return { ...base, left: rect.x - 6, top: rect.y - 6, width: 12, height: 12 }
+    case 'se': return { ...base, left: rect.x + rect.w - 6, top: rect.y + rect.h - 6, width: 12, height: 12 }
+    case 'sw': return { ...base, left: rect.x - 6, top: rect.y + rect.h - 6, width: 12, height: 12 }
     default: {
       const _exhaustive: never = dir
       void _exhaustive

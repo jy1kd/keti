@@ -22,6 +22,8 @@ export interface FloatingRect {
 interface FloatingWindowStore {
   /** 悬浮窗口：tabId → 几何信息 */
   windows: Record<string, FloatingRect>
+  /** 非浮动窗口类弹窗（OrderPopup/QueryPopup）的 z 值：key → z */
+  popupZ: Record<string, number>
   /** 悬浮一个标签；固定标签（closable:false）拒绝。返回是否成功 */
   detach: (tabId: string, rect: { x: number; y: number; w: number; h: number }) => boolean
   /** 停靠回标签栏（移除窗口登记） */
@@ -30,14 +32,17 @@ interface FloatingWindowStore {
   move: (tabId: string, pos: { x: number; y: number }) => void
   /** 缩放窗口（含移动，从任意边/角调整） */
   resize: (tabId: string, rect: { x: number; y: number; w: number; h: number }) => void
-  /** 点击窗口置顶（z 递增） */
+  /** 点击浮动窗口置顶（z 递增） */
   focus: (tabId: string) => void
+  /** 通用置顶：任意弹窗（order/query 等）点击/打开时升到全局最高 z，返回新 z */
+  bringToFront: (key: string) => number
 }
 
 let zCounter = 1400
 
 export const useFloatingWindowStore = create<FloatingWindowStore>((set) => ({
   windows: {},
+  popupZ: {},
   detach: (tabId, rect) => {
     const tab = useTabStore.getState().tabs.find((t) => t.id === tabId)
     if (!tab || !tab.closable) return false
@@ -75,5 +80,10 @@ export const useFloatingWindowStore = create<FloatingWindowStore>((set) => ({
       zCounter += 1
       return { windows: { ...s.windows, [tabId]: { ...cur, z: zCounter } } }
     })
+  },
+  bringToFront: (key) => {
+    zCounter += 1
+    set((s) => ({ popupZ: { ...s.popupZ, [key]: zCounter } }))
+    return zCounter
   },
 }))

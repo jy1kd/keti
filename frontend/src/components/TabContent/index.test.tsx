@@ -320,4 +320,79 @@ describe('浮动面板', () => {
     expect(panel).not.toHaveClass('tab-content__panel--floating')
     expect(panel).toHaveStyle({ display: 'none' }) // 非活跃且已停靠
   })
+
+  it('浮动标签面板 portal 到顶层 #floating-overlay（脱离 .tab-content 布局）', () => {
+    const overlay = document.createElement('div')
+    overlay.id = 'floating-overlay'
+    document.body.appendChild(overlay)
+    try {
+      useTabStore.setState({
+        tabs: [MARKET_TAB, SETTINGS_TAB],
+        activeTabId: MARKET_TAB.id,
+      })
+      useFloatingWindowStore.setState({
+        windows: { 'tab-settings': { x: 10, y: 20, w: 400, h: 300, z: 1401 } },
+      })
+      render(<TabContent />)
+      // 浮动面板应渲染在 overlay 内，并保留浮动样式
+      const panel = overlay.querySelector('[role="tabpanel"]')
+      expect(panel).not.toBeNull()
+      expect(panel).toHaveClass('tab-content__panel--floating')
+      expect(panel).toHaveStyle({ position: 'fixed', left: '10px', top: '52px', width: '400px', height: '268px' })
+      // .tab-content 内不应再包含浮动面板（只有 market）
+      const contentPanels = document.querySelectorAll('.tab-content [role="tabpanel"]')
+      expect(contentPanels).toHaveLength(1)
+      expect(contentPanels[0]).not.toHaveClass('tab-content__panel--floating')
+    } finally {
+      overlay.remove()
+    }
+  })
+
+  it('浮动面板捕获阶段置顶：子元素 stopPropagation 也触发 focus', () => {
+    useTabStore.setState({
+      tabs: [MARKET_TAB, SETTINGS_TAB],
+      activeTabId: MARKET_TAB.id,
+    })
+    // 用 detach 建立浮动窗口（z 与模块级 zCounter 同步，focus 后严格递增）
+    useFloatingWindowStore.setState({ windows: {} })
+    useFloatingWindowStore.getState().detach('tab-settings', { x: 10, y: 20, w: 400, h: 300 })
+    render(<TabContent />)
+    const before = useFloatingWindowStore.getState().windows['tab-settings'].z
+    const panel = getAllPanels().find((p) => p.classList.contains('tab-content__panel--floating'))!
+    // 子元素在冒泡阶段 stopPropagation：捕获阶段 handler 仍应触发 focus
+    const child = document.createElement('div')
+    child.addEventListener('pointerdown', (e) => e.stopPropagation())
+    panel.appendChild(child)
+    fireEvent(child, pointerEvent('pointerdown', { clientX: 10, clientY: 10, button: 0, bubbles: true }))
+    const after = useFloatingWindowStore.getState().windows['tab-settings'].z
+    expect(after).toBe(before + 1)
+  })
+
+  it('兜底：活跃标签已浮动时主窗口回退显示行情标签页（不空白）', () => {
+    // 模拟「活跃标签 = 已浮动的标签」的状态（正常路径 detachTabAt 会切回 market，
+    // 此用例验证渲染层兜底——任何路径漏切时主窗口仍显示行情，不空白）。
+    useTabStore.setState({
+      tabs: [MARKET_TAB, SETTINGS_TAB],
+      activeTabId: SETTINGS_TAB.id,
+    })
+    const overlay = document.createElement('div')
+    overlay.id = 'floating-overlay'
+    document.body.appendChild(overlay)
+    try {
+      useFloatingWindowStore.setState({
+        windows: { 'tab-settings': { x: 10, y: 20, w: 400, h: 300, z: 1401 } },
+      })
+      render(<TabContent />)
+      // 主窗口内容区应显示行情面板（回退），而非空白
+      const contentPanels = document.querySelectorAll('.tab-content [role="tabpanel"]')
+      const visible = Array.from(contentPanels).filter((p) => (p as HTMLElement).style.display !== 'none')
+      expect(visible).toHaveLength(1)
+      expect(contentPanels[0]).toHaveAttribute('aria-hidden', 'false')
+      // 设置面板已 portal 到 overlay
+      const overlayPanels = overlay.querySelectorAll('[role="tabpanel"]')
+      expect(overlayPanels).toHaveLength(1)
+    } finally {
+      overlay.remove()
+    }
+  })
 })

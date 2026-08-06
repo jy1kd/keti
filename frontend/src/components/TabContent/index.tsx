@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useTabStore, type Tab } from '@/stores/tabs'
 import { useFloatingWindowStore, FLOATING_CHROME_H } from '@/stores/floatingWindows'
 import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
@@ -61,23 +62,39 @@ export function TabContent() {
   const activeTabId = useTabStore((s) => s.activeTabId)
   const windows = useFloatingWindowStore((s) => s.windows)
 
+  // 主窗口内容区展示的有效活跃标签：若活跃标签已浮动（脱离为弹窗），主窗口回退到
+  // 默认行情标签页，保证「拖出弹窗后主窗口下方不空白」。正常路径下 detachTabAt 已
+  // 把活跃标签切回 market，这里是渲染层的兜底（任何路径漏切时仍不空白）。
+  const activeIsFloating = activeTabId ? !!windows[activeTabId] : false
+  const effectiveActiveId = activeIsFloating
+    ? (tabs.find((t) => t.type === 'market')?.id ?? tabs.find((t) => !windows[t.id])?.id ?? activeTabId)
+    : activeTabId
+
+  // 浮动面板渲染到顶层 overlay：与 FloatingWindow chrome 同层，脱离 .tab-content 的
+  // flex/overflow/层叠上下文，避免「内容区空白/被裁剪/错位」。首次提交后 overlay 已存在，
+  // 浮动面板在其后的渲染中总能找到目标容器。
+  const overlayEl = typeof document !== 'undefined' ? document.getElementById('floating-overlay') : null
+
   return (
     <div className="tab-content">
       {tabs.map((tab) => {
-        const isActive = tab.id === activeTabId
+        const isActive = tab.id === effectiveActiveId
         const floating = windows[tab.id]
-        return (
+        const panel = (
           <div
             key={tab.id}
             role="tabpanel"
             aria-labelledby={tab.id}
             aria-hidden={floating ? false : !isActive}
             className={`tab-content__panel${floating ? ' tab-content__panel--floating' : ''}`}
-            onPointerDown={(e) => {
+            onPointerDownCapture={() => {
+              // 捕获阶段置顶：即使页面内部组件 stopPropagation 也能将弹窗带到最前
               if (floating) {
                 useFloatingWindowStore.getState().focus(tab.id)
-                return
               }
+            }}
+            onPointerDown={(e) => {
+              if (floating) return
               if (!tab.closable) return
               if (e.button !== 0) return
               const target = e.target as HTMLElement
@@ -107,6 +124,10 @@ export function TabContent() {
             {renderTabContent(tab)}
           </div>
         )
+        if (floating && overlayEl) {
+          return createPortal(panel, overlayEl, tab.id)
+        }
+        return panel
       })}
     </div>
   )

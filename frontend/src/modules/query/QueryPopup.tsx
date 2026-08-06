@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 import { flushSync } from 'react-dom'
 import { useQueryPopupStore } from './popupStore'
 import { useTabStore } from '@/stores/tabs'
+import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import { getRect, flipToRect, getTabPanelRect } from '@/utils/flip'
 import { toast } from '@/components/Toast'
 import { usePopupResize, PopupResizeHandles } from '@/hooks/usePopupResize'
@@ -21,6 +22,8 @@ const MIN_H = 320
 export function QueryPopup() {
   const isOpen = useQueryPopupStore((s) => s.isOpen)
   const close = useQueryPopupStore((s) => s.close)
+  // 统一 z-index：与其他弹窗/浮动窗口共享置顶计数
+  const popupZ = useFloatingWindowStore((s) => s.popupZ['query'])
 
   const popupRef = useRef<HTMLDivElement | null>(null)
 
@@ -31,6 +34,11 @@ export function QueryPopup() {
     minH: MIN_H,
     active: isOpen,
   })
+
+  // ── 打开弹窗即置顶（统一 z-index 管理） ──
+  useEffect(() => {
+    if (isOpen) useFloatingWindowStore.getState().bringToFront('query')
+  }, [isOpen])
 
   // ── 拖拽移动 ──
   const dragRef = useRef<{ dx: number; dy: number } | null>(null)
@@ -96,6 +104,7 @@ export function QueryPopup() {
   if (!isOpen) return null
 
   const popupStyle: CSSProperties = {
+    zIndex: popupZ ?? 1500,
     ...(position
       ? { left: position.x, top: position.y }
       : { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }),
@@ -109,6 +118,7 @@ export function QueryPopup() {
       role="dialog"
       aria-label="查询"
       style={popupStyle}
+      onPointerDownCapture={() => useFloatingWindowStore.getState().bringToFront('query')}
     >
       <div className="query-popup__header" onMouseDown={handleHeaderMouseDown}>
         <span className="query-popup__header-left">

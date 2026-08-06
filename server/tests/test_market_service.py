@@ -437,6 +437,77 @@ class TestSnapshotCache:
         assert snap.get("openPrice") == 3845.0
 
 
+# ── Expired instrument filtering ──────────────────────────────────────
+
+class TestExpiredInstrumentFilter:
+    """过期合约过滤：expireDate < 今天（YYYYMMDD）的合约应从缓存剔除。"""
+
+    def _ymd(self, dt):
+        return dt.strftime("%Y%m%d")
+
+    def test_load_instruments_filters_expired(self):
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        svc = MarketService()
+        svc.load_instruments([
+            {"instrumentID": "expired1", "expireDate": self._ymd(today - timedelta(days=1))},
+            {"instrumentID": "expired2", "expireDate": self._ymd(today - timedelta(days=30))},
+            {"instrumentID": "valid1", "expireDate": self._ymd(today + timedelta(days=1))},
+            {"instrumentID": "today1", "expireDate": self._ymd(today)},
+            {"instrumentID": "noexpire"},
+        ])
+        ids = {i["instrumentID"] for i in svc.get_instruments()}
+        assert ids == {"valid1", "today1", "noexpire"}
+
+    def test_load_instruments_handles_dashed_expire_date(self):
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        svc = MarketService()
+        svc.load_instruments([
+            {"instrumentID": "expired1", "expireDate": (today - timedelta(days=1)).strftime("%Y-%m-%d")},
+            {"instrumentID": "valid1", "expireDate": (today + timedelta(days=1)).strftime("%Y-%m-%d")},
+        ])
+        ids = {i["instrumentID"] for i in svc.get_instruments()}
+        assert ids == {"valid1"}
+
+    def test_load_instruments_from_file_filters_expired(self):
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        data = [
+            {"instrumentID": "expired1", "expireDate": self._ymd(today - timedelta(days=1))},
+            {"instrumentID": "valid1", "expireDate": self._ymd(today + timedelta(days=1))},
+        ]
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(data, f)
+            tmp_path = f.name
+        try:
+            svc = MarketService()
+            count = svc.load_instruments_from_file(tmp_path)
+            assert count == 1
+            ids = {i["instrumentID"] for i in svc.get_instruments()}
+            assert ids == {"valid1"}
+        finally:
+            os.unlink(tmp_path)
+
+    def test_save_instruments_to_file_filters_expired(self):
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        data = [
+            {"instrumentID": "expired1", "expireDate": self._ymd(today - timedelta(days=1))},
+            {"instrumentID": "valid1", "expireDate": self._ymd(today + timedelta(days=1))},
+        ]
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            tmp_path = f.name
+        try:
+            svc = MarketService()
+            svc._save_instruments_to_file(tmp_path, data)
+            with open(tmp_path, encoding="utf-8") as f:
+                saved = json.load(f)
+            assert [i["instrumentID"] for i in saved] == ["valid1"]
+        finally:
+            os.unlink(tmp_path)
+
+
 # ── File loading ───────────────────────────────────────────────────────
 
 class TestLoadInstrumentsFromFile:
