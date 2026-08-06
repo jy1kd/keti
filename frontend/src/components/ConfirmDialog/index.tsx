@@ -11,7 +11,7 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({ title, details, warning, onConfirm, onCancel }: ConfirmDialogProps) {
   return (
     <div className="confirm-overlay" onClick={onCancel}>
-      <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
+      <div className="confirm-dialog" data-testid="confirm-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="confirm-title">{title}</div>
         <div className="confirm-details">
           {details.map((d) => (

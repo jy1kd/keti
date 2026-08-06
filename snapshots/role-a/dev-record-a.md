@@ -15,7 +15,7 @@
 - [x] **P1-2 `DepthRow` 三列语义**
 - [x] **P1-3 `QuickTradeBar`（内嵌改价+买卖按钮）**
 - [x] **P1-4 `TradeParams` 压缩参数区**
-- [ ] P1-5 点价确认闭环
+- [x] **P1-5 点价确认闭环**
 - [ ] P1-6 `OrderPopup` 布局重排
 - [ ] P1-7 TDD 测试（含全量回归）
 
@@ -129,3 +129,31 @@
 **问题与解决方案**
 
 - 无。数量上限直接复用 `validateVolumeWithLimit` 与 OrderForm 同一套规则，保证前后一致。
+
+### P1-5 实现记录
+
+**测试用例（`MarketDepth.test.tsx` 追加 10 个，全绿，累计 33）**
+
+1. 改价框默认显示对手价（卖一）
+2. 点买档买入列 → 弹确认框，展示 方向/价格/手数/开平
+3. 点卖档卖出列 → 确认框方向为卖出，价格为本档卖价
+4. 确认 → 提交报单（方向 buy + 本档价 + 当前手数）
+5. 取消 → 不提交，确认框关闭
+6. 价格列点击 → 不弹确认框（不直接下单），改价框同步该价
+7. QuickTradeBar 买入 → 弹确认框（改价框价格 + 当前手数）
+8-10. （QuickTradeBar 受控改造回归）显示当前值、快照空禁用、onChangePrice 上报
+
+**改动**
+
+- `MarketDepth.tsx`：`MarketDepth` 接入 `useOrderStore`（orderForm/setOrderForm/submitOrder）；点买/卖列与快捷买卖按钮 → 锁定 `OrderIntent`（方向/价格/手数/开平/有效期）→ 必弹 `ConfirmDialog` → 确认后同步 orderForm 并 `submitOrder`；价格列点击 → `setQuickPrice`（只填改价框，不直接下单）；渲染 `QuickTradeBar`（受控 value/onChangePrice）
+- `MarketDepth.tsx`：`QuickTradeBar` 由非受控改为受控（`value` + `onChangePrice`），涨跌停夹紧/tick 对齐后经回调上报
+- `ConfirmDialog/index.tsx`：对话框加 `data-testid="confirm-dialog"`（纯增量，供测试定位）
+
+**Commit**
+
+- `feat(task-order-popup-p1): 点价确认闭环（必弹确认框 + submitOrder + 价格列只填改价框）`
+
+**问题与解决方案**
+
+- tsc：`OrderIntent` 的 `combOffsetFlag`/`timeCondition` 用 `OrderRequestForm` 联合类型，避免 string 不兼容。
+- act 警告：确认提交是 async（await submitOrder 后 setIntent(null)），测试用 `await act(async () => {})` 刷新微任务。

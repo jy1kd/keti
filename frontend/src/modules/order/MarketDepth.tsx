@@ -1,7 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { MarketSnapshot } from '@/services/types'
+import { useOrderStore } from './store'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
+import type { OrderRequestForm } from '@/utils/orderMapping'
 import './MarketDepth.css'
+
+/** 点价/快捷下单意图（点击瞬间锁定 方向/价格/手数/开平/有效期，确认后据此报单） */
+interface OrderIntent {
+  direction: 'buy' | 'sell'
+  price: number
+  volume: number
+  combOffsetFlag: OrderRequestForm['combOffsetFlag']
+  timeCondition: OrderRequestForm['timeCondition']
+}
+
+const OFFSET_LABEL: Record<string, string> = {
+  open: '开',
+  close: '平',
+  close_today: '平今',
+}
 
 interface MarketDepthProps {
   snapshot: MarketSnapshot | null
@@ -84,6 +102,23 @@ function resolveDepth(snapshot: MarketSnapshot, tick: number | null) {
 export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
   const tick = priceTick > 0 ? priceTick : null
 
+  const orderForm = useOrderStore((s) => s.orderForm)
+  const setOrderForm = useOrderStore((s) => s.setOrderForm)
+  const submitOrder = useOrderStore((s) => s.submitOrder)
+  const [quickPrice, setQuickPrice] = useState(0)
+  const [intent, setIntent] = useState<OrderIntent | null>(null)
+
+  // 改价框默认价：对手价（卖一）→ 最新价
+  const quickDefault = useMemo(() => {
+    if (!snapshot) return null
+    if (isValidPrice(snapshot.askPrice1)) return snapshot.askPrice1
+    if (isValidPrice(snapshot.lastPrice)) return snapshot.lastPrice
+    return null
+  }, [snapshot])
+  useEffect(() => {
+    if (quickDefault !== null) setQuickPrice(quickDefault)
+  }, [quickDefault])
+
   if (!snapshot) {
     return <div className="market-depth market-depth--empty">--</div>
   }
@@ -111,6 +146,32 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
     changeClass = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat'
   }
 
+  // ── 点价确认闭环 ──
+  // 点买/卖列 → 锁定 OrderIntent（方向/价格/手数/开平/有效期）→ 必弹确认框 → 确认后 submitOrder。
+  // 每次必弹确认，不提供免确认模式。价格列点击只填改价框，不直接下单。
+  const openIntent = (direction: 'buy' | 'sell', price: number) => {
+    setIntent({
+      direction,
+      price,
+      volume: orderForm.volumeTotalOriginal,
+      combOffsetFlag: orderForm.combOffsetFlag,
+      timeCondition: orderForm.timeCondition,
+    })
+  }
+
+  const handleConfirm = async () => {
+    if (!intent) return
+    setOrderForm({
+      direction: intent.direction,
+      limitPrice: intent.price,
+      volumeTotalOriginal: intent.volume,
+      combOffsetFlag: intent.combOffsetFlag,
+      timeCondition: intent.timeCondition,
+    })
+    await submitOrder()
+    setIntent(null)
+  }
+
   return (
     <div className="market-depth">
       <DepthHeader />
@@ -121,7 +182,40 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
         changeText={changeText}
         changeClass={changeClass}
       />
-      <DepthLadder asks={asks} bids={bids} tick={tick} maxVol={maxVol} />
+      <DepthLadder
+        asks={asks}
+        bids={bids}
+        tick={tick}
+        maxVol={maxVol}
+        onBuyClick={(price) => openIntent('buy', price)}
+        onSellClick={(price) => openIntent('sell', price)}
+        onPriceClick={setQuickPrice}
+      />
+      <QuickTradeBar
+        snapshot={snapshot}
+        priceTick={priceTick}
+        volume={orderForm.volumeTotalOriginal}
+        value={quickPrice}
+        onChangePrice={setQuickPrice}
+        onBuy={(price) => openIntent('buy', price)}
+        onSell={(price) => openIntent('sell', price)}
+      />
+      {intent && (
+        <ConfirmDialog
+          title="确认报单"
+          details={[
+            { label: '方向', value: intent.direction === 'buy' ? '买入' : '卖出' },
+            {
+              label: '价格',
+              value: tick !== null ? formatTickPrice(intent.price, tick) : String(intent.price),
+            },
+            { label: '手数', value: String(intent.volume) },
+            { label: '开平', value: OFFSET_LABEL[intent.combOffsetFlag] ?? intent.combOffsetFlag },
+          ]}
+          onConfirm={handleConfirm}
+          onCancel={() => setIntent(null)}
+        />
+      )}
     </div>
   )
 }
@@ -173,22 +267,48 @@ function DepthLadder({
   bids,
   tick,
   maxVol,
+  onBuyClick,
+  onSellClick,
+  onPriceClick,
 }: {
   asks: ResolvedLevel[]
   bids: ResolvedLevel[]
   tick: number | null
   maxVol: number
+  onBuyClick?: (price: number) => void
+  onSellClick?: (price: number) => void
+  onPriceClick?: (price: number) => void
 }) {
   return (
     <div className="depth-ladder" data-testid="depth-ladder">
       {/* 卖盘：价格高→低，卖五顶、卖一贴最新价线（asks 反转渲染） */}
       {[...asks].reverse().map((level, i) => (
-        <DepthRow key={`ask-${i}`} kind="ask" index={5 - i} level={level} tick={tick} maxVol={maxVol} />
+        <DepthRow
+          key={`ask-${i}`}
+          kind="ask"
+          index={5 - i}
+          level={level}
+          tick={tick}
+          maxVol={maxVol}
+          onBuyClick={onBuyClick}
+          onSellClick={onSellClick}
+          onPriceClick={onPriceClick}
+        />
       ))}
       <LastPriceDivider />
       {/* 买盘：买一顶、买五底 */}
       {bids.map((level, i) => (
-        <DepthRow key={`bid-${i}`} kind="bid" index={i + 1} level={level} tick={tick} maxVol={maxVol} />
+        <DepthRow
+          key={`bid-${i}`}
+          kind="bid"
+          index={i + 1}
+          level={level}
+          tick={tick}
+          maxVol={maxVol}
+          onBuyClick={onBuyClick}
+          onSellClick={onSellClick}
+          onPriceClick={onPriceClick}
+        />
       ))}
     </div>
   )
@@ -279,6 +399,10 @@ interface QuickTradeBarProps {
   priceTick: number
   /** 下单手数（来自参数区，按钮文字联动） */
   volume: number
+  /** 改价框当前价（父级控制：默认对手价/最新价，价格列点击可写入） */
+  value: number
+  /** 改价框提交新价（tick 对齐 + 涨跌停夹紧后） */
+  onChangePrice: (v: number) => void
   /** 点买入 → 以改价框价格 + 当前手数限价报单 */
   onBuy: (price: number) => void
   /** 点卖出 → 以改价框价格 + 当前手数限价报单 */
@@ -288,11 +412,19 @@ interface QuickTradeBarProps {
 /**
  * QuickTradeBar — 改价 + 快捷买卖栏（内嵌于 MarketDepth 底部，精简/完整态均显示）
  *
- * 价格步进框默认对手价（卖一）/最新价，按 tickSize 步进、键盘可输入；
- * 提交时做涨跌停夹紧 + 最小变动价位对齐校验。
+ * 价格步进框显示 `value`，按 tickSize 步进、键盘可输入；
+ * 提交时做涨跌停夹紧 + 最小变动价位对齐校验，经 `onChangePrice` 上报。
  * `买入N手`（红）/ `卖出N手`（绿）文字随手数联动；手数 < 1 时禁用。
  */
-export function QuickTradeBar({ snapshot, priceTick, volume, onBuy, onSell }: QuickTradeBarProps) {
+export function QuickTradeBar({
+  snapshot,
+  priceTick,
+  volume,
+  value,
+  onChangePrice,
+  onBuy,
+  onSell,
+}: QuickTradeBarProps) {
   const tick = priceTick > 0 ? priceTick : null
   const [input, setInput] = useState('')
 
@@ -301,22 +433,14 @@ export function QuickTradeBar({ snapshot, priceTick, volume, onBuy, onSell }: Qu
     snapshot && isValidPrice(snapshot.upperLimitPrice) ? snapshot.upperLimitPrice : Number.MAX_SAFE_INTEGER
   const lower = snapshot && isValidPrice(snapshot.lowerLimitPrice) ? snapshot.lowerLimitPrice : 0
 
-  // 默认价：对手价（卖一）→ 最新价；无快照则为 null
-  const defaultPrice = useMemo(() => {
-    if (!snapshot) return null
-    if (isValidPrice(snapshot.askPrice1)) return snapshot.askPrice1
-    if (isValidPrice(snapshot.lastPrice)) return snapshot.lastPrice
-    return null
-  }, [snapshot])
-
-  // 默认价变化时同步到输入框
+  // 外部 value 变化（价格列点击 / 步进）→ 同步输入框显示
   useEffect(() => {
-    if (defaultPrice !== null && tick !== null) {
-      setInput(formatTickPrice(defaultPrice, tick))
+    if (tick !== null) {
+      setInput(formatTickPrice(value, tick))
     }
-  }, [defaultPrice, tick])
+  }, [value, tick])
 
-  /** 提交：解析 → tick 对齐 → 涨跌停夹紧 */
+  /** 提交：解析 → tick 对齐 → 涨跌停夹紧 → 上报 */
   const commit = (raw: string) => {
     if (tick === null) return
     const n = parseFloat(raw)
@@ -324,15 +448,17 @@ export function QuickTradeBar({ snapshot, priceTick, volume, onBuy, onSell }: Qu
     const aligned = Math.round(n / tick) * tick
     const clamped = Math.min(upper, Math.max(lower, aligned))
     setInput(formatTickPrice(clamped, tick))
+    onChangePrice(clamped)
   }
 
-  /** 步进：tickSize 加减，夹紧到涨跌停区间 */
+  /** 步进：tickSize 加减，夹紧到涨跌停区间 → 上报 */
   const step = (dir: 1 | -1) => {
     if (tick === null) return
     const cur = parseFloat(input)
     if (!Number.isFinite(cur)) return
     const next = Math.min(upper, Math.max(lower, cur + dir * tick))
     setInput(formatTickPrice(next, tick))
+    onChangePrice(next)
   }
 
   const price = parseFloat(input)

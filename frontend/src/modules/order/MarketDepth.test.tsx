@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within, act } from '@testing-library/react'
 import { MarketDepth, DepthRow, QuickTradeBar } from './MarketDepth'
 import type { ResolvedLevel } from './MarketDepth'
+import { useOrderStore, DEFAULT_ORDER_FORM } from './store'
 import type { MarketSnapshot } from '@/services/types'
 
 function makeSnapshot(overrides?: Partial<MarketSnapshot>): MarketSnapshot {
@@ -263,22 +264,33 @@ describe('QuickTradeBar（任务#3）', () => {
     lowerLimitPrice: 4690,
   })
 
-  function renderBar(overrides: { volume?: number; onBuy?: () => void; onSell?: () => void } = {}) {
+  function renderBar(
+    overrides: {
+      volume?: number
+      onBuy?: () => void
+      onSell?: () => void
+      value?: number
+      onChangePrice?: () => void
+    } = {},
+  ) {
     const onBuy = overrides.onBuy ?? vi.fn()
     const onSell = overrides.onSell ?? vi.fn()
+    const onChangePrice = overrides.onChangePrice ?? vi.fn()
     const view = render(
       <QuickTradeBar
         snapshot={snap}
         priceTick={0.2}
         volume={overrides.volume ?? 2}
+        value={overrides.value ?? 4696}
+        onChangePrice={onChangePrice}
         onBuy={onBuy}
         onSell={onSell}
       />,
     )
-    return { onBuy, onSell, ...view }
+    return { onBuy, onSell, onChangePrice, ...view }
   }
 
-  it('默认显示对手价（卖一价），按 tick 精度格式化', () => {
+  it('显示改价框当前价，按 tick 精度格式化', () => {
     renderBar()
     expect((screen.getByTestId('qtb-price') as HTMLInputElement).value).toBe('4696.0')
   })
@@ -341,10 +353,111 @@ describe('QuickTradeBar（任务#3）', () => {
 
   it('快照为空时输入框与按钮禁用', () => {
     render(
-      <QuickTradeBar snapshot={null} priceTick={0.2} volume={2} onBuy={vi.fn()} onSell={vi.fn()} />,
+      <QuickTradeBar
+        snapshot={null}
+        priceTick={0.2}
+        volume={2}
+        value={0}
+        onChangePrice={vi.fn()}
+        onBuy={vi.fn()}
+        onSell={vi.fn()}
+      />,
     )
     expect(screen.getByTestId('qtb-price')).toBeDisabled()
     expect(screen.getByTestId('qtb-buy')).toBeDisabled()
     expect(screen.getByTestId('qtb-sell')).toBeDisabled()
+  })
+
+  it('步进/提交后通过 onChangePrice 上报对齐夹紧后的价格', () => {
+    const onChangePrice = vi.fn()
+    renderBar({ onChangePrice, value: 4696 })
+    fireEvent.click(screen.getByTestId('qtb-step-up'))
+    expect(onChangePrice).toHaveBeenCalledWith(4696.2)
+    const input = screen.getByTestId('qtb-price') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '4705' } })
+    fireEvent.blur(input)
+    expect(onChangePrice).toHaveBeenCalledWith(4700)
+  })
+})
+
+describe('点价确认闭环（任务#5）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useOrderStore.setState({
+      orderForm: {
+        ...DEFAULT_ORDER_FORM,
+        instrumentID: 'IF2608',
+        exchangeID: 'CFFEX',
+        volumeTotalOriginal: 3,
+        combOffsetFlag: 'open',
+        timeCondition: 'gfd',
+        combHedgeFlag: 'speculation',
+      },
+    })
+  })
+
+  it('改价框默认显示对手价（卖一）', () => {
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    expect((screen.getByTestId('qtb-price') as HTMLInputElement).value).toBe('4696.0')
+  })
+
+  it('点买档买入列 → 弹确认框，展示 方向/价格/手数/开平', () => {
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('bid-1').querySelector('.depth-row__buy')!)
+    const dialog = within(screen.getByTestId('confirm-dialog'))
+    expect(screen.getByText('确认报单')).toBeInTheDocument()
+    expect(dialog.getByText('买入')).toBeInTheDocument()
+    expect(dialog.getByText('4694.0')).toBeInTheDocument() // 本档价
+    expect(dialog.getByText('3')).toBeInTheDocument() // 手数
+    expect(dialog.getByText('开')).toBeInTheDocument() // 开平
+  })
+
+  it('点卖档卖出列 → 确认框方向为 卖出，价格为本档卖价', () => {
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('ask-2').querySelector('.depth-row__sell')!)
+    const dialog = within(screen.getByTestId('confirm-dialog'))
+    expect(dialog.getByText('卖出')).toBeInTheDocument()
+    expect(dialog.getByText('4697.0')).toBeInTheDocument()
+  })
+
+  it('确认 → 提交报单（方向 buy + 本档价 + 当前手数）', async () => {
+    const submitSpy = vi.fn().mockResolvedValue(true)
+    useOrderStore.setState({ submitOrder: submitSpy as () => Promise<boolean> })
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('bid-1').querySelector('.depth-row__buy')!)
+    fireEvent.click(screen.getByText('确认执行'))
+    await act(async () => {})
+    expect(submitSpy).toHaveBeenCalledTimes(1)
+    const form = useOrderStore.getState().orderForm
+    expect(form.direction).toBe('buy')
+    expect(form.limitPrice).toBe(4694)
+    expect(form.volumeTotalOriginal).toBe(3)
+  })
+
+  it('取消 → 不提交，确认框关闭', () => {
+    const submitSpy = vi.fn().mockResolvedValue(true)
+    useOrderStore.setState({ submitOrder: submitSpy as () => Promise<boolean> })
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('ask-1').querySelector('.depth-row__sell')!)
+    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('取消'))
+    expect(submitSpy).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
+  })
+
+  it('价格列点击 → 不弹确认框（不直接下单），改价框同步该价', () => {
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('ask-2').querySelector('.depth-row__price')!)
+    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
+    expect((screen.getByTestId('qtb-price') as HTMLInputElement).value).toBe('4697.0')
+  })
+
+  it('QuickTradeBar 买入 → 弹确认框（改价框价格 + 当前手数）', () => {
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('qtb-buy'))
+    const dialog = within(screen.getByTestId('confirm-dialog'))
+    expect(dialog.getByText('买入')).toBeInTheDocument()
+    expect(dialog.getByText('4696.0')).toBeInTheDocument()
+    expect(dialog.getByText('3')).toBeInTheDocument()
   })
 })
