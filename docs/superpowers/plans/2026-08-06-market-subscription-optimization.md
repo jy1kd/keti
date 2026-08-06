@@ -15,7 +15,8 @@
 - 拖动检测：`DRAG_WINDOW_MS = 300`、`DRAG_THRESHOLD = 2`
 - subscribe 防抖 100ms，unsubscribe 防抖 500ms
 - 锁定合约（`lockedContracts`）与自选合约（`favorites`）永不退订、不参与 LRU 淘汰
-- 后端零改动
+- 后端零改动（快照回填复用后端已有 `/api/market/snapshots` 接口与 `_snapshots` 缓存）
+- 快照回填（方案 A）：subscribe 成功后立即 `getSnapshots(订阅列表)`，用缓存快照先填表，实时 tick 覆盖；失败静默
 - 所有文案/测试描述用中文
 - 沿用现有 TDD 模式：先写失败测试 → 运行确认失败 → 实现 → 运行确认通过 → 提交
 
@@ -761,6 +762,7 @@ Expected: 全部 PASS（含既有 809 个用例）
 - 机制 3 拖动中只增不减 → Task 3 ✓
 - 机制 4 LRU 上限保护 → Task 3 ✓
 - 机制 5 局部更新 → Task 1 + Task 4 ✓
+- 机制 6 快照回填 → Task 6 ✓
 - 后端零改动 → 全计划仅改 frontend/ ✓
 
 - [ ] **Step 3: 提交（若有遗漏改动）**
@@ -771,3 +773,129 @@ git commit -m "chore: 行情表格订阅优化收尾验证"
 ```
 
 （若 Step 1 全部通过且无额外改动，此步可跳过）
+
+---
+
+### Task 6: 快照回填（方案 A）
+
+**Files:**
+- Modify: `frontend/src/hooks/useSubscriptionManager.ts`
+- Test: `frontend/src/hooks/useSubscriptionManager.test.ts`
+
+**Interfaces:**
+- Consumes: 现有 `subscribeMarket`/`unsubscribeMarket`、`getSnapshots`（`@/services/api`）、`useMarketStore.getState().batchUpdate`
+- Produces: subscribe 成功回调内新增「回填缓存快照」动作——对 `toSubscribe` 调 `getSnapshots(toSubscribe)`，返回的 `{ snapshots }` 转 `MarketSnapshot[]` 经 `batchUpdate` 写入 store
+
+**背景：** 订阅停止后要等 CTP 异步回包才有数据，期间表格显示 `--`。方案 A：subscribe 成功后立即 `getSnapshots(订阅列表)`，用后端 `_snapshots` 缓存里已有的最后快照先填表，实时 tick 再覆盖。后端 `_snapshots` 缓存持续存在（订阅/退订不清缓存），任何 tick 过的合约缓存里都有最后价格。
+
+- [ ] **Step 1: 写失败测试**
+
+在 `frontend/src/hooks/useSubscriptionManager.test.ts` 追加：
+
+```ts
+describe('useSubscriptionManager 快照回填（方案 A）', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.clearAllMocks()
+    useMarketStore.setState({
+      visibleInstrumentIDs: [],
+      lockedContracts: new Map(),
+      recentlyUpdated: new Set(),
+      selectedContracts: new Set(),
+    })
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it('订阅成功后调用 getSnapshots 回填缓存快照', async () => {
+    const getSnapshotsMock = vi.mocked(getSnapshots)
+    getSnapshotsMock.mockResolvedValue({ snapshots: { IF2608: { instrumentID: 'IF2608', lastPrice: 4000 } } } as any)
+    renderHook(() => useSubscriptionManager())
+
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608']))
+    await act(async () => { vi.advanceTimersByTime(110) })
+
+    // subscribe 已调用
+    expect(vi.mocked(subscribeMarket)).toHaveBeenCalledWith(['IF2608'])
+    // 回填：getSnapshots 收到订阅的合约
+    expect(getSnapshotsMock).toHaveBeenCalledWith(['IF2608'])
+    // 快照写入 store
+    expect(useMarketStore.getState().snapshots.get('IF2608')?.lastPrice).toBe(4000)
+  })
+
+  it('getSnapshots 失败时静默，不抛错', async () => {
+    const getSnapshotsMock = vi.mocked(getSnapshots)
+    getSnapshotsMock.mockRejectedValue(new Error('network'))
+    renderHook(() => useSubscriptionManager())
+
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608']))
+    await act(async () => { vi.advanceTimersByTime(110) })
+
+    expect(getSnapshotsMock).toHaveBeenCalled()
+    // 不抛错（测试通过即证明静默）
+  })
+})
+```
+
+- [ ] **Step 2: 运行测试确认失败**
+
+Run: `cd frontend && npx vitest run src/hooks/useSubscriptionManager.test.ts`
+
+Expected: FAIL — 当前实现 subscribe 成功后未调用 `getSnapshots`
+
+- [ ] **Step 3: 实现快照回填**
+
+在 `frontend/src/hooks/useSubscriptionManager.ts`：
+
+1. **新增 import**：
+
+```ts
+import { subscribeMarket, unsubscribeMarket, getSnapshots } from '@/services/api'
+```
+
+2. **新增回填函数**：
+
+```ts
+/** 方案 A：订阅成功后立即拉后端缓存快照填表，实时 tick 再覆盖；失败静默 */
+const prefetchSnapshots = useCallback((ids: string[]) => {
+  if (ids.length === 0) return
+  getSnapshots(ids)
+    .then(({ snapshots }) => {
+      const snaps = Object.values(snapshots)
+      if (snaps.length > 0) {
+        useMarketStore.getState().batchUpdate(snaps)
+      }
+    })
+    .catch(() => {
+      // 静默：缓存回填失败不影响订阅，实时 tick 兜底
+    })
+}, [])
+```
+
+3. **在 subscribe 成功回调里触发**（`debouncedSubscribe` 与 `runFullDiff` 两处的 `.then` 内、`subscribedRef.set` 之后）：
+
+```ts
+if (resp?.success) {
+  for (const id of toSubscribe) subscribedRef.current.set(id, Date.now())
+  prefetchSnapshots(toSubscribe)  // 方案 A：回填缓存快照
+  // ... 既有 LRU 逻辑
+}
+```
+
+- [ ] **Step 4: 运行测试确认通过**
+
+Run: `cd frontend && npx vitest run src/hooks/useSubscriptionManager.test.ts`
+
+Expected: PASS（原 8 个 + 新增 2 个 = 10 个）
+
+- [ ] **Step 5: 运行全量前端测试（防回归）**
+
+Run: `cd frontend && npx vitest run`
+
+Expected: 全部 PASS。确认 `getSnapshots` 的 mock 覆盖不破坏既有 useSubscriptionManager 测试（`@/services/api` 的 mock 需补充 `getSnapshots: vi.fn()`，可放在测试文件顶部 `vi.mock('@/services/api', ...)` 中）。
+
+- [ ] **Step 6: 提交**
+
+```bash
+git add frontend/src/hooks/useSubscriptionManager.ts frontend/src/hooks/useSubscriptionManager.test.ts
+git commit -m "feat(hooks): 订阅成功后回填缓存快照（方案A），减少停止后填表等待"
+```
