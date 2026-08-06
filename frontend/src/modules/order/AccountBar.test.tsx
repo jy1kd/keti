@@ -50,12 +50,19 @@ describe('AccountBar', () => {
     lockPositionMock.mockResolvedValue({ success: true })
   })
 
-  it('挂载时触发持仓与账户串行拉取', async () => {
+  it('挂载时触发持仓与账户串行拉取（查询间 1200ms 延迟）', async () => {
+    vi.useFakeTimers()
     render(<AccountBar instrumentID="IF2608" />)
-    // 等待初始 fetch 完成并渲染（act 内 flush，避免外部 setState 警告）
-    await screen.findByTestId('ab-profit')
-    expect(refreshPositionsMock).toHaveBeenCalled()
-    expect(refreshAccountMock).toHaveBeenCalled()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(refreshPositionsMock).toHaveBeenCalledTimes(1)
+    expect(refreshAccountMock).toHaveBeenCalledTimes(0)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1200)
+    })
+    expect(refreshAccountMock).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
   })
 
   it('显示账户 ID 与当前合约持仓 多|空(净)、持盈', async () => {
@@ -63,7 +70,11 @@ describe('AccountBar', () => {
     const profit = await screen.findByTestId('ab-profit')
     expect(profit.textContent).toBe('+600.00')
     expect(profit.className).toContain('up')
-    expect(screen.getByTestId('ab-account').getAttribute('title')).toBe('YYB-1829143')
+    // 注入账户数据（模拟 fetch 完成后的 store 状态）
+    useQueryStore.setState({ account: ACCOUNT })
+    await waitFor(() => {
+      expect(screen.getByTestId('ab-account').getAttribute('title')).toBe('YYB-1829143')
+    })
     expect(screen.getByTestId('ab-long').textContent).toBe('5')
     expect(screen.getByTestId('ab-short').textContent).toBe('2')
     expect(screen.getByTestId('ab-net').textContent).toBe('(3)')
@@ -108,11 +119,13 @@ describe('AccountBar', () => {
   })
 
   it('账户 ID 超长时省略显示，hover title 保留全称', async () => {
-    refreshAccountMock.mockResolvedValue({ ...ACCOUNT, accountID: 'YYB-1829143-SH000001' })
     render(<AccountBar instrumentID="IF2608" />)
-    const el = await screen.findByTestId('ab-account')
-    expect(el.textContent).toBe('YYB-18291…')
-    expect(el.getAttribute('title')).toBe('YYB-1829143-SH000001')
+    await screen.findByTestId('ab-profit')
+    useQueryStore.setState({ account: { ...ACCOUNT, accountID: 'YYB-1829143-SH000001' } })
+    await waitFor(() => {
+      expect(screen.getByTestId('ab-account').textContent).toBe('YYB-18291…')
+    })
+    expect(screen.getByTestId('ab-account').getAttribute('title')).toBe('YYB-1829143-SH000001')
   })
 
   it('锁仓开关：点击调用 lockPosition 并切换为解锁', async () => {
@@ -124,19 +137,26 @@ describe('AccountBar', () => {
     await waitFor(() => expect(btn.textContent).toBe('解锁'))
   })
 
-  it('每 10s 串行自刷新持仓与账户', async () => {
+  it('每 10s 串行自刷新持仓与账户（持仓→1200ms→账户→10s→下一轮）', async () => {
     vi.useFakeTimers()
     render(<AccountBar instrumentID="IF2608" />)
+    // t=0：持仓拉取
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
     })
     expect(refreshPositionsMock).toHaveBeenCalledTimes(1)
+    // 延迟 1200ms 后账户串行拉取（未到时间前账户未拉取）
+    expect(refreshAccountMock).toHaveBeenCalledTimes(0)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1200)
+    })
     expect(refreshAccountMock).toHaveBeenCalledTimes(1)
+    // 10s 周期后新一轮：持仓再次拉取
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10_000)
     })
     expect(refreshPositionsMock).toHaveBeenCalledTimes(2)
-    expect(refreshAccountMock).toHaveBeenCalledTimes(2)
+    expect(refreshAccountMock).toHaveBeenCalledTimes(1)
     vi.useRealTimers()
   })
 })
