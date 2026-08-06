@@ -3,136 +3,101 @@ import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
 import { subscribeMarket, unsubscribeMarket } from '@/services/api'
 
-/** 订阅/退订防抖间隔（毫秒） */
-const SUBSCRIPTION_DEBOUNCE_MS = 100
+/** subscribe 防抖间隔（毫秒） */
+const SUB_DEBOUNCE_MS = 100
+/** unsubscribe 防抖间隔（毫秒） */
+const UNSUB_DEBOUNCE_MS = 500
+/** 延迟退订宽限期（毫秒） */
+const GRACE_MS = 30_000
 
-/**
- * 订阅管理器 Hook
- *
- * 实现按需订阅逻辑：
- * - 可见区域合约自动订阅
- * - 自选合约始终订阅
- * - 锁定合约永不退订
- *
- * 订阅公式：应该订阅 = 可见区域 + 自选合约 + 锁定合约
- * 退订公式：需要退订 = 已订阅 - 应该订阅
- */
 export function useSubscriptionManager() {
   const visibleInstrumentIDs = useMarketStore((s) => s.visibleInstrumentIDs)
   const lockedContracts = useMarketStore((s) => s.lockedContracts)
   const favorites = useContractsStore((s) => s.favorites)
 
-  // 当前已订阅的合约 ID 集合
-  const subscribedRef = useRef<Set<string>>(new Set())
-  // 防抖定时器
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** 已订阅合约 → 最近可见时间戳（ms） */
+  const subscribedRef = useRef<Map<string, number>>(new Map())
+  const subTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const unsubTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  /**
-   * 计算应该订阅的合约列表
-   * 应该订阅 = 可见区域 + 自选合约 + 锁定合约
-   */
   const calculateShouldSubscribe = useCallback((): Set<string> => {
     const shouldSubscribe = new Set<string>()
-
-    // 添加可见区域合约
-    for (const id of visibleInstrumentIDs) {
-      shouldSubscribe.add(id)
-    }
-
-    // 添加自选合约
-    for (const fav of favorites) {
-      shouldSubscribe.add(fav.instrumentID)
-    }
-
-    // 添加锁定合约
-    for (const id of lockedContracts.keys()) {
-      shouldSubscribe.add(id)
-    }
-
+    for (const id of visibleInstrumentIDs) shouldSubscribe.add(id)
+    for (const fav of favorites) shouldSubscribe.add(fav.instrumentID)
+    for (const id of lockedContracts.keys()) shouldSubscribe.add(id)
     return shouldSubscribe
   }, [visibleInstrumentIDs, favorites, lockedContracts])
 
-  /**
-   * 计算需要订阅和退订的合约
-   */
-  const calculateSubscriptionChanges = useCallback(() => {
-    const shouldSubscribe = calculateShouldSubscribe()
-    const currentlySubscribed = subscribedRef.current
-
-    // 需要订阅 = 应该订阅 - 已订阅
-    const toSubscribe: string[] = []
-    for (const id of shouldSubscribe) {
-      if (!currentlySubscribed.has(id)) {
-        toSubscribe.push(id)
+  /** 立即订阅缺失合约（subscribe 防抖 100ms） */
+  const debouncedSubscribe = useCallback(() => {
+    if (subTimerRef.current) clearTimeout(subTimerRef.current)
+    subTimerRef.current = setTimeout(() => {
+      const should = calculateShouldSubscribe()
+      const toSubscribe: string[] = []
+      for (const id of should) {
+        if (!subscribedRef.current.has(id)) toSubscribe.push(id)
       }
-    }
-
-    // 需要退订 = 已订阅 - 应该订阅
-    const toUnsubscribe: string[] = []
-    for (const id of currentlySubscribed) {
-      if (!shouldSubscribe.has(id)) {
-        toUnsubscribe.push(id)
-      }
-    }
-
-    return { toSubscribe, toUnsubscribe }
+      if (toSubscribe.length === 0) return
+      subscribeMarket(toSubscribe)
+        .then(() => {
+          for (const id of toSubscribe) subscribedRef.current.set(id, Date.now())
+        })
+        .catch((err) => console.error('[SubscriptionManager] Subscribe failed:', err))
+    }, SUB_DEBOUNCE_MS)
   }, [calculateShouldSubscribe])
 
-  /**
-   * 执行订阅/退订操作
-   */
-  const applySubscriptionChanges = useCallback(async () => {
-    const { toSubscribe, toUnsubscribe } = calculateSubscriptionChanges()
+  /** 延迟退订：仅当合约不在应该订阅集合 且 超过宽限期未可见 */
+  const debouncedUnsubscribe = useCallback(() => {
+    if (unsubTimerRef.current) clearTimeout(unsubTimerRef.current)
 
-    // 批量订阅
-    if (toSubscribe.length > 0) {
-      try {
-        await subscribeMarket(toSubscribe)
-        for (const id of toSubscribe) {
-          subscribedRef.current.add(id)
+    const runCheck = () => {
+      const should = calculateShouldSubscribe()
+      const now = Date.now()
+      const toUnsubscribe: string[] = []
+      // 仍在宽限期内的合约，记录最早到期的剩余时间，用于下次检查
+      let nextCheckIn: number | null = null
+      for (const [id, lastVisible] of subscribedRef.current) {
+        if (should.has(id)) continue
+        const elapsed = now - lastVisible
+        if (elapsed > GRACE_MS) {
+          toUnsubscribe.push(id)
+        } else {
+          const remaining = GRACE_MS - elapsed + 1
+          if (nextCheckIn === null || remaining < nextCheckIn) nextCheckIn = remaining
         }
-      } catch (err) {
-        console.error('[SubscriptionManager] Subscribe failed:', err)
+      }
+      if (toUnsubscribe.length > 0) {
+        unsubscribeMarket(toUnsubscribe)
+          .then(() => {
+            for (const id of toUnsubscribe) subscribedRef.current.delete(id)
+          })
+          .catch((err) => console.error('[SubscriptionManager] Unsubscribe failed:', err))
+      }
+      // 宽限期尚未到期的合约：等到期后再检查一次
+      if (nextCheckIn !== null) {
+        unsubTimerRef.current = setTimeout(runCheck, nextCheckIn)
       }
     }
 
-    // 批量退订
-    if (toUnsubscribe.length > 0) {
-      try {
-        await unsubscribeMarket(toUnsubscribe)
-        for (const id of toUnsubscribe) {
-          subscribedRef.current.delete(id)
-        }
-      } catch (err) {
-        console.error('[SubscriptionManager] Unsubscribe failed:', err)
-      }
-    }
-  }, [calculateSubscriptionChanges])
+    unsubTimerRef.current = setTimeout(runCheck, UNSUB_DEBOUNCE_MS)
+  }, [calculateShouldSubscribe])
 
-  /**
-   * 防抖执行订阅变更
-   */
-  const debouncedApply = useCallback(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
-    }
-    debounceTimerRef.current = setTimeout(applySubscriptionChanges, SUBSCRIPTION_DEBOUNCE_MS)
-  }, [applySubscriptionChanges])
-
-  // 当可见区域、自选合约或锁定合约变化时，执行订阅变更
+  // 可见区变化时：刷新可见合约的 lastVisibleTime，触发订阅与退订
   useEffect(() => {
-    debouncedApply()
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current)
-      }
+    const now = Date.now()
+    for (const id of visibleInstrumentIDs) {
+      if (subscribedRef.current.has(id)) subscribedRef.current.set(id, now)
     }
-  }, [visibleInstrumentIDs, favorites, lockedContracts, debouncedApply])
+    debouncedSubscribe()
+    debouncedUnsubscribe()
+    return () => {
+      if (subTimerRef.current) clearTimeout(subTimerRef.current)
+      if (unsubTimerRef.current) clearTimeout(unsubTimerRef.current)
+    }
+  }, [visibleInstrumentIDs, debouncedSubscribe, debouncedUnsubscribe])
 
   return {
-    /** 当前已订阅的合约 ID 集合 */
     subscribed: subscribedRef.current,
-    /** 手动触发订阅变更 */
-    applySubscriptionChanges,
+    applySubscriptionChanges: debouncedSubscribe,
   }
 }
