@@ -1,0 +1,102 @@
+/* ── ② AccountBar 账户/持仓/持盈栏 ────────────────────────────── */
+
+.account-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 12px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+  color: var(--text-primary);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* 账户号：超长省略，hover 显示全席位号 */
+.account-bar__id {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
+  flex-shrink: 0;
+}
+
+/* 持仓 多|空(净) */
+.account-bar__pos {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.account-bar__label {
+  font-family: inherit;
+  color: var(--text-secondary);
+}
+
+.account-bar__long {
+  color: var(--color-up);
+  font-weight: 600;
+}
+
+.account-bar__sep {
+  color: var(--text-muted);
+  font-style: normal;
+}
+
+.account-bar__short {
+  color: var(--color-down);
+  font-weight: 600;
+}
+
+.account-bar__net {
+  color: var(--text-secondary);
+}
+
+/* 持盈：盈红亏绿 */
+.account-bar__profit {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.account-bar__profit--up {
+  color: var(--color-up);
+}
+
+.account-bar__profit--down {
+  color: var(--color-down);
+}
+
+.account-bar__profit--flat {
+  color: var(--color-flat);
+}
+
+/* 锁仓/解锁开关 */
+.account-bar__lock {
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.account-bar__lock:hover {
+  background: var(--accent);
+  color: #1c2333;
+}
