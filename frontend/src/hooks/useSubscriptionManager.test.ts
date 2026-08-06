@@ -2,11 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useSubscriptionManager } from './useSubscriptionManager'
 import { useMarketStore } from '@/modules/market/store'
-import { subscribeMarket, unsubscribeMarket } from '@/services/api'
+import { subscribeMarket, unsubscribeMarket, getSnapshots } from '@/services/api'
 
 vi.mock('@/services/api', () => ({
   subscribeMarket: vi.fn().mockResolvedValue({ success: true }),
   unsubscribeMarket: vi.fn().mockResolvedValue({ success: true }),
+  getSnapshots: vi.fn().mockResolvedValue({ snapshots: {} }),
 }))
 
 describe('useSubscriptionManager 延迟退订', () => {
@@ -182,5 +183,46 @@ describe('useSubscriptionManager success 门控', () => {
 
     expect(vi.mocked(subscribeMarket)).toHaveBeenCalledWith(['IF2608'])
     expect(result.current.subscribed.has('IF2608')).toBe(true)
+  })
+})
+
+describe('useSubscriptionManager 快照回填（方案 A）', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.clearAllMocks()
+    useMarketStore.setState({
+      visibleInstrumentIDs: [],
+      lockedContracts: new Map(),
+      selectedContracts: new Set(),
+    })
+  })
+  afterEach(() => { vi.useRealTimers() })
+
+  it('订阅成功后调用 getSnapshots 回填缓存快照', async () => {
+    const getSnapshotsMock = vi.mocked(getSnapshots)
+    getSnapshotsMock.mockResolvedValue({ snapshots: { IF2608: { instrumentID: 'IF2608', lastPrice: 4000 } } } as any)
+    renderHook(() => useSubscriptionManager())
+
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608']))
+    await act(async () => { vi.advanceTimersByTime(110) })
+
+    // subscribe 已调用
+    expect(vi.mocked(subscribeMarket)).toHaveBeenCalledWith(['IF2608'])
+    // 回填：getSnapshots 收到订阅的合约
+    expect(getSnapshotsMock).toHaveBeenCalledWith(['IF2608'])
+    // 快照写入 store
+    expect(useMarketStore.getState().snapshots.get('IF2608')?.lastPrice).toBe(4000)
+  })
+
+  it('getSnapshots 失败时静默，不抛错', async () => {
+    const getSnapshotsMock = vi.mocked(getSnapshots)
+    getSnapshotsMock.mockRejectedValue(new Error('network'))
+    renderHook(() => useSubscriptionManager())
+
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608']))
+    await act(async () => { vi.advanceTimersByTime(110) })
+
+    expect(getSnapshotsMock).toHaveBeenCalled()
+    // 不抛错（测试通过即证明静默）
   })
 })

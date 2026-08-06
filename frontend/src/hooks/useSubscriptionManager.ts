@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
-import { subscribeMarket, unsubscribeMarket } from '@/services/api'
+import { subscribeMarket, unsubscribeMarket, getSnapshots } from '@/services/api'
 
 /** subscribe 防抖间隔（毫秒） */
 const SUB_DEBOUNCE_MS = 100
@@ -72,6 +72,21 @@ export function useSubscriptionManager() {
       .catch((err) => console.error('[SubscriptionManager] Unsubscribe failed:', err))
   }, [])
 
+  /** 方案 A：订阅成功后立即拉后端缓存快照填表，实时 tick 再覆盖；失败静默 */
+  const prefetchSnapshots = useCallback((ids: string[]) => {
+    if (ids.length === 0) return
+    getSnapshots(ids)
+      .then(({ snapshots }) => {
+        const snaps = Object.values(snapshots)
+        if (snaps.length > 0) {
+          useMarketStore.getState().batchUpdate(snaps)
+        }
+      })
+      .catch(() => {
+        // 静默：缓存回填失败不影响订阅，实时 tick 兜底
+      })
+  }, [])
+
   /** 立即订阅缺失合约（subscribe 防抖 100ms，拖动中也执行；订阅成功后做 LRU 上限控制） */
   const debouncedSubscribe = useCallback(() => {
     if (subTimerRef.current) clearTimeout(subTimerRef.current)
@@ -87,6 +102,7 @@ export function useSubscriptionManager() {
           // success 门控：被后端整批拒绝的合约不入 subscribedRef，留在待订阅状态下次重试
           if (resp?.success) {
             for (const id of toSubscribe) subscribedRef.current.set(id, Date.now())
+            prefetchSnapshots(toSubscribe)  // 方案 A：回填缓存快照
             // 拖动中也执行 LRU 上限控制：订阅后若超 SOFT_LIMIT，立即淘汰最久未见且已滑出的合约
             const lruEvict = computeLruEvictions(should)
             doUnsubscribe(lruEvict)
@@ -94,7 +110,7 @@ export function useSubscriptionManager() {
         })
         .catch((err) => console.error('[SubscriptionManager] Subscribe failed:', err))
     }, SUB_DEBOUNCE_MS)
-  }, [calculateShouldSubscribe, computeLruEvictions, doUnsubscribe])
+  }, [calculateShouldSubscribe, computeLruEvictions, doUnsubscribe, prefetchSnapshots])
 
   /** 是否处于拖动态：300ms 窗口内可见区变化 ≥ 2 次 */
   const isDragging = useCallback((): boolean => {
@@ -122,6 +138,7 @@ export function useSubscriptionManager() {
         .then((resp) => {
           if (resp?.success) {
             for (const id of toSubscribe) subscribedRef.current.set(id, Date.now())
+            prefetchSnapshots(toSubscribe)  // 方案 A：回填缓存快照
           }
         })
         .catch((err) => console.error('[SubscriptionManager] Subscribe failed:', err))
@@ -155,7 +172,7 @@ export function useSubscriptionManager() {
       if (unsubTimerRef.current) clearTimeout(unsubTimerRef.current)
       unsubTimerRef.current = setTimeout(() => runFullDiffRef.current(), nextCheckIn)
     }
-  }, [calculateShouldSubscribe, computeLruEvictions, doUnsubscribe])
+  }, [calculateShouldSubscribe, computeLruEvictions, doUnsubscribe, prefetchSnapshots])
 
   runFullDiffRef.current = runFullDiff
 
