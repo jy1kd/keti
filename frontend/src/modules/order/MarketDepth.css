@@ -131,14 +131,32 @@
   font-family: var(--font-mono);
   font-size: 14px;
   font-variant-numeric: tabular-nums;
+  position: relative;
 }
 
 .depth-row__buy {
   color: var(--color-up);
+  /* 量能条：背景填充宽度 = 该档量 / 十档最大量 */
+  background-image: linear-gradient(90deg, var(--color-up-bg), var(--color-up-bg));
+  background-repeat: no-repeat;
+  background-size: var(--vol-pct, 0%) 100%;
 }
 
 .depth-row__sell {
   color: var(--color-down);
+  /* 量能条：背景填充宽度 = 该档量 / 十档最大量 */
+  background-image: linear-gradient(90deg, var(--color-down-bg), var(--color-down-bg));
+  background-repeat: no-repeat;
+  background-size: var(--vol-pct, 0%) 100%;
+}
+
+/* 卖盘档买入列留红渐变空底（示距离）；买盘档卖出列留绿渐变空底 */
+.depth-row--ask .depth-row__buy {
+  background-image: linear-gradient(90deg, var(--color-up-bg), transparent);
+}
+
+.depth-row--bid .depth-row__sell {
+  background-image: linear-gradient(90deg, transparent, var(--color-down-bg));
 }
 
 .depth-row__price {
@@ -146,10 +164,9 @@
   font-weight: 500;
 }
 
-.depth-row--invalid .depth-row__buy,
-.depth-row--invalid .depth-row__sell,
-.depth-row--invalid .depth-row__price {
-  color: var(--text-muted);
+/* 无量占位 -- 弱化为次级灰 */
+.depth-row__muted {
+  color: var(--text-muted) !important;
 }
 
 /* ── ④ 最新价分隔线 ── */

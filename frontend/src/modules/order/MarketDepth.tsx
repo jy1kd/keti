@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import type { MarketSnapshot } from '@/services/types'
 import './MarketDepth.css'
 
@@ -12,7 +13,7 @@ const CTP_INVALID_PRICE = 1.7976931348623157e+308
 const isValidPrice = (price: number) => price > 0 && price < CTP_INVALID_PRICE
 
 /** 单档解析结果：真实盘口有效 或 tick 合成兜底价 */
-interface ResolvedLevel {
+export interface ResolvedLevel {
   price: number
   volume: number
   /** 真实盘口挂单有效 */
@@ -91,6 +92,12 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
   // 汇总：委买/委卖总量（仅统计有效档位量）
   const totalBidVol = bids.reduce((sum, l) => sum + (l.valid ? l.volume : 0), 0)
   const totalAskVol = asks.reduce((sum, l) => sum + (l.valid ? l.volume : 0), 0)
+  // 量能条基准：十档最大量（含买/卖全部有效档）
+  const maxVol = Math.max(
+    0,
+    ...bids.filter((l) => l.valid).map((l) => l.volume),
+    ...asks.filter((l) => l.valid).map((l) => l.volume),
+  )
 
   // 涨跌：相对昨结，涨红跌绿带箭头
   const preSettle = isValidPrice(snapshot.preSettlementPrice) ? snapshot.preSettlementPrice : null
@@ -113,7 +120,7 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
         changeText={changeText}
         changeClass={changeClass}
       />
-      <DepthLadder asks={asks} bids={bids} tick={tick} />
+      <DepthLadder asks={asks} bids={bids} tick={tick} maxVol={maxVol} />
     </div>
   )
 }
@@ -164,21 +171,23 @@ function DepthLadder({
   asks,
   bids,
   tick,
+  maxVol,
 }: {
   asks: ResolvedLevel[]
   bids: ResolvedLevel[]
   tick: number | null
+  maxVol: number
 }) {
   return (
     <div className="depth-ladder" data-testid="depth-ladder">
       {/* 卖盘：价格高→低，卖五顶、卖一贴最新价线（asks 反转渲染） */}
       {[...asks].reverse().map((level, i) => (
-        <DepthRow key={`ask-${i}`} kind="ask" index={5 - i} level={level} tick={tick} />
+        <DepthRow key={`ask-${i}`} kind="ask" index={5 - i} level={level} tick={tick} maxVol={maxVol} />
       ))}
       <LastPriceDivider />
       {/* 买盘：买一顶、买五底 */}
       {bids.map((level, i) => (
-        <DepthRow key={`bid-${i}`} kind="bid" index={i + 1} level={level} tick={tick} />
+        <DepthRow key={`bid-${i}`} kind="bid" index={i + 1} level={level} tick={tick} maxVol={maxVol} />
       ))}
     </div>
   )
@@ -190,19 +199,36 @@ function LastPriceDivider() {
 }
 
 /**
- * 单档 DepthRow — 三列语义（任务#2 补点击语义；此处仅渲染）：
- * 买入列：买盘档显示买量 / 卖盘档留空（红渐变底）；价格列居中；卖出列：卖盘档显示卖量 / 买盘档留空（绿渐变底）。
+ * 单档 DepthRow — 三列语义（列语义硬绑定，杜绝买卖混淆）：
+ *
+ * | 列 | 内容 | 视觉 | 交互 |
+ * |---|---|---|---|
+ * | 买入列 | 买盘档显示买量 / 卖盘档留空 | 红系 + 量能条（买盘档）/ 红渐变空底（卖盘档） | 点击 → 以本档价挂买单 |
+ * | 价格列 | 该档委托价 | 主色等宽居中 | 点击 → 只填改价框（不直接下单） |
+ * | 卖出列 | 卖盘档显示卖量 / 买盘档留空 | 绿系 + 量能条（卖盘档）/ 绿渐变空底（买盘档） | 点击 → 以本档价挂卖单 |
+ *
+ * `--` 表示无挂单量，弱化为次级灰（`depth-row__muted`）。
+ * 量能条：背景填充宽度 = 该档量 / 十档最大量（`--vol-pct`）。
+ * 完全无效档（无价无兜底）不可点击。
  */
-function DepthRow({
+export function DepthRow({
   kind,
   index,
   level,
   tick,
+  maxVol,
+  onBuyClick,
+  onSellClick,
+  onPriceClick,
 }: {
   kind: 'ask' | 'bid'
   index: number
   level: ResolvedLevel
   tick: number | null
+  maxVol: number
+  onBuyClick?: (price: number) => void
+  onSellClick?: (price: number) => void
+  onPriceClick?: (price: number) => void
 }) {
   const priceText = level.valid
     ? String(level.price)
@@ -213,11 +239,35 @@ function DepthRow({
   const buyText = kind === 'bid' ? volText : '--'
   const sellText = kind === 'ask' ? volText : '--'
 
+  // 量能条：仅量所在列填充；pct = 该档量 / 十档最大量
+  const pct = level.valid && maxVol > 0 ? Math.round((level.volume / maxVol) * 100) : 0
+  const buyPct = kind === 'bid' ? pct : 0
+  const sellPct = kind === 'ask' ? pct : 0
+  const buyStyle = { '--vol-pct': `${buyPct}%` } as CSSProperties
+  const sellStyle = { '--vol-pct': `${sellPct}%` } as CSSProperties
+
+  // 可点价：真实价或合成兜底价；完全无效档不可点
+  const clickable = level.valid || level.fallback !== null
+
   return (
     <div className={`depth-row depth-row--${kind}`} data-testid={`${kind}-${index}`}>
-      <span className="depth-row__buy">{buyText}</span>
-      <span className="depth-row__price">{priceText}</span>
-      <span className="depth-row__sell">{sellText}</span>
+      <span
+        className={`depth-row__buy${buyText === '--' ? ' depth-row__muted' : ''}`}
+        style={buyStyle}
+        onClick={() => clickable && onBuyClick?.(level.price)}
+      >
+        {buyText}
+      </span>
+      <span className="depth-row__price" onClick={() => clickable && onPriceClick?.(level.price)}>
+        {priceText}
+      </span>
+      <span
+        className={`depth-row__sell${sellText === '--' ? ' depth-row__muted' : ''}`}
+        style={sellStyle}
+        onClick={() => clickable && onSellClick?.(level.price)}
+      >
+        {sellText}
+      </span>
     </div>
   )
 }

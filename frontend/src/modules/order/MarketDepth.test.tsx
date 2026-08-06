@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { MarketDepth } from './MarketDepth'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { MarketDepth, DepthRow } from './MarketDepth'
+import type { ResolvedLevel } from './MarketDepth'
 import type { MarketSnapshot } from '@/services/types'
 
 function makeSnapshot(overrides?: Partial<MarketSnapshot>): MarketSnapshot {
@@ -139,5 +140,114 @@ describe('MarketDepth（任务#1：骨架 + 数据接入）', () => {
   it('空快照显示空态', () => {
     render(<MarketDepth snapshot={null} priceTick={0.2} />)
     expect(screen.getByText('--')).toBeInTheDocument()
+  })
+})
+
+describe('DepthRow 三列语义（任务#2）', () => {
+  // 卖一档：真实有效价 4696 / 量 15
+  const level: ResolvedLevel = { price: 4696, volume: 15, valid: true, fallback: null }
+
+  function renderRow(props: Partial<React.ComponentProps<typeof DepthRow>> = {}) {
+    const onBuyClick = vi.fn()
+    const onSellClick = vi.fn()
+    const onPriceClick = vi.fn()
+    const view = render(
+      <DepthRow
+        kind="ask"
+        index={1}
+        level={level}
+        tick={0.2}
+        maxVol={55}
+        onBuyClick={onBuyClick}
+        onSellClick={onSellClick}
+        onPriceClick={onPriceClick}
+        {...props}
+      />,
+    )
+    return { onBuyClick, onSellClick, onPriceClick, ...view }
+  }
+
+  it('买入列点击 → onBuyClick(本档价)，不触发卖单（列语义硬绑定）', () => {
+    const { onBuyClick, onSellClick } = renderRow()
+    fireEvent.click(screen.getByTestId('ask-1').querySelector('.depth-row__buy')!)
+    expect(onBuyClick).toHaveBeenCalledWith(4696)
+    expect(onSellClick).not.toHaveBeenCalled()
+  })
+
+  it('卖出列点击 → onSellClick(本档价)，不触发买单', () => {
+    const { onBuyClick, onSellClick } = renderRow()
+    fireEvent.click(screen.getByTestId('ask-1').querySelector('.depth-row__sell')!)
+    expect(onSellClick).toHaveBeenCalledWith(4696)
+    expect(onBuyClick).not.toHaveBeenCalled()
+  })
+
+  it('价格列点击 → onPriceClick(本档价)，不触发买/卖（只填改价框，不直接下单）', () => {
+    const { onBuyClick, onSellClick, onPriceClick } = renderRow()
+    fireEvent.click(screen.getByTestId('ask-1').querySelector('.depth-row__price')!)
+    expect(onPriceClick).toHaveBeenCalledWith(4696)
+    expect(onBuyClick).not.toHaveBeenCalled()
+    expect(onSellClick).not.toHaveBeenCalled()
+  })
+
+  it('完全无效档（无价无兜底）点击不触发任何回调', () => {
+    const invalid: ResolvedLevel = { price: 0, volume: 0, valid: false, fallback: null }
+    const { onBuyClick, onSellClick, onPriceClick } = renderRow({ level: invalid })
+    fireEvent.click(screen.getByTestId('ask-1').querySelector('.depth-row__buy')!)
+    fireEvent.click(screen.getByTestId('ask-1').querySelector('.depth-row__sell')!)
+    fireEvent.click(screen.getByTestId('ask-1').querySelector('.depth-row__price')!)
+    expect(onBuyClick).not.toHaveBeenCalled()
+    expect(onSellClick).not.toHaveBeenCalled()
+    expect(onPriceClick).not.toHaveBeenCalled()
+  })
+})
+
+describe('量能条与 -- 占位（任务#2）', () => {
+  // 十档最大量 = 50：买 10/20/30/40/50，卖 50/40/30/20/10
+  const depthSnap = makeSnapshot({
+    bidVolume1: 10, bidVolume2: 20, bidVolume3: 30, bidVolume4: 40, bidVolume5: 50,
+    askVolume1: 50, askVolume2: 40, askVolume3: 30, askVolume4: 20, askVolume5: 10,
+  })
+
+  it('买档买入列量能条宽度 = 该档量/十档最大量', () => {
+    render(<MarketDepth snapshot={depthSnap} priceTick={0.2} />)
+    const bid5Buy = screen.getByTestId('bid-5').querySelector('.depth-row__buy') as HTMLElement
+    expect(bid5Buy.style.getPropertyValue('--vol-pct')).toBe('100%')
+    const bid1Buy = screen.getByTestId('bid-1').querySelector('.depth-row__buy') as HTMLElement
+    expect(bid1Buy.style.getPropertyValue('--vol-pct')).toBe('20%')
+  })
+
+  it('卖档卖出列量能条宽度 = 该档量/十档最大量', () => {
+    render(<MarketDepth snapshot={depthSnap} priceTick={0.2} />)
+    const ask1Sell = screen.getByTestId('ask-1').querySelector('.depth-row__sell') as HTMLElement
+    expect(ask1Sell.style.getPropertyValue('--vol-pct')).toBe('100%')
+    const ask2Sell = screen.getByTestId('ask-2').querySelector('.depth-row__sell') as HTMLElement
+    expect(ask2Sell.style.getPropertyValue('--vol-pct')).toBe('80%')
+  })
+
+  it('有效档对侧空列（卖档买入列 / 买档卖出列）量能条为 0', () => {
+    render(<MarketDepth snapshot={depthSnap} priceTick={0.2} />)
+    const ask1Buy = screen.getByTestId('ask-1').querySelector('.depth-row__buy') as HTMLElement
+    expect(ask1Buy.style.getPropertyValue('--vol-pct')).toBe('0%')
+  })
+
+  it('无量占位 -- 弱化为次级灰（depth-row__muted）', () => {
+    // 合成档：无真实挂单价 → 所有量显示 --，应 muted
+    const snap = makeSnapshot({
+      bidPrice1: 0, bidVolume1: 0,
+      bidPrice2: 0, bidVolume2: 0,
+      bidPrice3: 0, bidVolume3: 0,
+      bidPrice4: 0, bidVolume4: 0,
+      bidPrice5: 0, bidVolume5: 0,
+      askPrice1: 0, askVolume1: 0,
+      askPrice2: 0, askVolume2: 0,
+      askPrice3: 0, askVolume3: 0,
+      askPrice4: 0, askVolume4: 0,
+      askPrice5: 0, askVolume5: 0,
+    })
+    render(<MarketDepth snapshot={snap} priceTick={0.2} />)
+    const bid1Buy = screen.getByTestId('bid-1').querySelector('.depth-row__buy')
+    expect(bid1Buy!.className).toContain('depth-row__muted')
+    const ask1Sell = screen.getByTestId('ask-1').querySelector('.depth-row__sell')
+    expect(ask1Sell!.className).toContain('depth-row__muted')
   })
 })
