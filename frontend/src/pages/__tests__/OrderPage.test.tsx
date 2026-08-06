@@ -144,4 +144,46 @@ describe('OrderPage', () => {
     const bar = container.querySelector('.order-page__title-bar');
     expect(bar).toHaveAttribute('data-drag-handle');
   });
+
+  // ── 浮动窗口模式（报单标签转弹窗，与行情面板 OrderPopup 样式统一） ──
+
+  it('浮动模式渲染五档盘口 + 报单表单（复用 OrderPopup 双栏布局）', () => {
+    useMarketStore.setState({
+      snapshots: new Map([
+        ['IF2608', {
+          instrumentID: 'IF2608',
+          lastPrice: 4585.6,
+          bidPrice1: 4585.2,
+          askPrice1: 4585.6,
+          openPrice: 4573.6,
+          highestPrice: 4590.0,
+          lowestPrice: 4570.0,
+          preSettlementPrice: 4573.6,
+          upperLimitPrice: 5029.0,
+          lowerLimitPrice: 4118.4,
+          volume: 20892,
+          openInterest: 45105,
+        } as MarketSnapshot],
+      ]),
+    });
+    const { container } = render(<OrderPage instrumentID="IF2608" floating />);
+    // 双栏容器 + 左列五档盘口面板
+    expect(container.querySelector('.order-popup__body')).toBeDefined();
+    expect(container.querySelector('.order-quote')).toBeDefined();
+    // 不渲染普通标签页的行情卡片
+    expect(container.querySelector('.order-page__quote-card')).toBeNull();
+    // 右列报单表单仍在
+    expect(screen.getByText(/买入 IF2608/)).toBeDefined();
+  });
+
+  it('浮动模式无合约时显示选择提示', () => {
+    const { container } = render(<OrderPage floating />);
+    expect(screen.getByText(/请在行情表格中选择合约/)).toBeDefined();
+    expect(container.querySelector('.order-popup__body')).toBeNull();
+  });
+
+  it('普通模式（非浮动）不渲染五档盘口面板', () => {
+    const { container } = render(<OrderPage instrumentID="IF2608" />);
+    expect(container.querySelector('.order-quote')).toBeNull();
+  });
 });

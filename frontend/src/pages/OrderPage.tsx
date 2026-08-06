@@ -7,14 +7,18 @@
 
 import { useEffect, useMemo } from 'react';
 import { OrderForm } from '@/modules/order/OrderForm';
+import { OrderQuotePanel } from '@/modules/order/OrderQuotePanel';
 import { useOrderStore } from '@/modules/order/store';
 import { useMarketStore } from '@/modules/market/store';
 import { useContractsStore } from '@/stores/contracts';
-import { isElectron } from '@/services/electron';
 import './OrderPage.css';
+// 浮动模式双栏布局复用 OrderPopup 的样式类（.order-popup__body 等），保证两处弹窗样式统一
+import '@/modules/order/OrderPopup.css';
 
 interface OrderPageProps {
   instrumentID?: string;
+  /** 浮动窗口模式（报单标签拖出转为弹窗）：左五档盘口 + 右报单表单，与行情面板 OrderPopup 一致 */
+  floating?: boolean;
 }
 
 /** 千分位格式化（纯数字，无小数点） */
@@ -28,7 +32,7 @@ function formatPrice(n: number, tick: number): string {
   return n.toFixed(decimals);
 }
 
-export function OrderPage({ instrumentID }: OrderPageProps) {
+export function OrderPage({ instrumentID, floating = false }: OrderPageProps) {
   const setOrderForm = useOrderStore((s) => s.setOrderForm);
   const snapshots = useMarketStore((s) => s.snapshots);
   const contracts = useContractsStore((s) => s.contracts);
@@ -40,7 +44,7 @@ export function OrderPage({ instrumentID }: OrderPageProps) {
     }
   }, [instrumentID, setOrderForm]);
 
-  const snapshot = instrumentID ? snapshots.get(instrumentID) : null;
+  const snapshot = instrumentID ? (snapshots.get(instrumentID) ?? null) : null;
   const contract = contracts.find((c) => c.instrumentID === instrumentID);
   const priceTick = contract?.priceTick ?? 0.2;
 
@@ -60,6 +64,32 @@ export function OrderPage({ instrumentID }: OrderPageProps) {
       changeClass: val > 0 ? 'up' : val < 0 ? 'down' : 'flat',
     };
   }, [snapshot, priceTick]);
+
+  // ── 浮动窗口模式（报单标签拖出转为弹窗）──
+  // 与行情面板 OrderPopup 一致：左列五档盘口（OrderQuotePanel）+ 右列报单表单。
+  if (floating) {
+    if (!instrumentID) {
+      return (
+        <div className="order-floating">
+          <div className="order-page__no-contract">
+            请在行情表格中选择合约后打开报单标签
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="order-floating">
+        <div className="order-popup__body">
+          <div className="order-popup__quote">
+            <OrderQuotePanel instrumentID={instrumentID} snapshot={snapshot} priceTick={priceTick} />
+          </div>
+          <div className="order-popup__form">
+            <OrderForm priceTick={priceTick} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="order-page">
@@ -172,13 +202,6 @@ export function OrderPage({ instrumentID }: OrderPageProps) {
               </span>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* ── Electron 提示 ── */}
-      {isElectron() && (
-        <div className="order-page__electron-info">
-          独立窗口模式
         </div>
       )}
 
