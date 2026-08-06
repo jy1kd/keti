@@ -16,7 +16,7 @@
 - [x] **P1-3 `QuickTradeBar`（内嵌改价+买卖按钮）**
 - [x] **P1-4 `TradeParams` 压缩参数区**
 - [x] **P1-5 点价确认闭环**
-- [ ] P1-6 `OrderPopup` 布局重排
+- [x] **P1-6 `OrderPopup` 布局重排**
 - [ ] P1-7 TDD 测试（含全量回归）
 
 ### P1-1 实现记录
@@ -157,3 +157,26 @@
 
 - tsc：`OrderIntent` 的 `combOffsetFlag`/`timeCondition` 用 `OrderRequestForm` 联合类型，避免 string 不兼容。
 - act 警告：确认提交是 async（await submitOrder 后 setIntent(null)），测试用 `await act(async () => {})` 刷新微任务。
+
+### P1-6 实现记录
+
+**测试用例（`OrderPopup.test.tsx` 更新 3 个 + 回归，17 个，全绿）**
+
+1. 打开后渲染标题、参数区与三列盘口（`tp-volume`/`开平`/`ask-1`/`bid-1`/`qtb-buy`）
+2. 点击盘口卖一档买入列 → 弹确认框（买入 · 卖一价 4696.0），确认前订单表单不被改写
+3. 缩到小于最小宽度时钳制到 **540**（原 680）
+4. 既有用例回归：标题/Esc/拖拽/置顶/放大为标签页/8 向缩放手柄/重开居中全部保持
+
+**改动**
+
+- `OrderPopup.tsx`：`MIN_W` 680 → 540；body 由 `OrderQuotePanel | OrderForm` 双栏改为 `TradeParams | MarketDepth`（`order-popup__params` + `order-popup__depth`）；移除 `OrderQuotePanel`/`OrderForm` 导入；标题栏拖拽/放大/关闭、ESC、置顶、锁定订阅、合约同步全部保留
+- `OrderPopup.css`：默认宽 740 → 540；body grid `minmax(200px,220px) minmax(0,1fr)`；新增 `.order-popup__params`/`.order-popup__depth`；保留 `.order-popup__quote`/`.order-popup__form` 类名，并加 `.order-floating .order-popup__body` 覆盖回 `5fr|7fr`，保证 OrderPage 浮动模式视觉不回退
+
+**Commit**
+
+- `feat(task-order-popup-p1): OrderPopup 布局重排（540px 双栏：参数区 200px | 三列十档盘口）`
+
+**问题与解决方案**
+
+- 点击 `ask-1` 行本身不触发点击：DepthRow 的 onClick 在子单元格（`.depth-row__buy`/`__sell`/`__price`）上，行 div 只是定位容器 → 测试改点 `.querySelector('.depth-row__buy')`（与 MarketDepth.test.tsx 一致）。
+- OrderPage 浮动模式回归：body grid 改为 200px|1fr 后浮动模式五档盘口会被压窄 → 用 `.order-floating .order-popup__body` 作用域覆盖回 5fr|7fr，两处样式仍统一在 OrderPopup.css。

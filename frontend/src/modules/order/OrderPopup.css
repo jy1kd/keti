@@ -3,7 +3,7 @@
 .order-popup {
   position: fixed;
   z-index: 1500;
-  width: 740px;
+  width: 540px;
   max-width: calc(100vw - 24px);
   max-height: calc(100vh - 24px);
   display: flex;
@@ -82,17 +82,39 @@
   color: var(--accent);
 }
 
-/* ── 双栏主体 ── */
+/* ── 双栏主体 ──
+ * 弹窗默认：左压缩参数区 200px | 右三列十档盘口（占满剩余宽度）。
+ * `OrderPage` 浮动模式复用同一组 `.order-popup__*` 类名，
+ * 通过 `.order-floating` 作用域覆盖回 五档盘口 5fr | 表单 7fr，保证浮动模式视觉不回退。
+ */
 
 .order-popup__body {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(280px, 5fr) minmax(360px, 7fr);
+  grid-template-columns: minmax(200px, 220px) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   gap: 12px;
   padding: 12px;
   overflow: hidden;
+}
+
+.order-popup__params,
+.order-popup__depth {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+/* 参数区占满左列、盘口占满右列 */
+.order-popup__params .trade-params {
+  height: 100%;
+}
+
+/* OrderPage 浮动模式：左五档盘口 + 右报单表单（保持原列宽比例） */
+.order-floating .order-popup__body {
+  grid-template-columns: minmax(280px, 5fr) minmax(360px, 7fr);
 }
 
 .order-popup__quote {

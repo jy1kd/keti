@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent, act, within } from '@testing-library/react'
 import { OrderPopup } from './OrderPopup'
 import { useOrderPopupStore } from './popupStore'
 import { useOrderStore } from './store'
@@ -83,14 +83,18 @@ describe('OrderPopup', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('打开后渲染标题、表单与盘口', () => {
+  it('打开后渲染标题、参数区与三列盘口', () => {
     useOrderPopupStore.setState({ instrumentID: 'IF2608' })
     useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) })
     render(<OrderPopup />)
     expect(screen.getByText('📝 报单-IF2608')).toBeInTheDocument()
-    expect(screen.getByText(/买入 IF2608/)).toBeInTheDocument()
+    // 左列压缩参数区（TradeParams）
+    expect(screen.getByTestId('tp-volume')).toBeInTheDocument()
+    expect(screen.getByLabelText('开平')).toBeInTheDocument()
+    // 右列三列十档盘口（MarketDepth）+ 内嵌快捷买卖栏
     expect(screen.getByTestId('ask-1')).toBeInTheDocument()
     expect(screen.getByTestId('bid-1')).toBeInTheDocument()
+    expect(screen.getByTestId('qtb-buy')).toBeInTheDocument()
   })
 
   it('打开后表单合约同步为弹窗合约', () => {
@@ -150,14 +154,18 @@ describe('OrderPopup', () => {
     expect(after).toBeGreaterThan(before)
   })
 
-  it('点击盘口卖一档回填买入价', () => {
+  it('点击盘口卖一档弹出确认框（买入 · 卖一价 4696），确认前不直接改单', () => {
     useOrderPopupStore.setState({ instrumentID: 'IF2608' })
     useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) })
     render(<OrderPopup />)
-    fireEvent.click(screen.getByTestId('ask-1'))
-    const form = useOrderStore.getState().orderForm
-    expect(form.direction).toBe('buy')
-    expect(form.limitPrice).toBe(4696)
+    fireEvent.click(screen.getByTestId('ask-1').querySelector('.depth-row__buy')!)
+    // 每次点价必弹确认框（强制确认流）
+    const dialog = screen.getByTestId('confirm-dialog')
+    expect(dialog).toBeInTheDocument()
+    expect(within(dialog).getByText('买入')).toBeInTheDocument()
+    expect(within(dialog).getByText('4696.0')).toBeInTheDocument()
+    // 确认前订单表单未被改写
+    expect(useOrderStore.getState().orderForm.limitPrice).toBe(0)
   })
 })
 
@@ -239,14 +247,14 @@ describe('缩放调整大小', () => {
     expect(dialog.style.left).toBe('142px')
   })
 
-  it('缩到小于最小宽度时钳制到 680', () => {
+  it('缩到小于最小宽度时钳制到 540', () => {
     useOrderPopupStore.setState({ instrumentID: 'IF2608' })
     render(<OrderPopup />)
     fireEvent(screen.getByLabelText('调整弹窗大小 e'), pointerEvent('pointerdown', { clientX: 882, clientY: 300, button: 0, bubbles: true }))
     fireEvent(window, pointerEvent('pointermove', { clientX: 500, clientY: 300 }))
     fireEvent(window, pointerEvent('pointerup', { clientX: 500, clientY: 300 }))
     const dialog = screen.getByRole('dialog')
-    expect(dialog.style.width).toBe('680px')
+    expect(dialog.style.width).toBe('540px')
   })
 
   it('重开回到默认尺寸与居中位置', async () => {

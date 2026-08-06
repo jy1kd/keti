@@ -10,18 +10,18 @@ import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import { getRect, flipToRect, getTabPanelRect } from '@/utils/flip'
 import { usePopupResize, PopupResizeHandles } from '@/hooks/usePopupResize'
 import { toast } from '@/components/Toast'
-import { OrderQuotePanel } from './OrderQuotePanel'
-import { OrderForm } from './OrderForm'
+import { TradeParams } from './TradeParams'
+import { MarketDepth } from './MarketDepth'
 import './OrderPopup.css'
 
-const MIN_W = 680
+const MIN_W = 540
 const MIN_H = 400
 
 /**
  * OrderPopup — 悬浮报单弹窗（非模态）
  *
  * 浮于行情标签页之上，行情保持可见、可交互。
- * 标题栏可拖拽移动；× / ESC 关闭；双栏：左行情面板，右报单表单。
+ * 标题栏可拖拽移动；× / ESC 关闭；双栏：左压缩参数区（200px），右三列十档盘口。
  */
 export function OrderPopup() {
   const instrumentID = useOrderPopupStore((s) => s.instrumentID)
@@ -171,11 +171,11 @@ export function OrderPopup() {
         </button>
       </div>
       <div className="order-popup__body">
-        <div className="order-popup__quote">
-          <OrderQuotePanel instrumentID={instrumentID} snapshot={snapshot} priceTick={priceTick} />
+        <div className="order-popup__params">
+          <TradeParams />
         </div>
-        <div className="order-popup__form">
-          <OrderForm priceTick={priceTick} />
+        <div className="order-popup__depth">
+          <MarketDepth snapshot={snapshot} priceTick={priceTick} />
         </div>
       </div>
       <div className="order-popup__handles">
