@@ -10,6 +10,9 @@ import { getRect, flipToRect, getTabPanelRect } from '@/utils/flip'
 import { usePopupResize, PopupResizeHandles } from '@/hooks/usePopupResize'
 import { toast } from '@/components/Toast'
 import { OrderTradeBody } from './OrderTradeBody'
+import { AccountBar } from './AccountBar'
+import { QuoteStatsBar } from './QuoteStatsBar'
+import { FooterBar } from './FooterBar'
 import './OrderPopup.css'
 
 const MIN_W = 540
@@ -24,6 +27,8 @@ const MIN_H = 400
 export function OrderPopup() {
   const instrumentID = useOrderPopupStore((s) => s.instrumentID)
   const closePopup = useOrderPopupStore((s) => s.closePopup)
+  const expanded = useOrderPopupStore((s) => s.expanded)
+  const setExpanded = useOrderPopupStore((s) => s.setExpanded)
   const setOrderForm = useOrderStore((s) => s.setOrderForm)
   const addLockedContract = useMarketStore((s) => s.addLockedContract)
   const removeLockedContract = useMarketStore((s) => s.removeLockedContract)
@@ -152,18 +157,37 @@ export function OrderPopup() {
             ⤢
           </button>
         </span>
-        <button
-          type="button"
-          className="order-popup__close"
-          onClick={closePopup}
-          aria-label="关闭报单弹窗"
-          title="关闭 (Esc)"
-        >
-          ×
-        </button>
+        <span className="order-popup__header-right">
+          {/* 收起为精简态：折叠 ⑥ 行情统计栏（等价 FooterBar ∨） */}
+          <button
+            type="button"
+            className="order-popup__collapse"
+            onClick={() => setExpanded(false)}
+            disabled={!expanded}
+            aria-label="收起为精简态"
+            title="收起（—）"
+          >
+            —
+          </button>
+          <button
+            type="button"
+            className="order-popup__close"
+            onClick={closePopup}
+            aria-label="关闭报单弹窗"
+            title="关闭 (Esc)"
+          >
+            ×
+          </button>
+        </span>
       </div>
+      {/* P2 ② 账户/持仓/持盈栏（精简态也显示） */}
+      <AccountBar instrumentID={instrumentID} />
       {/* P1 报单主体：压缩参数区 + 三列十档盘口（与 OrderPage 标签页共用，保证样式统一） */}
       <OrderTradeBody instrumentID={instrumentID} />
+      {/* P2 ⑥ 行情统计栏：仅完整态渲染 */}
+      {expanded && <QuoteStatsBar instrumentID={instrumentID} />}
+      {/* P2 ⑦ 底部工具条：∧/∨ 切换精简/完整态 */}
+      <FooterBar />
       <div className="order-popup__handles">
         <PopupResizeHandles onPointerDown={handleResizePointerDown} />
       </div>
