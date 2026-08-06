@@ -4,14 +4,12 @@ import { flushSync } from 'react-dom'
 import { useOrderPopupStore } from './popupStore'
 import { useOrderStore } from './store'
 import { useMarketStore } from '@/modules/market/store'
-import { useContractsStore } from '@/stores/contracts'
 import { useTabStore } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import { getRect, flipToRect, getTabPanelRect } from '@/utils/flip'
 import { usePopupResize, PopupResizeHandles } from '@/hooks/usePopupResize'
 import { toast } from '@/components/Toast'
-import { TradeParams } from './TradeParams'
-import { MarketDepth } from './MarketDepth'
+import { OrderTradeBody } from './OrderTradeBody'
 import './OrderPopup.css'
 
 const MIN_W = 540
@@ -27,8 +25,6 @@ export function OrderPopup() {
   const instrumentID = useOrderPopupStore((s) => s.instrumentID)
   const closePopup = useOrderPopupStore((s) => s.closePopup)
   const setOrderForm = useOrderStore((s) => s.setOrderForm)
-  const snapshots = useMarketStore((s) => s.snapshots)
-  const contracts = useContractsStore((s) => s.contracts)
   const addLockedContract = useMarketStore((s) => s.addLockedContract)
   const removeLockedContract = useMarketStore((s) => s.removeLockedContract)
   // 统一 z-index：与其他弹窗/浮动窗口共享置顶计数
@@ -53,10 +49,6 @@ export function OrderPopup() {
     if (!instrumentID) return
     useFloatingWindowStore.getState().bringToFront('order')
   }, [instrumentID])
-
-  const snapshot = instrumentID ? snapshots.get(instrumentID) ?? null : null
-  const contract = instrumentID ? contracts.find((c) => c.instrumentID === instrumentID) : null
-  const priceTick = contract?.priceTick ?? 0.2
 
   // ── 自由缩放 + 位置（共享 hook：物化居中态 + 8 方向手势，重开回到默认尺寸）──
   const popupRef = useRef<HTMLDivElement | null>(null)
@@ -170,14 +162,8 @@ export function OrderPopup() {
           ×
         </button>
       </div>
-      <div className="order-popup__body">
-        <div className="order-popup__params">
-          <TradeParams />
-        </div>
-        <div className="order-popup__depth">
-          <MarketDepth snapshot={snapshot} priceTick={priceTick} />
-        </div>
-      </div>
+      {/* P1 报单主体：压缩参数区 + 三列十档盘口（与 OrderPage 标签页共用，保证样式统一） */}
+      <OrderTradeBody instrumentID={instrumentID} />
       <div className="order-popup__handles">
         <PopupResizeHandles onPointerDown={handleResizePointerDown} />
       </div>
