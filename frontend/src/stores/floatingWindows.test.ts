@@ -84,6 +84,22 @@ describe('useFloatingWindowStore', () => {
     expect(after).toBe(before + 1)
   })
 
+  it('bringToFront 将弹窗 z 升到全局最高（高于现有浮动窗口）', () => {
+    useFloatingWindowStore.getState().detach('tab-settings', { x: 0, y: 0, w: 400, h: 300 })
+    const windowZ = useFloatingWindowStore.getState().windows['tab-settings'].z
+    const z = useFloatingWindowStore.getState().bringToFront('order')
+    expect(z).toBeGreaterThan(windowZ)
+    expect(useFloatingWindowStore.getState().popupZ['order']).toBe(z)
+  })
+
+  it('bringToFront 后续调用 z 单调递增', () => {
+    const z1 = useFloatingWindowStore.getState().bringToFront('order')
+    const z2 = useFloatingWindowStore.getState().bringToFront('query')
+    expect(z2).toBeGreaterThan(z1)
+    expect(useFloatingWindowStore.getState().popupZ['order']).toBe(z1)
+    expect(useFloatingWindowStore.getState().popupZ['query']).toBe(z2)
+  })
+
   it('move/resize/focus 不存在的标签：no-op 不抛错且 windows 不变', () => {
     expect(() => {
       useFloatingWindowStore.getState().move('tab-nope', { x: 10, y: 20 })

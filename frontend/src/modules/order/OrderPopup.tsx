@@ -6,6 +6,7 @@ import { useOrderStore } from './store'
 import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
 import { useTabStore } from '@/stores/tabs'
+import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import { getRect, flipToRect, getTabPanelRect } from '@/utils/flip'
 import { usePopupResize, PopupResizeHandles } from '@/hooks/usePopupResize'
 import { toast } from '@/components/Toast'
@@ -30,6 +31,8 @@ export function OrderPopup() {
   const contracts = useContractsStore((s) => s.contracts)
   const addLockedContract = useMarketStore((s) => s.addLockedContract)
   const removeLockedContract = useMarketStore((s) => s.removeLockedContract)
+  // 统一 z-index：与其他弹窗/浮动窗口共享置顶计数
+  const popupZ = useFloatingWindowStore((s) => s.popupZ['order'])
 
   // 合约切换 → 同步到报单表单（与 OrderPage 模式一致）
   useEffect(() => {
@@ -44,6 +47,12 @@ export function OrderPopup() {
     addLockedContract(instrumentID)
     return () => removeLockedContract(instrumentID)
   }, [instrumentID, addLockedContract, removeLockedContract])
+
+  // 打开弹窗即置顶（统一 z-index 管理）
+  useEffect(() => {
+    if (!instrumentID) return
+    useFloatingWindowStore.getState().bringToFront('order')
+  }, [instrumentID])
 
   const snapshot = instrumentID ? snapshots.get(instrumentID) ?? null : null
   const contract = instrumentID ? contracts.find((c) => c.instrumentID === instrumentID) : null
@@ -122,6 +131,7 @@ export function OrderPopup() {
   if (!instrumentID) return null
 
   const popupStyle: CSSProperties = {
+    zIndex: popupZ ?? 1500,
     ...(position
       ? { left: position.x, top: position.y }
       : { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }),
@@ -135,6 +145,7 @@ export function OrderPopup() {
       role="dialog"
       aria-label={`报单 ${instrumentID}`}
       style={popupStyle}
+      onPointerDownCapture={() => useFloatingWindowStore.getState().bringToFront('order')}
     >
       <div className="order-popup__header" onMouseDown={handleHeaderMouseDown}>
         <span className="order-popup__header-left">

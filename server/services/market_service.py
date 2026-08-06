@@ -57,9 +57,20 @@ class MarketService:
     def instrument_count(self) -> int:
         return len(self._instruments)
 
+    def _is_expired(self, inst: dict) -> bool:
+        """过期判定：expireDate < 今天（YYYYMMDD）视为过期；缺失/当天/未来保留。
+
+        CTP ReqQryInstrument 会返回历史/已过期合约，若不过滤，刷新后过期合约仍残留。
+        """
+        raw = str(inst.get("expireDate", "") or "").replace("-", "")
+        if not raw:
+            return False
+        today = datetime.now().strftime("%Y%m%d")
+        return raw < today
+
     def load_instruments(self, instruments: List[dict]) -> None:
-        """Replace the instrument cache with a new list."""
-        self._instruments = list(instruments)
+        """Replace the instrument cache with a new list (过滤过期合约)."""
+        self._instruments = [i for i in instruments if not self._is_expired(i)]
 
     def load_instruments_from_file(self, file_path: str) -> int:
         """Load instrument cache from a JSON file.
@@ -82,7 +93,7 @@ class MarketService:
             return 0
 
         self.load_instruments(data)
-        return len(data)
+        return len(self._instruments)
 
     def get_instruments(self, keyword: str = "") -> List[dict]:
         """Query instruments, optionally filtered by keyword (fuzzy search).
@@ -389,9 +400,10 @@ class MarketService:
                 self._on_instruments_callback(count)
 
     def _save_instruments_to_file(self, file_path: str, instruments: List[dict]) -> None:
-        """Save instrument list to a JSON file."""
+        """Save instrument list to a JSON file (过滤过期合约，保证落盘数据干净)."""
         import json
         try:
+            instruments = [i for i in instruments if not self._is_expired(i)]
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(instruments, f, ensure_ascii=False, indent=2)
             logger.info("Saved %d instruments to %s", len(instruments), file_path)

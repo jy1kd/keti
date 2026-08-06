@@ -6,6 +6,7 @@ import { useOrderStore } from './store'
 import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
 import { useTabStore } from '@/stores/tabs'
+import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import type { MarketSnapshot } from '@/services/types'
 
 // Mock toast，使上限路径可断言 toast.error
@@ -126,6 +127,27 @@ describe('OrderPopup', () => {
     render(<OrderPopup />)
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(useOrderPopupStore.getState().instrumentID).toBeNull()
+  })
+
+  it('打开弹窗即置顶（bringToFront order 写入统一 z）', () => {
+    useFloatingWindowStore.setState({ popupZ: {}, windows: {} })
+    useOrderPopupStore.setState({ instrumentID: 'IF2608' })
+    render(<OrderPopup />)
+    expect(useFloatingWindowStore.getState().popupZ['order']).toBeGreaterThanOrEqual(1401)
+  })
+
+  it('点击弹窗内容触发置顶（捕获阶段，子元素 stopPropagation 也生效）', () => {
+    useFloatingWindowStore.setState({ popupZ: {}, windows: {} })
+    useOrderPopupStore.setState({ instrumentID: 'IF2608' })
+    render(<OrderPopup />)
+    const before = useFloatingWindowStore.getState().popupZ['order']!
+    const dialog = screen.getByRole('dialog')
+    const child = document.createElement('div')
+    child.addEventListener('pointerdown', (e) => e.stopPropagation())
+    dialog.appendChild(child)
+    fireEvent(child, new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 10, clientY: 10 }))
+    const after = useFloatingWindowStore.getState().popupZ['order']!
+    expect(after).toBeGreaterThan(before)
   })
 
   it('点击盘口卖一档回填买入价', () => {

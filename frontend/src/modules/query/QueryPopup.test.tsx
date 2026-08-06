@@ -3,6 +3,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import { QueryPopup } from './QueryPopup'
 import { useQueryPopupStore } from './popupStore'
 import { useTabStore } from '@/stores/tabs'
+import { useFloatingWindowStore } from '@/stores/floatingWindows'
 
 // Mock FLIP 工具：jsdom 无真实布局，同步触发 onDone
 vi.mock('@/utils/flip', () => ({
@@ -57,6 +58,27 @@ describe('QueryPopup', () => {
     render(<QueryPopup />)
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(useQueryPopupStore.getState().isOpen).toBe(false)
+  })
+
+  it('打开弹窗即置顶（bringToFront query 写入统一 z）', () => {
+    useFloatingWindowStore.setState({ popupZ: {}, windows: {} })
+    useQueryPopupStore.setState({ isOpen: true })
+    render(<QueryPopup />)
+    expect(useFloatingWindowStore.getState().popupZ['query']).toBeGreaterThanOrEqual(1401)
+  })
+
+  it('点击弹窗内容触发置顶（捕获阶段，子元素 stopPropagation 也生效）', () => {
+    useFloatingWindowStore.setState({ popupZ: {}, windows: {} })
+    useQueryPopupStore.setState({ isOpen: true })
+    render(<QueryPopup />)
+    const before = useFloatingWindowStore.getState().popupZ['query']!
+    const dialog = screen.getByRole('dialog')
+    const child = document.createElement('div')
+    child.addEventListener('pointerdown', (e) => e.stopPropagation())
+    dialog.appendChild(child)
+    fireEvent(child, new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 10, clientY: 10 }))
+    const after = useFloatingWindowStore.getState().popupZ['query']!
+    expect(after).toBeGreaterThan(before)
   })
 })
 
