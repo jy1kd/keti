@@ -1,1216 +1,2898 @@
 {
-  "domains": [
+  "version": "1.0.0",
+  "project": {
+    "name": "keti",
+    "languages": [
+      "typescript",
+      "python",
+      "javascript",
+      "css",
+      "html",
+      "shell",
+      "markdown"
+    ],
+    "frameworks": [
+      "React",
+      "Vite",
+      "Zustand",
+      "Electron",
+      "FastAPI",
+      "ctp-python",
+      "ECharts",
+      "VTable",
+      "Pytest",
+      "Vitest"
+    ],
+    "description": "上期所 SimNow 模拟交易终端 — 基于 CTP 协议的期货期权模拟交易终端，支持浏览器 Web 与 Electron 桌面两种运行模式，对接 SimNow 7×24 测试环境，实现行情接入、交易接入、手动报单等功能（React 18 + TypeScript + Vite 前端，Python FastAPI + ctp-python 后端）",
+    "analyzedAt": "2026-08-05T14:44:05.208Z",
+    "gitCommitHash": "ad6b86b107be392fdec4c6ce2985861c909cb8f8"
+  },
+  "nodes": [
     {
-      "id": "market-data",
-      "name": "行情数据",
-      "nameEn": "Market Data",
-      "description": "Real-time market data subscription, display, K-line charting, and 5-level depth quote. Data flows from CTP OnRtnDepthMarketData through the backend to the frontend via WebSocket push.",
-      "entities": [
-        {
-          "id": "market-snapshot",
-          "name": "行情快照",
-          "nameEn": "Market Snapshot",
-          "description": "Single instrument's real-time market data including last price, bid/ask 5-level prices, volume, open interest, OHLC, and limit prices. Mapped from CTP CThostFtdcDepthMarketDataField.",
-          "fields": [
-            "instrumentID",
-            "lastPrice",
-            "bidPrice1-5",
-            "askPrice1-5",
-            "bidVolume1-5",
-            "askVolume1-5",
-            "volume",
-            "openInterest",
-            "openPrice",
-            "highestPrice",
-            "lowestPrice",
-            "closePrice",
-            "upperLimitPrice",
-            "lowerLimitPrice",
-            "updateTime",
-            "actionDay"
-          ],
-          "source": "CTP OnRtnDepthMarketData callback"
-        },
-        {
-          "id": "kline-bar",
-          "name": "K线柱",
-          "nameEn": "K-Line Bar",
-          "description": "OHLCV candlestick bar aggregated from real-time ticks. Supports 1m/5m/15m/30m/1h periods. Volume is computed as per-tick delta (CTP volume is cumulative).",
-          "fields": [
-            "timestamp",
-            "open",
-            "high",
-            "low",
-            "close",
-            "volume",
-            "openInterest"
-          ],
-          "source": "KLineService aggregation from ticks"
-        },
-        {
-          "id": "depth-quote",
-          "name": "五档行情",
-          "nameEn": "5-Level Depth Quote",
-          "description": "5-level bid/ask order book extracted from the latest snapshot. Filters CTP invalid prices (DBL_MAX).",
-          "fields": [
-            "instrumentID",
-            "bids[].price",
-            "bids[].volume",
-            "asks[].price",
-            "asks[].volume"
-          ],
-          "source": "Derived from Market Snapshot"
-        },
-        {
-          "id": "contract-info",
-          "name": "合约信息",
-          "nameEn": "Contract/Instrument Info",
-          "description": "Instrument metadata including exchange, product, volume multiplier, price tick, expiry date, and option-specific fields. Loaded from CTP ReqQryInstrument or local instruments.json.",
-          "fields": [
-            "instrumentID",
-            "instrumentName",
-            "exchangeID",
-            "productID",
-            "productClass",
-            "volumeMultiple",
-            "priceTick",
-            "expireDate",
-            "isTrading",
-            "optionsType",
-            "strikePrice",
-            "underlyingInstrID"
-          ],
-          "source": "CTP ReqQryInstrument or instruments.json"
-        },
-        {
-          "id": "subscription",
-          "name": "行情订阅",
-          "nameEn": "Market Subscription",
-          "description": "Tracks which instruments are currently subscribed for real-time market data. Max 500 contracts. Managed by MarketService.",
-          "fields": [
-            "instruments (set)",
-            "count"
-          ],
-          "source": "MarketService in-memory state"
-        }
+      "id": "domain:connection-session",
+      "type": "domain",
+      "name": "连接与会话管理",
+      "summary": "负责 SimNow 模拟交易环境的登录/登出、CTP 行情与交易双通道的连接生命周期管理，以及断线自动重连与连接状态展示，是终端一切业务的基础会话层。",
+      "tags": [
+        "登录",
+        "CTP连接",
+        "重连",
+        "会话"
       ],
-      "relationships": [
-        {
-          "from": "market-snapshot",
-          "to": "depth-quote",
-          "type": "derives",
-          "description": "5-level depth extracted from snapshot bid/ask fields"
-        },
-        {
-          "from": "market-snapshot",
-          "to": "kline-bar",
-          "type": "aggregates",
-          "description": "Ticks aggregated into OHLCV bars by KLineService"
-        },
-        {
-          "from": "contract-info",
-          "to": "subscription",
-          "type": "enables",
-          "description": "Contract metadata needed before subscribing"
-        },
-        {
-          "from": "subscription",
-          "to": "market-snapshot",
-          "type": "produces",
-          "description": "Subscribed instruments receive real-time snapshots via CTP"
-        }
-      ]
-    },
-    {
-      "id": "order-management",
-      "name": "交易报单",
-      "nameEn": "Order Management",
-      "description": "Order submission, cancellation, bulk cancel, reverse position, and lock position. Orders flow through OrderManager which wraps TraderApi and tracks in-memory state updated by CTP callbacks.",
-      "entities": [
-        {
-          "id": "order",
-          "name": "报单",
-          "nameEn": "Order",
-          "description": "A trading order submitted to CTP. Contains instrument, direction, offset flag, price, volume, time/volume conditions. Tracked in-memory by OrderManager with state updates from OnRtnOrder/OnRtnTrade callbacks.",
-          "fields": [
-            "orderRef",
-            "orderSysID",
-            "instrumentID",
-            "exchangeID",
-            "direction",
-            "combOffsetFlag",
-            "orderPriceType",
-            "limitPrice",
-            "volumeTotalOriginal",
-            "volumeTraded",
-            "volumeTotal",
-            "orderStatus",
-            "orderSubmitStatus",
-            "statusMsg",
-            "timeCondition",
-            "volumeCondition",
-            "hedgeFlag",
-            "insertTime",
-            "frontID",
-            "sessionID"
-          ],
-          "source": "OrderManager.insert() -> CTP ReqOrderInsert"
-        },
-        {
-          "id": "trade",
-          "name": "成交回报",
-          "nameEn": "Trade",
-          "description": "A trade execution resulting from an order fill. Recorded per-order in OrderManager._trades and broadcast via WebSocket.",
-          "fields": [
-            "tradeID",
-            "orderRef",
-            "instrumentID",
-            "direction",
-            "offsetFlag",
-            "price",
-            "volume",
-            "tradeTime",
-            "exchangeID"
-          ],
-          "source": "CTP OnRtnTrade callback"
-        },
-        {
-          "id": "stop-order",
-          "name": "止损单",
-          "nameEn": "Stop Order",
-          "description": "Conditional order that monitors market data and automatically submits an order when the stop price is triggered. Persisted to disk with GFD semantics. Status lifecycle: pending -> triggering -> triggered/canceled/trigger_failed.",
-          "fields": [
-            "stopOrderID",
-            "instrumentID",
-            "exchangeID",
-            "direction",
-            "offsetFlag",
-            "limitPrice",
-            "volume",
-            "stopPrice",
-            "triggerPriceType",
-            "status",
-            "createdAt",
-            "triggeredAt",
-            "orderRef"
-          ],
-          "source": "StopOrderService -> OrderManager.insert() on trigger"
-        },
-        {
-          "id": "reverse-order-set",
-          "name": "反向委托组",
-          "nameEn": "Reverse Order Set",
-          "description": "Composite operation: close existing position and open opposite direction. Supports serial (close then open) and parallel (simultaneous) execution modes. Handles SHFE close_today/close_yesterday split.",
-          "fields": [
-            "instrumentID",
-            "closePriceType",
-            "openPriceType",
-            "executionMode",
-            "closeTimeCondition",
-            "openTimeCondition"
-          ],
-          "source": "POST /api/order/reverse"
-        },
-        {
-          "id": "lock-order",
-          "name": "锁仓委托",
-          "nameEn": "Lock Order",
-          "description": "Opens an equal-volume opposite position without closing the original. Used for hedging risk while retaining the existing position.",
-          "fields": [
-            "instrumentID",
-            "priceType",
-            "limitPrice",
-            "timeCondition"
-          ],
-          "source": "POST /api/order/lock"
-        }
-      ],
-      "relationships": [
-        {
-          "from": "order",
-          "to": "trade",
-          "type": "produces",
-          "description": "Filled orders generate trade records"
-        },
-        {
-          "from": "stop-order",
-          "to": "order",
-          "type": "triggers",
-          "description": "Stop order auto-submits a real order when stop price hit"
-        },
-        {
-          "from": "reverse-order-set",
-          "to": "order",
-          "type": "composes",
-          "description": "Reverse operation creates close + open order pair"
-        },
-        {
-          "from": "lock-order",
-          "to": "order",
-          "type": "composes",
-          "description": "Lock operation creates an opposite-direction open order"
-        },
-        {
-          "from": "market-snapshot",
-          "to": "stop-order",
-          "type": "triggers",
-          "description": "Real-time price data triggers stop order conditions"
-        },
-        {
-          "from": "order",
-          "to": "market-snapshot",
-          "type": "references",
-          "description": "Market orders use snapshot price as protection price"
-        }
-      ]
-    },
-    {
-      "id": "query-services",
-      "name": "查询服务",
-      "nameEn": "Query Services",
-      "description": "Query order history, trade history, positions, and account balance from CTP. Results are cached in QueryService and refreshed on demand. CTP uses the bIsLast accumulation pattern for multi-batch responses.",
-      "entities": [
-        {
-          "id": "position",
-          "name": "持仓",
-          "nameEn": "Position",
-          "description": "Investor position data including instrument, direction (long/short), volume, cost, profit, and margin. Queried from CTP ReqQryInvestorPosition.",
-          "fields": [
-            "instrumentID",
-            "posiDirection",
-            "position",
-            "positionCost",
-            "positionProfit",
-            "openCost",
-            "useMargin",
-            "todayPosition",
-            "ydPosition",
-            "exchangeID",
-            "tradingDay"
-          ],
-          "source": "CTP ReqQryInvestorPosition"
-        },
-        {
-          "id": "account-info",
-          "name": "账户资金",
-          "nameEn": "Account Info",
-          "description": "Trading account fund information including balance, available funds, margin, commission, and profit. Queried from CTP ReqQryTradingAccount.",
-          "fields": [
-            "accountID",
-            "balance",
-            "available",
-            "frozenMargin",
-            "currMargin",
-            "commission",
-            "closeProfit",
-            "positionProfit",
-            "deposit",
-            "withdraw",
-            "preBalance",
-            "tradingDay"
-          ],
-          "source": "CTP ReqQryTradingAccount"
-        },
-        {
-          "id": "order-history",
-          "name": "报单流水",
-          "nameEn": "Order History",
-          "description": "Historical order records queried from CTP. Distinct from in-memory OrderManager state — these are CTP's authoritative records.",
-          "fields": [
-            "orderRef",
-            "orderSysID",
-            "instrumentID",
-            "direction",
-            "combOffsetFlag",
-            "limitPrice",
-            "volumeTotalOriginal",
-            "volumeTraded",
-            "orderStatus",
-            "statusMsg",
-            "insertTime"
-          ],
-          "source": "CTP ReqQryOrder"
-        },
-        {
-          "id": "trade-history",
-          "name": "成交流水",
-          "nameEn": "Trade History",
-          "description": "Historical trade execution records queried from CTP.",
-          "fields": [
-            "tradeID",
-            "orderRef",
-            "instrumentID",
-            "direction",
-            "offsetFlag",
-            "price",
-            "volume",
-            "tradeTime"
-          ],
-          "source": "CTP ReqQryTrade"
-        }
-      ],
-      "relationships": [
-        {
-          "from": "position",
-          "to": "order",
-          "type": "results_from",
-          "description": "Positions are the result of filled orders"
-        },
-        {
-          "from": "trade-history",
-          "to": "order-history",
-          "type": "relates_to",
-          "description": "Trades reference orders via orderRef"
-        },
-        {
-          "from": "account-info",
-          "to": "position",
-          "type": "aggregates",
-          "description": "Account margin/profit aggregates across all positions"
-        }
-      ]
-    },
-    {
-      "id": "options-trading",
-      "name": "期权交易",
-      "nameEn": "Options Trading",
-      "description": "Option contract filtering, option chain aggregation (T-type quotes by underlying + expiry), and implied volatility calculation using Black-Scholes model with Newton-Raphson iteration.",
-      "entities": [
-        {
-          "id": "option-contract",
-          "name": "期权合约",
-          "nameEn": "Option Contract",
-          "description": "Option instrument with type (call/put), strike price, expiry date, and underlying instrument. Filtered from instrument list by productClass='2'.",
-          "fields": [
-            "instrumentID",
-            "optionsType",
-            "strikePrice",
-            "expireDate",
-            "underlyingInstrID",
-            "volumeMultiple",
-            "priceTick"
-          ],
-          "source": "Filtered from instrument cache (productClass='2')"
-        },
-        {
-          "id": "option-chain",
-          "name": "期权链",
-          "nameEn": "Option Chain",
-          "description": "Options grouped by underlying instrument and expiry date, with calls and puts separated and sorted by strike price. Used for T-type quote display.",
-          "fields": [
-            "underlying",
-            "expireDate",
-            "calls[].instrumentID",
-            "calls[].strikePrice",
-            "puts[].instrumentID",
-            "puts[].strikePrice"
-          ],
-          "source": "OptionsService.get_option_chains()"
-        },
-        {
-          "id": "implied-volatility",
-          "name": "隐含波动率",
-          "nameEn": "Implied Volatility",
-          "description": "IV calculated via Newton-Raphson method on Black-Scholes formula. Requires option price, underlying price, strike, time to expiry, and risk-free rate. Capped at 500% (non-physical limit).",
-          "fields": [
-            "instrumentID",
-            "impliedVolatility",
-            "underlyingPrice",
-            "strikePrice",
-            "timeToExpiry",
-            "riskFreeRate",
-            "optionType"
-          ],
-          "source": "OptionsService.calculate_implied_volatility()"
-        }
-      ],
-      "relationships": [
-        {
-          "from": "option-contract",
-          "to": "option-chain",
-          "type": "groups_into",
-          "description": "Option contracts grouped into chains by underlying + expiry"
-        },
-        {
-          "from": "option-contract",
-          "to": "implied-volatility",
-          "type": "calculates",
-          "description": "IV computed per option contract from market data"
-        },
-        {
-          "from": "implied-volatility",
-          "to": "market-snapshot",
-          "type": "depends_on",
-          "description": "IV calculation requires real-time option and underlying prices from snapshots"
-        }
-      ]
-    },
-    {
-      "id": "connection-management",
-      "name": "连接管理",
-      "nameEn": "Connection Management",
-      "description": "CTP connection lifecycle management for both Market Data (MD) and Trading (TD) channels. MD connects at startup independently; TD requires validated credentials. Includes automatic reconnection with exponential backoff.",
-      "entities": [
-        {
-          "id": "md-connection",
-          "name": "行情连接",
-          "nameEn": "MD Connection",
-          "description": "Market Data front connection. Connects at server startup, runs independently of login. Uses CThostFtdcMdApi. Auto-reconnects on disconnect.",
-          "fields": [
-            "connection_status",
-            "login_status",
-            "subscribed_instruments"
-          ],
-          "source": "MdUserApi -> CTP MdApi"
-        },
-        {
-          "id": "td-connection",
-          "name": "交易连接",
-          "nameEn": "TD Connection",
-          "description": "Trading front connection. Requires login with broker/user/password credentials. Uses CThostFtdcTraderApi. Must confirm settlement before placing orders.",
-          "fields": [
-            "connection_status",
-            "login_status",
-            "brokerID",
-            "userID",
-            "frontID",
-            "sessionID"
-          ],
-          "source": "TraderApi -> CTP TraderApi"
-        },
-        {
-          "id": "reconnect-service",
-          "name": "重连服务",
-          "nameEn": "Reconnect Service",
-          "description": "Automatic reconnection with exponential backoff (base 1s, max 5 retries). After successful reconnect, re-subscribes previously tracked instruments.",
-          "fields": [
-            "retry_count",
-            "max_retries",
-            "base_delay",
-            "subscriptions"
-          ],
-          "source": "ReconnectService"
-        }
-      ],
-      "relationships": [
-        {
-          "from": "md-connection",
-          "to": "market-snapshot",
-          "type": "produces",
-          "description": "MD connection receives and delivers market data"
-        },
-        {
-          "from": "td-connection",
-          "to": "order",
-          "type": "enables",
-          "description": "TD connection required for order submission"
-        },
-        {
-          "from": "reconnect-service",
-          "to": "md-connection",
-          "type": "maintains",
-          "description": "Reconnect service restores MD connection on failure"
-        },
-        {
-          "from": "reconnect-service",
-          "to": "td-connection",
-          "type": "maintains",
-          "description": "Reconnect service restores TD connection on failure"
-        }
-      ]
-    },
-    {
-      "id": "realtime-push",
-      "name": "实时推送",
-      "nameEn": "Real-time Push",
-      "description": "WebSocket-based real-time data push from backend to frontend. Multiple endpoints for different data types. Includes heartbeat monitoring and dead connection cleanup.",
-      "entities": [
-        {
-          "id": "ws-endpoint",
-          "name": "WebSocket端点",
-          "nameEn": "WebSocket Endpoint",
-          "description": "5 dedicated WebSocket endpoints for different data channels: market data, order returns, position updates, stop order updates, and system status.",
-          "fields": [
-            "endpoint (market/order/position/stop/system)",
-            "connections",
-            "message_types"
-          ],
-          "source": "WebSocketManager"
-        },
-        {
-          "id": "ws-message",
-          "name": "WebSocket消息",
-          "nameEn": "WebSocket Message",
-          "description": "Typed messages pushed through WebSocket channels. Includes market_data, order_return, trade_return, position_update, stop_order_update, connection_status, instruments_refreshed, ping, error.",
-          "fields": [
-            "type",
-            "data"
-          ],
-          "source": "WebSocketManager.broadcast()"
-        }
-      ],
-      "relationships": [
-        {
-          "from": "ws-endpoint",
-          "to": "market-snapshot",
-          "type": "pushes",
-          "description": "market endpoint pushes real-time snapshots"
-        },
-        {
-          "from": "ws-endpoint",
-          "to": "order",
-          "type": "pushes",
-          "description": "order endpoint pushes order/trade returns"
-        },
-        {
-          "from": "ws-endpoint",
-          "to": "position",
-          "type": "pushes",
-          "description": "position endpoint pushes position updates"
-        },
-        {
-          "from": "ws-endpoint",
-          "to": "stop-order",
-          "type": "pushes",
-          "description": "stop endpoint pushes stop order status changes"
-        }
-      ]
-    },
-    {
-      "id": "user-preferences",
-      "name": "用户偏好",
-      "nameEn": "User Preferences",
-      "description": "User-configurable preferences persisted in localStorage. Includes selected contracts, hotkey bindings, and quick trade configuration.",
-      "entities": [
-        {
-          "id": "hotkey-config",
-          "name": "快捷键配置",
-          "nameEn": "Hotkey Configuration",
-          "description": "Keyboard shortcut bindings for trading actions: buy, sell, cancel, reverse, lock, batch cancel.",
-          "fields": [
-            "buy",
-            "sell",
-            "cancel",
-            "reverse",
-            "lock",
-            "batchCancel"
-          ],
-          "source": "localStorage via Zustand persist"
-        },
-        {
-          "id": "quick-trade-config",
-          "name": "快捷交易配置",
-          "nameEn": "Quick Trade Configuration",
-          "description": "Configuration for lock and reverse operations including price mode (counterparty/market), offset ticks, time condition (GFD/FAK), and execution mode (serial/parallel).",
-          "fields": [
-            "lock.priceMode",
-            "lock.offsetTicks",
-            "lock.timeCondition",
-            "reverse.close.*",
-            "reverse.open.*",
-            "reverse.executionMode",
-            "confirmBeforeExecute"
-          ],
-          "source": "localStorage via Zustand persist"
-        }
-      ],
-      "relationships": [
-        {
-          "from": "hotkey-config",
-          "to": "order",
-          "type": "triggers",
-          "description": "Hotkeys trigger order operations"
-        },
-        {
-          "from": "quick-trade-config",
-          "to": "reverse-order-set",
-          "type": "configures",
-          "description": "Quick trade config controls reverse behavior"
-        },
-        {
-          "from": "quick-trade-config",
-          "to": "lock-order",
-          "type": "configures",
-          "description": "Quick trade config controls lock behavior"
-        }
-      ]
-    }
-  ],
-  "flows": [
-    {
-      "id": "market-data-flow",
-      "name": "行情数据推送流程",
-      "nameEn": "Market Data Push Flow",
-      "description": "Real-time market data flows from CTP exchange through the backend to the frontend display. The bridge pattern connects CTP worker threads to the async web layer.",
-      "trigger": "CTP OnRtnDepthMarketData callback fires in CTP worker thread",
-      "outcome": "Frontend market table, K-line chart, and depth quote update in real-time",
-      "steps": [
-        {
-          "id": "md-1",
-          "order": 1,
-          "name": "CTP回调触发",
-          "nameEn": "CTP Callback Fires",
-          "description": "CTP exchange pushes depth market data via OnRtnDepthMarketData callback in the CTP worker thread"
-        },
-        {
-          "id": "md-2",
-          "order": 2,
-          "name": "字段映射",
-          "nameEn": "Field Mapping",
-          "description": "ctp_bridge calls map_depth_market_data() to convert PascalCase CTP fields to camelCase dict"
-        },
-        {
-          "id": "md-3",
-          "order": 3,
-          "name": "快照缓存更新",
-          "nameEn": "Snapshot Cache Update",
-          "description": "MarketService.update_snapshot() stores/merges the data in thread-safe snapshot cache"
-        },
-        {
-          "id": "md-4",
-          "order": 4,
-          "name": "K线聚合",
-          "nameEn": "K-Line Aggregation",
-          "description": "KLineService.update_tick() aggregates the tick into OHLCV bars for 1m/5m/15m/30m/1h periods"
-        },
-        {
-          "id": "md-5",
-          "order": 5,
-          "name": "止损单检查",
-          "nameEn": "Stop Order Check",
-          "description": "StopOrderService.on_market_data() checks if any pending stop orders should trigger"
-        },
-        {
-          "id": "md-6",
-          "order": 6,
-          "name": "WebSocket广播",
-          "nameEn": "WebSocket Broadcast",
-          "description": "broadcast_fn() bridges from CTP thread to async loop, pushing data to all /ws/market connections"
-        },
-        {
-          "id": "md-7",
-          "order": 7,
-          "name": "前端状态更新",
-          "nameEn": "Frontend State Update",
-          "description": "useMarketWs hook receives WebSocket message and updates Zustand market store (snapshots, klineData)"
-        },
-        {
-          "id": "md-8",
-          "order": 8,
-          "name": "UI渲染",
-          "nameEn": "UI Rendering",
-          "description": "Market table (vtable), K-line chart (ECharts), and depth quote component re-render with new data"
-        }
-      ]
-    },
-    {
-      "id": "order-submission-flow",
-      "name": "报单提交流程",
-      "nameEn": "Order Submission Flow",
-      "description": "User submits an order through the frontend form, which goes through validation, CTP submission, and callback-driven state tracking.",
-      "trigger": "User fills order form and clicks submit (or uses hotkey)",
-      "outcome": "Order submitted to CTP exchange, status tracked and displayed",
-      "steps": [
-        {
-          "id": "os-1",
-          "order": 1,
-          "name": "前端校验",
-          "nameEn": "Frontend Validation",
-          "description": "Order store validates: instrument selected, valid price, volume within limits (market: 60/30, limit: 500/100), protection price within limit range"
-        },
-        {
-          "id": "os-2",
-          "order": 2,
-          "name": "字段转换",
-          "nameEn": "Field Conversion",
-          "description": "convertOrderRequest() maps frontend enums (buy/sell/open/close) to CTP char codes (0/1/3)"
-        },
-        {
-          "id": "os-3",
-          "order": 3,
-          "name": "API请求",
-          "nameEn": "API Request",
-          "description": "POST /api/order/insert sends InsertOrderRequest to backend"
-        },
-        {
-          "id": "os-4",
-          "order": 4,
-          "name": "后端校验",
-          "nameEn": "Backend Validation",
-          "description": "Pydantic model validates: direction pattern [01], offsetFlag [013], priceType [12], volume limits, FOK/FAK constraints"
-        },
-        {
-          "id": "os-5",
-          "order": 5,
-          "name": "OrderManager提交",
-          "nameEn": "OrderManager Submit",
-          "description": "OrderManager.insert() creates pending record, registers response event, calls TraderApi.insert_order()"
-        },
-        {
-          "id": "os-6",
-          "order": 6,
-          "name": "CTP报单",
-          "nameEn": "CTP Order Insert",
-          "description": "TraderApi builds CThostFtdcInputOrderField and calls ReqOrderInsert on the CTP API"
-        },
-        {
-          "id": "os-7",
-          "order": 7,
-          "name": "回调等待",
-          "nameEn": "Wait for Callback",
-          "description": "OrderManager blocks on threading.Event (3s timeout) waiting for OnRspOrderInsert or OnRtnOrder callback"
-        },
-        {
-          "id": "os-8",
-          "order": 8,
-          "name": "状态更新",
-          "nameEn": "State Update",
-          "description": "Callback updates order state (accepted/rejected/canceled). OrderManager broadcasts order_return via WebSocket"
-        },
-        {
-          "id": "os-9",
-          "order": 9,
-          "name": "前端反馈",
-          "nameEn": "Frontend Feedback",
-          "description": "Toast notification shows success/failure. Query store upserts order for real-time tracking"
-        }
-      ]
-    },
-    {
-      "id": "stop-order-trigger-flow",
-      "name": "止损单触发流程",
-      "nameEn": "Stop Order Trigger Flow",
-      "description": "Stop order monitors market data and auto-submits an order when the stop price condition is met.",
-      "trigger": "Market data tick arrives for an instrument with pending stop orders",
-      "outcome": "Stop order triggers and submits a real order to CTP",
-      "steps": [
-        {
-          "id": "so-1",
-          "order": 1,
-          "name": "提交止损单",
-          "nameEn": "Submit Stop Order",
-          "description": "User submits stop order via POST /api/order/stop with stopPrice, direction, offsetFlag, limitPrice"
-        },
-        {
-          "id": "so-2",
-          "order": 2,
-          "name": "持久化存储",
-          "nameEn": "Persist to Disk",
-          "description": "StopOrderService saves stop order to data/stop_orders.json with status=pending"
-        },
-        {
-          "id": "so-3",
-          "order": 3,
-          "name": "行情监听",
-          "nameEn": "Market Data Monitoring",
-          "description": "ctp_bridge wires stop_order_callback to OnRtnDepthMarketData. Each tick calls StopOrderService.on_market_data()"
-        },
-        {
-          "id": "so-4",
-          "order": 4,
-          "name": "触发条件检查",
-          "nameEn": "Trigger Condition Check",
-          "description": "For each pending stop order on the instrument: buy stop triggers when lastPrice <= stopPrice, sell stop triggers when lastPrice >= stopPrice"
-        },
-        {
-          "id": "so-5",
-          "order": 5,
-          "name": "状态转换",
-          "nameEn": "Status Transition",
-          "description": "Atomic status change: pending -> triggering (prevents duplicate triggers via lock)"
-        },
-        {
-          "id": "so-6",
-          "order": 6,
-          "name": "自动报单",
-          "nameEn": "Auto Submit Order",
-          "description": "OrderManager.insert() called with the stop order's parameters. Market trigger uses limitPrice as protection price"
-        },
-        {
-          "id": "so-7",
-          "order": 7,
-          "name": "结果记录",
-          "nameEn": "Result Recording",
-          "description": "On success: status=triggered, orderRef recorded. On failure: status=trigger_failed. Persisted to disk"
-        },
-        {
-          "id": "so-8",
-          "order": 8,
-          "name": "WebSocket通知",
-          "nameEn": "WebSocket Notification",
-          "description": "stop_order_update broadcast to /ws/stop connections with updated stop order status"
-        }
-      ]
-    },
-    {
-      "id": "ctp-login-flow",
-      "name": "CTP登录流程",
-      "nameEn": "CTP Login Flow",
-      "description": "Trading connection login flow. MD connects independently at startup; TD requires explicit login with credentials.",
-      "trigger": "User clicks login in ConnectionPanel (or auto-login from saved credentials)",
-      "outcome": "TD authenticated and ready for order submission",
-      "steps": [
-        {
-          "id": "cl-1",
-          "order": 1,
-          "name": "MD自动连接",
-          "nameEn": "MD Auto-Connect",
-          "description": "At server startup, ctp_startup creates MdUserApi, registers SPI, connects to MD front, and logs in (no credentials needed)"
-        },
-        {
-          "id": "cl-2",
-          "order": 2,
-          "name": "用户登录请求",
-          "nameEn": "User Login Request",
-          "description": "POST /api/connection/login with brokerID, userID, password"
-        },
-        {
-          "id": "cl-3",
-          "order": 3,
-          "name": "TD连接创建",
-          "nameEn": "TD Connection Create",
-          "description": "connect_trading() creates TraderApi, registers SPI, connects to TD front"
-        },
-        {
-          "id": "cl-4",
-          "order": 4,
-          "name": "前置连接回调",
-          "nameEn": "Front Connected Callback",
-          "description": "OnFrontConnected callback fires, triggering ReqUserLogin"
-        },
-        {
-          "id": "cl-5",
-          "order": 5,
-          "name": "登录认证",
-          "nameEn": "Login Authentication",
-          "description": "CTP validates credentials. OnRspUserLogin returns FrontID/SessionID"
-        },
-        {
-          "id": "cl-6",
-          "order": 6,
-          "name": "结算确认",
-          "nameEn": "Settlement Confirmation",
-          "description": "ReqSettlementInfoConfirm sent to confirm daily settlement (required before trading)"
-        },
-        {
-          "id": "cl-7",
-          "order": 7,
-          "name": "OrderManager初始化",
-          "nameEn": "OrderManager Init",
-          "description": "OrderManager.set_session() records FrontID/SessionID for stale callback filtering"
-        },
-        {
-          "id": "cl-8",
-          "order": 8,
-          "name": "服务接线",
-          "nameEn": "Service Wiring",
-          "description": "Wire ctp_bridge (market data -> services), OrderManager callbacks (order/trade returns), stop order monitoring"
-        }
-      ]
-    },
-    {
-      "id": "reconnection-flow",
-      "name": "断线重连流程",
-      "nameEn": "Reconnection Flow",
-      "description": "Automatic reconnection when CTP front disconnects. Uses exponential backoff and re-subscribes instruments after reconnect.",
-      "trigger": "CTP OnFrontDisconnected callback fires",
-      "outcome": "Connection restored with all subscriptions re-established",
-      "steps": [
-        {
-          "id": "rc-1",
-          "order": 1,
-          "name": "断线检测",
-          "nameEn": "Disconnect Detection",
-          "description": "CTP OnFrontDisconnected callback fires. Connection status set to 'disconnected'"
-        },
-        {
-          "id": "rc-2",
-          "order": 2,
-          "name": "重连计数",
-          "nameEn": "Retry Counting",
-          "description": "ReconnectService.on_disconnect() increments retry count"
-        },
-        {
-          "id": "rc-3",
-          "order": 3,
-          "name": "指数退避",
-          "nameEn": "Exponential Backoff",
-          "description": "Delay = base_delay * 2^attempt (1s, 2s, 4s, 8s, 16s). Max 5 retries"
-        },
-        {
-          "id": "rc-4",
-          "order": 4,
-          "name": "重连尝试",
-          "nameEn": "Reconnect Attempt",
-          "description": "ReconnectService.try_reconnect() calls connect_fn to re-establish CTP connection"
-        },
-        {
-          "id": "rc-5",
-          "order": 5,
-          "name": "重新订阅",
-          "nameEn": "Re-subscribe",
-          "description": "On success, re-subscribes all previously tracked instruments via subscribe_fn"
-        },
-        {
-          "id": "rc-6",
-          "order": 6,
-          "name": "WebSocket通知",
-          "nameEn": "WebSocket Notify",
-          "description": "System WebSocket broadcasts connection_status update to frontend"
-        }
-      ]
-    },
-    {
-      "id": "option-chain-flow",
-      "name": "期权链查询流程",
-      "nameEn": "Option Chain Query Flow",
-      "description": "User browses option chains with T-type quotes and implied volatility analysis.",
-      "trigger": "User selects underlying instrument in Options panel",
-      "outcome": "Option chain displayed with calls/puts grouped by strike, IV calculated",
-      "steps": [
-        {
-          "id": "oc-1",
-          "order": 1,
-          "name": "标的筛选",
-          "nameEn": "Underlying Filter",
-          "description": "GET /api/market/options/underlyings returns available underlying instruments (e.g., IF2608)"
-        },
-        {
-          "id": "oc-2",
-          "order": 2,
-          "name": "期权链查询",
-          "nameEn": "Option Chain Query",
-          "description": "GET /api/market/option_chain with underlying + expire_date filter"
-        },
-        {
-          "id": "oc-3",
-          "order": 3,
-          "name": "合约筛选",
-          "nameEn": "Contract Filtering",
-          "description": "OptionsService.get_options() filters instruments by productClass='2', then by underlying"
-        },
-        {
-          "id": "oc-4",
-          "order": 4,
-          "name": "期权链聚合",
-          "nameEn": "Chain Aggregation",
-          "description": "OptionsService.get_option_chains() groups by (underlying, expireDate), separates calls/puts, sorts by strike"
-        },
-        {
-          "id": "oc-5",
-          "order": 5,
-          "name": "波动率计算",
-          "nameEn": "Volatility Calculation",
-          "description": "GET /api/market/volatility calculates IV via Newton-Raphson on Black-Scholes for each option with valid prices"
-        },
-        {
-          "id": "oc-6",
-          "order": 6,
-          "name": "前端展示",
-          "nameEn": "Frontend Display",
-          "description": "Options store renders T-type quote table with calls on left, puts on right, strikes in center, IV overlay"
-        }
-      ]
-    },
-    {
-      "id": "reverse-position-flow",
-      "name": "一键反向流程",
-      "nameEn": "Reverse Position Flow",
-      "description": "Close existing position and open opposite direction in one operation. Supports serial and parallel execution modes.",
-      "trigger": "User clicks reverse button or presses hotkey",
-      "outcome": "Position direction reversed with appropriate close/open orders",
-      "steps": [
-        {
-          "id": "rp-1",
-          "order": 1,
-          "name": "持仓查询",
-          "nameEn": "Position Lookup",
-          "description": "Get current positions for the instrument from QueryService. Validate position exists"
-        },
-        {
-          "id": "rp-2",
-          "order": 2,
-          "name": "保护价获取",
-          "nameEn": "Protection Price",
-          "description": "For market orders: get protection price from snapshot (lastPrice -> preClosePrice -> openPrice fallback chain)"
-        },
-        {
-          "id": "rp-3",
-          "order": 3,
-          "name": "平仓下单",
-          "nameEn": "Close Order",
-          "description": "Submit close order. SHFE special: split into close_today (offsetFlag='3') + close_yesterday (offsetFlag='1') if both exist"
-        },
-        {
-          "id": "rp-4",
-          "order": 4,
-          "name": "开仓下单",
-          "nameEn": "Open Order",
-          "description": "Submit opposite-direction open order. Serial: wait for close acceptance first. Parallel: submit simultaneously"
-        },
-        {
-          "id": "rp-5",
-          "order": 5,
-          "name": "结果汇总",
-          "nameEn": "Result Summary",
-          "description": "Return all order results (close_today, close_yesterday, open) with individual success/failure status"
-        }
-      ]
-    },
-    {
-      "id": "query-refresh-flow",
-      "name": "查询刷新流程",
-      "nameEn": "Query Refresh Flow",
-      "description": "Refresh orders, trades, positions, and account data from CTP. Uses the bIsLast accumulation pattern with 10s timeout.",
-      "trigger": "User clicks refresh button or periodic auto-refresh",
-      "outcome": "Query data updated in frontend display",
-      "steps": [
-        {
-          "id": "qr-1",
-          "order": 1,
-          "name": "前端触发",
-          "nameEn": "Frontend Trigger",
-          "description": "refreshAll() in query store triggers serial refresh with 1.2s delay between queries (CTP rate limit)"
-        },
-        {
-          "id": "qr-2",
-          "order": 2,
-          "name": "后端查询",
-          "nameEn": "Backend Query",
-          "description": "POST /api/query/{type}/refresh triggers QueryService to call TraderApi query method"
-        },
-        {
-          "id": "qr-3",
-          "order": 3,
-          "name": "CTP回调积累",
-          "nameEn": "CTP Callback Accumulation",
-          "description": "CTP sends multiple OnRspQryXxx callbacks with partial data. bIsLast=True on final batch"
-        },
-        {
-          "id": "qr-4",
-          "order": 4,
-          "name": "结果缓存",
-          "nameEn": "Result Caching",
-          "description": "QueryService accumulates results, caches on bIsLast, signals waiting thread"
-        },
-        {
-          "id": "qr-5",
-          "order": 5,
-          "name": "前端更新",
-          "nameEn": "Frontend Update",
-          "description": "Query store updates orders/trades/positions/account state. New items highlighted"
-        }
-      ]
-    }
-  ],
-  "steps": [
-    {
-      "id": "field-mapping",
-      "name": "CTP字段映射",
-      "nameEn": "CTP Field Mapping",
-      "description": "Bidirectional mapping between CTP PascalCase fields and frontend camelCase. Covers 6 data structures: DepthMarketData, InputOrder, Order, Trade, Instrument, Position, Account.",
-      "module": "server/services/field_mapping.py",
-      "direction": "CTP PascalCase <-> camelCase"
-    },
-    {
-      "id": "callback-spi",
-      "name": "回调SPI架构",
-      "nameEn": "Callback SPI Architecture",
-      "description": "Composition-based SPI design (not CTP SPI inheritance). BaseSpi provides event logging + custom handler registration. MdSpi and TraderSpi extend BaseSpi with CTP-specific callbacks.",
-      "module": "server/ctp_wrapper/callback.py",
-      "pattern": "Event emitter with on() registration"
-    },
-    {
-      "id": "ctp-bridge",
-      "name": "CTP线程桥接",
-      "nameEn": "CTP Thread Bridge",
-      "description": "Glue between CTP worker threads (sync callbacks) and async web layer (WebSocket broadcasts). The bridge pattern connects: CTP thread -> map fields -> update cache -> broadcast async.",
-      "module": "server/services/ctp_bridge.py",
-      "pattern": "Thread-safe bridge with async coroutine scheduling"
-    },
-    {
-      "id": "order-state-machine",
-      "name": "报单状态机",
-      "nameEn": "Order State Machine",
-      "description": "Order status lifecycle: pending (local) -> a (CTP initial/Unknown) -> 2 (NoTraded)/1 (PartTraded)/0 (AllTraded)/5 (Canceled). Active statuses: pending, a, 2, 3, 1. Terminal: 0, 5.",
-      "module": "server/services/order_manager.py",
-      "states": [
-        "pending",
-        "a(unknown)",
-        "2(no_traded)",
-        "3(no_traded_not_queuing)",
-        "1(part_traded)",
-        "0(all_traded)",
-        "5(canceled)"
-      ]
-    },
-    {
-      "id": "stop-order-state-machine",
-      "name": "止损单状态机",
-      "nameEn": "Stop Order State Machine",
-      "description": "Stop order lifecycle: pending -> triggering (intermediate, prevents duplicate) -> triggered/canceled/trigger_failed. GFD semantics: only today's pending orders loaded on startup.",
-      "module": "server/services/stop_order.py",
-      "states": [
-        "pending",
-        "triggering",
-        "triggered",
-        "canceled",
-        "trigger_failed"
-      ]
-    },
-    {
-      "id": "kline-aggregation",
-      "name": "K线聚合算法",
-      "nameEn": "K-Line Aggregation",
-      "description": "Aggregates CTP ticks into OHLCV bars. CTP volume is cumulative: per-tick delta = current - last. First tick for a new instrument gets delta=0. Bar boundaries computed from ActionDay+UpdateTime timestamps.",
-      "module": "server/services/kline_service.py",
-      "periods": [
-        "1m(60s)",
-        "5m(300s)",
-        "15m(900s)",
-        "30m(1800s)",
-        "1h(3600s)"
-      ]
-    },
-    {
-      "id": "iv-calculation",
-      "name": "隐含波动率计算",
-      "nameEn": "Implied Volatility Calculation",
-      "description": "Newton-Raphson iteration on Black-Scholes formula. Layers: (1) arbitrage boundary check (intrinsic value, upper bound), (2) iteration with step limiting and IV cap at 500%. Handles vega collapse near expiry.",
-      "module": "server/services/options_service.py",
-      "algorithm": "Newton-Raphson with Black-Scholes, max 100 iterations, tolerance 1e-6"
-    },
-    {
-      "id": "shfe-close-split",
-      "name": "上期所平今平昨拆分",
-      "nameEn": "SHFE Close Today/Yesterday Split",
-      "description": "SHFE/INE exchanges require separate orders for close_today (offsetFlag='3') and close_yesterday (offsetFlag='1'). Reverse/lock operations detect exchange and split accordingly.",
-      "module": "server/api/order.py",
-      "exchanges": [
-        "SHFE",
-        "INE"
-      ]
-    },
-    {
-      "id": "volume-limits",
-      "name": "数量限制规则",
-      "nameEn": "Volume Limit Rules",
-      "description": "CTP exchange-imposed volume limits: Market+Future=60, Market+Option=30, Limit+Future=500, Limit+Option=100. Validated both frontend and backend.",
-      "module": "server/api/order.py + frontend validators",
-      "limits": {
-        "market_future": 60,
-        "market_option": 30,
-        "limit_future": 500,
-        "limit_option": 100
+      "complexity": "complex",
+      "domainMeta": {
+        "entities": [
+          "CTP 行情连接 (MdUserApi)",
+          "CTP 交易连接 (TraderApi)",
+          "登录会话",
+          "连接状态"
+        ],
+        "businessRules": [
+          "行情/交易双通道分离管理",
+          "断线后指数退避自动重连并恢复订阅",
+          "交易通道需登录与结算确认后才可用"
+        ],
+        "crossDomainInteractions": [
+          "为行情与报单域提供可用通道",
+          "连接状态经 /ws/system 推送前端"
+        ]
       }
     },
     {
-      "id": "ctp-session-filtering",
-      "name": "CTP会话过滤",
-      "nameEn": "CTP Session Filtering",
-      "description": "After reconnection, CTP may replay historical OnRtnOrder callbacks from previous sessions. OrderManager filters stale callbacks by comparing (frontID, sessionID) against the current session identity set during login.",
-      "module": "server/services/order_manager.py",
-      "mechanism": "FrontID + SessionID comparison in on_rtn_order()"
+      "id": "domain:market-data",
+      "type": "domain",
+      "name": "行情接入与展示",
+      "summary": "从 CTP 行情通道订阅合约深度行情，经桥接层映射为快照后通过 WebSocket 推送到前端，驱动行情表格、五档深度与 K 线图展示，并提供合约搜索与自选收藏能力。",
+      "tags": [
+        "行情",
+        "订阅",
+        "快照",
+        "K线",
+        "自选",
+        "WebSocket"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entities": [
+          "行情快照",
+          "订阅集合",
+          "K线",
+          "合约列表",
+          "自选收藏"
+        ],
+        "businessRules": [
+          "订阅参数必须为字符串列表（CTP SWIG 边界）",
+          "可见/锁定/自选合约保证持续订阅",
+          "K 线由 tick 实时聚合，无历史数据接口",
+          "CTP 无效价格哨兵值在前端显示为 --"
+        ],
+        "crossDomainInteractions": [
+          "为报单域提供价格/保护价/对价",
+          "为期权域提供标的行情快照",
+          "为查询域提供平仓对手价",
+          "合约锁定由工作区驱动订阅集合"
+        ]
+      }
+    },
+    {
+      "id": "domain:order-execution",
+      "type": "domain",
+      "name": "交易报单执行",
+      "summary": "涵盖普通/套利报单、撤单、批量撤单、一键反向/锁仓与止损单的全生命周期，前端合规校验与后端权威校验构成双防线，通过 OrderManager 与 CTP 交易通道交互并实时回传报单/成交回报。",
+      "tags": [
+        "报单",
+        "撤单",
+        "反向",
+        "锁仓",
+        "止损单",
+        "CTP交易"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entities": [
+          "报单",
+          "成交流水",
+          "止损单",
+          "持仓",
+          "活动订单"
+        ],
+        "businessRules": [
+          "期货限价≤500手、期权≤100手、市价≤60手等数量上限",
+          "市价单必须填写保护价且在涨跌停内、priceTick 对齐",
+          "GFD/FOK/FAK 有效期条件组合校验",
+          "平仓区分平今/平昨"
+        ],
+        "crossDomainInteractions": [
+          "依赖行情快照计算对价/保护价",
+          "报单回报增量进入查询域流水",
+          "交易通道由连接域提供"
+        ]
+      }
+    },
+    {
+      "id": "domain:query-account",
+      "type": "domain",
+      "name": "查询与账户",
+      "summary": "提供持仓、资金账户、报单流水与成交流水的查询与展示，后端查询服务缓存 CTP 查询结果并按事件驱动刷新，前端支持自动刷新与 WebSocket 增量更新。",
+      "tags": [
+        "查询",
+        "持仓",
+        "资金",
+        "报单流水",
+        "成交"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entities": [
+          "持仓",
+          "资金账户",
+          "报单流水",
+          "成交流水",
+          "合约信息"
+        ],
+        "businessRules": [
+          "CTP 无效值 1.79e308 显示为 --",
+          "刷新串行带超时与节流",
+          "持仓平仓按今/昨仓选择平仓指令"
+        ],
+        "crossDomainInteractions": [
+          "接收报单域的回报增量",
+          "从行情域取对手价辅助平仓"
+        ]
+      }
+    },
+    {
+      "id": "domain:options-trading",
+      "type": "domain",
+      "name": "期权交易",
+      "summary": "面向期权交易者，提供按标的与到期日聚合的期权链、Black-Scholes 隐含波动率计算与 T 型报价表展示，是期权行情与交易的入口。",
+      "tags": [
+        "期权",
+        "期权链",
+        "波动率",
+        "T型报价",
+        "Black-Scholes"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entities": [
+          "期权链",
+          "隐含波动率",
+          "期权行情快照",
+          "行权价矩阵"
+        ],
+        "businessRules": [
+          "期权数量上限≤100手（限价）",
+          "按行权价合并 call/put 记录",
+          "期权合约代码带 _o 后缀"
+        ],
+        "crossDomainInteractions": [
+          "依赖行情快照计算波动率",
+          "期权下单复用交易报单域通道"
+        ]
+      }
+    },
+    {
+      "id": "domain:workspace-desktop",
+      "type": "domain",
+      "name": "界面工作区与桌面模式",
+      "summary": "管理多标签页、悬浮窗、全局快捷键与快捷交易配置等终端交互工作区能力，并提供 Electron 桌面模式的后端进程托管、IPC 桥接与多窗口支持，浏览器 Web 与桌面两种模式共享同一套代码。",
+      "tags": [
+        "标签页",
+        "悬浮窗",
+        "快捷键",
+        "设置",
+        "Electron",
+        "IPC"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entities": [
+          "标签",
+          "浮动窗口",
+          "用户偏好",
+          "后端进程",
+          "BrowserWindow"
+        ],
+        "businessRules": [
+          "标签按 type+instrumentID 去重并受 MAX_TABS 上限约束",
+          "固定标签不可关闭、不可拖出",
+          "打开标签的合约锁定以保证持续订阅",
+          "浮窗最小 320x200、最大 900x620"
+        ],
+        "crossDomainInteractions": [
+          "合约锁定驱动行情订阅集合",
+          "快捷键触发交易动作",
+          "自选页联动报单/查询弹窗"
+        ]
+      }
+    },
+    {
+      "id": "flow:connection-session:login-simnow",
+      "type": "flow",
+      "name": "登录 SimNow 交易会话",
+      "summary": "前端提交 brokerID/账号/密码，后端启动 CTP 交易通道完成登录与结算确认，前端轮询并展示通道阶段。",
+      "tags": [
+        "登录",
+        "会话",
+        "CTP"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "POST /api/connection/login",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "step:connection-session:login-simnow:submit-login-credentials",
+      "type": "step",
+      "name": "提交登录凭据",
+      "summary": "前端将 brokerID/账号/密码提交到登录接口。",
+      "tags": [
+        "api"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/services/api.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:connection-session:login-simnow:start-ctp-trading-connection",
+      "type": "step",
+      "name": "启动 CTP 交易连接",
+      "summary": "后端 login 接口在后台线程启动并连接 CTP 交易通道。",
+      "tags": [
+        "api"
+      ],
+      "complexity": "simple",
+      "filePath": "server/api/connection.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:connection-session:login-simnow:login-and-confirm-settlement",
+      "type": "step",
+      "name": "登录与结算确认",
+      "summary": "创建 TraderApi、执行交易登录与结算确认并装配回调。",
+      "tags": [
+        "service",
+        "ctp"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/ctp_startup.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:connection-session:login-simnow:poll-connection-status",
+      "type": "step",
+      "name": "轮询同步连接状态",
+      "summary": "前端定时轮询连接状态并同步到连接 store 的行情/交易通道阶段。",
+      "tags": [
+        "hook",
+        "state"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/hooks/useConnectionPoll.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:connection-session:login-simnow:render-connection-indicator",
+      "type": "step",
+      "name": "展示连接状态指示",
+      "summary": "连接状态徽标与工具提示展示各通道阶段及最后更新时间。",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/components/ConnectionStatus/index.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flow:connection-session:ctp-auto-reconnect",
+      "type": "flow",
+      "name": "CTP 通道断线自动重连",
+      "summary": "行情或交易通道断开后，以指数退避自动重建连接并恢复订阅，经 /ws/system 将状态推回前端。",
+      "tags": [
+        "重连",
+        "退避",
+        "稳定性"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "连接断开事件",
+        "entryType": "event"
+      }
+    },
+    {
+      "id": "step:connection-session:ctp-auto-reconnect:detect-connection-loss",
+      "type": "step",
+      "name": "检测连接断开",
+      "summary": "重连服务监听行情/交易通道的连接断开信号。",
+      "tags": [
+        "service"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/reconnect.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:connection-session:ctp-auto-reconnect:exponential-backoff-delay",
+      "type": "step",
+      "name": "指数退避计算延迟",
+      "summary": "按指数退避算法计算重试延迟并管理重试次数。",
+      "tags": [
+        "service"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/reconnect.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:connection-session:ctp-auto-reconnect:rebuild-ctp-channel",
+      "type": "step",
+      "name": "重建 CTP 通道",
+      "summary": "重建 MdUserApi/TraderApi 与 OrderManager，重新装配回调。",
+      "tags": [
+        "service",
+        "ctp"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/ctp_startup.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:connection-session:ctp-auto-reconnect:restore-subscriptions",
+      "type": "step",
+      "name": "恢复合约订阅",
+      "summary": "重连成功后恢复此前订阅的合约列表。",
+      "tags": [
+        "service"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/reconnect.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:connection-session:ctp-auto-reconnect:broadcast-connection-status",
+      "type": "step",
+      "name": "广播连接状态",
+      "summary": "WebSocketManager 将重连状态广播到 /ws/system 通道。",
+      "tags": [
+        "websocket"
+      ],
+      "complexity": "simple",
+      "filePath": "server/ws/manager.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:connection-session:ctp-auto-reconnect:frontend-update-connection-store",
+      "type": "step",
+      "name": "前端更新连接 store",
+      "summary": "前端系统 WS hook 接收状态并更新连接 store 的阶段与时间戳。",
+      "tags": [
+        "hook",
+        "state"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/hooks/useSystemWs.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flow:market-data:market-subscribe-push",
+      "type": "flow",
+      "name": "合约行情订阅与推送",
+      "summary": "前端计算订阅差异并批量订阅，CTP 深度行情经桥接层映射为快照，通过 /ws/market 推送并渲染到行情表格。",
+      "tags": [
+        "订阅",
+        "快照",
+        "推送"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "POST /api/market/subscribe",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "step:market-data:market-subscribe-push:compute-subscription-diff",
+      "type": "step",
+      "name": "计算订阅差异与防抖",
+      "summary": "结合选中/锁定/自选合约计算应订阅集合，防抖后批量订阅/退订。",
+      "tags": [
+        "hook",
+        "subscription"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/hooks/useSubscriptionManager.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:market-data:market-subscribe-push:rest-subscribe-endpoint",
+      "type": "step",
+      "name": "REST 订阅接口",
+      "summary": "订阅接口委托行情服务记录订阅集合。",
+      "tags": [
+        "api"
+      ],
+      "complexity": "simple",
+      "filePath": "server/api/market.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:market-data:market-subscribe-push:ctp-market-subscribe",
+      "type": "step",
+      "name": "CTP 行情通道订阅",
+      "summary": "MdUserApi 以字符串列表向 CTP 订阅合约。",
+      "tags": [
+        "ctp"
+      ],
+      "complexity": "simple",
+      "filePath": "server/ctp_wrapper/md_user_api.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:market-data:market-subscribe-push:depth-market-callback-mapping",
+      "type": "step",
+      "name": "深度行情回调与映射",
+      "summary": "桥接层将 CTP 深度行情映射为快照并触发 WebSocket 广播与 K 线 tick 更新。",
+      "tags": [
+        "bridge",
+        "mapping"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/ctp_bridge.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:market-data:market-subscribe-push:ws-market-broadcast",
+      "type": "step",
+      "name": "WebSocket /ws/market 广播",
+      "summary": "WebSocketManager 将快照广播到 /ws/market 通道的所有连接。",
+      "tags": [
+        "websocket"
+      ],
+      "complexity": "simple",
+      "filePath": "server/ws/manager.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:market-data:market-subscribe-push:frontend-snapshot-buffer",
+      "type": "step",
+      "name": "前端快照缓冲写入 store",
+      "summary": "行情 WS hook 缓冲快照与 K 线并以批量更新写入行情 store。",
+      "tags": [
+        "hook",
+        "state"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/hooks/useMarketWs.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:market-data:market-subscribe-push:render-market-table",
+      "type": "step",
+      "name": "行情表格渲染",
+      "summary": "基于 vtable 的行情表格做虚拟滚动、价格着色与多选。",
+      "tags": [
+        "ui",
+        "table"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/market/MarketTable.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flow:market-data:kline-aggregate-display",
+      "type": "flow",
+      "name": "K 线聚合与技术指标展示",
+      "summary": "后端基于 tick 流式聚合多周期 K 线，前端拉取后计算 MA/BOLL/MACD/KDJ/RSI 等技术指标并渲染 K 线图。",
+      "tags": [
+        "K线",
+        "指标",
+        "图表"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "GET /api/market/kline",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "step:market-data:kline-aggregate-display:tick-into-kline-service",
+      "type": "step",
+      "name": "tick 流入 K 线聚合服务",
+      "summary": "KLineService 线程安全地以 tick 增量更新多周期 OHLCV。",
+      "tags": [
+        "service"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/kline_service.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:market-data:kline-aggregate-display:aggregate-ohlcv-by-period",
+      "type": "step",
+      "name": "按周期聚合 OHLCV",
+      "summary": "解析 CTP action day 与更新时间戳，处理跨日与夜盘时段边界。",
+      "tags": [
+        "service"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/kline_service.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:market-data:kline-aggregate-display:rest-kline-endpoint",
+      "type": "step",
+      "name": "REST 提供 K 线数据",
+      "summary": "get_kline 接口返回指定合约与周期的 K 线并校验 period 参数。",
+      "tags": [
+        "api"
+      ],
+      "complexity": "simple",
+      "filePath": "server/api/market.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:market-data:kline-aggregate-display:fetch-and-align-kline",
+      "type": "step",
+      "name": "前端拉取并校准时间戳",
+      "summary": "K 线页面订阅行情 WS 并拉取 200 根 K 线，对齐周期后写入 store。",
+      "tags": [
+        "page"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/pages/KLinePage.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:market-data:kline-aggregate-display:compute-technical-indicators",
+      "type": "step",
+      "name": "计算技术指标",
+      "summary": "提供成交量均线、BOLL、KDJ 与 RSI（Wilder 指数平滑）等纯函数指标。",
+      "tags": [
+        "utility"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/market/indicators.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:market-data:kline-aggregate-display:render-kline-chart",
+      "type": "step",
+      "name": "K 线图渲染与周期切换",
+      "summary": "基于 ECharts 渲染蜡烛图与主副图指标，支持周期切换并保留缩放状态。",
+      "tags": [
+        "ui",
+        "chart"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/market/KLineChart.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flow:market-data:favorites-contract",
+      "type": "flow",
+      "name": "合约搜索与自选收藏",
+      "summary": "合约列表加载与搜索、自选收藏切换，自选页与右键菜单联动打开报单/查询弹窗与 K 线跳转。",
+      "tags": [
+        "搜索",
+        "收藏",
+        "自选"
+      ],
+      "complexity": "simple",
+      "domainMeta": {
+        "entryPoint": "用户交互（合约搜索/收藏）",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "step:market-data:favorites-contract:load-and-search-contracts",
+      "type": "step",
+      "name": "加载与搜索合约",
+      "summary": "合约列表 store 负责合约加载、按代码/名称/品种过滤搜索。",
+      "tags": [
+        "store",
+        "search"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/stores/contracts.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:market-data:favorites-contract:toggle-favorites",
+      "type": "step",
+      "name": "收藏与取消收藏",
+      "summary": "收藏切换维护自选合约集合，供行情与报单模块共享。",
+      "tags": [
+        "store"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/stores/contracts.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:market-data:favorites-contract:render-favorites-page",
+      "type": "step",
+      "name": "自选页展示与跳转",
+      "summary": "自选合约列表页支持双击打开报单弹窗与 K 线/查询跳转。",
+      "tags": [
+        "page"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/pages/FavoritesPage.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:market-data:favorites-contract:context-menu-link-popups",
+      "type": "step",
+      "name": "右键菜单联动弹窗",
+      "summary": "合约右键菜单管理单选/多选状态，联动打开报单/查询弹窗与自选 Tab。",
+      "tags": [
+        "hook",
+        "context-menu"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/hooks/useContractContextMenu.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flow:order-execution:submit-order",
+      "type": "flow",
+      "name": "提交报单",
+      "summary": "报单表单经价格步进与数量/保护价校验后映射为 CTP 订单请求，后端权威校验后经 OrderManager 提交 CTP，回报经 /ws/order 推送前端高亮。",
+      "tags": [
+        "报单",
+        "合规",
+        "校验"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "POST /api/order/submit",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "step:order-execution:submit-order:fill-form-validate-order",
+      "type": "step",
+      "name": "填写表单并校验数量/价格",
+      "summary": "报单表单支持普通/套利合约，做数量与价格合规校验。",
+      "tags": [
+        "ui",
+        "form"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/order/OrderForm.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:submit-order:price-step-tick-align",
+      "type": "step",
+      "name": "价格步进与最小变动价位对齐",
+      "summary": "价格按 priceTick 步进加减与对齐，供表单价格输入使用。",
+      "tags": [
+        "hook",
+        "validation"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/hooks/usePriceStep.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:submit-order:map-ctp-order-request",
+      "type": "step",
+      "name": "映射 CTP 订单请求",
+      "summary": "将报单表单映射为后端 CTP 订单请求结构，转换方向/开平/价格类型枚举。",
+      "tags": [
+        "utility"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/utils/orderMapping.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:submit-order:backend-authoritative-validation",
+      "type": "step",
+      "name": "后端权威合规校验",
+      "summary": "insert_order 接口内置数量上限与有效期条件组合校验（GFD/FOK/FAK、限价/市价）。",
+      "tags": [
+        "api",
+        "validation"
+      ],
+      "complexity": "simple",
+      "filePath": "server/api/order.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:submit-order:order-manager-submit",
+      "type": "step",
+      "name": "OrderManager 委托报单",
+      "summary": "OrderManager 线程安全地维护活动订单，提交报单并处理回报。",
+      "tags": [
+        "service"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/order_manager.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:submit-order:ctp-trading-place-order",
+      "type": "step",
+      "name": "CTP 交易通道报单",
+      "summary": "TraderApi 线程安全地执行报单请求。",
+      "tags": [
+        "ctp"
+      ],
+      "complexity": "simple",
+      "filePath": "server/ctp_wrapper/trader_api.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:submit-order:order-return-highlight",
+      "type": "step",
+      "name": "回报推送前端高亮",
+      "summary": "报单回报经 /ws/order 推送，前端报单流水对新报单高亮 2 秒。",
+      "tags": [
+        "ui",
+        "websocket"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/query/OrderFlow.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flow:order-execution:cancel-orders",
+      "type": "flow",
+      "name": "撤单与批量撤单",
+      "summary": "从报单流水或批量撤单弹窗发起单笔/全部撤单，后端委托 CTP 撤单并更新回报，WebSocket 推送前端刷新。",
+      "tags": [
+        "撤单",
+        "批量"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "POST /api/order/cancel 或 /api/order/cancel-all",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "step:order-execution:cancel-orders:order-flow-trigger-cancel",
+      "type": "step",
+      "name": "报单流水触发撤单",
+      "summary": "报单流水表格支持单笔撤单与撤销全部，对新报单高亮。",
+      "tags": [
+        "ui",
+        "table"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/query/OrderFlow.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:cancel-orders:batch-cancel-selection",
+      "type": "step",
+      "name": "批量撤单选择报单",
+      "summary": "批量撤单弹窗支持全选/反选、逐个撤单与成功失败统计。",
+      "tags": [
+        "ui",
+        "component"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/components/BatchCancel/index.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:cancel-orders:rest-cancel-endpoint",
+      "type": "step",
+      "name": "REST 撤单接口",
+      "summary": "按 orderRef 撤销委托或一键全部撤单。",
+      "tags": [
+        "api"
+      ],
+      "complexity": "simple",
+      "filePath": "server/api/order.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:cancel-orders:ctp-cancel-update-return",
+      "type": "step",
+      "name": "CTP 撤单并更新回报",
+      "summary": "OrderManager 处理撤单回报并广播订单状态更新。",
+      "tags": [
+        "service"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/order_manager.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:cancel-orders:ws-push-frontend-update",
+      "type": "step",
+      "name": "WS 推送前端更新",
+      "summary": "前端查询 store 以 WebSocket 增量 upsert 更新报单数据。",
+      "tags": [
+        "store",
+        "websocket"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/query/store.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flow:order-execution:reverse-lock-position",
+      "type": "flow",
+      "name": "一键反向与锁仓",
+      "summary": "快捷操作按钮经二次确认后，从行情快照计算对价，按串行/并行模式提交平仓与开仓委托完成反向或锁仓，并以 Toast 反馈结果。",
+      "tags": [
+        "反向",
+        "锁仓",
+        "快捷操作"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "POST /api/order/reverse 或 /api/order/lock",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "step:order-execution:reverse-lock-position:quick-actions-trigger",
+      "type": "step",
+      "name": "快捷操作触发",
+      "summary": "一键反向/锁仓/批量撤单按钮组封装异步执行的加载态。",
+      "tags": [
+        "ui",
+        "component"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/components/QuickActions/index.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:reverse-lock-position:confirm-dialog",
+      "type": "step",
+      "name": "二次确认弹窗",
+      "summary": "通用二次确认弹窗展示标题、明细行与可选风险提示。",
+      "tags": [
+        "ui",
+        "dialog"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/components/ConfirmDialog/index.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:reverse-lock-position:calc-counterparty-price",
+      "type": "step",
+      "name": "计算对价与锁仓参数",
+      "summary": "按买卖方向与偏移跳数计算对手价并做价格跳动对齐，提供保护价读取。",
+      "tags": [
+        "utility"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/utils/priceCalc.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:reverse-lock-position:dispatch-serial-parallel",
+      "type": "step",
+      "name": "按执行模式分派串行/并行",
+      "summary": "一键反向按 executionMode 分派到串行（平仓完成再开仓）或并行（同时提交）。",
+      "tags": [
+        "api"
+      ],
+      "complexity": "simple",
+      "filePath": "server/api/order.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:reverse-lock-position:submit-close-open-orders",
+      "type": "step",
+      "name": "平仓/开仓委托提交",
+      "summary": "构造平今/平昨与开仓委托参数并提交到 CTP 交易通道。",
+      "tags": [
+        "ctp"
+      ],
+      "complexity": "simple",
+      "filePath": "server/ctp_wrapper/trader_api.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:reverse-lock-position:toast-result-feedback",
+      "type": "step",
+      "name": "回报反馈 Toast",
+      "summary": "根据后端响应体判断成功/失败并弹出对应 Toast 通知。",
+      "tags": [
+        "ui",
+        "notification"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/components/Toast/index.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flow:order-execution:stop-order-management",
+      "type": "flow",
+      "name": "止损单管理",
+      "summary": "止损单表单提交后由 StopOrderService 落盘持久化，行情回调触发条件判断后执行报单，经 /ws/stop 广播并在前端止损单列表展示/取消。",
+      "tags": [
+        "止损单",
+        "触发",
+        "持久化"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "POST /api/order/submit-stop",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "step:order-execution:stop-order-management:stop-order-form-config",
+      "type": "step",
+      "name": "止损单表单配置",
+      "summary": "止损单表单支持限价/市价触发、价格步进与提交。",
+      "tags": [
+        "ui",
+        "form"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/order/StopOrderForm.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:stop-order-management:submit-stop-order-request",
+      "type": "step",
+      "name": "提交止损单请求",
+      "summary": "前端提交止损单请求，支持限价/市价触发并附带条件参数。",
+      "tags": [
+        "api"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/services/api.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:stop-order-management:stop-order-persist",
+      "type": "step",
+      "name": "止损单服务持久化",
+      "summary": "StopOrderService 管理提交/撤销/触发并落盘持久化。",
+      "tags": [
+        "service"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/stop_order.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:stop-order-management:market-callback-trigger-check",
+      "type": "step",
+      "name": "行情回调触发判断",
+      "summary": "桥接层在行情回调中检查止损触发条件。",
+      "tags": [
+        "bridge"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/ctp_bridge.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:stop-order-management:trigger-execute-stop-order",
+      "type": "step",
+      "name": "触发执行报单",
+      "summary": "止损条件达成后执行委托报单并广播状态。",
+      "tags": [
+        "service"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/stop_order.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:stop-order-management:ws-stop-broadcast",
+      "type": "step",
+      "name": "/ws/stop 广播状态",
+      "summary": "WebSocket 将止损单更新广播到 /ws/stop 通道。",
+      "tags": [
+        "websocket"
+      ],
+      "complexity": "simple",
+      "filePath": "server/ws/manager.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:order-execution:stop-order-management:stop-order-list",
+      "type": "step",
+      "name": "前端止损单列表",
+      "summary": "止损单列表展示止损价、委托价与状态，待触发止损单提供取消操作。",
+      "tags": [
+        "ui",
+        "table"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/query/StopOrderList.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flow:query-account:query-position-account",
+      "type": "flow",
+      "name": "持仓与资金查询",
+      "summary": "前端触发或自动刷新持仓与资金，后端查询服务缓存 CTP 查询结果并按事件驱动刷新，经 /ws/position 广播，前端持仓表格支持一键平仓。",
+      "tags": [
+        "持仓",
+        "资金",
+        "刷新"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "GET /api/query/positions 或 /api/query/account",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "step:query-account:query-position-account:frontend-trigger-refresh",
+      "type": "step",
+      "name": "前端触发刷新",
+      "summary": "查询面板提供 10 秒自动刷新、暂停/手动刷新与 C 键撤销全部。",
+      "tags": [
+        "ui",
+        "container"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/query/QueryPanel.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:query-account:query-position-account:rest-position-account-endpoint",
+      "type": "step",
+      "name": "REST 持仓/资金接口",
+      "summary": "持仓与资金查询接口返回缓存数据并支持主动刷新。",
+      "tags": [
+        "api"
+      ],
+      "complexity": "simple",
+      "filePath": "server/api/query.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:query-account:query-position-account:query-service-cache-refresh",
+      "type": "step",
+      "name": "查询服务缓存与刷新",
+      "summary": "查询服务缓存查询结果并通过事件驱动同步刷新。",
+      "tags": [
+        "service"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/query_service.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:query-account:query-position-account:ctp-query-return-wiring",
+      "type": "step",
+      "name": "CTP 查询回报装配",
+      "summary": "注册报单/成交/持仓/资金查询回报回调到查询服务。",
+      "tags": [
+        "service"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/ctp_startup.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:query-account:query-position-account:ws-position-broadcast",
+      "type": "step",
+      "name": "/ws/position 广播持仓",
+      "summary": "持仓刷新结果经 /ws/position 通道广播到前端。",
+      "tags": [
+        "websocket"
+      ],
+      "complexity": "simple",
+      "filePath": "server/ws/manager.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:query-account:query-position-account:position-table-close",
+      "type": "step",
+      "name": "持仓表格与一键平仓",
+      "summary": "持仓表格展示盈亏与保证金，平仓时从行情取对手价并打开报单标签页。",
+      "tags": [
+        "ui",
+        "table"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/query/Position.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:query-account:query-position-account:account-grid-display",
+      "type": "step",
+      "name": "资金账户网格展示",
+      "summary": "资金账户展示权益、可用、保证金等字段，无效值显示 --。",
+      "tags": [
+        "ui",
+        "table"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/query/AccountQuery.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flow:query-account:query-order-trade-flow",
+      "type": "flow",
+      "name": "报单与成交流水查询",
+      "summary": "查询 store 串行带节流刷新报单与成交流水，后端缓存 CTP 查询回报，前端以 WebSocket 增量 upsert 并渲染两张流水表格。",
+      "tags": [
+        "报单流水",
+        "成交流水",
+        "查询"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "GET /api/query/orders 或 /api/query/trades",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "step:query-account:query-order-trade-flow:serial-throttled-refresh",
+      "type": "step",
+      "name": "串行刷新带节流",
+      "summary": "查询 store 提供串行带超时与节流的刷新与暂停控制。",
+      "tags": [
+        "store"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/query/store.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:query-account:query-order-trade-flow:rest-order-trade-endpoint",
+      "type": "step",
+      "name": "REST 报单/成交接口",
+      "summary": "报单与成交流水查询接口返回缓存数据并支持主动刷新。",
+      "tags": [
+        "api"
+      ],
+      "complexity": "simple",
+      "filePath": "server/api/query.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:query-account:query-order-trade-flow:query-return-mapping-cache",
+      "type": "step",
+      "name": "查询回报映射缓存",
+      "summary": "CTP 查询回报经字段映射后写入查询服务缓存。",
+      "tags": [
+        "service"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/query_service.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:query-account:query-order-trade-flow:ws-incremental-upsert",
+      "type": "step",
+      "name": "WS 增量 upsert",
+      "summary": "前端查询 store 以 WebSocket 增量 upsert 更新报单与成交数据。",
+      "tags": [
+        "store",
+        "websocket"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/query/store.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:query-account:query-order-trade-flow:order-flow-table",
+      "type": "step",
+      "name": "报单流水表格",
+      "summary": "报单流水按状态/方向/开平映射中文显示，支持单笔与全部撤单。",
+      "tags": [
+        "ui",
+        "table"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/query/OrderFlow.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:query-account:query-order-trade-flow:trade-flow-table",
+      "type": "step",
+      "name": "成交流水表格",
+      "summary": "成交流水展示成交明细并对新成交高亮 2 秒后自动清除。",
+      "tags": [
+        "ui",
+        "table"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/query/TradeFlow.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flow:query-account:query-contract-detail",
+      "type": "flow",
+      "name": "合约详情查询",
+      "summary": "按合约代码拉取合约信息并展示详情，后端复用行情服务的合约缓存。",
+      "tags": [
+        "合约",
+        "详情"
+      ],
+      "complexity": "simple",
+      "domainMeta": {
+        "entryPoint": "GET /api/query/contracts",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "step:query-account:query-contract-detail:input-contract-code-query",
+      "type": "step",
+      "name": "输入合约代码查询",
+      "summary": "按 instrumentID 调用接口获取合约信息，处理加载与错误状态。",
+      "tags": [
+        "ui",
+        "component"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/query/ContractQuery.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:query-account:query-contract-detail:rest-contract-query-endpoint",
+      "type": "step",
+      "name": "REST 合约查询接口",
+      "summary": "按关键词查询合约列表。",
+      "tags": [
+        "api"
+      ],
+      "complexity": "simple",
+      "filePath": "server/api/query.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:query-account:query-contract-detail:reuse-market-contract-cache",
+      "type": "step",
+      "name": "复用行情服务合约缓存",
+      "summary": "合约查询复用行情服务维护的合约缓存。",
+      "tags": [
+        "service"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/market_service.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:query-account:query-contract-detail:render-contract-detail",
+      "type": "step",
+      "name": "合约详情展示",
+      "summary": "渲染合约代码、名称与交易信息等详情字段。",
+      "tags": [
+        "ui",
+        "component"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/query/ContractQuery.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flow:options-trading:option-chain-tquote",
+      "type": "flow",
+      "name": "期权链加载与 T 型报价",
+      "summary": "选择期权标的与到期日后拉取期权链，订阅行情快照，前端按行权价合并 call/put 渲染 T 型报价表。",
+      "tags": [
+        "期权链",
+        "T型报价",
+        "聚合"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "GET /api/market/option/chains",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "step:options-trading:option-chain-tquote:select-underlying-expiry",
+      "type": "step",
+      "name": "选择标的与到期日",
+      "summary": "期权面板提供标的搜索与到期日切换交互。",
+      "tags": [
+        "ui",
+        "component"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/options/OptionPanel.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:options-trading:option-chain-tquote:rest-option-chain-endpoint",
+      "type": "step",
+      "name": "REST 期权链接口",
+      "summary": "按标的不同到期月获取期权链。",
+      "tags": [
+        "api"
+      ],
+      "complexity": "simple",
+      "filePath": "server/api/market.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:options-trading:option-chain-tquote:option-service-aggregate-chain",
+      "type": "step",
+      "name": "期权服务聚合 call/put",
+      "summary": "期权服务实现期权合约过滤与期权链聚合。",
+      "tags": [
+        "service"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/options_service.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:options-trading:option-chain-tquote:subscribe-option-snapshots",
+      "type": "step",
+      "name": "订阅期权行情快照",
+      "summary": "期权 store 管理期权链、波动率并订阅期权合约行情。",
+      "tags": [
+        "store"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/options/store.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:options-trading:option-chain-tquote:merge-tquote-records",
+      "type": "step",
+      "name": "合并 T 型记录",
+      "summary": "将期权链的 call/put 数据按行权价合并为 T 型报价记录并融合快照与波动率。",
+      "tags": [
+        "utility"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/options/TQuoteTable.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:options-trading:option-chain-tquote:virtual-scroll-render",
+      "type": "step",
+      "name": "虚拟滚动渲染",
+      "summary": "基于 vtable 创建虚拟滚动 T 型报价表并刷新表格实例。",
+      "tags": [
+        "ui",
+        "table"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/options/TQuoteTable.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flow:options-trading:implied-volatility",
+      "type": "flow",
+      "name": "隐含波动率计算",
+      "summary": "基于期权合约行情快照以 Black-Scholes 模型反推隐含波动率，前端轮询并展示。",
+      "tags": [
+        "波动率",
+        "Black-Scholes"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "GET /api/market/volatility",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "step:options-trading:implied-volatility:option-snapshot-source",
+      "type": "step",
+      "name": "期权行情快照",
+      "summary": "volatility 接口基于行情快照计算期权隐含波动率。",
+      "tags": [
+        "api"
+      ],
+      "complexity": "simple",
+      "filePath": "server/api/market.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:options-trading:implied-volatility:bs-implied-volatility",
+      "type": "step",
+      "name": "BS 模型反推波动率",
+      "summary": "期权服务实现 Black-Scholes 定价与隐含波动率计算。",
+      "tags": [
+        "service"
+      ],
+      "complexity": "simple",
+      "filePath": "server/services/options_service.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:options-trading:implied-volatility:volatility-data-serialize",
+      "type": "step",
+      "name": "波动率数据序列化",
+      "summary": "VolatilityData 模型携带隐含波动率、剩余期限等字段并序列化。",
+      "tags": [
+        "model"
+      ],
+      "complexity": "simple",
+      "filePath": "server/models/options.py",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:options-trading:implied-volatility:frontend-poll-volatility",
+      "type": "step",
+      "name": "前端轮询展示",
+      "summary": "期权面板轮询波动率并接入 T 型报价表展示。",
+      "tags": [
+        "store",
+        "ui"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/modules/options/store.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flow:workspace-desktop:tab-management",
+      "type": "flow",
+      "name": "多标签页管理",
+      "summary": "管理标签数组与活跃标签，打开标签按类型+合约去重并受上限约束，内容区按类型渲染，并通过合约锁定保证订阅。",
+      "tags": [
+        "标签页",
+        "路由"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "用户交互（打开/切换标签）",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "step:workspace-desktop:tab-management:open-tab-dedup-limit",
+      "type": "step",
+      "name": "打开标签去重与上限",
+      "summary": "openTab 按 type+instrumentID 去重并受 MAX_TABS 上限约束，固定标签不可关闭。",
+      "tags": [
+        "store"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/stores/tabs.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:workspace-desktop:tab-management:tabbar-switch-close",
+      "type": "step",
+      "name": "标签栏切换与关闭",
+      "summary": "标签栏支持多标签切换、拖拽脱离、右键菜单与快捷键操作。",
+      "tags": [
+        "ui",
+        "tab-bar"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/components/TabBar/index.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:workspace-desktop:tab-management:tab-content-render",
+      "type": "step",
+      "name": "内容区按类型渲染",
+      "summary": "按当前标签类型渲染对应业务面板，并处理面板拖拽脱离事件。",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/components/TabContent/index.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:workspace-desktop:tab-management:tab-contract-locks",
+      "type": "step",
+      "name": "合约锁定同步订阅",
+      "summary": "监听标签变化，新增/关闭标签时以引用计数维护合约锁定，保证 K 线标签无数据。",
+      "tags": [
+        "hook"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/hooks/useTabContractLocks.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flow:workspace-desktop:floating-window",
+      "type": "flow",
+      "name": "悬浮窗与弹窗工作区",
+      "summary": "标签可拖拽脱离为浮动窗口，支持 8 方向缩放、聚焦与重新停靠，弹窗则复用浮窗几何能力实现非模态悬浮。",
+      "tags": [
+        "悬浮窗",
+        "弹窗",
+        "拖拽",
+        "缩放"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "用户交互（拖拽标签/打开弹窗）",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "step:workspace-desktop:floating-window:detach-tab-drag",
+      "type": "step",
+      "name": "标签拖拽脱离",
+      "summary": "detachTabAt 在光标位置将可关闭标签脱离为浮动窗口，管理 ghost 元素生命周期。",
+      "tags": [
+        "utility",
+        "drag"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/utils/detachDrag.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:workspace-desktop:floating-window:floating-window-geometry",
+      "type": "step",
+      "name": "浮窗几何管理",
+      "summary": "维护 tabId 到浮窗几何的映射，z 值递增实现置顶。",
+      "tags": [
+        "store"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/stores/floatingWindows.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:workspace-desktop:floating-window:floating-drag-resize",
+      "type": "step",
+      "name": "拖动与 8 方向缩放",
+      "summary": "浮窗容器实现拖动、缩放、聚焦与重新停靠。",
+      "tags": [
+        "ui",
+        "component"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/components/FloatingWindow/index.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:workspace-desktop:floating-window:dock-and-cleanup",
+      "type": "step",
+      "name": "停靠与孤立清理",
+      "summary": "浮窗集合与标签状态同步，标签关闭时清理孤立浮窗。",
+      "tags": [
+        "store"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/stores/floatingWindows.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flow:workspace-desktop:hotkeys-quick-trade",
+      "type": "flow",
+      "name": "快捷键与快捷交易配置",
+      "summary": "设置面板录制快捷键与快捷交易参数并持久化到 localStorage，全局快捷键 hook 将按键映射为买卖/反向/锁仓等交易动作。",
+      "tags": [
+        "快捷键",
+        "快捷交易",
+        "设置"
+      ],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "设置面板（用户交互）",
+        "entryType": "manual"
+      }
+    },
+    {
+      "id": "step:workspace-desktop:hotkeys-quick-trade:record-hotkey-conflict-check",
+      "type": "step",
+      "name": "录制快捷键与冲突检测",
+      "summary": "快捷键标签页支持按键录制、冲突校验、保存与恢复默认值。",
+      "tags": [
+        "ui",
+        "settings"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/components/SettingsPanel/HotKeyTab.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:workspace-desktop:hotkeys-quick-trade:quick-trade-config",
+      "type": "step",
+      "name": "快捷交易参数配置",
+      "summary": "配置锁仓/反向的成交模式、限价偏移、时间条件与执行模式。",
+      "tags": [
+        "ui",
+        "settings"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/components/SettingsPanel/QuickTradeTab.tsx",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:workspace-desktop:hotkeys-quick-trade:persist-user-prefs",
+      "type": "step",
+      "name": "偏好持久化",
+      "summary": "用户偏好 store 管理快捷键与快捷交易配置并持久化到 localStorage。",
+      "tags": [
+        "store",
+        "persistence"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/stores/userPrefs.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:workspace-desktop:hotkeys-quick-trade:global-hotkey-trigger-trade",
+      "type": "step",
+      "name": "全局快捷键触发交易",
+      "summary": "useHotKeys 将按键映射为交易动作，绑定全局 keydown 事件并跳过输入框聚焦。",
+      "tags": [
+        "hook",
+        "event-handler"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/src/hooks/useHotKeys.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flow:workspace-desktop:electron-desktop",
+      "type": "flow",
+      "name": "Electron 桌面模式运行",
+      "summary": "主进程装配窗口/托盘/快捷键/通知等管理器并托管 Python 后端子进程，通过 preload 与 IPC 向渲染进程暴露受限能力，支持多窗口与自动更新。",
+      "tags": [
+        "Electron",
+        "IPC",
+        "桌面"
+      ],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "启动桌面应用（Electron 主进程）",
+        "entryType": "event"
+      }
+    },
+    {
+      "id": "step:workspace-desktop:electron-desktop:main-process-init",
+      "type": "step",
+      "name": "主进程装配管理器",
+      "summary": "懒加载单例初始化窗口/托盘/快捷键/通知/后端/自动更新并装配生命周期。",
+      "tags": [
+        "electron",
+        "entry"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/electron/main.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:workspace-desktop:electron-desktop:backend-process-manage",
+      "type": "step",
+      "name": "后端进程托管",
+      "summary": "检测、启动、停止与重启 Python FastAPI 后端子进程，并环形缓冲采集日志。",
+      "tags": [
+        "electron",
+        "process"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/electron/backendManager.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:workspace-desktop:electron-desktop:ipc-bridge-preload",
+      "type": "step",
+      "name": "IPC 桥接暴露 API",
+      "summary": "preload 通过 contextBridge 暴露受限 electronAPI，IPC 频道常量与类型契约唯一来源。",
+      "tags": [
+        "electron",
+        "ipc"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/electron/preload.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:workspace-desktop:electron-desktop:multi-window-management",
+      "type": "step",
+      "name": "多窗口打开管理",
+      "summary": "创建主窗口/下单/K 线/标签页窗口，维护窗口集合、状态持久化与跨窗口广播。",
+      "tags": [
+        "electron",
+        "window"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/electron/windowManager.ts",
+      "lineRange": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "step:workspace-desktop:electron-desktop:auto-update",
+      "type": "step",
+      "name": "自动更新",
+      "summary": "基于 electron-updater 检测新版本、提示下载与安装并推送更新状态。",
+      "tags": [
+        "electron",
+        "update"
+      ],
+      "complexity": "simple",
+      "filePath": "frontend/electron/autoUpdater.ts",
+      "lineRange": [
+        0,
+        0
+      ]
     }
-  ]
+  ],
+  "edges": [
+    {
+      "source": "domain:connection-session",
+      "target": "flow:connection-session:login-simnow",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:connection-session:login-simnow",
+      "target": "step:connection-session:login-simnow:submit-login-credentials",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.2
+    },
+    {
+      "source": "flow:connection-session:login-simnow",
+      "target": "step:connection-session:login-simnow:start-ctp-trading-connection",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.4
+    },
+    {
+      "source": "flow:connection-session:login-simnow",
+      "target": "step:connection-session:login-simnow:login-and-confirm-settlement",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:connection-session:login-simnow",
+      "target": "step:connection-session:login-simnow:poll-connection-status",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:connection-session:login-simnow",
+      "target": "step:connection-session:login-simnow:render-connection-indicator",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:connection-session",
+      "target": "flow:connection-session:ctp-auto-reconnect",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:connection-session:ctp-auto-reconnect",
+      "target": "step:connection-session:ctp-auto-reconnect:detect-connection-loss",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.2
+    },
+    {
+      "source": "flow:connection-session:ctp-auto-reconnect",
+      "target": "step:connection-session:ctp-auto-reconnect:exponential-backoff-delay",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:connection-session:ctp-auto-reconnect",
+      "target": "step:connection-session:ctp-auto-reconnect:rebuild-ctp-channel",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:connection-session:ctp-auto-reconnect",
+      "target": "step:connection-session:ctp-auto-reconnect:restore-subscriptions",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "flow:connection-session:ctp-auto-reconnect",
+      "target": "step:connection-session:ctp-auto-reconnect:broadcast-connection-status",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:connection-session:ctp-auto-reconnect",
+      "target": "step:connection-session:ctp-auto-reconnect:frontend-update-connection-store",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:market-data",
+      "target": "flow:market-data:market-subscribe-push",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:market-data:market-subscribe-push",
+      "target": "step:market-data:market-subscribe-push:compute-subscription-diff",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.1
+    },
+    {
+      "source": "flow:market-data:market-subscribe-push",
+      "target": "step:market-data:market-subscribe-push:rest-subscribe-endpoint",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:market-data:market-subscribe-push",
+      "target": "step:market-data:market-subscribe-push:ctp-market-subscribe",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.4
+    },
+    {
+      "source": "flow:market-data:market-subscribe-push",
+      "target": "step:market-data:market-subscribe-push:depth-market-callback-mapping",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:market-data:market-subscribe-push",
+      "target": "step:market-data:market-subscribe-push:ws-market-broadcast",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "flow:market-data:market-subscribe-push",
+      "target": "step:market-data:market-subscribe-push:frontend-snapshot-buffer",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.9
+    },
+    {
+      "source": "flow:market-data:market-subscribe-push",
+      "target": "step:market-data:market-subscribe-push:render-market-table",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:market-data",
+      "target": "flow:market-data:kline-aggregate-display",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:market-data:kline-aggregate-display",
+      "target": "step:market-data:kline-aggregate-display:tick-into-kline-service",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.2
+    },
+    {
+      "source": "flow:market-data:kline-aggregate-display",
+      "target": "step:market-data:kline-aggregate-display:aggregate-ohlcv-by-period",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:market-data:kline-aggregate-display",
+      "target": "step:market-data:kline-aggregate-display:rest-kline-endpoint",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:market-data:kline-aggregate-display",
+      "target": "step:market-data:kline-aggregate-display:fetch-and-align-kline",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "flow:market-data:kline-aggregate-display",
+      "target": "step:market-data:kline-aggregate-display:compute-technical-indicators",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:market-data:kline-aggregate-display",
+      "target": "step:market-data:kline-aggregate-display:render-kline-chart",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:market-data",
+      "target": "flow:market-data:favorites-contract",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:market-data:favorites-contract",
+      "target": "step:market-data:favorites-contract:load-and-search-contracts",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:market-data:favorites-contract",
+      "target": "step:market-data:favorites-contract:toggle-favorites",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:market-data:favorites-contract",
+      "target": "step:market-data:favorites-contract:render-favorites-page",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:market-data:favorites-contract",
+      "target": "step:market-data:favorites-contract:context-menu-link-popups",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:order-execution",
+      "target": "flow:order-execution:submit-order",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:order-execution:submit-order",
+      "target": "step:order-execution:submit-order:fill-form-validate-order",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.1
+    },
+    {
+      "source": "flow:order-execution:submit-order",
+      "target": "step:order-execution:submit-order:price-step-tick-align",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:order-execution:submit-order",
+      "target": "step:order-execution:submit-order:map-ctp-order-request",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.4
+    },
+    {
+      "source": "flow:order-execution:submit-order",
+      "target": "step:order-execution:submit-order:backend-authoritative-validation",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:order-execution:submit-order",
+      "target": "step:order-execution:submit-order:order-manager-submit",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "flow:order-execution:submit-order",
+      "target": "step:order-execution:submit-order:ctp-trading-place-order",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.9
+    },
+    {
+      "source": "flow:order-execution:submit-order",
+      "target": "step:order-execution:submit-order:order-return-highlight",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:order-execution",
+      "target": "flow:order-execution:cancel-orders",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:order-execution:cancel-orders",
+      "target": "step:order-execution:cancel-orders:order-flow-trigger-cancel",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.2
+    },
+    {
+      "source": "flow:order-execution:cancel-orders",
+      "target": "step:order-execution:cancel-orders:batch-cancel-selection",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.4
+    },
+    {
+      "source": "flow:order-execution:cancel-orders",
+      "target": "step:order-execution:cancel-orders:rest-cancel-endpoint",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:order-execution:cancel-orders",
+      "target": "step:order-execution:cancel-orders:ctp-cancel-update-return",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:order-execution:cancel-orders",
+      "target": "step:order-execution:cancel-orders:ws-push-frontend-update",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:order-execution",
+      "target": "flow:order-execution:reverse-lock-position",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:order-execution:reverse-lock-position",
+      "target": "step:order-execution:reverse-lock-position:quick-actions-trigger",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.2
+    },
+    {
+      "source": "flow:order-execution:reverse-lock-position",
+      "target": "step:order-execution:reverse-lock-position:confirm-dialog",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:order-execution:reverse-lock-position",
+      "target": "step:order-execution:reverse-lock-position:calc-counterparty-price",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:order-execution:reverse-lock-position",
+      "target": "step:order-execution:reverse-lock-position:dispatch-serial-parallel",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "flow:order-execution:reverse-lock-position",
+      "target": "step:order-execution:reverse-lock-position:submit-close-open-orders",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:order-execution:reverse-lock-position",
+      "target": "step:order-execution:reverse-lock-position:toast-result-feedback",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:order-execution",
+      "target": "flow:order-execution:stop-order-management",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:order-execution:stop-order-management",
+      "target": "step:order-execution:stop-order-management:stop-order-form-config",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.1
+    },
+    {
+      "source": "flow:order-execution:stop-order-management",
+      "target": "step:order-execution:stop-order-management:submit-stop-order-request",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:order-execution:stop-order-management",
+      "target": "step:order-execution:stop-order-management:stop-order-persist",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.4
+    },
+    {
+      "source": "flow:order-execution:stop-order-management",
+      "target": "step:order-execution:stop-order-management:market-callback-trigger-check",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:order-execution:stop-order-management",
+      "target": "step:order-execution:stop-order-management:trigger-execute-stop-order",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "flow:order-execution:stop-order-management",
+      "target": "step:order-execution:stop-order-management:ws-stop-broadcast",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.9
+    },
+    {
+      "source": "flow:order-execution:stop-order-management",
+      "target": "step:order-execution:stop-order-management:stop-order-list",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:query-account",
+      "target": "flow:query-account:query-position-account",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:query-account:query-position-account",
+      "target": "step:query-account:query-position-account:frontend-trigger-refresh",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.1
+    },
+    {
+      "source": "flow:query-account:query-position-account",
+      "target": "step:query-account:query-position-account:rest-position-account-endpoint",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:query-account:query-position-account",
+      "target": "step:query-account:query-position-account:query-service-cache-refresh",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.4
+    },
+    {
+      "source": "flow:query-account:query-position-account",
+      "target": "step:query-account:query-position-account:ctp-query-return-wiring",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:query-account:query-position-account",
+      "target": "step:query-account:query-position-account:ws-position-broadcast",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "flow:query-account:query-position-account",
+      "target": "step:query-account:query-position-account:position-table-close",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.9
+    },
+    {
+      "source": "flow:query-account:query-position-account",
+      "target": "step:query-account:query-position-account:account-grid-display",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:query-account",
+      "target": "flow:query-account:query-order-trade-flow",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:query-account:query-order-trade-flow",
+      "target": "step:query-account:query-order-trade-flow:serial-throttled-refresh",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.2
+    },
+    {
+      "source": "flow:query-account:query-order-trade-flow",
+      "target": "step:query-account:query-order-trade-flow:rest-order-trade-endpoint",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:query-account:query-order-trade-flow",
+      "target": "step:query-account:query-order-trade-flow:query-return-mapping-cache",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:query-account:query-order-trade-flow",
+      "target": "step:query-account:query-order-trade-flow:ws-incremental-upsert",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "flow:query-account:query-order-trade-flow",
+      "target": "step:query-account:query-order-trade-flow:order-flow-table",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:query-account:query-order-trade-flow",
+      "target": "step:query-account:query-order-trade-flow:trade-flow-table",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:query-account",
+      "target": "flow:query-account:query-contract-detail",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:query-account:query-contract-detail",
+      "target": "step:query-account:query-contract-detail:input-contract-code-query",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:query-account:query-contract-detail",
+      "target": "step:query-account:query-contract-detail:rest-contract-query-endpoint",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:query-account:query-contract-detail",
+      "target": "step:query-account:query-contract-detail:reuse-market-contract-cache",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:query-account:query-contract-detail",
+      "target": "step:query-account:query-contract-detail:render-contract-detail",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:options-trading",
+      "target": "flow:options-trading:option-chain-tquote",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:options-trading:option-chain-tquote",
+      "target": "step:options-trading:option-chain-tquote:select-underlying-expiry",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.2
+    },
+    {
+      "source": "flow:options-trading:option-chain-tquote",
+      "target": "step:options-trading:option-chain-tquote:rest-option-chain-endpoint",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:options-trading:option-chain-tquote",
+      "target": "step:options-trading:option-chain-tquote:option-service-aggregate-chain",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:options-trading:option-chain-tquote",
+      "target": "step:options-trading:option-chain-tquote:subscribe-option-snapshots",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "flow:options-trading:option-chain-tquote",
+      "target": "step:options-trading:option-chain-tquote:merge-tquote-records",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:options-trading:option-chain-tquote",
+      "target": "step:options-trading:option-chain-tquote:virtual-scroll-render",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:options-trading",
+      "target": "flow:options-trading:implied-volatility",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:options-trading:implied-volatility",
+      "target": "step:options-trading:implied-volatility:option-snapshot-source",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:options-trading:implied-volatility",
+      "target": "step:options-trading:implied-volatility:bs-implied-volatility",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:options-trading:implied-volatility",
+      "target": "step:options-trading:implied-volatility:volatility-data-serialize",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:options-trading:implied-volatility",
+      "target": "step:options-trading:implied-volatility:frontend-poll-volatility",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:workspace-desktop",
+      "target": "flow:workspace-desktop:tab-management",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:workspace-desktop:tab-management",
+      "target": "step:workspace-desktop:tab-management:open-tab-dedup-limit",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:workspace-desktop:tab-management",
+      "target": "step:workspace-desktop:tab-management:tabbar-switch-close",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:workspace-desktop:tab-management",
+      "target": "step:workspace-desktop:tab-management:tab-content-render",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:workspace-desktop:tab-management",
+      "target": "step:workspace-desktop:tab-management:tab-contract-locks",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:workspace-desktop",
+      "target": "flow:workspace-desktop:floating-window",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:workspace-desktop:floating-window",
+      "target": "step:workspace-desktop:floating-window:detach-tab-drag",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:workspace-desktop:floating-window",
+      "target": "step:workspace-desktop:floating-window:floating-window-geometry",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:workspace-desktop:floating-window",
+      "target": "step:workspace-desktop:floating-window:floating-drag-resize",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:workspace-desktop:floating-window",
+      "target": "step:workspace-desktop:floating-window:dock-and-cleanup",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:workspace-desktop",
+      "target": "flow:workspace-desktop:hotkeys-quick-trade",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:workspace-desktop:hotkeys-quick-trade",
+      "target": "step:workspace-desktop:hotkeys-quick-trade:record-hotkey-conflict-check",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.3
+    },
+    {
+      "source": "flow:workspace-desktop:hotkeys-quick-trade",
+      "target": "step:workspace-desktop:hotkeys-quick-trade:quick-trade-config",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "flow:workspace-desktop:hotkeys-quick-trade",
+      "target": "step:workspace-desktop:hotkeys-quick-trade:persist-user-prefs",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:workspace-desktop:hotkeys-quick-trade",
+      "target": "step:workspace-desktop:hotkeys-quick-trade:global-hotkey-trigger-trade",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:workspace-desktop",
+      "target": "flow:workspace-desktop:electron-desktop",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:workspace-desktop:electron-desktop",
+      "target": "step:workspace-desktop:electron-desktop:main-process-init",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.2
+    },
+    {
+      "source": "flow:workspace-desktop:electron-desktop",
+      "target": "step:workspace-desktop:electron-desktop:backend-process-manage",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.4
+    },
+    {
+      "source": "flow:workspace-desktop:electron-desktop",
+      "target": "step:workspace-desktop:electron-desktop:ipc-bridge-preload",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "flow:workspace-desktop:electron-desktop",
+      "target": "step:workspace-desktop:electron-desktop:multi-window-management",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "flow:workspace-desktop:electron-desktop",
+      "target": "step:workspace-desktop:electron-desktop:auto-update",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "domain:connection-session",
+      "target": "domain:market-data",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "行情通道在登录后建立，重连恢复行情订阅",
+      "weight": 0.5
+    },
+    {
+      "source": "domain:connection-session",
+      "target": "domain:order-execution",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "交易通道登录/重连驱动报单可用性",
+      "weight": 0.5
+    },
+    {
+      "source": "domain:market-data",
+      "target": "domain:order-execution",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "行情快照为报单提供价格填充、保护价与对价计算",
+      "weight": 0.7
+    },
+    {
+      "source": "domain:market-data",
+      "target": "domain:options-trading",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "期权标的与合约行情快照驱动期权链与波动率",
+      "weight": 0.6
+    },
+    {
+      "source": "domain:market-data",
+      "target": "domain:query-account",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "持仓一键平仓从行情快照取对手价",
+      "weight": 0.4
+    },
+    {
+      "source": "domain:order-execution",
+      "target": "domain:query-account",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "报单/成交回报增量进入查询流水数据",
+      "weight": 0.6
+    },
+    {
+      "source": "domain:order-execution",
+      "target": "domain:options-trading",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "期权合约复用交易报单通道下单",
+      "weight": 0.4
+    },
+    {
+      "source": "domain:workspace-desktop",
+      "target": "domain:market-data",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "打开标签的合约锁定保证持续订阅",
+      "weight": 0.5
+    },
+    {
+      "source": "domain:workspace-desktop",
+      "target": "domain:order-execution",
+      "type": "cross_domain",
+      "direction": "forward",
+      "description": "全局快捷键触发买卖/反向/锁仓交易动作",
+      "weight": 0.4
+    }
+  ],
+  "layers": [],
+  "tour": []
 }
