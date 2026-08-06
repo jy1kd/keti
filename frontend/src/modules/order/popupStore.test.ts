@@ -56,6 +56,18 @@ describe('useOrderPopupStore', () => {
     expect(data.state.instrumentID).toBeUndefined()
   })
 
+  it('confirmOpen 为瞬态（默认 false），setConfirmOpen 切换且不持久化', () => {
+    expect(useOrderPopupStore.getState().confirmOpen).toBe(false)
+    useOrderPopupStore.getState().setConfirmOpen(true)
+    expect(useOrderPopupStore.getState().confirmOpen).toBe(true)
+    useOrderPopupStore.getState().setConfirmOpen(false)
+    expect(useOrderPopupStore.getState().confirmOpen).toBe(false)
+    // 确认框是瞬态 UI 状态：不跨会话恢复
+    const raw = localStorage.getItem(STORAGE_KEY)
+    expect(raw).not.toBeNull()
+    expect(JSON.parse(raw!).state.confirmOpen).toBeUndefined()
+  })
+
   it('rehydrate 从 localStorage 恢复展开状态', async () => {
     useOrderPopupStore.setState({ expanded: false })
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ state: { expanded: true }, version: 0 }))

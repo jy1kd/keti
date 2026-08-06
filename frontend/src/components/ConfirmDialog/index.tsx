@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import './styles.css'
 
 interface ConfirmDialogProps {
@@ -9,6 +10,16 @@ interface ConfirmDialogProps {
 }
 
 export function ConfirmDialog({ title, details, warning, onConfirm, onCancel }: ConfirmDialogProps) {
+  // Esc = 取消：与「取消」按钮/遮罩点击等价。配合 OrderPopup 的 confirmOpen 守卫，
+  // 弹窗内确认框打开时 Esc 优先取消确认框，而不是被外层全局监听当作「关闭弹窗」。
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [onCancel])
+
   return (
     <div className="confirm-overlay" onClick={onCancel}>
       <div className="confirm-dialog" data-testid="confirm-dialog" onClick={(e) => e.stopPropagation()}>

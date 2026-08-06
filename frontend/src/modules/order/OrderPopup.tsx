@@ -87,10 +87,14 @@ export function OrderPopup() {
   }, [setPosition])
 
   // ── ESC 关闭 ──
+  // 确认框打开时优先取消确认框（ConfirmDialog 自身监听 Esc → onCancel），
+  // 不关闭整个弹窗、不丢失待确认报单意图（P1 审查 🔵-1 → P2 confirmOpen）。
   useEffect(() => {
     if (!instrumentID) return
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closePopup()
+      if (e.key !== 'Escape') return
+      if (useOrderPopupStore.getState().confirmOpen) return
+      closePopup()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)

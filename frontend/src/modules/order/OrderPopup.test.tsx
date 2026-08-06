@@ -154,6 +154,32 @@ describe('OrderPopup', () => {
     expect(useOrderPopupStore.getState().instrumentID).toBeNull()
   })
 
+  it('确认框打开时按 Esc 取消确认框而非关闭弹窗（不丢失待确认报单意图）', () => {
+    useOrderPopupStore.setState({ instrumentID: 'IF2608' })
+    useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) })
+    render(<OrderPopup />)
+    // 点卖一档打开确认框
+    fireEvent.click(screen.getByTestId('ask-1').querySelector('.depth-row__buy')!)
+    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    // Esc 取消确认框（ConfirmDialog onCancel）……
+    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
+    // ……而非关闭整个弹窗
+    expect(useOrderPopupStore.getState().instrumentID).toBe('IF2608')
+  })
+
+  it('确认框关闭后 Esc 恢复关闭弹窗', () => {
+    useOrderPopupStore.setState({ instrumentID: 'IF2608' })
+    render(<OrderPopup />)
+    // 模拟确认框已打开再关闭后的状态（store 守卫仅依赖 confirmOpen 瞬态）
+    useOrderPopupStore.getState().setConfirmOpen(true)
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(useOrderPopupStore.getState().instrumentID).toBe('IF2608')
+    useOrderPopupStore.getState().setConfirmOpen(false)
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(useOrderPopupStore.getState().instrumentID).toBeNull()
+  })
+
   it('打开弹窗即置顶（bringToFront order 写入统一 z）', () => {
     useFloatingWindowStore.setState({ popupZ: {}, windows: {} })
     useOrderPopupStore.setState({ instrumentID: 'IF2608' })
