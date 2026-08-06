@@ -136,14 +136,15 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
 
   const { asks, bids, last } = resolveDepth(snapshot, tick)
 
-  // 汇总：委买/委卖总量（仅统计有效档位量）
-  const totalBidVol = bids.reduce((sum, l) => sum + (l.valid ? l.volume : 0), 0)
-  const totalAskVol = asks.reduce((sum, l) => sum + (l.valid ? l.volume : 0), 0)
-  // 量能条基准：十档最大量（含买/卖全部有效档）
+  // 汇总：委买/委卖总量 = 所有档位量之和（含合成价档；档位量 > 0 即计入，与行内展示一致）。
+  // SimNow 测试环境五档仅第 1 档有真实价/量（2-5 档 CTP 返回 DBL_MAX → 0 价 0 量），故真实数据下 委买/委卖 即为买一/卖一量。
+  const totalBidVol = bids.reduce((sum, l) => sum + (l.volume > 0 ? l.volume : 0), 0)
+  const totalAskVol = asks.reduce((sum, l) => sum + (l.volume > 0 ? l.volume : 0), 0)
+  // 量能条基准：十档最大量（含买/卖全部有量档）
   const maxVol = Math.max(
     0,
-    ...bids.filter((l) => l.valid).map((l) => l.volume),
-    ...asks.filter((l) => l.valid).map((l) => l.volume),
+    ...bids.filter((l) => l.volume > 0).map((l) => l.volume),
+    ...asks.filter((l) => l.volume > 0).map((l) => l.volume),
   )
 
   // 涨跌：相对昨结，涨红跌绿带箭头
@@ -253,7 +254,7 @@ interface DepthSummaryRowProps {
 
 function DepthSummaryRow({ totalBidVol, totalAskVol, lastText, changeText, changeClass }: DepthSummaryRowProps) {
   return (
-    <div className="depth-summary">
+    <div className="depth-summary" data-testid="depth-summary">
       <span className="depth-summary__bid">
         <span className="depth-summary__label">委买</span>
         <span className="depth-summary__value">{totalBidVol}</span>
@@ -369,12 +370,13 @@ export function DepthRow({
       ? formatTickPrice(level.price, tick)
       : String(level.price)
     : '--'
-  const volText = level.valid ? String(level.volume) : '--'
+  // 档位量：量 > 0 即展示（与汇总行统计口径一致：委买/委卖 = 所有档位量之和）
+  const volText = level.volume > 0 ? String(level.volume) : '--'
   const buyText = kind === 'bid' ? volText : '--'
   const sellText = kind === 'ask' ? volText : '--'
 
   // 量能条：仅量所在列填充；pct = 该档量 / 十档最大量
-  const pct = level.valid && maxVol > 0 ? Math.round((level.volume / maxVol) * 100) : 0
+  const pct = level.volume > 0 && maxVol > 0 ? Math.round((level.volume / maxVol) * 100) : 0
   const buyPct = kind === 'bid' ? pct : 0
   const sellPct = kind === 'ask' ? pct : 0
   const buyStyle = { '--vol-pct': `${buyPct}%` } as CSSProperties

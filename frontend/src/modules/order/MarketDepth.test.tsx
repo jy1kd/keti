@@ -89,6 +89,38 @@ describe('MarketDepth（任务#1：骨架 + 数据接入）', () => {
     expect(screen.getByText('+5.0')).toBeInTheDocument()
   })
 
+  it('SimNow 真实薄盘：仅第 1 档有量时 委买/委卖 = 第 1 档量（数据准确，非计算错误）', () => {
+    // PR-12 记录：SimNow 测试环境 2-5 档 CTP 返回 DBL_MAX（无效价、0 量），仅第 1 档有真实挂单。
+    // 故「委买/委卖 固定为 1」是数据真实值（买一/卖一各挂 1 手），汇总正确反映盘口。
+    const snap = makeSnapshot({
+      bidPrice2: 0, bidVolume2: 0, bidPrice3: 0, bidVolume3: 0,
+      bidPrice4: 0, bidVolume4: 0, bidPrice5: 0, bidVolume5: 0,
+      askPrice2: 0, askVolume2: 0, askPrice3: 0, askVolume3: 0,
+      askPrice4: 0, askVolume4: 0, askPrice5: 0, askVolume5: 0,
+    })
+    render(<MarketDepth snapshot={snap} priceTick={0.2} />)
+    const summary = within(screen.getByTestId('depth-summary'))
+    expect(summary.getByText('10')).toBeInTheDocument() // 委买 = 买一量 10
+    expect(summary.getByText('15')).toBeInTheDocument() // 委卖 = 卖一量 15
+    // 2-5 档合成价展示、量占位 --
+    expect(screen.getAllByText('--').length).toBeGreaterThanOrEqual(10)
+  })
+
+  it('委买/委卖汇总计入所有档位量（含合成价档带量），与行内同步', () => {
+    const snap = makeSnapshot({
+      bidPrice2: 0, bidVolume2: 5, // 买二价无效（tick 合成兜底）但带量 5
+      askPrice2: 0, askVolume2: 3, // 卖二同理带量 3
+    })
+    render(<MarketDepth snapshot={snap} priceTick={0.2} />)
+    const summary = within(screen.getByTestId('depth-summary'))
+    // 委买 = 10+5+30+40+50；委卖 = 15+3+35+45+55
+    expect(summary.getByText('135')).toBeInTheDocument()
+    expect(summary.getByText('153')).toBeInTheDocument()
+    // 行内同步展示合成价档的量（与汇总口径一致）
+    expect(screen.getByTestId('bid-2').textContent).toContain('5')
+    expect(screen.getByTestId('ask-2').textContent).toContain('3')
+  })
+
   it('卖盘在上、买盘在下：从上到下 ask-5 → ask-1 → bid-1 → bid-5', () => {
     render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
     const ladder = screen.getByTestId('depth-ladder')

@@ -104,6 +104,8 @@
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
+  /* 横向不溢出弹窗/画面（内容超宽时在栏内裁剪，而非刺出屏幕） */
+  overflow-x: hidden;
   scrollbar-gutter: stable;
 }
 

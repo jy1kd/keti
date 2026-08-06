@@ -119,6 +119,8 @@
   grid-template-columns: 1fr 1.2fr 1fr;
   height: 34px;
   flex: 1 1 34px;
+  /* 高度受限时档位行优先压缩让位给买卖栏（QTB 固定不裁剪），行内容不外溢 */
+  min-height: 0;
   border-bottom: 1px solid var(--border-color);
   cursor: default;
   user-select: none;
@@ -179,19 +181,26 @@
 /* ── ⑤ 改价 + 快捷买卖栏 ── */
 .qtb {
   display: grid;
-  grid-template-columns: 1fr 1.4fr 1fr;
+  /* 轨道 minmax(0,…) 防止「买入500手」按钮文字撑宽栏位导致横向溢出 */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr);
   gap: 6px;
   padding: 8px;
   border-top: 1px solid var(--border-color);
   background: var(--bg-secondary);
+  /* 买卖栏固定不被压缩：弹窗高度受限时让十档行压缩，而不是裁剪买卖按钮 */
+  flex: 0 0 auto;
 }
 
 .qtb__btn {
+  min-width: 0;
   height: 32px;
   border: none;
   border-radius: 4px;
   font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   cursor: pointer;
   transition: filter 0.15s;
 }
@@ -215,6 +224,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
 }
 
 .qtb__price-input {
