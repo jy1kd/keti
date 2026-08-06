@@ -28,12 +28,17 @@ function getInstrumentID(props: Record<string, unknown>): string | undefined {
  * query 类型已集成 QueryPanel（全局账户查询，放大自 QueryPopup）；
  * 其他类型使用占位文本，后续 PR 会逐步替换为实际页面组件。
  */
-function renderTabContent(tab: Tab): React.ReactNode {
+function renderTabContent(tab: Tab, floating: boolean): React.ReactNode {
   switch (tab.type) {
     case 'market':
       return <MarketPanel />
     case 'order':
-      return <OrderPage instrumentID={getInstrumentID(tab.props)} />
+      return (
+        <OrderPage
+          instrumentID={getInstrumentID(tab.props)}
+          floating={floating}
+        />
+      )
     case 'kline':
       return <KLinePage instrumentID={getInstrumentID(tab.props)} />
     case 'favorites':
@@ -121,7 +126,7 @@ export function TabContent() {
               }),
             }}
           >
-            {renderTabContent(tab)}
+            {renderTabContent(tab, !!floating)}
           </div>
         )
         if (floating && overlayEl) {
