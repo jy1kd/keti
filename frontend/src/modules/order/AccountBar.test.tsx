@@ -44,7 +44,7 @@ const ACCOUNT = {
 describe('AccountBar', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useQueryStore.setState({ positions: [], account: null })
+    useQueryStore.setState({ positions: [], account: null, isPaused: false })
     refreshPositionsMock.mockResolvedValue({ positions: POSITIONS })
     refreshAccountMock.mockResolvedValue(ACCOUNT)
     lockPositionMock.mockResolvedValue({ success: true })
@@ -185,6 +185,28 @@ describe('AccountBar', () => {
     })
     expect(refreshPositionsMock).toHaveBeenCalledTimes(2)
     expect(refreshAccountMock).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
+  })
+
+  it('暂停查询时挂起轮询（不发起 CTP 查询），恢复后继续', async () => {
+    vi.useFakeTimers()
+    useQueryStore.setState({ isPaused: true })
+    render(<AccountBar instrumentID="IF2608" />)
+    // 暂停期间：挂起本轮，t=0 与整个周期都不发起任何查询
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(refreshPositionsMock).toHaveBeenCalledTimes(0)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000)
+    })
+    expect(refreshPositionsMock).toHaveBeenCalledTimes(0)
+    // 恢复后：下一轮 10s 周期发起持仓拉取（对齐 QueryPanel 的 isPaused 语义）
+    useQueryStore.setState({ isPaused: false })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000)
+    })
+    expect(refreshPositionsMock).toHaveBeenCalledTimes(1)
     vi.useRealTimers()
   })
 })
