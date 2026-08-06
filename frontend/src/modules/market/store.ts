@@ -8,6 +8,10 @@ interface MarketStore {
   snapshots: Map<string, MarketSnapshot>
   updateSnapshot: (snapshot: MarketSnapshot) => void
   batchUpdate: (snapshots: MarketSnapshot[]) => void
+  /** 最近一次批量更新涉及到的合约 ID（供局部更新消费） */
+  recentlyUpdated: Set<string>
+  /** 返回并清空最近更新的合约 ID 列表 */
+  consumeRecentUpdates: () => string[]
   subscribeInstruments: (instruments: string[]) => Promise<void>
   klineData: Map<string, KLineData[]>
   setKlineData: (instrument: string, data: KLineData[]) => void
@@ -28,24 +32,34 @@ interface MarketStore {
   selectAll: (instrumentIDs: string[]) => void
 }
 
-export const useMarketStore = create<MarketStore>((set) => ({
+export const useMarketStore = create<MarketStore>((set, get) => ({
   selectedInstrument: null,
   setSelectedInstrument: (instrument) => set({ selectedInstrument: instrument }),
   snapshots: new Map(),
+  recentlyUpdated: new Set(),
   updateSnapshot: (snapshot) =>
     set((state) => {
       const next = new Map(state.snapshots)
       next.set(snapshot.instrumentID, snapshot)
-      return { snapshots: next }
+      const recent = new Set(state.recentlyUpdated)
+      recent.add(snapshot.instrumentID)
+      return { snapshots: next, recentlyUpdated: recent }
     }),
   batchUpdate: (updates) =>
     set((state) => {
       const next = new Map(state.snapshots)
+      const recent = new Set(state.recentlyUpdated)
       for (const snap of updates) {
         next.set(snap.instrumentID, snap)
+        recent.add(snap.instrumentID)
       }
-      return { snapshots: next }
+      return { snapshots: next, recentlyUpdated: recent }
     }),
+  consumeRecentUpdates: () => {
+    const ids = Array.from(get().recentlyUpdated)
+    set({ recentlyUpdated: new Set() })
+    return ids
+  },
   subscribeInstruments: async (instruments: string[]) => {
     try {
       await subscribeMarket(instruments)

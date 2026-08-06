@@ -322,3 +322,22 @@ describe('MarketStore - selectedContracts', () => {
   })
 })
 
+describe('recentlyUpdated', () => {
+  it('batchUpdate records updated instrument IDs and consumeRecentUpdates returns then clears', () => {
+    useMarketStore.setState({ recentlyUpdated: new Set() })
+    useMarketStore.getState().batchUpdate([
+      { instrumentID: 'IF2608', lastPrice: 4000 } as any,
+      { instrumentID: 'au2508', lastPrice: 480 } as any,
+    ])
+    const ids = useMarketStore.getState().consumeRecentUpdates()
+    expect(ids.sort()).toEqual(['IF2608', 'au2508'])
+    expect(useMarketStore.getState().consumeRecentUpdates()).toEqual([])
+  })
+
+  it('updateSnapshot records a single instrument', () => {
+    useMarketStore.setState({ recentlyUpdated: new Set() })
+    useMarketStore.getState().updateSnapshot({ instrumentID: 'ag2508', lastPrice: 6500 } as any)
+    expect(useMarketStore.getState().consumeRecentUpdates()).toEqual(['ag2508'])
+  })
+})
+
