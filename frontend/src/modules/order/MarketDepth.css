@@ -1,0 +1,160 @@
+/* MarketDepth — 三列十档盘口（核心报单区）
+ *
+ * 布局：`买入 | 价格 | 卖出` 三列 × 十档单表。
+ * 卖盘 5 档在上（价格高→低），最新价分隔线，买盘 5 档在下。
+ * 行高 ≥ 34px 保证点击热区；数字统一等宽字体保证纵向对齐。
+ */
+
+.market-depth {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.market-depth--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+/* ── ① 表头 ── */
+.depth-header {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  height: 24px;
+  flex: 0 0 24px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.depth-header span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.depth-header__buy {
+  color: var(--color-up);
+}
+
+.depth-header__sell {
+  color: var(--color-down);
+}
+
+/* ── ② 汇总行 ── */
+.depth-summary {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  height: 28px;
+  flex: 0 0 28px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+
+.depth-summary__bid,
+.depth-summary__ask {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+}
+
+.depth-summary__bid .depth-summary__value {
+  color: var(--color-up);
+}
+
+.depth-summary__ask .depth-summary__value {
+  color: var(--color-down);
+}
+
+.depth-summary__label {
+  color: var(--text-secondary);
+}
+
+.depth-summary__last {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+}
+
+.depth-summary__last-price {
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.depth-summary__change--up {
+  color: var(--color-up);
+}
+
+.depth-summary__change--down {
+  color: var(--color-down);
+}
+
+.depth-summary__change--flat {
+  color: var(--text-secondary);
+}
+
+/* ── ③ 十档梯形表 ── */
+.depth-ladder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.depth-row {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  height: 34px;
+  flex: 1 1 34px;
+  border-bottom: 1px solid var(--border-color);
+  cursor: default;
+  user-select: none;
+}
+
+.depth-row span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.depth-row__buy {
+  color: var(--color-up);
+}
+
+.depth-row__sell {
+  color: var(--color-down);
+}
+
+.depth-row__price {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.depth-row--invalid .depth-row__buy,
+.depth-row--invalid .depth-row__sell,
+.depth-row--invalid .depth-row__price {
+  color: var(--text-muted);
+}
+
+/* ── ④ 最新价分隔线 ── */
+.depth-last-divider {
+  height: 2px;
+  flex: 0 0 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
