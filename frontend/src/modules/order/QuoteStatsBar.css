@@ -1,0 +1,51 @@
+/* ── ⑥ QuoteStatsBar 行情统计栏（完整态） ─────────────────────── */
+
+.quote-stats-bar {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px 12px;
+  padding: 6px 12px;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border-color);
+  font-size: 12px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.quote-stats-bar__item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.quote-stats-bar__label {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.quote-stats-bar__value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quote-stats-bar__value--up {
+  color: var(--color-up);
+}
+
+.quote-stats-bar__value--down {
+  color: var(--color-down);
+}
+
+.quote-stats-bar__value--flat {
+  color: var(--color-flat);
+}
