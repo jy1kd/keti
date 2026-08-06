@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { MarketSnapshot } from '@/services/types'
 import './MarketDepth.css'
@@ -268,6 +269,131 @@ export function DepthRow({
       >
         {sellText}
       </span>
+    </div>
+  )
+}
+
+interface QuickTradeBarProps {
+  snapshot: MarketSnapshot | null
+  /** 合约最小变动价位 */
+  priceTick: number
+  /** 下单手数（来自参数区，按钮文字联动） */
+  volume: number
+  /** 点买入 → 以改价框价格 + 当前手数限价报单 */
+  onBuy: (price: number) => void
+  /** 点卖出 → 以改价框价格 + 当前手数限价报单 */
+  onSell: (price: number) => void
+}
+
+/**
+ * QuickTradeBar — 改价 + 快捷买卖栏（内嵌于 MarketDepth 底部，精简/完整态均显示）
+ *
+ * 价格步进框默认对手价（卖一）/最新价，按 tickSize 步进、键盘可输入；
+ * 提交时做涨跌停夹紧 + 最小变动价位对齐校验。
+ * `买入N手`（红）/ `卖出N手`（绿）文字随手数联动；手数 < 1 时禁用。
+ */
+export function QuickTradeBar({ snapshot, priceTick, volume, onBuy, onSell }: QuickTradeBarProps) {
+  const tick = priceTick > 0 ? priceTick : null
+  const [input, setInput] = useState('')
+
+  // 涨跌停夹紧区间；快照缺失时放宽（无快照则整体禁用）
+  const upper =
+    snapshot && isValidPrice(snapshot.upperLimitPrice) ? snapshot.upperLimitPrice : Number.MAX_SAFE_INTEGER
+  const lower = snapshot && isValidPrice(snapshot.lowerLimitPrice) ? snapshot.lowerLimitPrice : 0
+
+  // 默认价：对手价（卖一）→ 最新价；无快照则为 null
+  const defaultPrice = useMemo(() => {
+    if (!snapshot) return null
+    if (isValidPrice(snapshot.askPrice1)) return snapshot.askPrice1
+    if (isValidPrice(snapshot.lastPrice)) return snapshot.lastPrice
+    return null
+  }, [snapshot])
+
+  // 默认价变化时同步到输入框
+  useEffect(() => {
+    if (defaultPrice !== null && tick !== null) {
+      setInput(formatTickPrice(defaultPrice, tick))
+    }
+  }, [defaultPrice, tick])
+
+  /** 提交：解析 → tick 对齐 → 涨跌停夹紧 */
+  const commit = (raw: string) => {
+    if (tick === null) return
+    const n = parseFloat(raw)
+    if (!Number.isFinite(n)) return
+    const aligned = Math.round(n / tick) * tick
+    const clamped = Math.min(upper, Math.max(lower, aligned))
+    setInput(formatTickPrice(clamped, tick))
+  }
+
+  /** 步进：tickSize 加减，夹紧到涨跌停区间 */
+  const step = (dir: 1 | -1) => {
+    if (tick === null) return
+    const cur = parseFloat(input)
+    if (!Number.isFinite(cur)) return
+    const next = Math.min(upper, Math.max(lower, cur + dir * tick))
+    setInput(formatTickPrice(next, tick))
+  }
+
+  const price = parseFloat(input)
+  const priceValid = Number.isFinite(price)
+  const canTrade = priceValid && volume >= 1 && snapshot !== null
+
+  return (
+    <div className="qtb">
+      <button
+        type="button"
+        className="qtb__btn qtb__btn--buy"
+        data-testid="qtb-buy"
+        disabled={!canTrade}
+        onClick={() => canTrade && onBuy(price)}
+      >
+        买入{volume}手
+      </button>
+      <div className="qtb__price">
+        <input
+          data-testid="qtb-price"
+          className="qtb__price-input"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onBlur={(e) => commit(e.currentTarget.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit(e.currentTarget.value)
+          }}
+          disabled={!snapshot}
+        />
+        <div className="qtb__steps">
+          <button
+            type="button"
+            data-testid="qtb-step-up"
+            className="qtb__step"
+            aria-label="加价"
+            disabled={!snapshot}
+            onClick={() => step(1)}
+          >
+            ▲
+          </button>
+          <button
+            type="button"
+            data-testid="qtb-step-down"
+            className="qtb__step"
+            aria-label="减价"
+            disabled={!snapshot}
+            onClick={() => step(-1)}
+          >
+            ▼
+          </button>
+        </div>
+      </div>
+      <button
+        type="button"
+        className="qtb__btn qtb__btn--sell"
+        data-testid="qtb-sell"
+        disabled={!canTrade}
+        onClick={() => canTrade && onSell(price)}
+      >
+        卖出{volume}手
+      </button>
     </div>
   )
 }

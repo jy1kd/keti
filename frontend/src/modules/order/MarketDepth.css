@@ -175,3 +175,83 @@
   flex: 0 0 2px;
   background: linear-gradient(90deg, transparent, var(--accent), transparent);
 }
+
+/* ── ⑤ 改价 + 快捷买卖栏 ── */
+.qtb {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.qtb__btn {
+  height: 32px;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.qtb__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.qtb__btn--buy {
+  background: var(--color-up);
+  color: #fff;
+}
+
+.qtb__btn--sell {
+  background: var(--color-down);
+  color: #fff;
+}
+
+.qtb__price {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.qtb__price-input {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0 6px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  text-align: right;
+}
+
+.qtb__price-input:disabled {
+  color: var(--text-muted);
+}
+
+.qtb__steps {
+  display: flex;
+  flex-direction: column;
+}
+
+.qtb__step {
+  height: 15px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: 8px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.qtb__step:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

@@ -13,7 +13,7 @@
 
 - [x] **P1-1 `MarketDepth` 骨架 + 数据接入**
 - [x] **P1-2 `DepthRow` 三列语义**
-- [ ] P1-3 `QuickTradeBar`（内嵌改价+买卖按钮）
+- [x] **P1-3 `QuickTradeBar`（内嵌改价+买卖按钮）**
 - [ ] P1-4 `TradeParams` 压缩参数区
 - [ ] P1-5 点价确认闭环
 - [ ] P1-6 `OrderPopup` 布局重排
@@ -73,3 +73,31 @@
 **问题与解决方案**
 
 - 量能条基准取「十档最大量」（含买/卖全部有效档）；无效档（合成兜底价）仅价格可点、量显示 `--`。
+
+### P1-3 实现记录
+
+**测试用例（`MarketDepth.test.tsx` 追加 9 个，全绿，累计 25）**
+
+1. 默认显示对手价（卖一价），按 tick 精度格式化（`4696.0`）
+2. ▲ 步进 +tick、▼ 步进 -tick
+3. 输入超涨停价 → 提交后夹紧到涨停价
+4. 输入低于跌停价 → 提交后夹紧到跌停价
+5. 输入非 tick 整数倍 → 提交后对齐到 tick
+6. 买入/卖出按钮文字随手数联动（`买入2手`/`卖出2手`）
+7. 点买入 → `onBuy(改价框价格)`；点卖出 → `onSell(改价框价格)`
+8. 手数 < 1 时买卖按钮禁用
+9. 快照为空时输入框与按钮禁用
+
+**改动**
+
+- `MarketDepth.tsx`：导出 `QuickTradeBar`。价格步进框默认对手价（卖一）/最新价，▲▼ 按 tick 步进，blur/Enter 提交做「tick 对齐 + 涨跌停夹紧」；`买入N手`/`卖出N手` 文字随手数联动，手数 < 1 / 快照空时禁用
+- `MarketDepth.css`：`.qtb` 三列 grid（买|价|卖）、步进按钮、输入框样式
+
+**Commit**
+
+- `feat(task-order-popup-p1): QuickTradeBar 改价步进 + 买卖按钮（tick 对齐 + 涨跌停夹紧）`
+
+**问题与解决方案**
+
+- TS 报 `e.target` 类型（EventTarget 无 value）：onBlur/onKeyDown 改用 `e.currentTarget.value`。
+- 步进通过「re-parse 已格式化字符串」避免浮点累积误差。

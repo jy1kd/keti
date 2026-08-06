@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { MarketDepth, DepthRow } from './MarketDepth'
+import { MarketDepth, DepthRow, QuickTradeBar } from './MarketDepth'
 import type { ResolvedLevel } from './MarketDepth'
 import type { MarketSnapshot } from '@/services/types'
 
@@ -9,6 +9,8 @@ function makeSnapshot(overrides?: Partial<MarketSnapshot>): MarketSnapshot {
     instrumentID: 'IF2608',
     lastPrice: 4695,
     preSettlementPrice: 4690,
+    upperLimitPrice: 5000,
+    lowerLimitPrice: 4500,
     bidPrice1: 4694, bidVolume1: 10,
     bidPrice2: 4693, bidVolume2: 20,
     bidPrice3: 4692, bidVolume3: 30,
@@ -249,5 +251,100 @@ describe('量能条与 -- 占位（任务#2）', () => {
     expect(bid1Buy!.className).toContain('depth-row__muted')
     const ask1Sell = screen.getByTestId('ask-1').querySelector('.depth-row__sell')
     expect(ask1Sell!.className).toContain('depth-row__muted')
+  })
+})
+
+describe('QuickTradeBar（任务#3）', () => {
+  // 对手价=卖一 4696，涨跌停 4700/4690
+  const snap = makeSnapshot({
+    lastPrice: 4695,
+    askPrice1: 4696,
+    upperLimitPrice: 4700,
+    lowerLimitPrice: 4690,
+  })
+
+  function renderBar(overrides: { volume?: number; onBuy?: () => void; onSell?: () => void } = {}) {
+    const onBuy = overrides.onBuy ?? vi.fn()
+    const onSell = overrides.onSell ?? vi.fn()
+    const view = render(
+      <QuickTradeBar
+        snapshot={snap}
+        priceTick={0.2}
+        volume={overrides.volume ?? 2}
+        onBuy={onBuy}
+        onSell={onSell}
+      />,
+    )
+    return { onBuy, onSell, ...view }
+  }
+
+  it('默认显示对手价（卖一价），按 tick 精度格式化', () => {
+    renderBar()
+    expect((screen.getByTestId('qtb-price') as HTMLInputElement).value).toBe('4696.0')
+  })
+
+  it('▲ 步进 +tick、▼ 步进 -tick', () => {
+    renderBar()
+    const input = screen.getByTestId('qtb-price') as HTMLInputElement
+    fireEvent.click(screen.getByTestId('qtb-step-up'))
+    expect(input.value).toBe('4696.2')
+    fireEvent.click(screen.getByTestId('qtb-step-down'))
+    fireEvent.click(screen.getByTestId('qtb-step-down'))
+    expect(input.value).toBe('4695.8')
+  })
+
+  it('输入超过涨停价 → 提交后夹紧到涨停价', () => {
+    renderBar()
+    const input = screen.getByTestId('qtb-price') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '4705' } })
+    fireEvent.blur(input)
+    expect(input.value).toBe('4700.0')
+  })
+
+  it('输入低于跌停价 → 提交后夹紧到跌停价', () => {
+    renderBar()
+    const input = screen.getByTestId('qtb-price') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '4680' } })
+    fireEvent.blur(input)
+    expect(input.value).toBe('4690.0')
+  })
+
+  it('输入非 tick 整数倍 → 提交后对齐到 tick', () => {
+    renderBar()
+    const input = screen.getByTestId('qtb-price') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '4696.55' } })
+    fireEvent.blur(input)
+    expect(input.value).toBe('4696.6')
+  })
+
+  it('买入/卖出按钮文字随手数联动', () => {
+    renderBar({ volume: 2 })
+    expect(screen.getByText('买入2手')).toBeInTheDocument()
+    expect(screen.getByText('卖出2手')).toBeInTheDocument()
+  })
+
+  it('点买入 → onBuy(改价框价格)；点卖出 → onSell(改价框价格)', () => {
+    const onBuy = vi.fn()
+    const onSell = vi.fn()
+    renderBar({ onBuy, onSell })
+    fireEvent.click(screen.getByTestId('qtb-buy'))
+    expect(onBuy).toHaveBeenCalledWith(4696)
+    fireEvent.click(screen.getByTestId('qtb-sell'))
+    expect(onSell).toHaveBeenCalledWith(4696)
+  })
+
+  it('手数 < 1 时买卖按钮禁用', () => {
+    renderBar({ volume: 0 })
+    expect(screen.getByTestId('qtb-buy')).toBeDisabled()
+    expect(screen.getByTestId('qtb-sell')).toBeDisabled()
+  })
+
+  it('快照为空时输入框与按钮禁用', () => {
+    render(
+      <QuickTradeBar snapshot={null} priceTick={0.2} volume={2} onBuy={vi.fn()} onSell={vi.fn()} />,
+    )
+    expect(screen.getByTestId('qtb-price')).toBeDisabled()
+    expect(screen.getByTestId('qtb-buy')).toBeDisabled()
+    expect(screen.getByTestId('qtb-sell')).toBeDisabled()
   })
 })
