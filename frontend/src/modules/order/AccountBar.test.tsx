@@ -128,13 +128,41 @@ describe('AccountBar', () => {
     expect(screen.getByTestId('ab-account').getAttribute('title')).toBe('YYB-1829143-SH000001')
   })
 
-  it('锁仓开关：点击调用 lockPosition 并切换为解锁', async () => {
+  it('锁仓为下单操作：点击先弹确认框，取消不调用 lockPosition', async () => {
     render(<AccountBar instrumentID="IF2608" />)
     const btn = await screen.findByTestId('ab-lock')
     expect(btn.textContent).toBe('锁仓')
     fireEvent.click(btn)
-    await waitFor(() => expect(lockPositionMock).toHaveBeenCalledWith({ instrumentID: 'IF2608' }))
-    await waitFor(() => expect(btn.textContent).toBe('解锁'))
+    // 强制确认：确认框出现，展示合约与风险提示（下单类操作防误触）
+    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+    expect(screen.getByText('确认锁仓')).toBeInTheDocument()
+    // 取消：不触发任何下单
+    fireEvent.click(screen.getByText('取消'))
+    expect(lockPositionMock).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
+  })
+
+  it('确认锁仓才调用 lockPosition，锁仓后仍为「锁仓」（无解锁方向重复锁仓）', async () => {
+    render(<AccountBar instrumentID="IF2608" />)
+    const btn = await screen.findByTestId('ab-lock')
+    fireEvent.click(btn)
+    fireEvent.click(screen.getByText('确认执行'))
+    await waitFor(() => expect(lockPositionMock).toHaveBeenCalledTimes(1))
+    expect(lockPositionMock).toHaveBeenCalledWith({ instrumentID: 'IF2608' })
+    // 后端 lockPosition 单向锁仓、无解锁端点：按钮永不进入「解锁」态，杜绝二次点击重复锁仓
+    expect(btn.textContent).toBe('锁仓')
+  })
+
+  it('锁仓成功后刷新持仓（反映反方向开仓后的仓位变化）', async () => {
+    render(<AccountBar instrumentID="IF2608" />)
+    const btn = await screen.findByTestId('ab-lock')
+    // 点击前基准：初始挂载已拉取一次持仓
+    const before = refreshPositionsMock.mock.calls.length
+    fireEvent.click(btn)
+    fireEvent.click(screen.getByText('确认执行'))
+    await waitFor(() => expect(lockPositionMock).toHaveBeenCalledTimes(1))
+    // handleLockConfirm 成功后调用 fetchPositions → api refreshPositions 多一次
+    await waitFor(() => expect(refreshPositionsMock.mock.calls.length).toBeGreaterThan(before))
   })
 
   it('每 10s 串行自刷新持仓与账户（持仓→1200ms→账户→10s→下一轮）', async () => {

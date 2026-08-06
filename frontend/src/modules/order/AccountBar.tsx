@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQueryStore } from '@/modules/query/store'
+import { useOrderPopupStore } from './popupStore'
 import { lockPosition } from '@/services/api'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { toast } from '@/components/Toast'
 import './AccountBar.css'
 
@@ -27,7 +29,8 @@ function formatProfit(n: number): string {
  *
  * 打开即触发 fetchPositions + fetchAccount，每 10s 串行自刷新（遵守 CTP ~1 次/秒查询限频）。
  * 持仓按当前合约 instrumentID 过滤，posiDirection '2'/'3' 求和：多|空(净)；持盈盈红亏绿。
- * 右上角锁仓/解锁开关复用 api.lockPosition。
+ * 右上角「锁仓」为一次性下单操作（反方向开同等数量仓位，不平原有持仓）：后端 `/api/order/lock`
+ * 是单向锁仓、无解锁端点，因此不提供「解锁」方向（避免重复开反向仓的语义错误）；点击强制弹确认框。
  */
 export function AccountBar({ instrumentID }: AccountBarProps) {
   const positions = useQueryStore((s) => s.positions)
@@ -42,6 +45,11 @@ export function AccountBar({ instrumentID }: AccountBarProps) {
     let timer: ReturnType<typeof setTimeout> | undefined
     const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
     const load = async () => {
+      // 用户暂停查询时挂起本轮，不发起 CTP 查询（对齐 QueryPanel 的 isPaused 语义）
+      if (useQueryStore.getState().isPaused) {
+        timer = setTimeout(load, 10_000)
+        return
+      }
       await fetchPositions()
       if (disposed) return
       await delay(1200)
@@ -66,19 +74,37 @@ export function AccountBar({ instrumentID }: AccountBarProps) {
     return { long, short, net: long - short, profit }
   }, [positions, instrumentID])
 
-  // 锁仓/解锁开关（复用 api.lockPosition；UI 状态仅反映「已执行锁仓」）
-  const [locked, setLocked] = useState(false)
-  const handleLockToggle = async () => {
+  // ── 锁仓（下单操作，强制确认）────────────────────────────────────
+  // 后端 lockPosition 为单向锁仓（反方向开仓、不平原持仓），无解锁端点，
+  // 因此只有「锁仓」一次操作：确认后才调接口，成功后刷新持仓反映仓位变化。
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [lockPending, setLockPending] = useState(false)
+
+  // 确认框打开状态同步到 popupStore：弹窗内 Esc 优先取消确认框，而非关闭整个弹窗
+  useEffect(() => {
+    useOrderPopupStore.getState().setConfirmOpen(confirmOpen)
+    return () => useOrderPopupStore.getState().setConfirmOpen(false)
+  }, [confirmOpen])
+
+  const handleLockConfirm = async () => {
+    if (lockPending) return
+    setLockPending(true)
     try {
       const res = await lockPosition({ instrumentID })
       if (res.success) {
-        setLocked((v) => !v)
-        toast.success(locked ? '已解锁' : '已锁仓')
+        setConfirmOpen(false)
+        toast.success('锁仓成功（已反方向开仓）')
+        // 刷新持仓，反映锁仓后的仓位变化
+        await useQueryStore.getState().fetchPositions()
       } else {
         toast.error(`锁仓失败：${res.message || '未知错误'}`)
+        setConfirmOpen(false)
       }
     } catch (e) {
       toast.error(`锁仓失败：${e instanceof Error ? e.message : '未知错误'}`)
+      setConfirmOpen(false)
+    } finally {
+      setLockPending(false)
     }
   }
 
@@ -103,11 +129,21 @@ export function AccountBar({ instrumentID }: AccountBarProps) {
         type="button"
         className="account-bar__lock"
         data-testid="ab-lock"
-        onClick={handleLockToggle}
-        title={locked ? '解锁锁仓' : '一键锁仓当前合约'}
+        onClick={() => setConfirmOpen(true)}
+        disabled={lockPending}
+        title="一键锁仓：在反方向开同等数量仓位（不平原有持仓），会真实下单"
       >
-        {locked ? '解锁' : '锁仓'}
+        锁仓
       </button>
+      {confirmOpen && (
+        <ConfirmDialog
+          title="确认锁仓"
+          details={[{ label: '合约', value: instrumentID }]}
+          warning="将在反方向开同等数量仓位，不平原有持仓。锁仓会真实下单，请确认。"
+          onConfirm={handleLockConfirm}
+          onCancel={() => setConfirmOpen(false)}
+        />
+      )}
     </div>
   )
 }

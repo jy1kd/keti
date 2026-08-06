@@ -82,7 +82,7 @@
   color: var(--color-flat);
 }
 
-/* 锁仓/解锁开关 */
+/* 锁仓按钮（下单操作，点击弹确认框） */
 .account-bar__lock {
   height: 22px;
   padding: 0 8px;
@@ -96,7 +96,12 @@
   flex-shrink: 0;
 }
 
-.account-bar__lock:hover {
+.account-bar__lock:hover:not(:disabled) {
   background: var(--accent);
   color: #1c2333;
+}
+
+.account-bar__lock:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
