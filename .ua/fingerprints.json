@@ -1,198 +1,8 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "ad6b86b107be392fdec4c6ce2985861c909cb8f8",
-  "generatedAt": "2026-08-05T14:45:18.376Z",
+  "gitCommitHash": "be3edfed157f30bd1ebb16ce14317af84a813e1d",
+  "generatedAt": "2026-08-06T01:42:55.179Z",
   "files": {
-    ".claude/skills/role-a-dev-flow/references/diagnosis.md": {
-      "filePath": ".claude/skills/role-a-dev-flow/references/diagnosis.md",
-      "contentHash": "17dcb8dae2539e37fa7d832a7be019902828f891fc368d68afe872838634cc57",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 40,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/role-a-dev-flow/references/merge.md": {
-      "filePath": ".claude/skills/role-a-dev-flow/references/merge.md",
-      "contentHash": "4d35274cb6355d385b1dff62bc6bca534153b3712bcacb6c44f76a2ca491f11c",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 51,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/role-a-dev-flow/references/review.md": {
-      "filePath": ".claude/skills/role-a-dev-flow/references/review.md",
-      "contentHash": "ead667f286ac133f0c38f000807970bc841d2bbffa19d10a931c5bb94c3456a6",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 52,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/role-a-dev-flow/references/tdd.md": {
-      "filePath": ".claude/skills/role-a-dev-flow/references/tdd.md",
-      "contentHash": "f1e36d1806b097558bf053f0df391a9b1eb01e096983aae08b5742b74f555ca8",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 24,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/role-a-dev-flow/references/verification.md": {
-      "filePath": ".claude/skills/role-a-dev-flow/references/verification.md",
-      "contentHash": "2022674d059237019d36dc0068df71634460fcfb5805fea701c019291701c57b",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 71,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/role-a-dev-flow/SKILL.md": {
-      "filePath": ".claude/skills/role-a-dev-flow/SKILL.md",
-      "contentHash": "144a947227bc16b1891f42e896902d9b18042079d02cd895591cf53dae6a2ced",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 110,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/role-b-dev-flow/references/diagnosis.md": {
-      "filePath": ".claude/skills/role-b-dev-flow/references/diagnosis.md",
-      "contentHash": "fa79a8c1928ab80c8dcd0fa3e0ab4a96ee76d70a15cc8cc6212f3496f41211eb",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 89,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/role-b-dev-flow/references/merge.md": {
-      "filePath": ".claude/skills/role-b-dev-flow/references/merge.md",
-      "contentHash": "72556517ddcfc8d010d9be9eb7bb3f6e635b5389287ffbf37382384a3c59fd18",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 50,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/role-b-dev-flow/references/review.md": {
-      "filePath": ".claude/skills/role-b-dev-flow/references/review.md",
-      "contentHash": "6e00e7b9e7561673e7974c0841da30655a055928e0d748324801c52e48a80033",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 57,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/role-b-dev-flow/references/tdd.md": {
-      "filePath": ".claude/skills/role-b-dev-flow/references/tdd.md",
-      "contentHash": "f6e77820efe30ada45b7eb0a26a618de8334a5f2e7dbe04d1f503a12ae9d7e74",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 28,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/role-b-dev-flow/references/verification.md": {
-      "filePath": ".claude/skills/role-b-dev-flow/references/verification.md",
-      "contentHash": "28092a4785b439d22757694f661e8fd98808de48241553016ff0fc7119576c83",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 65,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/role-b-dev-flow/SKILL.md": {
-      "filePath": ".claude/skills/role-b-dev-flow/SKILL.md",
-      "contentHash": "c2b87eed326c3012e9e96580d4c4f38c34977c233d904eab348225319eb1a7bc",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 148,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/simnow-bug-fix/references/cleanup.md": {
-      "filePath": ".claude/skills/simnow-bug-fix/references/cleanup.md",
-      "contentHash": "e3a79915072e0ba13a5d22fbe1dccdeae914106023ec05550fd7f1d1ded9b1c9",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 54,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/simnow-bug-fix/references/diagnosis.md": {
-      "filePath": ".claude/skills/simnow-bug-fix/references/diagnosis.md",
-      "contentHash": "db34659556e04a15812f04a03b0cec7e3d49e553095df6e1e63be16327551b24",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 53,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/simnow-bug-fix/references/root-cause.md": {
-      "filePath": ".claude/skills/simnow-bug-fix/references/root-cause.md",
-      "contentHash": "909e48425ed1c1b4ed5c9dee4929ed048f4786a7fd2cdc5fbf10c62e9d5576ee",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 70,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/simnow-bug-fix/references/tdd-fix.md": {
-      "filePath": ".claude/skills/simnow-bug-fix/references/tdd-fix.md",
-      "contentHash": "da9a9c4755fa43771b394f232417ade27bf66fc28ade6764add5aad6a9569d5e",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 56,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/simnow-bug-fix/references/verification.md": {
-      "filePath": ".claude/skills/simnow-bug-fix/references/verification.md",
-      "contentHash": "50b5a07f23000974f3ca8b51213760c414af8702bddba41db9d70cde61762d45",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 61,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/simnow-bug-fix/SKILL.md": {
-      "filePath": ".claude/skills/simnow-bug-fix/SKILL.md",
-      "contentHash": "28e394a2c3052596eda71c0969f8afe87842ffc7ede2f276e2c1ff0433b0d354",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 93,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/simnow-consistency-check/SKILL.md": {
-      "filePath": ".claude/skills/simnow-consistency-check/SKILL.md",
-      "contentHash": "245bec1d568d51fcf73490beafcd07a3c3e2a83f1ae6cb88bf32f53c71d12625",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 413,
-      "hasStructuralAnalysis": true
-    },
     ".githooks/post-commit": {
       "filePath": ".githooks/post-commit",
       "contentHash": "8b6a5ce0d79e8a5b998c539f6c5a937f2e3483ef2e5e69e0bb20b95194b355d8",
@@ -202,1586 +12,6 @@
       "exports": [],
       "totalLines": 6,
       "hasStructuralAnalysis": false
-    },
-    ".ua/config.json": {
-      "filePath": ".ua/config.json",
-      "contentHash": "e78798a6016d7203eac0931e049f9bd5f1e0693f2fa20bfe420a5cdcacab2769",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 5,
-      "hasStructuralAnalysis": true
-    },
-    ".ua/domain-graph.json": {
-      "filePath": ".ua/domain-graph.json",
-      "contentHash": "71c3673228d33e0f9373254d05e968db611974367108116161c229cb29cec3c4",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 1216,
-      "hasStructuralAnalysis": true
-    },
-    ".ua/fingerprints.json": {
-      "filePath": ".ua/fingerprints.json",
-      "contentHash": "bda8040c1997365f0fec7126054fce3dc33b8fd86615109cd6a5df5051fd5ebd",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 8278,
-      "hasStructuralAnalysis": true
-    },
-    ".ua/knowledge-graph.json": {
-      "filePath": ".ua/knowledge-graph.json",
-      "contentHash": "488daa9cd5e7e535db6d1bdfb61bd0ac260d1cec713815fddb75f594703d09bf",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 31771,
-      "hasStructuralAnalysis": true
-    },
-    ".ua/meta.json": {
-      "filePath": ".ua/meta.json",
-      "contentHash": "8db9c3f61bca401615879b687bef3abb1b35e2e5262bf0130c4c7428fa0bd769",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 7,
-      "hasStructuralAnalysis": true
-    },
-    "CLAUDE.md": {
-      "filePath": "CLAUDE.md",
-      "contentHash": "e12b7503a6ad2b20ffbf92f6655e6b5648ac07174301bce92de2ffd8ff8ca726",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 190,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/dev-record-a.md": {
-      "filePath": "docs/dev-records/role-a/dev-record-a.md",
-      "contentHash": "915c71fa2ff5122643b6c4cfb7f23aff895c9a925c7fac72b5612aa4d00b1d60",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 854,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/progress.md": {
-      "filePath": "docs/dev-records/role-a/progress.md",
-      "contentHash": "8d6085062edb366d1129a91d91c438ab03986f444505e8f297ef9934e688d394",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 543,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr11.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr11.md",
-      "contentHash": "2764e75742757f38c61276c987a54f98053c5cdeb79a9affb783bdf9e7edd120",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 141,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr13.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr13.md",
-      "contentHash": "f862e311b2dcdcf0dcd9553a5599f9f026c8f5ffd9b3fbec27672ddfda2e7a0c",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 150,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr18.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr18.md",
-      "contentHash": "0e1e7443873262e4cead64c36dde98d0c94b129990fab4390e78882ec6e21199",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 130,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr19.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr19.md",
-      "contentHash": "8f48e4b8ab3bea6a805ea0b13c522faa4a023f9920f73f56d39054fe70a72bea",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 138,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr3-r2.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr3-r2.md",
-      "contentHash": "ffa7a971594405269ac3b69dff2af6664a5b4f82c099a4a4f6bf0fbb8f8050f9",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 79,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr3-ws-r2.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr3-ws-r2.md",
-      "contentHash": "bf146e4efb07445224de52a4515c4288f9977408288102b0757acdceeb868d4a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 72,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr3-ws.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr3-ws.md",
-      "contentHash": "7767e64cbbf7a703db321c4851d88680569862068946ee9793483fde0c56b2c7",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 206,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr3.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr3.md",
-      "contentHash": "a82d0a81d82c3008b5a1ff4b60fa668531b7ac1e162f998168e9b04d9ee790a7",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 163,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr5-r2.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr5-r2.md",
-      "contentHash": "a94b96934eb445c634570c921ce11404d377a894add3d68b20e60961ece1444f",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 96,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr5-r4.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr5-r4.md",
-      "contentHash": "54e4264ba287f210aa824b1d5cf7aa8f9dff9b60ed0aba21fe3ee6a85793fa6d",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 121,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr5-r5.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr5-r5.md",
-      "contentHash": "7c468d2e3a6817a39ad82fbfd10c8d644612eb190e64cc75fdfcf2ea0b7258df",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 161,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr5-r6.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr5-r6.md",
-      "contentHash": "c409efc08a1f3fbdd3024dcbcf03d6cb839de8b84beab1eeb2b3a463f7bb0f76",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 107,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr5.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr5.md",
-      "contentHash": "0228bbaaab4d32f631e9a930a2b1a69af893889a01e1108d602d9726fba575ea",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 201,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr7-final.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr7-final.md",
-      "contentHash": "04ec9fbc831c66692a94577cd79cc4bf3a441d391d475b4de6096156c13d7bef",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 73,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr7-r2.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr7-r2.md",
-      "contentHash": "6c4ca770b1ab07c685b20e7d492de1a6d6c5c902771a10f9138a3c690d97a50d",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 88,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr7-r3.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr7-r3.md",
-      "contentHash": "6d42303a23407a0a861e1b2cecd5af43fec71b17a67a8a679940aa2ab2f52d7c",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 106,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr7-r4.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr7-r4.md",
-      "contentHash": "ab4c9901bcd8338376449dad7d8718eea37b54824de93fdb17228086999d61c0",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 57,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr7.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr7.md",
-      "contentHash": "8e8c688ad6cff3d69e57b9272affcc42d4c58d1e9ca3a9b082ccdeed2db513ec",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 144,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-pr9.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-pr9.md",
-      "contentHash": "28f8d38c58f245b156fc5ba740ea40691bac28463b212a5b463bb4d84a7c18ef",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 222,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-prC2.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-prC2.md",
-      "contentHash": "3ae36eac399bcfb8f022ef722ddd2c838da3d39acbe7f593b7f62d0dcd01e9f4",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 56,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a-prC3.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a-prC3.md",
-      "contentHash": "6943422b3f9ee532622383a1c1b64025b6fd68340a906e474fe916b57ef25369",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 123,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-feedback-a.md": {
-      "filePath": "docs/dev-records/role-a/review-feedback-a.md",
-      "contentHash": "1828a18a13fa91055d9b56e642320825a8e0ee68fcb19ea4ad9873f8678f7eab",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 78,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-reply-a-pr11.md": {
-      "filePath": "docs/dev-records/role-a/review-reply-a-pr11.md",
-      "contentHash": "bff750f59737f483f3ba3abbffb3f5c35a906728605599ba031bf6d2848aa7a5",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 50,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-reply-a-pr13.md": {
-      "filePath": "docs/dev-records/role-a/review-reply-a-pr13.md",
-      "contentHash": "df6095a7a1f9974cef04052e9671f79759f239bfc610250d67960c3992e87606",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 46,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-reply-a-pr18.md": {
-      "filePath": "docs/dev-records/role-a/review-reply-a-pr18.md",
-      "contentHash": "0508da5bcf4352e40f9a4877faa356b98e28a0bd1b6668ac7e3d9ffd8622e6ae",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 49,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-reply-a-pr19.md": {
-      "filePath": "docs/dev-records/role-a/review-reply-a-pr19.md",
-      "contentHash": "5e37a05eae8f2d26442d87435d3e536fcdba915f2c2b240f780aeee007b87fef",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 59,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-reply-a-pr9.md": {
-      "filePath": "docs/dev-records/role-a/review-reply-a-pr9.md",
-      "contentHash": "8e621840cd6eb1237012f7c7a7f66da2b847f1802a9d8a5c9271a0bf9bf122fd",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 55,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-reply-a-prC3.md": {
-      "filePath": "docs/dev-records/role-a/review-reply-a-prC3.md",
-      "contentHash": "d66185d41e5351385e729ce55870788066bf764fe1488cc580e583f02ffb598b",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 87,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/review-reply-a.md": {
-      "filePath": "docs/dev-records/role-a/review-reply-a.md",
-      "contentHash": "e630825ee5be87f5ae36c267b54f68952df99cfd75ef899845ff8f60739fd504",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 353,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/verify-discussion-pr11.md": {
-      "filePath": "docs/dev-records/role-a/verify-discussion-pr11.md",
-      "contentHash": "9127d32d785a2ccd8bff19fd7dfa6ea3f7671c4da2a4d61024d5ba2fb7120a3c",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 175,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/verify-discussion-pr18.md": {
-      "filePath": "docs/dev-records/role-a/verify-discussion-pr18.md",
-      "contentHash": "45963aa7abd193875bdb5789a3699a38bf463875d1954deff970c5ae5822fd75",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 165,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-a/verify-discussion-pr9.md": {
-      "filePath": "docs/dev-records/role-a/verify-discussion-pr9.md",
-      "contentHash": "e893a759a24b01a6301b840a0f3e53f04f4ec8a8956bac89ece2689398224ef5",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 53,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/dev-record-b.md": {
-      "filePath": "docs/dev-records/role-b/dev-record-b.md",
-      "contentHash": "9f10775aa43e48d3e6e5946c313e2fa0363b1b3a5843e4c4a1a698a22aa85d8e",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 1133,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/pr-r8-description.md": {
-      "filePath": "docs/dev-records/role-b/pr-r8-description.md",
-      "contentHash": "16f6b8575eef73e12cc3e4888e46c3b444fd0539351cd250d159a586030b60ee",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 37,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/progress.md": {
-      "filePath": "docs/dev-records/role-b/progress.md",
-      "contentHash": "80ce750fff13a417e1ebe151152bb5a40400bd83316af270497b5cb25dc06de5",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 934,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-pr10.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-pr10.md",
-      "contentHash": "471fc487169718b8ddce432e58207e58b02dfc9c03975b8e8802a48a92d1bbaa",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 204,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-pr12.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-pr12.md",
-      "contentHash": "84988fc1aca24ff010d32e122ee40f3cdb66f9bf62bb3df7c7163c75fe127db1",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 194,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-pr12a.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-pr12a.md",
-      "contentHash": "44faf56c2f9dd2e16d262b41997a6babfe4854ea866a76966863b11640c07a09",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 190,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-pr14.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-pr14.md",
-      "contentHash": "1e45cc79d00a918c14a004ace0ee7e5a89d66d4f47b7db05be0f487f8df83ad8",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 140,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-pr15.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-pr15.md",
-      "contentHash": "94d78034c21986370a317807e1478baa641774d52ab68fced4709994215c0a93",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 112,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-pr16.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-pr16.md",
-      "contentHash": "a85c14427242b78fa7a6e629a537db343c32c8121731c1d73bffb89e0c17923b",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 203,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-pr2.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-pr2.md",
-      "contentHash": "452f3b921bc5aa75bb3a83473ae8e3f20f14bccd1f55545f2619768739d9216a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 72,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-pr20.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-pr20.md",
-      "contentHash": "89f88288a0f4133df033d16c6ff4a2e9188c0d9f3a2858d5cb0fa0f7ce62356a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 87,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-pr4.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-pr4.md",
-      "contentHash": "557382c446201164c4baffb0b73c0dcca4315c391658d211f176165f1b130f37",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 99,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-pr6.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-pr6.md",
-      "contentHash": "a7016f6fe8bf2321ae8d35044cef903e30affbe44005478a1a66e1cbf3dab143",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 104,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-pr6a.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-pr6a.md",
-      "contentHash": "e5561b45db9c4882e5e9ba443985310d2584c2bb2224dceb6e8165da67cde3b8",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 202,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-pr8.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-pr8.md",
-      "contentHash": "e668a93556527667d78996d4bca2fd1ee1f500a042b34fb65b8bc83de756eb83",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 199,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-prE1.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-prE1.md",
-      "contentHash": "fa2a17332216178518f48898c50637349dfa2e56e54df54bc9f07862fb816e4d",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 152,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-prE10.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-prE10.md",
-      "contentHash": "09b6432db0fcd70f05766830a433c018901f34f8760be3da1011521dbd49ecb5",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 127,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-prE2.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-prE2.md",
-      "contentHash": "b7e121cd4381c7a9b527fbfd6837ce20b9297de9e6fc84875dadf0086cd10e53",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 124,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-prE3.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-prE3.md",
-      "contentHash": "28daaaf3ce4275bd76750b015e8d37ce6cf6adff7f82c7319916f612e17220b0",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 129,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-prE4.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-prE4.md",
-      "contentHash": "afbf19c94bc9803bc574054d6affebceacb38304de25b42aaac087f27556de9f",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 115,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-prE5.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-prE5.md",
-      "contentHash": "e949a99ce09fe21ecf32ca3d881c706985e70e604c9f967fbf6d8137a47c9a3f",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 92,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-prE6-v2.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-prE6-v2.md",
-      "contentHash": "8c9dd5a7418bd29f44a3cd729d37b5ffe4b3d7e9416c0cf2eb49a969ddfb5c30",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 72,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-prE6.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-prE6.md",
-      "contentHash": "455b4dc7dc464d18ce80db53b704d4824118001df8a03462aa5b2f907b5c4f7d",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 153,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-prE7-v2.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-prE7-v2.md",
-      "contentHash": "824618d3a71a9e70f54a13df72a0d3547c7d0337e317cc7d54efb475bcaf58f3",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 45,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-prE7.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-prE7.md",
-      "contentHash": "7f539e52584ea5ad3bdec6c4c61f7b5c446d3e3ae650b15ff367cccf9d83a526",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 88,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-prE8-v2.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-prE8-v2.md",
-      "contentHash": "d57bedd3d470547cf442a3789ab33d59946982430590843101a607e3be044029",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 32,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-prE8.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-prE8.md",
-      "contentHash": "6a14b625e9eb18e4f1d26bc82f9a26bd1500e73c28d030e47b7cecfa95a2d824",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 119,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-prE9.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-prE9.md",
-      "contentHash": "70f0083531e7dcb2f76886151a1ca005d6476d838e10765714d3cb0aa4691353",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 100,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-feedback-b-resizable.md": {
-      "filePath": "docs/dev-records/role-b/review-feedback-b-resizable.md",
-      "contentHash": "ab1998c6b2faf345dd6a587b402a61cf97c474daa0e6468fe3784fe5716b6258",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 105,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-pr10.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-pr10.md",
-      "contentHash": "d709587b170bdfb41c4952ec4bcefa6687dca11592cf713b3683a0af3afea5a5",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 54,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-pr12.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-pr12.md",
-      "contentHash": "9edbb742e15fa28c935acaff3249b4ba4705c7d8f20b21be12fd6397794141fd",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 82,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-pr12a.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-pr12a.md",
-      "contentHash": "1f5d14ee1a0ec7b69a39585a1e1f55cefab0644f74897db233b14b75dfc742c1",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 40,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-pr14.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-pr14.md",
-      "contentHash": "c1aff63665c666629ce8b640d425e509d22bef75e0556c387f7ff63e4ae01a01",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 61,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-pr15.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-pr15.md",
-      "contentHash": "22fd1c58de13b196d4a9a4aa2d9fac3ee916b36e060618b991f99864769a0453",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 40,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-pr20.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-pr20.md",
-      "contentHash": "a69fa8e10e39909004a017bfa3350d8b03cff6a0463425c395e78012f195c8d9",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 37,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-pr6a.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-pr6a.md",
-      "contentHash": "cbd49d38df2639e883d1771d62eced08efa634b4ba4d90fbd2bbce8322f5f9d3",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 68,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-pr8.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-pr8.md",
-      "contentHash": "26ca9c5e56434565d9ab40923d0f3fd065e7033c1c34bc02e6abdc270b16493b",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 38,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-prE1.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-prE1.md",
-      "contentHash": "c813eed807a911160684e213bb47e8bae350aa672a0401dac2bb0b3b3a5699e6",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 52,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-prE10.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-prE10.md",
-      "contentHash": "d44f398ed8453de153452328fb52e30651cceaef729c4d888c3e73f43dc5b824",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 43,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-prE2.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-prE2.md",
-      "contentHash": "34aca386e23da65edc2fe0459a6095a43f6b659dea28bac7d61031cba580a45b",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 44,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-prE3.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-prE3.md",
-      "contentHash": "73527946fe08d8cdeb78cf627cb7ec1c4f47bb596af42c8f7323b4cde4935e11",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 44,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-prE4.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-prE4.md",
-      "contentHash": "88a5fa6636d44e604d5659b60311b1337e3a6c522dc16c215252e2d8a8d5d24e",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 49,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-prE5.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-prE5.md",
-      "contentHash": "aa96bed45261d161709dd82310eaaef7d56ae72cd3876bc872ba559a28a0380b",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 42,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-prE6.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-prE6.md",
-      "contentHash": "ad41b61cacec9ce5270fc5532b59068a5bc79eb1b67eeed0a4d7907175ba93bb",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 49,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-prE7-v2.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-prE7-v2.md",
-      "contentHash": "176a076d0a51a32416e885755c8a59fc0a2e8acb49430c30804bf0741e267065",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 36,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-prE8.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-prE8.md",
-      "contentHash": "4aa5646b08768a13c32ae44cec4c1c5352f29a06c7c711e509dfe63e6ba837d9",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 42,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-prE9.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-prE9.md",
-      "contentHash": "5ee8aa043ce4ebc9f7b087f84753be1a19bd934a00115a91beb96a68a2a63096",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 43,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b-resizable.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b-resizable.md",
-      "contentHash": "800b8e981999befbe949e7978be795b467b71a56ccdef753f77cc72138507f18",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 83,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/review-reply-b.md": {
-      "filePath": "docs/dev-records/role-b/review-reply-b.md",
-      "contentHash": "0888fdc86e99015cec4dc08e601e3def7d0bae8e58c1dfbdcab7cf942819616f",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 44,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/verify-discussion-pr12.md": {
-      "filePath": "docs/dev-records/role-b/verify-discussion-pr12.md",
-      "contentHash": "f13608a980de6013d404a29b2950107646249ac8b548ee00f75eee1d2f063c48",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 84,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/verify-discussion-pr6a.md": {
-      "filePath": "docs/dev-records/role-b/verify-discussion-pr6a.md",
-      "contentHash": "a971c4051a18644040fa8b9512fc490b679f4bc6364c8271ed2c8a1bd4d0b236",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 78,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/verify-discussion-pr8.md": {
-      "filePath": "docs/dev-records/role-b/verify-discussion-pr8.md",
-      "contentHash": "253ca688e7683f6e320e99d9432f39caa6e375fb4a2a242172171f11eec3abde",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 118,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/verify-discussion-prE1.md": {
-      "filePath": "docs/dev-records/role-b/verify-discussion-prE1.md",
-      "contentHash": "6b9246698adca57c55bc73be872e1b3b47da04006be36578b1c88ec2bdb50f4f",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 121,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/verify-discussion-prE10.md": {
-      "filePath": "docs/dev-records/role-b/verify-discussion-prE10.md",
-      "contentHash": "47e5cdc86caece03e4506337acc0e4fa37c9e02559e17772118264df4f84b76a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 115,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/verify-discussion-prE2.md": {
-      "filePath": "docs/dev-records/role-b/verify-discussion-prE2.md",
-      "contentHash": "985d508134afbc959f5d05e04e29947cff5b1c15420efd214dc696b5de83891d",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 115,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/verify-discussion-prE3.md": {
-      "filePath": "docs/dev-records/role-b/verify-discussion-prE3.md",
-      "contentHash": "384259215d734b344f161170ecd37a54181062d7eef8ceee100428c0d563b495",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 122,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/verify-discussion-prE4.md": {
-      "filePath": "docs/dev-records/role-b/verify-discussion-prE4.md",
-      "contentHash": "8f446c52fd600873339ca0d0232af873a979052a46d2e9ce8e940f90888174bb",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 111,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/verify-discussion-prE5.md": {
-      "filePath": "docs/dev-records/role-b/verify-discussion-prE5.md",
-      "contentHash": "7a39fb3d4a6d8a8343daeb87456142fe4ca04710d0c31a453fb79db67a9cb04a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 111,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/verify-discussion-prE6.md": {
-      "filePath": "docs/dev-records/role-b/verify-discussion-prE6.md",
-      "contentHash": "e87f276fbad68266ee6cc1c932c1079b196e09748519400d58421728164579da",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 121,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/verify-discussion-prE7.md": {
-      "filePath": "docs/dev-records/role-b/verify-discussion-prE7.md",
-      "contentHash": "eb156cb30d19357cb325b9919d6b4fcab9052fc50a8372c11de88b2b40e7548d",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 88,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/verify-discussion-prE8.md": {
-      "filePath": "docs/dev-records/role-b/verify-discussion-prE8.md",
-      "contentHash": "c99e8c1e620a2a998b260e6cb3b75df1438643a6b544a2e19e6cb57e52e5c377",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 107,
-      "hasStructuralAnalysis": true
-    },
-    "docs/dev-records/role-b/verify-discussion-prE9.md": {
-      "filePath": "docs/dev-records/role-b/verify-discussion-prE9.md",
-      "contentHash": "ba7e5010ea498bbdd3504bf5ae5b0f6776cf67df7f69e58cc24a92a821fdcc32",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 116,
-      "hasStructuralAnalysis": true
-    },
-    "docs/reviews/bug-review.md": {
-      "filePath": "docs/reviews/bug-review.md",
-      "contentHash": "3e457409c100815b854b0c67242c01e62b4cd97673628d82b49f989b42010279",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 328,
-      "hasStructuralAnalysis": true
-    },
-    "docs/reviews/check01.md": {
-      "filePath": "docs/reviews/check01.md",
-      "contentHash": "baa73dc14d45e06fd75af0c67a441486a3c0440a7f193960cf5cc3d9d1220a5d",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 50,
-      "hasStructuralAnalysis": true
-    },
-    "docs/reviews/check03.md": {
-      "filePath": "docs/reviews/check03.md",
-      "contentHash": "e42aeb9a98822ace67dbae45f005aa05dcb322256956c32ef198d65939cca8be",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 416,
-      "hasStructuralAnalysis": true
-    },
-    "docs/reviews/check04.md": {
-      "filePath": "docs/reviews/check04.md",
-      "contentHash": "1e7cea57152d7ba215c02cbe6c3188fa3c5eb1c0d17fd64727da5fefc810b1a5",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 139,
-      "hasStructuralAnalysis": true
-    },
-    "docs/reviews/check05.md": {
-      "filePath": "docs/reviews/check05.md",
-      "contentHash": "c771f83acd3132f481ea5125fc767defbbb6ac6ce458960ec18f790ad0b6f523",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 92,
-      "hasStructuralAnalysis": true
-    },
-    "docs/reviews/compliance-review.md": {
-      "filePath": "docs/reviews/compliance-review.md",
-      "contentHash": "e9af7f551af472de9cbf39dd9dcaceec94359b1ed103278ffe59626e685cf5f8",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 687,
-      "hasStructuralAnalysis": true
-    },
-    "docs/reviews/review-feedback-b-pr8-round2.md": {
-      "filePath": "docs/reviews/review-feedback-b-pr8-round2.md",
-      "contentHash": "c8cc1cc67c480a7969fe08c53eadd4f1d6c0347c553664167300339f18fc88ed",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 57,
-      "hasStructuralAnalysis": true
-    },
-    "docs/reviews/review-feedback-b-pr8.md": {
-      "filePath": "docs/reviews/review-feedback-b-pr8.md",
-      "contentHash": "52dd34aff692985b70fe43e64d95695dd1a6d2feb9ba3ff334db072fe700e94f",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 54,
-      "hasStructuralAnalysis": true
-    },
-    "docs/reviews/testing-guide.md": {
-      "filePath": "docs/reviews/testing-guide.md",
-      "contentHash": "1bf16f3f25981317dade1d61f9f13655244b8c936e1ee77a35e0a52989370c5c",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 840,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-feedback-redesign-r10.md": {
-      "filePath": "docs/snapshots/role-b/review-feedback-redesign-r10.md",
-      "contentHash": "8cc2986f6499bb13e8593000432719b47358556714a7e18ab6b7ab623b3f76d5",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 107,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-feedback-redesign-r11.md": {
-      "filePath": "docs/snapshots/role-b/review-feedback-redesign-r11.md",
-      "contentHash": "2aafda29c4cf22f003452ab50056ef02ea987519ee43eaf7552b9a1ea76929e7",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 91,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-feedback-redesign-r12.md": {
-      "filePath": "docs/snapshots/role-b/review-feedback-redesign-r12.md",
-      "contentHash": "e2c0adbe9cfdb5b59538bca6ac7e5c02f6313cb481e359620c439d367754e267",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 120,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-feedback-redesign-r13.md": {
-      "filePath": "docs/snapshots/role-b/review-feedback-redesign-r13.md",
-      "contentHash": "053a17e8e65a62551347afc4eb3ccf659f3509ad9620d2d75f6e01c79407d448",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 109,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-feedback-redesign-r14.md": {
-      "filePath": "docs/snapshots/role-b/review-feedback-redesign-r14.md",
-      "contentHash": "153fd73a24f58e7aed38b244b616322587b88094f9983592adf9c1ccbb38cf82",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 160,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-feedback-redesign-r15.md": {
-      "filePath": "docs/snapshots/role-b/review-feedback-redesign-r15.md",
-      "contentHash": "959980bf54b0e53774ae6e2337a014d2f5cc404e6ac2ccdb2bae4b3012cdc0cd",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 239,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-feedback-redesign-r16.md": {
-      "filePath": "docs/snapshots/role-b/review-feedback-redesign-r16.md",
-      "contentHash": "43f27262aba861f1f08675c31d4d1d5566de0eeafbb9a095e2bda8cd07e83b5a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 214,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-feedback-redesign-r20.md": {
-      "filePath": "docs/snapshots/role-b/review-feedback-redesign-r20.md",
-      "contentHash": "9cdad30eb1bf4985bbd8a7390aa171eaf544320da33511420fac7c6045dde21a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 84,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-feedback-redesign-r9.md": {
-      "filePath": "docs/snapshots/role-b/review-feedback-redesign-r9.md",
-      "contentHash": "3244677db11695cbcfd6716ca672ed658376585def5119bc64ca25c9439f7cff",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 124,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-reply-redesign-r10.md": {
-      "filePath": "docs/snapshots/role-b/review-reply-redesign-r10.md",
-      "contentHash": "46b2599b105e4bc8fac9d33e70e38c8387870e1101264146a21b2258cf2b8fb5",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 24,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-reply-redesign-r11.md": {
-      "filePath": "docs/snapshots/role-b/review-reply-redesign-r11.md",
-      "contentHash": "b4ba08f72f27f5e33127a6ca98262e6e00512714748d0c42520e9061e68cef79",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 84,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-reply-redesign-r12.md": {
-      "filePath": "docs/snapshots/role-b/review-reply-redesign-r12.md",
-      "contentHash": "4d960ac718e433886f18bba75b5638062a62873cf1db56b41d18704be81397bc",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 63,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-reply-redesign-r13.md": {
-      "filePath": "docs/snapshots/role-b/review-reply-redesign-r13.md",
-      "contentHash": "f65e50e593230392339c4ffc22c56e11654121cb2f53213746c5f8afb16e3ddf",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 48,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-reply-redesign-r14.md": {
-      "filePath": "docs/snapshots/role-b/review-reply-redesign-r14.md",
-      "contentHash": "91e4ef821cecc182c07b469792b93b87609380a455683f689f1d8a5b716fdc96",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 63,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-reply-redesign-r15.md": {
-      "filePath": "docs/snapshots/role-b/review-reply-redesign-r15.md",
-      "contentHash": "10ddf93d683a9b4fd52554161d6975736bd918b52e4181c1630135c546bf5171",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 104,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-reply-redesign-r16.md": {
-      "filePath": "docs/snapshots/role-b/review-reply-redesign-r16.md",
-      "contentHash": "eba2475fdb91c8198dcc07b42dd03d4373cddb19ec8a1aa17219254b302ce515",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 73,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-reply-redesign-r20.md": {
-      "filePath": "docs/snapshots/role-b/review-reply-redesign-r20.md",
-      "contentHash": "43921b867c092ddc75167f3df6638477194bf7c5c014123c00f1e51b5e823c18",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 56,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/review-reply-redesign-r9.md": {
-      "filePath": "docs/snapshots/role-b/review-reply-redesign-r9.md",
-      "contentHash": "5e42f8a5060b1fec479ce7ef2ce9d9ac5e30bda0459b3b2b7b80f02bd53e1fd3",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 62,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/verify-discussion-redesign-r10.md": {
-      "filePath": "docs/snapshots/role-b/verify-discussion-redesign-r10.md",
-      "contentHash": "2710af9431f9a6596ba5279872af14295da04c5353f8de3ca00a0a03f536b6f2",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 22,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/verify-discussion-redesign-r11.md": {
-      "filePath": "docs/snapshots/role-b/verify-discussion-redesign-r11.md",
-      "contentHash": "fdf2fcb250da9537fc97d072536a6f0130de071d371513865dd2a817f0b4549d",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 77,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/verify-discussion-redesign-r12.md": {
-      "filePath": "docs/snapshots/role-b/verify-discussion-redesign-r12.md",
-      "contentHash": "970ac48a6aae903e17c68d810c3317ae6e6f1cdf02bbb271cb7358ca25777049",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 169,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/verify-discussion-redesign-r13.md": {
-      "filePath": "docs/snapshots/role-b/verify-discussion-redesign-r13.md",
-      "contentHash": "73c7e959875e7fe7825f2b246024a20792b4f97409d5a34526be9f13ae17ccaa",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 148,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/verify-discussion-redesign-r14.md": {
-      "filePath": "docs/snapshots/role-b/verify-discussion-redesign-r14.md",
-      "contentHash": "aafcf45ec868b12fe6c1d58024e5490e4a9381878aa627017e7bc1a802815504",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 37,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/verify-discussion-redesign-r15.md": {
-      "filePath": "docs/snapshots/role-b/verify-discussion-redesign-r15.md",
-      "contentHash": "98ba0e97e3eb276d31442d161bf0c9855f4df9f72a159c7a71c6517f6d7a48cb",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 34,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/verify-discussion-redesign-r16.md": {
-      "filePath": "docs/snapshots/role-b/verify-discussion-redesign-r16.md",
-      "contentHash": "22ad7bb76d53e634259c4ebdb2e612f05efcab6ba6f2ddf5798cb0c50c9d04e5",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 33,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/verify-discussion-redesign-r20.md": {
-      "filePath": "docs/snapshots/role-b/verify-discussion-redesign-r20.md",
-      "contentHash": "5c6fd23314ea236704aa85443addd213524ef3c5bd764055ad4197dfb9549c7c",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 86,
-      "hasStructuralAnalysis": true
-    },
-    "docs/snapshots/role-b/verify-discussion-redesign-r9.md": {
-      "filePath": "docs/snapshots/role-b/verify-discussion-redesign-r9.md",
-      "contentHash": "8c4352b42c18a5af2323523d192a1170f4a0bbb60c98adb32998db9ca858e13f",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 27,
-      "hasStructuralAnalysis": true
-    },
-    "docs/specs/ctp-api-structure.txt": {
-      "filePath": "docs/specs/ctp-api-structure.txt",
-      "contentHash": "db6cc02aa4cf1ca6474db9ba9ae57b859b195c73436963163f1d241eeb463ad0",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 914,
-      "hasStructuralAnalysis": false
-    },
-    "docs/specs/ctp-python-guide.md": {
-      "filePath": "docs/specs/ctp-python-guide.md",
-      "contentHash": "26536f178cd27c75803c6bc8b6a7be08f0530c68e505805deb8ea142292b01bd",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 169,
-      "hasStructuralAnalysis": true
-    },
-    "docs/specs/design.md": {
-      "filePath": "docs/specs/design.md",
-      "contentHash": "8733aa577e58e9da29026014da6b88aa5556608176d1a62d8c97ce99c6b83fcf",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 1576,
-      "hasStructuralAnalysis": true
-    },
-    "docs/specs/dev.md": {
-      "filePath": "docs/specs/dev.md",
-      "contentHash": "53b30bf327ea66589bfae5dbc0a79b3069713a44d271a1191ec0734973994560",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 1457,
-      "hasStructuralAnalysis": true
-    },
-    "docs/specs/prd.md": {
-      "filePath": "docs/specs/prd.md",
-      "contentHash": "04a9ab5e0b20b3d4f72ba4b3132a729469b1b726ce81b1182ebdf57cd45b66c7",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 294,
-      "hasStructuralAnalysis": true
-    },
-    "docs/specs/redesign-plan.md": {
-      "filePath": "docs/specs/redesign-plan.md",
-      "contentHash": "67689d7293cf130d666099faa04b5ddc8e42adac32b674f13b390a6ac9ec9942",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 863,
-      "hasStructuralAnalysis": true
-    },
-    "docs/specs/trading-instructions.md": {
-      "filePath": "docs/specs/trading-instructions.md",
-      "contentHash": "71c24bf1484e12d050c3aab85785d0597fbb3238382698c1861fa25659ff3afd",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 363,
-      "hasStructuralAnalysis": true
-    },
-    "docs/superpowers/plans/2026-07-10-ctp-field-alignment.md": {
-      "filePath": "docs/superpowers/plans/2026-07-10-ctp-field-alignment.md",
-      "contentHash": "38c94d478edd021c6cba7f3021299d5381cf0699ac2b52067eb3bacf40ea6481",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 1167,
-      "hasStructuralAnalysis": true
-    },
-    "docs/superpowers/plans/2026-08-04-modal-tab-transition.md": {
-      "filePath": "docs/superpowers/plans/2026-08-04-modal-tab-transition.md",
-      "contentHash": "bacf2b4994e6e05a825770171359ea5b36d0fe1511b6cf93d0be2fd6bf09daba",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 1889,
-      "hasStructuralAnalysis": true
-    },
-    "docs/superpowers/plans/2026-08-05-popup-free-resize.md": {
-      "filePath": "docs/superpowers/plans/2026-08-05-popup-free-resize.md",
-      "contentHash": "3c2524ee1e761173bbc8a33382f817368e561e375bbf5d741f41bce1e1f27519",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 1434,
-      "hasStructuralAnalysis": true
-    },
-    "docs/superpowers/specs/2026-07-10-ctp-field-alignment-design.md": {
-      "filePath": "docs/superpowers/specs/2026-07-10-ctp-field-alignment-design.md",
-      "contentHash": "9707e7a3e1873c67c87b85046eec7767f681ebe510788375c42159f4bcacca40",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 125,
-      "hasStructuralAnalysis": true
-    },
-    "docs/superpowers/specs/2026-08-04-modal-tab-transition-design.md": {
-      "filePath": "docs/superpowers/specs/2026-08-04-modal-tab-transition-design.md",
-      "contentHash": "5f5508b13131ffec01afbd5f47276426b2a8d1a6cafe7c1b1a3e6230f88d7602",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 243,
-      "hasStructuralAnalysis": true
-    },
-    "docs/superpowers/specs/2026-08-05-popup-free-resize-design.md": {
-      "filePath": "docs/superpowers/specs/2026-08-05-popup-free-resize-design.md",
-      "contentHash": "a4426a75775c7b42ecc3b63f415c3d99b236a5b148360b3fb3f21bc69c03856b",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 260,
-      "hasStructuralAnalysis": true
-    },
-    "docs/tasks/bug-fix-test-round1.md": {
-      "filePath": "docs/tasks/bug-fix-test-round1.md",
-      "contentHash": "90a44f2d40f4592ab4f6cfb4219700c1ad70819b2c7b845a56514c28ec354a1f",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 71,
-      "hasStructuralAnalysis": true
-    },
-    "docs/tasks/compliance-fix-records.md": {
-      "filePath": "docs/tasks/compliance-fix-records.md",
-      "contentHash": "1bfad507657338addf480b06f97c5d8f2a3b136dac74a2b80226f7f79ff33efc",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 214,
-      "hasStructuralAnalysis": true
-    },
-    "docs/tasks/consistency-check-records.md": {
-      "filePath": "docs/tasks/consistency-check-records.md",
-      "contentHash": "cf3c3f9a9efbf92e3ae3a6f42fb1994092e3dea032ad955c7a94b0e9f2eb58fc",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 1090,
-      "hasStructuralAnalysis": true
-    },
-    "docs/tasks/task-dev-flow.md": {
-      "filePath": "docs/tasks/task-dev-flow.md",
-      "contentHash": "1655981ec4249cccd920579e10483eb4f367790835e10b8dd14393d8ca2eb049",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 644,
-      "hasStructuralAnalysis": true
-    },
-    "docs/tasks/task-electron-migration.md": {
-      "filePath": "docs/tasks/task-electron-migration.md",
-      "contentHash": "32ea59ba245e24876baab83fbc90c4127ad22316a11d66b8c7050dada15fbb58",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 888,
-      "hasStructuralAnalysis": true
-    },
-    "docs/tasks/task-redesign.md": {
-      "filePath": "docs/tasks/task-redesign.md",
-      "contentHash": "0038452ada04d5eaa7fe5bcfa5322c299fbf571c41d4625cd59dd24ce5d9d1b6",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 1048,
-      "hasStructuralAnalysis": true
-    },
-    "docs/tasks/task.md": {
-      "filePath": "docs/tasks/task.md",
-      "contentHash": "fd028a50217c52e42652d613eedd31fae04cadee125f7bc560d8f21519bb46c5",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 2108,
-      "hasStructuralAnalysis": true
     },
     "examples/ctp_connection_demo.py": {
       "filePath": "examples/ctp_connection_demo.py",
@@ -2668,16 +898,6 @@
       ],
       "exports": [],
       "totalLines": 92,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/electron-builder.json": {
-      "filePath": "frontend/electron-builder.json",
-      "contentHash": "5f0493ca168c84028b946f9b704c670f785946781b9f7d3719b9d9075a85a243",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 84,
       "hasStructuralAnalysis": true
     },
     "frontend/electron/__tests__/backendManager.test.ts": {
@@ -3604,16 +1824,6 @@
       "totalLines": 167,
       "hasStructuralAnalysis": true
     },
-    "frontend/electron/tsconfig.json": {
-      "filePath": "frontend/electron/tsconfig.json",
-      "contentHash": "bb3f6769373e2665d819bb07eab3ab2fbff6e4b2438efd4e09f81bfecbd47813",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 20,
-      "hasStructuralAnalysis": true
-    },
     "frontend/electron/windowManager.ts": {
       "filePath": "frontend/electron/windowManager.ts",
       "contentHash": "20cde68f9a12d3e853ca60629de438beea9bfacd0b9fb083bf6cd39650482857",
@@ -3666,36 +1876,6 @@
         "WindowManager"
       ],
       "totalLines": 417,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/index.html": {
-      "filePath": "frontend/index.html",
-      "contentHash": "6cca94fbe14387758d6d02a88bea88abc02fbb75ce851cebae880826c7d85957",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 17,
-      "hasStructuralAnalysis": false
-    },
-    "frontend/package.json": {
-      "filePath": "frontend/package.json",
-      "contentHash": "31183969770931e20213e4b8a557ab3c2b22dffaf8596e0cdcd5bcfc4ea02d19",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 53,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/pnpm-workspace.yaml": {
-      "filePath": "frontend/pnpm-workspace.yaml",
-      "contentHash": "47c662884ac8599a54a3a9e896fc957fc1d70f1dedb4f372a5509717b6ccba7f",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 3,
       "hasStructuralAnalysis": true
     },
     "frontend/scripts/build-electron.cjs": {
@@ -3801,13 +1981,13 @@
     },
     "frontend/src/App.tsx": {
       "filePath": "frontend/src/App.tsx",
-      "contentHash": "77d58c5129e3a3dc2ad8bdd6fbc2a234f278189184d10e64f8c884a060cc0b05",
+      "contentHash": "ee86e77cb2d9ffaae175e7662141250cd7e474514b79ace5d8548f48d8c4f9a1",
       "functions": [
         {
           "name": "App",
           "params": [],
           "exported": false,
-          "lineCount": 142
+          "lineCount": 147
         }
       ],
       "classes": [],
@@ -3915,18 +2095,8 @@
         }
       ],
       "exports": [],
-      "totalLines": 163,
+      "totalLines": 168,
       "hasStructuralAnalysis": true
-    },
-    "frontend/src/assets/styles/global.css": {
-      "filePath": "frontend/src/assets/styles/global.css",
-      "contentHash": "7f6fc0f6d1bf3956a59be8786991a31e5131ef21f2557e3677e28787352a5c3f",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 543,
-      "hasStructuralAnalysis": false
     },
     "frontend/src/components/BatchCancel/index.test.tsx": {
       "filePath": "frontend/src/components/BatchCancel/index.test.tsx",
@@ -3996,16 +2166,6 @@
       "totalLines": 168,
       "hasStructuralAnalysis": true
     },
-    "frontend/src/components/BatchCancel/styles.css": {
-      "filePath": "frontend/src/components/BatchCancel/styles.css",
-      "contentHash": "98e2c93da69abde272a6039f7f80df7bcb7e457456ce08aa733a94ecff681942",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 157,
-      "hasStructuralAnalysis": false
-    },
     "frontend/src/components/ConfirmDialog/index.tsx": {
       "filePath": "frontend/src/components/ConfirmDialog/index.tsx",
       "contentHash": "3d474386e99b9622b039940555b160012fb375bb0a6fd192ef1c4b22887e57b4",
@@ -4031,16 +2191,6 @@
       ],
       "totalLines": 37,
       "hasStructuralAnalysis": true
-    },
-    "frontend/src/components/ConfirmDialog/styles.css": {
-      "filePath": "frontend/src/components/ConfirmDialog/styles.css",
-      "contentHash": "4903090f14a1dd2a59f02dadb83944b8d6aeb9c3a699192d2ec3223135a33d71",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 92,
-      "hasStructuralAnalysis": false
     },
     "frontend/src/components/ConnectionStatus/index.test.tsx": {
       "filePath": "frontend/src/components/ConnectionStatus/index.test.tsx",
@@ -4132,16 +2282,6 @@
       "totalLines": 68,
       "hasStructuralAnalysis": true
     },
-    "frontend/src/components/ConnectionStatus/styles.css": {
-      "filePath": "frontend/src/components/ConnectionStatus/styles.css",
-      "contentHash": "e03e8067797bd2468fb711a5148be5a1c5cdb4579407689783f9000b4f0d8b91",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 58,
-      "hasStructuralAnalysis": false
-    },
     "frontend/src/components/ContextMenu/index.test.tsx": {
       "filePath": "frontend/src/components/ContextMenu/index.test.tsx",
       "contentHash": "b30eae53c6fa6ae1d840f63abb2426d2d904d2796bc834003fa17773a735eb90",
@@ -4209,16 +2349,6 @@
       ],
       "totalLines": 73,
       "hasStructuralAnalysis": true
-    },
-    "frontend/src/components/ContextMenu/styles.css": {
-      "filePath": "frontend/src/components/ContextMenu/styles.css",
-      "contentHash": "e22e13b8b8cf259e96efc753518e12d75eab25bd6f7348cbf5aceb39a0f8520f",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 51,
-      "hasStructuralAnalysis": false
     },
     "frontend/src/components/ContractSearch/index.test.tsx": {
       "filePath": "frontend/src/components/ContractSearch/index.test.tsx",
@@ -4308,16 +2438,6 @@
       "totalLines": 136,
       "hasStructuralAnalysis": true
     },
-    "frontend/src/components/ContractSearch/styles.css": {
-      "filePath": "frontend/src/components/ContractSearch/styles.css",
-      "contentHash": "937b9c2e269b0e93cef2748583eb2e643489b2478a9b36c2f122683b702d5ce9",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 74,
-      "hasStructuralAnalysis": false
-    },
     "frontend/src/components/ErrorBoundary/index.tsx": {
       "filePath": "frontend/src/components/ErrorBoundary/index.tsx",
       "contentHash": "5bc9afbad7560520edb7db45d43713e9d33fea443d9b9242b89a2ad8c8e7709f",
@@ -4362,7 +2482,7 @@
     },
     "frontend/src/components/FloatingWindow/index.test.tsx": {
       "filePath": "frontend/src/components/FloatingWindow/index.test.tsx",
-      "contentHash": "012cfcfd2a5dba7d8b5a19d13ff9ecd1cf46303a61605357e93b6e08310107e8",
+      "contentHash": "ffcdbbb935a60693e67e62244895d2911d3abbda9e24b027c558d6c2b0ccd549",
       "functions": [
         {
           "name": "pointerEvent",
@@ -4415,12 +2535,12 @@
         }
       ],
       "exports": [],
-      "totalLines": 129,
+      "totalLines": 141,
       "hasStructuralAnalysis": true
     },
     "frontend/src/components/FloatingWindow/index.tsx": {
       "filePath": "frontend/src/components/FloatingWindow/index.tsx",
-      "contentHash": "1b41886017003b86c9ca07051c136696007ef3e170e5d78c447c1aeb41d1e8fe",
+      "contentHash": "55e100ea5855bdab46b2c28392840d4aff772da1a939821a26d10a2bfed139ef",
       "functions": [
         {
           "name": "handleStyle",
@@ -4431,7 +2551,7 @@
           ],
           "returnType": "CSSProperties",
           "exported": false,
-          "lineCount": 17
+          "lineCount": 18
         },
         {
           "name": "FloatingWindow",
@@ -4498,28 +2618,8 @@
       "exports": [
         "FloatingWindows"
       ],
-      "totalLines": 175,
+      "totalLines": 181,
       "hasStructuralAnalysis": true
-    },
-    "frontend/src/components/FloatingWindow/styles.css": {
-      "filePath": "frontend/src/components/FloatingWindow/styles.css",
-      "contentHash": "e7b280b721b5dfc0de975673693fe7839df9c07efd58e4f6e5273ebb9061e05c",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 56,
-      "hasStructuralAnalysis": false
-    },
-    "frontend/src/components/InstrumentSearchModal/index.css": {
-      "filePath": "frontend/src/components/InstrumentSearchModal/index.css",
-      "contentHash": "e7e5165f2474b10007711857750fc67c45805dc8c8977dd2b725d98b103370dc",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 205,
-      "hasStructuralAnalysis": false
     },
     "frontend/src/components/InstrumentSearchModal/index.tsx": {
       "filePath": "frontend/src/components/InstrumentSearchModal/index.tsx",
@@ -4742,16 +2842,6 @@
       "totalLines": 94,
       "hasStructuralAnalysis": true
     },
-    "frontend/src/components/QuickActions/styles.css": {
-      "filePath": "frontend/src/components/QuickActions/styles.css",
-      "contentHash": "9d6b486ccde5ad91196f0b6534240d3921a25d81d99a7ec6933550bfa0004c41",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 49,
-      "hasStructuralAnalysis": false
-    },
     "frontend/src/components/QuickKeys/index.test.tsx": {
       "filePath": "frontend/src/components/QuickKeys/index.test.tsx",
       "contentHash": "2049768d7dd78c106de9ef7f09b6e5a2495908c7aa513a5ed8ebd18018ce5714",
@@ -4836,16 +2926,6 @@
       ],
       "totalLines": 108,
       "hasStructuralAnalysis": true
-    },
-    "frontend/src/components/QuickKeys/styles.css": {
-      "filePath": "frontend/src/components/QuickKeys/styles.css",
-      "contentHash": "3bdc5a279fb10b83c58f06f0ccc3e09e2c69cfb85484006434179ed675818123",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 98,
-      "hasStructuralAnalysis": false
     },
     "frontend/src/components/ResizeHandle/index.test.tsx": {
       "filePath": "frontend/src/components/ResizeHandle/index.test.tsx",
@@ -5136,16 +3216,6 @@
       "totalLines": 337,
       "hasStructuralAnalysis": true
     },
-    "frontend/src/components/SettingsPanel/styles.css": {
-      "filePath": "frontend/src/components/SettingsPanel/styles.css",
-      "contentHash": "82ce7e4d743139536f8d7a778e9ae1e7c312eef41a1445d3f50d0d234748faad",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 360,
-      "hasStructuralAnalysis": false
-    },
     "frontend/src/components/SpreadDisplay/index.tsx": {
       "filePath": "frontend/src/components/SpreadDisplay/index.tsx",
       "contentHash": "fd6a4fd24e348e44a2bb4e22b733dff3112ad28ce4bbdb58a480fabec9d56ac7",
@@ -5333,19 +3403,9 @@
       "totalLines": 256,
       "hasStructuralAnalysis": true
     },
-    "frontend/src/components/TabBar/styles.css": {
-      "filePath": "frontend/src/components/TabBar/styles.css",
-      "contentHash": "ecc90f94ef4ed956f7a99bf206945baedc67783c6d0c7f782fbd78147c8cd220",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 151,
-      "hasStructuralAnalysis": false
-    },
     "frontend/src/components/TabContent/index.test.tsx": {
       "filePath": "frontend/src/components/TabContent/index.test.tsx",
-      "contentHash": "5456552d9dfc286044a370735e7710b9407da74036cc006f0613021d15970954",
+      "contentHash": "e0deff1634444241670583cf4f75bbc4bcbdea6b3da4a8f5666759d32461fb60",
       "functions": [
         {
           "name": "makeTab",
@@ -5415,12 +3475,12 @@
         }
       ],
       "exports": [],
-      "totalLines": 324,
+      "totalLines": 399,
       "hasStructuralAnalysis": true
     },
     "frontend/src/components/TabContent/index.tsx": {
       "filePath": "frontend/src/components/TabContent/index.tsx",
-      "contentHash": "a53f59e1091b646f3430894d35b4df5c533e3a18991890ba186205b97ec05374",
+      "contentHash": "5735461797ad5c2ca3ea00d3e22d5f2679b3b75af0d1fa704fa8da93a6e915be",
       "functions": [
         {
           "name": "getInstrumentID",
@@ -5444,11 +3504,17 @@
           "name": "TabContent",
           "params": [],
           "exported": true,
-          "lineCount": 55
+          "lineCount": 75
         }
       ],
       "classes": [],
       "imports": [
+        {
+          "source": "react-dom",
+          "specifiers": [
+            "createPortal"
+          ]
+        },
         {
           "source": "@/stores/tabs",
           "specifiers": [
@@ -5520,18 +3586,8 @@
       "exports": [
         "TabContent"
       ],
-      "totalLines": 114,
+      "totalLines": 135,
       "hasStructuralAnalysis": true
-    },
-    "frontend/src/components/TabContent/styles.css": {
-      "filePath": "frontend/src/components/TabContent/styles.css",
-      "contentHash": "09a61e203e2d40469180cadf5eaf9086eccaa4b96f96e1dc3dbbb0caa6eab545",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 44,
-      "hasStructuralAnalysis": false
     },
     "frontend/src/components/Toast/index.test.tsx": {
       "filePath": "frontend/src/components/Toast/index.test.tsx",
@@ -5624,16 +3680,6 @@
       ],
       "totalLines": 85,
       "hasStructuralAnalysis": true
-    },
-    "frontend/src/components/Toast/styles.css": {
-      "filePath": "frontend/src/components/Toast/styles.css",
-      "contentHash": "eef24d30e438a53af66be48c8b5a42e893896317ee9169a363674394042fefec",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 41,
-      "hasStructuralAnalysis": false
     },
     "frontend/src/hooks/useConnectionPoll.ts": {
       "filePath": "frontend/src/hooks/useConnectionPoll.ts",
@@ -7316,16 +5362,6 @@
       "totalLines": 131,
       "hasStructuralAnalysis": true
     },
-    "frontend/src/modules/market/styles.css": {
-      "filePath": "frontend/src/modules/market/styles.css",
-      "contentHash": "0566624edf6da96656735e51768edbae363d26de279b32626aa4e9e53eb04b96",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 452,
-      "hasStructuralAnalysis": false
-    },
     "frontend/src/modules/market/useContractSearch.test.ts": {
       "filePath": "frontend/src/modules/market/useContractSearch.test.ts",
       "contentHash": "c781ebe28d33e8c3f73a14588ac851e606c7e8cbbccbfeaf27cae2587ead317d",
@@ -7633,16 +5669,6 @@
       ],
       "totalLines": 88,
       "hasStructuralAnalysis": true
-    },
-    "frontend/src/modules/options/styles.css": {
-      "filePath": "frontend/src/modules/options/styles.css",
-      "contentHash": "b3afc984500262d19f6b176fc672cd47e18f0c2b0b87b9e8874b8f1f479c53a3",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 149,
-      "hasStructuralAnalysis": false
     },
     "frontend/src/modules/options/TQuoteTable.test.tsx": {
       "filePath": "frontend/src/modules/options/TQuoteTable.test.tsx",
@@ -8018,19 +6044,9 @@
       "totalLines": 317,
       "hasStructuralAnalysis": true
     },
-    "frontend/src/modules/order/OrderPopup.css": {
-      "filePath": "frontend/src/modules/order/OrderPopup.css",
-      "contentHash": "255c2b01b7eb68efe6ec9d2f101e7a5d0fdefb343e809b05d370b899410642f9",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 132,
-      "hasStructuralAnalysis": false
-    },
     "frontend/src/modules/order/OrderPopup.test.tsx": {
       "filePath": "frontend/src/modules/order/OrderPopup.test.tsx",
-      "contentHash": "f1d0502612b513b91e3196ab8a62cf3e4212ae4babdcb92b73eae2269d88c02e",
+      "contentHash": "0dd3c1ecce5578a4cb93436dd001e0da1405bc4ff467ffb15155dd9de56ccb24",
       "functions": [
         {
           "name": "makeSnapshot",
@@ -8111,6 +6127,12 @@
           ]
         },
         {
+          "source": "@/stores/floatingWindows",
+          "specifiers": [
+            "useFloatingWindowStore"
+          ]
+        },
+        {
           "source": "@/services/types",
           "specifiers": [
             "MarketSnapshot"
@@ -8118,18 +6140,18 @@
         }
       ],
       "exports": [],
-      "totalLines": 249,
+      "totalLines": 271,
       "hasStructuralAnalysis": true
     },
     "frontend/src/modules/order/OrderPopup.tsx": {
       "filePath": "frontend/src/modules/order/OrderPopup.tsx",
-      "contentHash": "116af27e9be772f39129cc23e82a48ba1dd9c4b7899dff88d88cd29c84b5dc67",
+      "contentHash": "f4296fcdb10716949101ec8a9a837b23844d73ac970825d4cd8d160b7a2af644",
       "functions": [
         {
           "name": "OrderPopup",
           "params": [],
           "exported": true,
-          "lineCount": 151
+          "lineCount": 161
         }
       ],
       "classes": [],
@@ -8185,6 +6207,12 @@
           ]
         },
         {
+          "source": "@/stores/floatingWindows",
+          "specifiers": [
+            "useFloatingWindowStore"
+          ]
+        },
+        {
           "source": "@/utils/flip",
           "specifiers": [
             "getRect",
@@ -8225,18 +6253,8 @@
       "exports": [
         "OrderPopup"
       ],
-      "totalLines": 176,
+      "totalLines": 187,
       "hasStructuralAnalysis": true
-    },
-    "frontend/src/modules/order/OrderQuotePanel.css": {
-      "filePath": "frontend/src/modules/order/OrderQuotePanel.css",
-      "contentHash": "79dfd067e14cf3cc067289e8a6539c8925c102e1e05ffe40574cc5270e0bb033",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 118,
-      "hasStructuralAnalysis": false
     },
     "frontend/src/modules/order/OrderQuotePanel.test.tsx": {
       "filePath": "frontend/src/modules/order/OrderQuotePanel.test.tsx",
@@ -8604,16 +6622,6 @@
       ],
       "totalLines": 230,
       "hasStructuralAnalysis": true
-    },
-    "frontend/src/modules/order/styles.css": {
-      "filePath": "frontend/src/modules/order/styles.css",
-      "contentHash": "eabe9185a7db0097baab8b108c548f4dad698ef067ced24a3a898276054e850c",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 306,
-      "hasStructuralAnalysis": false
     },
     "frontend/src/modules/query/AccountQuery.test.tsx": {
       "filePath": "frontend/src/modules/query/AccountQuery.test.tsx",
@@ -9172,19 +7180,9 @@
       "totalLines": 175,
       "hasStructuralAnalysis": true
     },
-    "frontend/src/modules/query/QueryPopup.css": {
-      "filePath": "frontend/src/modules/query/QueryPopup.css",
-      "contentHash": "71326c05b4e6c5a4022815f64e5aaadadcd9b6376e45c13e9598394e324b75c1",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 108,
-      "hasStructuralAnalysis": false
-    },
     "frontend/src/modules/query/QueryPopup.test.tsx": {
       "filePath": "frontend/src/modules/query/QueryPopup.test.tsx",
-      "contentHash": "0cd81566060057d7d0c0610bd13bbdd88d07951b2ff700ec1babcde736dce13f",
+      "contentHash": "577356e825bb48807c62ebc755973f75911c564719f36b5f8085e0513db82432",
       "functions": [
         {
           "name": "pointerEvent",
@@ -9236,21 +7234,27 @@
           "specifiers": [
             "useTabStore"
           ]
+        },
+        {
+          "source": "@/stores/floatingWindows",
+          "specifiers": [
+            "useFloatingWindowStore"
+          ]
         }
       ],
       "exports": [],
-      "totalLines": 181,
+      "totalLines": 203,
       "hasStructuralAnalysis": true
     },
     "frontend/src/modules/query/QueryPopup.tsx": {
       "filePath": "frontend/src/modules/query/QueryPopup.tsx",
-      "contentHash": "5ba325537a2b2df15c674ebc6e4ceb9eb7ed90c5ac7fbec3bbd405e82e77a551",
+      "contentHash": "767e50c108b451ef2be36ffab1a0f11bc17be87a05cbeade14f0322ef662dc2e",
       "functions": [
         {
           "name": "QueryPopup",
           "params": [],
           "exported": true,
-          "lineCount": 124
+          "lineCount": 133
         }
       ],
       "classes": [],
@@ -9288,6 +7292,12 @@
           ]
         },
         {
+          "source": "@/stores/floatingWindows",
+          "specifiers": [
+            "useFloatingWindowStore"
+          ]
+        },
+        {
           "source": "@/utils/flip",
           "specifiers": [
             "getRect",
@@ -9322,7 +7332,7 @@
       "exports": [
         "QueryPopup"
       ],
-      "totalLines": 145,
+      "totalLines": 155,
       "hasStructuralAnalysis": true
     },
     "frontend/src/modules/query/StopOrderList.test.tsx": {
@@ -9483,16 +7493,6 @@
       ],
       "totalLines": 311,
       "hasStructuralAnalysis": true
-    },
-    "frontend/src/modules/query/styles.css": {
-      "filePath": "frontend/src/modules/query/styles.css",
-      "contentHash": "91ebd4ee5227d64b287e063baba46a5e174355aa0904280d6e2ba70af99f1924",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 313,
-      "hasStructuralAnalysis": false
     },
     "frontend/src/modules/query/TradeFlow.test.tsx": {
       "filePath": "frontend/src/modules/query/TradeFlow.test.tsx",
@@ -9671,16 +7671,6 @@
       "totalLines": 148,
       "hasStructuralAnalysis": true
     },
-    "frontend/src/pages/FavoritesPage.css": {
-      "filePath": "frontend/src/pages/FavoritesPage.css",
-      "contentHash": "5b923685dd9b7a21991a858234fee705a4d4dca13866ec416ebb30abbba9f581",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 51,
-      "hasStructuralAnalysis": false
-    },
     "frontend/src/pages/FavoritesPage.test.tsx": {
       "filePath": "frontend/src/pages/FavoritesPage.test.tsx",
       "contentHash": "24fbc0d8522795201a270bd9dfdac611e7861e52606f26713cf5f07986e68185",
@@ -9800,16 +7790,6 @@
       "totalLines": 117,
       "hasStructuralAnalysis": true
     },
-    "frontend/src/pages/IPCMonitorPage.css": {
-      "filePath": "frontend/src/pages/IPCMonitorPage.css",
-      "contentHash": "df60dc5a297c9b7a0e3ad822234f19d57ac2306c63313322f8f715bcf07c8868",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 215,
-      "hasStructuralAnalysis": false
-    },
     "frontend/src/pages/IPCMonitorPage.test.tsx": {
       "filePath": "frontend/src/pages/IPCMonitorPage.test.tsx",
       "contentHash": "5983c1867ff9d29eb8290a17bd63eb4c3575b10f1ad71be6bd4e2488b1e6f5b3",
@@ -9922,16 +7902,6 @@
       ],
       "totalLines": 339,
       "hasStructuralAnalysis": true
-    },
-    "frontend/src/pages/KLinePage.css": {
-      "filePath": "frontend/src/pages/KLinePage.css",
-      "contentHash": "022850ba3c364222001d862121be8b838b0513ec94a0a0edeee58363f9a66253",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 57,
-      "hasStructuralAnalysis": false
     },
     "frontend/src/pages/KLinePage.style.test.tsx": {
       "filePath": "frontend/src/pages/KLinePage.style.test.tsx",
@@ -10051,16 +8021,6 @@
       ],
       "totalLines": 100,
       "hasStructuralAnalysis": true
-    },
-    "frontend/src/pages/OrderPage.css": {
-      "filePath": "frontend/src/pages/OrderPage.css",
-      "contentHash": "6c513981880e17822d570b4f1847683ae85d7a313160302385dfd9d7ffb3d491",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 185,
-      "hasStructuralAnalysis": false
     },
     "frontend/src/pages/OrderPage.tsx": {
       "filePath": "frontend/src/pages/OrderPage.tsx",
@@ -11120,7 +9080,7 @@
     },
     "frontend/src/stores/floatingWindows.test.ts": {
       "filePath": "frontend/src/stores/floatingWindows.test.ts",
-      "contentHash": "b662406eb44e6c1bd49952014355ac067682f9e5ad7960823c20a064ffc52694",
+      "contentHash": "39f076be43fc8f3b93ff87d1d6cffbc200ee641cfe192c066ca72ac655abb123",
       "functions": [],
       "classes": [],
       "imports": [
@@ -11149,12 +9109,12 @@
         }
       ],
       "exports": [],
-      "totalLines": 102,
+      "totalLines": 118,
       "hasStructuralAnalysis": true
     },
     "frontend/src/stores/floatingWindows.ts": {
       "filePath": "frontend/src/stores/floatingWindows.ts",
-      "contentHash": "f00b86bc9955f3668ba12a6672cf56b606f1f39f4baaf500dd84bb6866d9b16a",
+      "contentHash": "0e45108c36e1cc339da10d4216f21efdce34777996f8e4751b4fd6284e19b854",
       "functions": [
         {
           "name": "defaultFloatingSize",
@@ -11184,7 +9144,7 @@
         "defaultFloatingSize",
         "useFloatingWindowStore"
       ],
-      "totalLines": 80,
+      "totalLines": 90,
       "hasStructuralAnalysis": true
     },
     "frontend/src/stores/tabs.test.ts": {
@@ -12133,26 +10093,6 @@
       "totalLines": 2,
       "hasStructuralAnalysis": true
     },
-    "frontend/tsconfig.json": {
-      "filePath": "frontend/tsconfig.json",
-      "contentHash": "f4245209e529cf70d766751781b172877d6aa81de7dec64e126dd33cf3329836",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 26,
-      "hasStructuralAnalysis": true
-    },
-    "frontend/tsconfig.node.json": {
-      "filePath": "frontend/tsconfig.node.json",
-      "contentHash": "6ec602b8aa146888c76f0b41ca3515f91f95919f6e6417a4670decaba8fcb982",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 11,
-      "hasStructuralAnalysis": true
-    },
     "frontend/vite.config.ts": {
       "filePath": "frontend/vite.config.ts",
       "contentHash": "1a6753990fe02fa3dd569668ff975fde3ec4bb2358cda98c413e544a6701130c",
@@ -12203,16 +10143,6 @@
       ],
       "exports": [],
       "totalLines": 17,
-      "hasStructuralAnalysis": true
-    },
-    "README.md": {
-      "filePath": "README.md",
-      "contentHash": "cda77c71b5328720bf440b16f21158621591f920d436cb7703bc6e76d4bcf115",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 457,
       "hasStructuralAnalysis": true
     },
     "scripts/build-backend.py": {
@@ -12304,35 +10234,6 @@
       "totalLines": 115,
       "hasStructuralAnalysis": true
     },
-    "scripts/prepare-electron.sh": {
-      "filePath": "scripts/prepare-electron.sh",
-      "contentHash": "9883daf4ab53fd568ce7c8677561d3612348f4160dddbb04a2e5031779568136",
-      "functions": [
-        {
-          "name": "check_pass",
-          "params": [],
-          "exported": false,
-          "lineCount": 3
-        },
-        {
-          "name": "check_fail",
-          "params": [],
-          "exported": false,
-          "lineCount": 3
-        },
-        {
-          "name": "check_warn",
-          "params": [],
-          "exported": false,
-          "lineCount": 3
-        }
-      ],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 123,
-      "hasStructuralAnalysis": true
-    },
     "server/__init__.py": {
       "filePath": "server/__init__.py",
       "contentHash": "a607063f058f278275ddea1b38179eda948bc569349bae2572e7865b57b6e400",
@@ -12342,16 +10243,6 @@
       "exports": [],
       "totalLines": 4,
       "hasStructuralAnalysis": true
-    },
-    "server/.env.sample": {
-      "filePath": "server/.env.sample",
-      "contentHash": "17d16048541b5d0f751bdf30645a30ec161d96a2f72f1413b5912c06a4b73541",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 32,
-      "hasStructuralAnalysis": false
     },
     "server/api/__init__.py": {
       "filePath": "server/api/__init__.py",
@@ -14315,16 +12206,6 @@
       "totalLines": 92,
       "hasStructuralAnalysis": false
     },
-    "server/requirements.txt": {
-      "filePath": "server/requirements.txt",
-      "contentHash": "9aaf6c3a19b416d9fb43e2c7fffaa291ce7fe1c55e2a7ad64dae18affba0d26d",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 10,
-      "hasStructuralAnalysis": false
-    },
     "server/services/__init__.py": {
       "filePath": "server/services/__init__.py",
       "contentHash": "7dc2886228f4802ed16eb56a8ca981b39b1f956f34573dfad837f22bfdcba0e8",
@@ -14758,7 +12639,7 @@
     },
     "server/services/market_service.py": {
       "filePath": "server/services/market_service.py",
-      "contentHash": "aca0da7a4c631236a48910dfe4c62ac24d2d13b7635bad671a0669c777c09626",
+      "contentHash": "f97da7b37a2bd5a30eb9919946ce0e5b8f9539fb3cd8d2801f2bfe38dd499524",
       "functions": [],
       "classes": [
         {
@@ -14767,6 +12648,7 @@
             "__init__",
             "set_ctp_hooks",
             "instrument_count",
+            "_is_expired",
             "load_instruments",
             "load_instruments_from_file",
             "get_instruments",
@@ -14793,7 +12675,7 @@
             "MAX_SUBSCRIPTIONS"
           ],
           "exported": true,
-          "lineCount": 382
+          "lineCount": 394
         }
       ],
       "imports": [
@@ -14848,7 +12730,7 @@
       "exports": [
         "MarketService"
       ],
-      "totalLines": 400,
+      "totalLines": 412,
       "hasStructuralAnalysis": true
     },
     "server/services/options_service.py": {
@@ -16444,7 +14326,7 @@
     },
     "server/tests/test_market_service.py": {
       "filePath": "server/tests/test_market_service.py",
-      "contentHash": "9dd5710e2b099caea6d26dee9f06812e764d30ba661d490e5bcf2cdf3984e8c4",
+      "contentHash": "6b1875f1ce600f7dfd9554f88c5803271fa32a8da2aa3cccdbc4e11c6349533d",
       "functions": [],
       "classes": [
         {
@@ -16533,6 +14415,19 @@
           "properties": [],
           "exported": true,
           "lineCount": 64
+        },
+        {
+          "name": "TestExpiredInstrumentFilter",
+          "methods": [
+            "_ymd",
+            "test_load_instruments_filters_expired",
+            "test_load_instruments_handles_dashed_expire_date",
+            "test_load_instruments_from_file_filters_expired",
+            "test_save_instruments_to_file_filters_expired"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 67
         },
         {
           "name": "TestLoadInstrumentsFromFile",
@@ -16634,12 +14529,13 @@
         "TestCtpHooks",
         "TestSubscriptionLimit",
         "TestSnapshotCache",
+        "TestExpiredInstrumentFilter",
         "TestLoadInstrumentsFromFile",
         "TestRefreshInstrumentsFromCtp",
         "TestInstrumentSearch",
         "TestPresetInstruments"
       ],
-      "totalLines": 830,
+      "totalLines": 901,
       "hasStructuralAnalysis": true
     },
     "server/tests/test_md_user_api.py": {
@@ -19718,224 +17614,171 @@
       "totalLines": 106,
       "hasStructuralAnalysis": true
     },
-    "snapshots/role-b/review-feedback-b-pr-r1.md": {
-      "filePath": "snapshots/role-b/review-feedback-b-pr-r1.md",
-      "contentHash": "188d3a89eb11b53e90398d076072977366cd1faecc10c9a7d625ad9a92526fb5",
-      "functions": [],
+    "frontend/src/components/TabContent/detachFlow.integration.test.tsx": {
+      "filePath": "frontend/src/components/TabContent/detachFlow.integration.test.tsx",
+      "contentHash": "4423581f8d6e9da6b752eb6319e1e0b7f1f5676fa2434c6aaf014dd7185942ea",
+      "functions": [
+        {
+          "name": "appendOverlay",
+          "params": [],
+          "exported": false,
+          "lineCount": 6
+        }
+      ],
       "classes": [],
-      "imports": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "beforeEach",
+            "afterEach",
+            "vi"
+          ]
+        },
+        {
+          "source": "@testing-library/react",
+          "specifiers": [
+            "render"
+          ]
+        },
+        {
+          "source": "./index",
+          "specifiers": [
+            "TabContent"
+          ]
+        },
+        {
+          "source": "@/stores/tabs",
+          "specifiers": [
+            "useTabStore"
+          ]
+        },
+        {
+          "source": "@/stores/floatingWindows",
+          "specifiers": [
+            "useFloatingWindowStore"
+          ]
+        },
+        {
+          "source": "@/utils/detachDrag",
+          "specifiers": [
+            "detachTabAt"
+          ]
+        }
+      ],
       "exports": [],
-      "totalLines": 120,
+      "totalLines": 96,
       "hasStructuralAnalysis": true
     },
-    "snapshots/role-b/review-feedback-b-pr-r17.md": {
-      "filePath": "snapshots/role-b/review-feedback-b-pr-r17.md",
-      "contentHash": "1bb0bc197dfab207debfdfa6206fccb2a83a9a340b9cb96d7c6d12e37e4b293d",
-      "functions": [],
+    "frontend/src/components/TabContent/detachFlow.repro.test.tsx": {
+      "filePath": "frontend/src/components/TabContent/detachFlow.repro.test.tsx",
+      "contentHash": "a5eabc7b82742d18987a479fb9e6e40c2c25c1e77b0fc3df1fff86aefc7dadd4",
+      "functions": [
+        {
+          "name": "pointerEvent",
+          "params": [
+            "type",
+            "init"
+          ],
+          "returnType": "PointerEvent",
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "appendOverlay",
+          "params": [],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "renderAppShell",
+          "params": [],
+          "exported": false,
+          "lineCount": 12
+        }
+      ],
       "classes": [],
-      "imports": [],
+      "imports": [
+        {
+          "source": "vitest",
+          "specifiers": [
+            "describe",
+            "it",
+            "expect",
+            "beforeEach",
+            "afterEach",
+            "vi"
+          ]
+        },
+        {
+          "source": "@testing-library/react",
+          "specifiers": [
+            "render",
+            "fireEvent",
+            "act"
+          ]
+        },
+        {
+          "source": "@/components/TabBar",
+          "specifiers": [
+            "TabBar"
+          ]
+        },
+        {
+          "source": "./index",
+          "specifiers": [
+            "TabContent"
+          ]
+        },
+        {
+          "source": "@/components/FloatingWindow",
+          "specifiers": [
+            "FloatingWindows"
+          ]
+        },
+        {
+          "source": "@/stores/tabs",
+          "specifiers": [
+            "useTabStore"
+          ]
+        },
+        {
+          "source": "@/stores/floatingWindows",
+          "specifiers": [
+            "useFloatingWindowStore"
+          ]
+        }
+      ],
       "exports": [],
-      "totalLines": 34,
+      "totalLines": 148,
       "hasStructuralAnalysis": true
     },
-    "snapshots/role-b/review-feedback-b-pr-r18.md": {
-      "filePath": "snapshots/role-b/review-feedback-b-pr-r18.md",
-      "contentHash": "39684d87e47d1e77fac2619036aa920a1c72698b2b4aed7e0056a66ffd6052ee",
-      "functions": [],
+    "frontend/repro-detach.cjs": {
+      "filePath": "frontend/repro-detach.cjs",
+      "contentHash": "33f72bfd8d9932665ec9a826a2a45830a84179c2ad8498a878373a32b73ca1fa",
+      "functions": [
+        {
+          "name": "sleep",
+          "params": [
+            "ms"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": false,
+          "lineCount": 80
+        }
+      ],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 41,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/review-feedback-b-pr-r19.md": {
-      "filePath": "snapshots/role-b/review-feedback-b-pr-r19.md",
-      "contentHash": "952b288f132d52edc59207c962c0feb5258b1033543c3aefc122acd56c6a9b86",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 33,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/review-feedback-b-pr-r2.md": {
-      "filePath": "snapshots/role-b/review-feedback-b-pr-r2.md",
-      "contentHash": "aa23e82a43820a22cf1cb93dc0dc8d4ea96aa1adff98d83b5d11277145b8421e",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 76,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/review-feedback-b-pr-r21.md": {
-      "filePath": "snapshots/role-b/review-feedback-b-pr-r21.md",
-      "contentHash": "317d8c9c067d734621d945eef1a0900a22e2dfac945fa0795d8585e5b7a3f10e",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 49,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/review-feedback-b-pr-r22.md": {
-      "filePath": "snapshots/role-b/review-feedback-b-pr-r22.md",
-      "contentHash": "e92bafccaead2a46be4499d5022b7f7ace3cb6eb8b54afadf82975d29135b1a2",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 30,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/review-feedback-b-pr-r3.md": {
-      "filePath": "snapshots/role-b/review-feedback-b-pr-r3.md",
-      "contentHash": "1b0ae4dd712598e431d2b0daedb19253913210dd6e223cdb6803164213e47e6f",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 47,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/review-feedback-b-pr-r4.md": {
-      "filePath": "snapshots/role-b/review-feedback-b-pr-r4.md",
-      "contentHash": "a8c9002c70ffaaceb949ec30a54c465c81b270e414a3224adf5554082602306c",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 37,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/review-feedback-b-pr-r5.md": {
-      "filePath": "snapshots/role-b/review-feedback-b-pr-r5.md",
-      "contentHash": "a348e2da30d7b0e7eba477f0ebd5cad4ac9ddab6144ec075efbd46df454e6b86",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 42,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/review-feedback-b-pr-r6.md": {
-      "filePath": "snapshots/role-b/review-feedback-b-pr-r6.md",
-      "contentHash": "59b87494d898a7833fa59d33505085dffdb05ca585dae4cf604adafaa2564843",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 46,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/review-feedback-b-pr-r7.md": {
-      "filePath": "snapshots/role-b/review-feedback-b-pr-r7.md",
-      "contentHash": "8c2148d912037a55b06d7bcb5ab028aeeaceb69c21913b8c6b724435e6d828f5",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 90,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/verify-discussion-pr-r1.md": {
-      "filePath": "snapshots/role-b/verify-discussion-pr-r1.md",
-      "contentHash": "18709d6499990c8d2706d22af297a5753640a572631e7cd38bab8133a3b6d214",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 38,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/verify-discussion-redesign-r17.md": {
-      "filePath": "snapshots/role-b/verify-discussion-redesign-r17.md",
-      "contentHash": "f84ded4c8a7f403f4928e9edeac34670b1ccb07c8dbcd15c2f2aa36d8b885c22",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 37,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/verify-discussion-redesign-r18.md": {
-      "filePath": "snapshots/role-b/verify-discussion-redesign-r18.md",
-      "contentHash": "dadb375f4844f4488cdb71811b489cef4555ced8634111273fc4153d7dabdf83",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 47,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/verify-discussion-redesign-r19.md": {
-      "filePath": "snapshots/role-b/verify-discussion-redesign-r19.md",
-      "contentHash": "b0879e6baec7dafc8ac0c845842934463fcde505a9c4fe66a588307c876d6af0",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 24,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/verify-discussion-redesign-r2.md": {
-      "filePath": "snapshots/role-b/verify-discussion-redesign-r2.md",
-      "contentHash": "9dffe6dfccaf662ed1ba2b56450991135b11ded94e3783322dd0b27631329a64",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 35,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/verify-discussion-redesign-r3.md": {
-      "filePath": "snapshots/role-b/verify-discussion-redesign-r3.md",
-      "contentHash": "8b408ac7fb6fab298e61a09a686da10ae85c4bf222328ca26291c6062ea7bcf6",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 37,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/verify-discussion-redesign-r4.md": {
-      "filePath": "snapshots/role-b/verify-discussion-redesign-r4.md",
-      "contentHash": "70995002a85bbbd0967e2daa0ea30a31925137f82cd950f804335808053d5df4",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 23,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/verify-discussion-redesign-r5.md": {
-      "filePath": "snapshots/role-b/verify-discussion-redesign-r5.md",
-      "contentHash": "2925845c3808be3123576138e4008d98e7d49c261b4088bc986c77287f099fd1",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 39,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/verify-discussion-redesign-r6.md": {
-      "filePath": "snapshots/role-b/verify-discussion-redesign-r6.md",
-      "contentHash": "91fb2e2ae77e336904ba20486614e478c782c8d1726fb68ac0fcd9baa8d3e4a9",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 41,
-      "hasStructuralAnalysis": true
-    },
-    "snapshots/role-b/verify-discussion-redesign-r7.md": {
-      "filePath": "snapshots/role-b/verify-discussion-redesign-r7.md",
-      "contentHash": "bda27c04b65953d2e668b359a20347feba90306140f964b4d7db7ffa883e2fef",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 48,
+      "totalLines": 89,
       "hasStructuralAnalysis": true
     }
   }

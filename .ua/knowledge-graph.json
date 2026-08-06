@@ -25,8 +25,8 @@
       "Pytest"
     ],
     "description": "上期所 SimNow 模拟交易终端 — 基于 CTP 协议的期货期权模拟交易终端，支持浏览器 Web 与 Electron 桌面两种运行模式，对接 SimNow 7×24 测试环境，实现行情接入、交易接入、手动报单等功能（React 18 + TypeScript + Vite 前端，Python FastAPI + ctp-python 后端）",
-    "analyzedAt": "2026-08-05T14:44:05.208Z",
-    "gitCommitHash": "ad6b86b107be392fdec4c6ce2985861c909cb8f8"
+    "analyzedAt": "2026-08-06T01:42:15.419Z",
+    "gitCommitHash": "be3edfed157f30bd1ebb16ce14317af84a813e1d"
   },
   "nodes": [
     {
@@ -115,35 +115,6 @@
         "tested"
       ],
       "complexity": "complex"
-    },
-    {
-      "id": "file:frontend/src/modules/order/OrderPopup.test.tsx",
-      "type": "file",
-      "name": "OrderPopup.test.tsx",
-      "filePath": "frontend/src/modules/order/OrderPopup.test.tsx",
-      "summary": "报单弹窗组件测试，覆盖弹窗开关、拖拽、锁仓合约与 Tab 打开等交互行为。",
-      "tags": [
-        "test",
-        "component",
-        "order",
-        "popup"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "type": "file",
-      "name": "OrderPopup.tsx",
-      "filePath": "frontend/src/modules/order/OrderPopup.tsx",
-      "summary": "可拖拽、可缩放的报单弹窗，集成行情快照、锁仓合约、Tab 打开与 FLIP 动画过渡。",
-      "tags": [
-        "component",
-        "order",
-        "popup",
-        "event-handler",
-        "tested"
-      ],
-      "complexity": "moderate"
     },
     {
       "id": "file:frontend/src/modules/order/OrderQuotePanel.test.tsx",
@@ -286,41 +257,6 @@
         "validation"
       ],
       "complexity": "complex"
-    },
-    {
-      "id": "function:frontend/src/modules/order/OrderPopup.test.tsx:makeSnapshot",
-      "type": "function",
-      "name": "makeSnapshot",
-      "filePath": "frontend/src/modules/order/OrderPopup.test.tsx",
-      "lineRange": [
-        29,
-        53
-      ],
-      "summary": "构造行情快照测试数据，供弹窗行情展示相关断言使用。",
-      "tags": [
-        "test",
-        "mock",
-        "fixture"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
-      "type": "function",
-      "name": "OrderPopup",
-      "filePath": "frontend/src/modules/order/OrderPopup.tsx",
-      "lineRange": [
-        25,
-        175
-      ],
-      "summary": "可拖拽、可缩放、可锁仓的报单弹窗，集成行情展示、Tab 打开与 FLIP 动画过渡。",
-      "tags": [
-        "component",
-        "popup",
-        "order",
-        "event-handler"
-      ],
-      "complexity": "moderate"
     },
     {
       "id": "function:frontend/src/modules/order/OrderQuotePanel.test.tsx:makeSnapshot",
@@ -4271,39 +4207,6 @@
       "complexity": "moderate"
     },
     {
-      "id": "file:server/services/market_service.py",
-      "type": "file",
-      "name": "market_service.py",
-      "filePath": "server/services/market_service.py",
-      "summary": "行情核心服务，管理合约缓存、订阅集合、快照缓存与预设合约，并支持从 CTP 全量刷新合约。",
-      "tags": [
-        "service",
-        "market-data",
-        "cache",
-        "subscription",
-        "tested"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "class:server/services/market_service.py:MarketService",
-      "type": "class",
-      "name": "MarketService",
-      "filePath": "server/services/market_service.py",
-      "lineRange": [
-        18,
-        399
-      ],
-      "summary": "行情服务，维护合约缓存、订阅集合、快照缓存与预设合约，支持从 CTP 刷新合约并落盘。",
-      "tags": [
-        "service",
-        "market-data",
-        "cache",
-        "subscription"
-      ],
-      "complexity": "complex"
-    },
-    {
       "id": "file:server/services/options_service.py",
       "type": "file",
       "name": "options_service.py",
@@ -5403,190 +5306,6 @@
         "test-double"
       ],
       "complexity": "simple"
-    },
-    {
-      "id": "file:server/tests/test_market_service.py",
-      "type": "file",
-      "name": "test_market_service.py",
-      "filePath": "server/tests/test_market_service.py",
-      "summary": "pytest 测试套件，验证 MarketService 的合约缓存、订阅管理、CTP hooks、快照缓存、合约文件加载/刷新、搜索与预置合约逻辑。",
-      "tags": [
-        "test",
-        "pytest",
-        "service",
-        "market"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "class:server/tests/test_market_service.py:TestMarketServiceInit",
-      "type": "class",
-      "name": "TestMarketServiceInit",
-      "filePath": "server/tests/test_market_service.py",
-      "lineRange": [
-        13,
-        37
-      ],
-      "summary": "pytest 测试类，覆盖 MarketService 行情服务 的 MarketServiceInit 相关行为。",
-      "tags": [
-        "test",
-        "pytest",
-        "unit-test"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "class:server/tests/test_market_service.py:TestInstrumentCache",
-      "type": "class",
-      "name": "TestInstrumentCache",
-      "filePath": "server/tests/test_market_service.py",
-      "lineRange": [
-        42,
-        157
-      ],
-      "summary": "pytest 测试类，覆盖 MarketService 行情服务 的 InstrumentCache 相关行为。",
-      "tags": [
-        "test",
-        "pytest",
-        "unit-test"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "class:server/tests/test_market_service.py:TestSubscriptionManagement",
-      "type": "class",
-      "name": "TestSubscriptionManagement",
-      "filePath": "server/tests/test_market_service.py",
-      "lineRange": [
-        162,
-        231
-      ],
-      "summary": "pytest 测试类，覆盖 MarketService 行情服务 的 SubscriptionManagement 相关行为。",
-      "tags": [
-        "test",
-        "pytest",
-        "unit-test"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "class:server/tests/test_market_service.py:TestCtpHooks",
-      "type": "class",
-      "name": "TestCtpHooks",
-      "filePath": "server/tests/test_market_service.py",
-      "lineRange": [
-        236,
-        335
-      ],
-      "summary": "pytest 测试类，覆盖 MarketService 行情服务 的 CtpHooks 相关行为。",
-      "tags": [
-        "test",
-        "pytest",
-        "unit-test"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "class:server/tests/test_market_service.py:TestSubscriptionLimit",
-      "type": "class",
-      "name": "TestSubscriptionLimit",
-      "filePath": "server/tests/test_market_service.py",
-      "lineRange": [
-        340,
-        369
-      ],
-      "summary": "pytest 测试类，覆盖 MarketService 行情服务 的 SubscriptionLimit 相关行为。",
-      "tags": [
-        "test",
-        "pytest",
-        "unit-test"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "class:server/tests/test_market_service.py:TestSnapshotCache",
-      "type": "class",
-      "name": "TestSnapshotCache",
-      "filePath": "server/tests/test_market_service.py",
-      "lineRange": [
-        374,
-        437
-      ],
-      "summary": "pytest 测试类，覆盖 MarketService 行情服务 的 SnapshotCache 相关行为。",
-      "tags": [
-        "test",
-        "pytest",
-        "unit-test"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "class:server/tests/test_market_service.py:TestLoadInstrumentsFromFile",
-      "type": "class",
-      "name": "TestLoadInstrumentsFromFile",
-      "filePath": "server/tests/test_market_service.py",
-      "lineRange": [
-        442,
-        518
-      ],
-      "summary": "pytest 测试类，覆盖 MarketService 行情服务 的 LoadInstrumentsFromFile 相关行为。",
-      "tags": [
-        "test",
-        "pytest",
-        "unit-test"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "class:server/tests/test_market_service.py:TestRefreshInstrumentsFromCtp",
-      "type": "class",
-      "name": "TestRefreshInstrumentsFromCtp",
-      "filePath": "server/tests/test_market_service.py",
-      "lineRange": [
-        523,
-        683
-      ],
-      "summary": "pytest 测试类，覆盖 MarketService 行情服务 的 RefreshInstrumentsFromCtp 相关行为。",
-      "tags": [
-        "test",
-        "pytest",
-        "unit-test"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "class:server/tests/test_market_service.py:TestInstrumentSearch",
-      "type": "class",
-      "name": "TestInstrumentSearch",
-      "filePath": "server/tests/test_market_service.py",
-      "lineRange": [
-        688,
-        768
-      ],
-      "summary": "pytest 测试类，覆盖 MarketService 行情服务 的 InstrumentSearch 相关行为。",
-      "tags": [
-        "test",
-        "pytest",
-        "unit-test"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "class:server/tests/test_market_service.py:TestPresetInstruments",
-      "type": "class",
-      "name": "TestPresetInstruments",
-      "filePath": "server/tests/test_market_service.py",
-      "lineRange": [
-        773,
-        829
-      ],
-      "summary": "pytest 测试类，覆盖 MarketService 行情服务 的 PresetInstruments 相关行为。",
-      "tags": [
-        "test",
-        "pytest",
-        "unit-test"
-      ],
-      "complexity": "moderate"
     },
     {
       "id": "file:server/tests/test_md_user_api.py",
@@ -8315,22 +8034,6 @@
       "complexity": "moderate"
     },
     {
-      "id": "file:frontend/src/App.tsx",
-      "type": "file",
-      "name": "App.tsx",
-      "filePath": "frontend/src/App.tsx",
-      "summary": "应用根组件，负责组装标签栏、浮窗、内容区与弹窗等核心布局，并处理 Electron 窗口导航、合约选中同步与全局快捷键。",
-      "tags": [
-        "入口点",
-        "component",
-        "electron",
-        "event-handler",
-        "tested"
-      ],
-      "complexity": "moderate",
-      "languageNotes": "通过 window.electronAPI 可选链调用 Electron IPC，纯浏览器模式下安全降级。"
-    },
-    {
       "id": "file:frontend/src/components/ConnectionStatus/index.test.tsx",
       "type": "file",
       "name": "index.test.tsx",
@@ -8356,35 +8059,6 @@
         "tested"
       ],
       "complexity": "simple"
-    },
-    {
-      "id": "file:frontend/src/components/FloatingWindow/index.test.tsx",
-      "type": "file",
-      "name": "index.test.tsx",
-      "filePath": "frontend/src/components/FloatingWindow/index.test.tsx",
-      "summary": "浮窗组件的测试，覆盖拖动、缩放、停靠与关闭等交互行为。",
-      "tags": [
-        "test",
-        "组件测试",
-        "浮窗"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "type": "file",
-      "name": "index.tsx",
-      "filePath": "frontend/src/components/FloatingWindow/index.tsx",
-      "summary": "浮窗容器组件，实现标签脱离主窗口后的独立窗口，支持拖动、缩放、聚焦与重新停靠。",
-      "tags": [
-        "component",
-        "浮窗",
-        "drag",
-        "resize",
-        "tested"
-      ],
-      "complexity": "complex",
-      "languageNotes": "使用 activeTeardownRef 引用保存拖拽 teardown，规避快速重复操作导致的监听器泄漏。"
     },
     {
       "id": "file:frontend/src/components/PerfMonitor/index.test.tsx",
@@ -8483,33 +8157,6 @@
       "languageNotes": "Electron 模式使用动态 import 创建独立标签窗口，浏览器模式回退到 window.open。"
     },
     {
-      "id": "file:frontend/src/components/TabContent/index.test.tsx",
-      "type": "file",
-      "name": "index.test.tsx",
-      "filePath": "frontend/src/components/TabContent/index.test.tsx",
-      "summary": "内容区组件测试，验证各页面面板的渲染与面板拖拽脱离交互。",
-      "tags": [
-        "test",
-        "组件测试",
-        "tab"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "file:frontend/src/components/TabContent/index.tsx",
-      "type": "file",
-      "name": "index.tsx",
-      "filePath": "frontend/src/components/TabContent/index.tsx",
-      "summary": "标签内容区组件，按当前标签类型渲染对应业务面板，并处理面板拖拽脱离事件。",
-      "tags": [
-        "component",
-        "tab-content",
-        "路由",
-        "tested"
-      ],
-      "complexity": "moderate"
-    },
-    {
       "id": "file:frontend/src/hooks/useConnectionPoll.ts",
       "type": "file",
       "name": "useConnectionPoll.ts",
@@ -8549,23 +8196,6 @@
       "complexity": "moderate"
     },
     {
-      "id": "function:frontend/src/App.tsx:App",
-      "type": "function",
-      "name": "App",
-      "filePath": "frontend/src/App.tsx",
-      "lineRange": [
-        19,
-        160
-      ],
-      "summary": "根组件，装配整体布局并绑定 Electron 导航、选中合约同步、系统 WS 与全局快捷键等副作用。",
-      "tags": [
-        "component",
-        "入口点",
-        "event-handler"
-      ],
-      "complexity": "complex"
-    },
-    {
       "id": "function:frontend/src/components/ConnectionStatus/index.tsx:ConnectionStatus",
       "type": "function",
       "name": "ConnectionStatus",
@@ -8598,57 +8228,6 @@
         "状态渲染"
       ],
       "complexity": "simple"
-    },
-    {
-      "id": "function:frontend/src/components/FloatingWindow/index.tsx:handleStyle",
-      "type": "function",
-      "name": "handleStyle",
-      "filePath": "frontend/src/components/FloatingWindow/index.tsx",
-      "lineRange": [
-        17,
-        33
-      ],
-      "summary": "计算浮窗缩放把手按方向对应的定位样式。",
-      "tags": [
-        "utility",
-        "样式计算",
-        "resize"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindow",
-      "type": "function",
-      "name": "FloatingWindow",
-      "filePath": "frontend/src/components/FloatingWindow/index.tsx",
-      "lineRange": [
-        41,
-        150
-      ],
-      "summary": "单个浮窗的交互实现，含拖动、四向/四角缩放、聚焦、停靠与关闭逻辑。",
-      "tags": [
-        "component",
-        "浮窗",
-        "drag"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindows",
-      "type": "function",
-      "name": "FloatingWindows",
-      "filePath": "frontend/src/components/FloatingWindow/index.tsx",
-      "lineRange": [
-        153,
-        174
-      ],
-      "summary": "浮窗集合容器，与标签状态同步，并在标签关闭时清理孤立浮窗。",
-      "tags": [
-        "component",
-        "浮窗",
-        "容器"
-      ],
-      "complexity": "moderate"
     },
     {
       "id": "function:frontend/src/components/PerfMonitor/index.tsx:PerfMonitor",
@@ -8696,41 +8275,6 @@
         "context-menu"
       ],
       "complexity": "complex"
-    },
-    {
-      "id": "function:frontend/src/components/TabContent/index.tsx:renderTabContent",
-      "type": "function",
-      "name": "renderTabContent",
-      "filePath": "frontend/src/components/TabContent/index.tsx",
-      "lineRange": [
-        30,
-        51
-      ],
-      "summary": "按标签类型分发渲染对应的市场/查询/页签面板。",
-      "tags": [
-        "utility",
-        "tab",
-        "路由",
-        "渲染"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:frontend/src/components/TabContent/index.tsx:TabContent",
-      "type": "function",
-      "name": "TabContent",
-      "filePath": "frontend/src/components/TabContent/index.tsx",
-      "lineRange": [
-        59,
-        113
-      ],
-      "summary": "内容区容器，根据当前标签渲染面板并处理面板拖拽脱离事件。",
-      "tags": [
-        "component",
-        "tab-content",
-        "路由"
-      ],
-      "complexity": "moderate"
     },
     {
       "id": "function:frontend/src/hooks/useConnectionPoll.ts:useConnectionPoll",
@@ -8844,52 +8388,6 @@
         "bootstrap"
       ],
       "complexity": "simple"
-    },
-    {
-      "id": "file:frontend/src/modules/query/QueryPopup.test.tsx",
-      "type": "file",
-      "name": "QueryPopup.test.tsx",
-      "filePath": "frontend/src/modules/query/QueryPopup.test.tsx",
-      "summary": "QueryPopup 悬浮查询弹窗的单元测试。覆盖弹窗开合、标题栏拖拽移动、ESC 关闭以及放大为「查询」标签页等交互行为。",
-      "tags": [
-        "test",
-        "component",
-        "query",
-        "popup"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "file:frontend/src/modules/query/QueryPopup.tsx",
-      "type": "file",
-      "name": "QueryPopup.tsx",
-      "filePath": "frontend/src/modules/query/QueryPopup.tsx",
-      "summary": "非模态悬浮查询弹窗组件，浮于标签页之上。支持标题栏拖拽移动、8 方向自由缩放、ESC/× 关闭，并可将弹窗放大为「查询」标签页（带 flip 过渡动画），主体内嵌 QueryPanel。",
-      "tags": [
-        "component",
-        "query",
-        "popup",
-        "ui",
-        "tested"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:frontend/src/modules/query/QueryPopup.tsx:QueryPopup",
-      "type": "function",
-      "name": "QueryPopup",
-      "filePath": "frontend/src/modules/query/QueryPopup.tsx",
-      "lineRange": [
-        21,
-        144
-      ],
-      "summary": "渲染查询弹窗，管理拖拽移动手势、复用 usePopupResize 实现自由缩放，以及放大为标签页时的 openTab 与 flip 过渡逻辑。",
-      "tags": [
-        "component",
-        "popup",
-        "event-handler"
-      ],
-      "complexity": "moderate"
     },
     {
       "id": "file:frontend/src/modules/query/popupStore.test.ts",
@@ -9095,68 +8593,6 @@
         "state-management"
       ],
       "complexity": "simple"
-    },
-    {
-      "id": "file:frontend/src/stores/floatingWindows.test.ts",
-      "type": "file",
-      "name": "floatingWindows.test.ts",
-      "filePath": "frontend/src/stores/floatingWindows.test.ts",
-      "summary": "浮动窗口 store 的单元测试。覆盖 detach/dock/move/resize/focus 等窗口几何操作及固定标签不可拖出的约束。",
-      "tags": [
-        "test",
-        "store",
-        "floating-window"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "file:frontend/src/stores/floatingWindows.ts",
-      "type": "file",
-      "name": "floatingWindows.ts",
-      "filePath": "frontend/src/stores/floatingWindows.ts",
-      "summary": "浮动窗口 Zustand store。维护 tabId 到窗口几何信息的映射，提供 detach/dock/move/resize/focus 操作，固定标签（closable:false）拒绝拖出，z 值递增实现置顶。",
-      "tags": [
-        "store",
-        "floating-window",
-        "zustand",
-        "state-management",
-        "tested"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:frontend/src/stores/floatingWindows.ts:defaultFloatingSize",
-      "type": "function",
-      "name": "defaultFloatingSize",
-      "filePath": "frontend/src/stores/floatingWindows.ts",
-      "lineRange": [
-        8,
-        12
-      ],
-      "summary": "计算拖出标签时浮动窗口的默认尺寸，按视口比例钳制到最大 900x620 且不小于最小 320x200。",
-      "tags": [
-        "utility",
-        "layout",
-        "floating-window"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:frontend/src/stores/floatingWindows.ts:useFloatingWindowStore",
-      "type": "function",
-      "name": "useFloatingWindowStore",
-      "filePath": "frontend/src/stores/floatingWindows.ts",
-      "lineRange": [
-        39,
-        79
-      ],
-      "summary": "导出的浮动窗口 store hook，实现窗口 detach/dock/move/resize/focus 全量几何操作。",
-      "tags": [
-        "store",
-        "zustand",
-        "state-management"
-      ],
-      "complexity": "moderate"
     },
     {
       "id": "file:frontend/src/stores/tabs.test.ts",
@@ -11176,80 +10612,6 @@
         "bug-fix",
         "git",
         "cleanup"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "config:.ua/config.json",
-      "type": "config",
-      "name": "config.json",
-      "filePath": ".ua/config.json",
-      "summary": "Understand-Anything 工具的运行配置，启用自动更新并将知识图谱输出语言设为中文（zh）。",
-      "tags": [
-        "configuration",
-        "工具配置",
-        "knowledge-graph",
-        "auto-update"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "config:.ua/domain-graph.json",
-      "type": "config",
-      "name": "domain-graph.json",
-      "filePath": ".ua/domain-graph.json",
-      "summary": "领域知识图数据，按 domains / flows / steps 结构描述行情数据、交易指令、风控等业务领域的实体、业务流与步骤。",
-      "tags": [
-        "configuration",
-        "领域图",
-        "领域知识",
-        "业务流",
-        "domain-graph"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "config:.ua/fingerprints.json",
-      "type": "config",
-      "name": "fingerprints.json",
-      "filePath": ".ua/fingerprints.json",
-      "summary": "项目全部文件的指纹缓存，记录每个文件的 contentHash、结构分析标志以及函数/类/导入等结构化元数据，用于增量分析去重。",
-      "tags": [
-        "configuration",
-        "指纹",
-        "内容哈希",
-        "结构分析",
-        "增量缓存"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "config:.ua/knowledge-graph.json",
-      "type": "config",
-      "name": "knowledge-graph.json",
-      "filePath": ".ua/knowledge-graph.json",
-      "summary": "组装完成的知识图谱主文件，包含 nodes、edges、layers、tour 及项目元信息，是 Understand-Anything 图谱管线的最终产物。",
-      "tags": [
-        "configuration",
-        "知识图谱",
-        "图数据",
-        "架构",
-        "nodes-edges"
-      ],
-      "complexity": "complex",
-      "languageNotes": "图谱管线各阶段的输出（指纹、领域图、元数据）在此统一合并，形成单一可交互的 JSON 图数据文件。"
-    },
-    {
-      "id": "config:.ua/meta.json",
-      "type": "config",
-      "name": "meta.json",
-      "filePath": ".ua/meta.json",
-      "summary": "知识图谱分析元数据，记录最近分析时间、git 提交哈希、工具版本与已分析文件数（171 个）。",
-      "tags": [
-        "configuration",
-        "元数据",
-        "分析记录",
-        "版本"
       ],
       "complexity": "simple"
     },
@@ -16504,6 +15866,950 @@
         "untagged"
       ],
       "complexity": "moderate"
+    },
+    {
+      "id": "file:frontend/src/modules/order/OrderPopup.tsx",
+      "type": "file",
+      "name": "OrderPopup.tsx",
+      "filePath": "frontend/src/modules/order/OrderPopup.tsx",
+      "summary": "非模态悬浮报单弹窗组件，浮于行情标签页之上并保持行情可交互。双栏布局展示五档行情与报单表单，支持标题栏拖拽移动、自由缩放、ESC/× 关闭，以及通过 FLIP 动画将弹窗放大为标签页。",
+      "tags": [
+        "组件",
+        "react",
+        "事件处理",
+        "浮动窗口",
+        "交易",
+        "tested"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "使用 React hooks（useCallback/useEffect/useRef）管理拖拽、缩放与 ESC 关闭逻辑，配合 usePopupResize 共享 hook 物化居中态与 8 方向缩放，并以 FLIP 动画实现弹窗到标签页的无缝过渡。"
+    },
+    {
+      "id": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
+      "type": "function",
+      "name": "OrderPopup",
+      "filePath": "frontend/src/modules/order/OrderPopup.tsx",
+      "lineRange": [
+        26,
+        186
+      ],
+      "summary": "报单弹窗主体组件：打开时锁定该合约的行情订阅并同步合约到报单表单，渲染五档行情面板与报单表单，管理拖拽移动、8 方向缩放、ESC 关闭和统一的 z-index 置顶，并提供放大为标签页的能力。",
+      "tags": [
+        "组件",
+        "react",
+        "事件处理",
+        "浮动窗口"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:frontend/src/modules/order/OrderPopup.test.tsx",
+      "type": "file",
+      "name": "OrderPopup.test.tsx",
+      "filePath": "frontend/src/modules/order/OrderPopup.test.tsx",
+      "summary": "OrderPopup 组件的单元测试（Vitest + Testing Library），覆盖弹窗关闭不渲染、打开后标题/表单/盘口渲染、合约锁定订阅与解除、点击 ×/ESC 关闭、置顶行为、盘口回填买入价，以及放大为标签页和 8 方向缩放等场景。",
+      "tags": [
+        "测试",
+        "react",
+        "组件",
+        "vitest",
+        "testing-library"
+      ],
+      "complexity": "complex",
+      "languageNotes": "通过 vi.hoisted 预创建 toast mock、vi.mock 屏蔽 FLIP 工具与 Toast，并物化 getBoundingClientRect 以在 jsdom 中驱动拖拽/缩放交互断言。"
+    },
+    {
+      "id": "function:frontend/src/modules/order/OrderPopup.test.tsx:makeSnapshot",
+      "type": "function",
+      "name": "makeSnapshot",
+      "filePath": "frontend/src/modules/order/OrderPopup.test.tsx",
+      "lineRange": [
+        30,
+        54
+      ],
+      "summary": "测试辅助函数，构造一份完整的五档行情 MarketSnapshot 测试快照，可通过 overrides 参数部分覆盖默认字段值。",
+      "tags": [
+        "测试",
+        "fixture",
+        "辅助函数"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:server/services/market_service.py",
+      "type": "file",
+      "name": "market_service.py",
+      "filePath": "server/services/market_service.py",
+      "summary": "核心行情数据服务，位于 API 路由与 CTP MdUserApi 之间，负责合约列表缓存、行情快照缓存与订阅跟踪（500 手上限），并支持从 CTP 刷新合约与自动生成预设合约列表。",
+      "tags": [
+        "service",
+        "market-data",
+        "cache",
+        "subscription",
+        "data-model",
+        "tested"
+      ],
+      "complexity": "complex",
+      "languageNotes": "通过回调注入（set_ctp_hooks）解耦 CTP 依赖以提升可测试性，并使用 threading.Lock 保证 CTP 工作线程与异步路由并发安全。"
+    },
+    {
+      "id": "class:server/services/market_service.py:MarketService",
+      "type": "class",
+      "name": "MarketService",
+      "filePath": "server/services/market_service.py",
+      "lineRange": [
+        18,
+        411
+      ],
+      "summary": "核心行情数据服务类，集中管理合约列表缓存、内存快照缓存和订阅集合（含 500 手上限），并处理 CTP 合约查询回调、预设合约自动检测与落盘。",
+      "tags": [
+        "service",
+        "market-data",
+        "cache",
+        "data-model",
+        "singleton"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:server/services/market_service.py:__init__",
+      "type": "function",
+      "name": "__init__",
+      "filePath": "server/services/market_service.py",
+      "lineRange": [
+        29,
+        39
+      ],
+      "summary": "初始化服务内部状态：合约、快照与订阅缓存，线程锁，以及可选的 CTP 订阅回调钩子。",
+      "tags": [
+        "constructor",
+        "initialization",
+        "state"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:server/services/market_service.py:set_ctp_hooks",
+      "type": "function",
+      "name": "set_ctp_hooks",
+      "filePath": "server/services/market_service.py",
+      "lineRange": [
+        41,
+        52
+      ],
+      "summary": "注入 CTP Subscribe/Unsubscribe 回调，在 CTP 连接成功后由启动流程调用；在此之前订阅仅做本地记账。",
+      "tags": [
+        "injection",
+        "ctp",
+        "testability"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:server/services/market_service.py:_is_expired",
+      "type": "function",
+      "name": "_is_expired",
+      "filePath": "server/services/market_service.py",
+      "lineRange": [
+        60,
+        69
+      ],
+      "summary": "过期合约判定：expireDate 早于今天（YYYYMMDD）视为过期，用于过滤 CTP 返回的历史或已到期合约。",
+      "tags": [
+        "validation",
+        "filter",
+        "expiry"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:server/services/market_service.py:load_instruments_from_file",
+      "type": "function",
+      "name": "load_instruments_from_file",
+      "filePath": "server/services/market_service.py",
+      "lineRange": [
+        75,
+        96
+      ],
+      "summary": "从 JSON 文件加载合约列表并过滤过期合约，返回成功加载的数量；文件缺失、格式非法或为空时返回 0。",
+      "tags": [
+        "io",
+        "cache",
+        "persistence"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:server/services/market_service.py:get_instruments",
+      "type": "function",
+      "name": "get_instruments",
+      "filePath": "server/services/market_service.py",
+      "lineRange": [
+        98,
+        118
+      ],
+      "summary": "按关键字对合约进行大小写不敏感的模糊搜索，匹配 instrumentID/instrumentName/exchangeID/productID 字段；无关键字时返回全部合约。",
+      "tags": [
+        "query",
+        "search",
+        "market-data"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:server/services/market_service.py:search_instruments",
+      "type": "function",
+      "name": "search_instruments",
+      "filePath": "server/services/market_service.py",
+      "lineRange": [
+        132,
+        147
+      ],
+      "summary": "按交易所加品种精确过滤合约，可选关键字继续在合约代码与名称中进行模糊匹配。",
+      "tags": [
+        "query",
+        "search",
+        "filter"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:server/services/market_service.py:refresh_preset_instruments",
+      "type": "function",
+      "name": "refresh_preset_instruments",
+      "filePath": "server/services/market_service.py",
+      "lineRange": [
+        168,
+        204
+      ],
+      "summary": "按品种自动挑选近月主力合约（isTrading 为 1 且到期日最近），生成预设合约列表并写回配置文件。",
+      "tags": [
+        "preset",
+        "auto-detection",
+        "persistence"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:server/services/market_service.py:subscribe",
+      "type": "function",
+      "name": "subscribe",
+      "filePath": "server/services/market_service.py",
+      "lineRange": [
+        216,
+        270
+      ],
+      "summary": "订阅合约行情：先去重并原子校验 500 手上限，再更新本地订阅集合并调用 CTP SubscribeMarketData，返回 added 与 alreadySubscribed。",
+      "tags": [
+        "subscription",
+        "ctp",
+        "validation",
+        "limit"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:server/services/market_service.py:unsubscribe",
+      "type": "function",
+      "name": "unsubscribe",
+      "filePath": "server/services/market_service.py",
+      "lineRange": [
+        272,
+        304
+      ],
+      "summary": "取消合约订阅：先从本地集合移除，再调用 CTP UnSubscribeMarketData；即使 CTP 失败也保持本地状态一致。",
+      "tags": [
+        "subscription",
+        "ctp",
+        "cleanup"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:server/services/market_service.py:update_snapshot",
+      "type": "function",
+      "name": "update_snapshot",
+      "filePath": "server/services/market_service.py",
+      "lineRange": [
+        312,
+        329
+      ],
+      "summary": "线程安全地写入或合并单条行情快照，可由 CTP 工作线程与异步路由并发调用，新字段覆盖旧字段、旧字段保留。",
+      "tags": [
+        "snapshot",
+        "cache",
+        "thread-safety"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:server/services/market_service.py:refresh_instruments_from_ctp",
+      "type": "function",
+      "name": "refresh_instruments_from_ctp",
+      "filePath": "server/services/market_service.py",
+      "lineRange": [
+        351,
+        373
+      ],
+      "summary": "向 CTP 发起合约查询（要求已登录），清空待处理列表并启动异步刷新流程，返回查询是否成功启动。",
+      "tags": [
+        "ctp",
+        "refresh",
+        "query"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:server/services/market_service.py:on_instruments_result",
+      "type": "function",
+      "name": "on_instruments_result",
+      "filePath": "server/services/market_service.py",
+      "lineRange": [
+        375,
+        400
+      ],
+      "summary": "处理 CTP OnRspQryInstrument 回调：映射或直接累积合约数据，最后一包时写入缓存、可选落盘并触发完成回调。",
+      "tags": [
+        "callback",
+        "ctp",
+        "event-handler"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:server/services/market_service.py:_save_instruments_to_file",
+      "type": "function",
+      "name": "_save_instruments_to_file",
+      "filePath": "server/services/market_service.py",
+      "lineRange": [
+        402,
+        411
+      ],
+      "summary": "将过滤过期合约后的合约列表写入 JSON 文件，保证落盘数据干净，失败时记录告警日志。",
+      "tags": [
+        "io",
+        "persistence",
+        "cache"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:server/tests/test_market_service.py",
+      "type": "file",
+      "name": "test_market_service.py",
+      "filePath": "server/tests/test_market_service.py",
+      "summary": "pytest 单元测试套件，覆盖 MarketService 行情服务的全部功能：初始化状态、合约缓存与搜索、订阅管理、CTP 回调钩子、订阅数量上限、快照缓存、过期合约过滤、文件加载、从 CTP 刷新合约以及预设合约（主力合约检测）等。",
+      "tags": [
+        "test",
+        "unit-test",
+        "market-service",
+        "pytest",
+        "ctp"
+      ],
+      "complexity": "complex",
+      "languageNotes": "pytest 测试类按功能模块分组，使用 MockTraderApi 模拟 CTP 交易 API 与 tempfile 临时文件，全面验证 MarketService 的边界与异常场景。"
+    },
+    {
+      "id": "class:server/tests/test_market_service.py:TestMarketServiceInit",
+      "type": "class",
+      "name": "TestMarketServiceInit",
+      "filePath": "server/tests/test_market_service.py",
+      "lineRange": [
+        13,
+        37
+      ],
+      "summary": "验证 MarketService 的初始化行为：模块可导入、默认属性正确、最大订阅数为固定上限且合约列表默认为空。",
+      "tags": [
+        "test",
+        "unit-test",
+        "initialization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:server/tests/test_market_service.py:TestInstrumentCache",
+      "type": "class",
+      "name": "TestInstrumentCache",
+      "filePath": "server/tests/test_market_service.py",
+      "lineRange": [
+        42,
+        157
+      ],
+      "summary": "覆盖合约缓存加载与 get_instruments 检索能力：按合约代码、名称、交易所过滤，支持大小写不敏感匹配、无匹配返回空、空关键字返回全部并保留字段完整性。",
+      "tags": [
+        "test",
+        "unit-test",
+        "instrument-cache",
+        "search"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:server/tests/test_market_service.py:TestSubscriptionManagement",
+      "type": "class",
+      "name": "TestSubscriptionManagement",
+      "filePath": "server/tests/test_market_service.py",
+      "lineRange": [
+        162,
+        231
+      ],
+      "summary": "验证订阅/取消订阅管理：添加与移除合约、返回变更数量、自动去重、重复订阅提示、空列表等边界处理。",
+      "tags": [
+        "test",
+        "unit-test",
+        "subscription"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:server/tests/test_market_service.py:TestCtpHooks",
+      "type": "class",
+      "name": "TestCtpHooks",
+      "filePath": "server/tests/test_market_service.py",
+      "lineRange": [
+        236,
+        335
+      ],
+      "summary": "验证 CTP 回调钩子机制：set_ctp_hooks 注册、订阅/取消订阅时调用 CTP 函数、仅对新增/已订阅合约触发、无钩子时静默、CTP 函数异常时返回失败结果。",
+      "tags": [
+        "test",
+        "unit-test",
+        "ctp",
+        "hooks"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:server/tests/test_market_service.py:TestSubscriptionLimit",
+      "type": "class",
+      "name": "TestSubscriptionLimit",
+      "filePath": "server/tests/test_market_service.py",
+      "lineRange": [
+        340,
+        369
+      ],
+      "summary": "验证订阅数量上限：限制内正常订阅、超出上限返回失败提示、批量订阅超出上限时的行为。",
+      "tags": [
+        "test",
+        "unit-test",
+        "subscription",
+        "limit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:server/tests/test_market_service.py:TestSnapshotCache",
+      "type": "class",
+      "name": "TestSnapshotCache",
+      "filePath": "server/tests/test_market_service.py",
+      "lineRange": [
+        374,
+        437
+      ],
+      "summary": "覆盖快照缓存功能：更新与读取快照、缺失返回空、全量快照获取以及重复更新时的覆盖行为。",
+      "tags": [
+        "test",
+        "unit-test",
+        "snapshot",
+        "cache"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:server/tests/test_market_service.py:TestExpiredInstrumentFilter",
+      "type": "class",
+      "name": "TestExpiredInstrumentFilter",
+      "filePath": "server/tests/test_market_service.py",
+      "lineRange": [
+        442,
+        508
+      ],
+      "summary": "验证过期合约过滤逻辑：加载合约列表时过滤已到期合约、处理带破折号的到期日期格式、从文件加载与保存文件时同样应用过滤。",
+      "tags": [
+        "test",
+        "unit-test",
+        "expired-filter",
+        "date"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:server/tests/test_market_service.py:TestLoadInstrumentsFromFile",
+      "type": "class",
+      "name": "TestLoadInstrumentsFromFile",
+      "filePath": "server/tests/test_market_service.py",
+      "lineRange": [
+        513,
+        589
+      ],
+      "summary": "验证从 JSON 文件加载合约：替换现有缓存、文件不存在/无效 JSON/内容非列表时的容错处理，以及加载真实合约数据文件。",
+      "tags": [
+        "test",
+        "unit-test",
+        "file-loading",
+        "error-handling"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:server/tests/test_market_service.py:TestRefreshInstrumentsFromCtp",
+      "type": "class",
+      "name": "TestRefreshInstrumentsFromCtp",
+      "filePath": "server/tests/test_market_service.py",
+      "lineRange": [
+        594,
+        754
+      ],
+      "summary": "验证从 CTP 刷新合约：调用 QueryInstruments、未登录/查询失败时返回错误、存储结果回调、结果累积写入文件以及 CTP 字段到内部模型映射。",
+      "tags": [
+        "test",
+        "unit-test",
+        "ctp-refresh",
+        "field-mapping"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:server/tests/test_market_service.py:TestInstrumentSearch",
+      "type": "class",
+      "name": "TestInstrumentSearch",
+      "filePath": "server/tests/test_market_service.py",
+      "lineRange": [
+        759,
+        839
+      ],
+      "summary": "覆盖合约搜索与列表功能：交易所去重列表、按交易所/品种过滤品种、关键字搜索、无匹配返回空，以及按 ID 列表批量获取合约（含部分匹配与空列表）。",
+      "tags": [
+        "test",
+        "unit-test",
+        "search",
+        "instrument"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:server/tests/test_market_service.py:TestPresetInstruments",
+      "type": "class",
+      "name": "TestPresetInstruments",
+      "filePath": "server/tests/test_market_service.py",
+      "lineRange": [
+        844,
+        900
+      ],
+      "summary": "验证预设合约：初始为空、刷新时检测主力合约（近月）、跳过非交易合约以及刷新结果保存到文件。",
+      "tags": [
+        "test",
+        "unit-test",
+        "preset",
+        "front-month"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/App.tsx",
+      "type": "file",
+      "name": "App.tsx",
+      "filePath": "frontend/src/App.tsx",
+      "summary": "React 应用根组件，负责引导整个前端：初始化系统 WebSocket、连接状态轮询、标签合约锁订阅等 hooks，接入 Electron IPC（托盘导航、选中合约回传），并组装状态栏、标签栏、浮动窗口与报单/查询弹窗等全局 UI。",
+      "tags": [
+        "entry-point",
+        "component",
+        "electron",
+        "event-handler",
+        "bootstrap",
+        "tested"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "React 根组件，用多个 useEffect 管理 Electron IPC 监听与 Ctrl+Shift+M 快捷键的生命周期。"
+    },
+    {
+      "id": "function:frontend/src/App.tsx:App",
+      "type": "function",
+      "name": "App",
+      "filePath": "frontend/src/App.tsx",
+      "lineRange": [
+        19,
+        165
+      ],
+      "summary": "根组件函数，初始化连接类 hooks（WebSocket/轮询/合约锁）、注册 Electron IPC 监听与快捷键，并渲染全局 UI 布局（状态栏、TabBar、TabContent、悬浮弹窗与浮动窗口）。",
+      "tags": [
+        "entry-point",
+        "component",
+        "bootstrap",
+        "ipc"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/components/FloatingWindow/index.test.tsx",
+      "type": "file",
+      "name": "index.test.tsx",
+      "filePath": "frontend/src/components/FloatingWindow/index.test.tsx",
+      "summary": "FloatingWindow 浮动窗口组件的单元测试，覆盖 chrome 壳渲染、标题条拖拽移动、停靠/关闭按钮、8 方向缩放手柄、position:fixed 回归以及各方向缩放语义。",
+      "tags": [
+        "test",
+        "component",
+        "ui",
+        "floating-window",
+        "regression"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "jsdom 24 缺少 PointerEvent 构造器，使用 MouseEvent 保留 clientX/clientY/button 模拟指针事件。"
+    },
+    {
+      "id": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "type": "file",
+      "name": "index.tsx",
+      "filePath": "frontend/src/components/FloatingWindow/index.tsx",
+      "summary": "浮动窗口 chrome 壳组件，提供标题条拖拽移动、停靠/关闭按钮与 8 方向缩放手柄；FloatingWindows 容器遍历窗口渲染壳，并清理已关闭标签的残留窗口登记。",
+      "tags": [
+        "component",
+        "floating-window",
+        "ui",
+        "drag-resize",
+        "interaction",
+        "tested"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "ResizeHandle 手柄内联 position:fixed，避免被全局 .resize-handle 的 relative 规则覆盖导致 flex 布局把主内容区压成 0 高。"
+    },
+    {
+      "id": "function:frontend/src/components/FloatingWindow/index.tsx:handleStyle",
+      "type": "function",
+      "name": "handleStyle",
+      "filePath": "frontend/src/components/FloatingWindow/index.tsx",
+      "lineRange": [
+        22,
+        39
+      ],
+      "summary": "根据方向与窗口矩形计算每个缩放手柄的 fixed 定位样式，使用穷举 switch 保证 ResizeDirection 类型安全。",
+      "tags": [
+        "utility",
+        "style",
+        "resize",
+        "type-safe"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindow",
+      "type": "function",
+      "name": "FloatingWindow",
+      "filePath": "frontend/src/components/FloatingWindow/index.tsx",
+      "lineRange": [
+        47,
+        156
+      ],
+      "summary": "单个浮动窗口的 chrome 壳组件，处理标题条拖拽移动（含边界钳制）、8 方向缩放（委托 startResizeDrag）、停靠与关闭交互，卸载时清理活跃监听器。",
+      "tags": [
+        "component",
+        "floating-window",
+        "interaction",
+        "drag-resize"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindows",
+      "type": "function",
+      "name": "FloatingWindows",
+      "filePath": "frontend/src/components/FloatingWindow/index.tsx",
+      "lineRange": [
+        159,
+        180
+      ],
+      "summary": "浮动窗口容器，遍历 windows 渲染所有浮动 chrome 壳，并在标签被关闭时把残留窗口登记自动 dock 回标签栏。",
+      "tags": [
+        "component",
+        "container",
+        "cleanup",
+        "floating-window"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/components/TabContent/index.test.tsx",
+      "type": "file",
+      "name": "index.test.tsx",
+      "filePath": "frontend/src/components/TabContent/index.test.tsx",
+      "summary": "TabContent 标签内容容器的单元测试，覆盖各标签类型渲染、活跃标签可见性、状态保持、无障碍属性、页面标题栏拖拽委托，以及浮动面板的固定定位/portal/捕获阶段置顶/回退兜底行为。",
+      "tags": [
+        "test",
+        "component",
+        "tab",
+        "a11y",
+        "floating-panel"
+      ],
+      "complexity": "complex",
+      "languageNotes": "大量 vi.mock 隔离子面板与 detachDrag 工具，it.each 参数化驱动 8 种标签类型的渲染断言。"
+    },
+    {
+      "id": "file:frontend/src/components/TabContent/index.tsx",
+      "type": "file",
+      "name": "index.tsx",
+      "filePath": "frontend/src/components/TabContent/index.tsx",
+      "summary": "标签内容容器，按活跃标签渲染对应面板（行情/报单/K线/查询等），用 display:none 保留各面板状态；浮动标签通过 portal 渲染到顶层 overlay，并提供拖拽脱离委托与主窗口回退兜底逻辑。",
+      "tags": [
+        "component",
+        "tab",
+        "container",
+        "portal",
+        "drag-detach",
+        "tested"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "浮动面板使用 createPortal 渲染到 #floating-overlay，与 FloatingWindow chrome 同层以脱离 .tab-content 的 flex/overflow 层叠上下文。"
+    },
+    {
+      "id": "function:frontend/src/components/TabContent/index.tsx:renderTabContent",
+      "type": "function",
+      "name": "renderTabContent",
+      "filePath": "frontend/src/components/TabContent/index.tsx",
+      "lineRange": [
+        31,
+        52
+      ],
+      "summary": "按标签类型分发渲染对应面板内容，并安全提取 instrumentID 字符串传给报单/K线页面（运行时类型守卫避免 as string 断言）。",
+      "tags": [
+        "factory",
+        "render",
+        "dispatcher",
+        "type-guard"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/components/TabContent/index.tsx:TabContent",
+      "type": "function",
+      "name": "TabContent",
+      "filePath": "frontend/src/components/TabContent/index.tsx",
+      "lineRange": [
+        60,
+        134
+      ],
+      "summary": "标签内容容器主组件，管理活跃标签可见性、浮动面板 portal 渲染、捕获阶段置顶 focus 与页面标题栏拖拽脱离委托。",
+      "tags": [
+        "component",
+        "tab",
+        "portal",
+        "container",
+        "drag-detach"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:frontend/src/modules/query/QueryPopup.test.tsx",
+      "type": "file",
+      "name": "QueryPopup.test.tsx",
+      "filePath": "frontend/src/modules/query/QueryPopup.test.tsx",
+      "summary": "QueryPopup 组件的单元测试（vitest + Testing Library），覆盖关闭/ESC/置顶/放大为标签页/八方向缩放等交互行为，并 mock 掉 FLIP 工具、QueryPanel 与 Toast。",
+      "tags": [
+        "test",
+        "component",
+        "弹窗",
+        "浮动窗口",
+        "vitest"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:frontend/src/modules/query/QueryPopup.tsx",
+      "type": "file",
+      "name": "QueryPopup.tsx",
+      "filePath": "frontend/src/modules/query/QueryPopup.tsx",
+      "summary": "实现非模态的悬浮查询弹窗组件：标题栏可拖拽移动、8 方向自由缩放、×/ESC 关闭，支持放大为标签页（FLIP 动画过渡），并通过共享 z-index store 与其他弹窗统一置顶。",
+      "tags": [
+        "component",
+        "弹窗",
+        "浮动窗口",
+        "拖拽缩放",
+        "tab切换",
+        "tested"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "组件复用 usePopupResize 共享 hook 物化居中态与八方向缩放手势，放大动画采用 FLIP（First-Last-Invert-Play）技术，并通过 flushSync 同步触发标签页打开。"
+    },
+    {
+      "id": "function:frontend/src/modules/query/QueryPopup.tsx:QueryPopup",
+      "type": "function",
+      "name": "QueryPopup",
+      "filePath": "frontend/src/modules/query/QueryPopup.tsx",
+      "lineRange": [
+        22,
+        154
+      ],
+      "summary": "渲染查询弹窗 UI（标题栏/主体/缩放手柄），管理拖拽移动、八方向缩放、点击置顶与放大为标签页等交互逻辑，弹窗主体为 QueryPanel。",
+      "tags": [
+        "component",
+        "弹窗",
+        "事件处理",
+        "拖拽缩放"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:frontend/src/stores/floatingWindows.test.ts",
+      "type": "file",
+      "name": "floatingWindows.test.ts",
+      "filePath": "frontend/src/stores/floatingWindows.test.ts",
+      "summary": "浮动窗口 Zustand store 的单元测试，验证 detach/dock/move/resize/focus/bringToFront 行为、固定标签拒绝拖出、z 值单调递增以及默认窗口尺寸的视口钳制。",
+      "tags": [
+        "test",
+        "store",
+        "zustand",
+        "浮动窗口"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:frontend/src/stores/floatingWindows.ts",
+      "type": "file",
+      "name": "floatingWindows.ts",
+      "filePath": "frontend/src/stores/floatingWindows.ts",
+      "summary": "Zustand 状态管理 store：登记标签拖出后的浮动窗口几何信息（位置/尺寸/z），提供 detach/dock/move/resize/focus 操作，并为 order/query 等非浮动弹窗维护统一的全局 z-index（bringToFront）。",
+      "tags": [
+        "store",
+        "zustand",
+        "状态管理",
+        "浮动窗口",
+        "z-index",
+        "tested"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Store 通过模块级 zCounter 实现全局 z 值单调递增，popupZ 字段让非浮动弹窗与浮动窗口共享同一置顶计数，统一 z-index 管理。"
+    },
+    {
+      "id": "function:frontend/src/stores/floatingWindows.ts:defaultFloatingSize",
+      "type": "function",
+      "name": "defaultFloatingSize",
+      "filePath": "frontend/src/stores/floatingWindows.ts",
+      "lineRange": [
+        8,
+        12
+      ],
+      "summary": "计算标签拖出为浮动窗口时的默认尺寸，按视口比例钳制在宽 320~900、高 200~620 的范围内。",
+      "tags": [
+        "工具函数",
+        "布局",
+        "窗口尺寸"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/components/TabContent/detachFlow.integration.test.tsx",
+      "type": "file",
+      "name": "detachFlow.integration.test.tsx",
+      "filePath": "frontend/src/components/TabContent/detachFlow.integration.test.tsx",
+      "summary": "集成测试，通过真实 detachTabAt 逻辑（不 mock）验证拖出活跃标签后主窗口切回行情且内容区不空白，并断言设置面板已通过 createPortal 渲染到 #floating-overlay 容器。",
+      "tags": [
+        "test",
+        "integration-test",
+        "detach-flow",
+        "tab-content",
+        "floating-window"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Vitest + @testing-library/react，使用 vi.mock 仅替换页面内容组件，detach 逻辑走真实实现。"
+    },
+    {
+      "id": "file:frontend/src/components/TabContent/detachFlow.repro.test.tsx",
+      "type": "file",
+      "name": "detachFlow.repro.test.tsx",
+      "filePath": "frontend/src/components/TabContent/detachFlow.repro.test.tsx",
+      "summary": "复现测试，使用真实 TabBar + TabContent + FloatingWindows 应用外壳，以手工构造的 pointer 事件模拟完整拖拽手势（pointerdown → move 超阈值 → up），复现并验证拖出活跃标签后主窗口切回行情、浮动弹窗内容不空白。",
+      "tags": [
+        "test",
+        "repro-test",
+        "detach-flow",
+        "pointer-events",
+        "floating-window"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "jsdom 24 无 PointerEvent 构造器，用 MouseEvent 兼容构造 PointerEvent 事件。"
+    },
+    {
+      "id": "function:frontend/src/components/TabContent/detachFlow.repro.test.tsx:renderAppShell",
+      "type": "function",
+      "name": "renderAppShell",
+      "filePath": "frontend/src/components/TabContent/detachFlow.repro.test.tsx",
+      "lineRange": [
+        49,
+        60
+      ],
+      "summary": "渲染包含 TabBar、#floating-overlay 容器、TabContent 与 FloatingWindows 的真实应用外壳，用于驱动完整拖拽脱离流程的集成测试。",
+      "tags": [
+        "test-helper",
+        "render",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/repro-detach.cjs",
+      "type": "file",
+      "name": "repro-detach.cjs",
+      "filePath": "frontend/repro-detach.cjs",
+      "summary": "独立 Puppeteer（puppeteer-core + Edge）复现脚本，自动化驱动浏览器打开设置标签并拖拽转为浮动弹窗，随后 dump 标签栏、主面板、overlay 与浮动窗口状态并截图，用于排查弹窗背景空白缺陷。",
+      "tags": [
+        "repro-script",
+        "puppeteer",
+        "e2e",
+        "debugging",
+        "detach-flow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/repro-detach.cjs:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "frontend/repro-detach.cjs",
+      "lineRange": [
+        7,
+        86
+      ],
+      "summary": "异步主流程：启动无头 Edge 浏览器、导航到本地 dev server，模拟拖拽设置标签转为浮动弹窗，并采集各阶段 DOM 状态输出到控制台与截图，用于人工复现与诊断弹窗空白问题。",
+      "tags": [
+        "puppeteer",
+        "automation",
+        "repro-script"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:docs/superpowers/plans/2026-08-05-popup-blank-and-expired-contracts.md",
+      "type": "document",
+      "name": "2026-08-05-popup-blank-and-expired-contracts.md",
+      "filePath": "docs/superpowers/plans/2026-08-05-popup-blank-and-expired-contracts.md",
+      "summary": "修复方案文档：针对浮动弹窗背景空白（createPortal 到顶层 #floating-overlay）、多弹窗点击置顶（捕获阶段 onPointerDownCapture + 统一 z-index）、过期合约刷新后仍存在（后端 MarketService 过滤 expireDate）三个问题给出根因分析、分步任务与验证清单。",
+      "tags": [
+        "documentation",
+        "fix-plan",
+        "floating-window",
+        "expired-contract",
+        "superpowers"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "superpowers 计划文档格式，使用 checkbox 语法（- [ ]）跟踪任务步骤，每个 Task 明确列出 Files 与 Approach。"
+    },
+    {
+      "id": "function:frontend/src/stores/floatingWindows.ts:useFloatingWindowStore",
+      "type": "function",
+      "name": "useFloatingWindowStore",
+      "filePath": "frontend/src/stores/floatingWindows.ts",
+      "lineRange": [
+        43,
+        89
+      ],
+      "summary": "浮动窗口 Zustand store hook（由 create 创建）：维护标签拖出后的浮动窗口几何信息（位置/尺寸/z）与非浮动弹窗的统一 z-index（popupZ），提供 detach/dock/move/resize/focus/bringToFront 操作，并通过模块级 zCounter 保证全局 z 值单调递增。",
+      "tags": [
+        "store",
+        "zustand",
+        "state-management",
+        "浮动窗口",
+        "z-index"
+      ],
+      "complexity": "moderate"
     }
   ],
   "edges": [
@@ -16531,20 +16837,6 @@
     {
       "source": "file:frontend/src/modules/order/OrderForm.tsx",
       "target": "function:frontend/src/modules/order/OrderForm.tsx:OrderForm",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.test.tsx",
-      "target": "function:frontend/src/modules/order/OrderPopup.test.tsx:makeSnapshot",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "target": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
       "type": "contains",
       "direction": "forward",
       "weight": 1
@@ -16594,13 +16886,6 @@
     {
       "source": "file:frontend/src/modules/order/OrderForm.tsx",
       "target": "function:frontend/src/modules/order/OrderForm.tsx:OrderForm",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "target": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
       "type": "exports",
       "direction": "forward",
       "weight": 0.8
@@ -16718,132 +17003,6 @@
       "weight": 0.7
     },
     {
-      "source": "file:frontend/src/modules/order/OrderPopup.test.tsx",
-      "target": "file:frontend/src/modules/market/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.test.tsx",
-      "target": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.test.tsx",
-      "target": "file:frontend/src/modules/order/popupStore.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.test.tsx",
-      "target": "file:frontend/src/modules/order/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.test.tsx",
-      "target": "file:frontend/src/services/types.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.test.tsx",
-      "target": "file:frontend/src/stores/contracts.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.test.tsx",
-      "target": "file:frontend/src/stores/tabs.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "target": "file:frontend/src/components/Toast/index.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "target": "file:frontend/src/hooks/usePopupResize.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "target": "file:frontend/src/modules/market/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "target": "file:frontend/src/modules/order/OrderForm.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "target": "file:frontend/src/modules/order/OrderPopup.css",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "target": "file:frontend/src/modules/order/OrderQuotePanel.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "target": "file:frontend/src/modules/order/popupStore.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "target": "file:frontend/src/modules/order/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "target": "file:frontend/src/stores/contracts.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "target": "file:frontend/src/stores/tabs.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "target": "file:frontend/src/utils/flip.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
       "source": "file:frontend/src/modules/order/OrderQuotePanel.test.tsx",
       "target": "file:frontend/src/modules/order/OrderQuotePanel.tsx",
       "type": "imports",
@@ -16956,13 +17115,6 @@
       "weight": 0.5
     },
     {
-      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "target": "file:frontend/src/modules/order/OrderPopup.test.tsx",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
       "source": "file:frontend/src/modules/order/OrderQuotePanel.tsx",
       "target": "file:frontend/src/modules/order/OrderQuotePanel.test.tsx",
       "type": "tested_by",
@@ -17014,69 +17166,6 @@
     {
       "source": "function:frontend/src/modules/order/StopOrderForm.tsx:StopOrderForm",
       "target": "function:frontend/src/modules/order/store.ts:useOrderStore",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
-      "target": "function:frontend/src/utils/flip.ts:flipToRect",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
-      "target": "function:frontend/src/utils/flip.ts:getRect",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
-      "target": "function:frontend/src/utils/flip.ts:getTabPanelRect",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
-      "target": "function:frontend/src/modules/order/popupStore.ts:useOrderPopupStore",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
-      "target": "function:frontend/src/modules/order/store.ts:useOrderStore",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
-      "target": "function:frontend/src/stores/contracts.ts:useContractsStore",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
-      "target": "function:frontend/src/modules/market/store.ts:useMarketStore",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
-      "target": "function:frontend/src/stores/tabs.ts:useTabStore",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
-      "target": "function:frontend/src/hooks/usePopupResize.tsx:usePopupResize",
       "type": "calls",
       "direction": "forward",
       "weight": 0.8
@@ -20274,36 +20363,8 @@
       "weight": 0.8
     },
     {
-      "source": "function:server/api/market.py:get_instruments",
-      "target": "class:server/services/market_service.py:MarketService",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:server/api/market.py:get_snapshots",
-      "target": "class:server/services/market_service.py:MarketService",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "function:server/api/market.py:get_kline",
       "target": "class:server/services/kline_service.py:KLineService",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:server/api/market.py:refresh_instruments",
-      "target": "class:server/services/market_service.py:MarketService",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:server/api/market.py:get_depth",
-      "target": "class:server/services/market_service.py:MarketService",
       "type": "calls",
       "direction": "forward",
       "weight": 0.8
@@ -20360,13 +20421,6 @@
     {
       "source": "function:server/api/order.py:lock_position",
       "target": "class:server/services/order_manager.py:OrderManager",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:server/api/order.py:_get_protection_price",
-      "target": "class:server/services/market_service.py:MarketService",
       "type": "calls",
       "direction": "forward",
       "weight": 0.8
@@ -20456,13 +20510,6 @@
       "weight": 0.8
     },
     {
-      "source": "function:server/api/query.py:get_contracts",
-      "target": "class:server/services/market_service.py:MarketService",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "file:server/ctp_wrapper/callback.py",
       "target": "file:server/tests/test_callback.py",
       "type": "tested_by",
@@ -20527,13 +20574,6 @@
     },
     {
       "source": "file:server/main.py",
-      "target": "file:server/services/market_service.py",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:server/main.py",
       "target": "file:server/services/options_service.py",
       "type": "imports",
       "direction": "forward",
@@ -20584,13 +20624,6 @@
     {
       "source": "file:server/services/ctp_bridge.py",
       "target": "file:server/services/kline_service.py",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:server/services/ctp_bridge.py",
-      "target": "file:server/services/market_service.py",
       "type": "imports",
       "direction": "forward",
       "weight": 0.7
@@ -20841,13 +20874,6 @@
       "weight": 1
     },
     {
-      "source": "file:server/services/market_service.py",
-      "target": "class:server/services/market_service.py:MarketService",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
       "source": "file:server/ctp_wrapper/types.py",
       "target": "class:server/ctp_wrapper/types.py:Direction",
       "type": "exports",
@@ -21030,13 +21056,6 @@
       "weight": 0.8
     },
     {
-      "source": "file:server/services/market_service.py",
-      "target": "class:server/services/market_service.py:MarketService",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "function:server/main.py:create_app",
       "target": "function:server/services/ctp_startup.py:connect_ctp",
       "type": "calls",
@@ -21046,13 +21065,6 @@
     {
       "source": "function:server/main.py:create_app",
       "target": "function:server/services/ctp_startup.py:start_ctp_trading_connection",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:server/main.py:create_app",
-      "target": "class:server/services/market_service.py:MarketService",
       "type": "calls",
       "direction": "forward",
       "weight": 0.8
@@ -21185,41 +21197,13 @@
     },
     {
       "source": "function:server/services/ctp_bridge.py:wire_market_data_callback",
-      "target": "class:server/services/market_service.py:MarketService",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:server/services/ctp_bridge.py:wire_market_data_callback",
       "target": "class:server/services/kline_service.py:KLineService",
       "type": "calls",
       "direction": "forward",
       "weight": 0.8
     },
     {
-      "source": "class:server/services/market_service.py:MarketService",
-      "target": "function:server/services/field_mapping.py:map_instrument",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "class:server/services/market_service.py:MarketService",
-      "target": "class:server/ctp_wrapper/trader_api.py:TraderApi",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "file:server/services/ctp_bridge.py",
-      "target": "file:server/tests/test_ctp_bridge.py",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:server/services/market_service.py",
       "target": "file:server/tests/test_ctp_bridge.py",
       "type": "tested_by",
       "direction": "forward",
@@ -21256,13 +21240,6 @@
     {
       "source": "file:server/tests/test_ctp_bridge.py",
       "target": "file:server/ctp_wrapper/callback.py",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:server/tests/test_ctp_bridge.py",
-      "target": "file:server/services/market_service.py",
       "type": "imports",
       "direction": "forward",
       "weight": 0.7
@@ -21807,104 +21784,6 @@
       "weight": 0.5
     },
     {
-      "source": "file:server/tests/test_market_api.py",
-      "target": "file:server/services/market_service.py",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:server/services/market_service.py",
-      "target": "file:server/tests/test_market_api.py",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:server/tests/test_market_service.py",
-      "target": "class:server/tests/test_market_service.py:TestMarketServiceInit",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:server/tests/test_market_service.py",
-      "target": "class:server/tests/test_market_service.py:TestInstrumentCache",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:server/tests/test_market_service.py",
-      "target": "class:server/tests/test_market_service.py:TestSubscriptionManagement",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:server/tests/test_market_service.py",
-      "target": "class:server/tests/test_market_service.py:TestCtpHooks",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:server/tests/test_market_service.py",
-      "target": "class:server/tests/test_market_service.py:TestSubscriptionLimit",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:server/tests/test_market_service.py",
-      "target": "class:server/tests/test_market_service.py:TestSnapshotCache",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:server/tests/test_market_service.py",
-      "target": "class:server/tests/test_market_service.py:TestLoadInstrumentsFromFile",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:server/tests/test_market_service.py",
-      "target": "class:server/tests/test_market_service.py:TestRefreshInstrumentsFromCtp",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:server/tests/test_market_service.py",
-      "target": "class:server/tests/test_market_service.py:TestInstrumentSearch",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:server/tests/test_market_service.py",
-      "target": "class:server/tests/test_market_service.py:TestPresetInstruments",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:server/tests/test_market_service.py",
-      "target": "file:server/services/market_service.py",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:server/services/market_service.py",
-      "target": "file:server/tests/test_market_service.py",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
       "source": "file:server/tests/test_md_user_api.py",
       "target": "class:server/tests/test_md_user_api.py:TestMdUserApiConstruction",
       "type": "contains",
@@ -22004,20 +21883,6 @@
     },
     {
       "source": "file:server/api/market.py",
-      "target": "file:server/tests/test_options_api.py",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:server/tests/test_options_api.py",
-      "target": "file:server/services/market_service.py",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:server/services/market_service.py",
       "target": "file:server/tests/test_options_api.py",
       "type": "tested_by",
       "direction": "forward",
@@ -22473,20 +22338,6 @@
     },
     {
       "source": "file:server/ctp_wrapper/trader_api.py",
-      "target": "file:server/tests/test_query_api.py",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:server/tests/test_query_api.py",
-      "target": "file:server/services/market_service.py",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:server/services/market_service.py",
       "target": "file:server/tests/test_query_api.py",
       "type": "tested_by",
       "direction": "forward",
@@ -23950,13 +23801,6 @@
     },
     {
       "source": "file:frontend/src/App.test.tsx",
-      "target": "file:frontend/src/App.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.test.tsx",
       "target": "file:frontend/src/stores/connection.ts",
       "type": "imports",
       "direction": "forward",
@@ -23964,118 +23808,6 @@
     },
     {
       "source": "file:frontend/src/App.test.tsx",
-      "target": "file:frontend/src/stores/tabs.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/assets/styles/global.css",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/components/ConnectionStatus/index.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/components/PerfMonitor/index.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/components/TabBar/index.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/components/TabContent/index.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/components/Toast/index.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/hooks/useConnectionPoll.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/hooks/useSystemWs.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/hooks/useTabContractLocks.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/modules/market/store.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/modules/query/QueryPopup.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/services/api.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/services/electron.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
       "target": "file:frontend/src/stores/tabs.ts",
       "type": "imports",
       "direction": "forward",
@@ -24105,62 +23837,6 @@
     {
       "source": "file:frontend/src/components/ConnectionStatus/index.tsx",
       "target": "file:frontend/src/stores/connection.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.test.tsx",
-      "target": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.test.tsx",
-      "target": "file:frontend/src/stores/floatingWindows.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.test.tsx",
-      "target": "file:frontend/src/stores/tabs.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "file:frontend/src/components/FloatingWindow/styles.css",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "file:frontend/src/components/ResizeHandle/index.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "file:frontend/src/stores/floatingWindows.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "file:frontend/src/stores/tabs.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "file:frontend/src/utils/resizeDrag.ts",
       "type": "imports",
       "direction": "forward",
       "weight": 0.7
@@ -24209,13 +23885,6 @@
     },
     {
       "source": "file:frontend/src/components/TabBar/index.test.tsx",
-      "target": "file:frontend/src/stores/floatingWindows.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/TabBar/index.test.tsx",
       "target": "file:frontend/src/stores/tabs.ts",
       "type": "imports",
       "direction": "forward",
@@ -24244,13 +23913,6 @@
     },
     {
       "source": "file:frontend/src/components/TabBar/index.tsx",
-      "target": "file:frontend/src/stores/floatingWindows.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/TabBar/index.tsx",
       "target": "file:frontend/src/stores/tabs.ts",
       "type": "imports",
       "direction": "forward",
@@ -24258,104 +23920,6 @@
     },
     {
       "source": "file:frontend/src/components/TabBar/index.tsx",
-      "target": "file:frontend/src/utils/detachDrag.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.test.tsx",
-      "target": "file:frontend/src/components/TabContent/index.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.test.tsx",
-      "target": "file:frontend/src/stores/floatingWindows.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.test.tsx",
-      "target": "file:frontend/src/stores/tabs.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.tsx",
-      "target": "file:frontend/src/components/TabContent/styles.css",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.tsx",
-      "target": "file:frontend/src/modules/market/MarketPanel.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.tsx",
-      "target": "file:frontend/src/modules/query/QueryPanel.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.tsx",
-      "target": "file:frontend/src/pages/FavoritesPage.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.tsx",
-      "target": "file:frontend/src/pages/IPCMonitorPage.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.tsx",
-      "target": "file:frontend/src/pages/KLinePage.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.tsx",
-      "target": "file:frontend/src/pages/OrderPage.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.tsx",
-      "target": "file:frontend/src/pages/SettingsPage.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.tsx",
-      "target": "file:frontend/src/stores/floatingWindows.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.tsx",
-      "target": "file:frontend/src/stores/tabs.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.tsx",
       "target": "file:frontend/src/utils/detachDrag.ts",
       "type": "imports",
       "direction": "forward",
@@ -24411,13 +23975,6 @@
       "weight": 0.7
     },
     {
-      "source": "file:frontend/src/App.tsx",
-      "target": "function:frontend/src/App.tsx:App",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
       "source": "file:frontend/src/components/ConnectionStatus/index.tsx",
       "target": "function:frontend/src/components/ConnectionStatus/index.tsx:ConnectionStatus",
       "type": "contains",
@@ -24432,27 +23989,6 @@
       "weight": 1
     },
     {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "function:frontend/src/components/FloatingWindow/index.tsx:handleStyle",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindow",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindows",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
       "source": "file:frontend/src/components/PerfMonitor/index.tsx",
       "target": "function:frontend/src/components/PerfMonitor/index.tsx:PerfMonitor",
       "type": "contains",
@@ -24469,20 +24005,6 @@
     {
       "source": "file:frontend/src/components/TabBar/index.tsx",
       "target": "function:frontend/src/components/TabBar/index.tsx:TabBar",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.tsx",
-      "target": "function:frontend/src/components/TabContent/index.tsx:renderTabContent",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.tsx",
-      "target": "function:frontend/src/components/TabContent/index.tsx:TabContent",
       "type": "contains",
       "direction": "forward",
       "weight": 1
@@ -24514,13 +24036,6 @@
       "type": "contains",
       "direction": "forward",
       "weight": 1
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "function:frontend/src/App.tsx:App",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
     },
     {
       "source": "file:frontend/src/components/ConnectionStatus/index.tsx",
@@ -24530,13 +24045,6 @@
       "weight": 0.8
     },
     {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindows",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "file:frontend/src/components/PerfMonitor/index.tsx",
       "target": "function:frontend/src/components/PerfMonitor/index.tsx:PerfMonitor",
       "type": "exports",
@@ -24553,13 +24061,6 @@
     {
       "source": "file:frontend/src/components/TabBar/index.tsx",
       "target": "function:frontend/src/components/TabBar/index.tsx:TabBar",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.tsx",
-      "target": "function:frontend/src/components/TabContent/index.tsx:TabContent",
       "type": "exports",
       "direction": "forward",
       "weight": 0.8
@@ -24593,22 +24094,8 @@
       "weight": 0.8
     },
     {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/App.test.tsx",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
       "source": "file:frontend/src/components/ConnectionStatus/index.tsx",
       "target": "file:frontend/src/components/ConnectionStatus/index.test.tsx",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "file:frontend/src/components/FloatingWindow/index.test.tsx",
       "type": "tested_by",
       "direction": "forward",
       "weight": 0.5
@@ -24642,13 +24129,6 @@
       "weight": 0.5
     },
     {
-      "source": "file:frontend/src/components/TabContent/index.tsx",
-      "target": "file:frontend/src/components/TabContent/index.test.tsx",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
       "source": "file:frontend/src/hooks/useTabContractLocks.ts",
       "target": "file:frontend/src/hooks/useTabContractLocks.test.ts",
       "type": "tested_by",
@@ -24656,20 +24136,6 @@
       "weight": 0.5
     },
     {
-      "source": "function:frontend/src/App.tsx:App",
-      "target": "function:frontend/src/hooks/useConnectionPoll.ts:useConnectionPoll",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindow",
-      "target": "function:frontend/src/utils/resizeDrag.ts:startResizeDrag",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "function:frontend/src/components/TabBar/index.tsx:TabBar",
       "target": "function:frontend/src/utils/detachDrag.ts:startDetachDrag",
       "type": "calls",
@@ -24679,62 +24145,6 @@
     {
       "source": "function:frontend/src/components/TabBar/index.tsx:TabBar",
       "target": "function:frontend/src/utils/detachDrag.ts:detachTabAt",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/components/TabContent/index.tsx:TabContent",
-      "target": "function:frontend/src/utils/detachDrag.ts:startDetachDrag",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/components/TabContent/index.tsx:TabContent",
-      "target": "function:frontend/src/utils/detachDrag.ts:detachTabAt",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/components/TabContent/index.tsx:renderTabContent",
-      "target": "function:frontend/src/modules/market/MarketPanel.tsx:MarketPanel",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/components/TabContent/index.tsx:renderTabContent",
-      "target": "function:frontend/src/modules/query/QueryPanel.tsx:QueryPanel",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/components/TabContent/index.tsx:renderTabContent",
-      "target": "function:frontend/src/pages/FavoritesPage.tsx:FavoritesPage",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/components/TabContent/index.tsx:renderTabContent",
-      "target": "function:frontend/src/pages/IPCMonitorPage.tsx:IPCMonitorPage",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/components/TabContent/index.tsx:renderTabContent",
-      "target": "function:frontend/src/pages/KLinePage.tsx:KLinePage",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/components/TabContent/index.tsx:renderTabContent",
-      "target": "function:frontend/src/pages/OrderPage.tsx:OrderPage",
       "type": "calls",
       "direction": "forward",
       "weight": 0.8
@@ -24783,136 +24193,10 @@
     },
     {
       "source": "file:frontend/src/main.tsx",
-      "target": "file:frontend/src/App.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/main.tsx",
       "target": "file:frontend/src/assets/styles/global.css",
       "type": "imports",
       "direction": "forward",
       "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPopup.test.tsx",
-      "target": "file:frontend/src/modules/query/popupStore.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPopup.test.tsx",
-      "target": "file:frontend/src/modules/query/QueryPopup.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPopup.test.tsx",
-      "target": "file:frontend/src/stores/tabs.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
-      "target": "file:frontend/src/components/Toast/index.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
-      "target": "file:frontend/src/hooks/usePopupResize.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
-      "target": "file:frontend/src/modules/query/popupStore.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
-      "target": "file:frontend/src/modules/query/QueryPanel.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
-      "target": "file:frontend/src/modules/query/QueryPopup.css",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
-      "target": "file:frontend/src/stores/tabs.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
-      "target": "file:frontend/src/utils/flip.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
-      "target": "function:frontend/src/modules/query/QueryPopup.tsx:QueryPopup",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
-      "target": "function:frontend/src/modules/query/QueryPopup.tsx:QueryPopup",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
-      "target": "file:frontend/src/hooks/usePopupResize.tsx",
-      "type": "depends_on",
-      "direction": "forward",
-      "weight": 0.6
-    },
-    {
-      "source": "function:frontend/src/modules/query/QueryPopup.tsx:QueryPopup",
-      "target": "function:frontend/src/utils/flip.ts:getRect",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/modules/query/QueryPopup.tsx:QueryPopup",
-      "target": "function:frontend/src/utils/flip.ts:flipToRect",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/modules/query/QueryPopup.tsx:QueryPopup",
-      "target": "function:frontend/src/utils/flip.ts:getTabPanelRect",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
-      "target": "file:frontend/src/modules/query/QueryPopup.test.tsx",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
     },
     {
       "source": "file:frontend/src/modules/query/popupStore.test.ts",
@@ -24952,13 +24236,6 @@
     {
       "source": "file:frontend/src/modules/query/popupStore.ts",
       "target": "file:frontend/src/modules/query/popupStore.test.ts",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:frontend/src/modules/query/popupStore.ts",
-      "target": "file:frontend/src/modules/query/QueryPopup.test.tsx",
       "type": "tested_by",
       "direction": "forward",
       "weight": 0.5
@@ -25055,62 +24332,6 @@
       "weight": 0.5
     },
     {
-      "source": "file:frontend/src/stores/floatingWindows.test.ts",
-      "target": "file:frontend/src/stores/floatingWindows.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/stores/floatingWindows.test.ts",
-      "target": "file:frontend/src/stores/tabs.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/stores/floatingWindows.ts",
-      "target": "file:frontend/src/stores/tabs.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/stores/floatingWindows.ts",
-      "target": "function:frontend/src/stores/floatingWindows.ts:defaultFloatingSize",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/stores/floatingWindows.ts",
-      "target": "function:frontend/src/stores/floatingWindows.ts:useFloatingWindowStore",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/stores/floatingWindows.ts",
-      "target": "function:frontend/src/stores/floatingWindows.ts:defaultFloatingSize",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:frontend/src/stores/floatingWindows.ts",
-      "target": "function:frontend/src/stores/floatingWindows.ts:useFloatingWindowStore",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:frontend/src/stores/floatingWindows.ts",
-      "target": "file:frontend/src/stores/floatingWindows.test.ts",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
       "source": "file:frontend/src/stores/tabs.test.ts",
       "target": "file:frontend/src/stores/tabs.ts",
       "type": "imports",
@@ -25140,13 +24361,6 @@
     },
     {
       "source": "file:frontend/src/utils/detachDrag.test.ts",
-      "target": "file:frontend/src/stores/floatingWindows.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/utils/detachDrag.test.ts",
       "target": "file:frontend/src/stores/tabs.ts",
       "type": "imports",
       "direction": "forward",
@@ -25161,13 +24375,6 @@
     },
     {
       "source": "file:frontend/src/utils/detachDrag.ts",
-      "target": "file:frontend/src/stores/floatingWindows.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/utils/detachDrag.ts",
       "target": "file:frontend/src/stores/tabs.ts",
       "type": "imports",
       "direction": "forward",
@@ -25198,13 +24405,6 @@
       "source": "file:frontend/src/utils/detachDrag.ts",
       "target": "function:frontend/src/utils/detachDrag.ts:startDetachDrag",
       "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:frontend/src/utils/detachDrag.ts:detachTabAt",
-      "target": "function:frontend/src/stores/floatingWindows.ts:defaultFloatingSize",
-      "type": "calls",
       "direction": "forward",
       "weight": 0.8
     },
@@ -27239,34 +26439,6 @@
       "weight": 0.5
     },
     {
-      "source": "config:.ua/config.json",
-      "target": "config:.ua/knowledge-graph.json",
-      "type": "related",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "config:.ua/knowledge-graph.json",
-      "target": "config:.ua/domain-graph.json",
-      "type": "related",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "config:.ua/knowledge-graph.json",
-      "target": "config:.ua/fingerprints.json",
-      "type": "related",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "config:.ua/knowledge-graph.json",
-      "target": "config:.ua/meta.json",
-      "type": "related",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
       "source": "document:docs/dev-records/role-a/dev-record-a.md",
       "target": "file:server/main.py",
       "type": "documents",
@@ -27360,13 +26532,6 @@
     {
       "source": "document:docs/dev-records/role-a/review-feedback-a-pr5.md",
       "target": "file:server/api/market.py",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/dev-records/role-a/review-feedback-a-pr5.md",
-      "target": "file:server/services/market_service.py",
       "type": "documents",
       "direction": "forward",
       "weight": 0.5
@@ -27675,13 +26840,6 @@
     {
       "source": "document:docs/dev-records/role-a/review-reply-a-pr19.md",
       "target": "file:server/services/ctp_startup.py",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/dev-records/role-a/review-reply-a-pr19.md",
-      "target": "file:server/services/market_service.py",
       "type": "documents",
       "direction": "forward",
       "weight": 0.5
@@ -28102,13 +27260,6 @@
     {
       "source": "document:docs/dev-records/role-b/review-reply-b-prE9.md",
       "target": "document:docs/dev-records/role-b/review-feedback-b-prE9.md",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/dev-records/role-b/review-reply-b-resizable.md",
-      "target": "file:frontend/src/App.tsx",
       "type": "documents",
       "direction": "forward",
       "weight": 0.5
@@ -28759,13 +27910,6 @@
     },
     {
       "source": "document:docs/snapshots/role-b/verify-discussion-redesign-r12.md",
-      "target": "file:frontend/src/components/TabContent/index.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/snapshots/role-b/verify-discussion-redesign-r12.md",
       "target": "file:frontend/src/pages/FavoritesPage.tsx",
       "type": "documents",
       "direction": "forward",
@@ -28795,13 +27939,6 @@
     {
       "source": "document:docs/snapshots/role-b/verify-discussion-redesign-r14.md",
       "target": "file:frontend/src/pages/OrderPage.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/snapshots/role-b/verify-discussion-redesign-r15.md",
-      "target": "file:frontend/src/modules/query/QueryPopup.tsx",
       "type": "documents",
       "direction": "forward",
       "weight": 0.5
@@ -29025,13 +28162,6 @@
     },
     {
       "source": "document:docs/specs/prd.md",
-      "target": "file:frontend/src/App.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/specs/prd.md",
       "target": "file:server/api/market.py",
       "type": "documents",
       "direction": "forward",
@@ -29186,20 +28316,6 @@
     },
     {
       "source": "document:docs/superpowers/plans/2026-08-04-modal-tab-transition.md",
-      "target": "file:frontend/src/components/TabContent/index.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/plans/2026-08-04-modal-tab-transition.md",
-      "target": "file:frontend/src/stores/floatingWindows.ts",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/plans/2026-08-04-modal-tab-transition.md",
       "target": "file:frontend/src/utils/flip.ts",
       "type": "documents",
       "direction": "forward",
@@ -29214,28 +28330,7 @@
     },
     {
       "source": "document:docs/superpowers/plans/2026-08-04-modal-tab-transition.md",
-      "target": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/plans/2026-08-04-modal-tab-transition.md",
       "target": "file:frontend/src/components/TabBar/index.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/plans/2026-08-04-modal-tab-transition.md",
-      "target": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/plans/2026-08-04-modal-tab-transition.md",
-      "target": "file:frontend/src/modules/query/QueryPopup.tsx",
       "type": "documents",
       "direction": "forward",
       "weight": 0.5
@@ -29257,34 +28352,6 @@
     {
       "source": "document:docs/superpowers/plans/2026-08-05-popup-free-resize.md",
       "target": "file:frontend/src/components/ResizeHandle/index.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/plans/2026-08-05-popup-free-resize.md",
-      "target": "file:frontend/src/stores/floatingWindows.ts",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/plans/2026-08-05-popup-free-resize.md",
-      "target": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/plans/2026-08-05-popup-free-resize.md",
-      "target": "file:frontend/src/modules/query/QueryPopup.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/plans/2026-08-05-popup-free-resize.md",
-      "target": "file:frontend/src/modules/order/OrderPopup.tsx",
       "type": "documents",
       "direction": "forward",
       "weight": 0.5
@@ -29347,27 +28414,6 @@
     },
     {
       "source": "document:docs/superpowers/specs/2026-08-04-modal-tab-transition-design.md",
-      "target": "file:frontend/src/stores/floatingWindows.ts",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/specs/2026-08-04-modal-tab-transition-design.md",
-      "target": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/specs/2026-08-04-modal-tab-transition-design.md",
-      "target": "file:frontend/src/components/TabContent/index.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/specs/2026-08-04-modal-tab-transition-design.md",
       "target": "file:frontend/src/components/TabBar/index.tsx",
       "type": "documents",
       "direction": "forward",
@@ -29375,28 +28421,7 @@
     },
     {
       "source": "document:docs/superpowers/specs/2026-08-04-modal-tab-transition-design.md",
-      "target": "file:frontend/src/modules/order/OrderPopup.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/specs/2026-08-04-modal-tab-transition-design.md",
-      "target": "file:frontend/src/modules/query/QueryPopup.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/specs/2026-08-04-modal-tab-transition-design.md",
       "target": "file:frontend/src/modules/query/QueryPanel.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/specs/2026-08-04-modal-tab-transition-design.md",
-      "target": "file:frontend/src/App.tsx",
       "type": "documents",
       "direction": "forward",
       "weight": 0.5
@@ -29432,34 +28457,6 @@
     {
       "source": "document:docs/superpowers/specs/2026-08-05-popup-free-resize-design.md",
       "target": "file:frontend/src/utils/detachDrag.ts",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/specs/2026-08-05-popup-free-resize-design.md",
-      "target": "file:frontend/src/stores/floatingWindows.ts",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/specs/2026-08-05-popup-free-resize-design.md",
-      "target": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/specs/2026-08-05-popup-free-resize-design.md",
-      "target": "file:frontend/src/modules/query/QueryPopup.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "document:docs/superpowers/specs/2026-08-05-popup-free-resize-design.md",
-      "target": "file:frontend/src/modules/order/OrderPopup.tsx",
       "type": "documents",
       "direction": "forward",
       "weight": 0.5
@@ -29565,13 +28562,6 @@
     {
       "source": "config:frontend/pnpm-workspace.yaml",
       "target": "config:frontend/package.json",
-      "type": "related",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:frontend/src/modules/order/OrderPopup.css",
-      "target": "file:frontend/src/modules/order/OrderPopup.tsx",
       "type": "related",
       "direction": "forward",
       "weight": 0.5
@@ -30200,13 +29190,6 @@
       "weight": 0.5
     },
     {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "file:frontend/src/components/FloatingWindow/styles.css",
-      "type": "related",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
       "source": "file:frontend/src/components/InstrumentSearchModal/index.tsx",
       "target": "file:frontend/src/components/InstrumentSearchModal/index.css",
       "type": "related",
@@ -30237,20 +29220,6 @@
     {
       "source": "file:frontend/src/components/TabBar/index.tsx",
       "target": "file:frontend/src/components/TabBar/styles.css",
-      "type": "related",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:frontend/src/components/TabContent/index.tsx",
-      "target": "file:frontend/src/components/TabContent/styles.css",
-      "type": "related",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/assets/styles/global.css",
       "type": "related",
       "direction": "forward",
       "weight": 0.5
@@ -30538,13 +29507,6 @@
     {
       "source": "file:frontend/src/modules/options/styles.css",
       "target": "file:frontend/src/modules/options/OptionPanel.tsx",
-      "type": "related",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:frontend/src/modules/query/QueryPopup.css",
-      "target": "file:frontend/src/modules/query/QueryPopup.tsx",
       "type": "related",
       "direction": "forward",
       "weight": 0.5
@@ -31013,13 +29975,6 @@
       "description": "Path-based pairing (deterministic)"
     },
     {
-      "source": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
-      "target": "function:frontend/src/components/Toast/index.tsx:toast",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "function:frontend/src/pages/FavoritesPage.tsx:FavoritesPage",
       "target": "function:frontend/src/components/Toast/index.tsx:toast",
       "type": "calls",
@@ -31048,13 +30003,6 @@
       "weight": 0.8
     },
     {
-      "source": "function:frontend/src/components/TabContent/index.tsx:renderTabContent",
-      "target": "function:frontend/src/pages/SettingsPage.tsx:SettingsPage",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "document:docs/superpowers/plans/2026-07-10-ctp-field-alignment.md",
       "target": "document:docs/specs/ctp-api-structure.txt",
       "type": "related",
@@ -31067,6 +30015,1503 @@
       "type": "depends_on",
       "direction": "forward",
       "weight": 0.6
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
+      "target": "file:frontend/src/components/Toast/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
+      "target": "file:frontend/src/hooks/usePopupResize.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
+      "target": "file:frontend/src/modules/market/store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
+      "target": "file:frontend/src/modules/order/OrderForm.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
+      "target": "file:frontend/src/modules/order/OrderPopup.css",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
+      "target": "file:frontend/src/modules/order/OrderQuotePanel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
+      "target": "file:frontend/src/modules/order/popupStore.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
+      "target": "file:frontend/src/modules/order/store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
+      "target": "file:frontend/src/stores/contracts.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
+      "target": "file:frontend/src/utils/flip.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.test.tsx",
+      "target": "file:frontend/src/modules/market/store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.test.tsx",
+      "target": "file:frontend/src/modules/order/OrderPopup.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.test.tsx",
+      "target": "file:frontend/src/modules/order/popupStore.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.test.tsx",
+      "target": "file:frontend/src/modules/order/store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.test.tsx",
+      "target": "file:frontend/src/services/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.test.tsx",
+      "target": "file:frontend/src/stores/contracts.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.test.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
+      "target": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
+      "target": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.test.tsx",
+      "target": "function:frontend/src/modules/order/OrderPopup.test.tsx:makeSnapshot",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
+      "target": "function:frontend/src/utils/flip.ts:getRect",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
+      "target": "function:frontend/src/utils/flip.ts:flipToRect",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
+      "target": "function:frontend/src/utils/flip.ts:getTabPanelRect",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
+      "target": "function:frontend/src/hooks/usePopupResize.tsx:usePopupResize",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/order/OrderPopup.tsx",
+      "target": "file:frontend/src/modules/order/OrderPopup.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "class:server/services/market_service.py:MarketService",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "class:server/services/market_service.py:MarketService",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "function:server/services/market_service.py:__init__",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "function:server/services/market_service.py:set_ctp_hooks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "function:server/services/market_service.py:_is_expired",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "function:server/services/market_service.py:load_instruments_from_file",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "function:server/services/market_service.py:get_instruments",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "function:server/services/market_service.py:search_instruments",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "function:server/services/market_service.py:refresh_preset_instruments",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "function:server/services/market_service.py:subscribe",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "function:server/services/market_service.py:unsubscribe",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "function:server/services/market_service.py:update_snapshot",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "function:server/services/market_service.py:refresh_instruments_from_ctp",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "function:server/services/market_service.py:on_instruments_result",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "function:server/services/market_service.py:_save_instruments_to_file",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "file:server/services/field_mapping.py",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "function:server/services/market_service.py:on_instruments_result",
+      "target": "function:server/services/field_mapping.py:map_instrument",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "file:server/tests/test_market_service.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:server/services/market_service.py",
+      "target": "file:server/tests/test_market_api.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:server/services/ctp_bridge.py",
+      "target": "file:server/services/market_service.py",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "file:server/services/market_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/services/market_service.py:MarketService",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestMarketServiceInit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestInstrumentCache",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestSubscriptionManagement",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestCtpHooks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestSubscriptionLimit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestSnapshotCache",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestExpiredInstrumentFilter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestLoadInstrumentsFromFile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestRefreshInstrumentsFromCtp",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestInstrumentSearch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestPresetInstruments",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestMarketServiceInit",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestInstrumentCache",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestSubscriptionManagement",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestCtpHooks",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestSubscriptionLimit",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestSnapshotCache",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestExpiredInstrumentFilter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestLoadInstrumentsFromFile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestRefreshInstrumentsFromCtp",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestInstrumentSearch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:server/tests/test_market_service.py",
+      "target": "class:server/tests/test_market_service.py:TestPresetInstruments",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/assets/styles/global.css",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/components/ConnectionStatus/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/components/PerfMonitor/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/components/TabBar/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/components/TabContent/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/components/Toast/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/hooks/useConnectionPoll.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/hooks/useSystemWs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/hooks/useTabContractLocks.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/modules/market/store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/modules/order/OrderPopup.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/modules/query/QueryPopup.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/services/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/services/electron.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.test.tsx",
+      "target": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.test.tsx",
+      "target": "file:frontend/src/stores/floatingWindows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.test.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "file:frontend/src/components/FloatingWindow/styles.css",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "file:frontend/src/components/ResizeHandle/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "file:frontend/src/stores/floatingWindows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "file:frontend/src/utils/resizeDrag.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.test.tsx",
+      "target": "file:frontend/src/components/TabContent/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.test.tsx",
+      "target": "file:frontend/src/stores/floatingWindows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.test.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "file:frontend/src/components/TabContent/styles.css",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "file:frontend/src/modules/market/MarketPanel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "file:frontend/src/modules/query/QueryPanel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "file:frontend/src/pages/FavoritesPage.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "file:frontend/src/pages/IPCMonitorPage.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "file:frontend/src/pages/KLinePage.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "file:frontend/src/pages/OrderPage.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "file:frontend/src/pages/SettingsPage.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "file:frontend/src/stores/floatingWindows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "file:frontend/src/utils/detachDrag.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/App.tsx:App",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "function:frontend/src/components/FloatingWindow/index.tsx:handleStyle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindows",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "function:frontend/src/components/TabContent/index.tsx:renderTabContent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "function:frontend/src/components/TabContent/index.tsx:TabContent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/App.tsx:App",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindows",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "function:frontend/src/components/TabContent/index.tsx:TabContent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "file:frontend/src/components/FloatingWindow/index.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "file:frontend/src/components/TabContent/index.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/hooks/useSystemWs.ts:useSystemWs",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/hooks/useConnectionPoll.ts:useConnectionPoll",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/hooks/useTabContractLocks.ts:useTabContractLocks",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/modules/market/store.ts:useMarketStore",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/stores/tabs.ts:useTabStore",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/services/electron.ts:isElectron",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/components/Toast/index.tsx:ToastContainer",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/components/ConnectionStatus/index.tsx:ConnectionStatus",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/components/PerfMonitor/index.tsx:PerfMonitor",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/components/TabBar/index.tsx:TabBar",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/components/TabContent/index.tsx:TabContent",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindows",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/modules/order/OrderPopup.tsx:OrderPopup",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/modules/query/QueryPopup.tsx:QueryPopup",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "function:frontend/src/stores/tabs.ts:useTabStore",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "function:frontend/src/utils/resizeDrag.ts:startResizeDrag",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "function:frontend/src/components/ResizeHandle/index.tsx:ResizeHandle",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "function:frontend/src/stores/tabs.ts:useTabStore",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "function:frontend/src/utils/detachDrag.ts:startDetachDrag",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "function:frontend/src/utils/detachDrag.ts:detachTabAt",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "function:frontend/src/modules/market/MarketPanel.tsx:MarketPanel",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "function:frontend/src/modules/query/QueryPanel.tsx:QueryPanel",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "function:frontend/src/pages/FavoritesPage.tsx:FavoritesPage",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "function:frontend/src/pages/OrderPage.tsx:OrderPage",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "function:frontend/src/pages/KLinePage.tsx:KLinePage",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "function:frontend/src/pages/SettingsPage.tsx:SettingsPage",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "function:frontend/src/pages/IPCMonitorPage.tsx:IPCMonitorPage",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/query/QueryPopup.test.tsx",
+      "target": "file:frontend/src/modules/query/popupStore.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/query/QueryPopup.test.tsx",
+      "target": "file:frontend/src/modules/query/QueryPopup.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/query/QueryPopup.test.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
+      "target": "file:frontend/src/components/Toast/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
+      "target": "file:frontend/src/hooks/usePopupResize.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
+      "target": "file:frontend/src/modules/query/popupStore.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
+      "target": "file:frontend/src/modules/query/QueryPanel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
+      "target": "file:frontend/src/modules/query/QueryPopup.css",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
+      "target": "file:frontend/src/utils/flip.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/stores/floatingWindows.test.ts",
+      "target": "file:frontend/src/stores/floatingWindows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/stores/floatingWindows.test.ts",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/stores/floatingWindows.ts",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
+      "target": "function:frontend/src/modules/query/QueryPopup.tsx:QueryPopup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/floatingWindows.ts",
+      "target": "function:frontend/src/stores/floatingWindows.ts:defaultFloatingSize",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
+      "target": "function:frontend/src/modules/query/QueryPopup.tsx:QueryPopup",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/stores/floatingWindows.ts",
+      "target": "function:frontend/src/stores/floatingWindows.ts:defaultFloatingSize",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
+      "target": "file:frontend/src/modules/query/QueryPopup.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/stores/floatingWindows.ts",
+      "target": "file:frontend/src/stores/floatingWindows.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
+      "target": "file:frontend/src/hooks/usePopupResize.tsx",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:frontend/src/modules/query/QueryPopup.tsx",
+      "target": "file:frontend/src/stores/floatingWindows.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "function:frontend/src/modules/query/QueryPopup.tsx:QueryPopup",
+      "target": "function:frontend/src/utils/flip.ts:flipToRect",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:frontend/src/modules/query/QueryPopup.tsx:QueryPopup",
+      "target": "function:frontend/src/utils/flip.ts:getTabPanelRect",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:frontend/src/modules/query/QueryPopup.tsx:QueryPopup",
+      "target": "function:frontend/src/utils/flip.ts:getRect",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/detachFlow.integration.test.tsx",
+      "target": "file:frontend/src/components/TabContent/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/detachFlow.integration.test.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/detachFlow.integration.test.tsx",
+      "target": "file:frontend/src/stores/floatingWindows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/detachFlow.integration.test.tsx",
+      "target": "file:frontend/src/utils/detachDrag.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "file:frontend/src/components/TabContent/detachFlow.integration.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/stores/tabs.ts",
+      "target": "file:frontend/src/components/TabContent/detachFlow.integration.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/stores/floatingWindows.ts",
+      "target": "file:frontend/src/components/TabContent/detachFlow.integration.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/utils/detachDrag.ts",
+      "target": "file:frontend/src/components/TabContent/detachFlow.integration.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/detachFlow.repro.test.tsx",
+      "target": "file:frontend/src/components/TabBar/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/detachFlow.repro.test.tsx",
+      "target": "file:frontend/src/components/TabContent/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/detachFlow.repro.test.tsx",
+      "target": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/detachFlow.repro.test.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/detachFlow.repro.test.tsx",
+      "target": "file:frontend/src/stores/floatingWindows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/TabBar/index.tsx",
+      "target": "file:frontend/src/components/TabContent/detachFlow.repro.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "file:frontend/src/components/TabContent/detachFlow.repro.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "file:frontend/src/components/TabContent/detachFlow.repro.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/stores/tabs.ts",
+      "target": "file:frontend/src/components/TabContent/detachFlow.repro.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/stores/floatingWindows.ts",
+      "target": "file:frontend/src/components/TabContent/detachFlow.repro.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/detachFlow.repro.test.tsx",
+      "target": "function:frontend/src/components/TabContent/detachFlow.repro.test.tsx:renderAppShell",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/repro-detach.cjs",
+      "target": "function:frontend/repro-detach.cjs:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:docs/superpowers/plans/2026-08-05-popup-blank-and-expired-contracts.md",
+      "target": "file:frontend/src/components/TabContent/index.tsx",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:docs/superpowers/plans/2026-08-05-popup-blank-and-expired-contracts.md",
+      "target": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:docs/superpowers/plans/2026-08-05-popup-blank-and-expired-contracts.md",
+      "target": "file:frontend/src/stores/floatingWindows.ts",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:docs/superpowers/plans/2026-08-05-popup-blank-and-expired-contracts.md",
+      "target": "file:server/services/market_service.py",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:docs/superpowers/plans/2026-08-05-popup-blank-and-expired-contracts.md",
+      "target": "file:frontend/repro-detach.cjs",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/App.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5,
+      "description": "Path-based pairing (deterministic)"
+    },
+    {
+      "source": "file:frontend/src/App.test.tsx",
+      "target": "file:frontend/src/App.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:frontend/src/components/TabBar/index.test.tsx",
+      "target": "file:frontend/src/stores/floatingWindows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:frontend/src/components/TabBar/index.tsx",
+      "target": "file:frontend/src/stores/floatingWindows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:frontend/src/main.tsx",
+      "target": "file:frontend/src/App.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:frontend/src/utils/detachDrag.test.ts",
+      "target": "file:frontend/src/stores/floatingWindows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:frontend/src/utils/detachDrag.ts",
+      "target": "file:frontend/src/stores/floatingWindows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:server/main.py",
+      "target": "file:server/services/market_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:server/services/ctp_bridge.py",
+      "target": "file:server/services/market_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:server/tests/test_ctp_bridge.py",
+      "target": "file:server/services/market_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:server/tests/test_market_api.py",
+      "target": "file:server/services/market_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:server/tests/test_options_api.py",
+      "target": "file:server/services/market_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:server/tests/test_query_api.py",
+      "target": "file:server/services/market_service.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "function:frontend/src/stores/floatingWindows.ts:useFloatingWindowStore",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/components/TabContent/index.tsx",
+      "target": "function:frontend/src/stores/floatingWindows.ts:useFloatingWindowStore",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/stores/floatingWindows.ts",
+      "target": "function:frontend/src/stores/floatingWindows.ts:useFloatingWindowStore",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/floatingWindows.ts",
+      "target": "function:frontend/src/stores/floatingWindows.ts:useFloatingWindowStore",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
     }
   ],
   "layers": [
@@ -31398,7 +31843,9 @@
         "file:server/tests/test_models.py",
         "file:server/tests/test_options_models.py",
         "file:server/tests/test_reconnect.py",
-        "file:server/tests/test_ws_integration.py"
+        "file:server/tests/test_ws_integration.py",
+        "file:frontend/src/components/TabContent/detachFlow.integration.test.tsx",
+        "file:frontend/src/components/TabContent/detachFlow.repro.test.tsx"
       ]
     },
     {
@@ -31581,13 +32028,14 @@
         "document:docs/dev-records/role-b/verify-discussion-prE9.md",
         "document:README.md",
         "document:snapshots/role-b/verify-discussion-redesign-r6.md",
-        "document:snapshots/role-b/verify-discussion-redesign-r7.md"
+        "document:snapshots/role-b/verify-discussion-redesign-r7.md",
+        "document:docs/superpowers/plans/2026-08-05-popup-blank-and-expired-contracts.md"
       ]
     },
     {
       "id": "layer:config-infra",
       "name": "工程配置与构建层",
-      "description": "构建配置（package.json/tsconfig/vite）、打包脚本、Claude 技能、示例脚本、CI 钩子及编译产物（dist-electron/.ua）",
+      "description": "构建配置（package.json/tsconfig/vite）、打包脚本、Claude 技能、示例脚本、CI 钩子及编译产物（dist-electron）",
       "nodeIds": [
         "file:frontend/dist-electron/main.cjs",
         "file:frontend/dist-electron/windowManager.cjs",
@@ -31618,11 +32066,6 @@
         "document:.claude/skills/simnow-bug-fix/references/tdd-fix.md",
         "document:.claude/skills/simnow-bug-fix/references/verification.md",
         "document:.claude/skills/simnow-bug-fix/references/cleanup.md",
-        "config:.ua/config.json",
-        "config:.ua/domain-graph.json",
-        "config:.ua/fingerprints.json",
-        "config:.ua/knowledge-graph.json",
-        "config:.ua/meta.json",
         "config:frontend/electron-builder.json",
         "config:frontend/package.json",
         "config:frontend/pnpm-workspace.yaml",
@@ -31656,78 +32099,111 @@
         "file:frontend/vitest.config.ts",
         "file:scripts/build-backend.py",
         "file:scripts/prepare-electron.sh",
-        "document:server/requirements.txt"
+        "document:server/requirements.txt",
+        "file:frontend/repro-detach.cjs"
       ]
     }
   ],
   "tour": [
     {
       "order": 1,
-      "title": "项目总览与应用入口",
-      "description": "从 README.md 开始理解项目定位：基于 CTP 协议的期货期权模拟交易终端，同时支持浏览器 Web 与 Electron 桌面两种运行模式。随后进入前端入口 main.tsx——它通过 React StrictMode 将 App 挂载到 #root，是两种模式共用的启动点；vite.config.ts 则配置了 /api 与 /ws 开发代理，让前端在开发期就能直连 FastAPI 后端，并输出适配 Electron 的相对路径构建产物。",
+      "title": "项目概览",
+      "description": "从 README 出发，了解这个基于 CTP 协议的期货期权模拟交易终端全貌：它对接 SimNow 7×24 测试环境，同时支持浏览器 Web 应用与 Electron 桌面应用两种运行模式，实现行情接入、交易接入与手动报单等完整功能。README 梳理了技术栈（React 18 + TypeScript 5 + Vite 5 前端、Python FastAPI + websockets 后端、ctp-python 绑定）、核心功能与快速开始方式，为整个导览建立上下文。后续步骤将沿着「前端入口 → 前端基础层 → 业务模块 → 后端 API/服务 → CTP 封装 → Electron → 测试与文档」的路径展开。",
       "nodeIds": [
-        "document:README.md",
-        "file:frontend/src/main.tsx",
-        "file:frontend/vite.config.ts"
+        "document:README.md"
       ]
     },
     {
       "order": 2,
-      "title": "核心界面框架：标签页与浮窗",
-      "description": "App.tsx 是前端 fan-out 最高的根组件（17 个依赖），负责把标签栏、浮窗、内容区与弹窗组装成整个应用布局，并处理 Electron 窗口导航与合约选中同步。它依赖的两个 Zustand store 是布局的骨架：tabs.ts（fan-in 33）管理标签数组与活跃标签，按 type+instrumentID 去重并受 MAX_TABS 上限约束；floatingWindows.ts 维护 tabId 到浮窗几何的映射，用递增 z 值实现置顶，固定标签拒绝被拖出。",
+      "title": "前端应用入口",
+      "description": "main.tsx 是前端唯一启动点：通过 React StrictMode 将 App 挂载到 index.html 的 #root 节点并引入全局样式，浏览器与 Electron 两种模式共用这一入口。index.html 定义了 #root 挂载点并加载 /src/main.tsx 模块，同时引入 JetBrains Mono 等外部字体。从这里的 App.tsx 出发，就能沿着依赖图逐层深入整个前端。",
       "nodeIds": [
-        "file:frontend/src/App.tsx",
-        "file:frontend/src/stores/tabs.ts",
-        "file:frontend/src/stores/floatingWindows.ts"
-      ]
+        "file:frontend/src/main.tsx",
+        "file:frontend/index.html"
+      ],
+      "languageLesson": "React 18 的 createRoot(...).render() 是并发渲染的挂载方式，替代旧版 ReactDOM.render；StrictMode 会在开发环境额外执行渲染与副作用检查，帮助提前暴露问题。"
     },
     {
       "order": 3,
-      "title": "行情模块：行情表格与 K 线指标",
-      "description": "行情是终端最核心的数据模块。market/store.ts（fan-in 29）统一管理快照、K 线、周期、可见/锁定/多选合约等行情状态；MarketTable.tsx 基于 @visactor/vtable 实现虚拟滚动与价格着色，支撑 1000+ 合约同时展示；MarketPanel.tsx（fan-out 19）整合合约搜索、深度报价、收藏与批量操作；indicators.ts 提供成交量均线、BOLL、KDJ、RSI（Wilder 指数平滑）等纯函数指标，供 K 线图实时计算。",
+      "title": "应用骨架与标签页系统",
+      "description": "App.tsx 是前端根组件，负责引导整个前端：初始化系统 WebSocket、连接状态轮询、标签合约锁订阅等 hooks，并组装状态栏、标签栏与浮动窗口，接入 Electron IPC（托盘导航、选中合约回传）。tabs.ts 是标签页 Zustand store，管理标签数组与活跃标签，openTab 按 type+instrumentID 去重并受 MAX_TABS 上限约束，固定标签不可关闭——这是前端多面板布局的状态核心。TabBar 组件在此基础上实现多标签切换、拖拽脱离与右键菜单。",
       "nodeIds": [
-        "file:frontend/src/modules/market/store.ts",
-        "file:frontend/src/modules/market/MarketTable.tsx",
-        "file:frontend/src/modules/market/MarketPanel.tsx",
-        "file:frontend/src/modules/market/indicators.ts"
-      ]
+        "file:frontend/src/App.tsx",
+        "file:frontend/src/stores/tabs.ts",
+        "file:frontend/src/components/TabBar/index.tsx"
+      ],
+      "languageLesson": "Zustand 通过极简的 create() 定义 store，组件用 selector 订阅状态片段，只有用到对应状态的组件才会重渲染；配合 persist 中间件可把用户偏好写入 localStorage。"
     },
     {
       "order": 4,
-      "title": "报单模块：交易指令与合规校验",
-      "description": "报单是交易终端的灵魂。order/store.ts（fan-in 14）集中管理报单表单状态、提交/撤单动作与合规校验逻辑，是整个模块的核心状态层；OrderPanel.tsx（fan-out 16）整合报单/止损单表单、一键反向/锁仓（含对价价格计算与二次确认）、批量撤单与全局快捷键，通过多个 Zustand store 读写交易状态并调用后端 API。这里的合规逻辑（数量上限、保护价）会与后端权威校验形成双重防线。",
+      "title": "数据契约与 API 客户端",
+      "description": "types.ts 是前后端共享的数据模型类型定义（行情/报单/查询/期权等接口类型），字段统一 camelCase 并与 design.md 对齐，是全项目被依赖最多的文件（fan-in 53）。api.ts 封装行情、报单、查询、止损等全部后端 REST 端点；ws.ts 是 WebSocket 连接管理器，维护多通道连接与消息/关闭回调，负责 JSON 解析、断开清理与重连。这两层是前端与后端通信的枢纽，后续所有业务模块都建立在其上。",
       "nodeIds": [
-        "file:frontend/src/modules/order/store.ts",
-        "file:frontend/src/modules/order/OrderPanel.tsx"
-      ]
+        "file:frontend/src/services/types.ts",
+        "file:frontend/src/services/api.ts",
+        "file:frontend/src/services/ws.ts"
+      ],
+      "languageLesson": "TypeScript 的类型别名与接口让接口契约在编译期被校验；前后端共享同一份类型定义，配合后端 field_mapping 的 PascalCase→camelCase 转换，避免字段命名漂移。"
     },
     {
       "order": 5,
-      "title": "查询与期权模块：回报展示与期权链",
-      "description": "查询模块负责把交易结果呈现给用户：query/store.ts（fan-in 13）管理报单/成交/持仓/资金/止损单数据，提供串行带超时与节流的刷新、WebSocket 增量 upsert 及撤单操作；QueryPanel.tsx（fan-out 14）作为容器提供七个标签页、10 秒自动刷新、C 键撤销全部等交互。期权模块则另立门户：options/store.ts 管理期权链与隐含波动率，OptionPanel.tsx 渲染 T 型报价表，两者共同构成期权交易入口。",
+      "title": "核心状态 store 层",
+      "description": "这三个 store 构成前端基础状态层：connection.ts 分别管理行情/交易两条连接的 phase、最近成功与断开时间戳、累计重连计数，并提供便捷的 mdConnected/tdConnected 布尔派生；contracts.ts 负责合约加载、搜索与自选收藏管理，是行情与报单模块共享的数据源；userPrefs.ts 管理所选合约、交易快捷键并持久化到 localStorage。它们被上层行情、报单、查询等业务模块广泛消费。",
       "nodeIds": [
-        "file:frontend/src/modules/query/store.ts",
-        "file:frontend/src/modules/query/QueryPanel.tsx",
-        "file:frontend/src/modules/options/store.ts",
-        "file:frontend/src/modules/options/OptionPanel.tsx"
+        "file:frontend/src/stores/connection.ts",
+        "file:frontend/src/stores/contracts.ts",
+        "file:frontend/src/stores/userPrefs.ts"
       ]
     },
     {
       "order": 6,
-      "title": "前端服务层：REST 与 WebSocket 客户端",
-      "description": "这一层是所有业务模块共享的基础能力。types.ts 是 fan-in 最高的文件（53 处依赖）——它定义行情/报单/查询/期权等全部接口类型，统一 camelCase 并与 design.md 对齐，是前后端字段契约的枢纽；api.ts（fan-in 24）封装行情、报单、查询、止损等全部 REST 端点的请求与响应处理；ws.ts 维护多通道 WebSocket 连接（market/order/position/stop/system），负责消息解析、断开清理与重连。",
+      "title": "行情业务模块",
+      "description": "行情模块是前端最大的业务面：MarketPanel 整合合约搜索、深度报价、行情表格与收藏批量操作；market/store.ts 管理快照、K 线、周期与可见/锁定/多选合约状态；MarketTable 基于 @visactor/vtable 实现虚拟滚动，支持上千合约的流畅渲染；useMarketWs hook 订阅行情 WebSocket，负责快照缓冲、K 线聚合、成交量增量计算与断线重连。这四者共同把 CTP 推送的行情数据呈现给用户。",
       "nodeIds": [
-        "file:frontend/src/services/api.ts",
-        "file:frontend/src/services/types.ts",
-        "file:frontend/src/services/ws.ts"
-      ]
+        "file:frontend/src/modules/market/MarketPanel.tsx",
+        "file:frontend/src/modules/market/store.ts",
+        "file:frontend/src/modules/market/MarketTable.tsx",
+        "file:frontend/src/hooks/useMarketWs.ts"
+      ],
+      "languageLesson": "虚拟滚动只渲染可视区行而非整表，是支撑 1000+ 合约行表格性能的关键；行情 hook 采用快照缓冲与批量合并更新，避免高频 tick 触发布局抖动。"
     },
     {
       "order": 7,
-      "title": "后端 API 层：FastAPI 路由",
-      "description": "跨过前后端边界进入后端。server/main.py 是后端 BFS 依赖图的根——作为 FastAPI 应用工厂，它组装 REST 路由、WebSocket 端点与中间件，并在 lifespan 异步上下文中建立 CTP 连接。四个路由模块各司其职：connection.py 处理登录/登出/状态，market.py 覆盖合约列表、订阅、快照、K 线与期权链，order.py 实现报单、撤单、一键反向/锁仓及止损单并内置上期所合规校验，query.py 提供持仓、资金、报单、成交查询。",
+      "title": "报单业务模块",
+      "description": "报单模块实现手动报单与止损单的核心交易能力：OrderPanel 整合报单/止损单表单、一键反向/锁仓（含对价价格计算与二次确认）、批量撤单及全局快捷键；order/store.ts 集中管理表单状态、提交/撤单动作与合规校验逻辑；OrderForm 支持普通报单与套利合约，集成价格步进与数量/价格合规校验。validators.ts 实现前端合规校验——按指令类型与品种的数量上限、市价保护价、priceTick 对齐，与后端 Pydantic 双重把关，确保符合上期所交易规则。",
+      "nodeIds": [
+        "file:frontend/src/modules/order/OrderPanel.tsx",
+        "file:frontend/src/modules/order/store.ts",
+        "file:frontend/src/modules/order/OrderForm.tsx",
+        "file:frontend/src/utils/validators.ts"
+      ],
+      "languageLesson": "合规校验在前后端各实现一遍（前端即时反馈 + 后端权威兜底），符合金融交易系统的纵深防御模式，防止绕过前端直接调用后端接口。"
+    },
+    {
+      "order": 8,
+      "title": "查询与期权业务模块",
+      "description": "查询模块提供报单/成交/持仓/资金/止损单/合约/K 线七个标签页：query/store.ts 管理查询数据与活动标签页，提供串行带超时与节流的刷新，并通过 WebSocket 增量 upsert；QueryPanel 容器支持 10 秒自动刷新、暂停/手动刷新与批量撤单。期权模块 OptionPanel 加载期权标的与链数据、管理选中状态、订阅行情快照并渲染 T 型报价表，呈现期权链聚合与隐含波动率，覆盖 PRD 中 F1-F5 的完整业务功能。",
+      "nodeIds": [
+        "file:frontend/src/modules/query/QueryPanel.tsx",
+        "file:frontend/src/modules/query/store.ts",
+        "file:frontend/src/modules/options/OptionPanel.tsx"
+      ]
+    },
+    {
+      "order": 9,
+      "title": "后端入口与配置",
+      "description": "从后端依赖图的深度 0 出发：server/main.py 是 FastAPI 应用工厂，组装 REST 路由、WebSocket 端点、中间件与全局服务状态，并在 lifespan 中建立 CTP 连接。start.py 是后端启动入口脚本，读取 .env 配置并按交易时段自动选择 SimNow 行情/交易地址，再组装 uvicorn 启动参数运行 FastAPI 服务。config.py 通过环境变量与 dotenv 加载 CTP 连接参数（brokerID、行情/交易前置地址、账号等），是所有后端服务初始化所依赖的基础。",
       "nodeIds": [
         "file:server/main.py",
+        "file:server/start.py",
+        "file:server/config.py"
+      ]
+    },
+    {
+      "order": 10,
+      "title": "后端 REST API 层",
+      "description": "API 层按业务划分四个路由组：connection 提供登录/登出/状态接口并驱动 CTP 交易连接启动；market 覆盖合约列表、订阅/退订、快照、K 线、五档深度、期权链与波动率等行情接口；order 实现报单、撤单、批量撤单、一键反向/锁仓及止损单管理，并内置上期所合规校验；query 提供持仓、资金、报单、成交与合约数据的查询，支持主动向 CTP 刷新后广播。它们与前端 api.ts 的调用一一对应，是前后端 REST 契约的落点。",
+      "nodeIds": [
         "file:server/api/connection.py",
         "file:server/api/market.py",
         "file:server/api/order.py",
@@ -31735,36 +32211,58 @@
       ]
     },
     {
-      "order": 8,
-      "title": "后端服务与 CTP 封装：行情桥接与报单管理",
-      "description": "这是整个系统与 CTP 协议对话的最深层。ctp_wrapper 用 md_user_api.py 封装行情 API（创建行情通道、登录、订阅/退订）、trader_api.py 封装交易 API（结算确认、报单、撤单与各类查询）；ctp_bridge.py 把 CTP 深度行情事件映射为快照更新、WebSocket 广播与 K 线 tick；order_manager.py 线程安全地维护活动订单与成交，处理 CTP 回报并广播订单状态；ws/manager.py 按端点管理连接池并做心跳检测与失活清理。",
+      "order": 11,
+      "title": "后端业务服务层",
+      "description": "服务层承载核心业务逻辑：market_service 位于 API 路由与 CTP MdUserApi 之间，负责合约列表缓存、行情快照缓存与订阅跟踪（500 手上限），并支持从 CTP 刷新合约；order_manager 线程安全地维护活动订单与成交、处理 CTP 回报并通过广播函数推送订单状态；kline_service 基于 tick 流式聚合多周期 K 线，无历史数据接口；stop_order 支持止损单提交/撤单/触发执行、落盘持久化与 WebSocket 广播。这些服务把 CTP 回调转化为上层 API 与前端可用的业务数据。",
       "nodeIds": [
+        "file:server/services/market_service.py",
         "file:server/services/order_manager.py",
-        "file:server/services/ctp_bridge.py",
-        "file:server/ctp_wrapper/trader_api.py",
-        "file:server/ctp_wrapper/md_user_api.py",
-        "file:server/ws/manager.py"
+        "file:server/services/kline_service.py",
+        "file:server/services/stop_order.py"
       ]
     },
     {
-      "order": 9,
-      "title": "Electron 桌面外壳：窗口、IPC 与后端托管",
-      "description": "Electron 模式让同一个前端跑成桌面应用。main.ts 以懒加载单例初始化窗口/托盘/快捷键/通知/后端/自动更新各管理器并装配生命周期；backendManager.ts 负责检测、启动、停止与重启 Python FastAPI 后端子进程，并用环形缓冲采集其日志；ipc/index.ts 定义全部 IPC 频道常量与类型契约，是主进程与渲染进程消息命名的唯一来源；preload.ts 通过 contextBridge 向渲染进程暴露受限的 electronAPI。",
+      "order": 12,
+      "title": "WebSocket 实时推送与行情桥接",
+      "description": "WebSocket 是行情与订单回报的实时通道：ws/manager.py 按端点（market/order/position/stop/system）管理连接池，提供连接/断开注册、类型化广播以及后台心跳检测与失活连接清理；handlers.py 通用处理连接生命周期与 subscribe/unsubscribe 路由。ctp_bridge.py 是行情数据回调桥接层，将 CTP 深度行情事件映射为快照更新、WebSocket 广播与 K 线 tick 更新，打通了 CTP → 后端 → 前端的实时数据链路，对应前端 useMarketWs 的订阅侧。",
+      "nodeIds": [
+        "file:server/ws/manager.py",
+        "file:server/ws/handlers.py",
+        "file:server/services/ctp_bridge.py"
+      ]
+    },
+    {
+      "order": 13,
+      "title": "CTP 协议封装层",
+      "description": "CTP 封装层是项目与上期所 CTP 协议对接的根基：md_user_api 封装行情 API（创建行情通道、登录、订阅/退订行情数据），trader_api 封装交易 API（登录、结算确认、报单、撤单及各类查询请求）；callback.py 基于组合模式动态生成行情/交易回调类，支持事件日志与自定义 handler 注册；field_mapping 将 CTP PascalCase 结构转换为前端 camelCase dict（行情、报单、成交、合约、持仓、资金共 50+ 字段）。这一层是所有行情/交易功能的真实数据源头。",
+      "nodeIds": [
+        "file:server/ctp_wrapper/md_user_api.py",
+        "file:server/ctp_wrapper/trader_api.py",
+        "file:server/ctp_wrapper/callback.py",
+        "file:server/services/field_mapping.py"
+      ],
+      "languageLesson": "ctp-python 是 SWIG 绑定，SubscribeMarketData 必须传字符串列表（如 [\"IF2608\"]），传 bytes 会触发堆损坏（0xC0000374）；字段映射层把 CTP 的 PascalCase 约定转换为前端 camelCase，是前后端类型对齐的关键。"
+    },
+    {
+      "order": 14,
+      "title": "Electron 桌面层",
+      "description": "Electron 让同一套前端代码以桌面应用形式运行：electron/main.ts 是主进程入口，以懒加载单例方式初始化窗口/托盘/快捷键/通知/后端/自动更新等管理器并注册 IPC handler；ipc/index.ts 定义前后端 IPC 通信所需的全部频道常量（IPC_CHANNELS）与类型契约，是主进程与渲染进程消息命名与参数约定的唯一来源；渲染进程侧 services/electron.ts 封装窗口控制、多窗口打开、应用信息、后端管理等 preload 桥接接口，并区分浏览器/桌面双模式。这与 README 描述的「浏览器 + 桌面两种运行模式共享同一套前端」呼应。",
       "nodeIds": [
         "file:frontend/electron/main.ts",
-        "file:frontend/electron/preload.ts",
         "file:frontend/electron/ipc/index.ts",
-        "file:frontend/electron/backendManager.ts"
-      ]
+        "file:frontend/src/services/electron.ts"
+      ],
+      "languageLesson": "Electron 主进程与渲染进程通过 preload 暴露的 contextBridge 通信；IPC 频道用集中常量表定义可避免字符串散落与命名漂移，主进程还能托管后端 Python 进程，实现桌面应用自包含启动。"
     },
     {
-      "order": 10,
-      "title": "设计与规范文档：项目的契约与知识底座",
-      "description": "这个项目的文档本身就是可执行的契约。design.md 定义系统架构图、前后端模块划分、REST 与 WebSocket 接口契约以及数据模型（CTP 标准接口 7 个 + 自定义业务接口 10 个）；dev.md 规定代码目录结构、Zustand store 设计、CTP 封装与错误处理策略；trading-instructions.md 是限价/市价/套利指令数量上限、保护价等合规规则的事实来源——第 4 步的前端校验与第 7 步的后端兜底都对齐这份文档。",
+      "order": 15,
+      "title": "测试与文档",
+      "description": "测试层保障了前后端行为的一致性：后端 108 个 pytest 单元测试（如 test_order_api 验证报单 REST 接口及 FOK/FAK 有效期约束），前端 469 个 Vitest 测试（如 market/store.test 验证快照批量更新与 K 线追加排序逻辑）。文档层提供了设计与合规依据：design.md 是技术架构设计（接口契约、数据模型、WebSocket 端点、数据流），trading-instructions.md 是上期所交易指令合规问答（限价/市价/套利数量上限、市价保护价规则、GFD/FOK/FAK 有效期），是全项目合规校验的业务来源，贯穿前端 validators 与后端 Pydantic 校验。",
       "nodeIds": [
         "document:docs/specs/design.md",
-        "document:docs/specs/dev.md",
-        "document:docs/specs/trading-instructions.md"
+        "document:docs/specs/trading-instructions.md",
+        "file:server/tests/test_order_api.py",
+        "file:frontend/src/modules/market/store.test.ts"
       ]
     }
   ]
