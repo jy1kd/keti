@@ -1,0 +1,96 @@
+/* TradeParams — 压缩参数区（报单弹窗左栏 ~200px） */
+
+.trade-params {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 8px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.tp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* 允许行内子项收缩，防 200px 左栏横向溢出画面 */
+  min-width: 0;
+}
+
+.tp-row__label {
+  flex: 0 0 44px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tp-row__select {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 100%;
+  height: 28px;
+  padding: 0 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tp-stepper {
+  display: flex;
+  align-items: center;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.tp-stepper__btn {
+  width: 24px;
+  height: 28px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.tp-stepper__btn:first-of-type {
+  border-radius: 4px 0 0 4px;
+}
+
+.tp-stepper__btn:last-of-type {
+  border-radius: 0 4px 4px 0;
+}
+
+.tp-stepper__input {
+  flex: 1 1 0;
+  /* 宽度完全由 flex 决定：width:0 + min-width:0 保证 number 输入框收缩到容器内，
+     不因全局 input 固有宽度把参数列撑出画面；max-width 兜底 */
+  width: 0;
+  min-width: 0;
+  max-width: 100%;
+  height: 28px;
+  border: 1px solid var(--border-color);
+  border-left: none;
+  border-right: none;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  /* 覆盖全局 input{padding:5px 10px}：紧凑内边距，给 3 位手数数字留展示空间 */
+  padding: 0 4px;
+  text-align: center;
+}
+
+.tp-hint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.tp-hint__error {
+  color: var(--color-up);
+}

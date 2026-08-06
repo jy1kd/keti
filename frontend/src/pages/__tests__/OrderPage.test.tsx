@@ -1,27 +1,55 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { OrderPage } from '../OrderPage';
+import { useOrderStore } from '@/modules/order/store';
 import { useContractsStore } from '@/stores/contracts';
 import { useMarketStore } from '@/modules/market/store';
 import type { MarketSnapshot } from '@/services/types';
 
+const IF2608_CONTRACT = {
+  instrumentID: 'IF2608',
+  instrumentName: '沪深300',
+  exchangeID: 'CFFEX',
+  productID: 'IF',
+  volumeMultiple: 300,
+  priceTick: 0.2,
+  expireDate: '2026-08-15',
+  isTrading: 1,
+  productClass: '1',
+};
+
+function makeSnapshot(overrides?: Partial<MarketSnapshot>): MarketSnapshot {
+  return {
+    instrumentID: 'IF2608',
+    lastPrice: 4585.6,
+    bidPrice1: 4585.2, bidVolume1: 45,
+    bidPrice2: 4585.0, bidVolume2: 30,
+    bidPrice3: 4584.8, bidVolume3: 12,
+    bidPrice4: 4584.6, bidVolume4: 8,
+    bidPrice5: 4584.4, bidVolume5: 5,
+    askPrice1: 4585.6, askVolume1: 40,
+    askPrice2: 4585.8, askVolume2: 22,
+    askPrice3: 4586.0, askVolume3: 15,
+    askPrice4: 4586.2, askVolume4: 9,
+    askPrice5: 4586.4, askVolume5: 3,
+    volume: 20892,
+    openInterest: 45105,
+    openPrice: 4573.6,
+    highestPrice: 4590.0,
+    lowestPrice: 4570.0,
+    preSettlementPrice: 4573.6,
+    upperLimitPrice: 5029.0,
+    lowerLimitPrice: 4118.4,
+    ...overrides,
+  } as MarketSnapshot;
+}
+
 describe('OrderPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useOrderStore.getState().resetOrderForm();
     useContractsStore.setState({
-      contracts: [
-        {
-          instrumentID: 'IF2608',
-          instrumentName: '沪深300',
-          exchangeID: 'CFFEX',
-          productID: 'IF',
-          volumeMultiple: 300,
-          priceTick: 0.2,
-          expireDate: '2026-08-15',
-          isTrading: 1,
-          productClass: '1',
-        },
-      ],
+      contracts: [IF2608_CONTRACT],
       favorites: [],
       isLoaded: true,
     });
@@ -35,106 +63,69 @@ describe('OrderPage', () => {
     expect(screen.getByText('📝 报单')).toBeDefined();
   });
 
-  it('should display instrument ID in title bar and quote card', () => {
+  it('should display instrument ID in title bar', () => {
     render(<OrderPage instrumentID="IF2608" />);
-    // 标题栏中的合约代码
     const codes = screen.getAllByText('IF2608');
     expect(codes.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('should display contract name in quote card', () => {
+  // ── P1 主体：压缩参数区 + 三列十档盘口（与弹窗 OrderPopup 统一） ──
+
+  it('渲染压缩参数区（开平/投保/有效期下拉 + 手数步进）', () => {
     render(<OrderPage instrumentID="IF2608" />);
-    expect(screen.getByText('沪深300')).toBeDefined();
+    expect(screen.getByTestId('tp-volume')).toBeDefined();
+    expect(screen.getByLabelText('开平')).toBeDefined();
+    expect(screen.getByLabelText('投保')).toBeDefined();
+    expect(screen.getByLabelText('有效期')).toBeDefined();
   });
 
-  it('should display latest price in quote card when snapshot available', () => {
-    useMarketStore.setState({
-      snapshots: new Map([
-        ['IF2608', {
-          instrumentID: 'IF2608',
-          lastPrice: 4585.6,
-          bidPrice1: 4585.2,
-          askPrice1: 4585.6,
-          openPrice: 4573.6,
-          highestPrice: 4590.0,
-          lowestPrice: 4570.0,
-          preSettlementPrice: 4573.6,
-          upperLimitPrice: 5029.0,
-          lowerLimitPrice: 4118.4,
-          volume: 20892,
-          openInterest: 45105,
-        } as MarketSnapshot],
-      ]),
-    });
+  it('渲染三列十档盘口 + 快捷买卖栏（默认手数 1）', () => {
+    useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) });
     render(<OrderPage instrumentID="IF2608" />);
-    // 最新价在卡片中显示（priceTick=0.2 → 2 位小数）
-    const prices = screen.getAllByText('4585.60');
-    expect(prices.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByTestId('ask-1')).toBeDefined();
+    expect(screen.getByTestId('bid-1')).toBeDefined();
+    expect(screen.getByTestId('qtb-buy')).toBeDefined();
+    expect(screen.getByTestId('qtb-sell')).toBeDefined();
+    // 快捷买卖按钮文字随手数联动
+    expect(screen.getByText('买入1手')).toBeDefined();
+    expect(screen.getByText('卖出1手')).toBeDefined();
   });
 
-  it('should show exchange ID in quote card', () => {
+  it('快照存在时汇总行显示最新价（priceTick 精度）', () => {
+    useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) });
     render(<OrderPage instrumentID="IF2608" />);
-    expect(screen.getByText('CFFEX')).toBeDefined();
+    // priceTick=0.2 → 1 位小数（最新价在汇总行与卖一档均显示）
+    expect(screen.getAllByText('4585.6').length).toBeGreaterThanOrEqual(1);
   });
 
-  // ── 表单渲染 ──
-
-  it('should render direction buttons', () => {
-    render(<OrderPage />);
-    expect(screen.getByText('买')).toBeDefined();
-    expect(screen.getByText('卖')).toBeDefined();
-  });
-
-  it('should render submit button with instrument ID', () => {
+  it('快照不存在时盘口显示空态（--）', () => {
     render(<OrderPage instrumentID="IF2608" />);
-    expect(screen.getByText(/买入 IF2608/)).toBeDefined();
-  });
-
-  // ── 边界条件 ──
-
-  it('should show placeholder hint when no instrumentID provided', () => {
-    render(<OrderPage />);
-    expect(screen.getByText(/请在行情表格中选择合约/)).toBeDefined();
+    expect(screen.getByText('--')).toBeDefined();
   });
 
   it('should show instrumentID but not name when contract not found', () => {
     render(<OrderPage instrumentID="IF9999" />);
-    // 标题栏和卡片中都显示合约代码
     expect(screen.getAllByText('IF9999').length).toBeGreaterThanOrEqual(1);
-    // 不显示已知合约名称
     expect(screen.queryByText('沪深300')).toBeNull();
   });
 
-  it('should show dashes in quote card when snapshot unavailable', () => {
+  // ── 点价确认闭环（与弹窗一致：每次必弹确认框；价格列只填改价框） ──
+
+  it('点击盘口卖一档弹出确认框（方向/价格/手数/开平）', () => {
+    useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) });
     render(<OrderPage instrumentID="IF2608" />);
-    // 快照不存在时，数据网格显示 —
-    const dashes = screen.getAllByText('—');
-    expect(dashes.length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByTestId('ask-1').querySelector('.depth-row__buy')!);
+    const dialog = screen.getByTestId('confirm-dialog');
+    expect(dialog).toBeDefined();
   });
 
-  it('should show formatted volume and open interest when snapshot available', () => {
-    useMarketStore.setState({
-      snapshots: new Map([
-        ['IF2608', {
-          instrumentID: 'IF2608',
-          lastPrice: 4585.6,
-          bidPrice1: 0,
-          askPrice1: 0,
-          openPrice: 0,
-          highestPrice: 0,
-          lowestPrice: 0,
-          preSettlementPrice: 4573.6,
-          upperLimitPrice: 0,
-          lowerLimitPrice: 0,
-          volume: 20892,
-          openInterest: 45105,
-        } as MarketSnapshot],
-      ]),
-    });
+  it('点击价格列只填改价框，不弹确认框', () => {
+    useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) });
     render(<OrderPage instrumentID="IF2608" />);
-    // 千分位格式化
-    expect(screen.getByText('20,892')).toBeDefined();
-    expect(screen.getByText('45,105')).toBeDefined();
+    fireEvent.click(screen.getByTestId('ask-1').querySelector('.depth-row__price')!);
+    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+    // 改价框已被填入卖一价
+    expect((screen.getByTestId('qtb-price') as HTMLInputElement).value).toBe('4585.6');
   });
 
   // ── 拖拽句柄 ──
@@ -145,35 +136,17 @@ describe('OrderPage', () => {
     expect(bar).toHaveAttribute('data-drag-handle');
   });
 
-  // ── 浮动窗口模式（报单标签转弹窗，与行情面板 OrderPopup 样式统一） ──
+  // ── 浮动窗口模式（报单标签转弹窗，与 OrderPopup 样式统一） ──
 
-  it('浮动模式渲染五档盘口 + 报单表单（复用 OrderPopup 双栏布局）', () => {
-    useMarketStore.setState({
-      snapshots: new Map([
-        ['IF2608', {
-          instrumentID: 'IF2608',
-          lastPrice: 4585.6,
-          bidPrice1: 4585.2,
-          askPrice1: 4585.6,
-          openPrice: 4573.6,
-          highestPrice: 4590.0,
-          lowestPrice: 4570.0,
-          preSettlementPrice: 4573.6,
-          upperLimitPrice: 5029.0,
-          lowerLimitPrice: 4118.4,
-          volume: 20892,
-          openInterest: 45105,
-        } as MarketSnapshot],
-      ]),
-    });
+  it('浮动模式渲染 P1 主体（TradeParams + MarketDepth，复用 .order-popup__body）', () => {
+    useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) });
     const { container } = render(<OrderPage instrumentID="IF2608" floating />);
-    // 双栏容器 + 左列五档盘口面板
+    expect(container.querySelector('.order-floating')).toBeDefined();
     expect(container.querySelector('.order-popup__body')).toBeDefined();
-    expect(container.querySelector('.order-quote')).toBeDefined();
-    // 不渲染普通标签页的行情卡片
-    expect(container.querySelector('.order-page__quote-card')).toBeNull();
-    // 右列报单表单仍在
-    expect(screen.getByText(/买入 IF2608/)).toBeDefined();
+    expect(container.querySelector('.order-popup__params')).toBeDefined();
+    expect(container.querySelector('.order-popup__depth')).toBeDefined();
+    expect(screen.getByTestId('tp-volume')).toBeDefined();
+    expect(screen.getByTestId('ask-1')).toBeDefined();
   });
 
   it('浮动模式无合约时显示选择提示', () => {
@@ -182,8 +155,11 @@ describe('OrderPage', () => {
     expect(container.querySelector('.order-popup__body')).toBeNull();
   });
 
-  it('普通模式（非浮动）不渲染五档盘口面板', () => {
+  it('非浮动模式同样渲染 P1 主体（标签页与弹窗统一）', () => {
+    useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) });
     const { container } = render(<OrderPage instrumentID="IF2608" />);
-    expect(container.querySelector('.order-quote')).toBeNull();
+    expect(container.querySelector('.order-popup__body')).toBeDefined();
+    expect(screen.getByTestId('tp-volume')).toBeDefined();
+    expect(screen.getByTestId('ask-1')).toBeDefined();
   });
 });
