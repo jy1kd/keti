@@ -5,17 +5,19 @@ import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import { useTabStore } from '@/stores/tabs'
 
 // Mock 面板内容：浮动面板由 TabContent 渲染，此处只测 chrome 壳
-// ResizeHandle 按 direction 渲染可定位的测试柄
+// ResizeHandle 按 direction 渲染可定位的测试柄；style 需透传，供断言 position:fixed
 vi.mock('@/components/ResizeHandle', () => ({
   ResizeHandle: ({
     direction,
     onPointerDown,
     'aria-label': label,
+    style,
   }: {
     direction: string
     onPointerDown?: (e: React.PointerEvent) => void
     'aria-label'?: string
-  }) => <div data-testid={`resize-handle-${direction}`} aria-label={label} onPointerDown={onPointerDown} />,
+    style?: React.CSSProperties
+  }) => <div data-testid={`resize-handle-${direction}`} aria-label={label} onPointerDown={onPointerDown} style={style} />,
 }))
 
 /** jsdom 24 不提供 PointerEvent 构造器；用 MouseEvent 保留 clientX/clientY/button */
@@ -79,6 +81,16 @@ describe('FloatingWindows', () => {
     render(<FloatingWindows />)
     ;['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].forEach((dir) => {
       expect(screen.getByTestId(`resize-handle-${dir}`)).toBeInTheDocument()
+    })
+  })
+
+  it('缩放手柄应 position:fixed（脱离 .app 布局，不压扁主内容区）', () => {
+    // 回归：.resize-handle（global.css）默认 position:relative，若手柄未内联 fixed，
+    // 会作为 .app flex 列的 item 占位，把 .tab-main 挤压成 0 高 → 拖出弹窗后主内容空白。
+    useFloatingWindowStore.getState().detach('tab-settings', { x: 10, y: 20, w: 400, h: 300 })
+    render(<FloatingWindows />)
+    ;['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].forEach((dir) => {
+      expect(screen.getByTestId(`resize-handle-${dir}`)).toHaveStyle({ position: 'fixed' })
     })
   })
 
