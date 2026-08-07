@@ -225,10 +225,15 @@
   border-color: var(--accent);
 }
 
-.kline-chart__canvas {
+.kline-chart__canvas-wrap {
   flex: 1;
   min-height: 0;
   position: relative;
+}
+
+.kline-chart__canvas {
+  position: absolute;
+  inset: 0;
 }
 
 .kline-chart__empty {

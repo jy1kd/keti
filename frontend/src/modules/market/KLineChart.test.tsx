@@ -75,6 +75,17 @@ describe('KLineChart', () => {
     expect(screen.getByTestId('kline-canvas')).toBeInTheDocument()
   })
 
+  it('空态占位符与 canvas 是兄弟而非子节点（避免 ECharts 与 React 争夺 DOM 所有权）', () => {
+    render(<KLineChart instrument="IF2608" klineData={[]} period="5m" />)
+    const canvas = screen.getByTestId('kline-canvas')
+    const empty = screen.getByText('暂无K线数据')
+    // 占位符不能是 canvas 的子节点：若 React 在 echarts.init 命令式插入的
+    // 容器内管理子节点，数据由空变非空时 removeChild 会抛 NotFoundError
+    expect(canvas.contains(empty)).toBe(false)
+    // 二者应为兄弟（同一父节点下）
+    expect(canvas.parentElement).toBe(empty.parentElement)
+  })
+
   it('renders instrument name in header', () => {
     render(<KLineChart instrument="IF2608" klineData={sampleData} period="5m" />)
     expect(screen.getByText('IF2608')).toBeInTheDocument()

@@ -380,7 +380,11 @@ export function KLineChart({ instrument, klineData, period, onPeriodChange, name
           </div>
         </div>
       </div>
-      <div className="kline-chart__canvas" data-testid="kline-canvas" ref={chartRef}>
+      {/* ECharts 容器与空态占位符必须分离：React 渲染的占位符若作为 chartRef 的子节点，
+          会与 echarts.init 命令式插入的 canvas 争夺同一容器的 DOM 所有权，
+          数据从空变非空时 React removeChild 找不到节点 → NotFoundError。 */}
+      <div className="kline-chart__canvas-wrap">
+        <div className="kline-chart__canvas" data-testid="kline-canvas" ref={chartRef} />
         {klineData.length === 0 && (
           <div className="kline-chart__empty">暂无K线数据</div>
         )}

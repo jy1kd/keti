@@ -26,6 +26,10 @@ interface MarketStore {
   setSelectedContracts: (ids: Set<string>) => void
   clearSelection: () => void
   selectAll: (instrumentIDs: string[]) => void
+  /** 滚动松手信号序号（monotonic counter；消费后无需重置） */
+  scrollEndSeq: number
+  /** 标记一次滚动条释放（松手），使订阅管理器立即执行完整 diff */
+  markScrollEnd: () => void
 }
 
 export const useMarketStore = create<MarketStore>((set) => ({
@@ -127,4 +131,6 @@ export const useMarketStore = create<MarketStore>((set) => ({
   clearSelection: () => set({ selectedContracts: new Set() }),
   selectAll: (instrumentIDs) =>
     set({ selectedContracts: new Set(instrumentIDs) }),
+  scrollEndSeq: 0,
+  markScrollEnd: () => set((state) => ({ scrollEndSeq: state.scrollEndSeq + 1 })),
 }))

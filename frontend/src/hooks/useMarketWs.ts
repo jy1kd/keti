@@ -115,6 +115,15 @@ export function useMarketWs(wsBaseUrl: string) {
   const batchUpdate = useMarketStore((s) => s.batchUpdate)
   const appendKline = useMarketStore((s) => s.appendKline)
   const currentPeriod = useMarketStore((s) => s.currentPeriod)
+  const selectedInstrument = useMarketStore((s) => s.selectedInstrument)
+  const lockedContracts = useMarketStore((s) => s.lockedContracts)
+
+  // 回调在 mount 时注册一次（useReconnect），闭包冻结首次渲染的值。
+  // 因此 gate 读取必须走 ref，才能拿到最新的 selectedInstrument / lockedContracts。
+  const selectedInstrumentRef = useRef(selectedInstrument)
+  const lockedContractsRef = useRef(lockedContracts)
+  selectedInstrumentRef.current = selectedInstrument
+  lockedContractsRef.current = lockedContracts
 
   // 创建全局单例 WSManager（仅创建一次）
   if (!globalWs) {
@@ -157,6 +166,13 @@ export function useMarketWs(wsBaseUrl: string) {
       const snap = message.data as MarketSnapshot
       // 缓冲快照
       snapshotBufferRef.current.push(snap)
+      // 只有「选中合约」或「打开标签被锁定的合约」才需要 K 线数据。
+      // 订阅集可能因滚动膨胀到数百，若对所有订阅合约都做 K 线聚合
+      // （snapshotToKline + appendKline 的 Date 解析/数组复制），拖拽多次后会明显变慢。
+      const needsKline =
+        snap.instrumentID === selectedInstrumentRef.current ||
+        lockedContractsRef.current.has(snap.instrumentID)
+      if (!needsKline) return
       // 缓冲 K 线（同一合约多次更新只保留最新）
       klineBufferRef.current.set(snap.instrumentID, snapshotToKline(snap, periodMs))
       // 计算成交量增量（CTP volume 是当日累计值）
