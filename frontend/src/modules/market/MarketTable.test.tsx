@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render } from '@testing-library/react'
 import { MarketTable } from './MarketTable'
+import { useMarketStore } from './store'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
 
 describe('MarketTable', () => {
@@ -227,6 +228,21 @@ describe('MarketTable', () => {
 
     // 回调应该被调用
     expect(onVisibleRangeChange).toHaveBeenCalled()
+  })
+
+  it('滚动条释放（mouseup 距上次 scroll <200ms）触发 markScrollEnd', async () => {
+    const { ListTable } = await import('@visactor/vtable')
+    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    const instance = (ListTable as any).mock.results[0].value
+
+    // 模拟一次滚动（记录 lastScrollAtRef）
+    const scrollHandler = instance.on.mock.calls.find(([name]: [string]) => name === 'scroll')?.[1]
+    expect(scrollHandler).toBeDefined()
+    scrollHandler({ scrollTop: 500 })
+
+    // 松手 → markScrollEnd
+    window.dispatchEvent(new Event('mouseup'))
+    expect(useMarketStore.getState().scrollEndSeq).toBeGreaterThan(0)
   })
 
   // --- onContextMenu tests ---

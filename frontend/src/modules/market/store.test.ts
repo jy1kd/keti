@@ -322,3 +322,19 @@ describe('MarketStore - selectedContracts', () => {
   })
 })
 
+describe('MarketStore - scrollEndSeq', () => {
+  beforeEach(() => {
+    useMarketStore.setState({
+      scrollEndSeq: 0,
+    })
+  })
+
+  it('markScrollEnd 递增滚动松手信号', () => {
+    expect(useMarketStore.getState().scrollEndSeq).toBe(0)
+    useMarketStore.getState().markScrollEnd()
+    expect(useMarketStore.getState().scrollEndSeq).toBe(1)
+    useMarketStore.getState().markScrollEnd()
+    expect(useMarketStore.getState().scrollEndSeq).toBe(2)
+  })
+})
+

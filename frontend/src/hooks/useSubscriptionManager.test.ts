@@ -18,6 +18,7 @@ describe('useSubscriptionManager 延迟退订', () => {
       visibleInstrumentIDs: [],
       lockedContracts: new Map(),
       selectedContracts: new Set(),
+      scrollEndSeq: 0,
     })
   })
   afterEach(() => { vi.useRealTimers() })
@@ -75,6 +76,7 @@ describe('useSubscriptionManager 拖动与 LRU', () => {
       visibleInstrumentIDs: [],
       lockedContracts: new Map(),
       selectedContracts: new Set(),
+      scrollEndSeq: 0,
     })
   })
   afterEach(() => { vi.useRealTimers() })
@@ -180,6 +182,36 @@ describe('useSubscriptionManager 拖动与 LRU', () => {
     const unsubscribed = vi.mocked(unsubscribeMarket).mock.calls.flat(2) as string[]
     expect(unsubscribed).not.toContain('au2508')
   })
+
+  it('滚动松手（markScrollEnd）立即完整 diff，跳过拖动态 500ms 窗口', async () => {
+    renderHook(() => useSubscriptionManager())
+
+    // 先静止订阅
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608']))
+    await act(async () => { vi.advanceTimersByTime(110) })
+    vi.mocked(subscribeMarket).mockClear()
+    vi.mocked(unsubscribeMarket).mockClear()
+
+    // 模拟拖动：300ms 内 ≥2 次变化 → 拖动态，零 HTTP
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608', 'au2508']))
+    await act(async () => { vi.advanceTimersByTime(200) })
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs(['au2508']))
+    await act(async () => { vi.advanceTimersByTime(200) })
+    expect(vi.mocked(subscribeMarket)).not.toHaveBeenCalled()
+
+    // 滚动松手 → 立即完整 diff（不推进 500ms 即订阅最终可见区 au2508）
+    act(() => useMarketStore.getState().markScrollEnd())
+    await act(async () => {})
+    expect(vi.mocked(subscribeMarket)).toHaveBeenCalled()
+    const subbed = vi.mocked(subscribeMarket).mock.calls.flat(2) as string[]
+    expect(subbed).toContain('au2508')
+
+    // 松手后可见区变化不再被误判为拖动态 → 立即订阅（无 500ms 延迟）
+    vi.mocked(subscribeMarket).mockClear()
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs(['NEW1']))
+    await act(async () => {})
+    expect(vi.mocked(subscribeMarket)).toHaveBeenCalledWith(['NEW1'])
+  })
 })
 
 describe('useSubscriptionManager success 门控', () => {
@@ -190,6 +222,7 @@ describe('useSubscriptionManager success 门控', () => {
       visibleInstrumentIDs: [],
       lockedContracts: new Map(),
       selectedContracts: new Set(),
+      scrollEndSeq: 0,
     })
   })
   afterEach(() => { vi.useRealTimers() })
@@ -226,6 +259,7 @@ describe('useSubscriptionManager 快照回填（方案 A）', () => {
       visibleInstrumentIDs: [],
       lockedContracts: new Map(),
       selectedContracts: new Set(),
+      scrollEndSeq: 0,
     })
   })
   afterEach(() => { vi.useRealTimers() })

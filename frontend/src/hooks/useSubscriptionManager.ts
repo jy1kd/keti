@@ -16,6 +16,7 @@ export function useSubscriptionManager() {
   const visibleInstrumentIDs = useMarketStore((s) => s.visibleInstrumentIDs)
   const lockedContracts = useMarketStore((s) => s.lockedContracts)
   const favorites = useContractsStore((s) => s.favorites)
+  const scrollEndSeq = useMarketStore((s) => s.scrollEndSeq)
 
   /** 已订阅合约 → 最近可见时间戳（ms） */
   const subscribedRef = useRef<Map<string, number>>(new Map())
@@ -27,6 +28,8 @@ export function useSubscriptionManager() {
   const didMountRef = useRef(false)
   /** 最近一次完整 diff 的定时器（拖动停止后执行） */
   const fullDiffTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** 已消费的滚动松手信号序号（判重，避免重复处理） */
+  const lastHandledScrollEndRef = useRef(0)
   /** 始终指向最新 runFullDiff，避免重排定时器闭包捕获旧版本 */
   const runFullDiffRef = useRef<() => void>(() => {})
 
@@ -167,6 +170,18 @@ export function useSubscriptionManager() {
 
   // 可见区变化时：刷新可见合约的 lastVisibleTime，按拖动态分流订阅/完整 diff
   useEffect(() => {
+    // 滚动松手信号：跳过拖动态推断，立即完整 diff
+    if (scrollEndSeq > lastHandledScrollEndRef.current) {
+      lastHandledScrollEndRef.current = scrollEndSeq
+      recentChangesRef.current = []  // 清除拖动历史，后续变化不再被误判为拖动态
+      if (fullDiffTimerRef.current) clearTimeout(fullDiffTimerRef.current)  // 取消待定 500ms，避免重复 diff
+      runFullDiff()
+      return () => {
+        if (unsubTimerRef.current) clearTimeout(unsubTimerRef.current)
+        if (fullDiffTimerRef.current) clearTimeout(fullDiffTimerRef.current)
+      }
+    }
+
     const now = Date.now()
     if (didMountRef.current) {
       // 非首次：记录本次可见区变化，用于拖动检测
@@ -193,7 +208,7 @@ export function useSubscriptionManager() {
       if (unsubTimerRef.current) clearTimeout(unsubTimerRef.current)
       if (fullDiffTimerRef.current) clearTimeout(fullDiffTimerRef.current)
     }
-  }, [visibleInstrumentIDs, isDragging, runFullDiff])
+  }, [visibleInstrumentIDs, isDragging, runFullDiff, scrollEndSeq])
 
   return {
     subscribed: subscribedRef.current,

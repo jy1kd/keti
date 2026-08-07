@@ -3,6 +3,7 @@ import { ListTable } from '@visactor/vtable'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
 import { getProductName } from '@/utils/productNames'
 import { getContractStatus, type ContractStatus } from '@/utils/contractStatus'
+import { useMarketStore } from './store'
 
 interface MarketTableProps {
   contracts: ContractInfo[]
@@ -27,6 +28,9 @@ interface MarketTableProps {
 }
 
 const PLACEHOLDER = '--'
+
+/** mouseup 距上次 scroll 在此窗口内视为滚动条释放（松手） */
+const SCROLL_RELEASE_WINDOW_MS = 200
 
 const UP_COLOR = '#ef4444'
 const DOWN_COLOR = '#22c55e'
@@ -136,6 +140,8 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   const recordsRef = useRef<ReturnType<typeof buildRecord>[]>([])
   const prevSnapshotsRef = useRef<Map<string, MarketSnapshot> | null>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** 最近一次滚动发生的时间戳（松手检测窗口依据） */
+  const lastScrollAtRef = useRef(0)
   /** instrumentID → 行索引（0-based）映射：contracts 变化时重建，供局部更新 O(1) 查索引 */
   const rowIndexByInstrument = useMemo(() => {
     const map = new Map<string, number>()
@@ -422,9 +428,19 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
 
     // 滚动时触发（100ms 防抖）
     table.on('scroll', () => {
+      lastScrollAtRef.current = Date.now()
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
       debounceTimerRef.current = setTimeout(notifyVisibleRange, 100)
     })
+
+    // 滚动条释放（mouseup 距上次 scroll < 200ms）→ 最终 notify + 完整 diff 信号
+    const handleScrollEnd = () => {
+      if (Date.now() - lastScrollAtRef.current > SCROLL_RELEASE_WINDOW_MS) return
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+      notifyVisibleRange()
+      useMarketStore.getState().markScrollEnd()
+    }
+    window.addEventListener('mouseup', handleScrollEnd)
 
     tableRef.current = table
 
@@ -435,6 +451,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       }
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
+      window.removeEventListener('mouseup', handleScrollEnd)
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
       table.release()
     }
