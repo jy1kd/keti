@@ -212,7 +212,8 @@ export function TabBar({ onAddTab }: TabBarProps) {
             }}
           >
             {icon}
-            {favoritesCount > 0 && (
+            {/* 自选计数角标只绑定 ⭐ 自选快捷按钮（QUICK_TABS 未来扩充时避免误渲染） */}
+            {type === 'favorites' && favoritesCount > 0 && (
               <span className="tab-bar__quick-badge">{favoritesCount}</span>
             )}
           </button>

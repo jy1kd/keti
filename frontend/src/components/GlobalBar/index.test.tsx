@@ -147,6 +147,14 @@ describe('GlobalBar', () => {
       expect(screen.queryByRole('menuitem')).toBeNull()
     })
 
+    it('点击菜单外部（body）关闭菜单', () => {
+      render(<GlobalBar perfVisible={false} onTogglePerf={vi.fn()} />)
+      fireEvent.click(screen.getByLabelText('更多'))
+      expect(screen.getByText('⚡FPS 监控')).toBeInTheDocument()
+      fireEvent.click(document.body)
+      expect(screen.queryByText('⚡FPS 监控')).toBeNull()
+    })
+
     it('点击菜单项后菜单关闭', () => {
       render(<GlobalBar perfVisible={false} onTogglePerf={vi.fn()} />)
       fireEvent.click(screen.getByLabelText('更多'))

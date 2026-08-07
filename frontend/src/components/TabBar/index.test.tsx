@@ -359,7 +359,10 @@ describe('TabBar', () => {
     it('有自选合约时 ⭐ 按钮显示计数角标', () => {
       useContractsStore.setState({ favorites: [{ instrumentID: 'IF2608' }, { instrumentID: 'IC2608' }] as any })
       render(<TabBar />)
-      expect(screen.getByText('2', { selector: '.tab-bar__quick-badge' })).toBeInTheDocument()
+      const badge = screen.getByText('2', { selector: '.tab-bar__quick-badge' })
+      expect(badge).toBeInTheDocument()
+      // 角标只挂在 ⭐ 自选按钮上（type === 'favorites' 限定，QUICK_TABS 扩充时不误渲染）
+      expect(badge.closest('button')).toHaveAttribute('aria-label', '⭐ 自选')
     })
   })
 
