@@ -115,6 +115,15 @@
   background: var(--bg-secondary);
 }
 
+/* 标题栏即 drag-handle：hover 以 cursor 提示可拖，active 表示拖拽中 */
+.kline-chart__header[data-drag-handle] {
+  cursor: grab;
+}
+
+.kline-chart__header[data-drag-handle]:active {
+  cursor: grabbing;
+}
+
 .kline-chart__contract {
   display: flex;
   align-items: baseline;
@@ -181,6 +190,7 @@
   font-size: 12px;
   cursor: pointer;
   transition: all 0.15s;
+  flex-shrink: 0;
 }
 
 .kline-chart__btn:hover {

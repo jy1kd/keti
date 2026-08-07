@@ -71,12 +71,9 @@ export function KLinePage({ instrumentID }: KLinePageProps) {
         </div>
       )}
 
-      {/* ── K线图（标题栏承载：合约代码/名称/最新价 + 周期 + 指标） ── */}
+      {/* ── K线图（标题栏承载：合约代码/名称/最新价 + 周期 + 指标；drag-handle 已上移 KLineChart 标题栏） ── */}
       {instrumentID && (
         <div className="kline-page__content">
-          <div className="kline-page__drag" data-drag-handle title="拖动此栏可将标签转为弹窗">
-            📈 拖动此栏可转弹窗
-          </div>
           <KLineChart
             instrument={instrumentID}
             name={contract?.instrumentName}

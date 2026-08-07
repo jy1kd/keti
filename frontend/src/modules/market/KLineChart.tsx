@@ -333,7 +333,8 @@ export function KLineChart({ instrument, klineData, period, onPeriodChange, name
 
   return (
     <div className="kline-chart" data-testid="kline-chart">
-      <div className="kline-chart__header">
+      {/* 标题栏承载 drag-handle：整行可拖为浮动弹窗（原独立拖拽条已删除，仅 hover 以 cursor 提示） */}
+      <div className="kline-chart__header" data-drag-handle title="拖动此栏可将标签转为弹窗">
         <div className="kline-chart__contract">
           <span className="kline-chart__instrument">{instrument}</span>
           {name && <span className="kline-chart__name">{name}</span>}
