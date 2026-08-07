@@ -83,11 +83,6 @@ describe('KLinePage', () => {
     expect(instrumentElements.length).toBeGreaterThan(0);
   });
 
-  it('should pass contract name to KLineChart header', () => {
-    render(<KLinePage instrumentID="IF2608" />);
-    expect(screen.getByTestId('contract-name').textContent).toBe('沪深300');
-  });
-
   it('should render period selector', () => {
     render(<KLinePage instrumentID="IF2608" />);
     expect(screen.getByTestId('period-1m')).toBeDefined();
@@ -143,27 +138,12 @@ describe('KLinePage', () => {
 
   // ── 搜索切换 ──
 
-  it('SimNow instrumentName 与代码相同时，标题栏显示产品中文名而非重复代码', () => {
-    useContractsStore.setState({
-      contracts: [
-        {
-          instrumentID: 'sc2609',
-          instrumentName: 'sc2609', // SimNow 返回与 instrumentID 相同的 instrumentName
-          exchangeID: 'INE',
-          productID: 'sc',
-          volumeMultiple: 1000,
-          priceTick: 0.1,
-          expireDate: '2026-08-31',
-          isTrading: 1,
-          productClass: '1',
-        },
-      ],
-      favorites: [],
-      isLoaded: true,
-    });
-    render(<KLinePage instrumentID="sc2609" tabId="tab-kline-IF2608" />);
-    // getProductName('sc') = '原油'，不再重复显示 'sc2609'
-    expect(screen.getByTestId('contract-name').textContent).toBe('原油');
+  it('标题栏合约代码区由搜索框替代：不再渲染静态合约名，搜索框回显合约代码', () => {
+    render(<KLinePage instrumentID="IF2608" tabId="tab-kline-IF2608" />);
+    // name prop 已移除，静态合约名不再渲染
+    expect(screen.queryByTestId('contract-name')).toBeNull();
+    // 搜索框回显当前合约代码（initialQuery）
+    expect(screen.getByDisplayValue('IF2608')).toBeDefined();
   });
 
   it('页内搜索并选择合约时，调用 updateTab 更新所属标签页 props 与 title', () => {

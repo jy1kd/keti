@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event'
 import { MarketPanel } from './MarketPanel'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
-import { useTabStore } from '@/stores/tabs'
 import { openFloatingTab } from '@/utils/openFloatingTab'
 import type { MarketSnapshot } from '@/services/types'
 
@@ -311,7 +310,7 @@ describe('MarketPanel', () => {
     })
   })
 
-  it('右键菜单点击「打开K线」打开K线标签', async () => {
+  it('右键菜单点击「打开K线」打开K线浮动窗口', async () => {
     setupContracts()
 
     const user = userEvent.setup()
@@ -330,9 +329,10 @@ describe('MarketPanel', () => {
     // 点击「打开K线」
     await user.click(screen.getByText('打开K线'))
 
-    const tabs = useTabStore.getState().tabs
-    const klineTab = tabs.find(t => t.type === 'kline' && t.props?.instrumentID === 'IF2608')
-    expect(klineTab).toBeDefined()
-    expect(useTabStore.getState().activeTabId).toBe(klineTab?.id)
+    expect(mockOpenFloatingTab).toHaveBeenCalledWith({
+      type: 'kline',
+      title: '📈 K线-IF2608',
+      props: { instrumentID: 'IF2608' },
+    })
   })
 })

@@ -175,14 +175,15 @@ describe('FavoritesPage', () => {
     })
   })
 
-  it('右键菜单点击「打开K线」打开K线标签', () => {
+  it('右键菜单点击「打开K线」打开K线浮动窗口', () => {
     render(<FavoritesPage />)
     fireEvent.click(screen.getByTestId('ctx-IF2608'))
     fireEvent.click(screen.getByText('打开K线'))
 
-    const tabs = useTabStore.getState().tabs
-    const klineTab = tabs.find(t => t.type === 'kline' && t.props?.instrumentID === 'IF2608')
-    expect(klineTab).toBeDefined()
-    expect(useTabStore.getState().activeTabId).toBe(klineTab?.id)
+    expect(mockOpenFloatingTab).toHaveBeenCalledWith({
+      type: 'kline',
+      title: '📈 K线-IF2608',
+      props: { instrumentID: 'IF2608' },
+    })
   })
 })

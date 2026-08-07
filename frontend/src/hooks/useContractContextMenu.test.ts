@@ -52,17 +52,35 @@ describe('useContractContextMenu', () => {
     expect(mockOpenFloatingTab).toHaveBeenCalledWith({ type: 'query', title: '📋 查询' })
   })
 
-  it('openKlineTab 打开K线标签页', () => {
+  it('openKlineTab 打开K线浮动窗口', () => {
     const { result } = renderHook(() => useContractContextMenu())
     act(() => {
       result.current.openKlineTab('IF2608')
     })
 
-    const tabs = useTabStore.getState().tabs
-    const klineTab = tabs.find((t) => t.type === 'kline' && t.props?.instrumentID === 'IF2608')
-    expect(klineTab).toBeDefined()
-    expect(klineTab?.title).toBe('📈 K线-IF2608')
-    expect(useTabStore.getState().activeTabId).toBe(klineTab?.id)
+    expect(mockOpenFloatingTab).toHaveBeenCalledWith({
+      type: 'kline',
+      title: '📈 K线-IF2608',
+      props: { instrumentID: 'IF2608' },
+    })
+  })
+
+  it('openKlineTabs 批量打开K线浮动窗口', () => {
+    const { result } = renderHook(() => useContractContextMenu())
+    act(() => {
+      result.current.openKlineTabs(['IF2608', 'rb2610'])
+    })
+
+    expect(mockOpenFloatingTab).toHaveBeenNthCalledWith(1, {
+      type: 'kline',
+      title: '📈 K线-IF2608',
+      props: { instrumentID: 'IF2608' },
+    })
+    expect(mockOpenFloatingTab).toHaveBeenNthCalledWith(2, {
+      type: 'kline',
+      title: '📈 K线-rb2610',
+      props: { instrumentID: 'rb2610' },
+    })
   })
 
   it('handleContextMenu 抑制浏览器默认菜单并记录坐标', () => {

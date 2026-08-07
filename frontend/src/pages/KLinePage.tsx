@@ -2,7 +2,8 @@
  * KLinePage — K线标签页
  *
  * 专业交易终端风格的独立K线页面。
- * 顶部单一展示栏（合约代码/名称/最新价 + 多周期 + 技术指标）由 KLineChart 标题栏承载。
+ * 顶部单一展示栏（合约搜索切换框 + 最新价 + 多周期 + 技术指标）由 KLineChart 标题栏承载，
+ * 合约代码区即搜索框（可输入切换合约），不再并排显示静态合约代码。
  * 同时兼容 Electron 独立窗口模式。
  */
 
@@ -13,7 +14,6 @@ import { useMarketStore } from '@/modules/market/store';
 import { useContractsStore } from '@/stores/contracts';
 import { useTabStore } from '@/stores/tabs';
 import { getKlineData } from '@/services/api';
-import { getProductName } from '@/utils/productNames';
 import { PERIOD_MS } from '@/hooks/useMarketWs';
 import { isElectron } from '@/services/electron';
 import './KLinePage.css';
@@ -102,13 +102,11 @@ export function KLinePage({ instrumentID, tabId }: KLinePageProps) {
         <div className="kline-page__content">
           <KLineChart
             instrument={instrumentID}
-            // SimNow 后端 instrumentName 与 instrumentID 相同（无中文名），
-            // 显示产品中文名（productID → 品种名）避免标题栏重复展示合约代码。
-            name={contract ? getProductName(contract.productID) : undefined}
             latestPrice={latestPrice}
             klineData={data}
             period={currentPeriod}
             onPeriodChange={setPeriod}
+            // 标题栏合约代码区由搜索框替代（KLineChart 有 searchSlot 时不渲染静态合约块），
             // key=instrumentID：切换后重挂载搜索框，回显新合约代码
             searchSlot={
               <ContractSearch

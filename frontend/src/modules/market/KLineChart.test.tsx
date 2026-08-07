@@ -136,6 +136,19 @@ describe('KLineChart', () => {
     expect(slot.closest('.kline-chart__search')).not.toBeNull()
   })
 
+  it('有搜索插槽时不再渲染静态合约代码区（避免与搜索框回显并排重复）', () => {
+    render(
+      <KLineChart
+        instrument="IF2608"
+        klineData={[]}
+        period="5m"
+        searchSlot={<div data-testid="search-slot">搜索</div>}
+      />,
+    )
+    expect(screen.queryByText('IF2608')).toBeNull()
+    expect(document.querySelector('.kline-chart__contract')).toBeNull()
+  })
+
   it('does not render search slot when not provided', () => {
     render(<KLineChart instrument="IF2608" klineData={[]} period="5m" />)
     expect(document.querySelector('.kline-chart__search')).toBeNull()
