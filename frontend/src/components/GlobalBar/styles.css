@@ -1,0 +1,120 @@
+.global-bar {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding-left: 16px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 20;
+}
+
+/* 中间标签区：占满剩余空间；覆盖 TabBar 自身高度/边框以融入全局栏 */
+.global-bar .tab-bar {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border-bottom: none;
+  background: transparent;
+}
+
+.global-bar__left {
+  display: flex;
+  align-items: center;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.global-bar__tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 16px;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.global-bar__tool {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+
+.global-bar__tool:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.global-bar__tool[aria-expanded='true'] {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.global-bar__fps {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: #3fb950;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  background: rgba(63, 185, 80, 0.08);
+  white-space: nowrap;
+}
+
+.global-bar__more {
+  position: relative;
+}
+
+.global-bar__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 100;
+  min-width: 180px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  padding: 4px 0;
+}
+
+.global-bar__menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.global-bar__menu-item:hover {
+  background: var(--bg-hover);
+}
+
+.global-bar__menu-check {
+  color: var(--accent);
+  font-size: 12px;
+}

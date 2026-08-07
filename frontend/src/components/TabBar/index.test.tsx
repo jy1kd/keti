@@ -3,15 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { TabBar } from './index'
 import { useTabStore } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
-
-const { mockQueryOpen } = vi.hoisted(() => ({ mockQueryOpen: vi.fn() }))
-
-// Mock 查询弹窗 store（TabBar 📋 按钮打开悬浮弹窗而非标签页）
-vi.mock('@/modules/query/popupStore', () => ({
-  useQueryPopupStore: {
-    getState: () => ({ open: mockQueryOpen, close: vi.fn() }),
-  },
-}))
+import { useContractsStore } from '@/stores/contracts'
 
 const detachMock = vi.hoisted(() => ({
   startDetachDrag: vi.fn(),
@@ -51,6 +43,7 @@ describe('TabBar', () => {
     detachMock.detachTabAt.mockReset()
     useFloatingWindowStore.setState({ windows: {} })
     useTabStore.setState(defaultState)
+    useContractsStore.setState({ favorites: [] })
   })
 
   // --- 渲染 ---
@@ -358,15 +351,15 @@ describe('TabBar', () => {
       expect(useTabStore.getState().activeTabId).toBe('tab-favorites')
     })
 
-    it('应显示 📋 查询快捷按钮', () => {
+    it('自选数为 0 时不显示 ⭐ 计数角标', () => {
       render(<TabBar />)
-      expect(screen.getByLabelText('📋 查询')).toBeInTheDocument()
+      expect(screen.queryByText('0', { selector: '.tab-bar__quick-badge' })).toBeNull()
     })
 
-    it('点击 📋 按钮应打开查询弹窗', () => {
+    it('有自选合约时 ⭐ 按钮显示计数角标', () => {
+      useContractsStore.setState({ favorites: [{ instrumentID: 'IF2608' }, { instrumentID: 'IC2608' }] as any })
       render(<TabBar />)
-      fireEvent.click(screen.getByLabelText('📋 查询'))
-      expect(mockQueryOpen).toHaveBeenCalled()
+      expect(screen.getByText('2', { selector: '.tab-bar__quick-badge' })).toBeInTheDocument()
     })
   })
 

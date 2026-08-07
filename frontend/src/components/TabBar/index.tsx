@@ -1,8 +1,8 @@
 import { useCallback, useState, useRef, useEffect, type KeyboardEvent } from 'react'
 import { useTabStore, type Tab } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
+import { useContractsStore } from '@/stores/contracts'
 import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
-import { useQueryPopupStore } from '@/modules/query/popupStore'
 import { isElectron } from '@/services/electron'
 import './styles.css'
 
@@ -39,6 +39,8 @@ export function TabBar({ onAddTab }: TabBarProps) {
   const openTab = useTabStore((s) => s.openTab)
   const windows = useFloatingWindowStore((s) => s.windows)
   const dock = useFloatingWindowStore((s) => s.dock)
+  // 自选计数角标（自选页 header 移除后，计数收敛到 ⭐ 快捷入口）
+  const favoritesCount = useContractsStore((s) => s.favorites.length)
   const suppressClickRef = useRef(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
@@ -210,19 +212,12 @@ export function TabBar({ onAddTab }: TabBarProps) {
             }}
           >
             {icon}
+            {favoritesCount > 0 && (
+              <span className="tab-bar__quick-badge">{favoritesCount}</span>
+            )}
           </button>
         )
       })}
-      {/* 查询弹窗快捷按钮（查询为悬浮弹窗形态，非标签页） */}
-      <button
-        type="button"
-        className="tab-bar__quick"
-        aria-label="📋 查询"
-        title="📋 查询"
-        onClick={() => useQueryPopupStore.getState().open()}
-      >
-        📋
-      </button>
       <button
         type="button"
         className="tab-bar__add"

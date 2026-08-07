@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
-import { ConnectionStatus } from '@/components/ConnectionStatus'
-import { TabBar } from '@/components/TabBar'
+import { GlobalBar } from '@/components/GlobalBar'
 import { TabContent } from '@/components/TabContent'
-import { PerfMonitor } from '@/components/PerfMonitor'
 import { ToastContainer } from '@/components/Toast'
 import { useSystemWs } from '@/hooks/useSystemWs'
 import { useConnectionPoll } from '@/hooks/useConnectionPoll'
@@ -93,56 +91,10 @@ function App() {
   return (
     <div className="app">
       <ToastContainer />
-      <header className="status-bar">
-        <div className="status-bar__left">
-          <button
-            className="status-bar__gear"
-            onClick={() => openTab({ type: 'settings', title: '⚙ 设置' })}
-            title="设置"
-          >
-            ⚙
-          </button>
-          <ConnectionStatus />
-          <button
-            className="status-bar__btn"
-            onClick={() => setPerfVisible((v) => !v)}
-            title="FPS 监控 (Ctrl+Shift+M)"
-            style={{
-              marginLeft: 12,
-              background: perfVisible ? 'rgba(63,185,80,0.12)' : 'transparent',
-              color: perfVisible ? '#3fb950' : '#8b949e',
-              border: '1px solid #30363d',
-              borderRadius: 4,
-              padding: '2px 8px',
-              cursor: 'pointer',
-              fontSize: 11,
-              fontFamily: 'var(--font-mono)',
-            }}
-          >
-            {perfVisible ? <><PerfMonitor visible /> ⚡FPS</> : '⚡FPS'}
-          </button>
-          <button
-            className="status-bar__btn"
-            onClick={() => openTab({ type: 'ipc-monitor', title: '📡 网络监控' })}
-            title="网络监控"
-            style={{
-              marginLeft: 8,
-              background: 'transparent',
-              color: '#8b949e',
-              border: '1px solid #30363d',
-              borderRadius: 4,
-              padding: '2px 8px',
-              cursor: 'pointer',
-              fontSize: 11,
-              fontFamily: 'var(--font-mono)',
-            }}
-          >
-            🔌IPC
-          </button>
-        </div>
-        <span className="app-title">SimNow 交易终端</span>
-      </header>
-      <TabBar onAddTab={() => openTab({ type: 'settings', title: '⚙ 设置' })} />
+      <GlobalBar
+        perfVisible={perfVisible}
+        onTogglePerf={() => setPerfVisible((v) => !v)}
+      />
 
       {/* 浮动窗口内容 overlay：TabContent 将浮动标签内容 portal 到这里，
           与 FloatingWindow chrome 同层，脱离 .tab-content 布局/溢出/层叠干扰 */}

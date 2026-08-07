@@ -94,6 +94,7 @@
 }
 
 .tab-bar__quick {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -112,6 +113,21 @@
 .tab-bar__quick:hover {
   color: var(--text-primary);
   background: rgba(255, 255, 255, 0.06);
+}
+
+.tab-bar__quick-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  line-height: 14px;
+  text-align: center;
 }
 
 .tab-bar__quick--active {

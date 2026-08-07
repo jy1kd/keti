@@ -131,49 +131,6 @@ input:focus-visible, select:focus-visible {
   min-width: 1024px;
 }
 
-.status-bar {
-  display: flex;
-  align-items: center;
-  padding: 0 16px;
-  background-color: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  height: 40px;
-  flex-shrink: 0;
-}
-
-.status-bar__left {
-  display: flex;
-  align-items: center;
-}
-
-.status-bar__gear {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 16px;
-  cursor: pointer;
-  transition: color 0.15s, background 0.15s;
-  margin-right: 12px;
-  padding: 0;
-  line-height: 1;
-}
-
-.status-bar__gear:hover {
-  color: var(--accent);
-  background: var(--accent-dim);
-}
-
-.status-bar__gear.active {
-  color: var(--accent);
-  background: var(--accent-glow);
-}
-
 /* ── 设置弹窗 Overlay ──────────────────────────────────────────────── */
 
 .settings-overlay {
@@ -194,15 +151,6 @@ input:focus-visible, select:focus-visible {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-}
-
-.app-title {
-  margin-left: auto;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--accent);
-  text-transform: uppercase;
 }
 
 .main-content {

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import App from './App'
 import { useConnectionStore } from '@/stores/connection'
@@ -19,8 +19,23 @@ vi.mock('@/components/TabContent', () => ({
   TabContent: () => <div data-testid="tab-content">TabContent Mock</div>,
 }))
 
+// rAF stub（GlobalBar FPS 徽标内 PerfMonitor visible=true 时使用）
+let rafCallbacks: FrameRequestCallback[] = []
+let rafId = 0
+
 describe('App Layout — 标签页系统', () => {
   beforeEach(() => {
+    rafCallbacks = []
+    rafId = 0
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      rafCallbacks.push(cb)
+      return ++rafId
+    })
+    vi.stubGlobal('cancelAnimationFrame', (id: number) => {
+      rafCallbacks = rafCallbacks.filter((_, i) => i + 1 !== id)
+    })
+    vi.stubGlobal('performance', { now: () => 0 })
+
     useConnectionStore.setState({ mdConnected: false, tdConnected: false })
     useTabStore.setState({
       tabs: [
@@ -28,6 +43,10 @@ describe('App Layout — 标签页系统', () => {
       ],
       activeTabId: 'tab-market',
     })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   describe('标签页布局', () => {
@@ -47,16 +66,16 @@ describe('App Layout — 标签页系统', () => {
     })
   })
 
-  describe('状态栏', () => {
+  describe('全局栏（GlobalBar）', () => {
     it('显示 MD/TD 连接状态', () => {
       render(<App />)
       expect(screen.getByText('MD')).toBeInTheDocument()
       expect(screen.getByText('TD')).toBeInTheDocument()
     })
 
-    it('显示应用标题', () => {
+    it('不渲染应用标题（由 Electron 原生标题栏承载）', () => {
       render(<App />)
-      expect(screen.getByText('SimNow 交易终端')).toBeInTheDocument()
+      expect(screen.queryByText('SimNow 交易终端')).toBeNull()
     })
   })
 
@@ -77,19 +96,16 @@ describe('App Layout — 标签页系统', () => {
   })
 
   describe('性能监控', () => {
-    it('渲染 FPS 按钮', () => {
+    it('默认不渲染 ⚡FPS（已收敛进 ⋯ 更多菜单）', () => {
       render(<App />)
-      expect(screen.getByText('⚡FPS')).toBeInTheDocument()
+      expect(screen.queryByText('⚡FPS 监控')).toBeNull()
     })
 
-    it('Ctrl+Shift+M 切换性能监控', () => {
+    it('Ctrl+Shift+M 切换性能监控（显示 FPS 徽标）', () => {
       render(<App />)
-      const fpsBtn = screen.getByText('⚡FPS').closest('button')
-      expect(fpsBtn).toBeInTheDocument()
-
-      // 触发快捷键后，FPS 按钮背景色应变化（perfVisible=true）
+      expect(screen.queryByTestId('global-bar-fps')).toBeNull()
       fireEvent.keyDown(window, { key: 'M', ctrlKey: true, shiftKey: true })
-      expect(fpsBtn).toHaveStyle({ background: 'rgba(63,185,80,0.12)' })
+      expect(screen.getByTestId('global-bar-fps')).toBeInTheDocument()
     })
   })
 })
