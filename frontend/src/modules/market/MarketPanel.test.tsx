@@ -4,9 +4,16 @@ import userEvent from '@testing-library/user-event'
 import { MarketPanel } from './MarketPanel'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
-import { useTabStore } from '@/stores/tabs'
-import { useOrderPopupStore } from '@/modules/order/popupStore'
+import { openFloatingTab } from '@/utils/openFloatingTab'
 import type { MarketSnapshot } from '@/services/types'
+
+// Mock 统一浮动窗入口（双击/右键「打开报单」现为打开浮动窗口）
+vi.mock('@/utils/openFloatingTab', () => ({
+  openFloatingTab: vi.fn(),
+  ORDER_FLOATING_SIZE: { w: 620, h: 540 },
+}))
+
+const mockOpenFloatingTab = vi.mocked(openFloatingTab)
 
 // Mock ResizeObserver (not available in jsdom)
 globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
@@ -103,7 +110,6 @@ describe('MarketPanel', () => {
       scrollEndSeq: 0,
     })
     useContractsStore.setState({ contracts: [], favorites: [], isLoaded: false })
-    useOrderPopupStore.setState({ instrumentID: null })
     capturedPointOrderOpts = null
     vi.clearAllMocks()
   })
@@ -233,7 +239,7 @@ describe('MarketPanel', () => {
     })
   }
 
-  it('双击行情表格行打开报单弹窗', () => {
+  it('双击行情表格行打开报单浮动窗口', () => {
     setupContracts()
 
     render(<MarketPanel />)
@@ -244,7 +250,12 @@ describe('MarketPanel', () => {
       capturedPointOrderOpts.onFill({ instrumentID: 'IF2608', price: 4695 })
     })
 
-    expect(useOrderPopupStore.getState().instrumentID).toBe('IF2608')
+    expect(mockOpenFloatingTab).toHaveBeenCalledWith({
+      type: 'order',
+      title: '📝 报单-IF2608',
+      props: { instrumentID: 'IF2608' },
+      size: { w: 620, h: 540 },
+    })
   })
 
   it('右键行情表格行显示上下文菜单', async () => {
@@ -271,7 +282,7 @@ describe('MarketPanel', () => {
     expect(screen.getByText('打开K线')).toBeInTheDocument()
   })
 
-  it('右键菜单点击「打开报单」打开报单弹窗', async () => {
+  it('右键菜单点击「打开报单」打开报单浮动窗口', async () => {
     setupContracts()
 
     const user = userEvent.setup()
@@ -290,11 +301,16 @@ describe('MarketPanel', () => {
     // 点击「打开报单」
     await user.click(screen.getByText('打开报单'))
 
-    // 应打开悬浮报单弹窗
-    expect(useOrderPopupStore.getState().instrumentID).toBe('IF2608')
+    // 应打开报单浮动窗口
+    expect(mockOpenFloatingTab).toHaveBeenCalledWith({
+      type: 'order',
+      title: '📝 报单-IF2608',
+      props: { instrumentID: 'IF2608' },
+      size: { w: 620, h: 540 },
+    })
   })
 
-  it('右键菜单点击「打开K线」打开K线标签', async () => {
+  it('右键菜单点击「打开K线」打开K线浮动窗口', async () => {
     setupContracts()
 
     const user = userEvent.setup()
@@ -313,9 +329,10 @@ describe('MarketPanel', () => {
     // 点击「打开K线」
     await user.click(screen.getByText('打开K线'))
 
-    const tabs = useTabStore.getState().tabs
-    const klineTab = tabs.find(t => t.type === 'kline' && t.props?.instrumentID === 'IF2608')
-    expect(klineTab).toBeDefined()
-    expect(useTabStore.getState().activeTabId).toBe(klineTab?.id)
+    expect(mockOpenFloatingTab).toHaveBeenCalledWith({
+      type: 'kline',
+      title: '📈 K线-IF2608',
+      props: { instrumentID: 'IF2608' },
+    })
   })
 })

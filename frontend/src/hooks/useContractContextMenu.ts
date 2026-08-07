@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTabStore } from '@/stores/tabs'
-import { useOrderPopupStore } from '@/modules/order/popupStore'
-import { useQueryPopupStore } from '@/modules/query/popupStore'
+import { useMarketStore } from '@/modules/market/store'
+import { openFloatingTab, ORDER_FLOATING_SIZE } from '@/utils/openFloatingTab'
 
 interface ContextMenuState {
   instrumentID: string
@@ -19,7 +19,7 @@ interface MultiSelectContextMenuState {
 /**
  * useContractContextMenu — 合约右键菜单共享 Hook
  *
- * 封装右键菜单的状态管理与打开逻辑（打开报单弹窗 / K线标签页），
+ * 封装右键菜单的状态管理与打开逻辑（打开报单/查询/K线浮动窗），
  * 供 MarketPanel / FavoritesPage 复用，避免重复实现。
  *
  * 用法：
@@ -31,14 +31,22 @@ export function useContractContextMenu() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [multiSelectMenu, setMultiSelectMenu] = useState<MultiSelectContextMenuState | null>(null)
 
-  // 打开悬浮报单弹窗
+  // 打开报单浮动窗口（统一浮动窗模式；原 OrderPopup 弹窗已并入浮动窗口，函数名保留兼容）
   const openOrderPopup = useCallback((instrumentID: string) => {
-    useOrderPopupStore.getState().openPopup(instrumentID)
+    openFloatingTab({
+      type: 'order',
+      title: `📝 报单-${instrumentID}`,
+      props: { instrumentID },
+      size: ORDER_FLOATING_SIZE,
+    })
   }, [])
 
-  // 打开悬浮查询弹窗（传入合约并选中，使合约/K线子页显示该合约）
+  // 打开查询浮动窗口（统一浮动窗模式；传入合约并选中，使查询面板合约/K线子页显示该合约）
   const openQueryPopup = useCallback((instrumentID: string) => {
-    useQueryPopupStore.getState().open(instrumentID)
+    if (instrumentID) {
+      useMarketStore.getState().setSelectedInstrument(instrumentID)
+    }
+    openFloatingTab({ type: 'query', title: '📋 查询' })
   }, [])
 
   // 打开单个报单标签页
@@ -50,14 +58,14 @@ export function useContractContextMenu() {
     })
   }, [openTab])
 
-  // 打开K线标签页
+  // 打开K线浮动窗口（统一浮动窗模式）
   const openKlineTab = useCallback((instrumentID: string) => {
-    openTab({
+    openFloatingTab({
       type: 'kline',
       title: `📈 K线-${instrumentID}`,
       props: { instrumentID },
     })
-  }, [openTab])
+  }, [])
 
   // 批量打开报单标签页
   const openOrderTabs = useCallback((instrumentIDs: string[]) => {
@@ -70,16 +78,16 @@ export function useContractContextMenu() {
     })
   }, [openTab])
 
-  // 批量打开K线标签页
+  // 批量打开K线浮动窗口
   const openKlineTabs = useCallback((instrumentIDs: string[]) => {
     instrumentIDs.forEach((id) => {
-      openTab({
+      openFloatingTab({
         type: 'kline',
         title: `📈 K线-${id}`,
         props: { instrumentID: id },
       })
     })
-  }, [openTab])
+  }, [])
 
   // 单选右键菜单处理：记录坐标并抑制浏览器原生菜单
   const handleContextMenu = useCallback((instrumentID: string, price: number, event: MouseEvent) => {

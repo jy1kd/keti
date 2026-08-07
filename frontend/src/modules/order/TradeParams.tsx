@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useOrderStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
 import { useQueryStore } from '../query/store'
-import { useOrderPopupStore } from './popupStore'
 import { validateVolumeWithLimit, getVolumeLimit } from '@/utils/validators'
 import { reversePosition } from '@/services/api'
 import { ACTIVE_ORDER_STATUSES } from './myOrders'
@@ -16,6 +15,8 @@ import './TradeParams.css'
 interface TradeParamsProps {
   /** 可选覆盖合约代码（默认取 orderForm.instrumentID），用于定位 productClass 做数量上限校验 */
   instrumentID?: string
+  /** 合约切换回调（统一浮动窗模式）：报单浮动窗切换合约时更新所属标签页；标签页模式可不传 */
+  onSwitch?: (instrumentID: string) => void
 }
 
 /**
@@ -25,7 +26,7 @@ interface TradeParamsProps {
  * + 手数步进（校验复用 `validateVolumeWithLimit`：期货 500 / 市价 60 / 期权 100）。
  * 状态读写 `useOrderStore.orderForm`；快捷手数/撤单按钮见 P3 后续模块。
  */
-export function TradeParams({ instrumentID }: TradeParamsProps) {
+export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
   const orderForm = useOrderStore((s) => s.orderForm)
   const setOrderForm = useOrderStore((s) => s.setOrderForm)
   const contracts = useContractsStore((s) => s.contracts)
@@ -36,12 +37,10 @@ export function TradeParams({ instrumentID }: TradeParamsProps) {
     return contract?.productClass ?? '1'
   }, [contracts, activeInstrument])
 
-  // 合约搜索选择：弹窗正打开当前合约 → 联动切换弹窗合约（标题/订阅/盘口随动）
+  // 合约搜索选择：更新报单表单；浮动窗模式联动切换所属标签页合约（标题/订阅/盘口随动）
   const handleContractSelect = (code: string) => {
-    if (useOrderPopupStore.getState().instrumentID === activeInstrument) {
-      useOrderPopupStore.getState().openPopup(code)
-    }
     setOrderForm({ instrumentID: code })
+    onSwitch?.(code)
   }
 
   const volumeLimit = getVolumeLimit(orderForm.orderPriceType, productClass)
@@ -54,12 +53,6 @@ export function TradeParams({ instrumentID }: TradeParamsProps) {
   // ── 操作按钮（P3-5）：撤最新 / 撤全部（确认）/ 平净仓（确认）──
   const [confirmOp, setConfirmOp] = useState<'cancelAll' | 'flatNet' | null>(null)
   const [opPending, setOpPending] = useState(false)
-
-  // 确认框打开 → 同步 popupStore.confirmOpen：弹窗内 Esc 优先取消确认框而非关弹窗
-  useEffect(() => {
-    useOrderPopupStore.getState().setConfirmOpen(confirmOp !== null)
-    return () => useOrderPopupStore.getState().setConfirmOpen(false)
-  }, [confirmOp])
 
   // 撤最新：refreshOrders 取当前合约最新一笔活动挂单（insertTime 倒序）→ 撤单
   const handleCancelLatest = async () => {

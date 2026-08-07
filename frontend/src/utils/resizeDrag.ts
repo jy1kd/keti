@@ -1,6 +1,6 @@
 export type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
 
-/** 真实可用的 8 个方向（FloatingWindow / QueryPopup / OrderPopup 共用） */
+/** 真实可用的 8 个方向（FloatingWindow 共用） */
 export const RESIZE_DIRECTIONS: ResizeDirection[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']
 
 export interface ResizeRect {

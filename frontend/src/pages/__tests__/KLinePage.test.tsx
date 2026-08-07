@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { KLinePage } from '../KLinePage';
 import { useContractsStore } from '@/stores/contracts';
 import { useMarketStore } from '@/modules/market/store';
+import { useTabStore } from '@/stores/tabs';
 import type { MarketSnapshot } from '@/services/types';
 
 // Mock the KLineChart component
 vi.mock('@/modules/market/KLineChart', () => ({
-  KLineChart: vi.fn().mockImplementation(({ instrument, period, name, latestPrice, onPeriodChange }) => (
+  KLineChart: vi.fn().mockImplementation(({ instrument, period, name, latestPrice, onPeriodChange, searchSlot }) => (
     <div data-testid="kline-chart">
       <span data-testid="instrument">{instrument}</span>
       {name && <span data-testid="contract-name">{name}</span>}
@@ -15,6 +16,7 @@ vi.mock('@/modules/market/KLineChart', () => ({
       <span data-testid="period">{period}</span>
       <button data-testid="period-1m" onClick={() => onPeriodChange?.('1m')}>1m</button>
       <button data-testid="period-5m" onClick={() => onPeriodChange?.('5m')}>5m</button>
+      {searchSlot}
     </div>
   )),
 }));
@@ -45,9 +47,28 @@ describe('KLinePage', () => {
           isTrading: 1,
           productClass: '1',
         },
+        {
+          instrumentID: 'rb2610',
+          instrumentName: 'rb2610',
+          exchangeID: 'SHFE',
+          productID: 'rb',
+          volumeMultiple: 10,
+          priceTick: 1,
+          expireDate: '2026-10-15',
+          isTrading: 1,
+          productClass: '1',
+        },
       ],
       favorites: [],
       isLoaded: true,
+    });
+    // Set up tab store：K线标签页
+    useTabStore.setState({
+      tabs: [
+        { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+        { id: 'tab-kline-IF2608', type: 'kline', title: '📈 K线-IF2608', props: { instrumentID: 'IF2608' }, closable: true },
+      ],
+      activeTabId: 'tab-kline-IF2608',
     });
   });
 
@@ -60,11 +81,6 @@ describe('KLinePage', () => {
     render(<KLinePage instrumentID="IF2608" />);
     const instrumentElements = screen.getAllByText('IF2608');
     expect(instrumentElements.length).toBeGreaterThan(0);
-  });
-
-  it('should pass contract name to KLineChart header', () => {
-    render(<KLinePage instrumentID="IF2608" />);
-    expect(screen.getByTestId('contract-name').textContent).toBe('沪深300');
   });
 
   it('should render period selector', () => {
@@ -118,6 +134,40 @@ describe('KLinePage', () => {
   it('should show dash for latest price in KLineChart header when snapshot unavailable', () => {
     render(<KLinePage instrumentID="IF2608" />);
     expect(screen.getByTestId('latest-price').textContent).toBe('—');
+  });
+
+  // ── 搜索切换 ──
+
+  it('标题栏合约代码区由搜索框替代：不再渲染静态合约名，搜索框回显合约代码', () => {
+    render(<KLinePage instrumentID="IF2608" tabId="tab-kline-IF2608" />);
+    // name prop 已移除，静态合约名不再渲染
+    expect(screen.queryByTestId('contract-name')).toBeNull();
+    // 搜索框回显当前合约代码（initialQuery）
+    expect(screen.getByDisplayValue('IF2608')).toBeDefined();
+  });
+
+  it('页内搜索并选择合约时，调用 updateTab 更新所属标签页 props 与 title', () => {
+    const updateTabSpy = vi
+      .spyOn(useTabStore.getState(), 'updateTab')
+      .mockImplementation(() => {});
+    try {
+      render(<KLinePage instrumentID="IF2608" tabId="tab-kline-IF2608" />);
+      const input = screen.getByPlaceholderText('搜索合约...');
+      fireEvent.change(input, { target: { value: 'rb' } });
+      fireEvent.mouseDown(screen.getByText('rb2610'));
+      expect(updateTabSpy).toHaveBeenCalledWith('tab-kline-IF2608', {
+        props: { instrumentID: 'rb2610' },
+        title: '📈 K线-rb2610',
+      });
+    } finally {
+      updateTabSpy.mockRestore();
+    }
+  });
+
+  it('无 tabId（如查询面板复用）时不触发切换，仍渲染搜索框', () => {
+    render(<KLinePage instrumentID="IF2608" />);
+    expect(screen.getByPlaceholderText('搜索合约...')).toBeDefined();
+    expect(screen.getByTestId('instrument').textContent).toBe('IF2608');
   });
 
   // ── 边界条件 ──

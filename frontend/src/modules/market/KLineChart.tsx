@@ -12,6 +12,8 @@ export interface KLineChartProps {
   name?: string
   /** 最新价（显示在标题栏，可选；'—' 表示无快照） */
   latestPrice?: string
+  /** 标题栏搜索/切换插槽（可选）：K线页嵌入合约搜索切换；行情查询等场景不传则不渲染 */
+  searchSlot?: React.ReactNode
 }
 
 /** 主图指标类型 */
@@ -266,7 +268,7 @@ const SUB_INDICATORS: { label: string; value: SubIndicator }[] = [
   { label: 'RSI', value: 'rsi' },
 ]
 
-export function KLineChart({ instrument, klineData, period, onPeriodChange, name, latestPrice }: KLineChartProps) {
+export function KLineChart({ instrument, klineData, period, onPeriodChange, name, latestPrice, searchSlot }: KLineChartProps) {
   const chartRef = useRef<HTMLDivElement>(null)
   const instanceRef = useRef<echarts.ECharts | null>(null)
   const prevDataLenRef = useRef(0)
@@ -335,11 +337,16 @@ export function KLineChart({ instrument, klineData, period, onPeriodChange, name
     <div className="kline-chart" data-testid="kline-chart">
       {/* 标题栏承载 drag-handle：整行可拖为浮动弹窗（原独立拖拽条已删除，仅 hover 以 cursor 提示） */}
       <div className="kline-chart__header" data-drag-handle>
-        {/* title 仅放合约信息区，避免悬停周期/指标控件时误显「可拖」提示（审查 🟡-2） */}
-        <div className="kline-chart__contract" title="拖动此栏可将标签转为弹窗">
-          <span className="kline-chart__instrument">{instrument}</span>
-          {name && <span className="kline-chart__name">{name}</span>}
-        </div>
+        {/* 有搜索/切换插槽时（K线页）直接用搜索框替代静态合约代码区，避免「合约代码 + 输入框回显」并排重复；
+            无插槽时（行情查询等）保留静态合约显示。title 仅放合约信息区，避免悬停周期/指标控件时误显「可拖」提示（审查 🟡-2） */}
+        {searchSlot ? (
+          <div className="kline-chart__search">{searchSlot}</div>
+        ) : (
+          <div className="kline-chart__contract" title="拖动此栏可将标签转为弹窗">
+            <span className="kline-chart__instrument">{instrument}</span>
+            {name && <span className="kline-chart__name">{name}</span>}
+          </div>
+        )}
         {latestPrice != null && (
           <span className="kline-chart__latest">
             <span className="kline-chart__latest-label">最新</span>
