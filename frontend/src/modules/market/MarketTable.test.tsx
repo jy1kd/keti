@@ -194,6 +194,17 @@ describe('MarketTable', () => {
     expect(record.lastPrice).toBe('--')
   })
 
+  it('横向滚动条样式明显（scrollStyle 加粗 + 高亮滑块色 + 常显）', async () => {
+    const { ListTable } = await import('@visactor/vtable')
+    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    const options = (ListTable as any).mock.calls[0][1]
+    const ss = options.theme.scrollStyle
+    expect(ss).toBeDefined()
+    expect(ss.visible).toBe('always')
+    expect(ss.width).toBeGreaterThanOrEqual(12) // 加粗滚动条，非默认细条
+    expect(ss.scrollSliderColor).toBe('#4a9eff') // 高亮滑块色，便于发现
+  })
+
   // --- onVisibleRangeChange tests ---
 
   it('接受 onVisibleRangeChange 回调', () => {

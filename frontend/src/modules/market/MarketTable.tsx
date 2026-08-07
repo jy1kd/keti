@@ -61,21 +61,21 @@ function statusStyle(args: any) {
 }
 
 const columns = [
-  { field: 'instrumentID', title: '合约', width: 70 },
-  { field: 'productName', title: '合约品种', width: 80 },
-  { field: 'exchangeID', title: '交易所', width: 60 },
-  { field: 'volumeMultiple', title: '合约乘数', width: 70 },
-  { field: 'priceTick', title: '最小变动价位', width: 90 },
-  { field: 'expireDate', title: '到期日', width: 85 },
-  { field: 'status', title: '状态', width: 60, style: statusStyle },
-  { field: 'lastPrice', title: '最新价', width: 90, style: coloredStyle },
-  { field: 'change', title: '涨跌', width: 80, style: coloredStyle },
-  { field: 'changePercent', title: '涨跌%', width: 80, style: coloredStyle },
-  { field: 'bidPrice1', title: '买一', width: 90, style: coloredStyle },
-  { field: 'askPrice1', title: '卖一', width: 90, style: coloredStyle },
-  { field: 'volume', title: '成交量', width: 90 },
-  { field: 'openInterest', title: '持仓量', width: 90 },
-  { field: 'favorite', title: '⭐', width: 50 },
+  { field: 'instrumentID', title: '合约', width: 90 },
+  { field: 'productName', title: '合约品种', width: 100 },
+  { field: 'exchangeID', title: '交易所', width: 80 },
+  { field: 'volumeMultiple', title: '合约乘数', width: 90 },
+  { field: 'priceTick', title: '最小变动价位', width: 110 },
+  { field: 'expireDate', title: '到期日', width: 100 },
+  { field: 'status', title: '状态', width: 80, style: statusStyle },
+  { field: 'lastPrice', title: '最新价', width: 110, style: coloredStyle },
+  { field: 'change', title: '涨跌', width: 100, style: coloredStyle },
+  { field: 'changePercent', title: '涨跌%', width: 100, style: coloredStyle },
+  { field: 'bidPrice1', title: '买一', width: 110, style: coloredStyle },
+  { field: 'askPrice1', title: '卖一', width: 110, style: coloredStyle },
+  { field: 'volume', title: '成交量', width: 110 },
+  { field: 'openInterest', title: '持仓量', width: 110 },
+  { field: 'favorite', title: '⭐', width: 60 },
 ]
 
 const CTP_INVALID_PRICE = 1.7976931348623157e+308
@@ -235,8 +235,9 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
           inlineRowBgColor: 'rgba(240, 180, 41, 0.12)',
         },
         scrollStyle: {
-          scrollSliderColor: '#30363d',
-          scrollRailColor: '#161b22',
+          scrollSliderColor: '#4a9eff',
+          scrollRailColor: '#21262d',
+          width: 12,
           visible: 'always',
         },
         frameStyle: {
