@@ -9,7 +9,7 @@
 |---|---|---|---|---|
 | P1 | 核心报单闭环 | 三列十档 `MarketDepth`（含内嵌改价/买卖按钮）+ 压缩参数区 `TradeParams` + 点价确认报单 | 无 | ✅ 已完成（2026-08-06 人工验证通过） |
 | P2 | 完整态与账户栏 | `AccountBar`（持仓/持盈）+ `QuoteStatsBar` + `FooterBar` + 精简/完整态切换 | P1 | ✅ 已完成（2026-08-06 人工验证通过） |
-| P3 | 增强 | 合约步进、快捷手数、盘口挂单量与撤单、乐观渲染/回滚、撤最新/撤全部/平净仓 | P1（部分依赖 P2 的持仓数据） | 待开始 |
+| P3 | 增强 | 合约步进、快捷手数、盘口挂单量与撤单、乐观渲染/回滚、撤最新/撤全部/平净仓 | P1（部分依赖 P2 的持仓数据） | ✅ 已完成（2026-08-07） |
 | P4 | 参数扩展（二期） | GTC/平昨/自动开平、红绿反转、Smart Order→止损单、热键浮层 | P1-P3 | 待开始 |
 
 ---
@@ -59,13 +59,13 @@
 1. **`AccountBar.tsx`**
    - 打开时触发 `fetchPositions` + `fetchAccount`，每 10s 自刷新（串行，遵守 CTP ~1 次/秒查询限制），不依赖 QueryPanel
    - 账户下拉（`AccountInfo.accountID`，超长省略）、`持仓 多|空(净)`（按 `instrumentID` 过滤 `PositionRecord`）、`持盈`（`positionProfit`，盈红亏绿）
-   - 锁仓/解锁开关（复用 `api.lockPosition`）
+   - ~~锁仓/解锁开关（复用 `api.lockPosition`）~~：**2026-08-07 用户要求移除**，AccountBar 不再显示锁仓按钮（锁仓保留在报单面板 QuickActions）
    - 文件：`frontend/src/modules/order/AccountBar.tsx`（新）
 2. **`QuoteStatsBar.tsx`（⑥，仅完整态）**
    - `今开/昨结/最高/最低/成交量/持仓量` KV，涨跌着色；复用 `OrderQuotePanel` 取值逻辑
    - 文件：`frontend/src/modules/order/QuoteStatsBar.tsx`（新）
 3. **`FooterBar.tsx`（⑦）**
-   - 居中 `∧/∨` 切换精简/完整态；右下 `+`（预留）
+   - 居中 `∧/∨` 切换精简/完整态；~~右下 `+`（预留）~~：2026-08-07 用户要求移除（占位无功能）
    - 文件：`frontend/src/modules/order/FooterBar.tsx`（新）
 4. **两态切换与持久化**
    - `popupStore` 增加 `expanded`（精简/完整态）+ zustand `persist` 本地持久化；标题栏 `—` 按钮等价收起
@@ -103,9 +103,21 @@
    - `ContractStepper.test.tsx`：月份/品种切换
    - 挂单聚合与撤单测试、pending 回滚测试、`TradeParams` 操作按钮测试
 7. **账户下拉资金明细（P2 审查 🔵-2 延后项）**
-   - `AccountBar` 账户号展开下拉，列出可用资金 / 持仓可用（设计 §4.2 备注）；P2 仅实现超长省略 + hover 全席位号
+   - `AccountBar` 账户号展开下拉，列出可用资金 / 持仓盈亏 / 动态权益（设计 §4.2 备注；`AccountInfo` 无「持仓可用」字段，以持仓盈亏替代）；P2 仅实现超长省略 + hover 全席位号
 
 **验收**：盘口挂单可撤、报单失败回滚正确、步进切月正确；大额/撤全部/平净仓均强制确认。
+
+### 开发完成说明（2026-08-07，✅ 已完成收尾）
+
+- **全部 7 项已实现**：ContractStepper（相邻月份 + 品种步进）、QtyPreset（1/20/50/100 + 超限钳制）、盘口我方挂单量显示与点击撤单（`myOrders.ts` 聚合）、乐观渲染与失败回滚（`store.lastSubmitError` + 顶部红条）、撤最新/撤全部/平净仓（撤全部与平净仓强制确认）、账户下拉资金明细（P2 🔵-2 延后项落地）
+- **审查修复**：🔴-1 确认防重入（`confirmBusyRef` + ConfirmDialog `busy`）；🟡-1~6（pending 禁叠点 / 轮询尊重 isPaused / pending 净增量判定 / 买卖按钮 tick 对齐 / 下拉字段表述同步 / 下拉面板点击不关闭）；🔵-2 设计文档 §4.3 措辞同步
+- **人工验证**：8 项全部通过（verify-discussion-orderpopup-p3.md），前端全量 1044 单测全绿
+- **用户要求的三处 UI 调整**：平净仓按钮改小（紧凑居中）、快捷手数按钮放大（100 不溢出）、移除 AccountBar 锁仓按钮（锁仓保留在报单面板 QuickActions）、移除 FooterBar 右下加号按钮（预留占位）
+- **推迟的可选子任务**：QtyPreset 右键自定义预设、盘口长按/右键菜单（撤该档/改价/反手）——均为任务清单标注「可选」，建议后续独立小 PR 交付
+- **实现适配说明**：
+  - 「委托回报转实态」：当前前端未将 `/ws/order` 报单回报接入 queryStore，采用「refreshOrders 聚合接替 + 10s 兜底清理」实现 pending→实态（功能等效）
+  - 平净仓调 `reversePosition(当前合约, 市价串行)`（后端自动取保护价），未完全复用 OrderPanel 的 quickTradeConfig 对价限价计算
+  - 前端全量 **1044 单测全绿**；tsc 无新增错误（仅剩既有 `src/hooks/debug-drag-accumulate.test.ts` 类型错误，来自 main 的 vtable 分支 debug 提交，非 P3 引入，`npm run build` 的 tsc 步骤受其影响）
 
 ---
 

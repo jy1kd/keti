@@ -6,6 +6,7 @@
  */
 
 .market-depth {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -169,6 +170,63 @@
 /* 无量占位 -- 弱化为次级灰 */
 .depth-row__muted {
   color: var(--text-muted) !important;
+}
+
+/* P3 我方挂单量徽标：贴列右上角，可点击撤单 */
+.depth-row__my {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  padding: 0 3px;
+  font-size: 10px;
+  line-height: 13px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  pointer-events: none;
+}
+
+.depth-row__my--buy {
+  color: var(--color-up);
+  background: rgba(248, 81, 73, 0.15);
+  border: 1px solid rgba(248, 81, 73, 0.45);
+}
+
+.depth-row__my--sell {
+  color: var(--color-down);
+  background: rgba(63, 185, 80, 0.15);
+  border: 1px solid rgba(63, 185, 80, 0.45);
+}
+
+/* 乐观 pending 徽标：半透明虚线，成功转实态后移除 */
+.depth-row__my--pending {
+  color: var(--accent);
+  background: rgba(240, 180, 41, 0.12);
+  border: 1px dashed rgba(240, 180, 41, 0.6);
+  opacity: 0.55;
+}
+
+/* 汇总行我方挂单笔数 (N)：与量同色但高亮描边区分 */
+.depth-summary__my {
+  font-size: 11px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  padding: 0 3px;
+  opacity: 0.9;
+}
+
+/* 失败回滚顶部红条：提示报单失败原因 */
+.market-depth__banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 6px 10px;
+  font-size: 12px;
+  text-align: center;
+  color: #fff;
+  background: rgba(208, 60, 60, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* ── ④ 最新价分隔线 ── */

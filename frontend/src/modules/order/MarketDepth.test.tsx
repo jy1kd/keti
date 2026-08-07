@@ -9,7 +9,12 @@ import type { MarketSnapshot } from '@/services/types'
 // （auto-mock 同时覆盖 contracts/market 等对 services/api 的传递导入）
 vi.mock('../../services/api')
 
-import { submitOrder as apiSubmitOrder } from '../../services/api'
+import {
+  submitOrder as apiSubmitOrder,
+  cancelOrder as apiCancelOrder,
+  refreshOrders as apiRefreshOrders,
+} from '../../services/api'
+import { useQueryStore } from '../query/store'
 
 // 捕获真实 submitOrder：「点价确认闭环」用例会用 submitSpy 覆盖 store action，集成用例需在 beforeEach 恢复
 const realSubmitOrder = useOrderStore.getState().submitOrder
@@ -553,5 +558,329 @@ describe('点价确认闭环（任务#5）', () => {
     expect(dialog.getByText('买入')).toBeInTheDocument()
     expect(dialog.getByText('4696.0')).toBeInTheDocument()
     expect(dialog.getByText('3')).toBeInTheDocument()
+  })
+})
+
+describe('盘口我方挂单量（P3-3）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useOrderStore.setState({ submitOrder: realSubmitOrder })
+    useOrderStore.setState({
+      orderForm: {
+        ...DEFAULT_ORDER_FORM,
+        instrumentID: 'IF2608',
+        exchangeID: 'CFFEX',
+        volumeTotalOriginal: 3,
+        combOffsetFlag: 'open',
+        timeCondition: 'gfd',
+      },
+    })
+    useQueryStore.setState({ orders: [] })
+  })
+
+  it('汇总行展示 委买/委卖 我方挂单笔数：委买 150(1) 委卖 175(0)', () => {
+    useQueryStore.setState({
+      orders: [
+        {
+          orderRef: 'ORD-B1',
+          instrumentID: 'IF2608',
+          direction: '0', // 买
+          combOffsetFlag: '0',
+          limitPrice: 4694, // 买一档
+          volumeTotalOriginal: 2,
+          volumeTraded: 0,
+          orderStatus: '2',
+        },
+      ],
+    })
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    const summaryEl = screen.getByTestId('depth-summary')
+    const bidValue = summaryEl.querySelector('.depth-summary__bid .depth-summary__value')
+    expect(bidValue!.textContent).toBe('150(1)') // 委买 150 + 我方1笔
+    const askValue = summaryEl.querySelector('.depth-summary__ask .depth-summary__value')
+    expect(askValue!.textContent).toBe('175') // 委卖无我方单 → 无 (N)
+  })
+
+  it('匹配档位显示我方挂单量徽标（买档买入列）', () => {
+    useQueryStore.setState({
+      orders: [
+        {
+          orderRef: 'ORD-B1',
+          instrumentID: 'IF2608',
+          direction: '0',
+          combOffsetFlag: '0',
+          limitPrice: 4694,
+          volumeTotalOriginal: 2,
+          volumeTraded: 0,
+          orderStatus: '2',
+        },
+      ],
+    })
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    const bid1Buy = screen.getByTestId('bid-1').querySelector('.depth-row__buy')!
+    expect(bid1Buy.querySelector('.depth-row__my')).not.toBeNull()
+    expect(bid1Buy.querySelector('.depth-row__my')!.textContent).toBe('2')
+  })
+
+  it('点击含我方买单的档位 → 撤该档挂单（不弹点价确认框）', async () => {
+    vi.mocked(apiCancelOrder).mockResolvedValue({ success: true })
+    useQueryStore.setState({
+      orders: [
+        {
+          orderRef: 'ORD-B1',
+          instrumentID: 'IF2608',
+          direction: '0',
+          combOffsetFlag: '0',
+          limitPrice: 4694,
+          volumeTotalOriginal: 2,
+          volumeTraded: 0,
+          orderStatus: '2',
+        },
+      ],
+    })
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('bid-1').querySelector('.depth-row__buy')!)
+    await act(async () => {})
+    expect(apiCancelOrder).toHaveBeenCalledWith('ORD-B1')
+    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
+  })
+
+  it('点击不含我方挂单的档位 → 仍弹点价确认框（下单语义保留）', () => {
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('bid-2').querySelector('.depth-row__buy')!)
+    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+  })
+
+  it('点击含我方卖单的档位 → 撤该档卖单', async () => {
+    vi.mocked(apiCancelOrder).mockResolvedValue({ success: true })
+    useQueryStore.setState({
+      orders: [
+        {
+          orderRef: 'ORD-S1',
+          instrumentID: 'IF2608',
+          direction: '1',
+          combOffsetFlag: '0',
+          limitPrice: 4696,
+          volumeTotalOriginal: 3,
+          volumeTraded: 1,
+          orderStatus: '1',
+        },
+      ],
+    })
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('ask-1').querySelector('.depth-row__sell')!)
+    await act(async () => {})
+    expect(apiCancelOrder).toHaveBeenCalledWith('ORD-S1')
+  })
+})
+
+describe('乐观渲染与失败回滚（P3-4）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useOrderStore.setState({ submitOrder: realSubmitOrder })
+    useOrderStore.setState({
+      orderForm: {
+        ...DEFAULT_ORDER_FORM,
+        instrumentID: 'IF2608',
+        exchangeID: 'CFFEX',
+        volumeTotalOriginal: 3,
+        combOffsetFlag: 'open',
+        timeCondition: 'gfd',
+      },
+    })
+    useQueryStore.setState({ orders: [] })
+  })
+
+  it('确认报单 → 档位立即显示半透明 pending 徽标（乐观渲染）', async () => {
+    let resolveSubmit!: (v: boolean) => void
+    const submitSpy = vi.fn().mockReturnValue(new Promise<boolean>((r) => { resolveSubmit = r }))
+    useOrderStore.setState({ submitOrder: submitSpy as () => Promise<boolean> })
+
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('bid-1').querySelector('.depth-row__buy')!)
+    fireEvent.click(screen.getByText('确认执行'))
+
+    const bid1Buy = screen.getByTestId('bid-1').querySelector('.depth-row__buy')!
+    const pendingBadge = bid1Buy.querySelector('.depth-row__my--pending')
+    expect(pendingBadge).not.toBeNull()
+    expect(pendingBadge!.textContent).toBe('3') // 当前手数 3
+    expect(pendingBadge!.className).toContain('depth-row__my--pending')
+
+    resolveSubmit(true)
+    await act(async () => {})
+  })
+
+  it('报单失败 → pending 回滚移除 + 顶部红条展示原因', async () => {
+    // 真实 submitOrder + api 失败 → lastSubmitError 贯通到红条
+    vi.mocked(apiSubmitOrder).mockResolvedValue({ success: false, orderRef: '', error: '资金不足' })
+
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('bid-1').querySelector('.depth-row__buy')!)
+    fireEvent.click(screen.getByText('确认执行'))
+    await act(async () => {})
+
+    expect(screen.getByTestId('md-banner').textContent).toContain('资金不足')
+    const bid1Buy = screen.getByTestId('bid-1').querySelector('.depth-row__buy')!
+    expect(bid1Buy.querySelector('.depth-row__my--pending')).toBeNull()
+  })
+
+  it('提交成功但尚未刷新到真实单 → pending 保留；拉到真实挂单后转实态移除', async () => {
+    useOrderStore.setState({ submitOrder: vi.fn().mockResolvedValue(true) })
+
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('bid-1').querySelector('.depth-row__buy')!)
+    fireEvent.click(screen.getByText('确认执行'))
+    await act(async () => {})
+
+    // 提交成功但 orders 聚合尚无该单 → pending 仍在
+    expect(screen.getByTestId('bid-1').querySelector('.depth-row__my--pending')).not.toBeNull()
+
+    // refreshOrders 拉取到该买单 → 聚合出实态
+    useQueryStore.setState({
+      orders: [
+        {
+          orderRef: 'ORD-001',
+          instrumentID: 'IF2608',
+          direction: '0',
+          combOffsetFlag: '0',
+          limitPrice: 4694,
+          volumeTotalOriginal: 3,
+          volumeTraded: 0,
+          orderStatus: '2',
+        },
+      ],
+    })
+    await act(async () => {})
+
+    const bid1Buy = screen.getByTestId('bid-1').querySelector('.depth-row__buy')!
+    expect(bid1Buy.querySelector('.depth-row__my--pending')).toBeNull() // pending 移除
+    expect(bid1Buy.querySelector('.depth-row__my--buy')!.textContent).toBe('3') // 实态徽标
+  })
+})
+
+describe('审查修复（🔴-1 / 🟡-1~4）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useOrderStore.setState({ submitOrder: realSubmitOrder })
+    useOrderStore.setState({
+      orderForm: {
+        ...DEFAULT_ORDER_FORM,
+        instrumentID: 'IF2608',
+        exchangeID: 'CFFEX',
+        volumeTotalOriginal: 3,
+        combOffsetFlag: 'open',
+        timeCondition: 'gfd',
+      },
+    })
+    useQueryStore.setState({ orders: [], isPaused: false })
+  })
+
+  it('提交挂起期间双击「确认执行」→ 仅提交一次（🔴-1 防重入）', async () => {
+    let resolveSubmit!: (v: boolean) => void
+    const submitSpy = vi.fn().mockReturnValue(new Promise<boolean>((r) => { resolveSubmit = r }))
+    useOrderStore.setState({ submitOrder: submitSpy as () => Promise<boolean> })
+
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('bid-1').querySelector('.depth-row__buy')!)
+    fireEvent.click(screen.getByText('确认执行'))
+    fireEvent.click(screen.getByText('确认执行')) // 双击落在提交等待窗口内
+
+    resolveSubmit(true)
+    await act(async () => {})
+    expect(submitSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('pending 档位禁止叠加点击：再点同档不弹新确认框（🟡-1）', async () => {
+    let resolveSubmit!: (v: boolean) => void
+    const submitSpy = vi.fn().mockReturnValue(new Promise<boolean>((r) => { resolveSubmit = r }))
+    useOrderStore.setState({ submitOrder: submitSpy as () => Promise<boolean> })
+
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('bid-1').querySelector('.depth-row__buy')!)
+    fireEvent.click(screen.getByText('确认执行'))
+    // pending 显示期间再点同档买入列 → 忽略（仍只有原确认框）
+    fireEvent.click(screen.getByTestId('bid-1').querySelector('.depth-row__buy')!)
+    expect(screen.queryAllByTestId('confirm-dialog').length).toBe(1)
+
+    resolveSubmit(true)
+    await act(async () => {})
+    expect(submitSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('暂停查询时挂起报单轮询，不发起 CTP 查询（🟡-2）', async () => {
+    vi.useFakeTimers()
+    useQueryStore.setState({ isPaused: true, orders: [] })
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000)
+    })
+    expect(apiRefreshOrders).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('同价存在既有挂单时，新单 pending 不因既有量被提前移除（净增量判定，🟡-3）', async () => {
+    useOrderStore.setState({ submitOrder: vi.fn().mockResolvedValue(true) })
+    // 既有卖一挂单 2 手（报单前已存在）
+    useQueryStore.setState({
+      orders: [
+        { orderRef: 'ORD-OLD', instrumentID: 'IF2608', direction: '1', combOffsetFlag: '0', limitPrice: 4696, volumeTotalOriginal: 2, volumeTraded: 0, orderStatus: '2' },
+      ],
+    })
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    // 经改价框在卖一价 4696 挂卖单（避免点击既有挂单档触发撤单）
+    fireEvent.click(screen.getByTestId('ask-1').querySelector('.depth-row__price')!)
+    fireEvent.click(screen.getByTestId('qtb-sell'))
+    fireEvent.click(screen.getByText('确认执行'))
+    await act(async () => {})
+    // 聚合仍为既有 2 手（新单未被刷新到）→ pending 保留
+    expect(screen.getByTestId('ask-1').querySelector('.depth-row__my--pending')).not.toBeNull()
+    // 刷新拉到新单 3 手 → 净增量 3 ≥ pending 3 → pending 移除，实态 5 手
+    useQueryStore.setState({
+      orders: [
+        { orderRef: 'ORD-OLD', instrumentID: 'IF2608', direction: '1', combOffsetFlag: '0', limitPrice: 4696, volumeTotalOriginal: 2, volumeTraded: 0, orderStatus: '2' },
+        { orderRef: 'ORD-NEW', instrumentID: 'IF2608', direction: '1', combOffsetFlag: '0', limitPrice: 4696, volumeTotalOriginal: 3, volumeTraded: 0, orderStatus: '2' },
+      ],
+    })
+    await act(async () => {})
+    expect(screen.getByTestId('ask-1').querySelector('.depth-row__my--pending')).toBeNull()
+    expect(screen.getByTestId('ask-1').querySelector('.depth-row__my--sell')!.textContent).toBe('5')
+  })
+
+  it('输入超涨停价未 blur 直接点买入 → 夹紧到涨停价后再报单（🟡-4）', () => {
+    const onBuy = vi.fn()
+    render(
+      <QuickTradeBar
+        snapshot={makeSnapshot({ lastPrice: 4695, askPrice1: 4696, upperLimitPrice: 4700, lowerLimitPrice: 4690 })}
+        priceTick={0.2}
+        volume={2}
+        value={4696}
+        onChangePrice={vi.fn()}
+        onBuy={onBuy}
+        onSell={vi.fn()}
+      />,
+    )
+    const input = screen.getByTestId('qtb-price') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '4705' } })
+    fireEvent.click(screen.getByTestId('qtb-buy'))
+    expect(onBuy).toHaveBeenCalledWith(4700) // 夹紧到涨停 4700
+  })
+
+  it('输入非 tick 整数倍未 blur 直接点卖出 → 对齐到 tick 后再报单（🟡-4）', () => {
+    const onSell = vi.fn()
+    render(
+      <QuickTradeBar
+        snapshot={makeSnapshot({ lastPrice: 4695, askPrice1: 4696, upperLimitPrice: 4700, lowerLimitPrice: 4690 })}
+        priceTick={0.2}
+        volume={2}
+        value={4696}
+        onChangePrice={vi.fn()}
+        onBuy={vi.fn()}
+        onSell={onSell}
+      />,
+    )
+    const input = screen.getByTestId('qtb-price') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '4696.55' } })
+    fireEvent.click(screen.getByTestId('qtb-sell'))
+    expect(onSell).toHaveBeenCalledWith(4696.6) // tick 0.2 对齐
   })
 })

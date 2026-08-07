@@ -94,3 +94,50 @@
 .tp-hint__error {
   color: var(--color-up);
 }
+
+/* P3 操作按钮：撤最新 / 撤全部（描边）/ 平净仓（主按钮蓝） */
+.tp-row--ops {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.tp-op-btn {
+  flex: 1;
+  padding: 4px 0;
+  font-size: 12px;
+  line-height: 18px;
+  border: 1px solid var(--accent-dim, rgba(240, 180, 41, 0.5));
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary, #e6e6e6);
+  cursor: pointer;
+}
+
+.tp-op-btn:hover:not(:disabled) {
+  border-color: var(--accent, #f0b429);
+  color: var(--accent, #f0b429);
+}
+
+.tp-op-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tp-op-btn--primary {
+  /* 紧凑居中：不复用 .tp-op-btn 的 flex:1 撑满，改为自动宽度小按钮 */
+  align-self: center;
+  flex: 0 0 auto;
+  min-width: 120px;
+  padding: 4px 14px;
+  margin-top: 6px;
+  border-color: var(--color-primary-blue, #2f6bff);
+  background: var(--color-primary-blue, #2f6bff);
+  color: #fff;
+}
+
+.tp-op-btn--primary:hover:not(:disabled) {
+  border-color: #4d82ff;
+  background: #4d82ff;
+  color: #fff;
+}

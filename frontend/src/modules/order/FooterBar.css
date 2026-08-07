@@ -41,25 +41,3 @@
 .order-popup__footer-text {
   white-space: nowrap;
 }
-
-/* 右下 ＋ 新增关联窗口（预留） */
-.order-popup__footer-add {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.order-popup__footer-add:hover {
-  background: var(--accent-dim);
-  color: var(--accent);
-}

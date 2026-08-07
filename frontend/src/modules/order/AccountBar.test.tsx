@@ -1,18 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react'
 import { AccountBar } from './AccountBar'
 import { useQueryStore } from '@/modules/query/store'
 
-const { refreshPositionsMock, refreshAccountMock, lockPositionMock } = vi.hoisted(() => ({
+const { refreshPositionsMock, refreshAccountMock } = vi.hoisted(() => ({
   refreshPositionsMock: vi.fn(),
   refreshAccountMock: vi.fn(),
-  lockPositionMock: vi.fn(),
 }))
 
 vi.mock('@/services/api', () => ({
   refreshPositions: refreshPositionsMock,
   refreshAccount: refreshAccountMock,
-  lockPosition: lockPositionMock,
 }))
 
 vi.mock('@/components/Toast', () => ({
@@ -47,7 +45,6 @@ describe('AccountBar', () => {
     useQueryStore.setState({ positions: [], account: null, isPaused: false })
     refreshPositionsMock.mockResolvedValue({ positions: POSITIONS })
     refreshAccountMock.mockResolvedValue(ACCOUNT)
-    lockPositionMock.mockResolvedValue({ success: true })
   })
 
   it('挂载时触发持仓与账户串行拉取（查询间 1200ms 延迟）', async () => {
@@ -128,41 +125,56 @@ describe('AccountBar', () => {
     expect(screen.getByTestId('ab-account').getAttribute('title')).toBe('YYB-1829143-SH000001')
   })
 
-  it('锁仓为下单操作：点击先弹确认框，取消不调用 lockPosition', async () => {
-    render(<AccountBar instrumentID="IF2608" />)
-    const btn = await screen.findByTestId('ab-lock')
-    expect(btn.textContent).toBe('锁仓')
-    fireEvent.click(btn)
-    // 强制确认：确认框出现，展示合约与风险提示（下单类操作防误触）
-    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
-    expect(screen.getByText('确认锁仓')).toBeInTheDocument()
-    // 取消：不触发任何下单
-    fireEvent.click(screen.getByText('取消'))
-    expect(lockPositionMock).not.toHaveBeenCalled()
-    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
-  })
+  describe('账户下拉资金明细（P3-7，P2 审查 🔵-2 延后项）', () => {
+    it('点击账户号展开下拉：显示 可用资金/持仓盈亏/动态权益', async () => {
+      render(<AccountBar instrumentID="IF2608" />)
+      await screen.findByTestId('ab-profit')
+      useQueryStore.setState({ account: ACCOUNT })
+      await waitFor(() =>
+        expect(screen.getByTestId('ab-account').getAttribute('title')).toBe('YYB-1829143'),
+      )
+      fireEvent.click(screen.getByTestId('ab-account'))
+      const dd = within(screen.getByTestId('ab-dropdown'))
+      expect(dd.getByText('可用资金')).toBeInTheDocument()
+      expect(dd.getByText('80,000.00')).toBeInTheDocument()
+      expect(dd.getByText('持仓盈亏')).toBeInTheDocument()
+      expect(dd.getByText('600.00')).toBeInTheDocument()
+      expect(dd.getByText('动态权益')).toBeInTheDocument()
+      expect(dd.getByText('100,000.00')).toBeInTheDocument()
+    })
 
-  it('确认锁仓才调用 lockPosition，锁仓后仍为「锁仓」（无解锁方向重复锁仓）', async () => {
-    render(<AccountBar instrumentID="IF2608" />)
-    const btn = await screen.findByTestId('ab-lock')
-    fireEvent.click(btn)
-    fireEvent.click(screen.getByText('确认执行'))
-    await waitFor(() => expect(lockPositionMock).toHaveBeenCalledTimes(1))
-    expect(lockPositionMock).toHaveBeenCalledWith({ instrumentID: 'IF2608' })
-    // 后端 lockPosition 单向锁仓、无解锁端点：按钮永不进入「解锁」态，杜绝二次点击重复锁仓
-    expect(btn.textContent).toBe('锁仓')
-  })
+    it('点击外部关闭下拉', async () => {
+      render(<AccountBar instrumentID="IF2608" />)
+      await screen.findByTestId('ab-profit')
+      useQueryStore.setState({ account: ACCOUNT })
+      await waitFor(() =>
+        expect(screen.getByTestId('ab-account').getAttribute('title')).toBe('YYB-1829143'),
+      )
+      fireEvent.click(screen.getByTestId('ab-account'))
+      expect(screen.getByTestId('ab-dropdown')).toBeInTheDocument()
+      fireEvent.mouseDown(document.body)
+      expect(screen.queryByTestId('ab-dropdown')).not.toBeInTheDocument()
+    })
 
-  it('锁仓成功后刷新持仓（反映反方向开仓后的仓位变化）', async () => {
-    render(<AccountBar instrumentID="IF2608" />)
-    const btn = await screen.findByTestId('ab-lock')
-    // 点击前基准：初始挂载已拉取一次持仓
-    const before = refreshPositionsMock.mock.calls.length
-    fireEvent.click(btn)
-    fireEvent.click(screen.getByText('确认执行'))
-    await waitFor(() => expect(lockPositionMock).toHaveBeenCalledTimes(1))
-    // handleLockConfirm 成功后调用 fetchPositions → api refreshPositions 多一次
-    await waitFor(() => expect(refreshPositionsMock.mock.calls.length).toBeGreaterThan(before))
+    it('点击下拉面板自身不关闭（🟡-6：portal 容器纳入 contains 判断）', async () => {
+      render(<AccountBar instrumentID="IF2608" />)
+      await screen.findByTestId('ab-profit')
+      useQueryStore.setState({ account: ACCOUNT })
+      await waitFor(() =>
+        expect(screen.getByTestId('ab-account').getAttribute('title')).toBe('YYB-1829143'),
+      )
+      fireEvent.click(screen.getByTestId('ab-account'))
+      const dd = screen.getByTestId('ab-dropdown')
+      fireEvent.mouseDown(dd)
+      expect(screen.getByTestId('ab-dropdown')).toBeInTheDocument()
+    })
+
+    it('账户为 null 时点击不展开下拉', async () => {
+      render(<AccountBar instrumentID="IF2608" />)
+      await screen.findByTestId('ab-profit')
+      fireEvent.click(screen.getByTestId('ab-account'))
+      expect(screen.queryByTestId('ab-dropdown')).not.toBeInTheDocument()
+    })
   })
 
   it('每 10s 串行自刷新持仓与账户（持仓→1200ms→账户→10s→下一轮）', async () => {

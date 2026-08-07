@@ -123,12 +123,13 @@
 
 | 元素 | 数据 | 说明 |
 |---|---|---|
-| 账户下拉 `YYB-1829143…` | `AccountInfo.accountID` | 超长省略，hover 显示全席位号；下拉列出可用资金/持仓可用 |
+| 账户下拉 `YYB-1829143…` | `AccountInfo.accountID` | 超长省略，hover 显示全席位号；下拉列出可用资金/持仓盈亏/动态权益 |
 | `持仓 多|空(净)` | `PositionRecord` 按 `instrumentID` 过滤，`posiDirection '2'/'3'` 求和 | 净仓 = 多 - 空 |
 | `持盈 +1200` | `positionProfit` | 随最新价实时刷新，盈红亏绿（对齐 `--color-up/down`） |
 
 - **数据来源决策**：`AccountBar` 打开时触发 `useQueryStore.fetchPositions()` + `fetchAccount()`，并每 10s 自刷新（与 QueryPanel 相同的串行 + 延迟节奏，避免 CTP 查询限频）。不依赖 QueryPanel 是否挂载。
-- 右上角：`锁仓/解锁` 开关（复用 `api.lockPosition`）、布局模板按钮（可选，建议后期）。
+- 布局模板按钮（可选，建议后期）。
+- ~~右上角 `锁仓/解锁` 开关~~：**2026-08-07 用户要求移除**（AccountBar 不再显示锁仓按钮；锁仓能力保留在报单面板 `QuickActions` 一键锁仓）。
 
 ### 4.3 ③ 交易参数区（新增 `TradeParams.tsx`，压缩现有 `OrderForm`）
 
@@ -143,7 +144,7 @@
 | 手数 `[1]` | 数字步进框 | 上下微调、键盘输入，校验 ≥1 且 ≤ 上限（复用 `validateVolumeWithLimit`，期货 500 / 市价 60 / 期权 100） |
 | 快捷手数 `1 20 50 100` | 分段按钮组 | 点击即填入手数；右键自定义预设（可选，P3） |
 | `撤最新` | 描边按钮 | 撤当前合约最近一笔挂单（`refreshOrders` 取最新 + `cancelOrder`） |
-| `撤全部` | 描边按钮 | 撤当前合约全部挂单，二次确认 |
+| `撤全部` | 描边按钮 | 撤全部未成交报单（**全部合约**，后端 `cancel_all` 语义），二次确认 |
 | `平净仓` | 主按钮（蓝） | 一键对冲净持仓（复用 `reversePosition` 逻辑，弹确认） |
 | `Smart Order` | 折叠模块 | 本期映射为「止损单」入口（`StopOrderForm` 已存在），预留 TWAP/冰山扩展点 |
 
@@ -244,7 +245,7 @@
 ### 4.7 ⑦ 底部工具条（新增 `FooterBar.tsx`）
 
 - 居中 `∧/∨` 切换精简态 / 完整态（`popupStore.expanded`）。
-- 右下 `+`：新增关联窗口 / 加自选（预留）。
+- ~~右下 `+`：新增关联窗口 / 加自选（预留）~~：**2026-08-07 用户要求移除**（预留占位无功能，已删除）。
 
 ---
 

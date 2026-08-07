@@ -24,6 +24,7 @@ describe('OrderStore', () => {
       selectedInstrument: null,
       orderForm: { ...DEFAULT_ORDER_FORM },
       isSubmitting: false,
+      lastSubmitError: null,
     })
     vi.clearAllMocks()
   })
@@ -175,6 +176,42 @@ describe('OrderStore', () => {
 
     expect(result).toBe(false)
     expect(toast.error).toHaveBeenCalledWith('报单失败：网络异常')
+  })
+
+  it('submitOrder 失败时记录 lastSubmitError（P3 顶部红条提示原因）', async () => {
+    vi.mocked(mockSubmitOrder).mockResolvedValue({
+      success: false,
+      orderRef: '',
+      error: '资金不足',
+    })
+
+    useOrderStore.getState().setOrderForm({
+      instrumentID: 'IF2608',
+      direction: 'buy',
+      limitPrice: 4800,
+    })
+
+    const result = await useOrderStore.getState().submitOrder()
+    expect(result).toBe(false)
+    expect(useOrderStore.getState().lastSubmitError).toBe('资金不足')
+  })
+
+  it('submitOrder 成功时 lastSubmitError 为 null', async () => {
+    vi.mocked(mockSubmitOrder).mockResolvedValue({ success: true, orderRef: 'ORD-001' })
+
+    useOrderStore.getState().setOrderForm({
+      instrumentID: 'IF2608',
+      limitPrice: 4800,
+    })
+
+    await useOrderStore.getState().submitOrder()
+    expect(useOrderStore.getState().lastSubmitError).toBeNull()
+  })
+
+  it('校验失败（如未选合约）同样记录 lastSubmitError', async () => {
+    useOrderStore.getState().resetOrderForm()
+    await useOrderStore.getState().submitOrder()
+    expect(useOrderStore.getState().lastSubmitError).toBe('请选择合约')
   })
 
   it('sets isSubmitting to true during submit and resets after', async () => {

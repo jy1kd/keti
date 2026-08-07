@@ -1,8 +1,16 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useOrderStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
+import { useQueryStore } from '../query/store'
+import { useOrderPopupStore } from './popupStore'
 import { validateVolumeWithLimit, getVolumeLimit } from '@/utils/validators'
+import { reversePosition } from '@/services/api'
+import { ACTIVE_ORDER_STATUSES } from './myOrders'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { toast } from '@/components/Toast'
 import type { OrderRequestForm } from '@/utils/orderMapping'
+import { ContractStepper } from './ContractStepper'
+import { QtyPreset } from './QtyPreset'
 import './TradeParams.css'
 
 interface TradeParamsProps {
@@ -13,9 +21,9 @@ interface TradeParamsProps {
 /**
  * TradeParams — 压缩参数区（报单弹窗左栏 ~200px）
  *
- * 开平 / 投保 / 有效期 三个下拉（映射 `combOffsetFlag` / `combHedgeFlag` / `timeCondition`）
+ * 合约步进（P3）+ 开平 / 投保 / 有效期 三个下拉（映射 `combOffsetFlag` / `combHedgeFlag` / `timeCondition`）
  * + 手数步进（校验复用 `validateVolumeWithLimit`：期货 500 / 市价 60 / 期权 100）。
- * 状态读写 `useOrderStore.orderForm`；仅参数，不含合约步进/快捷手数/撤单（P3）。
+ * 状态读写 `useOrderStore.orderForm`；快捷手数/撤单按钮见 P3 后续模块。
  */
 export function TradeParams({ instrumentID }: TradeParamsProps) {
   const orderForm = useOrderStore((s) => s.orderForm)
@@ -35,8 +43,80 @@ export function TradeParams({ instrumentID }: TradeParamsProps) {
     productClass,
   )
 
+  // ── 操作按钮（P3-5）：撤最新 / 撤全部（确认）/ 平净仓（确认）──
+  const [confirmOp, setConfirmOp] = useState<'cancelAll' | 'flatNet' | null>(null)
+  const [opPending, setOpPending] = useState(false)
+
+  // 确认框打开 → 同步 popupStore.confirmOpen：弹窗内 Esc 优先取消确认框而非关弹窗
+  useEffect(() => {
+    useOrderPopupStore.getState().setConfirmOpen(confirmOp !== null)
+    return () => useOrderPopupStore.getState().setConfirmOpen(false)
+  }, [confirmOp])
+
+  // 撤最新：refreshOrders 取当前合约最新一笔活动挂单（insertTime 倒序）→ 撤单
+  const handleCancelLatest = async () => {
+    await useQueryStore.getState().fetchOrders()
+    const orders = useQueryStore.getState().orders
+    const mine = orders
+      .filter(
+        (o) =>
+          o.instrumentID === activeInstrument && ACTIVE_ORDER_STATUSES.includes(o.orderStatus),
+      )
+      .sort((a, b) => (b.insertTime ?? '').localeCompare(a.insertTime ?? ''))
+    const latest = mine[0]
+    if (!latest) {
+      toast.error('暂无该合约可撤报单')
+      return
+    }
+    await useQueryStore.getState().handleCancelOrder(latest.orderRef)
+  }
+
+  // 撤全部：强制确认 → cancelAllOrders
+  const handleCancelAll = async () => {
+    if (opPending) return
+    setOpPending(true)
+    try {
+      await useQueryStore.getState().handleCancelAll()
+      setConfirmOp(null)
+    } finally {
+      setOpPending(false)
+    }
+  }
+
+  // 平净仓：强制确认 → reversePosition（默认市价串行，后端自动取保护价）→ 刷新持仓
+  const handleFlatNet = async () => {
+    if (opPending) return
+    setOpPending(true)
+    try {
+      const res = await reversePosition({
+        instrumentID: activeInstrument,
+        executionMode: 'serial',
+      })
+      if (res.success) {
+        toast.success('平净仓已提交')
+        useQueryStore.getState().fetchPositions()
+      } else {
+        toast.error(`平净仓失败：${res.message || '未知错误'}`)
+      }
+      setConfirmOp(null)
+    } catch (e) {
+      toast.error(`平净仓失败：${e instanceof Error ? e.message : '未知错误'}`)
+      setConfirmOp(null)
+    } finally {
+      setOpPending(false)
+    }
+  }
+
   return (
     <div className="trade-params">
+      <div className="tp-row">
+        <span className="tp-row__label">合约</span>
+        <ContractStepper
+          instrumentID={activeInstrument}
+          onSelect={(code) => setOrderForm({ instrumentID: code })}
+        />
+      </div>
+
       <div className="tp-row">
         <span className="tp-row__label">开平</span>
         <select
@@ -134,6 +214,65 @@ export function TradeParams({ instrumentID }: TradeParamsProps) {
         <span>最大 {volumeLimit} 手</span>
         {volumeError && <span className="tp-hint__error">{volumeError}</span>}
       </div>
+
+      <div className="tp-row">
+        <span className="tp-row__label">快捷</span>
+        <QtyPreset
+          value={orderForm.volumeTotalOriginal}
+          limit={volumeLimit}
+          onSelect={(v) => setOrderForm({ volumeTotalOriginal: v })}
+        />
+      </div>
+
+      {/* 操作按钮：撤最新 / 撤全部（二次确认）/ 平净仓（确认） */}
+      <div className="tp-row tp-row--ops">
+        <button
+          type="button"
+          className="tp-op-btn"
+          data-testid="tp-cancel-latest"
+          onClick={handleCancelLatest}
+          disabled={opPending}
+        >
+          撤最新
+        </button>
+        <button
+          type="button"
+          className="tp-op-btn"
+          data-testid="tp-cancel-all"
+          onClick={() => setConfirmOp('cancelAll')}
+          disabled={opPending}
+        >
+          撤全部
+        </button>
+      </div>
+      <button
+        type="button"
+        className="tp-op-btn tp-op-btn--primary"
+        data-testid="tp-flat-net"
+        onClick={() => setConfirmOp('flatNet')}
+        disabled={opPending}
+      >
+        平净仓
+      </button>
+
+      {confirmOp === 'cancelAll' && (
+        <ConfirmDialog
+          title="确认撤全部"
+          details={[{ label: '范围', value: '所有未成交报单' }]}
+          warning="将撤销所有未成交报单（全部合约），请确认。"
+          onConfirm={handleCancelAll}
+          onCancel={() => setConfirmOp(null)}
+        />
+      )}
+      {confirmOp === 'flatNet' && (
+        <ConfirmDialog
+          title="确认平净仓"
+          details={[{ label: '合约', value: activeInstrument }]}
+          warning="将平掉当前合约全部净持仓并反向开仓（市价串行），会真实下单，请确认。"
+          onConfirm={handleFlatNet}
+          onCancel={() => setConfirmOp(null)}
+        />
+      )}
     </div>
   )
 }

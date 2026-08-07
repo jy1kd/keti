@@ -4,8 +4,7 @@ import './FooterBar.css'
 /**
  * FooterBar — ⑦ 底部工具条
  *
- * 居中 ∧/∨ 切换精简态 / 完整态（popupStore.expanded，与标题栏 `—` 等价）；
- * 右下 `＋` 新增关联窗口（预留）。
+ * 居中 ∧/∨ 切换精简态 / 完整态（popupStore.expanded，与标题栏 `—` 等价）。
  */
 export function FooterBar() {
   const expanded = useOrderPopupStore((s) => s.expanded)
@@ -23,13 +22,6 @@ export function FooterBar() {
       >
         <span className="order-popup__footer-arrow">{expanded ? '∨' : '∧'}</span>
         <span className="order-popup__footer-text">{expanded ? '收起' : '展开完整态'}</span>
-      </button>
-      <button
-        type="button"
-        className="order-popup__footer-add"
-        title="新增关联窗口（预留）"
-      >
-        ＋
       </button>
     </div>
   )
