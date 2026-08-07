@@ -59,7 +59,12 @@ function pushAndFlush(act: (fn: () => void) => void, onMessage: (msg: { type: st
 describe('useMarketWs', () => {
   beforeEach(() => {
     vi.useFakeTimers()
-    useMarketStore.setState({ snapshots: new Map(), currentPeriod: '5m' })
+    useMarketStore.setState({
+      snapshots: new Map(),
+      currentPeriod: '5m',
+      selectedInstrument: null,
+      lockedContracts: new Map(),
+    })
     // 重置全局单例
     resetGlobalWs()
     mockConnect.mockClear()
@@ -115,7 +120,7 @@ describe('useMarketWs', () => {
 
   it('收到 market_data 时批量更新 K 线数据（appendKline）', () => {
     const appendKline = vi.fn()
-    useMarketStore.setState({ appendKline })
+    useMarketStore.setState({ appendKline, selectedInstrument: 'IF2608' })
 
     renderHook(() => useMarketWs('ws://localhost:8000'))
 
@@ -147,9 +152,80 @@ describe('useMarketWs', () => {
     )
   })
 
+  it('未选中且未锁定的合约不计算 K 线（只缓冲快照）', () => {
+    const appendKline = vi.fn()
+    useMarketStore.setState({ appendKline, selectedInstrument: null, lockedContracts: new Map() })
+
+    renderHook(() => useMarketWs('ws://localhost:8000'))
+
+    const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
+
+    pushAndFlush(act, onMessage, {
+      type: 'market_data',
+      data: {
+        instrumentID: 'rb2510',
+        lastPrice: 3500.0,
+        volume: 100,
+        openInterest: 500,
+        updateTime: '14:30:00',
+        updateMillisec: 500,
+      },
+    })
+
+    // 快照仍应批量更新（表格要渲染），但 K 线不计算
+    expect(useMarketStore.getState().snapshots.get('rb2510')).toBeDefined()
+    expect(appendKline).not.toHaveBeenCalled()
+  })
+
+  it('锁定的合约（打开 K线/报单标签）也计算 K 线', () => {
+    const appendKline = vi.fn()
+    useMarketStore.setState({ appendKline, selectedInstrument: null, lockedContracts: new Map([['au2508', 1]]) })
+
+    renderHook(() => useMarketWs('ws://localhost:8000'))
+
+    const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
+
+    pushAndFlush(act, onMessage, {
+      type: 'market_data',
+      data: {
+        instrumentID: 'au2508',
+        lastPrice: 600.5,
+        volume: 100,
+        openInterest: 500,
+        updateTime: '14:30:00',
+        updateMillisec: 500,
+      },
+    })
+
+    expect(appendKline).toHaveBeenCalledWith(
+      'au2508',
+      expect.objectContaining({ close: 600.5 }),
+      expect.any(Number),
+    )
+  })
+
+  it('gate 使用最新 selectedInstrument（切换选中合约后 K 线跟随）', () => {
+    const appendKline = vi.fn()
+    useMarketStore.setState({ appendKline, selectedInstrument: 'IF2608' })
+
+    renderHook(() => useMarketWs('ws://localhost:8000'))
+
+    const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
+
+    // 切到 au2508 后，IF2608 的 tick 不再算 K 线
+    act(() => useMarketStore.getState().setSelectedInstrument('au2508'))
+
+    pushAndFlush(act, onMessage, {
+      type: 'market_data',
+      data: { instrumentID: 'IF2608', lastPrice: 4120, volume: 100, openInterest: 500, updateTime: '14:30:00', updateMillisec: 500 },
+    })
+
+    expect(appendKline).not.toHaveBeenCalled()
+  })
+
   it('K 线时间戳按周期向下取整', () => {
     const appendKline = vi.fn()
-    useMarketStore.setState({ appendKline, currentPeriod: '5m' })
+    useMarketStore.setState({ appendKline, currentPeriod: '5m', selectedInstrument: 'IF2608' })
 
     renderHook(() => useMarketWs('ws://localhost:8000'))
 

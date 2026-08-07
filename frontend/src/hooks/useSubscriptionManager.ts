@@ -3,8 +3,14 @@ import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
 import { subscribeMarket, unsubscribeMarket, getSnapshots } from '@/services/api'
 
-/** 延迟退订宽限期（毫秒） */
-const GRACE_MS = 30_000
+/**
+ * 延迟退订宽限期（毫秒）。
+ * 从 30s 收紧到 10s：订阅集随滚动膨胀，拖多次后可能顶到 SOFT_LIMIT，
+ * 更短的宽限期能更快释放滑出视野的合约，减缓膨胀。
+ * 注意：宽限期长短不影响「拖动到底不刷新」——那由机制 7（滚动松手立即 diff）
+ * + 拖动中零 HTTP 保证；滑回时重新订阅 + 快照回填仍秒出数据。
+ */
+const GRACE_MS = 10_000
 /** 拖动检测窗口（毫秒） */
 const DRAG_WINDOW_MS = 300
 /** 窗口内变化次数阈值 → 视为拖动中 */

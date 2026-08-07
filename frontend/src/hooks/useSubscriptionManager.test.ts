@@ -34,9 +34,26 @@ describe('useSubscriptionManager 延迟退订', () => {
 
     // 滑出可见区
     act(() => useMarketStore.getState().setVisibleInstrumentIDs([]))
-    await act(async () => { vi.advanceTimersByTime(10_000) }) // 10s < 30s 宽限期
+    await act(async () => { vi.advanceTimersByTime(9_000) }) // 9s < 10s 宽限期
 
     expect(vi.mocked(unsubscribeMarket)).not.toHaveBeenCalled()
+  })
+
+  it('宽限期收紧到 10s：滑出超过 10s 才退订', async () => {
+    renderHook(() => useSubscriptionManager())
+
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608']))
+    await act(async () => { vi.advanceTimersByTime(110) })
+    vi.mocked(subscribeMarket).mockClear()
+
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs([]))
+    // 9s：仍在宽限期内 → 不退订
+    await act(async () => { vi.advanceTimersByTime(9_000) })
+    expect(vi.mocked(unsubscribeMarket)).not.toHaveBeenCalled()
+
+    // 再过 2s（累计 11s > 10s）→ 触发到期重排定时器 → 退订
+    await act(async () => { vi.advanceTimersByTime(2_000) })
+    expect(vi.mocked(unsubscribeMarket)).toHaveBeenCalled()
   })
 
   it('超过宽限期仍不可见则退订', async () => {

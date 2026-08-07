@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, act } from '@testing-library/react'
 import { MarketTable } from './MarketTable'
 import { useMarketStore } from './store'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
@@ -186,8 +186,8 @@ describe('MarketTable', () => {
       />
     )
 
-    // 等待初始可见行检测
-    await vi.advanceTimersByTimeAsync(100)
+    // 等待初始可见行检测（notifyVisibleRange 触发 setVisibleRangeVersion，需 act 包裹）
+    await act(async () => { await vi.advanceTimersByTimeAsync(100) })
 
     // 应该调用回调，传入可见合约 ID 列表
     expect(onVisibleRangeChange).toHaveBeenCalled()
@@ -207,7 +207,7 @@ describe('MarketTable', () => {
       />
     )
 
-    await vi.advanceTimersByTimeAsync(100)
+    await act(async () => { await vi.advanceTimersByTimeAsync(100) })
     onVisibleRangeChange.mockClear()
 
     // 添加新合约
@@ -224,7 +224,7 @@ describe('MarketTable', () => {
       />
     )
 
-    await vi.advanceTimersByTimeAsync(100)
+    await act(async () => { await vi.advanceTimersByTimeAsync(100) })
 
     // 回调应该被调用
     expect(onVisibleRangeChange).toHaveBeenCalled()
@@ -240,8 +240,10 @@ describe('MarketTable', () => {
     expect(scrollHandler).toBeDefined()
     scrollHandler({ scrollTop: 500 })
 
-    // 松手 → markScrollEnd
-    window.dispatchEvent(new Event('mouseup'))
+    // 松手 → markScrollEnd（handleScrollEnd 同步调用 notifyVisibleRange → setVisibleRangeVersion，需 act 包裹）
+    await act(async () => {
+      window.dispatchEvent(new Event('mouseup'))
+    })
     expect(useMarketStore.getState().scrollEndSeq).toBeGreaterThan(0)
   })
 
@@ -377,6 +379,57 @@ describe('MarketTable', () => {
       const calls2 = instance.updateRecords.mock.calls as [any[], number[]][]
       expect(calls2.length).toBeGreaterThan(0)
       expect(calls2[0][1]).toEqual([1])
+    })
+
+    it('只更新可见行：屏幕外合约的快照变化不触发 updateRecords', async () => {
+      const { ListTable } = await import('@visactor/vtable')
+      const manyContracts: ContractInfo[] = Array.from({ length: 50 }, (_, i) => ({
+        instrumentID: `C${i}`,
+        instrumentName: `测试${i}`,
+        exchangeID: 'SHFE',
+        productID: 'au',
+        volumeMultiple: 1000,
+        priceTick: 0.02,
+        expireDate: '99991231',
+        isTrading: 1,
+        productClass: '1',
+      }))
+      const baseSnapshots = new Map<string, MarketSnapshot>(
+        manyContracts.map((c) => [c.instrumentID, {
+          instrumentID: c.instrumentID,
+          lastPrice: 4000,
+          bidPrice1: 3999,
+          askPrice1: 4001,
+          volume: 1,
+          openInterest: 1,
+        } as MarketSnapshot])
+      )
+
+      const { rerender } = render(<MarketTable contracts={manyContracts} snapshots={baseSnapshots} />)
+      const instance = (ListTable as any).mock.results[0].value
+      instance.updateRecords.mockClear()
+      instance.setRecords.mockClear()
+
+      // 模拟可见范围只有中间几行（含预加载 → 可见区间窄）
+      const originalRange = instance.getBodyVisibleCellRange
+      instance.getBodyVisibleCellRange = vi.fn().mockReturnValue({ rowStart: 25, rowEnd: 25, colStart: 0, colEnd: 10 })
+
+      // 只改屏幕外的合约 C0（index 0）→ 不应触发 updateRecords
+      const snap1 = new Map(baseSnapshots)
+      snap1.set('C0', { ...snap1.get('C0')!, lastPrice: 3999 } as any)
+      rerender(<MarketTable contracts={manyContracts} snapshots={snap1} />)
+      expect(instance.updateRecords).not.toHaveBeenCalled()
+
+      // 改可见区合约 C25（index 25）→ 应触发 updateRecords 且索引为 25
+      const snap2 = new Map(snap1)
+      snap2.set('C25', { ...snap2.get('C25')!, lastPrice: 4001 } as any)
+      rerender(<MarketTable contracts={manyContracts} snapshots={snap2} />)
+      expect(instance.updateRecords).toHaveBeenCalled()
+      const rows = instance.updateRecords.mock.calls.flatMap((c: [any[], number[]]) => c[1])
+      expect(rows).toContain(25)
+
+      // 恢复原始 mock，避免影响同文件其他用例
+      instance.getBodyVisibleCellRange = originalRange
     })
 
     it('selectedContracts 变化时仍走 setRecords 全量', async () => {

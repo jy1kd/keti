@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useMemo } from 'react'
+import { useRef, useEffect, useCallback, useState } from 'react'
 import { ListTable } from '@visactor/vtable'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
 import { getProductName } from '@/utils/productNames'
@@ -138,16 +138,13 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   const lastClickTimeRef = useRef<number>(0)
   const lastClickRowRef = useRef<number>(-1)
   const recordsRef = useRef<ReturnType<typeof buildRecord>[]>([])
-  const prevSnapshotsRef = useRef<Map<string, MarketSnapshot> | null>(null)
+  /** 每行最近一次 buildRecord 所用的 snapshot 引用（按行跟踪，仅对可见行生效） */
+  const rowSnapshotRef = useRef<(MarketSnapshot | undefined)[]>([])
+  /** 可见区版本号：滚动导致可见范围变化时递增，驱动局部更新 effect 重算（滚入新区域的行立即刷新） */
+  const [visibleRangeVersion, setVisibleRangeVersion] = useState(0)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** 最近一次滚动发生的时间戳（松手检测窗口依据） */
   const lastScrollAtRef = useRef(0)
-  /** instrumentID → 行索引（0-based）映射：contracts 变化时重建，供局部更新 O(1) 查索引 */
-  const rowIndexByInstrument = useMemo(() => {
-    const map = new Map<string, number>()
-    for (let i = 0; i < contracts.length; i++) map.set(contracts[i].instrumentID, i)
-    return map
-  }, [contracts])
 
   useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
@@ -174,6 +171,8 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
         if (record) visibleIDs.push(record.instrumentID)
       }
       onVisibleRangeChangeRef.current(visibleIDs)
+      // 可见区变化 → 递增版本号，驱动局部更新 effect 对滚入的新行立即重算
+      setVisibleRangeVersion((v) => v + 1)
     } catch {
       // vtable 尚未就绪
     }
@@ -462,37 +461,45 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     if (!tableRef.current) return
     const records = contracts.map((contract) => buildRecord(contract, snapshots.get(contract.instrumentID), favoritedIds?.has(contract.instrumentID) ?? false))
     recordsRef.current = records
+    // 重置每行 snapshot 跟踪：全量重建后所有行都视为已同步
+    rowSnapshotRef.current = contracts.map((c) => snapshots.get(c.instrumentID))
     tableRef.current.setRecords(records)
-    prevSnapshotsRef.current = snapshots
     lastClickedIndexRef.current = null
     setTimeout(notifyVisibleRange, 0)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contracts, favoritedIds])
 
-  // snapshots 变化 → 局部 updateRecords（高频 tick，自 diff 找变化行，避免多实例争用 store）
+  // snapshots 变化 或 可见区变化 → 仅对可见行局部 updateRecords。
+  // 高频 tick 下逐行按 snapshot 引用比较（rowSnapshotRef），避免对几百个订阅合约全量 buildRecord；
+  // 滚动到新区域时 visibleRangeVersion 递增，触发本 effect 对滚入的行立即重算。
   useEffect(() => {
     if (!tableRef.current) return
-    const prev = prevSnapshotsRef.current
-    if (!prev) return
+    const range = tableRef.current.getBodyVisibleCellRange?.()
+    if (!range) return
+
+    const PRELOAD_ROWS = 10
+    const startRow = Math.max(0, range.rowStart - 1 - PRELOAD_ROWS) // vtable row 0 = header，向上预加载
+    const endRow = Math.min(recordsRef.current.length - 1, range.rowEnd - 1 + PRELOAD_ROWS) // 向下预加载
 
     const rowIndexes: number[] = []
     const updatedRecords: ReturnType<typeof buildRecord>[] = []
-    // 遍历新 snapshots，与旧 Map 按引用比较，找出真正变化的合约行
-    for (const [id, snap] of snapshots) {
-      if (prev.get(id) === snap) continue // 引用相同，未变化
-      const rowIndex = rowIndexByInstrument.get(id) // O(1) 查行号，替代 contracts.findIndex
-      if (rowIndex === undefined) continue
-      const record = buildRecord(contracts[rowIndex], snap, favoritedIds?.has(id) ?? false)
-      recordsRef.current[rowIndex] = record
+    for (let i = startRow; i <= endRow; i++) {
+      const rowSnap = rowSnapshotRef.current[i]
+      const rowRecord = recordsRef.current[i]
+      if (!rowRecord) continue
+      const snap = snapshots.get(rowRecord.instrumentID)
+      if (rowSnap === snap) continue // 该行快照引用未变
+      const record = buildRecord(contracts[i], snap, favoritedIds?.has(rowRecord.instrumentID) ?? false)
+      recordsRef.current[i] = record
+      rowSnapshotRef.current[i] = snap
       updatedRecords.push(record)
-      rowIndexes.push(rowIndex) // updateRecords 第二参数是 0-based 记录索引（表头偏移由 vtable 内部处理）
+      rowIndexes.push(i) // updateRecords 第二参数是 0-based 记录索引（表头偏移由 vtable 内部处理）
     }
     if (updatedRecords.length > 0) {
       tableRef.current.updateRecords(updatedRecords, rowIndexes)
     }
-    prevSnapshotsRef.current = snapshots
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshots, rowIndexByInstrument])
+  }, [snapshots, visibleRangeVersion, contracts, favoritedIds])
 
   // selectedContracts 变化时更新行高亮
   useEffect(() => {
