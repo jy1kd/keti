@@ -9,7 +9,11 @@ import type { MarketSnapshot } from '@/services/types'
 // （auto-mock 同时覆盖 contracts/market 等对 services/api 的传递导入）
 vi.mock('../../services/api')
 
-import { submitOrder as apiSubmitOrder, cancelOrder as apiCancelOrder } from '../../services/api'
+import {
+  submitOrder as apiSubmitOrder,
+  cancelOrder as apiCancelOrder,
+  refreshOrders as apiRefreshOrders,
+} from '../../services/api'
 import { useQueryStore } from '../query/store'
 
 // 捕获真实 submitOrder：「点价确认闭环」用例会用 submitSpy 覆盖 store action，集成用例需在 beforeEach 恢复
@@ -751,5 +755,132 @@ describe('乐观渲染与失败回滚（P3-4）', () => {
     const bid1Buy = screen.getByTestId('bid-1').querySelector('.depth-row__buy')!
     expect(bid1Buy.querySelector('.depth-row__my--pending')).toBeNull() // pending 移除
     expect(bid1Buy.querySelector('.depth-row__my--buy')!.textContent).toBe('3') // 实态徽标
+  })
+})
+
+describe('审查修复（🔴-1 / 🟡-1~4）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useOrderStore.setState({ submitOrder: realSubmitOrder })
+    useOrderStore.setState({
+      orderForm: {
+        ...DEFAULT_ORDER_FORM,
+        instrumentID: 'IF2608',
+        exchangeID: 'CFFEX',
+        volumeTotalOriginal: 3,
+        combOffsetFlag: 'open',
+        timeCondition: 'gfd',
+      },
+    })
+    useQueryStore.setState({ orders: [], isPaused: false })
+  })
+
+  it('提交挂起期间双击「确认执行」→ 仅提交一次（🔴-1 防重入）', async () => {
+    let resolveSubmit!: (v: boolean) => void
+    const submitSpy = vi.fn().mockReturnValue(new Promise<boolean>((r) => { resolveSubmit = r }))
+    useOrderStore.setState({ submitOrder: submitSpy as () => Promise<boolean> })
+
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('bid-1').querySelector('.depth-row__buy')!)
+    fireEvent.click(screen.getByText('确认执行'))
+    fireEvent.click(screen.getByText('确认执行')) // 双击落在提交等待窗口内
+
+    resolveSubmit(true)
+    await act(async () => {})
+    expect(submitSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('pending 档位禁止叠加点击：再点同档不弹新确认框（🟡-1）', async () => {
+    let resolveSubmit!: (v: boolean) => void
+    const submitSpy = vi.fn().mockReturnValue(new Promise<boolean>((r) => { resolveSubmit = r }))
+    useOrderStore.setState({ submitOrder: submitSpy as () => Promise<boolean> })
+
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('bid-1').querySelector('.depth-row__buy')!)
+    fireEvent.click(screen.getByText('确认执行'))
+    // pending 显示期间再点同档买入列 → 忽略（仍只有原确认框）
+    fireEvent.click(screen.getByTestId('bid-1').querySelector('.depth-row__buy')!)
+    expect(screen.queryAllByTestId('confirm-dialog').length).toBe(1)
+
+    resolveSubmit(true)
+    await act(async () => {})
+    expect(submitSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('暂停查询时挂起报单轮询，不发起 CTP 查询（🟡-2）', async () => {
+    vi.useFakeTimers()
+    useQueryStore.setState({ isPaused: true, orders: [] })
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000)
+    })
+    expect(apiRefreshOrders).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('同价存在既有挂单时，新单 pending 不因既有量被提前移除（净增量判定，🟡-3）', async () => {
+    useOrderStore.setState({ submitOrder: vi.fn().mockResolvedValue(true) })
+    // 既有卖一挂单 2 手（报单前已存在）
+    useQueryStore.setState({
+      orders: [
+        { orderRef: 'ORD-OLD', instrumentID: 'IF2608', direction: '1', combOffsetFlag: '0', limitPrice: 4696, volumeTotalOriginal: 2, volumeTraded: 0, orderStatus: '2' },
+      ],
+    })
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    // 经改价框在卖一价 4696 挂卖单（避免点击既有挂单档触发撤单）
+    fireEvent.click(screen.getByTestId('ask-1').querySelector('.depth-row__price')!)
+    fireEvent.click(screen.getByTestId('qtb-sell'))
+    fireEvent.click(screen.getByText('确认执行'))
+    await act(async () => {})
+    // 聚合仍为既有 2 手（新单未被刷新到）→ pending 保留
+    expect(screen.getByTestId('ask-1').querySelector('.depth-row__my--pending')).not.toBeNull()
+    // 刷新拉到新单 3 手 → 净增量 3 ≥ pending 3 → pending 移除，实态 5 手
+    useQueryStore.setState({
+      orders: [
+        { orderRef: 'ORD-OLD', instrumentID: 'IF2608', direction: '1', combOffsetFlag: '0', limitPrice: 4696, volumeTotalOriginal: 2, volumeTraded: 0, orderStatus: '2' },
+        { orderRef: 'ORD-NEW', instrumentID: 'IF2608', direction: '1', combOffsetFlag: '0', limitPrice: 4696, volumeTotalOriginal: 3, volumeTraded: 0, orderStatus: '2' },
+      ],
+    })
+    await act(async () => {})
+    expect(screen.getByTestId('ask-1').querySelector('.depth-row__my--pending')).toBeNull()
+    expect(screen.getByTestId('ask-1').querySelector('.depth-row__my--sell')!.textContent).toBe('5')
+  })
+
+  it('输入超涨停价未 blur 直接点买入 → 夹紧到涨停价后再报单（🟡-4）', () => {
+    const onBuy = vi.fn()
+    render(
+      <QuickTradeBar
+        snapshot={makeSnapshot({ lastPrice: 4695, askPrice1: 4696, upperLimitPrice: 4700, lowerLimitPrice: 4690 })}
+        priceTick={0.2}
+        volume={2}
+        value={4696}
+        onChangePrice={vi.fn()}
+        onBuy={onBuy}
+        onSell={vi.fn()}
+      />,
+    )
+    const input = screen.getByTestId('qtb-price') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '4705' } })
+    fireEvent.click(screen.getByTestId('qtb-buy'))
+    expect(onBuy).toHaveBeenCalledWith(4700) // 夹紧到涨停 4700
+  })
+
+  it('输入非 tick 整数倍未 blur 直接点卖出 → 对齐到 tick 后再报单（🟡-4）', () => {
+    const onSell = vi.fn()
+    render(
+      <QuickTradeBar
+        snapshot={makeSnapshot({ lastPrice: 4695, askPrice1: 4696, upperLimitPrice: 4700, lowerLimitPrice: 4690 })}
+        priceTick={0.2}
+        volume={2}
+        value={4696}
+        onChangePrice={vi.fn()}
+        onBuy={vi.fn()}
+        onSell={onSell}
+      />,
+    )
+    const input = screen.getByTestId('qtb-price') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '4696.55' } })
+    fireEvent.click(screen.getByTestId('qtb-sell'))
+    expect(onSell).toHaveBeenCalledWith(4696.6) // tick 0.2 对齐
   })
 })

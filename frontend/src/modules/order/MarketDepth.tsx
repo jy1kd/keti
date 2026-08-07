@@ -119,6 +119,11 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
     let disposed = false
     let timer: ReturnType<typeof setTimeout> | undefined
     const load = async () => {
+      // 用户暂停查询时挂起本轮，不发起 CTP 报单流水查询（对齐 AccountBar 的 isPaused 语义，🟡-2）
+      if (useQueryStore.getState().isPaused) {
+        timer = setTimeout(load, 10_000)
+        return
+      }
       await useQueryStore.getState().fetchOrders()
       if (disposed) return
       timer = setTimeout(load, 10_000)
@@ -138,12 +143,18 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
     price: number
     volume: number
     status: 'pending' | 'error'
+    /** 报单前该价该向既有挂单量（净增量判定用，避免被历史挂单提前移除，🟡-3） */
+    baseline: number
   }
   const [pending, setPending] = useState<PendingOrder[]>([])
   const [banner, setBanner] = useState<string | null>(null)
   const pendingIdRef = useRef(0)
+  // 防重入（🔴-1）：提交期间同步锁，双击「确认执行」只发起一次 submitOrder
+  const [confirmBusy, setConfirmBusy] = useState(false)
+  const confirmBusyRef = useRef(false)
 
-  // pending 转实态：当聚合中出现同档同向真实挂单（refreshOrders 拉到）→ 移除 pending（由实态徽标接管）
+  // pending 转实态：当该价该向挂单净增量 ≥ pending 量（refreshOrders 拉到新单）→ 移除 pending（由实态徽标接管）。
+  // 净增量而非「量 > 0」：避免同价历史挂单导致新单 pending 被提前移除（🟡-3）。
   useEffect(() => {
     if (pending.length === 0) return
     setPending((prev) => {
@@ -151,7 +162,8 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
         if (p.status !== 'pending') return true
         const level = myOrders.byPrice.get(p.price)
         if (!level) return true
-        return (p.direction === 'buy' ? level.buyVolume : level.sellVolume) === 0
+        const vol = p.direction === 'buy' ? level.buyVolume : level.sellVolume
+        return vol - p.baseline < p.volume
       })
       return next.length === prev.length ? prev : next
     })
@@ -257,6 +269,8 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
       cancelLevel('buy', price)
       return
     }
+    // 报单进行中（pending 未转实态）该档禁止叠加点击，防重复报单（🟡-1）
+    if (pendingByPrice.get(price)?.buy) return
     openIntent('buy', price)
   }
 
@@ -266,43 +280,56 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
       cancelLevel('sell', price)
       return
     }
+    if (pendingByPrice.get(price)?.sell) return
     openIntent('sell', price)
   }
 
   const handleConfirm = async () => {
-    if (!intent) return
-    // 乐观渲染：确认瞬间档位立即出现半透明 pending（以当前手数显示）
-    const id = ++pendingIdRef.current
-    const pe: PendingOrder = {
-      id,
-      direction: intent.direction,
-      price: intent.price,
-      volume: intent.volume,
-      status: 'pending',
-    }
-    setPending((prev) => [...prev, pe])
+    // 防重入（🔴-1）：提交期间双击「确认执行」直接忽略（confirmBusyRef 同步锁，不等渲染）
+    if (!intent || confirmBusyRef.current) return
+    confirmBusyRef.current = true
+    setConfirmBusy(true)
+    try {
+      // 乐观渲染：确认瞬间档位立即出现半透明 pending（以当前手数显示）
+      const id = ++pendingIdRef.current
+      // baseline = 报单前该价该向既有挂单量（净增量判定用）
+      const pre = myOrders.byPrice.get(intent.price)
+      const baseline = intent.direction === 'buy' ? (pre?.buyVolume ?? 0) : (pre?.sellVolume ?? 0)
+      const pe: PendingOrder = {
+        id,
+        direction: intent.direction,
+        price: intent.price,
+        volume: intent.volume,
+        status: 'pending',
+        baseline,
+      }
+      setPending((prev) => [...prev, pe])
 
-    setOrderForm({
-      direction: intent.direction,
-      limitPrice: intent.price,
-      volumeTotalOriginal: intent.volume,
-      combOffsetFlag: intent.combOffsetFlag,
-      timeCondition: intent.timeCondition,
-    })
-    const ok = await submitOrder()
-    if (ok) {
-      // 成功：刷新挂单让真实单接替（转实态由聚合 effect 完成）；若一直未被接替（如立即全部成交/撤单）10s 后清理
-      useQueryStore.getState().fetchOrders()
-      window.setTimeout(() => {
+      setOrderForm({
+        direction: intent.direction,
+        limitPrice: intent.price,
+        volumeTotalOriginal: intent.volume,
+        combOffsetFlag: intent.combOffsetFlag,
+        timeCondition: intent.timeCondition,
+      })
+      const ok = await submitOrder()
+      if (ok) {
+        // 成功：刷新挂单让真实单接替（转实态由聚合 effect 完成）；若一直未被接替（如立即全部成交/撤单）10s 后清理
+        useQueryStore.getState().fetchOrders()
+        window.setTimeout(() => {
+          setPending((prev) => prev.filter((p) => p.id !== id))
+        }, 10_000)
+      } else {
+        // 失败回滚：pending 移除，顶部红条展示原因（store.lastSubmitError）
         setPending((prev) => prev.filter((p) => p.id !== id))
-      }, 10_000)
-    } else {
-      // 失败回滚：pending 移除，顶部红条展示原因（store.lastSubmitError）
-      setPending((prev) => prev.filter((p) => p.id !== id))
-      setBanner(useOrderStore.getState().lastSubmitError ?? '报单失败')
-      window.setTimeout(() => setBanner(null), 4000)
+        setBanner(useOrderStore.getState().lastSubmitError ?? '报单失败')
+        window.setTimeout(() => setBanner(null), 4000)
+      }
+    } finally {
+      confirmBusyRef.current = false
+      setConfirmBusy(false)
+      setIntent(null)
     }
-    setIntent(null)
   }
 
   return (
@@ -354,6 +381,7 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
             { label: '手数', value: String(intent.volume) },
             { label: '开平', value: OFFSET_LABEL[intent.combOffsetFlag] ?? intent.combOffsetFlag },
           ]}
+          busy={confirmBusy}
           onConfirm={handleConfirm}
           onCancel={() => setIntent(null)}
         />
@@ -636,13 +664,19 @@ export function QuickTradeBar({
     }
   }, [value, tick])
 
-  /** 提交：解析 → tick 对齐 → 涨跌停夹紧 → 上报 */
+  /** 解析 → tick 对齐 → 涨跌停夹紧；非法输入返回 null */
+  const align = (raw: string): number | null => {
+    if (tick === null) return null
+    const n = parseFloat(raw)
+    if (!Number.isFinite(n)) return null
+    return Math.min(upper, Math.max(lower, Math.round(n / tick) * tick))
+  }
+
+  /** 提交（blur/Enter）：对齐夹紧后写回输入框并上报 */
   const commit = (raw: string) => {
     if (tick === null) return
-    const n = parseFloat(raw)
-    if (!Number.isFinite(n)) return
-    const aligned = Math.round(n / tick) * tick
-    const clamped = Math.min(upper, Math.max(lower, aligned))
+    const clamped = align(raw)
+    if (clamped === null) return
     setInput(formatTickPrice(clamped, tick))
     onChangePrice(clamped)
   }
@@ -657,6 +691,16 @@ export function QuickTradeBar({
     onChangePrice(next)
   }
 
+  // 买卖按钮：不依赖 blur 先于 click 的事件顺序，直接走同一对齐/夹紧路径再报单（🟡-4）
+  const handleBuy = () => {
+    const aligned = align(input)
+    if (aligned !== null) onBuy(aligned)
+  }
+  const handleSell = () => {
+    const aligned = align(input)
+    if (aligned !== null) onSell(aligned)
+  }
+
   const price = parseFloat(input)
   const priceValid = Number.isFinite(price)
   const canTrade = priceValid && volume >= 1 && snapshot !== null
@@ -668,7 +712,7 @@ export function QuickTradeBar({
         className="qtb__btn qtb__btn--buy"
         data-testid="qtb-buy"
         disabled={!canTrade}
-        onClick={() => canTrade && onBuy(price)}
+        onClick={handleBuy}
       >
         买入{volume}手
       </button>
@@ -712,7 +756,7 @@ export function QuickTradeBar({
         className="qtb__btn qtb__btn--sell"
         data-testid="qtb-sell"
         disabled={!canTrade}
-        onClick={() => canTrade && onSell(price)}
+        onClick={handleSell}
       >
         卖出{volume}手
       </button>

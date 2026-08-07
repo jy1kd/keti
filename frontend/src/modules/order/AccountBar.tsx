@@ -102,14 +102,15 @@ export function AccountBar({ instrumentID }: AccountBarProps) {
     setAccountOpen(true)
   }
 
-  // 点击外部关闭（含下拉本体外的任意位置）
+  // 点击外部关闭（账户区或下拉面板本体以外的任意位置；🟡-6 下拉经 portal 渲染，需单独纳入 contains）
   const accountAreaRef = useRef<HTMLDivElement | null>(null)
+  const dropdownRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
     if (!accountOpen) return
     const onDown = (e: MouseEvent) => {
-      if (accountAreaRef.current && !accountAreaRef.current.contains(e.target as Node)) {
-        setAccountOpen(false)
-      }
+      const inAccount = accountAreaRef.current?.contains(e.target as Node)
+      const inDropdown = dropdownRef.current?.contains(e.target as Node)
+      if (!inAccount && !inDropdown) setAccountOpen(false)
     }
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
@@ -177,6 +178,7 @@ export function AccountBar({ instrumentID }: AccountBarProps) {
         {accountOpen && account && dropdownRect &&
           createPortal(
             <div
+              ref={dropdownRef}
               className="account-bar__dropdown"
               data-testid="ab-dropdown"
               style={{ top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width }}

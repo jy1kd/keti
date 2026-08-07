@@ -196,6 +196,19 @@ describe('AccountBar', () => {
       expect(screen.queryByTestId('ab-dropdown')).not.toBeInTheDocument()
     })
 
+    it('点击下拉面板自身不关闭（🟡-6：portal 容器纳入 contains 判断）', async () => {
+      render(<AccountBar instrumentID="IF2608" />)
+      await screen.findByTestId('ab-profit')
+      useQueryStore.setState({ account: ACCOUNT })
+      await waitFor(() =>
+        expect(screen.getByTestId('ab-account').getAttribute('title')).toBe('YYB-1829143'),
+      )
+      fireEvent.click(screen.getByTestId('ab-account'))
+      const dd = screen.getByTestId('ab-dropdown')
+      fireEvent.mouseDown(dd)
+      expect(screen.getByTestId('ab-dropdown')).toBeInTheDocument()
+    })
+
     it('账户为 null 时点击不展开下拉', async () => {
       render(<AccountBar instrumentID="IF2608" />)
       await screen.findByTestId('ab-profit')

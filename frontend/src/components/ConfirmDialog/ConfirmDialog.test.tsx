@@ -52,4 +52,18 @@ describe('ConfirmDialog', () => {
     expect(onConfirm).toHaveBeenCalledTimes(1)
     expect(onCancel).not.toHaveBeenCalled()
   })
+
+  it('busy 时禁用 确认/取消 按钮，且 Esc 不再触发取消（提交期间防重复触发）', () => {
+    const onCancel = vi.fn()
+    const onConfirm = vi.fn()
+    render(
+      <ConfirmDialog title="确认" details={[]} busy onConfirm={onConfirm} onCancel={onCancel} />
+    )
+    expect(screen.getByText('确认执行')).toBeDisabled()
+    expect(screen.getByText('取消')).toBeDisabled()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(onCancel).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('确认执行'))
+    expect(onConfirm).not.toHaveBeenCalled()
+  })
 })
