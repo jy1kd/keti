@@ -3,7 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { TabBar } from './index'
 import { useTabStore } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
-import { useContractsStore } from '@/stores/contracts'
 
 const detachMock = vi.hoisted(() => ({
   startDetachDrag: vi.fn(),
@@ -11,9 +10,6 @@ const detachMock = vi.hoisted(() => ({
 }))
 
 vi.mock('@/utils/detachDrag', () => detachMock)
-
-// beforeEach 会把 setActiveTab 重置为空操作；此处保存真实实现供浮动停靠测试验证 store 状态
-const realSetActiveTab = useTabStore.getState().setActiveTab
 
 const defaultState = {
   tabs: [
@@ -43,7 +39,6 @@ describe('TabBar', () => {
     detachMock.detachTabAt.mockReset()
     useFloatingWindowStore.setState({ windows: {} })
     useTabStore.setState(defaultState)
-    useContractsStore.setState({ favorites: [] })
   })
 
   // --- 渲染 ---
@@ -297,72 +292,6 @@ describe('TabBar', () => {
       render(<TabBar />)
       fireEvent.keyDown(screen.getByRole('tablist'), { key: 'Enter' })
       expect(setActiveTab).not.toHaveBeenCalled()
-    })
-  })
-
-  // --- 快捷按钮 ---
-
-  describe('快捷按钮', () => {
-    it('应显示 ⭐ 自选快捷按钮', () => {
-      render(<TabBar />)
-      expect(screen.getByLabelText('⭐ 自选')).toBeInTheDocument()
-    })
-
-    it('点击 ⭐ 按钮应打开自选标签页', () => {
-      const openTab = vi.fn().mockReturnValue(true)
-      useTabStore.setState({ openTab })
-      render(<TabBar />)
-      fireEvent.click(screen.getByLabelText('⭐ 自选'))
-      expect(openTab).toHaveBeenCalledWith({
-        type: 'favorites',
-        title: '⭐ 自选',
-        closable: true,
-      })
-    })
-
-    it('自选标签已打开时，点击 ⭐ 应激活该标签', () => {
-      const setActiveTab = vi.fn()
-      useTabStore.setState({
-        tabs: [
-          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-favorites', type: 'favorites', title: '⭐ 自选', props: {}, closable: true },
-        ],
-        activeTabId: 'tab-market',
-        setActiveTab,
-      })
-      render(<TabBar />)
-      fireEvent.click(screen.getByLabelText('⭐ 自选'))
-      expect(setActiveTab).toHaveBeenCalledWith('tab-favorites')
-    })
-
-    it('自选标签浮动时点击 ⭐ 应停靠回标签栏并激活', () => {
-      useTabStore.setState({
-        tabs: [
-          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-favorites', type: 'favorites', title: '⭐ 自选', props: {}, closable: true },
-        ],
-        activeTabId: 'tab-market',
-        setActiveTab: realSetActiveTab,
-      })
-      useFloatingWindowStore.setState({ windows: { 'tab-favorites': { x: 0, y: 0, w: 400, h: 300, z: 1401 } } })
-      render(<TabBar />)
-      fireEvent.click(screen.getByLabelText('⭐ 自选'))
-      expect(useFloatingWindowStore.getState().windows['tab-favorites']).toBeUndefined()
-      expect(useTabStore.getState().activeTabId).toBe('tab-favorites')
-    })
-
-    it('自选数为 0 时不显示 ⭐ 计数角标', () => {
-      render(<TabBar />)
-      expect(screen.queryByText('0', { selector: '.tab-bar__quick-badge' })).toBeNull()
-    })
-
-    it('有自选合约时 ⭐ 按钮显示计数角标', () => {
-      useContractsStore.setState({ favorites: [{ instrumentID: 'IF2608' }, { instrumentID: 'IC2608' }] as any })
-      render(<TabBar />)
-      const badge = screen.getByText('2', { selector: '.tab-bar__quick-badge' })
-      expect(badge).toBeInTheDocument()
-      // 角标只挂在 ⭐ 自选按钮上（type === 'favorites' 限定，QUICK_TABS 扩充时不误渲染）
-      expect(badge.closest('button')).toHaveAttribute('aria-label', '⭐ 自选')
     })
   })
 

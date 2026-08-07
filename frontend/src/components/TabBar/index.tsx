@@ -1,7 +1,6 @@
 import { useCallback, useState, useRef, useEffect, type KeyboardEvent } from 'react'
 import { useTabStore, type Tab } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
-import { useContractsStore } from '@/stores/contracts'
 import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
 import { isElectron } from '@/services/electron'
 import './styles.css'
@@ -10,11 +9,6 @@ interface TabBarProps {
   /** 点击 "+" 按钮时的回调 */
   onAddTab?: () => void
 }
-
-/** 可通过快捷按钮打开的标签页类型 */
-const QUICK_TABS = [
-  { type: 'favorites' as const, icon: '⭐', title: '⭐ 自选' },
-]
 
 interface ContextMenuState {
   tabId: string
@@ -36,11 +30,7 @@ export function TabBar({ onAddTab }: TabBarProps) {
   const activeTabId = useTabStore((s) => s.activeTabId)
   const setActiveTab = useTabStore((s) => s.setActiveTab)
   const closeTab = useTabStore((s) => s.closeTab)
-  const openTab = useTabStore((s) => s.openTab)
   const windows = useFloatingWindowStore((s) => s.windows)
-  const dock = useFloatingWindowStore((s) => s.dock)
-  // 自选计数角标（自选页 header 移除后，计数收敛到 ⭐ 快捷入口）
-  const favoritesCount = useContractsStore((s) => s.favorites.length)
   const suppressClickRef = useRef(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
@@ -189,36 +179,6 @@ export function TabBar({ onAddTab }: TabBarProps) {
         </div>
       ))}
       <div className="tab-bar__separator" />
-      {QUICK_TABS.map(({ type, icon, title }) => {
-        const tab = tabs.find((t) => t.type === type)
-        const isOpen = visibleTabs.some((t) => t.type === type)
-        return (
-          <button
-            key={type}
-            type="button"
-            className={`tab-bar__quick${isOpen ? ' tab-bar__quick--active' : ''}`}
-            aria-label={title}
-            title={title}
-            onClick={() => {
-              if (!tab) {
-                openTab({ type, title, closable: true })
-              } else if (windows[tab.id]) {
-                // 浮动中的目标标签：停靠回标签栏并激活
-                dock(tab.id)
-                setActiveTab(tab.id)
-              } else {
-                setActiveTab(tab.id)
-              }
-            }}
-          >
-            {icon}
-            {/* 自选计数角标只绑定 ⭐ 自选快捷按钮（QUICK_TABS 未来扩充时避免误渲染） */}
-            {type === 'favorites' && favoritesCount > 0 && (
-              <span className="tab-bar__quick-badge">{favoritesCount}</span>
-            )}
-          </button>
-        )
-      })}
       <button
         type="button"
         className="tab-bar__add"
