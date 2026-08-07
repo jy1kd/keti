@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { TradeParams } from './TradeParams'
 import { useOrderStore } from './store'
+import { useOrderPopupStore } from './popupStore'
 import { useContractsStore } from '@/stores/contracts'
 import { useQueryStore } from '../query/store'
 
@@ -206,41 +207,65 @@ describe('TradeParams（任务#4）', () => {
     })
   })
 
-  describe('合约步进（P3 ContractStepper 集成）', () => {
-    it('渲染 合约 行与步进控件', () => {
+  describe('合约搜索切换（替换箭头步进）', () => {
+    it('渲染 合约 行与搜索框（回显当前合约）', () => {
       render(<TradeParams />)
       expect(screen.getByText('合约')).toBeInTheDocument()
-      expect(screen.getByTestId('contract-stepper')).toBeInTheDocument()
+      const input = screen.getByPlaceholderText('搜索合约...') as HTMLInputElement
+      expect(input.value).toBe('IF2608')
     })
 
-    it('点击 › 相邻月份 → setOrderForm({ instrumentID }) 切换到新合约', () => {
+    it('搜索并选择合约 → setOrderForm({ instrumentID }) 切换', () => {
       useContractsStore.setState({
         contracts: [
           IF2608_CONTRACT,
           { ...IF2608_CONTRACT, instrumentID: 'IF2609' },
-          { ...IF2608_CONTRACT, instrumentID: 'IF2607' },
         ],
         favorites: [],
         isLoaded: true,
       })
       render(<TradeParams />)
-      fireEvent.click(screen.getByTestId('cs-next'))
+      const input = screen.getByPlaceholderText('搜索合约...')
+      fireEvent.change(input, { target: { value: 'IF2609' } })
+      fireEvent.mouseDown(screen.getByText('IF2609'))
       expect(useOrderStore.getState().orderForm.instrumentID).toBe('IF2609')
     })
 
-    it('点击 ‹ 相邻月份 → 切换到上一月份合约', () => {
+    it('选择新合约后输入框回显新合约（key 随 activeInstrument 重挂载）', () => {
       useContractsStore.setState({
         contracts: [
           IF2608_CONTRACT,
           { ...IF2608_CONTRACT, instrumentID: 'IF2609' },
-          { ...IF2608_CONTRACT, instrumentID: 'IF2607' },
+        ],
+        favorites: [],
+        isLoaded: true,
+      })
+      const { rerender } = render(<TradeParams />)
+      const input = screen.getByPlaceholderText('搜索合约...') as HTMLInputElement
+      fireEvent.change(input, { target: { value: 'IF2609' } })
+      fireEvent.mouseDown(screen.getByText('IF2609'))
+      // orderForm.instrumentID 已切换 → key 变化强制重挂载 → 输入框回显新合约
+      expect(useOrderStore.getState().orderForm.instrumentID).toBe('IF2609')
+      rerender(<TradeParams />)
+      const input2 = screen.getByPlaceholderText('搜索合约...') as HTMLInputElement
+      expect(input2.value).toBe('IF2609')
+    })
+
+    it('弹窗正打开当前合约时选择新合约 → 联动 openPopup 切换弹窗合约', () => {
+      useOrderPopupStore.setState({ instrumentID: 'IF2608' })
+      useContractsStore.setState({
+        contracts: [
+          IF2608_CONTRACT,
+          { ...IF2608_CONTRACT, instrumentID: 'IF2609' },
         ],
         favorites: [],
         isLoaded: true,
       })
       render(<TradeParams />)
-      fireEvent.click(screen.getByTestId('cs-prev'))
-      expect(useOrderStore.getState().orderForm.instrumentID).toBe('IF2607')
+      const input = screen.getByPlaceholderText('搜索合约...')
+      fireEvent.change(input, { target: { value: 'IF2609' } })
+      fireEvent.mouseDown(screen.getByText('IF2609'))
+      expect(useOrderPopupStore.getState().instrumentID).toBe('IF2609')
     })
   })
 })

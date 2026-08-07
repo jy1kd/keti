@@ -32,7 +32,7 @@
 |---|---|---|
 | ① 标题栏 `五档下单-{合约}` | 已有（📝 报单-{合约}） | 缺帮助 `?`、缺收起（缩小为精简态）按钮 |
 | ② 账户/持仓/持盈栏 | **无** | 需新增 `AccountBar`；数据在 `useQueryStore`（由 QueryPanel 10s 轮询填充） |
-| ③ 交易参数区（左 ~200px） | `OrderForm` 全量表单 | 需压缩为下拉 + 步进；缺合约步进、快捷手数、撤最新/撤全部、平净仓、Smart Order |
+| ③ 交易参数区（左 ~200px） | `OrderForm` 全量表单 | 需压缩为下拉 + 步进；缺合约搜索切换、快捷手数、撤最新/撤全部、平净仓、Smart Order |
 | ④ 五档盘口（右 flex） | `DepthQuote` 上下两块 | 需重写为 **买量\|价格\|卖量 三列单表** + 顶部汇总行 + 最新价分隔线 + 量能条 + 挂单量；**点价语义需改** |
 | ⑤ 快速买卖按钮栏 | `OrderForm` 底部提交按钮 | 独立为 `买入N手 \| 价格 \| 卖出N手`，由 MarketDepth 内嵌 `QuickTradeBar` 提供（两态均显示） |
 | ⑥ 行情统计栏（完整态） | `OrderQuotePanel` 底部 stats grid | 拆为独立条，仅完整态渲染 |
@@ -284,7 +284,7 @@
 | `OrderPopup.tsx` | 重排布局：header + `AccountBar` + body(`TradeParams` \| `MarketDepth`) + `QuoteStatsBar` + `FooterBar`；接管精简/完整态 |
 | `OrderPopup.css` | 全量重写（保留 `.order-popup__*` 类名供 OrderPage 浮动模式复用） |
 | `OrderQuotePanel.tsx` / `OrderQuotePanel.css` | 保留给 `OrderPage` 非浮动/浮动模式；弹窗内不再直接使用（或收敛为 `AccountBar`+`QuoteStatsBar`） |
-| `TradeParams.tsx`（新） | 压缩参数区；含 `ContractStepper`、下拉 ×3、`QtyStepper`、`QtyPreset`、`CancelButtons`、`FlatNetButton` |
+| `TradeParams.tsx`（新） | 压缩参数区；含 `ContractSearch`（合约搜索切换）、下拉 ×3、`QtyStepper`、`QtyPreset`、`CancelButtons`、`FlatNetButton` |
 | `MarketDepth.tsx`（新） | 三列十档单表 + 汇总行 + 最新价分隔线 + 量能条 + 我方挂单量 + 乐观渲染；内嵌 `QuickTradeBar`（改价框 + 买卖按钮）；子组件 `DepthHeader/DepthSummaryRow/DepthLadder/DepthRow/LastPriceDivider` |
 | `AccountBar.tsx`（新） | 账户下拉 + 持仓 + 持盈；自带拉取 |
 | `QuoteStatsBar.tsx` / `FooterBar.tsx`（新） | 行情统计栏（完整态）/ 底部工具条 |
@@ -301,7 +301,7 @@
 |---|---|---|
 | **P1 核心闭环** | ④ `MarketDepth` 三列十档（含内嵌 `QuickTradeBar` 改价+买卖按钮）+ ③ `TradeParams` 压缩参数区（沿用开/平/平今、gfd/fok/fak）；点价直接下单（每次带确认框） | 点档位弹确认 → 确认后报单成功，参数正确，现有校验全通过 |
 | **P2 完整态** | ② `AccountBar` + ⑥ `QuoteStatsBar` + ⑦ `FooterBar`；精简/完整态切换与持久化 | 一键展开完整态，持仓/资金实时刷新 |
-| **P3 增强** | 合约步进切换、快捷手数预设、盘口我方挂单量显示与点击撤单（含长按菜单）、量能可视化、乐观渲染与失败回滚、撤最新/撤全部/平净仓 | 盘口挂单可撤、报单失败回滚正确、步进切月正确 |
+| **P3 增强** | 合约搜索切换、快捷手数预设、盘口我方挂单量显示与点击撤单（含长按菜单）、量能可视化、乐观渲染与失败回滚、撤最新/撤全部/平净仓 | 盘口挂单可撤、报单失败回滚正确、合约搜索切换正确 |
 | **P4 可选** | GTC/平昨（orderMapping）、自动开平（后端）、红绿反转配置、Smart Order→止损单、热键说明浮层 | 配置化能力补齐 |
 
 每阶段遵循现有 TDD 双窗口流程：先补测试（`OrderPopup.test.tsx` 等），再实现。

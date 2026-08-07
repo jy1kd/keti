@@ -8,10 +8,12 @@ interface ContractSearchProps {
   onSelect?: (instrumentID: string) => void
   /** 搜索关键词变化回调（用于表格过滤） */
   onQueryChange?: (query: string) => void
+  /** 初始显示值（如回显当前选中合约）；仅初次挂载生效，选择/输入后内部接管 */
+  initialQuery?: string
 }
 
-export function ContractSearch({ contracts, onSelect, onQueryChange }: ContractSearchProps) {
-  const [query, setQuery] = useState('')
+export function ContractSearch({ contracts, onSelect, onQueryChange, initialQuery = '' }: ContractSearchProps) {
+  const [query, setQuery] = useState(initialQuery)
   const [isOpen, setIsOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const listRef = useRef<HTMLDivElement>(null)

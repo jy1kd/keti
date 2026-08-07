@@ -81,13 +81,13 @@
 
 ## P3 增强
 
-**目标**：合约步进、快捷手数、盘口「我方挂单量」与点击撤单、乐观渲染/回滚、量能可视化完善、撤最新/撤全部/平净仓。
+**目标**：合约搜索切换、快捷手数、盘口「我方挂单量」与点击撤单、乐观渲染/回滚、量能可视化完善、撤最新/撤全部/平净仓。
 
 ### 任务清单
 
-1. **合约步进切换（`ContractStepper`）**
-   - 解析合约代码切相邻月份/品种，选中同步 `setOrderForm({ instrumentID })`（联动行情订阅与标题）
-   - 位于 `TradeParams` 顶部
+1. **合约搜索切换（`ContractSearch`）**
+   - 搜索合约并选中，同步 `setOrderForm({ instrumentID })`（联动行情订阅与标题；弹窗打开当前合约时联动切换弹窗合约）
+   - 位于 `TradeParams` 顶部；输入框回显当前合约（`initialQuery` + key 重挂载）
 2. **快捷手数预设（`QtyPreset`）**
    - `1 20 50 100` 分段按钮，点击即填入手数；右键自定义预设（可选子任务）
 3. **盘口「我方挂单量」显示与点击撤单**
@@ -100,16 +100,17 @@
    - `撤全部`：二次确认 + `cancelAllOrders`
    - `平净仓`：确认 + `reversePosition`（复用 OrderPanel 现有逻辑）
 6. **TDD 测试**
-   - `ContractStepper.test.tsx`：月份/品种切换
+   - `ContractSearch` 搜索/回显测试 + `TradeParams` 合约搜索集成（含弹窗联动）
    - 挂单聚合与撤单测试、pending 回滚测试、`TradeParams` 操作按钮测试
 7. **账户下拉资金明细（P2 审查 🔵-2 延后项）**
    - `AccountBar` 账户号展开下拉，列出可用资金 / 持仓盈亏 / 动态权益（设计 §4.2 备注；`AccountInfo` 无「持仓可用」字段，以持仓盈亏替代）；P2 仅实现超长省略 + hover 全席位号
 
-**验收**：盘口挂单可撤、报单失败回滚正确、步进切月正确；大额/撤全部/平净仓均强制确认。
+**验收**：盘口挂单可撤、报单失败回滚正确、合约搜索切换正确；大额/撤全部/平净仓均强制确认。
 
 ### 开发完成说明（2026-08-07，✅ 已完成收尾）
 
-- **全部 7 项已实现**：ContractStepper（相邻月份 + 品种步进）、QtyPreset（1/20/50/100 + 超限钳制）、盘口我方挂单量显示与点击撤单（`myOrders.ts` 聚合）、乐观渲染与失败回滚（`store.lastSubmitError` + 顶部红条）、撤最新/撤全部/平净仓（撤全部与平净仓强制确认）、账户下拉资金明细（P2 🔵-2 延后项落地）
+- **全部 7 项已实现**：ContractSearch（合约搜索切换，回显当前合约 + 弹窗联动）、QtyPreset（1/20/50/100 + 超限钳制）、盘口我方挂单量显示与点击撤单（`myOrders.ts` 聚合）、乐观渲染与失败回滚（`store.lastSubmitError` + 顶部红条）、撤最新/撤全部/平净仓（撤全部与平净仓强制确认）、账户下拉资金明细（P2 🔵-2 延后项落地）
+- **后续调整（2026-08-07，用户要求）**：取消 `ContractStepper` 箭头切换（相邻月份/品种步进），改为 `TradeParams` 合约搜索切换（`ContractSearch` 回显当前合约 + 搜索选择，保留弹窗联动）；删除 `ContractStepper`/`contractStep` 死代码
 - **审查修复**：🔴-1 确认防重入（`confirmBusyRef` + ConfirmDialog `busy`）；🟡-1~6（pending 禁叠点 / 轮询尊重 isPaused / pending 净增量判定 / 买卖按钮 tick 对齐 / 下拉字段表述同步 / 下拉面板点击不关闭）；🔵-2 设计文档 §4.3 措辞同步
 - **人工验证**：8 项全部通过（verify-discussion-orderpopup-p3.md），前端全量 1044 单测全绿
 - **用户要求的三处 UI 调整**：平净仓按钮改小（紧凑居中）、快捷手数按钮放大（100 不溢出）、移除 AccountBar 锁仓按钮（锁仓保留在报单面板 QuickActions）、移除 FooterBar 右下加号按钮（预留占位）
