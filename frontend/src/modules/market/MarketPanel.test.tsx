@@ -95,6 +95,7 @@ describe('MarketPanel', () => {
     useMarketStore.setState({
       selectedInstrument: null,
       snapshots: new Map(),
+      scrollEndSeq: 0,
     })
     useContractsStore.setState({ contracts: [], favorites: [], isLoaded: false })
     useOrderPopupStore.setState({ instrumentID: null })
