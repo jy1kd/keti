@@ -3,6 +3,7 @@ import { ListTable } from '@visactor/vtable'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
 import { getProductName } from '@/utils/productNames'
 import { getContractStatus, type ContractStatus } from '@/utils/contractStatus'
+import { SCROLLBAR_SIZE, PROMINENT_SCROLL_STYLE } from '@/utils/vtableTheme'
 import { useMarketStore } from './store'
 
 interface MarketTableProps {
@@ -31,9 +32,6 @@ const PLACEHOLDER = '--'
 
 /** mouseup 距上次 scroll 在此窗口内视为滚动条释放（松手） */
 const SCROLL_RELEASE_WINDOW_MS = 200
-
-/** vtable 滚动条厚度（与 theme scrollStyle.width 保持一致；用于排除滚动条区域的误判） */
-const SCROLLBAR_SIZE = 12
 
 const UP_COLOR = '#ef4444'
 const DOWN_COLOR = '#22c55e'
@@ -237,12 +235,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
           cellBgColor: 'rgba(240, 180, 41, 0.08)',
           inlineRowBgColor: 'rgba(240, 180, 41, 0.12)',
         },
-        scrollStyle: {
-          scrollSliderColor: '#4a9eff',
-          scrollRailColor: '#21262d',
-          width: SCROLLBAR_SIZE,
-          visible: 'always',
-        },
+        scrollStyle: { ...PROMINENT_SCROLL_STYLE },
         frameStyle: {
           borderColor: '#30363d',
           cornerRadius: 0,
