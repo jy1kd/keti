@@ -90,9 +90,10 @@ describe('FavoritesPage', () => {
     useOrderPopupStore.setState({ instrumentID: null })
   })
 
-  it('should render favorites page title', () => {
+  it('删除冗余「⭐ 自选合约」标题，仅保留计数角标', () => {
     render(<FavoritesPage />)
-    expect(screen.getByText(/自选合约/)).toBeDefined()
+    expect(screen.queryByText(/自选合约/)).toBeNull()
+    expect(screen.getByText('2', { selector: '.favorites-page__count' })).toBeDefined()
   })
 
   it('should display favorites count', () => {

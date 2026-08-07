@@ -153,7 +153,7 @@ describe('TabContent', () => {
       ['market', '行情面板'],
       ['order', '报单页面'],
       ['kline', 'K线页面'],
-      ['favorites', '⭐ 自选合约'],
+      ['favorites', '暂无自选合约'],
       ['settings', '⚙ 设置'],
       ['options', '期权标签页'],
       ['ipc-monitor', '🔌 IPC 监控'],

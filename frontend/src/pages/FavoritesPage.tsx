@@ -55,7 +55,6 @@ export function FavoritesPage() {
     return (
       <div className="favorites-page">
         <div className="favorites-page__header" data-drag-handle>
-          <h2 className="favorites-page__title">⭐ 自选合约</h2>
           <span className="favorites-page__count">0</span>
         </div>
         <div className="favorites-page__empty">
@@ -69,7 +68,6 @@ export function FavoritesPage() {
   return (
     <div className="favorites-page">
       <div className="favorites-page__header" data-drag-handle>
-        <h2 className="favorites-page__title">⭐ 自选合约</h2>
         <span className="favorites-page__count">{favorites.length}</span>
       </div>
       <div className="favorites-page__table">
