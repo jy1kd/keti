@@ -9,7 +9,7 @@ import { ACTIVE_ORDER_STATUSES } from './myOrders'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { toast } from '@/components/Toast'
 import type { OrderRequestForm } from '@/utils/orderMapping'
-import { ContractStepper } from './ContractStepper'
+import { ContractSearch } from '@/components/ContractSearch'
 import { QtyPreset } from './QtyPreset'
 import './TradeParams.css'
 
@@ -21,7 +21,7 @@ interface TradeParamsProps {
 /**
  * TradeParams — 压缩参数区（报单弹窗左栏 ~200px）
  *
- * 合约步进（P3）+ 开平 / 投保 / 有效期 三个下拉（映射 `combOffsetFlag` / `combHedgeFlag` / `timeCondition`）
+ * 合约搜索切换（替换箭头步进）+ 开平 / 投保 / 有效期 三个下拉（映射 `combOffsetFlag` / `combHedgeFlag` / `timeCondition`）
  * + 手数步进（校验复用 `validateVolumeWithLimit`：期货 500 / 市价 60 / 期权 100）。
  * 状态读写 `useOrderStore.orderForm`；快捷手数/撤单按钮见 P3 后续模块。
  */
@@ -35,6 +35,14 @@ export function TradeParams({ instrumentID }: TradeParamsProps) {
     const contract = contracts.find((c) => c.instrumentID === activeInstrument)
     return contract?.productClass ?? '1'
   }, [contracts, activeInstrument])
+
+  // 合约搜索选择：弹窗正打开当前合约 → 联动切换弹窗合约（标题/订阅/盘口随动）
+  const handleContractSelect = (code: string) => {
+    if (useOrderPopupStore.getState().instrumentID === activeInstrument) {
+      useOrderPopupStore.getState().openPopup(code)
+    }
+    setOrderForm({ instrumentID: code })
+  }
 
   const volumeLimit = getVolumeLimit(orderForm.orderPriceType, productClass)
   const volumeError = validateVolumeWithLimit(
@@ -111,9 +119,12 @@ export function TradeParams({ instrumentID }: TradeParamsProps) {
     <div className="trade-params">
       <div className="tp-row">
         <span className="tp-row__label">合约</span>
-        <ContractStepper
-          instrumentID={activeInstrument}
-          onSelect={(code) => setOrderForm({ instrumentID: code })}
+        {/* 搜索切换合约；key 随当前合约变化强制重挂载，回显当前合约代码 */}
+        <ContractSearch
+          key={activeInstrument}
+          contracts={contracts}
+          initialQuery={activeInstrument}
+          onSelect={handleContractSelect}
         />
       </div>
 

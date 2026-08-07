@@ -4,24 +4,12 @@ import { TabBar } from './index'
 import { useTabStore } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
 
-const { mockQueryOpen } = vi.hoisted(() => ({ mockQueryOpen: vi.fn() }))
-
-// Mock 查询弹窗 store（TabBar 📋 按钮打开悬浮弹窗而非标签页）
-vi.mock('@/modules/query/popupStore', () => ({
-  useQueryPopupStore: {
-    getState: () => ({ open: mockQueryOpen, close: vi.fn() }),
-  },
-}))
-
 const detachMock = vi.hoisted(() => ({
   startDetachDrag: vi.fn(),
   detachTabAt: vi.fn(),
 }))
 
 vi.mock('@/utils/detachDrag', () => detachMock)
-
-// beforeEach 会把 setActiveTab 重置为空操作；此处保存真实实现供浮动停靠测试验证 store 状态
-const realSetActiveTab = useTabStore.getState().setActiveTab
 
 const defaultState = {
   tabs: [
@@ -265,7 +253,7 @@ describe('TabBar', () => {
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
           { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
-          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
+          { id: 'tab-settings-2', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
         activeTabId: 'tab-settings',
         setActiveTab,
@@ -281,14 +269,14 @@ describe('TabBar', () => {
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
           { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
-          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
+          { id: 'tab-settings-2', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
         activeTabId: 'tab-market',
         setActiveTab,
       })
       render(<TabBar />)
       fireEvent.keyDown(screen.getByRole('tablist'), { key: 'End' })
-      expect(setActiveTab).toHaveBeenCalledWith('tab-settings')
+      expect(setActiveTab).toHaveBeenCalledWith('tab-settings-2')
     })
 
     it('其他键不应触发切换', () => {
@@ -304,69 +292,6 @@ describe('TabBar', () => {
       render(<TabBar />)
       fireEvent.keyDown(screen.getByRole('tablist'), { key: 'Enter' })
       expect(setActiveTab).not.toHaveBeenCalled()
-    })
-  })
-
-  // --- 快捷按钮 ---
-
-  describe('快捷按钮', () => {
-    it('应显示 ⭐ 自选快捷按钮', () => {
-      render(<TabBar />)
-      expect(screen.getByLabelText('⭐ 自选')).toBeInTheDocument()
-    })
-
-    it('点击 ⭐ 按钮应打开自选标签页', () => {
-      const openTab = vi.fn().mockReturnValue(true)
-      useTabStore.setState({ openTab })
-      render(<TabBar />)
-      fireEvent.click(screen.getByLabelText('⭐ 自选'))
-      expect(openTab).toHaveBeenCalledWith({
-        type: 'favorites',
-        title: '⭐ 自选',
-        closable: true,
-      })
-    })
-
-    it('自选标签已打开时，点击 ⭐ 应激活该标签', () => {
-      const setActiveTab = vi.fn()
-      useTabStore.setState({
-        tabs: [
-          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-favorites', type: 'favorites', title: '⭐ 自选', props: {}, closable: true },
-        ],
-        activeTabId: 'tab-market',
-        setActiveTab,
-      })
-      render(<TabBar />)
-      fireEvent.click(screen.getByLabelText('⭐ 自选'))
-      expect(setActiveTab).toHaveBeenCalledWith('tab-favorites')
-    })
-
-    it('自选标签浮动时点击 ⭐ 应停靠回标签栏并激活', () => {
-      useTabStore.setState({
-        tabs: [
-          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-favorites', type: 'favorites', title: '⭐ 自选', props: {}, closable: true },
-        ],
-        activeTabId: 'tab-market',
-        setActiveTab: realSetActiveTab,
-      })
-      useFloatingWindowStore.setState({ windows: { 'tab-favorites': { x: 0, y: 0, w: 400, h: 300, z: 1401 } } })
-      render(<TabBar />)
-      fireEvent.click(screen.getByLabelText('⭐ 自选'))
-      expect(useFloatingWindowStore.getState().windows['tab-favorites']).toBeUndefined()
-      expect(useTabStore.getState().activeTabId).toBe('tab-favorites')
-    })
-
-    it('应显示 📋 查询快捷按钮', () => {
-      render(<TabBar />)
-      expect(screen.getByLabelText('📋 查询')).toBeInTheDocument()
-    })
-
-    it('点击 📋 按钮应打开查询弹窗', () => {
-      render(<TabBar />)
-      fireEvent.click(screen.getByLabelText('📋 查询'))
-      expect(mockQueryOpen).toHaveBeenCalled()
     })
   })
 

@@ -24,6 +24,18 @@
   color: var(--text-secondary);
 }
 
+/* 合约搜索切换（替换 ContractStepper 箭头）：输入框自适应 200px 左栏，
+   覆盖 ContractSearch 组件默认 220px 固定宽度，避免溢出画面 */
+.trade-params .contract-search {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.trade-params .contract-search .search-input {
+  width: 100%;
+  height: 28px;
+}
+
 .tp-row__select {
   flex: 1 1 0;
   min-width: 0;

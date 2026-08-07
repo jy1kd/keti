@@ -93,32 +93,6 @@
   flex-shrink: 0;
 }
 
-.tab-bar__quick {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  font-size: 14px;
-  color: var(--text-muted);
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: color 0.15s, background 0.15s;
-  flex-shrink: 0;
-}
-
-.tab-bar__quick:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.tab-bar__quick--active {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.08);
-}
-
 .tab-bar__context-menu {
   position: fixed;
   z-index: 1000;

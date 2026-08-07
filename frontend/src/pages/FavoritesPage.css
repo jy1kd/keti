@@ -6,22 +6,6 @@
   background: var(--bg-primary);
 }
 
-.favorites-page__header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.favorites-page__count {
-  font-size: 12px;
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-
 .favorites-page__table {
   flex: 1;
   min-height: 0;

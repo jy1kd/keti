@@ -22,6 +22,20 @@ describe('ContractSearch', () => {
     expect(input.value).toBe('')
   })
 
+  it('renders with initialQuery value (回显当前合约)', () => {
+    render(<ContractSearch contracts={[]} initialQuery="IF2608" />)
+    const input = screen.getByPlaceholderText('搜索合约...') as HTMLInputElement
+    expect(input.value).toBe('IF2608')
+  })
+
+  it('输入覆盖 initialQuery 后按输入搜索', () => {
+    render(<ContractSearch contracts={mockContracts} initialQuery="au2508" />)
+    const input = screen.getByPlaceholderText('搜索合约...') as HTMLInputElement
+    expect(input.value).toBe('au2508')
+    fireEvent.change(input, { target: { value: 'ag' } })
+    expect(screen.getByText('ag2508')).toBeInTheDocument()
+  })
+
   it('shows matching contracts when typing', () => {
     render(<ContractSearch contracts={mockContracts} />)
     const input = screen.getByPlaceholderText('搜索合约...')

@@ -54,9 +54,6 @@ export function FavoritesPage() {
   if (favorites.length === 0) {
     return (
       <div className="favorites-page" data-testid="favorites-page">
-        <div className="favorites-page__header" data-drag-handle>
-          <span className="favorites-page__count">0</span>
-        </div>
         <div className="favorites-page__empty">
           <p>暂无自选合约</p>
           <p className="favorites-page__hint">在行情表格中点击 ☆ 收藏合约</p>
@@ -67,9 +64,6 @@ export function FavoritesPage() {
 
   return (
     <div className="favorites-page" data-testid="favorites-page">
-      <div className="favorites-page__header" data-drag-handle>
-        <span className="favorites-page__count">{favorites.length}</span>
-      </div>
       <div className="favorites-page__table">
         <MarketTable
           contracts={favorites}

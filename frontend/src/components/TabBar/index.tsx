@@ -2,7 +2,6 @@ import { useCallback, useState, useRef, useEffect, type KeyboardEvent } from 're
 import { useTabStore, type Tab } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
-import { useQueryPopupStore } from '@/modules/query/popupStore'
 import { isElectron } from '@/services/electron'
 import './styles.css'
 
@@ -10,11 +9,6 @@ interface TabBarProps {
   /** 点击 "+" 按钮时的回调 */
   onAddTab?: () => void
 }
-
-/** 可通过快捷按钮打开的标签页类型 */
-const QUICK_TABS = [
-  { type: 'favorites' as const, icon: '⭐', title: '⭐ 自选' },
-]
 
 interface ContextMenuState {
   tabId: string
@@ -36,9 +30,7 @@ export function TabBar({ onAddTab }: TabBarProps) {
   const activeTabId = useTabStore((s) => s.activeTabId)
   const setActiveTab = useTabStore((s) => s.setActiveTab)
   const closeTab = useTabStore((s) => s.closeTab)
-  const openTab = useTabStore((s) => s.openTab)
   const windows = useFloatingWindowStore((s) => s.windows)
-  const dock = useFloatingWindowStore((s) => s.dock)
   const suppressClickRef = useRef(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
@@ -187,42 +179,6 @@ export function TabBar({ onAddTab }: TabBarProps) {
         </div>
       ))}
       <div className="tab-bar__separator" />
-      {QUICK_TABS.map(({ type, icon, title }) => {
-        const tab = tabs.find((t) => t.type === type)
-        const isOpen = visibleTabs.some((t) => t.type === type)
-        return (
-          <button
-            key={type}
-            type="button"
-            className={`tab-bar__quick${isOpen ? ' tab-bar__quick--active' : ''}`}
-            aria-label={title}
-            title={title}
-            onClick={() => {
-              if (!tab) {
-                openTab({ type, title, closable: true })
-              } else if (windows[tab.id]) {
-                // 浮动中的目标标签：停靠回标签栏并激活
-                dock(tab.id)
-                setActiveTab(tab.id)
-              } else {
-                setActiveTab(tab.id)
-              }
-            }}
-          >
-            {icon}
-          </button>
-        )
-      })}
-      {/* 查询弹窗快捷按钮（查询为悬浮弹窗形态，非标签页） */}
-      <button
-        type="button"
-        className="tab-bar__quick"
-        aria-label="📋 查询"
-        title="📋 查询"
-        onClick={() => useQueryPopupStore.getState().open()}
-      >
-        📋
-      </button>
       <button
         type="button"
         className="tab-bar__add"

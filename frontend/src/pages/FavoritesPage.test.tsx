@@ -90,15 +90,13 @@ describe('FavoritesPage', () => {
     useOrderPopupStore.setState({ instrumentID: null })
   })
 
-  it('删除冗余「⭐ 自选合约」标题，仅保留计数角标', () => {
+  it('移除标题栏「⭐ 自选合约」与计数角标（计数收敛到全局栏 ⭐ 快捷入口），表格顶到全局栏下', () => {
     render(<FavoritesPage />)
+    // 无 header：无标题、无计数角标
     expect(screen.queryByText(/自选合约/)).toBeNull()
-    expect(screen.getByText('2', { selector: '.favorites-page__count' })).toBeDefined()
-  })
-
-  it('should display favorites count', () => {
-    render(<FavoritesPage />)
-    expect(screen.getByText('2', { selector: '.favorites-page__count' })).toBeDefined()
+    expect(document.querySelector('.favorites-page__header')).toBeNull()
+    // 表格直接渲染
+    expect(screen.getByTestId('market-table')).toBeDefined()
   })
 
   it('should pass favorites to MarketTable', () => {
