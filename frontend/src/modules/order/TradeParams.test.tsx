@@ -107,4 +107,42 @@ describe('TradeParams（任务#4）', () => {
     fireEvent.click(screen.getByTestId('tp-volume-up'))
     expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(500)
   })
+
+  describe('合约步进（P3 ContractStepper 集成）', () => {
+    it('渲染 合约 行与步进控件', () => {
+      render(<TradeParams />)
+      expect(screen.getByText('合约')).toBeInTheDocument()
+      expect(screen.getByTestId('contract-stepper')).toBeInTheDocument()
+    })
+
+    it('点击 › 相邻月份 → setOrderForm({ instrumentID }) 切换到新合约', () => {
+      useContractsStore.setState({
+        contracts: [
+          IF2608_CONTRACT,
+          { ...IF2608_CONTRACT, instrumentID: 'IF2609' },
+          { ...IF2608_CONTRACT, instrumentID: 'IF2607' },
+        ],
+        favorites: [],
+        isLoaded: true,
+      })
+      render(<TradeParams />)
+      fireEvent.click(screen.getByTestId('cs-next'))
+      expect(useOrderStore.getState().orderForm.instrumentID).toBe('IF2609')
+    })
+
+    it('点击 ‹ 相邻月份 → 切换到上一月份合约', () => {
+      useContractsStore.setState({
+        contracts: [
+          IF2608_CONTRACT,
+          { ...IF2608_CONTRACT, instrumentID: 'IF2609' },
+          { ...IF2608_CONTRACT, instrumentID: 'IF2607' },
+        ],
+        favorites: [],
+        isLoaded: true,
+      })
+      render(<TradeParams />)
+      fireEvent.click(screen.getByTestId('cs-prev'))
+      expect(useOrderStore.getState().orderForm.instrumentID).toBe('IF2607')
+    })
+  })
 })

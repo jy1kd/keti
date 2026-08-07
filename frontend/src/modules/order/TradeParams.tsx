@@ -3,6 +3,7 @@ import { useOrderStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
 import { validateVolumeWithLimit, getVolumeLimit } from '@/utils/validators'
 import type { OrderRequestForm } from '@/utils/orderMapping'
+import { ContractStepper } from './ContractStepper'
 import './TradeParams.css'
 
 interface TradeParamsProps {
@@ -13,9 +14,9 @@ interface TradeParamsProps {
 /**
  * TradeParams — 压缩参数区（报单弹窗左栏 ~200px）
  *
- * 开平 / 投保 / 有效期 三个下拉（映射 `combOffsetFlag` / `combHedgeFlag` / `timeCondition`）
+ * 合约步进（P3）+ 开平 / 投保 / 有效期 三个下拉（映射 `combOffsetFlag` / `combHedgeFlag` / `timeCondition`）
  * + 手数步进（校验复用 `validateVolumeWithLimit`：期货 500 / 市价 60 / 期权 100）。
- * 状态读写 `useOrderStore.orderForm`；仅参数，不含合约步进/快捷手数/撤单（P3）。
+ * 状态读写 `useOrderStore.orderForm`；快捷手数/撤单按钮见 P3 后续模块。
  */
 export function TradeParams({ instrumentID }: TradeParamsProps) {
   const orderForm = useOrderStore((s) => s.orderForm)
@@ -37,6 +38,14 @@ export function TradeParams({ instrumentID }: TradeParamsProps) {
 
   return (
     <div className="trade-params">
+      <div className="tp-row">
+        <span className="tp-row__label">合约</span>
+        <ContractStepper
+          instrumentID={activeInstrument}
+          onSelect={(code) => setOrderForm({ instrumentID: code })}
+        />
+      </div>
+
       <div className="tp-row">
         <span className="tp-row__label">开平</span>
         <select
