@@ -80,6 +80,21 @@ describe('KLineChart', () => {
     expect(screen.getByText('IF2608')).toBeInTheDocument()
   })
 
+  it('标题栏带 data-drag-handle（整行可拖为弹窗）', () => {
+    render(<KLineChart instrument="IF2608" klineData={[]} period="5m" />)
+    const header = document.querySelector('.kline-chart__header')
+    expect(header).not.toBeNull()
+    expect(header).toHaveAttribute('data-drag-handle')
+  })
+
+  it('拖拽 title 提示仅保留在合约信息区，不覆盖周期/指标控件', () => {
+    render(<KLineChart instrument="IF2608" klineData={[]} period="5m" />)
+    const header = document.querySelector('.kline-chart__header')
+    expect(header).not.toHaveAttribute('title')
+    const contract = document.querySelector('.kline-chart__contract')
+    expect(contract).toHaveAttribute('title', '拖动此栏可将标签转为弹窗')
+  })
+
   it('renders contract name when provided', () => {
     render(<KLineChart instrument="IF2608" klineData={[]} period="5m" name="沪深300" />)
     expect(screen.getByText('沪深300')).toBeInTheDocument()

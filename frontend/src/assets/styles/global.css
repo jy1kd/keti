@@ -230,36 +230,6 @@ input:focus-visible, select:focus-visible {
   flex-direction: column;
 }
 
-/* ── 行情/期权 Tab 切换 ───────────────────────────────────────────────── */
-
-.market-tabs {
-  display: flex;
-  gap: 0;
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-}
-
-.market-tab {
-  padding: 6px 16px;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text-secondary);
-  font-size: 13px;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
-}
-
-.market-tab:hover {
-  color: var(--text-primary);
-}
-
-.market-tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-}
-
 .order-area {
   height: 100%;
   overflow: hidden;

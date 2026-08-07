@@ -54,6 +54,11 @@ vi.mock('@/components/InstrumentSearchModal', () => ({
     ) : null,
 }))
 
+// Mock OptionPanel（T型期权模式切换测试）
+vi.mock('@/modules/options/OptionPanel', () => ({
+  OptionPanel: () => <div data-testid="option-panel">OptionPanel Mock</div>,
+}))
+
 // Mock echarts
 vi.mock('echarts', () => ({
   init: vi.fn(() => ({
@@ -102,9 +107,12 @@ describe('MarketPanel', () => {
     vi.clearAllMocks()
   })
 
-  it('renders panel title', () => {
+  it('删除冗余「行情面板」标题（合并为单条工具栏）', () => {
     render(<MarketPanel />)
-    expect(screen.getByText('行情面板')).toBeInTheDocument()
+    expect(screen.queryByText('行情面板')).not.toBeInTheDocument()
+    // 行情/期权模式切换保留在工具栏内
+    expect(screen.getByText('行情')).toBeInTheDocument()
+    expect(screen.getByText('T型期权')).toBeInTheDocument()
   })
 
   it('renders with market-panel class', () => {
@@ -127,15 +135,15 @@ describe('MarketPanel', () => {
     expect(mockUseMarketWs).toHaveBeenCalledWith('ws://localhost:8000')
   })
 
-  it('renders 全部合约 and 自选合约 tabs', () => {
+  it('renders 全部 and 自选 tabs', () => {
     render(<MarketPanel />)
-    expect(screen.getByText('全部合约')).toBeInTheDocument()
-    expect(screen.getByText('自选合约')).toBeInTheDocument()
+    expect(screen.getByText('全部')).toBeInTheDocument()
+    expect(screen.getByText('自选')).toBeInTheDocument()
   })
 
-  it('renders 搜索合约 button', () => {
+  it('renders 高级搜索按钮（合并搜索入口）', () => {
     render(<MarketPanel />)
-    expect(screen.getByText('搜索合约')).toBeInTheDocument()
+    expect(screen.getByTitle('搜索合约')).toBeInTheDocument()
   })
 
   // --- 状态过滤开关 tests ---
@@ -187,12 +195,22 @@ describe('MarketPanel', () => {
     expect(ids).toEqual(['IF2608'])
   })
 
-  it('点击 搜索合约 按钮打开搜索弹窗', async () => {
+  it('点击 高级 按钮打开搜索弹窗', async () => {
     const user = userEvent.setup()
     render(<MarketPanel />)
     expect(screen.queryByTestId('instrument-search-modal')).not.toBeInTheDocument()
-    await user.click(screen.getByText('搜索合约'))
+    await user.click(screen.getByTitle('搜索合约'))
     expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
+  })
+
+  it('点击 T型期权 切换到期权模式，行情工具栏保留模式切换', async () => {
+    const user = userEvent.setup()
+    render(<MarketPanel />)
+    expect(screen.queryByTestId('option-panel')).not.toBeInTheDocument()
+    await user.click(screen.getByText('T型期权'))
+    expect(screen.getByTestId('option-panel')).toBeInTheDocument()
+    expect(screen.getByText('行情')).toBeInTheDocument()
+    expect(screen.getByText('T型期权')).toBeInTheDocument()
   })
 
   // --- 标签页打开方式测试 (PR-R13) ---

@@ -33,9 +33,12 @@ describe('QueryPanel', () => {
     })
   })
 
-  it('renders panel title', () => {
+  it('删除冗余「查询面板」标题，工具栏直接承载 7 个子 Tab', () => {
     render(<QueryPanel />)
-    expect(screen.getByText('查询面板')).toBeInTheDocument()
+    expect(screen.queryByText('查询面板')).not.toBeInTheDocument()
+    // 子 Tab 仍在工具栏内
+    expect(screen.getByText('报单')).toBeInTheDocument()
+    expect(screen.getByText('成交')).toBeInTheDocument()
   })
 
   it('renders all 6 tab buttons', () => {

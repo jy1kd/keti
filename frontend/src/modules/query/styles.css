@@ -46,13 +46,6 @@
   gap: 8px;
 }
 
-.query-panel .panel-header h2 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
 .query-panel .panel-controls {
   display: flex;
   gap: 4px;

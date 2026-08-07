@@ -115,6 +115,15 @@
   background: var(--bg-secondary);
 }
 
+/* 标题栏即 drag-handle：hover 以 cursor 提示可拖，active 表示拖拽中 */
+.kline-chart__header[data-drag-handle] {
+  cursor: grab;
+}
+
+.kline-chart__header[data-drag-handle]:active {
+  cursor: grabbing;
+}
+
 .kline-chart__contract {
   display: flex;
   align-items: baseline;
@@ -181,6 +190,7 @@
   font-size: 12px;
   cursor: pointer;
   transition: all 0.15s;
+  flex-shrink: 0;
 }
 
 .kline-chart__btn:hover {
@@ -232,10 +242,97 @@
   pointer-events: none;
 }
 
-/* 标签切换 */
-.panel-header__tabs {
+/* ── 行情页工具栏（合并 market-tabs + panel-header 为单行） ── */
+
+.market-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* 行情/期权模式切换（segmented） */
+.market-toolbar__mode {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.market-mode-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.market-mode-btn:first-child {
+  border-radius: 4px 0 0 4px;
+  border-right: none;
+}
+
+.market-mode-btn:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.market-mode-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.market-mode-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* 搜索区：内联搜索 + 高级弹窗入口（合并原「搜索合约」按钮）
+   flex:1 吃掉中间空间，不设 max-width（审查 🟡-1：避免宽屏下与 tabs 之间出现空隙） */
+.market-toolbar__search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.market-toolbar__search .contract-search {
+  flex: 1;
+  width: auto;
+}
+
+.market-toolbar__search .search-input {
+  width: 100%;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.btn-search-advanced {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn-search-advanced:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* 全部/自选 segmented */
+.market-toolbar__tabs {
   display: flex;
   gap: 2px;
+  flex-shrink: 0;
 }
 
 .btn-tab {
@@ -260,37 +357,21 @@
   border-color: var(--accent);
 }
 
-/* 标题行：标题 + 搜索框 */
-.panel-header__title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.panel-header__title .contract-search {
-  width: 220px;
-}
-
-.panel-header__title .search-input {
-  width: 100%;
-  padding: 2px 8px;
-  font-size: 12px;
-}
-
 .search-count {
   font-size: 11px;
   color: var(--text-muted);
   white-space: nowrap;
 }
 
-/* 操作按钮 */
-.panel-header__actions {
+/* 操作区（仅交易中/显示全部 + 收藏）— 不设 margin-left:auto，随 tabs 紧排（审查 🟡-1） */
+.market-toolbar__actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
-/* 过滤开关（仅交易中 / 显示全部）— 与搜索合约按钮留出间隙 */
+/* 过滤开关（仅交易中 / 显示全部） */
 .btn-filter-status {
   padding: 4px 12px;
   background: transparent;
@@ -300,7 +381,6 @@
   font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
-  margin-right: 12px;
   transition: opacity 0.2s, background 0.2s;
 }
 
@@ -332,16 +412,6 @@
 .btn-refresh-instruments:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.btn-search-instruments {
-  padding: 4px 12px;
-  background: var(--accent-color, #4a9eff);
-  border: none;
-  border-radius: 4px;
-  color: #fff;
-  cursor: pointer;
-  font-size: 13px;
 }
 
 .btn-subscribed-toggle {

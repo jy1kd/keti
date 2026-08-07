@@ -78,6 +78,12 @@ describe('KLinePage', () => {
     expect(screen.getByTestId('instrument').textContent).toBe('IF2608');
   });
 
+  it('已删除 24px 拖拽条（drag-handle 上移 KLineChart 标题栏）', () => {
+    render(<KLinePage instrumentID="IF2608" />);
+    expect(screen.queryByText(/拖动此栏可转弹窗/)).not.toBeInTheDocument();
+    expect(document.querySelector('.kline-page__drag')).toBeNull();
+  });
+
   // ── 单一展示栏（合约信息传入 KLineChart 标题栏） ──
 
   it('should display instrument ID', () => {
