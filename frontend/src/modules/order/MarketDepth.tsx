@@ -3,6 +3,8 @@ import type { CSSProperties } from 'react'
 import type { MarketSnapshot } from '@/services/types'
 import { useOrderStore } from './store'
 import { useOrderPopupStore } from './popupStore'
+import { useQueryStore } from '../query/store'
+import { aggregateMyOrders, type MyOrderLevel } from './myOrders'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import type { OrderRequestForm } from '@/utils/orderMapping'
 import './MarketDepth.css'
@@ -109,6 +111,26 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
   const [quickPrice, setQuickPrice] = useState(0)
   const [intent, setIntent] = useState<OrderIntent | null>(null)
 
+  // ── 我方挂单量（P3）：拉取报单流水并定期刷新，按 合约+限价+方向 聚合匹配档位 ──
+  const orders = useQueryStore((s) => s.orders)
+  const instrumentID = snapshot?.instrumentID ?? ''
+  useEffect(() => {
+    if (!instrumentID) return
+    let disposed = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const load = async () => {
+      await useQueryStore.getState().fetchOrders()
+      if (disposed) return
+      timer = setTimeout(load, 10_000)
+    }
+    load()
+    return () => {
+      disposed = true
+      clearTimeout(timer)
+    }
+  }, [instrumentID])
+  const myOrders = useMemo(() => aggregateMyOrders(orders, instrumentID), [orders, instrumentID])
+
   // 改价框默认价：对手价（卖一）→ 最新价
   const quickDefault = useMemo(() => {
     if (!snapshot) return null
@@ -178,6 +200,36 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
     })
   }
 
+  // ── 点价语义（P3 扩展）：档位含我方挂单 → 撤该档挂单；否则 → 弹确认报单 ──
+  const cancelLevel = async (direction: 'buy' | 'sell', price: number) => {
+    const level = myOrders.byPrice.get(price)
+    if (!level) return
+    const refs = direction === 'buy' ? level.buyRefs : level.sellRefs
+    if (refs.length === 0) return
+    for (const ref of refs) {
+      await useQueryStore.getState().handleCancelOrder(ref)
+    }
+    useQueryStore.getState().fetchOrders()
+  }
+
+  const handleBuyClick = (price: number) => {
+    const level = myOrders.byPrice.get(price)
+    if (level && level.buyVolume > 0) {
+      cancelLevel('buy', price)
+      return
+    }
+    openIntent('buy', price)
+  }
+
+  const handleSellClick = (price: number) => {
+    const level = myOrders.byPrice.get(price)
+    if (level && level.sellVolume > 0) {
+      cancelLevel('sell', price)
+      return
+    }
+    openIntent('sell', price)
+  }
+
   const handleConfirm = async () => {
     if (!intent) return
     setOrderForm({
@@ -197,6 +249,8 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
       <DepthSummaryRow
         totalBidVol={totalBidVol}
         totalAskVol={totalAskVol}
+        myBuyCount={myOrders.totalBuyCount}
+        mySellCount={myOrders.totalSellCount}
         lastText={last !== null ? (tick !== null ? formatTickPrice(last, tick) : String(last)) : '--'}
         changeText={changeText}
         changeClass={changeClass}
@@ -206,8 +260,9 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
         bids={bids}
         tick={tick}
         maxVol={maxVol}
-        onBuyClick={(price) => openIntent('buy', price)}
-        onSellClick={(price) => openIntent('sell', price)}
+        myLevels={myOrders.byPrice}
+        onBuyClick={handleBuyClick}
+        onSellClick={handleSellClick}
         onPriceClick={setQuickPrice}
       />
       <QuickTradeBar
@@ -250,21 +305,35 @@ function DepthHeader() {
   )
 }
 
-/** ② 汇总行：委买总量 | 最新价+涨跌 | 委卖总量 */
+/** ② 汇总行：委买总量(我方挂单数) | 最新价+涨跌 | 委卖总量(我方挂单数) */
 interface DepthSummaryRowProps {
   totalBidVol: number
   totalAskVol: number
+  /** 我方买/卖活动挂单笔数（>0 时以 (N) 展示） */
+  myBuyCount: number
+  mySellCount: number
   lastText: string
   changeText: string
   changeClass: string
 }
 
-function DepthSummaryRow({ totalBidVol, totalAskVol, lastText, changeText, changeClass }: DepthSummaryRowProps) {
+function DepthSummaryRow({
+  totalBidVol,
+  totalAskVol,
+  myBuyCount,
+  mySellCount,
+  lastText,
+  changeText,
+  changeClass,
+}: DepthSummaryRowProps) {
   return (
     <div className="depth-summary" data-testid="depth-summary">
       <span className="depth-summary__bid">
         <span className="depth-summary__label">委买</span>
-        <span className="depth-summary__value">{totalBidVol}</span>
+        <span className="depth-summary__value">
+          {totalBidVol}
+          {myBuyCount > 0 && <span className="depth-summary__my">({myBuyCount})</span>}
+        </span>
       </span>
       <span className="depth-summary__last">
         <span className="depth-summary__last-price">{lastText}</span>
@@ -274,7 +343,10 @@ function DepthSummaryRow({ totalBidVol, totalAskVol, lastText, changeText, chang
       </span>
       <span className="depth-summary__ask">
         <span className="depth-summary__label">委卖</span>
-        <span className="depth-summary__value">{totalAskVol}</span>
+        <span className="depth-summary__value">
+          {totalAskVol}
+          {mySellCount > 0 && <span className="depth-summary__my">({mySellCount})</span>}
+        </span>
       </span>
     </div>
   )
@@ -286,6 +358,7 @@ function DepthLadder({
   bids,
   tick,
   maxVol,
+  myLevels,
   onBuyClick,
   onSellClick,
   onPriceClick,
@@ -294,6 +367,8 @@ function DepthLadder({
   bids: ResolvedLevel[]
   tick: number | null
   maxVol: number
+  /** 按价格索引的我方挂单量（P3）：匹配档位显示徽标，点击即撤 */
+  myLevels: Map<number, MyOrderLevel>
   onBuyClick?: (price: number) => void
   onSellClick?: (price: number) => void
   onPriceClick?: (price: number) => void
@@ -309,6 +384,8 @@ function DepthLadder({
           level={level}
           tick={tick}
           maxVol={maxVol}
+          myBuyVol={myLevels.get(level.price)?.buyVolume ?? 0}
+          mySellVol={myLevels.get(level.price)?.sellVolume ?? 0}
           onBuyClick={onBuyClick}
           onSellClick={onSellClick}
           onPriceClick={onPriceClick}
@@ -324,6 +401,8 @@ function DepthLadder({
           level={level}
           tick={tick}
           maxVol={maxVol}
+          myBuyVol={myLevels.get(level.price)?.buyVolume ?? 0}
+          mySellVol={myLevels.get(level.price)?.sellVolume ?? 0}
           onBuyClick={onBuyClick}
           onSellClick={onSellClick}
           onPriceClick={onPriceClick}
@@ -357,6 +436,8 @@ export function DepthRow({
   level,
   tick,
   maxVol,
+  myBuyVol = 0,
+  mySellVol = 0,
   onBuyClick,
   onSellClick,
   onPriceClick,
@@ -366,6 +447,10 @@ export function DepthRow({
   level: ResolvedLevel
   tick: number | null
   maxVol: number
+  /** 本档位我方买单挂单量（>0 显示徽标，点击 → 撤该档买单） */
+  myBuyVol?: number
+  /** 本档位我方卖单挂单量 */
+  mySellVol?: number
   onBuyClick?: (price: number) => void
   onSellClick?: (price: number) => void
   onPriceClick?: (price: number) => void
@@ -400,6 +485,7 @@ export function DepthRow({
         onClick={() => clickable && onBuyClick?.(level.price)}
       >
         {buyText}
+        {myBuyVol > 0 && <em className="depth-row__my depth-row__my--buy">{myBuyVol}</em>}
       </span>
       <span className="depth-row__price" onClick={() => clickable && onPriceClick?.(level.price)}>
         {priceText}
@@ -410,6 +496,7 @@ export function DepthRow({
         onClick={() => clickable && onSellClick?.(level.price)}
       >
         {sellText}
+        {mySellVol > 0 && <em className="depth-row__my depth-row__my--sell">{mySellVol}</em>}
       </span>
     </div>
   )

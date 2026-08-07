@@ -171,6 +171,40 @@
   color: var(--text-muted) !important;
 }
 
+/* P3 我方挂单量徽标：贴列右上角，可点击撤单 */
+.depth-row__my {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  padding: 0 3px;
+  font-size: 10px;
+  line-height: 13px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  pointer-events: none;
+}
+
+.depth-row__my--buy {
+  color: var(--color-up);
+  background: rgba(248, 81, 73, 0.15);
+  border: 1px solid rgba(248, 81, 73, 0.45);
+}
+
+.depth-row__my--sell {
+  color: var(--color-down);
+  background: rgba(63, 185, 80, 0.15);
+  border: 1px solid rgba(63, 185, 80, 0.45);
+}
+
+/* 汇总行我方挂单笔数 (N)：与量同色但高亮描边区分 */
+.depth-summary__my {
+  font-size: 11px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  padding: 0 3px;
+  opacity: 0.9;
+}
+
 /* ── ④ 最新价分隔线 ── */
 .depth-last-divider {
   height: 2px;
