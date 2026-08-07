@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react'
 import { AccountBar } from './AccountBar'
 import { useQueryStore } from '@/modules/query/store'
 
@@ -163,6 +163,45 @@ describe('AccountBar', () => {
     await waitFor(() => expect(lockPositionMock).toHaveBeenCalledTimes(1))
     // handleLockConfirm 成功后调用 fetchPositions → api refreshPositions 多一次
     await waitFor(() => expect(refreshPositionsMock.mock.calls.length).toBeGreaterThan(before))
+  })
+
+  describe('账户下拉资金明细（P3-7，P2 审查 🔵-2 延后项）', () => {
+    it('点击账户号展开下拉：显示 可用资金/持仓盈亏/动态权益', async () => {
+      render(<AccountBar instrumentID="IF2608" />)
+      await screen.findByTestId('ab-profit')
+      useQueryStore.setState({ account: ACCOUNT })
+      await waitFor(() =>
+        expect(screen.getByTestId('ab-account').getAttribute('title')).toBe('YYB-1829143'),
+      )
+      fireEvent.click(screen.getByTestId('ab-account'))
+      const dd = within(screen.getByTestId('ab-dropdown'))
+      expect(dd.getByText('可用资金')).toBeInTheDocument()
+      expect(dd.getByText('80,000.00')).toBeInTheDocument()
+      expect(dd.getByText('持仓盈亏')).toBeInTheDocument()
+      expect(dd.getByText('600.00')).toBeInTheDocument()
+      expect(dd.getByText('动态权益')).toBeInTheDocument()
+      expect(dd.getByText('100,000.00')).toBeInTheDocument()
+    })
+
+    it('点击外部关闭下拉', async () => {
+      render(<AccountBar instrumentID="IF2608" />)
+      await screen.findByTestId('ab-profit')
+      useQueryStore.setState({ account: ACCOUNT })
+      await waitFor(() =>
+        expect(screen.getByTestId('ab-account').getAttribute('title')).toBe('YYB-1829143'),
+      )
+      fireEvent.click(screen.getByTestId('ab-account'))
+      expect(screen.getByTestId('ab-dropdown')).toBeInTheDocument()
+      fireEvent.mouseDown(document.body)
+      expect(screen.queryByTestId('ab-dropdown')).not.toBeInTheDocument()
+    })
+
+    it('账户为 null 时点击不展开下拉', async () => {
+      render(<AccountBar instrumentID="IF2608" />)
+      await screen.findByTestId('ab-profit')
+      fireEvent.click(screen.getByTestId('ab-account'))
+      expect(screen.queryByTestId('ab-dropdown')).not.toBeInTheDocument()
+    })
   })
 
   it('每 10s 串行自刷新持仓与账户（持仓→1200ms→账户→10s→下一轮）', async () => {

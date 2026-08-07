@@ -105,3 +105,53 @@
   opacity: 0.5;
   cursor: default;
 }
+
+/* P3-7 账户下拉资金明细：账户号点击展开 */
+.account-bar__account {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.account-bar__id--clickable {
+  cursor: pointer;
+}
+
+.account-bar__id--clickable:hover {
+  color: var(--text-primary);
+}
+
+.account-bar__caret {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* 下拉面板：fixed 定位到 body（规避 overflow:hidden 裁剪） */
+.account-bar__dropdown {
+  position: fixed;
+  z-index: 2100;
+  padding: 6px 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.ab-dd__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 3px 0;
+  font-size: 12px;
+}
+
+.ab-dd__row span {
+  color: var(--text-secondary);
+}
+
+.ab-dd__row b {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}

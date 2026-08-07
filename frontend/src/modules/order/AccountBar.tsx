@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useQueryStore } from '@/modules/query/store'
 import { useOrderPopupStore } from './popupStore'
 import { lockPosition } from '@/services/api'
@@ -22,6 +23,12 @@ function truncateAccountID(id: string): string {
 function formatProfit(n: number): string {
   if (n == null || !Number.isFinite(n) || Math.abs(n) >= CTP_INVALID) return '--'
   return `${n > 0 ? '+' : ''}${n.toFixed(2)}`
+}
+
+/** 资金格式化：千分位 + 两位小数；无效值显示 -- */
+function formatMoney(n: number): string {
+  if (n == null || !Number.isFinite(n)) return '--'
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 /**
@@ -74,6 +81,50 @@ export function AccountBar({ instrumentID }: AccountBarProps) {
     return { long, short, net: long - short, profit }
   }, [positions, instrumentID])
 
+  // ── 账户下拉资金明细（P3-7，P2 审查 🔵-2 延后项）──────────────────
+  // 账户号点击展开：可用资金 / 持仓盈亏 / 动态权益。用 createPortal 渲染到 body，
+  // 规避 `.account-bar` 的 overflow:hidden 裁剪；定位取账户元素视口矩形（弹窗 transform 不影响 body 级 fixed）。
+  const [accountOpen, setAccountOpen] = useState(false)
+  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null)
+  const accountElRef = useRef<HTMLSpanElement | null>(null)
+
+  const handleAccountClick = () => {
+    if (!account) return
+    if (accountOpen) {
+      setAccountOpen(false)
+      return
+    }
+    const el = accountElRef.current
+    if (el) {
+      const r = el.getBoundingClientRect()
+      setDropdownRect({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, 180) })
+    }
+    setAccountOpen(true)
+  }
+
+  // 点击外部关闭（含下拉本体外的任意位置）
+  const accountAreaRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!accountOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (accountAreaRef.current && !accountAreaRef.current.contains(e.target as Node)) {
+        setAccountOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [accountOpen])
+
+  // Esc 关闭下拉（账户区域弹出层，不触发弹窗关闭）
+  useEffect(() => {
+    if (!accountOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setAccountOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [accountOpen])
+
   // ── 锁仓（下单操作，强制确认）────────────────────────────────────
   // 后端 lockPosition 为单向锁仓（反方向开仓、不平原持仓），无解锁端点，
   // 因此只有「锁仓」一次操作：确认后才调接口，成功后刷新持仓反映仓位变化。
@@ -112,9 +163,40 @@ export function AccountBar({ instrumentID }: AccountBarProps) {
 
   return (
     <div className="account-bar" data-testid="account-bar">
-      <span className="account-bar__id" data-testid="ab-account" title={account?.accountID || '--'}>
-        {account?.accountID ? truncateAccountID(account.accountID) : '--'}
-      </span>
+      <div className="account-bar__account" ref={accountAreaRef}>
+        <span
+          ref={accountElRef}
+          className={`account-bar__id${account ? ' account-bar__id--clickable' : ''}`}
+          data-testid="ab-account"
+          title={account?.accountID || '--'}
+          onClick={handleAccountClick}
+        >
+          {account?.accountID ? truncateAccountID(account.accountID) : '--'}
+        </span>
+        {account && <span className="account-bar__caret">▾</span>}
+        {accountOpen && account && dropdownRect &&
+          createPortal(
+            <div
+              className="account-bar__dropdown"
+              data-testid="ab-dropdown"
+              style={{ top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width }}
+            >
+              <div className="ab-dd__row">
+                <span>可用资金</span>
+                <b>{formatMoney(account.available)}</b>
+              </div>
+              <div className="ab-dd__row">
+                <span>持仓盈亏</span>
+                <b>{formatMoney(account.positionProfit)}</b>
+              </div>
+              <div className="ab-dd__row">
+                <span>动态权益</span>
+                <b>{formatMoney(account.balance)}</b>
+              </div>
+            </div>,
+            document.body,
+          )}
+      </div>
       <span className="account-bar__pos" data-testid="ab-pos">
         <span className="account-bar__label">持仓</span>
         <b className="account-bar__long" data-testid="ab-long">{long}</b>

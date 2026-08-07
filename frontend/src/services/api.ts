@@ -280,6 +280,8 @@ interface OrderResult {
 interface ReverseResponse {
   success: boolean
   orders: OrderResult[]
+  /** 后端错误分支返回 { success: false, message }；与 LockResponse 错误形态对齐 */
+  message?: string
 }
 
 interface LockResponse {
