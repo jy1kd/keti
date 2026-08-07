@@ -20,8 +20,8 @@ async function main() {
   await page.goto('http://localhost:5173/', { waitUntil: 'networkidle2', timeout: 30000 })
   await sleep(1000)
 
-  // Open the settings tab via the gear button in the status bar
-  const gear = await page.$('.status-bar__gear')
+  // Open the settings tab via the gear button in the global bar
+  const gear = await page.$('.global-bar__tool[title="设置"]')
   if (!gear) { console.log('NO GEAR BUTTON'); await browser.close(); return }
   await gear.click()
   await sleep(600)

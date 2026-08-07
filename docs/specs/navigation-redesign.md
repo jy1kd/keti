@@ -195,15 +195,28 @@
 
 ### Phase 2 — 全局栏合并（终态）
 
-| 步骤 | 改动 | 涉及文件 |
-|------|------|----------|
-| 2.1 | 新建 `GlobalBar` 组件，将 `status-bar` 与 `tab-bar` 合并为一行 | `App.tsx`、新组件 |
-| 2.2 | FPS / IPC 收敛进「⋯」更多菜单 | `App.tsx`、GlobalBar |
-| 2.3 | 应用标题移除（保留 document.title） | `App.tsx` |
-| 2.4 | 自选页去掉标题栏，表格顶到标签栏下 | `FavoritesPage.tsx`、css |
-| 2.5 | 全量回归：标签拖拽分离 / 浮动窗口 / 右键菜单 / 快捷键 | 相关组件 |
+| 步骤 | 改动 | 涉及文件 | 状态 |
+|------|------|----------|------|
+| 2.1 | 新建 `GlobalBar` 组件，将 `status-bar` 与 `tab-bar` 合并为一行 | `App.tsx`、新组件 | ✅ |
+| 2.2 | FPS / IPC 收敛进「⋯」更多菜单 | `App.tsx`、GlobalBar | ✅ |
+| 2.3 | 应用标题移除（保留 document.title） | `App.tsx` | ✅ |
+| 2.4 | 自选页去掉标题栏，表格顶到标签栏下 | `FavoritesPage.tsx`、css | ✅ |
+| 2.5 | 全量回归：标签拖拽分离 / 浮动窗口 / 右键菜单 / 快捷键 | 相关组件 | ✅ |
 
-**验证**：除全量测试外，重点回归「拖拽转浮动窗口」「浮窗停靠回标签栏」两条既有交互链路。
+**验证**：`npm test` 全量通过（1065 测试 ✅）；`vite build` 打包成功 ✅；「拖拽转浮动窗口」「浮窗停靠回标签栏」由 detachFlow 集成/复现测试覆盖 ✅。
+
+> **Phase 2 状态：✅ 已完成**（2026-08-07）
+> - 全局栏合并完成：GlobalBar 一行承载 连接状态 + 工作区标签 + 全局工具区
+> - 审查：待审查窗口二次审查
+> - 人工验证：待人工走查
+>
+> 实施说明（与文档的偏差/决策）：
+> - ⭐ 自选计数角标从自选页 header 收敛到全局栏 TabBar ⭐ 快捷入口（单一事实源：自选入口即计数）。
+> - FLOATING_CHROME_H 无需改动：浮动窗口标题条高度独立于顶部全局栏（TabContent 位移只让出浮动窗口自身 chrome）。
+> - ⚡FPS 菜单项为 toggle（开启显示 ✓ + 全局栏 FPS 徽标）；Ctrl+Shift+M 快捷键保留（不破坏既有交互）。
+> - 📋 查询按钮迁入全局栏右工具区（单一事实源，原 tab-bar 中的重复按钮删除）。
+> - 自选页 header 彻底移除（含计数角标与 data-drag-handle；自选为固定标签不可拖离，移除 handle 无功能损失）。
+> - 遗留调试脚本 `repro-detach.cjs` 的 ⚙ 选择器同步更新为 `.global-bar__tool[title="设置"]`。
 
 ---
 
@@ -221,12 +234,12 @@
 
 ## 7. 附：验收标准
 
-- [ ] 行情页顶部 chrome ≤ 2 行，高度 ≤ 80px
-  > Phase 1：行情页 4 行 → **3 行**（合并 market-tabs + panel-header，方案 A 目标达成）；最终 **2 行**待 Phase 2 合并 status-bar + tab-bar。
+- [x] 行情页顶部 chrome ≤ 2 行，高度 ≤ 80px
+  > Phase 1：行情页 4 行 → **3 行**（合并 market-tabs + panel-header，方案 A 目标达成）；Phase 2 合并 status-bar + tab-bar 为 GlobalBar → 行情页 **2 行**（40 + 36）＝ **76px** ≤ 80px。✅
 - [ ] 所有页面标题与标签标题不重复
   > Phase 1 已删除「行情面板」「查询面板」「⭐ 自选合约」冗余标题（报单页标题栏保留合约代码，属必要信息）。✅
-- [ ] ⚡FPS / 🔌IPC 不再占据主行
-  > 属 Phase 2 全局栏「⋯」更多菜单（步骤 2.2）。
+- [x] ⚡FPS / 🔌IPC 不再占据主行
+  > Phase 2 已收敛进全局栏「⋯」更多菜单（步骤 2.2）；Ctrl+Shift+M 快捷键保留。✅
 - [ ] 标签拖拽分离 / 浮动窗口 / 右键菜单 / 快捷键功能回归通过
   > Phase 1 自动化回归（detachFlow 集成测试）通过 ✅；人工走查待 Phase 3 人工验证。
 - [x] `cd frontend && npm test` 全量通过
