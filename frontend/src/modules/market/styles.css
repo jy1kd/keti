@@ -290,14 +290,14 @@
   border-color: var(--accent);
 }
 
-/* 搜索区：内联搜索 + 高级弹窗入口（合并原「搜索合约」按钮） */
+/* 搜索区：内联搜索 + 高级弹窗入口（合并原「搜索合约」按钮）
+   flex:1 吃掉中间空间，不设 max-width（审查 🟡-1：避免宽屏下与 tabs 之间出现空隙） */
 .market-toolbar__search {
   display: flex;
   align-items: center;
   gap: 6px;
   flex: 1;
   min-width: 0;
-  max-width: 360px;
 }
 
 .market-toolbar__search .contract-search {
@@ -363,12 +363,11 @@
   white-space: nowrap;
 }
 
-/* 操作区（仅交易中/显示全部 + 收藏） */
+/* 操作区（仅交易中/显示全部 + 收藏）— 不设 margin-left:auto，随 tabs 紧排（审查 🟡-1） */
 .market-toolbar__actions {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: auto;
   flex-shrink: 0;
 }
 

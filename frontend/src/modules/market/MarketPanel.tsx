@@ -100,7 +100,9 @@ export function MarketPanel() {
 
   return (
     <section className="market-panel">
-      {/* 行情页工具栏：合并 market-tabs（模式切换）+ panel-header（搜索/全部自选/操作）为单行 */}
+      {/* 行情页工具栏：合并 market-tabs（模式切换）+ panel-header（搜索/全部自选/操作）为单行。
+          保留 data-drag-handle：market 为固定标签（closable:false）故 TabContent 中惰性不触发，
+          与旧 market-tabs 行为一致；保留以对齐 Phase 2 全局栏合并后的拖拽语义（审查 🔵-1）。 */}
       <div className="market-toolbar" data-drag-handle>
         {/* 左：行情/期权模式切换 */}
         <div className="market-toolbar__mode">

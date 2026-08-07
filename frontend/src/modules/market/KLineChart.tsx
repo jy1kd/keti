@@ -334,8 +334,9 @@ export function KLineChart({ instrument, klineData, period, onPeriodChange, name
   return (
     <div className="kline-chart" data-testid="kline-chart">
       {/* 标题栏承载 drag-handle：整行可拖为浮动弹窗（原独立拖拽条已删除，仅 hover 以 cursor 提示） */}
-      <div className="kline-chart__header" data-drag-handle title="拖动此栏可将标签转为弹窗">
-        <div className="kline-chart__contract">
+      <div className="kline-chart__header" data-drag-handle>
+        {/* title 仅放合约信息区，避免悬停周期/指标控件时误显「可拖」提示（审查 🟡-2） */}
+        <div className="kline-chart__contract" title="拖动此栏可将标签转为弹窗">
           <span className="kline-chart__instrument">{instrument}</span>
           {name && <span className="kline-chart__name">{name}</span>}
         </div>

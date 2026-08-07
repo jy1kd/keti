@@ -153,7 +153,6 @@ describe('TabContent', () => {
       ['market', '行情面板'],
       ['order', '报单页面'],
       ['kline', 'K线页面'],
-      ['favorites', '暂无自选合约'],
       ['settings', '⚙ 设置'],
       ['options', '期权标签页'],
       ['ipc-monitor', '🔌 IPC 监控'],
@@ -166,6 +165,17 @@ describe('TabContent', () => {
       })
       render(<TabContent />)
       expect(screen.getByText(new RegExp(expectedText))).toBeInTheDocument()
+    })
+
+    // 审查 🔵-2：自选页标题已删除，改用稳定的 data-testid 断言页面渲染
+    it('应为 favorites 类型渲染自选页', () => {
+      const tab = makeTab({ type: 'favorites' })
+      useTabStore.setState({
+        tabs: [tab],
+        activeTabId: tab.id,
+      })
+      render(<TabContent />)
+      expect(screen.getByTestId('favorites-page')).toBeInTheDocument()
     })
   })
 

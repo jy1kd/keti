@@ -85,8 +85,14 @@ describe('KLineChart', () => {
     const header = document.querySelector('.kline-chart__header')
     expect(header).not.toBeNull()
     expect(header).toHaveAttribute('data-drag-handle')
-    // 保留 title 拖拽提示
-    expect(header).toHaveAttribute('title')
+  })
+
+  it('拖拽 title 提示仅保留在合约信息区，不覆盖周期/指标控件', () => {
+    render(<KLineChart instrument="IF2608" klineData={[]} period="5m" />)
+    const header = document.querySelector('.kline-chart__header')
+    expect(header).not.toHaveAttribute('title')
+    const contract = document.querySelector('.kline-chart__contract')
+    expect(contract).toHaveAttribute('title', '拖动此栏可将标签转为弹窗')
   })
 
   it('renders contract name when provided', () => {
