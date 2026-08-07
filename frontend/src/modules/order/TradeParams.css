@@ -125,6 +125,11 @@
 }
 
 .tp-op-btn--primary {
+  /* 紧凑居中：不复用 .tp-op-btn 的 flex:1 撑满，改为自动宽度小按钮 */
+  align-self: center;
+  flex: 0 0 auto;
+  min-width: 120px;
+  padding: 4px 14px;
   margin-top: 6px;
   border-color: var(--color-primary-blue, #2f6bff);
   background: var(--color-primary-blue, #2f6bff);
