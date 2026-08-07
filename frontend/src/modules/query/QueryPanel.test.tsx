@@ -33,7 +33,7 @@ describe('QueryPanel', () => {
     })
   })
 
-  it('删除冗余「查询面板」标题，工具栏直接承载 7 个子 Tab', () => {
+  it('删除冗余「查询面板」标题，工具栏直接承载 5 个子 Tab', () => {
     render(<QueryPanel />)
     expect(screen.queryByText('查询面板')).not.toBeInTheDocument()
     // 子 Tab 仍在工具栏内
@@ -41,14 +41,13 @@ describe('QueryPanel', () => {
     expect(screen.getByText('成交')).toBeInTheDocument()
   })
 
-  it('renders all 6 tab buttons', () => {
+  it('renders all 5 tab buttons', () => {
     render(<QueryPanel />)
     expect(screen.getByText('报单')).toBeInTheDocument()
     expect(screen.getByText('成交')).toBeInTheDocument()
     expect(screen.getByText('持仓')).toBeInTheDocument()
     expect(screen.getByText('资金')).toBeInTheDocument()
     expect(screen.getByText('止损单')).toBeInTheDocument()
-    expect(screen.getByText('合约')).toBeInTheDocument()
   })
 
   it('defaults to orders tab', () => {
@@ -113,5 +112,11 @@ describe('QueryPanel', () => {
     useQueryStore.setState({ activeTab: 'stop_orders' })
     render(<QueryPanel />)
     expect(screen.getByText('暂无止损单')).toBeInTheDocument()
+  })
+
+  it('不再显示 合约/K线 Tab', () => {
+    render(<QueryPanel />)
+    expect(screen.queryByText('合约')).not.toBeInTheDocument()
+    expect(screen.queryByText('K线')).not.toBeInTheDocument()
   })
 })

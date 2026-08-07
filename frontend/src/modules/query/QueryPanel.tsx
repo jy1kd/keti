@@ -5,12 +5,6 @@ import { TradeFlow } from './TradeFlow'
 import { Position } from './Position'
 import { AccountQuery } from './AccountQuery'
 import { StopOrderList } from './StopOrderList'
-import { ContractQuery } from './ContractQuery'
-import { KLineChart } from '../market/KLineChart'
-import { useMarketStore } from '../market/store'
-import { PERIOD_MS } from '@/hooks/useMarketWs'
-import { getKlineData } from '@/services/api'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
 import './styles.css'
 
 const TABS = [
@@ -19,8 +13,6 @@ const TABS = [
   { key: 'positions' as const, label: '持仓' },
   { key: 'account' as const, label: '资金' },
   { key: 'stop_orders' as const, label: '止损单' },
-  { key: 'contracts' as const, label: '合约' },
-  { key: 'kline' as const, label: 'K线' },
 ]
 
 export function QueryPanel() {
@@ -31,11 +23,6 @@ export function QueryPanel() {
   const togglePause = useQueryStore((s) => s.togglePause)
   const refreshAll = useQueryStore((s) => s.refreshAll)
   const handleCancelAll = useQueryStore((s) => s.handleCancelAll)
-  const selectedInstrument = useMarketStore((s) => s.selectedInstrument)
-  const klineData = useMarketStore((s) => s.klineData)
-  const setKlineData = useMarketStore((s) => s.setKlineData)
-  const period = useMarketStore((s) => s.currentPeriod)
-  const setPeriod = useMarketStore((s) => s.setPeriod)
 
   // Initial data load
   useEffect(() => {
@@ -57,24 +44,6 @@ export function QueryPanel() {
   }, [isPaused, refreshAll])
 
   // 注意：WebSocket 行情推送由 MarketPanel 中的 useMarketWs 单例管理
-
-  // 获取K线数据
-  useEffect(() => {
-    if (!selectedInstrument) return
-    getKlineData(selectedInstrument, period, 200)
-      .then((res) => {
-        if (res.bars?.length) {
-          const periodMs = PERIOD_MS[period] ?? PERIOD_MS['5m']
-          const aligned = res.bars.map((bar) => {
-            // 使用完整的时间戳（包含日期），与实时数据格式一致
-            const timestamp = Math.floor(bar.timestamp / periodMs) * periodMs
-            return { ...bar, timestamp }
-          })
-          setKlineData(selectedInstrument, aligned)
-        }
-      })
-      .catch(() => { /* 静默失败 */ })
-  }, [selectedInstrument, period, setKlineData])
 
   // C key shortcut — cancel all active orders (when orders tab is active)
   const onKeyDown = useCallback(
@@ -107,27 +76,6 @@ export function QueryPanel() {
         return <AccountQuery />
       case 'stop_orders':
         return <StopOrderList />
-      case 'contracts':
-        return <ContractQuery instrumentID={selectedInstrument ?? ''} />
-      case 'kline': {
-        const selectedKline = selectedInstrument ? klineData.get(selectedInstrument) ?? [] : []
-        return (
-          <div className="kline-query">
-            {selectedInstrument ? (
-              <ErrorBoundary>
-                <KLineChart
-                  instrument={selectedInstrument}
-                  klineData={selectedKline}
-                  period={period}
-                  onPeriodChange={setPeriod}
-                />
-              </ErrorBoundary>
-            ) : (
-              <div className="kline-placeholder">选择合约查看K线图</div>
-            )}
-          </div>
-        )
-      }
       default:
         return null
     }
@@ -147,23 +95,21 @@ export function QueryPanel() {
             </button>
           ))}
         </div>
-        {activeTab !== 'kline' && (
-          <div className="panel-controls">
-            <button
-              className={`btn-pause ${isPaused ? 'paused' : ''}`}
-              onClick={togglePause}
-            >
-              {isPaused ? '继续' : '暂停'}
-            </button>
-            <button
-              className="btn-refresh"
-              onClick={() => refreshAll()}
-              disabled={isLoading || isPaused}
-            >
-              {isLoading ? '刷新中…' : '刷新'}
-            </button>
-          </div>
-        )}
+        <div className="panel-controls">
+          <button
+            className={`btn-pause ${isPaused ? 'paused' : ''}`}
+            onClick={togglePause}
+          >
+            {isPaused ? '继续' : '暂停'}
+          </button>
+          <button
+            className="btn-refresh"
+            onClick={() => refreshAll()}
+            disabled={isLoading || isPaused}
+          >
+            {isLoading ? '刷新中…' : '刷新'}
+          </button>
+        </div>
       </div>
       <div className="panel-content">
         {renderContent()}
