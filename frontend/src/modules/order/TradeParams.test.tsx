@@ -1,8 +1,17 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { TradeParams } from './TradeParams'
 import { useOrderStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
+import { useQueryStore } from '../query/store'
+
+vi.mock('../../services/api')
+
+import {
+  cancelOrder as apiCancelOrder,
+  cancelAllOrders as apiCancelAllOrders,
+  reversePosition as apiReversePosition,
+} from '../../services/api'
 
 const IF2608_CONTRACT = {
   instrumentID: 'IF2608',
@@ -120,6 +129,80 @@ describe('TradeParams（任务#4）', () => {
       render(<TradeParams />)
       fireEvent.click(screen.getByTestId('qty-preset-100'))
       expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(60)
+    })
+  })
+
+  describe('操作按钮（P3-5 撤最新/撤全部/平净仓）', () => {
+    beforeEach(() => {
+      useQueryStore.setState({ orders: [], positions: [] })
+      vi.clearAllMocks()
+    })
+
+    it('渲染 撤最新/撤全部/平净仓 按钮', () => {
+      render(<TradeParams />)
+      expect(screen.getByTestId('tp-cancel-latest')).toBeInTheDocument()
+      expect(screen.getByTestId('tp-cancel-all')).toBeInTheDocument()
+      expect(screen.getByTestId('tp-flat-net')).toBeInTheDocument()
+    })
+
+    it('撤最新 → 撤当前合约 insertTime 最新一笔活动挂单', async () => {
+      vi.mocked(apiCancelOrder).mockResolvedValue({ success: true })
+      useQueryStore.setState({
+        orders: [
+          { orderRef: 'OLD', instrumentID: 'IF2608', direction: '0', limitPrice: 4690, volumeTotalOriginal: 1, volumeTraded: 0, orderStatus: '2', insertTime: '09:30:01' },
+          { orderRef: 'LATEST', instrumentID: 'IF2608', direction: '0', limitPrice: 4694, volumeTotalOriginal: 2, volumeTraded: 0, orderStatus: '2', insertTime: '09:31:00' },
+          { orderRef: 'OTHER', instrumentID: 'IC2608', direction: '0', limitPrice: 5600, volumeTotalOriginal: 1, volumeTraded: 0, orderStatus: '2', insertTime: '09:32:00' },
+        ],
+      })
+      render(<TradeParams />)
+      fireEvent.click(screen.getByTestId('tp-cancel-latest'))
+      await act(async () => {})
+      expect(apiCancelOrder).toHaveBeenCalledWith('LATEST')
+    })
+
+    it('撤最新但无该合约活动挂单 → 不调撤单接口', async () => {
+      render(<TradeParams />)
+      fireEvent.click(screen.getByTestId('tp-cancel-latest'))
+      await act(async () => {})
+      expect(apiCancelOrder).not.toHaveBeenCalled()
+    })
+
+    it('撤全部 → 强制确认框 → 确认后调用 cancelAllOrders', async () => {
+      vi.mocked(apiCancelAllOrders).mockResolvedValue({ success: true, attempted: 2, succeeded: 2, failedRefs: [] })
+      render(<TradeParams />)
+      fireEvent.click(screen.getByTestId('tp-cancel-all'))
+      expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+      fireEvent.click(screen.getByText('确认执行'))
+      await act(async () => {})
+      expect(apiCancelAllOrders).toHaveBeenCalledTimes(1)
+    })
+
+    it('撤全部取消 → 不调用 cancelAllOrders', () => {
+      render(<TradeParams />)
+      fireEvent.click(screen.getByTestId('tp-cancel-all'))
+      fireEvent.click(screen.getByText('取消'))
+      expect(apiCancelAllOrders).not.toHaveBeenCalled()
+      expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
+    })
+
+    it('平净仓 → 强制确认框 → 确认后调用 reversePosition(当前合约)', async () => {
+      vi.mocked(apiReversePosition).mockResolvedValue({ success: true, orders: [] })
+      render(<TradeParams />)
+      fireEvent.click(screen.getByTestId('tp-flat-net'))
+      expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+      fireEvent.click(screen.getByText('确认执行'))
+      await act(async () => {})
+      expect(apiReversePosition).toHaveBeenCalledWith(expect.objectContaining({ instrumentID: 'IF2608' }))
+    })
+
+    it('平净仓成功 → 刷新持仓', async () => {
+      const fetchPositionsSpy = vi.spyOn(useQueryStore.getState(), 'fetchPositions').mockResolvedValue(undefined)
+      vi.mocked(apiReversePosition).mockResolvedValue({ success: true, orders: [] })
+      render(<TradeParams />)
+      fireEvent.click(screen.getByTestId('tp-flat-net'))
+      fireEvent.click(screen.getByText('确认执行'))
+      await act(async () => {})
+      expect(fetchPositionsSpy).toHaveBeenCalled()
     })
   })
 
