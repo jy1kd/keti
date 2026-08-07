@@ -65,7 +65,7 @@
    - `今开/昨结/最高/最低/成交量/持仓量` KV，涨跌着色；复用 `OrderQuotePanel` 取值逻辑
    - 文件：`frontend/src/modules/order/QuoteStatsBar.tsx`（新）
 3. **`FooterBar.tsx`（⑦）**
-   - 居中 `∧/∨` 切换精简/完整态；右下 `+`（预留）
+   - 居中 `∧/∨` 切换精简/完整态；~~右下 `+`（预留）~~：2026-08-07 用户要求移除（占位无功能）
    - 文件：`frontend/src/modules/order/FooterBar.tsx`（新）
 4. **两态切换与持久化**
    - `popupStore` 增加 `expanded`（精简/完整态）+ zustand `persist` 本地持久化；标题栏 `—` 按钮等价收起
