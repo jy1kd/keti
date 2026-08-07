@@ -149,9 +149,9 @@ describe('TradeParams（任务#4）', () => {
       vi.mocked(apiCancelOrder).mockResolvedValue({ success: true })
       useQueryStore.setState({
         orders: [
-          { orderRef: 'OLD', instrumentID: 'IF2608', direction: '0', limitPrice: 4690, volumeTotalOriginal: 1, volumeTraded: 0, orderStatus: '2', insertTime: '09:30:01' },
-          { orderRef: 'LATEST', instrumentID: 'IF2608', direction: '0', limitPrice: 4694, volumeTotalOriginal: 2, volumeTraded: 0, orderStatus: '2', insertTime: '09:31:00' },
-          { orderRef: 'OTHER', instrumentID: 'IC2608', direction: '0', limitPrice: 5600, volumeTotalOriginal: 1, volumeTraded: 0, orderStatus: '2', insertTime: '09:32:00' },
+          { orderRef: 'OLD', instrumentID: 'IF2608', direction: '0', combOffsetFlag: '0', limitPrice: 4690, volumeTotalOriginal: 1, volumeTraded: 0, orderStatus: '2', insertTime: '09:30:01' },
+          { orderRef: 'LATEST', instrumentID: 'IF2608', direction: '0', combOffsetFlag: '0', limitPrice: 4694, volumeTotalOriginal: 2, volumeTraded: 0, orderStatus: '2', insertTime: '09:31:00' },
+          { orderRef: 'OTHER', instrumentID: 'IC2608', direction: '0', combOffsetFlag: '0', limitPrice: 5600, volumeTotalOriginal: 1, volumeTraded: 0, orderStatus: '2', insertTime: '09:32:00' },
         ],
       })
       render(<TradeParams />)

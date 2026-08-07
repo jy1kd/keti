@@ -14,10 +14,12 @@ export interface RawOrderEntry {
   orderRef: string
   instrumentID: string
   direction: string
+  combOffsetFlag?: string
   limitPrice: number
   volumeTotalOriginal: number
   volumeTraded?: number
   orderStatus: string
+  insertTime?: string
 }
 
 /** 单档位聚合：我方买/卖挂单的剩余量、笔数、orderRef 列表（撤单用） */
