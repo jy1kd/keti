@@ -3,6 +3,7 @@ import { ListTable } from '@visactor/vtable'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
 import { getProductName } from '@/utils/productNames'
 import { getContractStatus, type ContractStatus } from '@/utils/contractStatus'
+import { SCROLLBAR_SIZE, PROMINENT_SCROLL_STYLE } from '@/utils/vtableTheme'
 import { useMarketStore } from './store'
 
 interface MarketTableProps {
@@ -61,19 +62,21 @@ function statusStyle(args: any) {
 }
 
 const columns = [
-  { field: 'instrumentID', title: '合约', width: 90 },
-  { field: 'productName', title: '合约品种', width: 100 },
-  { field: 'exchangeID', title: '交易所', width: 70 },
-  { field: 'expireDate', title: '到期日', width: 90 },
-  { field: 'status', title: '状态', width: 70, style: statusStyle },
-  { field: 'lastPrice', title: '最新价', width: 100, style: coloredStyle },
-  { field: 'change', title: '涨跌', width: 80, style: coloredStyle },
-  { field: 'changePercent', title: '涨跌%', width: 80, style: coloredStyle },
-  { field: 'bidPrice1', title: '买一', width: 100, style: coloredStyle },
-  { field: 'askPrice1', title: '卖一', width: 100, style: coloredStyle },
-  { field: 'volume', title: '成交量', width: 100 },
-  { field: 'openInterest', title: '持仓量', width: 100 },
-  { field: 'favorite', title: '⭐', width: 50 },
+  { field: 'instrumentID', title: '合约', width: 110 },
+  { field: 'productName', title: '合约品种', width: 85 },
+  { field: 'exchangeID', title: '交易所', width: 75 },
+  { field: 'volumeMultiple', title: '合约乘数', width: 85 },
+  { field: 'priceTick', title: '最小变动价位', width: 110 },
+  { field: 'expireDate', title: '到期日', width: 100 },
+  { field: 'status', title: '状态', width: 80, style: statusStyle },
+  { field: 'lastPrice', title: '最新价', width: 110, style: coloredStyle },
+  { field: 'change', title: '涨跌', width: 100, style: coloredStyle },
+  { field: 'changePercent', title: '涨跌%', width: 100, style: coloredStyle },
+  { field: 'bidPrice1', title: '买一', width: 110, style: coloredStyle },
+  { field: 'askPrice1', title: '卖一', width: 110, style: coloredStyle },
+  { field: 'volume', title: '成交量', width: 110 },
+  { field: 'openInterest', title: '持仓量', width: 110 },
+  { field: 'favorite', title: '⭐', width: 60 },
 ]
 
 const CTP_INVALID_PRICE = 1.7976931348623157e+308
@@ -87,6 +90,8 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, i
       instrumentID: contract.instrumentID,
       productName,
       exchangeID: contract.exchangeID || PLACEHOLDER,
+      volumeMultiple: contract.volumeMultiple,
+      priceTick: contract.priceTick,
       expireDate: contract.expireDate || PLACEHOLDER,
       status,
       lastPrice: PLACEHOLDER,
@@ -109,6 +114,8 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, i
     instrumentID: snap.instrumentID,
     productName,
     exchangeID: contract.exchangeID || PLACEHOLDER,
+    volumeMultiple: contract.volumeMultiple,
+    priceTick: contract.priceTick,
     expireDate: contract.expireDate || PLACEHOLDER,
     status,
     lastPrice: isValidPrice(snap.lastPrice) ? snap.lastPrice : PLACEHOLDER,
@@ -187,7 +194,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     const table = new ListTable(containerRef.current, {
       columns,
       records,
-      widthMode: 'adaptive',
+      widthMode: 'standard',
       theme: {
         underlayBackgroundColor: '#0d1117',
         defaultStyle: {
@@ -228,11 +235,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
           cellBgColor: 'rgba(240, 180, 41, 0.08)',
           inlineRowBgColor: 'rgba(240, 180, 41, 0.12)',
         },
-        scrollStyle: {
-          scrollSliderColor: '#30363d',
-          scrollRailColor: '#161b22',
-          visible: 'always',
-        },
+        scrollStyle: { ...PROMINENT_SCROLL_STYLE },
         frameStyle: {
           borderColor: '#30363d',
           cornerRadius: 0,
@@ -364,7 +367,18 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
         if (rect && tableRef.current) {
           const x = e.clientX - rect.left
           const y = e.clientY - rect.top
-          const cellInfo = (tableRef.current as any).getCellAt?.(x, y)
+          // 排除滚动条区域：底部横向进度条 / 右侧纵向滚动条。
+          // 否则拖拽进度条时 getCellAt 会把该区域判成「邻近的行」→ 误触发多选，与滚动条拖动冲突。
+          const table = tableRef.current as any
+          const tH = table.tableNoFrameHeight
+          const tW = table.tableNoFrameWidth
+          if (
+            (typeof tH === 'number' && y >= tH - SCROLLBAR_SIZE) ||
+            (typeof tW === 'number' && x >= tW - SCROLLBAR_SIZE)
+          ) {
+            return -1
+          }
+          const cellInfo = table.getCellAt?.(x, y)
           if (cellInfo && cellInfo.row !== undefined) {
             return cellInfo.row - 1
           }

@@ -53,8 +53,8 @@ describe('QueryStore', () => {
     expect(useQueryStore.getState().activeTab).toBe('trades')
   })
 
-  it('supports all tab values including stop_orders, contracts', () => {
-    const tabs = ['orders', 'trades', 'positions', 'account', 'stop_orders', 'contracts'] as const
+  it('supports all remaining tab values', () => {
+    const tabs = ['orders', 'trades', 'positions', 'account', 'stop_orders'] as const
     for (const tab of tabs) {
       useQueryStore.getState().setActiveTab(tab)
       expect(useQueryStore.getState().activeTab).toBe(tab)

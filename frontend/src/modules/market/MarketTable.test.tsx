@@ -161,6 +161,107 @@ describe('MarketTable', () => {
     expect(statusCol.style({ table: { records }, row: 2, col: 4 })).toEqual({ color: '#d29922' })
   })
 
+  it('columns 包含合约乘数与最小变动价位，且采用固定列宽 standard', async () => {
+    const { ListTable } = await import('@visactor/vtable')
+    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    const options = (ListTable as any).mock.calls[0][1]
+    expect(options.widthMode).toBe('standard')
+    const titles = options.columns.map((c: { title: string }) => c.title)
+    expect(titles).toContain('合约乘数')
+    expect(titles).toContain('最小变动价位')
+    for (const col of options.columns) {
+      expect(typeof col.width).toBe('number')
+      expect(col.width as number).toBeGreaterThan(0)
+    }
+  })
+
+  it('buildRecord 从 contract 填充合约乘数与最小变动价位（有快照）', async () => {
+    const { ListTable } = await import('@visactor/vtable')
+    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    const options = (ListTable as any).mock.calls[0][1]
+    const record = options.records[0] // au2508
+    expect(record.volumeMultiple).toBe(1000)
+    expect(record.priceTick).toBe(0.02)
+  })
+
+  it('无快照时合约乘数/最小变动价位仍从 contract 显示（静态列）', async () => {
+    const { ListTable } = await import('@visactor/vtable')
+    render(<MarketTable contracts={mockContracts} snapshots={new Map()} />)
+    const options = (ListTable as any).mock.calls[0][1]
+    const record = options.records[0]
+    expect(record.volumeMultiple).toBe(1000)
+    expect(record.priceTick).toBe(0.02)
+    expect(record.lastPrice).toBe('--')
+  })
+
+  it('横向滚动条样式明显（scrollStyle 加粗 + 高亮滑块色 + 常显）', async () => {
+    const { ListTable } = await import('@visactor/vtable')
+    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    const options = (ListTable as any).mock.calls[0][1]
+    const ss = options.theme.scrollStyle
+    expect(ss).toBeDefined()
+    expect(ss.visible).toBe('always')
+    expect(ss.width).toBeGreaterThanOrEqual(12) // 加粗滚动条，非默认细条
+    expect(ss.scrollSliderColor).toBe('#4a9eff') // 高亮滑块色，便于发现
+  })
+
+  // --- 滚动条区域不触发多选（拖拽进度条不应误选行） ---
+
+  describe('滚动条区域不触发多选', () => {
+    it('拖拽底部横向进度条（底部 12px 内）不误选合约行', async () => {
+      const onSelectionChange = vi.fn()
+      const { container } = render(
+        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={onSelectionChange} />
+      )
+      const { ListTable } = await import('@visactor/vtable')
+      const instance = (ListTable as any).mock.results[0].value
+      // 模拟：getCellAt 把滚动条区域判为「末行」（横向进度条覆盖/邻近最后一行）
+      instance.getCellAt = vi.fn().mockReturnValue({ row: 1, col: 0 })
+      Object.defineProperty(instance, 'tableNoFrameWidth', { value: 800, configurable: true })
+      Object.defineProperty(instance, 'tableNoFrameHeight', { value: 600, configurable: true })
+      const tableEl = container.firstChild as HTMLElement
+
+      await act(async () => {
+        // y=595 落在底部进度条带（600-12=588 以下）；无修复时 getCellAt 返回 row1 → 误触发多选
+        // 全部在 tableEl 上冒泡派发（mousemove/mouseup 监听在 window，冒泡到达且 e.target 是元素）
+        tableEl.dispatchEvent(new MouseEvent('mousedown', { clientX: 400, clientY: 595, button: 0, bubbles: true }))
+        tableEl.dispatchEvent(new MouseEvent('mousemove', { clientX: 500, clientY: 595, button: 0, bubbles: true }))
+        tableEl.dispatchEvent(new MouseEvent('mouseup', { clientX: 500, clientY: 595, button: 0, bubbles: true }))
+      })
+
+      expect(onSelectionChange).not.toHaveBeenCalled()
+      // 清理共享 mock，避免影响后续用例
+      delete instance.getCellAt
+      delete instance.tableNoFrameWidth
+      delete instance.tableNoFrameHeight
+    })
+
+    it('拖拽右侧纵向滚动条（右侧 12px 内）不误选合约行', async () => {
+      const onSelectionChange = vi.fn()
+      const { container } = render(
+        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={onSelectionChange} />
+      )
+      const { ListTable } = await import('@visactor/vtable')
+      const instance = (ListTable as any).mock.results[0].value
+      instance.getCellAt = vi.fn().mockReturnValue({ row: 1, col: 0 })
+      Object.defineProperty(instance, 'tableNoFrameWidth', { value: 800, configurable: true })
+      Object.defineProperty(instance, 'tableNoFrameHeight', { value: 600, configurable: true })
+      const tableEl = container.firstChild as HTMLElement
+
+      await act(async () => {
+        // x=795 落在右侧滚动条带（800-12=788 右侧）；无修复时 getCellAt 按 y 判行 → 误触发多选
+        tableEl.dispatchEvent(new MouseEvent('mousedown', { clientX: 795, clientY: 200, button: 0, bubbles: true }))
+        tableEl.dispatchEvent(new MouseEvent('mousemove', { clientX: 795, clientY: 300, button: 0, bubbles: true }))
+        tableEl.dispatchEvent(new MouseEvent('mouseup', { clientX: 795, clientY: 300, button: 0, bubbles: true }))
+      })
+
+      expect(onSelectionChange).not.toHaveBeenCalled()
+      delete instance.getCellAt
+      delete instance.tableNoFrameWidth
+      delete instance.tableNoFrameHeight
+    })
+  })
+
   // --- onVisibleRangeChange tests ---
 
   it('接受 onVisibleRangeChange 回调', () => {
