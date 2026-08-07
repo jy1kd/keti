@@ -4,7 +4,7 @@
 
 **Goal:** 消除行情表格拖动时的订阅/退订抖动、大幅降低请求量、永不触顶 500 上限，并减少每次 WS tick 的全量重建开销。
 
-**Architecture:** 前端五机制叠加——① 延迟退订（30s 宽限期）② 分层防抖（sub 100ms / unsub 500ms）③ 拖动中只增不减 ④ LRU 上限保护（SOFT_LIMIT=480）⑤ 局部更新（vtable `updateRecords`）。后端零改动。核心改动集中在 `useSubscriptionManager.ts`（机制 1-4）和 `MarketTable.tsx` + `store.ts`（机制 5）。
+**Architecture:** 前端六机制叠加——① 延迟退订（30s 宽限期）② 停止后统一完整 diff ③ 拖动中零 HTTP（不订不退）④ LRU 上限保护（SOFT_LIMIT=480）+ 退订先行串行化兜底 ⑤ 局部更新（vtable `updateRecords`）⑥ 快照回填（方案 A）。后端零改动。核心改动集中在 `useSubscriptionManager.ts`（机制 1-4、6）和 `MarketTable.tsx` + `store.ts`（机制 5）。
 
 **Tech Stack:** React 18 + TypeScript 5, Zustand, @visactor/vtable ^1.26.4, Vitest + Testing Library
 
@@ -13,7 +13,8 @@
 - `SOFT_LIMIT = 480`（永远 < 后端 `MAX_SUBSCRIPTIONS = 500`，留 20 余量）
 - `GRACE_MS = 30_000`（延迟退订宽限期）
 - 拖动检测：`DRAG_WINDOW_MS = 300`、`DRAG_THRESHOLD = 2`
-- subscribe 防抖 100ms，unsubscribe 防抖 500ms
+- 拖动中零 HTTP（不订不退）；订阅只在完整 diff 触发（非拖动变化立即、拖动停止后 500ms）
+- 退订先行串行化兜底：`subscribedRef.size + 新增订阅 > SOFT_LIMIT` 时，先 await 退订（后端确认）再订阅
 - 锁定合约（`lockedContracts`）与自选合约（`favorites`）永不退订、不参与 LRU 淘汰
 - 后端零改动（快照回填复用后端已有 `/api/market/snapshots` 接口与 `_snapshots` 缓存）
 - 快照回填（方案 A）：subscribe 成功后立即 `getSnapshots(订阅列表)`，用缓存快照先填表，实时 tick 覆盖；失败静默
@@ -898,4 +899,215 @@ Expected: 全部 PASS。确认 `getSnapshots` 的 mock 覆盖不破坏既有 use
 ```bash
 git add frontend/src/hooks/useSubscriptionManager.ts frontend/src/hooks/useSubscriptionManager.test.ts
 git commit -m "feat(hooks): 订阅成功后回填缓存快照（方案A），减少停止后填表等待"
+```
+
+---
+
+### Task 7: 拖动中零 HTTP + 退订先行串行化兜底
+
+**Files:**
+- Modify: `frontend/src/hooks/useSubscriptionManager.ts`
+- Test: `frontend/src/hooks/useSubscriptionManager.test.ts`
+
+**Interfaces:**
+- Consumes: 现有 `subscribedRef: Map<string, number>`、`GRACE_MS`、`DRAG_WINDOW_MS`、`DRAG_THRESHOLD`、`SOFT_LIMIT`、`computeLruEvictions`、`doUnsubscribe`、`prefetchSnapshots`、`subscribeMarket`/`unsubscribeMarket`/`getSnapshots`
+- Produces: 拖动中零 HTTP（isDragging 分支不再订阅）；`runFullDiff` 内「退订先行」串行化兜底
+
+**背景：** 修复「拖动进度条到底时底部合约卡旧数据不刷新」的竞态 bug。
+
+根因：拖动中每次可见区变化都订阅（`debouncedSubscribe`），`subscribedRef` 经 LRU 稳定在 480；但 LRU 退订是异步 HTTP、与后续订阅无顺序约束。后端 `subscribe()` 的 500 上限检查是「请求到达时刻」的原子快照，当底部合约的订阅在后端 `_subscriptions` 仍近 500 时到达，即被整批拒绝（`success:false`），不入 `subscribedRef`、不触发 `getSnapshots` 回填，显示旧缓存直到下次 diff 重试成功（几秒后）。
+
+修复：① **拖动中零 HTTP**——用户拖动时不关注快速略过的合约，`isDragging()` 分支不再订阅，只调度 500ms 后的 `runFullDiff`；`subscribedRef` 不再随拖动膨胀，拖到底部只是新增底部窗口，后端名额充足，竞态消失。② **退订先行串行化兜底**——`runFullDiff` 中当 `subscribedRef.size + 新增订阅 > SOFT_LIMIT`（需腾名额）时，先 await 退订（后端确认）再订阅，保证订阅到达时后端已腾空；否则订阅与退订并行（保持现状，不加延迟）。
+
+- [ ] **Step 1: 写失败测试**
+
+在 `frontend/src/hooks/useSubscriptionManager.test.ts`：
+
+**a. 改写「拖动中只订阅不退订」测试为「拖动中零 HTTP」：**
+
+```ts
+it('拖动中既不订阅也不退订，停止后才订阅最终可见区', async () => {
+  renderHook(() => useSubscriptionManager())
+
+  // 初始静止订阅
+  act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608']))
+  await act(async () => { vi.advanceTimersByTime(110) })
+  vi.mocked(subscribeMarket).mockClear()
+  vi.mocked(unsubscribeMarket).mockClear()
+
+  // 模拟快速拖动：300ms 内 ≥2 次变化 → 拖动态，零 HTTP
+  act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608', 'au2508']))
+  await act(async () => { vi.advanceTimersByTime(200) })
+  act(() => useMarketStore.getState().setVisibleInstrumentIDs(['au2508']))
+  await act(async () => { vi.advanceTimersByTime(200) })
+
+  // 拖动中零 HTTP：无 subscribe、无 unsubscribe
+  expect(vi.mocked(subscribeMarket)).not.toHaveBeenCalled()
+  expect(vi.mocked(unsubscribeMarket)).not.toHaveBeenCalled()
+
+  // 停止后 500ms 完整 diff → 订阅最终可见区 au2508
+  await act(async () => { vi.advanceTimersByTime(500) })
+  expect(vi.mocked(subscribeMarket)).toHaveBeenCalled()
+  const subbed = vi.mocked(subscribeMarket).mock.calls.flat(2) as string[]
+  expect(subbed).toContain('au2508')
+})
+```
+
+**b. 新增「退订先行串行化兜底」测试：**
+
+```ts
+it('新批次超 SOFT_LIMIT 时退订先行再订阅（串行化兜底）', async () => {
+  renderHook(() => useSubscriptionManager())
+
+  // 先把 subscribedRef 灌到 SOFT_LIMIT（480）
+  const base = Array.from({ length: 480 }, (_, i) => `ID${i}`)
+  act(() => useMarketStore.getState().setVisibleInstrumentIDs(base))
+  await act(async () => { vi.advanceTimersByTime(110) })
+  vi.mocked(subscribeMarket).mockClear()
+  vi.mocked(unsubscribeMarket).mockClear()
+
+  // 全部滑出 + 滑入 3 个新合约 → 480 + 3 > 480 → 需要腾名额
+  act(() => useMarketStore.getState().setVisibleInstrumentIDs(['NEW1', 'NEW2', 'NEW3']))
+  await act(async () => { vi.advanceTimersByTime(110) })
+  await act(async () => { vi.advanceTimersByTime(500) })
+
+  // 退订先行：unsubscribeMarket 先于 subscribeMarket 调用
+  expect(vi.mocked(unsubscribeMarket)).toHaveBeenCalled()
+  expect(vi.mocked(subscribeMarket)).toHaveBeenCalled()
+  const unsubFirst = vi.mocked(unsubscribeMarket).mock.invocationCallOrder[0]
+  const subFirst = vi.mocked(subscribeMarket).mock.invocationCallOrder[0]
+  expect(subFirst).toBeGreaterThan(unsubFirst)
+})
+```
+
+- [ ] **Step 2: 运行测试确认失败**
+
+Run: `cd frontend && npx vitest run src/hooks/useSubscriptionManager.test.ts`
+
+Expected: FAIL — 现状拖动中会订阅（零 HTTP 断言不通过）；串行化测试中 subscribe 先于 unsubscribe 调用（invocationCallOrder 断言不通过）。
+
+- [ ] **Step 3: 实现**
+
+在 `frontend/src/hooks/useSubscriptionManager.ts`：
+
+1. **删除死代码**：`SUB_DEBOUNCE_MS` 常量、`subTimerRef`、`debouncedSubscribe` 函数（拖动路径不再订阅）。已确认无外部依赖（grep 全仓库仅本文件使用）。
+
+2. **effect 拖动态分支**：去掉 `debouncedSubscribe()` 调用，只保留调度 500ms 后 `runFullDiff`：
+
+```ts
+if (isDragging()) {
+  // 拖动中零 HTTP：不订阅不退订，只调度停止后的完整 diff
+  if (fullDiffTimerRef.current) clearTimeout(fullDiffTimerRef.current)
+  fullDiffTimerRef.current = setTimeout(runFullDiff, 500)
+} else {
+  // 静止态：直接完整 diff
+  if (fullDiffTimerRef.current) clearTimeout(fullDiffTimerRef.current)
+  runFullDiff()
+}
+```
+
+effect 依赖数组去掉 `debouncedSubscribe`（→ `[visibleInstrumentIDs, isDragging, runFullDiff]`），cleanup 去掉 `subTimerRef` 清理。
+
+3. **`doUnsubscribe` 改为返回 `Promise<void>`**（成功时从 `subscribedRef` 删除、失败静默），供串行化路径 await 链使用：
+
+```ts
+const doUnsubscribe = useCallback((ids: string[]): Promise<void> => {
+  if (ids.length === 0) return Promise.resolve()
+  return unsubscribeMarket(ids)
+    .then((resp) => {
+      if (resp?.success) {
+        for (const id of ids) subscribedRef.current.delete(id)
+      }
+    })
+    .catch((err) => console.error('[SubscriptionManager] Unsubscribe failed:', err))
+}, [])
+```
+
+4. **`runFullDiff` 重构**：抽出 `subscribeNow`（success 门控 + 快照回填），新增「退订先行」串行化兜底：
+
+```ts
+const runFullDiff = useCallback(() => {
+  const should = calculateShouldSubscribe()
+  const now = Date.now()
+
+  // 1. 需要订阅的缺失合约
+  const toSubscribe: string[] = []
+  for (const id of should) {
+    if (!subscribedRef.current.has(id)) toSubscribe.push(id)
+  }
+
+  // 2. 宽限期退订候选 + 记录最早到期时间（到期重排）
+  const graceCandidates: { id: string; lastVisible: number }[] = []
+  let nextCheckIn: number | null = null
+  for (const [id, lastVisible] of subscribedRef.current) {
+    if (should.has(id)) continue
+    const elapsed = now - lastVisible
+    graceCandidates.push({ id, lastVisible })
+    if (elapsed <= GRACE_MS) {
+      const remaining = GRACE_MS - elapsed + 1
+      if (nextCheckIn === null || remaining < nextCheckIn) nextCheckIn = remaining
+    }
+  }
+
+  // 3. 合并退订集：宽限期过期 + LRU 上限淘汰
+  const toUnsubscribe = new Set<string>()
+  for (const c of graceCandidates) {
+    if (now - c.lastVisible > GRACE_MS) toUnsubscribe.add(c.id)
+  }
+  for (const id of computeLruEvictions(should, toSubscribe.length)) {
+    toUnsubscribe.add(id)
+  }
+  const unsubscribeIds = Array.from(toUnsubscribe)
+
+  // 4. 订阅动作（success 门控 + 快照回填），供串行化/并行共用
+  const subscribeNow = (ids: string[]) => {
+    if (ids.length === 0) return
+    subscribeMarket(ids)
+      .then((resp) => {
+        if (resp?.success) {
+          for (const id of ids) subscribedRef.current.set(id, Date.now())
+          prefetchSnapshots(ids)
+        }
+      })
+      .catch((err) => console.error('[SubscriptionManager] Subscribe failed:', err))
+  }
+
+  // 5. 退订先行（串行化兜底）：新批次会顶到 SOFT_LIMIT 时，
+  //    先等退订（后端确认腾出名额）再订阅，规避后端 500 上限原子整批拒绝；
+  //    平时（无需腾名额）订阅与退订并行，不加延迟
+  const needRoom = subscribedRef.current.size + toSubscribe.length > SOFT_LIMIT
+  if (needRoom && unsubscribeIds.length > 0) {
+    doUnsubscribe(unsubscribeIds).then(() => subscribeNow(toSubscribe))
+  } else {
+    subscribeNow(toSubscribe)
+    if (unsubscribeIds.length > 0) doUnsubscribe(unsubscribeIds)
+  }
+
+  // 6. 宽限期尚未到期的合约：等到期后再检查一次（到期重排链）
+  if (unsubTimerRef.current) clearTimeout(unsubTimerRef.current)
+  unsubTimerRef.current = nextCheckIn !== null
+    ? setTimeout(() => runFullDiffRef.current(), nextCheckIn)
+    : null
+}, [calculateShouldSubscribe, computeLruEvictions, doUnsubscribe, prefetchSnapshots])
+```
+
+> 说明：第 6 步改为「有 nextCheckIn 则调度、无则清空」，避免滑回可见的合约留下陈旧 timer。
+
+- [ ] **Step 4: 运行测试确认通过**
+
+Run: `cd frontend && npx vitest run src/hooks/useSubscriptionManager.test.ts`
+
+Expected: PASS（改写 1 个 + 新增 1 个 + 既有全部通过，共 11 个）
+
+- [ ] **Step 5: 运行全量前端测试（防回归）**
+
+Run: `cd frontend && npx vitest run`
+
+Expected: 全部 PASS。确认无其他文件依赖 `debouncedSubscribe`/`SUB_DEBOUNCE_MS`（已 grep 确认仅本文件使用）。
+
+- [ ] **Step 6: 提交**
+
+```bash
+git add frontend/src/hooks/useSubscriptionManager.ts frontend/src/hooks/useSubscriptionManager.test.ts
+git commit -m "fix(hooks): 拖动中零 HTTP + 退订先行串行化兜底，修复拖动到底不刷新"
 ```

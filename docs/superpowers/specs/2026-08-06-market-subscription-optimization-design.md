@@ -27,8 +27,8 @@
 |--------|------|
 | 优化范围 | 仅前端，后端零改动（快照回填复用后端已有 `_snapshots` 缓存） |
 | 退订策略 | 延迟退订（30s 宽限期），不再立即退订 |
-| 拖动策略 | 拖动中只增不减，停止后统一 diff |
-| 上限保护 | `SOFT_LIMIT = 480 < 500`，LRU 淘汰最久未见的低优先级合约 |
+| 拖动策略 | 拖动中零 HTTP（既不订阅也不退订），停止后统一 diff 订阅最终可见区 |
+| 上限保护 | `SOFT_LIMIT = 480 < 500`，LRU 淘汰最久未见；新批次超限时退订先行（await）再订阅 |
 | 更新方式 | `setRecords`（全量）→ `updateRecords`（局部） |
 | 触发方式 | 用 `visibleInstrumentIDs` 短窗口内多次变化推断拖动态，不改 `MarketTable` 滚动接线 |
 | **快照回填** | **订阅成功后立即 `getSnapshots(订阅列表)`，用后端缓存快照先填表，实时 tick 再覆盖（方案 A）** |
@@ -45,11 +45,12 @@
 tick 更新  → contracts.map 全量重建 → setRecords 全量替换
 
 改造后：
-可见区变化 → 200ms防抖 → 更新"应该订阅"集合
-           ├─ subscribe（立即，100ms 防抖）
-           ├─ 订阅成功 → getSnapshots 回填缓存快照（方案 A，立即有数据）
-           ├─ unsubscribe（延迟 30s 宽限期，500ms 防抖，拖动中暂停）
-           └─ 订阅数 > SOFT_LIMIT(480) → LRU 淘汰最久未见
+可见区变化 → 拖动检测（300ms 窗口 ≥2 次变化）
+           ├─ 拖动中：零 HTTP（既不订阅也不退订），只记录变化时间戳
+           └─ 停止后 / 非拖动变化 → 完整 diff：
+                ├─ subscribe（成功 → getSnapshots 回填缓存快照，立即有数据）
+                ├─ unsubscribe（30s 宽限期 + LRU 淘汰最久未见）
+                └─ 新批次超 SOFT_LIMIT → 退订先行（await 后端确认）→ 再订阅
 tick 更新  → 只 rebuild 变化的合约 → updateRecords 局部重绘
 ```
 
@@ -61,9 +62,9 @@ tick 更新  → 只 rebuild 变化的合约 → updateRecords 局部重绘
 | # | 机制 | 文件 | 解决 |
 |---|------|------|------|
 | 1 | 延迟退订（30s 宽限期） | useSubscriptionManager | 订阅抖动 |
-| 2 | 分层防抖（sub 100ms / unsub 500ms） | useSubscriptionManager | 请求量 |
-| 3 | 拖动中只增不减 | useSubscriptionManager | 请求风暴 |
-| 4 | LRU 上限保护（SOFT_LIMIT=480） | useSubscriptionManager | 500 上限 |
+| 2 | 停止后统一完整 diff（无拖动中防抖） | useSubscriptionManager | 请求量 |
+| 3 | 拖动中零 HTTP（不订不退） | useSubscriptionManager | 请求风暴 |
+| 4 | LRU 上限保护（SOFT_LIMIT=480）+ 退订先行串行化兜底 | useSubscriptionManager | 500 上限 |
 | 5 | 局部更新（updateRecords） | MarketTable + useMarketWs + store | 全量重建开销 |
 | 6 | 快照回填（subscribe 后 getSnapshots） | useSubscriptionManager | 停止后填满慢 |
 
@@ -99,18 +100,11 @@ for (const [id, lastVisible] of subscribedRef.current) {
 - 宽限期内滑回 → 不触发退订，`lastVisibleTime` 刷新。
 - 效果：拖动滑过的合约保留订阅，滑回立即有数据，无需重新走 CTP 异步回包。
 
-### 3.3 分层防抖（机制 2）
+### 3.3 停止后统一完整 diff（机制 2）
 
-subscribe 与 unsubscribe 使用不同的防抖窗口：
+不再有「拖动中的分层防抖」。订阅只发生在**完整 diff** 时——非拖动变化立即执行，拖动停止后 500ms 执行一次。拖动中零 HTTP（见机制 3）。退订由完整 diff 的宽限期判定统一处理（见机制 1、4）。
 
-| 操作 | 防抖窗口 | 原因 |
-|------|----------|------|
-| subscribe | 100ms | 滑入的合约要尽快有数据 |
-| unsubscribe | 500ms + 30s 宽限期 | 退订不急，避免抖动 |
-
-实现：拆成两个独立定时器，subscribe 与 unsubscribe 各自防抖合并。
-
-### 3.4 拖动中只增不减（机制 3）
+### 3.4 拖动中零 HTTP（机制 3）
 
 用「短窗口内多次可见区变化」推断拖动态：
 
@@ -124,10 +118,13 @@ const DRAG_THRESHOLD = 2     // 窗口内变化次数
 const isDragging = recentChanges.filter(t => now - t < DRAG_WINDOW_MS).length >= DRAG_THRESHOLD
 ```
 
-- **拖动中**：只执行 subscribe，**完全不发 unsubscribe**（含 LRU 淘汰）。
-- **停止后**（无变化 500ms）：执行一次完整 diff——subscribe + unsubscribe + LRU 淘汰。
+- **拖动中**：零 HTTP——既不 subscribe 也不 unsubscribe，只记录变化时间戳。理由：拖动过程中用户不关注被快速略过的合约内容，订阅它们纯属浪费（请求风暴 + LRU 无谓膨胀）。
+- **停止后**（无变化 500ms）：执行一次完整 diff——subscribe 当前可见区 + 宽限期退订 + LRU 淘汰。
+- **效果**：LRU 不随拖动膨胀（subscribedRef 停在拖动前水平），拖到底部只是新增一个底部窗口，后端名额充足——「拖动到底不刷新」的竞态（订阅到达时后端仍满被原子整批拒绝）直接消失。
+- **挂载不计入拖动**：首次挂载的 effect 运行不是用户的可见区变化，不写入 `recentChanges`（`didMountRef` 守卫），避免首个可见窗口被误判为拖动态而把首次订阅推迟 500ms。
+- **代价（已认可）**：拖动过程中可见区显示 `--`/旧缓存；快速方向键/滚轮滚动也会被判为「拖动」而抑制订阅（如需区分可用可见区跳变距离，后续可按需加）。
 
-### 3.5 LRU 上限保护（机制 4）
+### 3.5 LRU 上限保护 + 退订先行串行化兜底（机制 4）
 
 三层优先级，决定谁被保留、谁被淘汰：
 
@@ -146,11 +143,13 @@ const SOFT_LIMIT = 480  // < 后端 500，留 20 余量
 // 2. 若 subscribedRef.size + 新增订阅 > SOFT_LIMIT：
 //    → 按 lastVisibleTime 从旧到新，批量淘汰低优先级合约（跳过自选/锁定）
 //    → 直到腾出空间（保底 ≤ 480）
-// 3. 最终才 unsubscribeMarket(淘汰清单) + subscribeMarket(新增清单)
+// 3. 若需要腾名额 → 退订先行：await unsubscribeMarket(淘汰清单) 确认后端已删除，
+//    再 subscribeMarket(新增清单)；否则两者并行发出
 ```
 
 - 淘汰的是**最久没见过的**低优先级合约——拖回时重新订阅的代价最小。
-- 拖动中不淘汰（订阅数暂时超限也无妨，停止后收敛）。
+- **退订先行（串行化兜底）**：后端 `subscribe()` 的 500 上限检查是「请求到达时刻」的原子快照，若订阅到达时后端集合仍满会被**整批拒绝**（`success:false`），可见合约卡旧数据直到重试。因此当 `subscribedRef.size + 新增订阅 > SOFT_LIMIT` 时，先 await 退订（后端确认已释放名额）再订阅，保证订阅到达时集合已腾空。平时无需腾名额，订阅与退订并行（不加延迟）。
+- 拖动中零 HTTP（机制 3），淘汰只发生在停止后的完整 diff。
 
 ---
 
@@ -261,10 +260,12 @@ subscribe 成功
 ```
 订阅流（拖动）：
 scroll → MarketTable.notifyVisibleRange(100ms 防抖) → setVisibleInstrumentIDs
-  → useSubscriptionManager(200ms 防抖)
-    ├─ subscribe（100ms 防抖，拖动中也执行）
-    └─ unsubscribe（500ms 防抖 + 30s 宽限期，拖动中暂停）
-    └─ 停止后完整 diff：subscribe + unsubscribe + LRU 淘汰(≤480)
+  → useSubscriptionManager：拖动检测（300ms 窗口 ≥2 次变化）
+    ├─ 拖动中：零 HTTP（不订不退）
+    └─ 停止后 / 非拖动变化 → 完整 diff：
+         subscribe 当前可见区（成功 → getSnapshots 回填）
+       + 宽限期退订（30s）
+       + LRU 淘汰（≤480；新批次超限时退订先行 await 再订阅）
 
 行情流（tick）：
 WS market_data → useMarketWs 缓冲 → batchUpdate(snaps) → store 更新 snapshots + 记录变化集
@@ -275,7 +276,8 @@ WS market_data → useMarketWs 缓冲 → batchUpdate(snaps) → store 更新 sn
 
 ## 6. 错误处理
 
-- **subscribe / unsubscribe 失败**：沿用现有逻辑（try/catch + console.error），本地状态保持一致（订阅失败仍记录为已订阅，等待下一次 diff 重试）。
+- **subscribe / unsubscribe 失败**：success 门控——`resp?.success` 为真才更新 `subscribedRef`；被整批拒绝（`success:false`）的合约不入 `subscribedRef`，留在待订阅状态，下次 diff 自动重试。网络异常 try/catch + console.error。
+- **退订先行时退订失败**：不阻塞订阅——catch 后仍执行 subscribe（尽力而为）；后端若仍满则下次 diff 重试。
 - **LRU 淘汰遇到后端超限**：SOFT_LIMIT=480 永远 < 500，预留 20 余量；即便极端情况下 CTP 返回失败，本地已移除，下次 diff 可恢复。
 - **updateRecords 行号越界**：`rowIndex < 0` 跳过；vtable 未就绪时 `try/catch` 包裹（沿用现有 `notifyVisibleRange` 模式）。
 
@@ -288,9 +290,9 @@ WS market_data → useMarketWs 缓冲 → batchUpdate(snaps) → store 更新 sn
 **`frontend/src/hooks/useSubscriptionManager.test.ts`（新建）**
 
 1. **延迟退订**：合约滑出可见区 30s 内不退订（`vi.useFakeTimers()` 推进 10s，断言无 unsubscribe 调用）；超 30s 未可见 → 触发退订；宽限期内滑回 → 退订取消、时间刷新。
-2. **拖动中只增不减**：连续多次 `setVisibleInstrumentIDs` → 期间只发 subscribe 不发 unsubscribe；停止后发一次合并退订。
-3. **LRU 上限**：注入 480+ 合约 → 订阅数永不超 480；淘汰顺序为最久未见；自选/锁定合约永不淘汰；边界（恰好 SOFT_LIMIT 时新增）只淘汰最旧一个。
-4. **分层防抖**：subscribe 用 100ms 窗口、unsubscribe 用 500ms 窗口，断言两种防抖独立。
+2. **拖动中零 HTTP**：连续多次 `setVisibleInstrumentIDs`（300ms 内 ≥2 次）→ 期间 subscribe 与 unsubscribe **均不被调用**；停止 500ms 后完整 diff 订阅最终可见区。
+3. **LRU 上限 + 退订先行串行化**：注入 480+ 合约 → 订阅数永不超 480；淘汰顺序为最久未见；自选/锁定永不淘汰；新批次超 SOFT_LIMIT 时断言 `unsubscribeMarket` 先于 `subscribeMarket` 调用（`mock.invocationCallOrder`）。
+4. **完整 diff 时机**：非拖动可见区变化立即订阅；拖动停止后 500ms 统一完整 diff。
 
 **`frontend/src/modules/market/MarketTable.test.tsx`（修改）**
 
