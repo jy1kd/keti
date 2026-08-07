@@ -95,43 +95,12 @@
 .position-table-wrap,
 .account-query,
 .stop-order-list,
-.quote-query,
-.contract-query {
+.quote-query {
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
   padding: 8px;
-}
-
-/* 合约详情 2×4 网格 */
-.contract-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px;
-  background: var(--border-color);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.contract-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 12px;
-  background: var(--bg-panel);
-}
-
-.contract-label {
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.contract-value {
-  font-size: 13px;
-  color: var(--text-primary);
-  font-weight: 500;
 }
 
 .flow-toolbar {
@@ -283,23 +252,4 @@
   font-weight: 500;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
-}
-
-/* ── K线样式 ──────────────────────────────────── */
-
-.kline-query {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-  padding: 8px;
-}
-
-.kline-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  color: var(--text-secondary);
-  font-size: 13px;
 }
