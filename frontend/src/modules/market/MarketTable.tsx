@@ -32,6 +32,9 @@ const PLACEHOLDER = '--'
 /** mouseup 距上次 scroll 在此窗口内视为滚动条释放（松手） */
 const SCROLL_RELEASE_WINDOW_MS = 200
 
+/** vtable 滚动条厚度（与 theme scrollStyle.width 保持一致；用于排除滚动条区域的误判） */
+const SCROLLBAR_SIZE = 12
+
 const UP_COLOR = '#ef4444'
 const DOWN_COLOR = '#22c55e'
 const FLAT_COLOR = '#e6edf3'
@@ -237,7 +240,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
         scrollStyle: {
           scrollSliderColor: '#4a9eff',
           scrollRailColor: '#21262d',
-          width: 12,
+          width: SCROLLBAR_SIZE,
           visible: 'always',
         },
         frameStyle: {
@@ -371,7 +374,18 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
         if (rect && tableRef.current) {
           const x = e.clientX - rect.left
           const y = e.clientY - rect.top
-          const cellInfo = (tableRef.current as any).getCellAt?.(x, y)
+          // 排除滚动条区域：底部横向进度条 / 右侧纵向滚动条。
+          // 否则拖拽进度条时 getCellAt 会把该区域判成「邻近的行」→ 误触发多选，与滚动条拖动冲突。
+          const table = tableRef.current as any
+          const tH = table.tableNoFrameHeight
+          const tW = table.tableNoFrameWidth
+          if (
+            (typeof tH === 'number' && y >= tH - SCROLLBAR_SIZE) ||
+            (typeof tW === 'number' && x >= tW - SCROLLBAR_SIZE)
+          ) {
+            return -1
+          }
+          const cellInfo = table.getCellAt?.(x, y)
           if (cellInfo && cellInfo.row !== undefined) {
             return cellInfo.row - 1
           }
