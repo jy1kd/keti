@@ -12,6 +12,8 @@ export interface KLineChartProps {
   name?: string
   /** 最新价（显示在标题栏，可选；'—' 表示无快照） */
   latestPrice?: string
+  /** 标题栏搜索/切换插槽（可选）：K线页嵌入合约搜索切换；行情查询等场景不传则不渲染 */
+  searchSlot?: React.ReactNode
 }
 
 /** 主图指标类型 */
@@ -266,7 +268,7 @@ const SUB_INDICATORS: { label: string; value: SubIndicator }[] = [
   { label: 'RSI', value: 'rsi' },
 ]
 
-export function KLineChart({ instrument, klineData, period, onPeriodChange, name, latestPrice }: KLineChartProps) {
+export function KLineChart({ instrument, klineData, period, onPeriodChange, name, latestPrice, searchSlot }: KLineChartProps) {
   const chartRef = useRef<HTMLDivElement>(null)
   const instanceRef = useRef<echarts.ECharts | null>(null)
   const prevDataLenRef = useRef(0)
@@ -340,6 +342,8 @@ export function KLineChart({ instrument, klineData, period, onPeriodChange, name
           <span className="kline-chart__instrument">{instrument}</span>
           {name && <span className="kline-chart__name">{name}</span>}
         </div>
+        {/* 搜索/切换插槽：置于合约信息区之后、最新价之前，供 K线页切换合约使用 */}
+        {searchSlot && <div className="kline-chart__search">{searchSlot}</div>}
         {latestPrice != null && (
           <span className="kline-chart__latest">
             <span className="kline-chart__latest-label">最新</span>

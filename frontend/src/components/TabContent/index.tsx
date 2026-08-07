@@ -40,7 +40,7 @@ function renderTabContent(tab: Tab, floating: boolean): React.ReactNode {
         />
       )
     case 'kline':
-      return <KLinePage instrumentID={getInstrumentID(tab.props)} />
+      return <KLinePage instrumentID={getInstrumentID(tab.props)} tabId={tab.id} />
     case 'favorites':
       return <FavoritesPage />
     case 'query':

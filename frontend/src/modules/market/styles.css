@@ -144,6 +144,16 @@
   white-space: nowrap;
 }
 
+/* 标题栏搜索/切换插槽：与合约代码并排，不挤压右侧周期/指标控件 */
+.kline-chart__search {
+  flex-shrink: 0;
+}
+
+/* 标题栏内搜索框紧凑化（默认 220px → 150px） */
+.kline-chart__search .search-input {
+  width: 150px;
+}
+
 .kline-chart__latest {
   display: flex;
   align-items: baseline;

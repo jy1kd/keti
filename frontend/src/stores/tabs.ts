@@ -60,6 +60,10 @@ interface TabStore {
   /** 关闭标签页；固定标签不可关闭 */
   closeTab: (tabId: string) => void
 
+  /** 更新标签页内容（K线页内搜索切换合约）：保持 id 稳定，同步 props 与 title。
+   *  若目标合约已被其他标签打开，则激活该标签并关闭当前标签，避免重复。 */
+  updateTab: (tabId: string, patch: { props?: Record<string, unknown>; title?: string }) => void
+
   /** 切换活跃标签页 */
   setActiveTab: (tabId: string) => void
 
@@ -86,11 +90,21 @@ export const useTabStore = create<TabStore>((set, get) => ({
     let result = false
 
     set((state) => {
-      // 去重：相同 type + instrumentID 直接激活
-      const existing = state.tabs.find((t) => t.id === tabId)
+      // 去重：优先按 id（type+instrumentID）匹配；K线页内切换合约后 tab id 保持稳定，
+      // 再按 type+instrumentID 内容匹配。命中时同步 props/title，自愈陈旧内容。
+      const existing = state.tabs.find(
+        (t) =>
+          t.id === tabId ||
+          (typeof props.instrumentID === 'string' &&
+            t.type === type &&
+            t.props.instrumentID === props.instrumentID),
+      )
       if (existing) {
         result = true
-        return { activeTabId: existing.id }
+        return {
+          tabs: state.tabs.map((t) => (t.id === existing.id ? { ...t, props, title } : t)),
+          activeTabId: existing.id,
+        }
       }
 
       // 数量限制
@@ -136,6 +150,35 @@ export const useTabStore = create<TabStore>((set, get) => ({
       return {
         tabs: newTabs,
         activeTabId: newActiveId,
+      }
+    })
+  },
+
+  updateTab: (tabId, patch) => {
+    set((state) => {
+      const tab = state.tabs.find((t) => t.id === tabId)
+      if (!tab) return state
+
+      const props = patch.props ?? tab.props
+      const title = patch.title ?? tab.title
+      const instrumentID = props.instrumentID
+
+      // 目标合约已有其他标签打开 → 激活它并关闭当前标签，避免两个标签显示同一合约
+      if (typeof instrumentID === 'string') {
+        const existing = state.tabs.find(
+          (t) => t.id !== tabId && t.type === tab.type && t.props.instrumentID === instrumentID,
+        )
+        if (existing) {
+          return {
+            tabs: state.tabs.filter((t) => t.id !== tabId),
+            activeTabId: state.activeTabId === tabId ? existing.id : state.activeTabId,
+          }
+        }
+      }
+
+      return {
+        tabs: state.tabs.map((t) => (t.id === tabId ? { ...t, props, title } : t)),
+        activeTabId: state.activeTabId === tabId ? tabId : state.activeTabId,
       }
     })
   },

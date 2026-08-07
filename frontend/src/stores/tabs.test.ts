@@ -194,6 +194,82 @@ describe('useTabStore', () => {
     })
   })
 
+  // --- updateTab ---
+
+  describe('updateTab', () => {
+    it('应更新标签页 props 与 title，id 保持稳定（K线页内切换合约）', () => {
+      const { openTab, updateTab } = useTabStore.getState()
+      openTab({ type: 'kline', title: '📈 K线-IF2608', props: { instrumentID: 'IF2608' } })
+
+      updateTab('tab-kline-IF2608', {
+        props: { instrumentID: 'rb2610' },
+        title: '📈 K线-rb2610',
+      })
+
+      const state = useTabStore.getState()
+      const tab = state.tabs.find((t) => t.type === 'kline')
+      expect(tab).toBeDefined()
+      expect(tab?.id).toBe('tab-kline-IF2608') // id 稳定，不复算
+      expect(tab?.props).toEqual({ instrumentID: 'rb2610' })
+      expect(tab?.title).toBe('📈 K线-rb2610')
+      expect(state.activeTabId).toBe('tab-kline-IF2608')
+    })
+
+    it('切换后从行情表重新打开同合约应去重（按 type+instrumentID 内容匹配并自愈）', () => {
+      const { openTab, updateTab } = useTabStore.getState()
+      openTab({ type: 'kline', title: '📈 K线-IF2608', props: { instrumentID: 'IF2608' } })
+      // 页内切换到 rb2610（id 保持 tab-kline-IF2608）
+      updateTab('tab-kline-IF2608', {
+        props: { instrumentID: 'rb2610' },
+        title: '📈 K线-rb2610',
+      })
+      // 从行情表右键打开 rb2610：不应新建标签
+      const result = openTab({ type: 'kline', title: '📈 K线-rb2610', props: { instrumentID: 'rb2610' } })
+
+      expect(result).toBe(true)
+      const state = useTabStore.getState()
+      expect(state.tabs.filter((t) => t.type === 'kline')).toHaveLength(1)
+      expect(state.activeTabId).toBe('tab-kline-IF2608')
+    })
+
+    it('重新打开被切换走的旧合约时应自愈回该合约', () => {
+      const { openTab, updateTab } = useTabStore.getState()
+      openTab({ type: 'kline', title: '📈 K线-IF2608', props: { instrumentID: 'IF2608' } })
+      updateTab('tab-kline-IF2608', {
+        props: { instrumentID: 'rb2610' },
+        title: '📈 K线-rb2610',
+      })
+      // 重新打开 IF2608：命中旧 id tab-kline-IF2608，props/title 自愈
+      openTab({ type: 'kline', title: '📈 K线-IF2608', props: { instrumentID: 'IF2608' } })
+
+      const tab = useTabStore.getState().tabs.find((t) => t.type === 'kline')
+      expect(tab?.props).toEqual({ instrumentID: 'IF2608' })
+      expect(tab?.title).toBe('📈 K线-IF2608')
+    })
+
+    it('目标合约已被其他标签打开时，应激活它并关闭当前标签', () => {
+      const { openTab, updateTab } = useTabStore.getState()
+      openTab({ type: 'kline', title: '📈 K线-IF2608', props: { instrumentID: 'IF2608' } })
+      openTab({ type: 'kline', title: '📈 K线-rb2610', props: { instrumentID: 'rb2610' } })
+      // 当前活跃 tab-kline-rb2610；把 IF2608 标签切换到 rb2610 → 冲突，关闭并激活 rb2610
+      updateTab('tab-kline-IF2608', {
+        props: { instrumentID: 'rb2610' },
+        title: '📈 K线-rb2610',
+      })
+
+      const state = useTabStore.getState()
+      expect(state.tabs.filter((t) => t.type === 'kline')).toHaveLength(1)
+      expect(state.tabs.find((t) => t.id === 'tab-kline-IF2608')).toBeUndefined()
+      expect(state.activeTabId).toBe('tab-kline-rb2610')
+    })
+
+    it('更新不存在的标签页应无操作', () => {
+      const { updateTab } = useTabStore.getState()
+      updateTab('non-existent-tab', { props: { instrumentID: 'rb2610' } })
+      expect(useTabStore.getState().tabs).toHaveLength(1)
+    })
+  })
+
   // --- setActiveTab ---
 
   describe('setActiveTab', () => {
