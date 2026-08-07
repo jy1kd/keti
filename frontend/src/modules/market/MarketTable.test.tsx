@@ -161,6 +161,39 @@ describe('MarketTable', () => {
     expect(statusCol.style({ table: { records }, row: 2, col: 4 })).toEqual({ color: '#d29922' })
   })
 
+  it('columns 包含合约乘数与最小变动价位，且采用固定列宽 standard', async () => {
+    const { ListTable } = await import('@visactor/vtable')
+    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    const options = (ListTable as any).mock.calls[0][1]
+    expect(options.widthMode).toBe('standard')
+    const titles = options.columns.map((c: { title: string }) => c.title)
+    expect(titles).toContain('合约乘数')
+    expect(titles).toContain('最小变动价位')
+    for (const col of options.columns) {
+      expect(typeof col.width).toBe('number')
+      expect(col.width as number).toBeGreaterThan(0)
+    }
+  })
+
+  it('buildRecord 从 contract 填充合约乘数与最小变动价位（有快照）', async () => {
+    const { ListTable } = await import('@visactor/vtable')
+    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    const options = (ListTable as any).mock.calls[0][1]
+    const record = options.records[0] // au2508
+    expect(record.volumeMultiple).toBe(1000)
+    expect(record.priceTick).toBe(0.02)
+  })
+
+  it('无快照时合约乘数/最小变动价位仍从 contract 显示（静态列）', async () => {
+    const { ListTable } = await import('@visactor/vtable')
+    render(<MarketTable contracts={mockContracts} snapshots={new Map()} />)
+    const options = (ListTable as any).mock.calls[0][1]
+    const record = options.records[0]
+    expect(record.volumeMultiple).toBe(1000)
+    expect(record.priceTick).toBe(0.02)
+    expect(record.lastPrice).toBe('--')
+  })
+
   // --- onVisibleRangeChange tests ---
 
   it('接受 onVisibleRangeChange 回调', () => {

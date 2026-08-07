@@ -61,18 +61,20 @@ function statusStyle(args: any) {
 }
 
 const columns = [
-  { field: 'instrumentID', title: '合约', width: 90 },
-  { field: 'productName', title: '合约品种', width: 100 },
-  { field: 'exchangeID', title: '交易所', width: 70 },
-  { field: 'expireDate', title: '到期日', width: 90 },
-  { field: 'status', title: '状态', width: 70, style: statusStyle },
-  { field: 'lastPrice', title: '最新价', width: 100, style: coloredStyle },
+  { field: 'instrumentID', title: '合约', width: 70 },
+  { field: 'productName', title: '合约品种', width: 80 },
+  { field: 'exchangeID', title: '交易所', width: 60 },
+  { field: 'volumeMultiple', title: '合约乘数', width: 70 },
+  { field: 'priceTick', title: '最小变动价位', width: 90 },
+  { field: 'expireDate', title: '到期日', width: 85 },
+  { field: 'status', title: '状态', width: 60, style: statusStyle },
+  { field: 'lastPrice', title: '最新价', width: 90, style: coloredStyle },
   { field: 'change', title: '涨跌', width: 80, style: coloredStyle },
   { field: 'changePercent', title: '涨跌%', width: 80, style: coloredStyle },
-  { field: 'bidPrice1', title: '买一', width: 100, style: coloredStyle },
-  { field: 'askPrice1', title: '卖一', width: 100, style: coloredStyle },
-  { field: 'volume', title: '成交量', width: 100 },
-  { field: 'openInterest', title: '持仓量', width: 100 },
+  { field: 'bidPrice1', title: '买一', width: 90, style: coloredStyle },
+  { field: 'askPrice1', title: '卖一', width: 90, style: coloredStyle },
+  { field: 'volume', title: '成交量', width: 90 },
+  { field: 'openInterest', title: '持仓量', width: 90 },
   { field: 'favorite', title: '⭐', width: 50 },
 ]
 
@@ -87,6 +89,8 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, i
       instrumentID: contract.instrumentID,
       productName,
       exchangeID: contract.exchangeID || PLACEHOLDER,
+      volumeMultiple: contract.volumeMultiple,
+      priceTick: contract.priceTick,
       expireDate: contract.expireDate || PLACEHOLDER,
       status,
       lastPrice: PLACEHOLDER,
@@ -109,6 +113,8 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, i
     instrumentID: snap.instrumentID,
     productName,
     exchangeID: contract.exchangeID || PLACEHOLDER,
+    volumeMultiple: contract.volumeMultiple,
+    priceTick: contract.priceTick,
     expireDate: contract.expireDate || PLACEHOLDER,
     status,
     lastPrice: isValidPrice(snap.lastPrice) ? snap.lastPrice : PLACEHOLDER,
@@ -187,7 +193,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     const table = new ListTable(containerRef.current, {
       columns,
       records,
-      widthMode: 'adaptive',
+      widthMode: 'standard',
       theme: {
         underlayBackgroundColor: '#0d1117',
         defaultStyle: {
