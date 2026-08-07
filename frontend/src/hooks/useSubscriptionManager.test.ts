@@ -79,22 +79,53 @@ describe('useSubscriptionManager 拖动与 LRU', () => {
   })
   afterEach(() => { vi.useRealTimers() })
 
-  it('拖动中（多次可见区变化）只订阅不退订', async () => {
+  it('拖动中既不订阅也不退订，停止后才订阅最终可见区', async () => {
     renderHook(() => useSubscriptionManager())
 
+    // 初始静止订阅
     act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608']))
     await act(async () => { vi.advanceTimersByTime(110) })
     vi.mocked(subscribeMarket).mockClear()
+    vi.mocked(unsubscribeMarket).mockClear()
 
-    // 模拟拖动：连续多次可见区变化（300ms 内 ≥2 次 → 拖动态）
+    // 模拟快速拖动：300ms 内 ≥2 次变化 → 拖动态，零 HTTP
     act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608', 'au2508']))
     await act(async () => { vi.advanceTimersByTime(200) })
     act(() => useMarketStore.getState().setVisibleInstrumentIDs(['au2508']))
     await act(async () => { vi.advanceTimersByTime(200) })
 
+    // 拖动中零 HTTP：无 subscribe、无 unsubscribe
+    expect(vi.mocked(subscribeMarket)).not.toHaveBeenCalled()
     expect(vi.mocked(unsubscribeMarket)).not.toHaveBeenCalled()
-    // 但 subscribe 仍在进行（mock.calls 是 [[arg]]，需 flat(2) 展平到字符串层）
-    expect(vi.mocked(subscribeMarket).mock.calls.flat(2)).toContain('au2508')
+
+    // 停止后 500ms 完整 diff → 订阅最终可见区 au2508
+    await act(async () => { vi.advanceTimersByTime(500) })
+    expect(vi.mocked(subscribeMarket)).toHaveBeenCalled()
+    const subbed = vi.mocked(subscribeMarket).mock.calls.flat(2) as string[]
+    expect(subbed).toContain('au2508')
+  })
+
+  it('新批次超 SOFT_LIMIT 时退订先行再订阅（串行化兜底）', async () => {
+    renderHook(() => useSubscriptionManager())
+
+    // 先把 subscribedRef 灌到 SOFT_LIMIT（480）
+    const base = Array.from({ length: 480 }, (_, i) => `ID${i}`)
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs(base))
+    await act(async () => { vi.advanceTimersByTime(110) })
+    vi.mocked(subscribeMarket).mockClear()
+    vi.mocked(unsubscribeMarket).mockClear()
+
+    // 全部滑出 + 滑入 3 个新合约 → 480 + 3 > 480 → 需要腾名额
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs(['NEW1', 'NEW2', 'NEW3']))
+    await act(async () => { vi.advanceTimersByTime(110) })
+    await act(async () => { vi.advanceTimersByTime(500) })
+
+    // 退订先行：unsubscribeMarket 先于 subscribeMarket 调用
+    expect(vi.mocked(unsubscribeMarket)).toHaveBeenCalled()
+    expect(vi.mocked(subscribeMarket)).toHaveBeenCalled()
+    const unsubFirst = vi.mocked(unsubscribeMarket).mock.invocationCallOrder[0]
+    const subFirst = vi.mocked(subscribeMarket).mock.invocationCallOrder[0]
+    expect(subFirst).toBeGreaterThan(unsubFirst)
   })
 
   it('停止后完整 diff 退订超期合约', async () => {
@@ -175,11 +206,12 @@ describe('useSubscriptionManager success 门控', () => {
     // 被拒合约未标记为已订阅 → 留在待订阅状态
     expect(result.current.subscribed.has('IF2608')).toBe(false)
 
-    // 再次触发可见区变化 → 重新尝试订阅（mock 恢复默认 success:true）
+    // 再次触发可见区变化（连续两次变化在 300ms 内 → 拖动态，零 HTTP）→
+    // 停止后 500ms 完整 diff 重新尝试订阅（mock 恢复默认 success:true）
     vi.mocked(subscribeMarket).mockClear()
     act(() => useMarketStore.getState().setVisibleInstrumentIDs([]))
     act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608']))
-    await act(async () => { vi.advanceTimersByTime(110) })
+    await act(async () => { vi.advanceTimersByTime(500) })
 
     expect(vi.mocked(subscribeMarket)).toHaveBeenCalledWith(['IF2608'])
     expect(result.current.subscribed.has('IF2608')).toBe(true)
