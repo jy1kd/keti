@@ -57,7 +57,7 @@ tick 更新  → 只 rebuild 变化的合约 → updateRecords 局部重绘
 - **订阅管理**集中在 `useSubscriptionManager.ts` 一个 Hook，用 `Map<instrumentID, lastVisibleTime>` 替代 `Set<string>`。
 - **局部更新**在 `MarketTable.tsx` + `useMarketWs.ts` + `store.ts` 三处配合。
 - **快照回填**在 `useSubscriptionManager.ts` 内、subscribe 成功后触发，复用后端 `getSnapshots` 接口 + 后端 `_snapshots` 缓存，后端零改动。
-- 六个机制（下表）彼此独立、可叠加。
+- 七个机制（下表）彼此独立、可叠加。
 
 | # | 机制 | 文件 | 解决 |
 |---|------|------|------|
@@ -67,6 +67,7 @@ tick 更新  → 只 rebuild 变化的合约 → updateRecords 局部重绘
 | 4 | LRU 上限保护（SOFT_LIMIT=480）+ 退订先行串行化兜底 | useSubscriptionManager | 500 上限 |
 | 5 | 局部更新（updateRecords） | MarketTable + useMarketWs + store | 全量重建开销 |
 | 6 | 快照回填（subscribe 后 getSnapshots） | useSubscriptionManager | 停止后填满慢 |
+| 7 | 滚动松手立即完整 diff（mouseup 信号） | MarketTable + store + useSubscriptionManager | 拖停止检测 500ms 等待 |
 
 ---
 
@@ -150,6 +151,39 @@ const SOFT_LIMIT = 480  // < 后端 500，留 20 余量
 - 淘汰的是**最久没见过的**低优先级合约——拖回时重新订阅的代价最小。
 - **退订先行（串行化兜底）**：后端 `subscribe()` 的 500 上限检查是「请求到达时刻」的原子快照，若订阅到达时后端集合仍满会被**整批拒绝**（`success:false`），可见合约卡旧数据直到重试。因此当 `subscribedRef.size + 新增订阅 > SOFT_LIMIT` 时，先 await 退订（后端确认已释放名额）再订阅，保证订阅到达时集合已腾空。平时无需腾名额，订阅与退订并行（不加延迟）。
 - 拖动中零 HTTP（机制 3），淘汰只发生在停止后的完整 diff。
+
+### 3.6 滚动松手立即完整 diff（机制 7）
+
+**问题：** 机制 3 的拖动态推断用「300ms 窗口 ≥2 次变化」判定拖动，停止后须等 **500ms** 才触发完整 diff。对滚动条拖拽（大范围移动的主要方式），释放滚动条的瞬间即已确定「已停止」，500ms 是纯等待。
+
+**方案：** 用 DOM 层「释放」信号替代 500ms 推断，松手即触发完整 diff：
+
+```
+滚动条释放（window mouseup 距上次 scroll < 200ms）
+  → MarketTable：取消 100ms 防抖 → 立即 notifyVisibleRange()（最终可见区）
+  → store.markScrollEnd()（scrollEndSeq 单调递增）
+  → useSubscriptionManager effect 消费信号
+    → 清 recentChangesRef（后续变化不再被误判为拖动态）
+    → 清 fullDiffTimerRef（取消待定 500ms 定时器，避免重复 diff）
+    → 立即 runFullDiff()
+```
+
+**三个改动点：**
+
+1. **store**：新增 `scrollEndSeq: number`（初始 0）+ action `markScrollEnd()`（递增）。用**单调递增计数器**而非布尔/置 null：置 null 会触发第二次 effect 运行（null→值→null 两次依赖变化），造成重复 diff；计数器只增不reset，消费靠 `lastHandledScrollEndRef` 判重。
+2. **MarketTable**：scroll 处理器记录 `lastScrollAtRef = Date.now()`；新增 `window mouseup` 监听——`Date.now() - lastScrollAt < SCROLL_RELEASE_WINDOW_MS(200)` 才视为滚动条释放（避免普通点击误触发）→ 取消待发 100ms 防抖 → 最终 `notifyVisibleRange()`（同步写 store）→ `useMarketStore.getState().markScrollEnd()`。
+3. **useSubscriptionManager**：effect 顶部消费信号——`scrollEndSeq > lastHandledScrollEndRef.current` 时：置 `lastHandledScrollEndRef.current = scrollEndSeq`、清 `recentChangesRef`、清 `fullDiffTimerRef`、立即 `runFullDiff()` 并 return（跳过 isDragging 分支）。`scrollEndSeq` 加入 effect 依赖数组。
+
+**为何不用 VTable 原生事件：** VTable 无「滚动停止」事件——`SCROLL_VERTICAL_END` 仅在滚动到底（`scrollTop + viewHeight >= totalHeight`）时触发，不是松手信号，不可用。
+
+**覆盖与限制：**
+- ✅ 滚动条拖拽释放（用户主要痛点）——松手即 diff，数据出现从「~600ms + 订阅往返」缩短到「0ms + 订阅往返」，砍掉 ~500ms 大头
+- ✅ 滚动条轨道点击跳转（mousedown→scroll→mouseup）
+- ⚠️ 滚轮/方向键滚动无 mouseup，仍走 500ms 推断窗口（本轮不改；如需可后续加 scroll idle 计时器）
+- 拖动中（鼠标按住未松）不触发 mouseup，机制 3 零 HTTP 保持
+- 误触发（滚轮停止后 <200ms 内点击）仅一次立即 diff，多为空操作（订阅已满足），无害
+
+**与既有机制衔接：** flush 只是把 `runFullDiff` 提前调用，串行化兜底、宽限期、LRU、快照回填全部保留。非拖动态变化本就走立即 diff，flush 对之为空操作。**flush 的关键收益之一**：取消待定 500ms 定时器，避免「提前 diff + 定时器再 diff」的双重订阅（同批次 subscribe 未入 `subscribedRef` 时二次 diff 会重复发订阅）。
 
 ---
 
@@ -262,6 +296,7 @@ subscribe 成功
 scroll → MarketTable.notifyVisibleRange(100ms 防抖) → setVisibleInstrumentIDs
   → useSubscriptionManager：拖动检测（300ms 窗口 ≥2 次变化）
     ├─ 拖动中：零 HTTP（不订不退）
+    ├─ 滚动松手（mouseup <200ms 内）→ markScrollEnd → 立即完整 diff（跳过 500ms 窗口）
     └─ 停止后 / 非拖动变化 → 完整 diff：
          subscribe 当前可见区（成功 → getSnapshots 回填）
        + 宽限期退订（30s）
@@ -302,6 +337,10 @@ WS market_data → useMarketWs 缓冲 → batchUpdate(snaps) → store 更新 sn
 **快照回填（方案 A，`useSubscriptionManager.test.ts` 追加）**
 
 7. **订阅成功后回填缓存快照**：mock `getSnapshots` 返回缓存快照，断言 subscribe 成功后 `getSnapshots(订阅列表)` 被调用、返回的快照经 `batchUpdate` 写入 store；`getSnapshots` 失败时静默（不抛错，实时 tick 兜底）。
+8. **滚动松手立即完整 diff（机制 7）**：
+   - store 单测：`markScrollEnd()` 递增 `scrollEndSeq`（`store.test.ts`）
+   - hook 单测：模拟拖动态（300ms 内 ≥2 次变化、零 HTTP）后调 `markScrollEnd()` → **不推进 500ms** 即订阅最终可见区；松手后可见区变化不再被误判为拖动态（立即订阅）（`useSubscriptionManager.test.ts`）
+   - MarketTable 接线：mock scroll 处理器后 `window.dispatchEvent(new Event('mouseup'))` → `scrollEndSeq` 递增（`MarketTable.test.tsx`）
 
 **mock 方式：** `vi.mock('@/services/api')` 记录 `subscribeMarket`/`unsubscribeMarket`/`getSnapshots` 调用；`vi.useFakeTimers()` 控制时间推进；`setupTests.ts` 已有 `setRecords: vi.fn()`，需补充 `updateRecords: vi.fn()`。
 
@@ -312,3 +351,4 @@ WS market_data → useMarketWs 缓冲 → batchUpdate(snaps) → store 更新 sn
 - 后端订阅/退订接口改造（合并去抖、批量优化）——本轮不动后端
 - K 线、期权链等其他表格的局部更新改造
 - 虚拟滚动按需订阅之外的渲染优化
+- 滚轮/方向键滚动的停止检测（无 mouseup 信号，仍走 500ms 推断窗口；如需可后续加 scroll idle 计时器）

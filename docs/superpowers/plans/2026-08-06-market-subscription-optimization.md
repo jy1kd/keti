@@ -4,7 +4,7 @@
 
 **Goal:** 消除行情表格拖动时的订阅/退订抖动、大幅降低请求量、永不触顶 500 上限，并减少每次 WS tick 的全量重建开销。
 
-**Architecture:** 前端六机制叠加——① 延迟退订（30s 宽限期）② 停止后统一完整 diff ③ 拖动中零 HTTP（不订不退）④ LRU 上限保护（SOFT_LIMIT=480）+ 退订先行串行化兜底 ⑤ 局部更新（vtable `updateRecords`）⑥ 快照回填（方案 A）。后端零改动。核心改动集中在 `useSubscriptionManager.ts`（机制 1-4、6）和 `MarketTable.tsx` + `store.ts`（机制 5）。
+**Architecture:** 前端七机制叠加——① 延迟退订（30s 宽限期）② 停止后统一完整 diff ③ 拖动中零 HTTP（不订不退）④ LRU 上限保护（SOFT_LIMIT=480）+ 退订先行串行化兜底 ⑤ 局部更新（vtable `updateRecords`）⑥ 快照回填（方案 A）⑦ 滚动松手立即完整 diff（mouseup 信号）。后端零改动。核心改动集中在 `useSubscriptionManager.ts`（机制 1-4、6-7 消费侧）和 `MarketTable.tsx` + `store.ts`（机制 5、7 触发侧）。
 
 **Tech Stack:** React 18 + TypeScript 5, Zustand, @visactor/vtable ^1.26.4, Vitest + Testing Library
 
@@ -13,7 +13,8 @@
 - `SOFT_LIMIT = 480`（永远 < 后端 `MAX_SUBSCRIPTIONS = 500`，留 20 余量）
 - `GRACE_MS = 30_000`（延迟退订宽限期）
 - 拖动检测：`DRAG_WINDOW_MS = 300`、`DRAG_THRESHOLD = 2`
-- 拖动中零 HTTP（不订不退）；订阅只在完整 diff 触发（非拖动变化立即、拖动停止后 500ms）
+- 拖动中零 HTTP（不订不退）；订阅只在完整 diff 触发（非拖动变化立即、拖动停止后 500ms、**滚动松手立即**）
+- 滚动松手立即完整 diff：`window mouseup` 距上次 scroll < `SCROLL_RELEASE_WINDOW_MS = 200` → `markScrollEnd()` → hook 清 recentChanges/清 500ms 定时器 → 立即 `runFullDiff()`（store `scrollEndSeq` 单调递增信号，消费后无需重置）
 - 退订先行串行化兜底：`subscribedRef.size + 新增订阅 > SOFT_LIMIT` 时，先 await 退订（后端确认）再订阅
 - 锁定合约（`lockedContracts`）与自选合约（`favorites`）永不退订、不参与 LRU 淘汰
 - 后端零改动（快照回填复用后端已有 `/api/market/snapshots` 接口与 `_snapshots` 缓存）
@@ -1110,4 +1111,204 @@ Expected: 全部 PASS。确认无其他文件依赖 `debouncedSubscribe`/`SUB_DE
 ```bash
 git add frontend/src/hooks/useSubscriptionManager.ts frontend/src/hooks/useSubscriptionManager.test.ts
 git commit -m "fix(hooks): 拖动中零 HTTP + 退订先行串行化兜底，修复拖动到底不刷新"
+```
+
+---
+
+### Task 8: 滚动松手立即完整 diff（砍掉 500ms 拖停止窗口）
+
+**Files:**
+- Modify: `frontend/src/modules/market/store.ts`
+- Modify: `frontend/src/hooks/useSubscriptionManager.ts`
+- Modify: `frontend/src/modules/market/MarketTable.tsx`
+- Test: `frontend/src/modules/market/store.test.ts`、`frontend/src/hooks/useSubscriptionManager.test.ts`、`frontend/src/modules/market/MarketTable.test.tsx`
+
+**Interfaces:**
+- Consumes: store 新增 `scrollEndSeq` + `markScrollEnd`；现有 `subscribedRef`/`recentChangesRef`/`fullDiffTimerRef`/`runFullDiff`
+- Produces: 滚动松手（mouseup 距上次 scroll < 200ms）→ `markScrollEnd()` → hook effect 顶部消费信号 → 清 recentChanges + 清 500ms 定时器 → 立即 `runFullDiff()`（跳过 isDragging 分支）
+
+**背景：** 机制 3 停止检测用「300ms 窗口 ≥2 次变化」推断拖动态，停止后须等 **500ms** 才触发完整 diff。滚动条拖拽释放的瞬间即可确定「已停止」，用 mouseup 信号砍掉这 500ms。**VTable 无「滚动停止」事件**（`SCROLL_VERTICAL_END` 仅在滚动到底 `scrollTop + viewHeight >= totalHeight` 时触发），故用 mouseup 启发式。
+
+- [ ] **Step 1: 写失败测试**
+
+**a. `frontend/src/modules/market/store.test.ts` 追加：**
+
+```ts
+describe('scrollEndSeq', () => {
+  it('markScrollEnd 递增滚动松手信号', () => {
+    useMarketStore.setState({ scrollEndSeq: 0 })
+    expect(useMarketStore.getState().scrollEndSeq).toBe(0)
+    useMarketStore.getState().markScrollEnd()
+    expect(useMarketStore.getState().scrollEndSeq).toBe(1)
+    useMarketStore.getState().markScrollEnd()
+    expect(useMarketStore.getState().scrollEndSeq).toBe(2)
+  })
+})
+```
+
+**b. `frontend/src/hooks/useSubscriptionManager.test.ts` 追加：**
+
+```ts
+it('滚动松手（markScrollEnd）立即完整 diff，跳过拖动态 500ms 窗口', async () => {
+  renderHook(() => useSubscriptionManager())
+
+  // 先静止订阅
+  act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608']))
+  await act(async () => { vi.advanceTimersByTime(110) })
+  vi.mocked(subscribeMarket).mockClear()
+  vi.mocked(unsubscribeMarket).mockClear()
+
+  // 模拟拖动：300ms 内 ≥2 次变化 → 拖动态，零 HTTP
+  act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608', 'au2508']))
+  await act(async () => { vi.advanceTimersByTime(200) })
+  act(() => useMarketStore.getState().setVisibleInstrumentIDs(['au2508']))
+  await act(async () => { vi.advanceTimersByTime(200) })
+  expect(vi.mocked(subscribeMarket)).not.toHaveBeenCalled()
+
+  // 滚动松手 → 立即完整 diff（不推进 500ms 即订阅最终可见区 au2508）
+  act(() => useMarketStore.getState().markScrollEnd())
+  await act(async () => {})
+  expect(vi.mocked(subscribeMarket)).toHaveBeenCalled()
+  const subbed = vi.mocked(subscribeMarket).mock.calls.flat(2) as string[]
+  expect(subbed).toContain('au2508')
+
+  // 松手后可见区变化不再被误判为拖动态 → 立即订阅（无 500ms 延迟）
+  vi.mocked(subscribeMarket).mockClear()
+  act(() => useMarketStore.getState().setVisibleInstrumentIDs(['NEW1']))
+  await act(async () => {})
+  expect(vi.mocked(subscribeMarket)).toHaveBeenCalledWith(['NEW1'])
+})
+```
+
+**c. `frontend/src/modules/market/MarketTable.test.tsx` 追加：**
+
+```ts
+it('滚动条释放（mouseup 距上次 scroll <200ms）触发 markScrollEnd', async () => {
+  const { ListTable } = await import('@visactor/vtable')
+  render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+  const instance = (ListTable as any).mock.results[0].value
+
+  // 模拟一次滚动（记录 lastScrollAtRef）
+  const scrollHandler = instance.on.mock.calls.find(([name]: [string]) => name === 'scroll')?.[1]
+  expect(scrollHandler).toBeDefined()
+  scrollHandler({ scrollTop: 500 })
+
+  // 松手 → markScrollEnd
+  window.dispatchEvent(new Event('mouseup'))
+  expect(useMarketStore.getState().scrollEndSeq).toBeGreaterThan(0)
+})
+```
+
+- [ ] **Step 2: 运行测试确认失败**
+
+Run: `cd frontend && npx vitest run src/modules/market/store.test.ts src/hooks/useSubscriptionManager.test.ts src/modules/market/MarketTable.test.tsx`
+
+Expected: FAIL — `scrollEndSeq`/`markScrollEnd` 不存在（store）、hook 未消费信号（滚动松手用例不通过）、MarketTable 未接 mouseup（scrollEndSeq 不递增）。
+
+- [ ] **Step 3: 实现**
+
+**a. `store.ts`：新增 `scrollEndSeq` + `markScrollEnd`（单调递增计数器，消费后无需重置，避免置 null 触发第二次 effect 运行）：**
+
+```ts
+interface MarketStore {
+  // ... 现有字段
+  /** 滚动松手信号序号（monotonic counter；消费后无需重置） */
+  scrollEndSeq: number
+  /** 标记一次滚动条释放（松手），使订阅管理器立即执行完整 diff */
+  markScrollEnd: () => void
+}
+```
+
+初始值 + action：
+
+```ts
+  scrollEndSeq: 0,
+  markScrollEnd: () => set((state) => ({ scrollEndSeq: state.scrollEndSeq + 1 })),
+```
+
+**b. `useSubscriptionManager.ts`：effect 顶部消费信号：**
+
+新增 selector 与 ref：
+
+```ts
+  const scrollEndSeq = useMarketStore((s) => s.scrollEndSeq)
+  /** 已消费的滚动松手信号序号（判重，避免重复处理） */
+  const lastHandledScrollEndRef = useRef(0)
+```
+
+effect 顶部（`const now = Date.now()` 之前）加：
+
+```ts
+  // 滚动松手信号：跳过拖动态推断，立即完整 diff
+  if (scrollEndSeq > lastHandledScrollEndRef.current) {
+    lastHandledScrollEndRef.current = scrollEndSeq
+    recentChangesRef.current = []  // 清除拖动历史，后续变化不再被误判为拖动态
+    if (fullDiffTimerRef.current) clearTimeout(fullDiffTimerRef.current)  // 取消待定 500ms，避免重复 diff
+    runFullDiff()
+    return
+  }
+```
+
+effect 依赖数组加 `scrollEndSeq`：`[visibleInstrumentIDs, isDragging, runFullDiff, scrollEndSeq]`。
+
+**c. `MarketTable.tsx`：scroll 记录时间戳 + mouseup 松手信号：**
+
+模块常量：
+
+```ts
+/** mouseup 距上次 scroll 在此窗口内视为滚动条释放（松手） */
+const SCROLL_RELEASE_WINDOW_MS = 200
+```
+
+组件内新增 ref（靠近其他 ref 声明）：
+
+```ts
+  const lastScrollAtRef = useRef(0)
+```
+
+挂载 effect 的 scroll 处理（加时间戳记录）与新增 mouseup 监听（cleanup 一并移除）：
+
+```ts
+    // 滚动时触发（100ms 防抖）
+    table.on('scroll', () => {
+      lastScrollAtRef.current = Date.now()
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+      debounceTimerRef.current = setTimeout(notifyVisibleRange, 100)
+    })
+
+    // 滚动条释放（mouseup 距上次 scroll < 200ms）→ 最终 notify + 完整 diff 信号
+    const handleScrollEnd = () => {
+      if (Date.now() - lastScrollAtRef.current > SCROLL_RELEASE_WINDOW_MS) return
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+      notifyVisibleRange()
+      useMarketStore.getState().markScrollEnd()
+    }
+    window.addEventListener('mouseup', handleScrollEnd)
+```
+
+cleanup（return 的清理函数中）加：
+
+```ts
+      window.removeEventListener('mouseup', handleScrollEnd)
+```
+
+> 注：`useMarketStore` 已在 MarketTable 导入（局部更新 effect 已用 `useMarketStore.getState().consumeRecentUpdates()`）。`handleScrollEnd` 在 effect 内定义、cleanup 内引用，闭包正确。
+
+- [ ] **Step 4: 运行测试确认通过**
+
+Run: `cd frontend && npx vitest run src/modules/market/store.test.ts src/hooks/useSubscriptionManager.test.ts src/modules/market/MarketTable.test.tsx`
+
+Expected: PASS（新增 3 个用例 + 既有全部通过）
+
+- [ ] **Step 5: 运行全量前端测试（防回归）**
+
+Run: `cd frontend && npx vitest run`
+
+Expected: 全部 PASS。重点确认 `MarketPanel.test.tsx`（挂 useSubscriptionManager、传 onVisibleRangeChange）与 `useMarketWs.test.ts` 不受 store 新字段影响（beforeEach 若用 setState 全量重置则需补 `scrollEndSeq: 0`）。
+
+- [ ] **Step 6: 提交**
+
+```bash
+git add frontend/src/modules/market/store.ts frontend/src/modules/market/store.test.ts frontend/src/hooks/useSubscriptionManager.ts frontend/src/hooks/useSubscriptionManager.test.ts frontend/src/modules/market/MarketTable.tsx frontend/src/modules/market/MarketTable.test.tsx
+git commit -m "feat(market): 滚动松手立即完整 diff（机制7），砍掉拖停止检测 500ms"
 ```
