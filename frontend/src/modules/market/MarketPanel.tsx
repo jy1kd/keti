@@ -98,142 +98,151 @@ export function MarketPanel() {
     setOrderInstrument(instrumentID)
   }
 
-  // T型期权报价模式：直接渲染 OptionPanel
-  if (viewMode === 'options') {
-    return (
-      <section className="market-panel">
-        <div className="market-tabs" data-drag-handle>
-          <button className="market-tab" onClick={() => setViewMode('market')}>行情</button>
-          <button className="market-tab active" onClick={() => setViewMode('options')}>T型期权报价</button>
-        </div>
-        <OptionPanel />
-      </section>
-    )
-  }
-
   return (
     <section className="market-panel">
-      <div className="market-tabs" data-drag-handle>
-        <button className="market-tab active" onClick={() => setViewMode('market')}>行情</button>
-        <button className="market-tab" onClick={() => setViewMode('options')}>T型期权报价</button>
-      </div>
-      <div className="panel-header">
-        <div className="panel-header__title">
-          <h2>行情面板</h2>
-          <ContractSearch contracts={baseContracts} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
-          {searchQuery && (
-            <span className="search-count">
-              {displayContracts.length} / {baseContracts.length}
-            </span>
-          )}
-        </div>
-        <div className="panel-header__tabs">
+      {/* 行情页工具栏：合并 market-tabs（模式切换）+ panel-header（搜索/全部自选/操作）为单行 */}
+      <div className="market-toolbar" data-drag-handle>
+        {/* 左：行情/期权模式切换 */}
+        <div className="market-toolbar__mode">
           <button
-            className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
-            onClick={() => setActiveTab('all')}
+            className={`market-mode-btn${viewMode === 'market' ? ' active' : ''}`}
+            onClick={() => setViewMode('market')}
           >
-            全部合约
+            行情
           </button>
           <button
-            className={`btn-tab${activeTab === 'favorites' ? ' active' : ''}`}
-            onClick={() => setActiveTab('favorites')}
+            className={`market-mode-btn${viewMode === 'options' ? ' active' : ''}`}
+            onClick={() => setViewMode('options')}
           >
-            自选合约
+            T型期权
           </button>
         </div>
-        <div className="panel-header__actions">
-          <button
-            className={`btn-filter-status${filterActive ? ' active' : ''}`}
-            onClick={() => setFilterActive((v) => !v)}
-            title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
-          >
-            {filterActive ? '仅交易中' : '显示全部'}
-          </button>
-          <button
-            className="btn-search-instruments"
-            onClick={() => setSearchModalOpen(true)}
-          >
-            搜索合约
-          </button>
-          <button
-            className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
-            disabled={!selectedInstrument && selectedContracts.size === 0}
-            onClick={async () => {
-              // 如果有多选，批量收藏/取消收藏
-              if (selectedContracts.size > 1) {
-                const allFavorited = Array.from(selectedContracts).every(id => favoritedIds.has(id))
-                if (allFavorited) {
-                  // 全部已收藏，批量取消
-                  for (const id of selectedContracts) {
-                    await removeFromFavorites(id)
+
+        {/* 中/右：搜索 + 全部/自选 + 操作（仅行情模式展示，期权模式只有模式切换） */}
+        {viewMode === 'market' && (
+          <>
+            <div className="market-toolbar__search">
+              <ContractSearch contracts={baseContracts} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
+              <button
+                className="btn-search-advanced"
+                title="搜索合约"
+                onClick={() => setSearchModalOpen(true)}
+              >
+                🔍
+              </button>
+              {searchQuery && (
+                <span className="search-count">
+                  {displayContracts.length} / {baseContracts.length}
+                </span>
+              )}
+            </div>
+            <div className="market-toolbar__tabs">
+              <button
+                className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
+                onClick={() => setActiveTab('all')}
+              >
+                全部
+              </button>
+              <button
+                className={`btn-tab${activeTab === 'favorites' ? ' active' : ''}`}
+                onClick={() => setActiveTab('favorites')}
+              >
+                自选
+              </button>
+            </div>
+            <div className="market-toolbar__actions">
+              <button
+                className={`btn-filter-status${filterActive ? ' active' : ''}`}
+                onClick={() => setFilterActive((v) => !v)}
+                title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
+              >
+                {filterActive ? '仅交易中' : '显示全部'}
+              </button>
+              <button
+                className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
+                disabled={!selectedInstrument && selectedContracts.size === 0}
+                onClick={async () => {
+                  // 如果有多选，批量收藏/取消收藏
+                  if (selectedContracts.size > 1) {
+                    const allFavorited = Array.from(selectedContracts).every(id => favoritedIds.has(id))
+                    if (allFavorited) {
+                      // 全部已收藏，批量取消
+                      for (const id of selectedContracts) {
+                        await removeFromFavorites(id)
+                      }
+                      toast.success(`已移除 ${selectedContracts.size} 个合约`)
+                    } else {
+                      // 批量收藏
+                      let count = 0
+                      for (const id of selectedContracts) {
+                        const inst = contracts.find(c => c.instrumentID === id)
+                        if (inst) {
+                          const success = await addToFavorites(inst)
+                          if (success) count++
+                        }
+                      }
+                      toast.success(`已收藏 ${count} 个合约`)
+                    }
+                    return
                   }
-                  toast.success(`已移除 ${selectedContracts.size} 个合约`)
-                } else {
-                  // 批量收藏
-                  let count = 0
-                  for (const id of selectedContracts) {
-                    const inst = contracts.find(c => c.instrumentID === id)
+
+                  // 单个合约收藏/取消收藏
+                  if (!selectedInstrument) return
+                  if (favoritedIds.has(selectedInstrument)) {
+                    await removeFromFavorites(selectedInstrument)
+                    toast.success(`已移除 ${selectedInstrument}`)
+                  } else {
+                    const inst = contracts.find(c => c.instrumentID === selectedInstrument)
                     if (inst) {
-                      const success = await addToFavorites(inst)
-                      if (success) count++
+                      await addToFavorites(inst)
+                      toast.success(`已收藏 ${inst.instrumentID}`)
                     }
                   }
-                  toast.success(`已收藏 ${count} 个合约`)
+                }}
+              >
+                {selectedContracts.size > 1
+                  ? (Array.from(selectedContracts).every(id => favoritedIds.has(id)) ? '批量移除' : '批量收藏')
+                  : (selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏')
                 }
-                return
-              }
+              </button>
+            </div>
+          </>
+        )}
+      </div>
 
-              // 单个合约收藏/取消收藏
-              if (!selectedInstrument) return
-              if (favoritedIds.has(selectedInstrument)) {
-                await removeFromFavorites(selectedInstrument)
-                toast.success(`已移除 ${selectedInstrument}`)
-              } else {
-                const inst = contracts.find(c => c.instrumentID === selectedInstrument)
-                if (inst) {
-                  await addToFavorites(inst)
-                  toast.success(`已收藏 ${inst.instrumentID}`)
+      {viewMode === 'options' ? (
+        <OptionPanel />
+      ) : (
+        <div className="panel-content">
+          <ErrorBoundary>
+            <MarketTable
+              contracts={displayContracts}
+              snapshots={snapshots}
+              selectedInstrument={selectedInstrument}
+              onRowClick={handleClick}
+              onRowDoubleClick={handleDoubleClick}
+              onContextMenu={handleContextMenu}
+              onMultiSelectContextMenu={handleMultiSelectContextMenu}
+              onVisibleRangeChange={setVisibleInstrumentIDs}
+              favoritedIds={favoritedIds}
+              onFavoriteChange={(instrumentID, isFavorited) => {
+                if (isFavorited) {
+                  const inst = contracts.find(c => c.instrumentID === instrumentID)
+                  if (inst) {
+                    addToFavorites(inst)
+                    toast.success(`已收藏 ${instrumentID}`)
+                  }
+                } else {
+                  removeFromFavorites(instrumentID)
+                  toast.success(`已移除 ${instrumentID}`)
                 }
-              }
-            }}
-          >
-            {selectedContracts.size > 1
-              ? (Array.from(selectedContracts).every(id => favoritedIds.has(id)) ? '批量移除' : '批量收藏')
-              : (selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏')
-            }
-          </button>
+              }}
+              selectedContracts={selectedContracts}
+              onSelectionChange={setSelectedContracts}
+            />
+          </ErrorBoundary>
         </div>
-      </div>
-
-      <div className="panel-content">
-        <ErrorBoundary>
-          <MarketTable
-            contracts={displayContracts}
-            snapshots={snapshots}
-            selectedInstrument={selectedInstrument}
-            onRowClick={handleClick}
-            onRowDoubleClick={handleDoubleClick}
-            onContextMenu={handleContextMenu}
-            onMultiSelectContextMenu={handleMultiSelectContextMenu}
-            onVisibleRangeChange={setVisibleInstrumentIDs}
-            favoritedIds={favoritedIds}
-            onFavoriteChange={(instrumentID, isFavorited) => {
-              if (isFavorited) {
-                const inst = contracts.find(c => c.instrumentID === instrumentID)
-                if (inst) {
-                  addToFavorites(inst)
-                  toast.success(`已收藏 ${instrumentID}`)
-                }
-              } else {
-                removeFromFavorites(instrumentID)
-                toast.success(`已移除 ${instrumentID}`)
-              }
-            }}
-            selectedContracts={selectedContracts}
-            onSelectionChange={setSelectedContracts}
-          />
-        </ErrorBoundary>
-      </div>
+      )}
 
       <InstrumentSearchModal
         isOpen={searchModalOpen}
