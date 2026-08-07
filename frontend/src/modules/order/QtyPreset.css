@@ -1,0 +1,31 @@
+/* QtyPreset — 快捷手数预设 */
+.qty-preset {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.qty-preset__btn {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 0;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  border: 1px solid var(--border-color, #30363d);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-secondary, #8a93a0);
+  cursor: pointer;
+}
+
+.qty-preset__btn:hover {
+  color: var(--text-primary, #e6e6e6);
+  border-color: var(--accent-dim, rgba(240, 180, 41, 0.4));
+}
+
+.qty-preset__btn--active {
+  color: var(--text-primary, #e6e6e6);
+  border-color: var(--accent, #f0b429);
+  background: rgba(240, 180, 41, 0.12);
+}

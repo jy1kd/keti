@@ -108,6 +108,21 @@ describe('TradeParams（任务#4）', () => {
     expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(500)
   })
 
+  describe('快捷手数（P3 QtyPreset 集成）', () => {
+    it('点击预设 → setOrderForm({ volumeTotalOriginal })', () => {
+      render(<TradeParams />)
+      fireEvent.click(screen.getByTestId('qty-preset-50'))
+      expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(50)
+    })
+
+    it('市价单上限 60：点击 100 预设 → 钳制到 60', () => {
+      setForm({ orderPriceType: 'market' })
+      render(<TradeParams />)
+      fireEvent.click(screen.getByTestId('qty-preset-100'))
+      expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(60)
+    })
+  })
+
   describe('合约步进（P3 ContractStepper 集成）', () => {
     it('渲染 合约 行与步进控件', () => {
       render(<TradeParams />)

@@ -4,6 +4,7 @@ import { useContractsStore } from '@/stores/contracts'
 import { validateVolumeWithLimit, getVolumeLimit } from '@/utils/validators'
 import type { OrderRequestForm } from '@/utils/orderMapping'
 import { ContractStepper } from './ContractStepper'
+import { QtyPreset } from './QtyPreset'
 import './TradeParams.css'
 
 interface TradeParamsProps {
@@ -142,6 +143,15 @@ export function TradeParams({ instrumentID }: TradeParamsProps) {
       >
         <span>最大 {volumeLimit} 手</span>
         {volumeError && <span className="tp-hint__error">{volumeError}</span>}
+      </div>
+
+      <div className="tp-row">
+        <span className="tp-row__label">快捷</span>
+        <QtyPreset
+          value={orderForm.volumeTotalOriginal}
+          limit={volumeLimit}
+          onSelect={(v) => setOrderForm({ volumeTotalOriginal: v })}
+        />
       </div>
     </div>
   )
