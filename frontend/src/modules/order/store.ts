@@ -22,6 +22,8 @@ interface OrderStore {
   selectedInstrument: string | null
   orderForm: OrderRequestForm
   isSubmitting: boolean
+  /** 最近一次报单失败原因（P3 乐观渲染失败回滚时顶部红条展示）；无失败为 null */
+  lastSubmitError: string | null
   setSelectedInstrument: (instrument: string | null) => void
   setOrderForm: (partial: Partial<OrderRequestForm>) => void
   resetOrderForm: () => void
@@ -34,6 +36,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   selectedInstrument: null,
   orderForm: { ...DEFAULT_ORDER_FORM },
   isSubmitting: false,
+  lastSubmitError: null,
 
   // 选中合约时更新 instrumentID 和 exchangeID，保留用户已选择的方向/开平设置
   setSelectedInstrument: (instrument) => {
@@ -65,14 +68,20 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
 
   submitOrder: async () => {
     const form = get().orderForm
+    // 失败统一出口：记录原因（P3 顶部红条）+ toast + 返回 false
+    const fail = (msg: string): false => {
+      set({ lastSubmitError: msg })
+      toast.error(`报单失败：${msg}`)
+      return false
+    }
+    set({ lastSubmitError: null })
 
     // 套利合约校验：自动生成 instrumentID
     let submitForm = { ...form }
     if (form.orderPriceType === 'arbitrage') {
       const arbErr = validateArbitrage(form.arbitrageLeg1 ?? '', form.arbitrageLeg2 ?? '')
       if (arbErr) {
-        toast.error(`报单失败：${arbErr}`)
-        return false
+        return fail(arbErr)
       }
       // 自动生成 SPD 格式的 instrumentID（CTP 套利合约格式）
       submitForm = {
@@ -83,24 +92,20 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
 
     // Client-side validation
     if (!submitForm.instrumentID) {
-      toast.error('报单失败：请选择合约')
-      return false
+      return fail('请选择合约')
     }
     if (submitForm.orderPriceType === 'limit' && (!Number.isFinite(submitForm.limitPrice) || submitForm.limitPrice <= 0)) {
-      toast.error('报单失败：请输入有效价格')
-      return false
+      return fail('请输入有效价格')
     }
 
     // 市价单保护价校验
     if (submitForm.orderPriceType === 'market' && (!submitForm.stopPrice || submitForm.stopPrice <= 0)) {
-      toast.error('报单失败：市价指令必须填写保护价')
-      return false
+      return fail('市价指令必须填写保护价')
     }
 
     // 数量有效性校验
     if (!Number.isFinite(submitForm.volumeTotalOriginal) || submitForm.volumeTotalOriginal < 1) {
-      toast.error('报单失败：请输入有效数量')
-      return false
+      return fail('请输入有效数量')
     }
 
     // 数量上限校验
@@ -109,8 +114,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     const productClass = contract?.productClass ?? '1'
     const volumeErr = validateVolumeWithLimit(submitForm.volumeTotalOriginal, submitForm.orderPriceType, productClass)
     if (volumeErr) {
-      toast.error(`报单失败：${volumeErr}`)
-      return false
+      return fail(volumeErr)
     }
 
     // 保护价涨跌停校验（市价单）
@@ -119,12 +123,10 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       const snap = snapshots.get(submitForm.instrumentID)
       if (snap) {
         if (submitForm.stopPrice > snap.upperLimitPrice) {
-          toast.error(`报单失败：保护价不能超过涨停价 ${snap.upperLimitPrice}`)
-          return false
+          return fail(`保护价不能超过涨停价 ${snap.upperLimitPrice}`)
         }
         if (submitForm.stopPrice < snap.lowerLimitPrice) {
-          toast.error(`报单失败：保护价不能低于跌停价 ${snap.lowerLimitPrice}`)
-          return false
+          return fail(`保护价不能低于跌停价 ${snap.lowerLimitPrice}`)
         }
       }
     }
@@ -154,18 +156,16 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
         const errMsg = result.message || result.error || '未知错误'
         // 套利合约特殊提示
         if (submitForm.orderPriceType === 'arbitrage' && errMsg.includes('instrument')) {
-          toast.error('套利合约不存在或不支持，请确认 SimNow 是否支持该套利合约')
-        } else {
-          toast.error(`报单失败：${errMsg}`)
+          set({ isSubmitting: false })
+          return fail('套利合约不存在或不支持，请确认 SimNow 是否支持该套利合约')
         }
         set({ isSubmitting: false })
-        return false
+        return fail(errMsg)
       }
     } catch (e) {
       const message = e instanceof Error ? e.message : '未知错误'
-      toast.error(`报单失败：${message}`)
       set({ isSubmitting: false })
-      return false
+      return fail(message)
     }
   },
 

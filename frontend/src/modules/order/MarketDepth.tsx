@@ -131,6 +131,45 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
   }, [instrumentID])
   const myOrders = useMemo(() => aggregateMyOrders(orders, instrumentID), [orders, instrumentID])
 
+  // ── 乐观渲染（P3）：确认报单 → 档位立即半透明 pending；成功由真实挂单接替转实态，失败回滚 + 顶部红条 ──
+  interface PendingOrder {
+    id: number
+    direction: 'buy' | 'sell'
+    price: number
+    volume: number
+    status: 'pending' | 'error'
+  }
+  const [pending, setPending] = useState<PendingOrder[]>([])
+  const [banner, setBanner] = useState<string | null>(null)
+  const pendingIdRef = useRef(0)
+
+  // pending 转实态：当聚合中出现同档同向真实挂单（refreshOrders 拉到）→ 移除 pending（由实态徽标接管）
+  useEffect(() => {
+    if (pending.length === 0) return
+    setPending((prev) => {
+      const next = prev.filter((p) => {
+        if (p.status !== 'pending') return true
+        const level = myOrders.byPrice.get(p.price)
+        if (!level) return true
+        return (p.direction === 'buy' ? level.buyVolume : level.sellVolume) === 0
+      })
+      return next.length === prev.length ? prev : next
+    })
+  }, [myOrders])
+
+  // 按价格汇总 pending 量（档位徽标用）
+  const pendingByPrice = useMemo(() => {
+    const m = new Map<number, { buy: number; sell: number }>()
+    for (const p of pending) {
+      if (p.status !== 'pending') continue
+      const cur = m.get(p.price) ?? { buy: 0, sell: 0 }
+      if (p.direction === 'buy') cur.buy += p.volume
+      else cur.sell += p.volume
+      m.set(p.price, cur)
+    }
+    return m
+  }, [pending])
+
   // 改价框默认价：对手价（卖一）→ 最新价
   const quickDefault = useMemo(() => {
     if (!snapshot) return null
@@ -232,6 +271,17 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
 
   const handleConfirm = async () => {
     if (!intent) return
+    // 乐观渲染：确认瞬间档位立即出现半透明 pending（以当前手数显示）
+    const id = ++pendingIdRef.current
+    const pe: PendingOrder = {
+      id,
+      direction: intent.direction,
+      price: intent.price,
+      volume: intent.volume,
+      status: 'pending',
+    }
+    setPending((prev) => [...prev, pe])
+
     setOrderForm({
       direction: intent.direction,
       limitPrice: intent.price,
@@ -239,12 +289,29 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
       combOffsetFlag: intent.combOffsetFlag,
       timeCondition: intent.timeCondition,
     })
-    await submitOrder()
+    const ok = await submitOrder()
+    if (ok) {
+      // 成功：刷新挂单让真实单接替（转实态由聚合 effect 完成）；若一直未被接替（如立即全部成交/撤单）10s 后清理
+      useQueryStore.getState().fetchOrders()
+      window.setTimeout(() => {
+        setPending((prev) => prev.filter((p) => p.id !== id))
+      }, 10_000)
+    } else {
+      // 失败回滚：pending 移除，顶部红条展示原因（store.lastSubmitError）
+      setPending((prev) => prev.filter((p) => p.id !== id))
+      setBanner(useOrderStore.getState().lastSubmitError ?? '报单失败')
+      window.setTimeout(() => setBanner(null), 4000)
+    }
     setIntent(null)
   }
 
   return (
     <div className="market-depth">
+      {banner && (
+        <div className="market-depth__banner" data-testid="md-banner" role="alert">
+          {banner}
+        </div>
+      )}
       <DepthHeader />
       <DepthSummaryRow
         totalBidVol={totalBidVol}
@@ -261,6 +328,7 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
         tick={tick}
         maxVol={maxVol}
         myLevels={myOrders.byPrice}
+        pendingByPrice={pendingByPrice}
         onBuyClick={handleBuyClick}
         onSellClick={handleSellClick}
         onPriceClick={setQuickPrice}
@@ -359,6 +427,7 @@ function DepthLadder({
   tick,
   maxVol,
   myLevels,
+  pendingByPrice,
   onBuyClick,
   onSellClick,
   onPriceClick,
@@ -369,6 +438,8 @@ function DepthLadder({
   maxVol: number
   /** 按价格索引的我方挂单量（P3）：匹配档位显示徽标，点击即撤 */
   myLevels: Map<number, MyOrderLevel>
+  /** 按价格索引的乐观 pending 量（P3-4）：半透明徽标，成功转实态后移除 */
+  pendingByPrice: Map<number, { buy: number; sell: number }>
   onBuyClick?: (price: number) => void
   onSellClick?: (price: number) => void
   onPriceClick?: (price: number) => void
@@ -386,6 +457,8 @@ function DepthLadder({
           maxVol={maxVol}
           myBuyVol={myLevels.get(level.price)?.buyVolume ?? 0}
           mySellVol={myLevels.get(level.price)?.sellVolume ?? 0}
+          pendingBuyVol={pendingByPrice.get(level.price)?.buy ?? 0}
+          pendingSellVol={pendingByPrice.get(level.price)?.sell ?? 0}
           onBuyClick={onBuyClick}
           onSellClick={onSellClick}
           onPriceClick={onPriceClick}
@@ -403,6 +476,8 @@ function DepthLadder({
           maxVol={maxVol}
           myBuyVol={myLevels.get(level.price)?.buyVolume ?? 0}
           mySellVol={myLevels.get(level.price)?.sellVolume ?? 0}
+          pendingBuyVol={pendingByPrice.get(level.price)?.buy ?? 0}
+          pendingSellVol={pendingByPrice.get(level.price)?.sell ?? 0}
           onBuyClick={onBuyClick}
           onSellClick={onSellClick}
           onPriceClick={onPriceClick}
@@ -438,6 +513,8 @@ export function DepthRow({
   maxVol,
   myBuyVol = 0,
   mySellVol = 0,
+  pendingBuyVol = 0,
+  pendingSellVol = 0,
   onBuyClick,
   onSellClick,
   onPriceClick,
@@ -451,6 +528,10 @@ export function DepthRow({
   myBuyVol?: number
   /** 本档位我方卖单挂单量 */
   mySellVol?: number
+  /** 本档位乐观 pending 买单量（半透明徽标，P3-4） */
+  pendingBuyVol?: number
+  /** 本档位乐观 pending 卖单量 */
+  pendingSellVol?: number
   onBuyClick?: (price: number) => void
   onSellClick?: (price: number) => void
   onPriceClick?: (price: number) => void
@@ -486,6 +567,9 @@ export function DepthRow({
       >
         {buyText}
         {myBuyVol > 0 && <em className="depth-row__my depth-row__my--buy">{myBuyVol}</em>}
+        {pendingBuyVol > 0 && (
+          <em className="depth-row__my depth-row__my--pending">{pendingBuyVol}</em>
+        )}
       </span>
       <span className="depth-row__price" onClick={() => clickable && onPriceClick?.(level.price)}>
         {priceText}
@@ -497,6 +581,9 @@ export function DepthRow({
       >
         {sellText}
         {mySellVol > 0 && <em className="depth-row__my depth-row__my--sell">{mySellVol}</em>}
+        {pendingSellVol > 0 && (
+          <em className="depth-row__my depth-row__my--pending">{pendingSellVol}</em>
+        )}
       </span>
     </div>
   )
