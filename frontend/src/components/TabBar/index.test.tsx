@@ -253,7 +253,7 @@ describe('TabBar', () => {
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
           { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
-          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
+          { id: 'tab-settings-2', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
         activeTabId: 'tab-settings',
         setActiveTab,
@@ -269,14 +269,14 @@ describe('TabBar', () => {
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
           { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
-          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
+          { id: 'tab-settings-2', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
         activeTabId: 'tab-market',
         setActiveTab,
       })
       render(<TabBar />)
       fireEvent.keyDown(screen.getByRole('tablist'), { key: 'End' })
-      expect(setActiveTab).toHaveBeenCalledWith('tab-settings')
+      expect(setActiveTab).toHaveBeenCalledWith('tab-settings-2')
     })
 
     it('其他键不应触发切换', () => {
