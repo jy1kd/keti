@@ -61,10 +61,10 @@ function statusStyle(args: any) {
 }
 
 const columns = [
-  { field: 'instrumentID', title: '合约', width: 90 },
-  { field: 'productName', title: '合约品种', width: 100 },
-  { field: 'exchangeID', title: '交易所', width: 80 },
-  { field: 'volumeMultiple', title: '合约乘数', width: 90 },
+  { field: 'instrumentID', title: '合约', width: 110 },
+  { field: 'productName', title: '合约品种', width: 85 },
+  { field: 'exchangeID', title: '交易所', width: 75 },
+  { field: 'volumeMultiple', title: '合约乘数', width: 85 },
   { field: 'priceTick', title: '最小变动价位', width: 110 },
   { field: 'expireDate', title: '到期日', width: 100 },
   { field: 'status', title: '状态', width: 80, style: statusStyle },
