@@ -82,30 +82,6 @@
   color: var(--color-flat);
 }
 
-/* 锁仓按钮（下单操作，点击弹确认框） */
-.account-bar__lock {
-  height: 22px;
-  padding: 0 8px;
-  border: 1px solid var(--accent);
-  border-radius: 4px;
-  background: var(--accent-dim);
-  color: var(--accent);
-  font-size: 11px;
-  line-height: 1;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.account-bar__lock:hover:not(:disabled) {
-  background: var(--accent);
-  color: #1c2333;
-}
-
-.account-bar__lock:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
 /* P3-7 账户下拉资金明细：账户号点击展开 */
 .account-bar__account {
   display: flex;

@@ -59,7 +59,7 @@
 1. **`AccountBar.tsx`**
    - 打开时触发 `fetchPositions` + `fetchAccount`，每 10s 自刷新（串行，遵守 CTP ~1 次/秒查询限制），不依赖 QueryPanel
    - 账户下拉（`AccountInfo.accountID`，超长省略）、`持仓 多|空(净)`（按 `instrumentID` 过滤 `PositionRecord`）、`持盈`（`positionProfit`，盈红亏绿）
-   - 锁仓/解锁开关（复用 `api.lockPosition`）
+   - ~~锁仓/解锁开关（复用 `api.lockPosition`）~~：**2026-08-07 用户要求移除**，AccountBar 不再显示锁仓按钮（锁仓保留在报单面板 QuickActions）
    - 文件：`frontend/src/modules/order/AccountBar.tsx`（新）
 2. **`QuoteStatsBar.tsx`（⑥，仅完整态）**
    - `今开/昨结/最高/最低/成交量/持仓量` KV，涨跌着色；复用 `OrderQuotePanel` 取值逻辑

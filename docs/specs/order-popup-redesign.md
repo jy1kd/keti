@@ -123,12 +123,13 @@
 
 | 元素 | 数据 | 说明 |
 |---|---|---|
-| 账户下拉 `YYB-1829143…` | `AccountInfo.accountID` | 超长省略，hover 显示全席位号；下拉列出可用资金/持仓可用 |
+| 账户下拉 `YYB-1829143…` | `AccountInfo.accountID` | 超长省略，hover 显示全席位号；下拉列出可用资金/持仓盈亏/动态权益 |
 | `持仓 多|空(净)` | `PositionRecord` 按 `instrumentID` 过滤，`posiDirection '2'/'3'` 求和 | 净仓 = 多 - 空 |
 | `持盈 +1200` | `positionProfit` | 随最新价实时刷新，盈红亏绿（对齐 `--color-up/down`） |
 
 - **数据来源决策**：`AccountBar` 打开时触发 `useQueryStore.fetchPositions()` + `fetchAccount()`，并每 10s 自刷新（与 QueryPanel 相同的串行 + 延迟节奏，避免 CTP 查询限频）。不依赖 QueryPanel 是否挂载。
-- 右上角：`锁仓/解锁` 开关（复用 `api.lockPosition`）、布局模板按钮（可选，建议后期）。
+- 布局模板按钮（可选，建议后期）。
+- ~~右上角 `锁仓/解锁` 开关~~：**2026-08-07 用户要求移除**（AccountBar 不再显示锁仓按钮；锁仓能力保留在报单面板 `QuickActions` 一键锁仓）。
 
 ### 4.3 ③ 交易参数区（新增 `TradeParams.tsx`，压缩现有 `OrderForm`）
 
