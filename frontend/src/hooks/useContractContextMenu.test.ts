@@ -2,7 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { useContractContextMenu } from './useContractContextMenu'
 import { useTabStore } from '@/stores/tabs'
-import { useOrderPopupStore } from '@/modules/order/popupStore'
+import { openFloatingTab } from '@/utils/openFloatingTab'
+
+// Mock 统一浮动窗入口：openOrderPopup/openQueryPopup 现为打开浮动窗口
+vi.mock('@/utils/openFloatingTab', () => ({
+  openFloatingTab: vi.fn(),
+  ORDER_FLOATING_SIZE: { w: 620, h: 540 },
+}))
+
+const mockOpenFloatingTab = vi.mocked(openFloatingTab)
 
 function resetTabs() {
   useTabStore.setState({
@@ -14,7 +22,6 @@ function resetTabs() {
 describe('useContractContextMenu', () => {
   beforeEach(() => {
     resetTabs()
-    useOrderPopupStore.setState({ instrumentID: null })
     vi.clearAllMocks()
   })
 
@@ -22,13 +29,27 @@ describe('useContractContextMenu', () => {
     resetTabs()
   })
 
-  it('openOrderPopup 打开悬浮报单弹窗', () => {
+  it('openOrderPopup 打开报单浮动窗口（统一浮动窗模式）', () => {
     const { result } = renderHook(() => useContractContextMenu())
     act(() => {
       result.current.openOrderPopup('IF2608')
     })
 
-    expect(useOrderPopupStore.getState().instrumentID).toBe('IF2608')
+    expect(mockOpenFloatingTab).toHaveBeenCalledWith({
+      type: 'order',
+      title: '📝 报单-IF2608',
+      props: { instrumentID: 'IF2608' },
+      size: { w: 620, h: 540 },
+    })
+  })
+
+  it('openQueryPopup 打开查询浮动窗口（统一浮动窗模式）', () => {
+    const { result } = renderHook(() => useContractContextMenu())
+    act(() => {
+      result.current.openQueryPopup('IF2608')
+    })
+
+    expect(mockOpenFloatingTab).toHaveBeenCalledWith({ type: 'query', title: '📋 查询' })
   })
 
   it('openKlineTab 打开K线标签页', () => {

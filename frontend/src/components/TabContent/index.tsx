@@ -25,7 +25,7 @@ function getInstrumentID(props: Record<string, unknown>): string | undefined {
  * market 类型已集成 MarketPanel；
  * order 类型已集成 OrderPage；
  * kline 类型已集成 KLinePage；
- * query 类型已集成 QueryPanel（全局账户查询，放大自 QueryPopup）；
+ * query 类型已集成 QueryPanel（全局账户查询）；
  * 其他类型使用占位文本，后续 PR 会逐步替换为实际页面组件。
  */
 function renderTabContent(tab: Tab, floating: boolean): React.ReactNode {
@@ -37,6 +37,7 @@ function renderTabContent(tab: Tab, floating: boolean): React.ReactNode {
         <OrderPage
           instrumentID={getInstrumentID(tab.props)}
           floating={floating}
+          tabId={tab.id}
         />
       )
     case 'kline':

@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { TradeParams } from './TradeParams'
 import { useOrderStore } from './store'
-import { useOrderPopupStore } from './popupStore'
 import { useContractsStore } from '@/stores/contracts'
 import { useQueryStore } from '../query/store'
 
@@ -251,8 +250,8 @@ describe('TradeParams（任务#4）', () => {
       expect(input2.value).toBe('IF2609')
     })
 
-    it('弹窗正打开当前合约时选择新合约 → 联动 openPopup 切换弹窗合约', () => {
-      useOrderPopupStore.setState({ instrumentID: 'IF2608' })
+    it('浮动窗模式选择新合约 → 触发 onSwitch 联动切换所属标签页合约', () => {
+      const onSwitch = vi.fn()
       useContractsStore.setState({
         contracts: [
           IF2608_CONTRACT,
@@ -261,11 +260,11 @@ describe('TradeParams（任务#4）', () => {
         favorites: [],
         isLoaded: true,
       })
-      render(<TradeParams />)
+      render(<TradeParams onSwitch={onSwitch} />)
       const input = screen.getByPlaceholderText('搜索合约...')
       fireEvent.change(input, { target: { value: 'IF2609' } })
       fireEvent.mouseDown(screen.getByText('IF2609'))
-      expect(useOrderPopupStore.getState().instrumentID).toBe('IF2609')
+      expect(onSwitch).toHaveBeenCalledWith('IF2609')
     })
   })
 })

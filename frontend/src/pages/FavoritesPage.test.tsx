@@ -4,7 +4,15 @@ import { FavoritesPage } from './FavoritesPage'
 import { useContractsStore } from '@/stores/contracts'
 import { useMarketStore } from '@/modules/market/store'
 import { useTabStore } from '@/stores/tabs'
-import { useOrderPopupStore } from '@/modules/order/popupStore'
+import { openFloatingTab } from '@/utils/openFloatingTab'
+
+// Mock 统一浮动窗入口（自选双击/右键「打开报单」现为打开浮动窗口）
+vi.mock('@/utils/openFloatingTab', () => ({
+  openFloatingTab: vi.fn(),
+  ORDER_FLOATING_SIZE: { w: 620, h: 540 },
+}))
+
+const mockOpenFloatingTab = vi.mocked(openFloatingTab)
 
 // Mock MarketTable to simplify testing
 vi.mock('@/modules/market/MarketTable', () => ({
@@ -86,8 +94,6 @@ describe('FavoritesPage', () => {
       tabs: [{ id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false }],
       activeTabId: 'tab-market',
     })
-    // 重置悬浮报单弹窗
-    useOrderPopupStore.setState({ instrumentID: null })
   })
 
   it('移除标题栏「⭐ 自选合约」与计数角标（计数收敛到全局栏 ⭐ 快捷入口），表格顶到全局栏下', () => {
@@ -137,11 +143,16 @@ describe('FavoritesPage', () => {
 
   // --- 标签页打开方式测试 (PR-R13) ---
 
-  it('自选合约双击打开报单弹窗', () => {
+  it('自选合约双击打开报单浮动窗口', () => {
     render(<FavoritesPage />)
     fireEvent.click(screen.getByTestId('dbl-IF2608'))
 
-    expect(useOrderPopupStore.getState().instrumentID).toBe('IF2608')
+    expect(mockOpenFloatingTab).toHaveBeenCalledWith({
+      type: 'order',
+      title: '📝 报单-IF2608',
+      props: { instrumentID: 'IF2608' },
+      size: { w: 620, h: 540 },
+    })
   })
 
   it('自选合约右键显示上下文菜单', () => {
@@ -151,12 +162,17 @@ describe('FavoritesPage', () => {
     expect(screen.getByText('打开K线')).toBeDefined()
   })
 
-  it('右键菜单点击「打开报单」打开报单弹窗', () => {
+  it('右键菜单点击「打开报单」打开报单浮动窗口', () => {
     render(<FavoritesPage />)
     fireEvent.click(screen.getByTestId('ctx-IF2608'))
     fireEvent.click(screen.getByText('打开报单'))
 
-    expect(useOrderPopupStore.getState().instrumentID).toBe('IF2608')
+    expect(mockOpenFloatingTab).toHaveBeenCalledWith({
+      type: 'order',
+      title: '📝 报单-IF2608',
+      props: { instrumentID: 'IF2608' },
+      size: { w: 620, h: 540 },
+    })
   })
 
   it('右键菜单点击「打开K线」打开K线标签', () => {

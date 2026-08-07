@@ -20,12 +20,15 @@ export interface DetachDragParams {
   onDetach: (pos: { x: number; y: number }) => void
 }
 
-/** 将标签在光标位置脱离为浮动窗口；固定标签返回 false；若拖离的是活跃标签自动切回 market */
-export function detachTabAt(tabId: string, pos: { x: number; y: number }): boolean {
+/**
+ * 将标签在光标位置脱离为浮动窗口；固定标签返回 false；若拖离的是活跃标签自动切回 market。
+ * @param size 可选浮动窗尺寸；缺省用 defaultFloatingSize()（报单浮动窗传 540×400 对齐原弹窗）。
+ */
+export function detachTabAt(tabId: string, pos: { x: number; y: number }, size?: { w: number; h: number }): boolean {
   const state = useTabStore.getState()
   const tab = state.tabs.find((t) => t.id === tabId)
   if (!tab || !tab.closable) return false
-  const { w, h } = defaultFloatingSize()
+  const { w, h } = size ?? defaultFloatingSize()
   const x = Math.min(Math.max(0, pos.x), Math.max(0, window.innerWidth - w))
   const y = Math.min(Math.max(0, pos.y), Math.max(0, window.innerHeight - 40))
   const ok = useFloatingWindowStore.getState().detach(tabId, { x, y, w, h })

@@ -11,7 +11,7 @@ export type TabType =
   | 'options'
   | 'ipc-monitor'
   | 'settings'
-  | 'query' // 新增：查询（全局账户查询，放大自 QueryPopup）
+  | 'query' // 查询（全局账户查询）
 
 /** 所有标签页类型 */
 export const TAB_TYPES: TabType[] = [
@@ -74,7 +74,7 @@ interface TabStore {
 // --- 辅助函数 ---
 
 /** 生成标签页 ID */
-function generateTabId(type: TabType, props?: Record<string, unknown>): string {
+export function generateTabId(type: TabType, props?: Record<string, unknown>): string {
   const suffix = props?.instrumentID ? `-${props.instrumentID}` : ''
   return `tab-${type}${suffix}`
 }

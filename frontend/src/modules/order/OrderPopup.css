@@ -146,11 +146,6 @@
   height: 100%;
 }
 
-/* OrderPage 浮动模式：左五档盘口 + 右报单表单（保持原列宽比例） */
-.order-floating .order-popup__body {
-  grid-template-columns: minmax(280px, 5fr) minmax(360px, 7fr);
-}
-
 .order-popup__quote {
   min-width: 0;
   min-height: 0;

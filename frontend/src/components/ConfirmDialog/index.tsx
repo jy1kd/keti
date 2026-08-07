@@ -12,9 +12,8 @@ interface ConfirmDialogProps {
 }
 
 export function ConfirmDialog({ title, details, warning, onConfirm, onCancel, busy }: ConfirmDialogProps) {
-  // Esc = 取消：与「取消」按钮/遮罩点击等价。配合 OrderPopup 的 confirmOpen 守卫，
-  // 弹窗内确认框打开时 Esc 优先取消确认框，而不是被外层全局监听当作「关闭弹窗」。
-  // busy 期间 Esc 不取消（提交进行中，避免关闭弹窗丢 pending）
+  // Esc = 取消：与「取消」按钮/遮罩点击等价（确认框自行消费 Esc，不向外冒泡）。
+  // busy 期间 Esc 不取消（提交进行中，避免关闭丢失 pending）
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !busy) onCancel()

@@ -6,8 +6,6 @@ import { useSystemWs } from '@/hooks/useSystemWs'
 import { useConnectionPoll } from '@/hooks/useConnectionPoll'
 import { useTabContractLocks } from '@/hooks/useTabContractLocks'
 import { useMarketStore } from '@/modules/market/store'
-import { OrderPopup } from '@/modules/order/OrderPopup'
-import { QueryPopup } from '@/modules/query/QueryPopup'
 import { FloatingWindows } from '@/components/FloatingWindow'
 import { useTabStore } from '@/stores/tabs'
 import { API_BASE } from '@/services/api'
@@ -104,13 +102,9 @@ function App() {
         <TabContent />
       </main>
 
-      {/* 悬浮报单弹窗（非模态，浮于所有标签页之上） */}
-      <OrderPopup />
-
-      {/* 悬浮查询弹窗（非模态，浮于所有标签页之上） */}
-      <QueryPopup />
-
-      {/* 浮动标签窗口（chrome 壳；内容由 TabContent 位移覆盖） */}
+      {/* 浮动标签窗口（chrome 壳；内容由 TabContent 位移覆盖）。
+          统一浮动窗模式：报单/查询/K线/设置/网络监控均以浮动窗口打开，
+          支持 ⇩ 停靠回标签栏 / 拖拽脱离 双向转换。 */}
       <FloatingWindows />
     </div>
   )

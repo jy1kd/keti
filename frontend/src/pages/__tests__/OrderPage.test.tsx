@@ -6,6 +6,16 @@ import { useContractsStore } from '@/stores/contracts';
 import { useMarketStore } from '@/modules/market/store';
 import type { MarketSnapshot } from '@/services/types';
 
+// Mock API：AccountBar 挂载即拉取持仓/账户（jsdom 无后端，返回空即静默）
+vi.mock('@/services/api', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('@/services/api')>();
+  return {
+    ...mod,
+    refreshPositions: vi.fn(),
+    refreshAccount: vi.fn(),
+  };
+});
+
 const IF2608_CONTRACT = {
   instrumentID: 'IF2608',
   instrumentName: '沪深300',
