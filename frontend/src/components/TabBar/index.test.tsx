@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act, within } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { TabBar } from './index'
 import { useTabStore } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
+import { useMarketStore } from '@/modules/market/store'
 
 const detachMock = vi.hoisted(() => ({
   startDetachDrag: vi.fn(),
@@ -10,6 +13,17 @@ const detachMock = vi.hoisted(() => ({
 }))
 
 vi.mock('@/utils/detachDrag', () => detachMock)
+
+// jsdom 无 ResizeObserver；stub 记录回调，测试手动触发以控制测量时机
+let roCallback: ResizeObserverCallback | null = null
+globalThis.ResizeObserver = vi.fn().mockImplementation((cb: ResizeObserverCallback) => {
+  roCallback = cb
+  return {
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }
+}) as unknown as typeof ResizeObserver
 
 const defaultState = {
   tabs: [
@@ -39,6 +53,7 @@ describe('TabBar', () => {
     detachMock.detachTabAt.mockReset()
     useFloatingWindowStore.setState({ windows: {} })
     useTabStore.setState(defaultState)
+    useMarketStore.setState({ selectedInstrument: null })
   })
 
   // --- 渲染 ---
@@ -190,12 +205,125 @@ describe('TabBar', () => {
       render(<TabBar />)
       expect(screen.getByLabelText('新增标签')).toBeInTheDocument()
     })
+  })
 
-    it('点击 + 按钮应调用 onAddTab', () => {
-      const onAddTab = vi.fn()
-      render(<TabBar onAddTab={onAddTab} />)
-      fireEvent.click(screen.getByLabelText('新增标签'))
-      expect(onAddTab).toHaveBeenCalledTimes(1)
+  // --- + 新增标签选择栏 ---
+
+  describe('+ 新增标签选择栏', () => {
+    // React 的 onMouseEnter/onMouseLeave 由 mouseover/mouseout 合成：在 + 按钮上
+    // fireEvent.mouseEnter 不冒泡到 wrapper 的 onMouseEnter，故用 mouseOver（会冒泡）打开、
+    // 在 wrapper 上 mouseLeave 关闭。已用探针测试验证。
+    const hoverOpen = () => fireEvent.mouseOver(screen.getByLabelText('新增标签'))
+    const hoverClose = () => {
+      const wrap = screen.getByLabelText('新增标签').parentElement!
+      fireEvent.mouseLeave(wrap)
+    }
+
+    it('悬停 + 显示选择栏（报单/K线/查询/设置）', () => {
+      render(<TabBar />)
+      hoverOpen()
+      expect(screen.getByText('📝 报单')).toBeInTheDocument()
+      expect(screen.getByText('📈 K线')).toBeInTheDocument()
+      expect(screen.getByText('📋 查询')).toBeInTheDocument()
+      expect(screen.getByText('⚙ 设置')).toBeInTheDocument()
+    })
+
+    it('移出 + 与选择栏后选择栏关闭', () => {
+      render(<TabBar />)
+      hoverOpen()
+      expect(screen.getByText('📝 报单')).toBeInTheDocument()
+      hoverClose()
+      expect(screen.queryByText('📝 报单')).toBeNull()
+    })
+
+    it('点击「📝 报单」以停靠标签打开', () => {
+      const openTab = vi.fn(() => true)
+      useTabStore.setState({ ...defaultState, openTab })
+      render(<TabBar />)
+      hoverOpen()
+      fireEvent.click(screen.getByText('📝 报单'))
+      expect(openTab).toHaveBeenCalledWith({ type: 'order', title: '📝 报单' })
+    })
+
+    it('点击「⚙ 设置」以停靠标签打开', () => {
+      const openTab = vi.fn(() => true)
+      useTabStore.setState({ ...defaultState, openTab })
+      render(<TabBar />)
+      hoverOpen()
+      fireEvent.click(screen.getByText('⚙ 设置'))
+      expect(openTab).toHaveBeenCalledWith({ type: 'settings', title: '⚙ 设置' })
+    })
+
+    it('选中合约时点击「📝 报单」带 instrumentID 打开（标题含合约代码）', () => {
+      const openTab = vi.fn(() => true)
+      useTabStore.setState({ ...defaultState, openTab })
+      useMarketStore.setState({ selectedInstrument: 'IF2608' })
+      render(<TabBar />)
+      hoverOpen()
+      fireEvent.click(screen.getByText('📝 报单'))
+      expect(openTab).toHaveBeenCalledWith({
+        type: 'order',
+        title: '📝 报单-IF2608',
+        props: { instrumentID: 'IF2608' },
+      })
+    })
+
+    it('选中合约时点击「📈 K线」带 instrumentID 打开（标题含合约代码）', () => {
+      const openTab = vi.fn(() => true)
+      useTabStore.setState({ ...defaultState, openTab })
+      useMarketStore.setState({ selectedInstrument: 'IF2608' })
+      render(<TabBar />)
+      hoverOpen()
+      fireEvent.click(screen.getByText('📈 K线'))
+      expect(openTab).toHaveBeenCalledWith({
+        type: 'kline',
+        title: '📈 K线-IF2608',
+        props: { instrumentID: 'IF2608' },
+      })
+    })
+
+    it('鼠标从 + 悬停区下移到菜单项不关闭选择栏（可到达并点击菜单项）', () => {
+      // 回归：.tab-bar__add-menu 原留 4px 间隙，鼠标下移穿过间隙会触发 wrapper
+      // mouseleave，导致选择栏在鼠标到达菜单项前关闭。此用例模拟「+ → 菜单项」的
+      // 穿行路径，断言菜单在鼠标到达时仍打开、点击成功。
+      const openTab = vi.fn(() => true)
+      useTabStore.setState({ ...defaultState, openTab })
+      render(<TabBar />)
+      hoverOpen()
+      // 鼠标下移进入菜单区（fix 后间隙并入悬停区，不再触发 wrapper mouseleave）
+      fireEvent.mouseOver(screen.getByText('📝 报单'))
+      expect(screen.getByText('📝 报单')).toBeInTheDocument()
+      fireEvent.click(screen.getByText('📝 报单'))
+      expect(openTab).toHaveBeenCalledWith({ type: 'order', title: '📝 报单' })
+    })
+
+    it('点击选择栏外部关闭', () => {
+      render(<TabBar />)
+      hoverOpen()
+      expect(screen.getByText('📝 报单')).toBeInTheDocument()
+      fireEvent.mouseDown(document.body)
+      expect(screen.queryByText('📝 报单')).toBeNull()
+    })
+
+    it('Escape 关闭选择栏', () => {
+      render(<TabBar />)
+      hoverOpen()
+      expect(screen.getByText('📝 报单')).toBeInTheDocument()
+      fireEvent.keyDown(window, { key: 'Escape' })
+      expect(screen.queryByText('📝 报单')).toBeNull()
+    })
+  })
+
+  // --- + 选择栏悬停可达性样式（回归） ---
+
+  describe('+ 选择栏悬停可达性样式', () => {
+    // jsdom 无法计算真实布局几何，故直接断言 CSS 源文件（同 KLinePage.style.test 模式）。
+    it('.tab-bar__add-menu 必须与 + 悬停区无缝衔接（top:100%，无 4px 死区）', () => {
+      const css = readFileSync(resolve(__dirname, 'styles.css'), 'utf-8')
+      const block = css.match(/\.tab-bar__add-menu\s*\{([^}]*)\}/)?.[1]
+      expect(block).toBeTruthy()
+      expect(block).toMatch(/top:\s*100%/)
+      expect(block).not.toMatch(/\+ 4px/)
     })
   })
 
@@ -384,6 +512,131 @@ describe('TabBar', () => {
       render(<TabBar />)
       expect(screen.queryByText('⚙ 设置')).toBeNull()
       expect(screen.getByText('📊 行情')).toBeInTheDocument()
+    })
+  })
+
+  // --- 标签溢出（▾ 下拉） ---
+
+  describe('标签溢出（▾ 下拉）', () => {
+    /** 渲染 N 个等宽标签，mock offsetWidth/clientWidth，触发 ResizeObserver 重算 */
+    function renderManyTabs(count: number, containerWidth: number, tabWidth: number) {
+      useTabStore.setState({
+        tabs: Array.from({ length: count }, (_, i) => ({
+          id: i === 0 ? 'tab-market' : `tab-${i}`,
+          type: (i === 0 ? 'market' : 'settings') as 'market' | 'settings',
+          title: i === 0 ? '📊 行情' : `标签 ${i}`,
+          props: {},
+          closable: i !== 0,
+        })),
+        activeTabId: 'tab-market',
+      })
+      const { container } = render(<TabBar />)
+      const scrollEl = container.querySelector('.tab-bar__scroll') as HTMLElement
+      Object.defineProperty(scrollEl, 'clientWidth', { value: containerWidth, configurable: true })
+      scrollEl.querySelectorAll('[role="tab"]').forEach((el) => {
+        Object.defineProperty(el, 'offsetWidth', { value: tabWidth, configurable: true })
+      })
+      return { container, scrollEl }
+    }
+
+    it('有隐藏标签时显示 ▾ 按钮', () => {
+      renderManyTabs(8, 300, 100)
+      act(() => { roCallback?.([], null as unknown as ResizeObserver) })
+      expect(screen.getByLabelText('溢出标签')).toBeInTheDocument()
+    })
+
+    it('无隐藏标签时不显示 ▾ 按钮', () => {
+      renderManyTabs(3, 500, 100)
+      act(() => { roCallback?.([], null as unknown as ResizeObserver) })
+      expect(screen.queryByLabelText('溢出标签')).toBeNull()
+    })
+
+    it('点击 ▾ 展开隐藏标签列表，点击某项 setActiveTab 并关闭', () => {
+      const setActiveTab = vi.fn()
+      useTabStore.setState({
+        tabs: Array.from({ length: 8 }, (_, i) => ({
+          id: i === 0 ? 'tab-market' : `tab-${i}`,
+          type: (i === 0 ? 'market' : 'settings') as 'market' | 'settings',
+          title: i === 0 ? '📊 行情' : `标签 ${i}`,
+          props: {},
+          closable: i !== 0,
+        })),
+        activeTabId: 'tab-market',
+        setActiveTab,
+      })
+      const { container } = render(<TabBar />)
+      const scrollEl = container.querySelector('.tab-bar__scroll') as HTMLElement
+      Object.defineProperty(scrollEl, 'clientWidth', { value: 300, configurable: true })
+      scrollEl.querySelectorAll('[role="tab"]').forEach((el) => {
+        Object.defineProperty(el, 'offsetWidth', { value: 100, configurable: true })
+      })
+      act(() => { roCallback?.([], null as unknown as ResizeObserver) })
+      fireEvent.click(screen.getByLabelText('溢出标签'))
+      // 隐藏标签仍渲染在滚动区（被裁剪），必须限定在菜单内查询，避免「多元素」冲突
+      const menu = screen.getByRole('menu', { name: '隐藏标签' })
+      expect(within(menu).getByText('标签 7')).toBeInTheDocument()
+      fireEvent.click(within(menu).getByText('标签 7'))
+      expect(setActiveTab).toHaveBeenCalledWith('tab-7')
+      expect(screen.queryByRole('menu', { name: '隐藏标签' })).toBeNull() // 菜单已关闭
+    })
+
+    it('▾ 菜单项不重复显示图标（title 已含 emoji 前缀）', () => {
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-1', type: 'settings', title: '标签 1', props: {}, closable: true },
+          { id: 'tab-2', type: 'settings', title: '标签 2', props: {}, closable: true },
+          { id: 'tab-3', type: 'settings', title: '标签 3', props: {}, closable: true },
+          { id: 'tab-4', type: 'settings', title: '标签 4', props: {}, closable: true },
+          { id: 'tab-5', type: 'settings', title: '标签 5', props: {}, closable: true },
+          { id: 'tab-6', type: 'settings', title: '标签 6', props: {}, closable: true },
+          { id: 'tab-order-au', type: 'order', title: '📝 报单-IF2608', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-market',
+      })
+      const { container } = render(<TabBar />)
+      const scrollEl = container.querySelector('.tab-bar__scroll') as HTMLElement
+      Object.defineProperty(scrollEl, 'clientWidth', { value: 300, configurable: true })
+      scrollEl.querySelectorAll('[role="tab"]').forEach((el) => {
+        Object.defineProperty(el, 'offsetWidth', { value: 100, configurable: true })
+      })
+      act(() => { roCallback?.([], null as unknown as ResizeObserver) })
+      fireEvent.click(screen.getByLabelText('溢出标签'))
+      const menu = screen.getByRole('menu', { name: '隐藏标签' })
+      const item = within(menu).getByRole('menuitem', { name: /报单/ })
+      // title 已含 emoji，不应再渲染独立 icon span（否则 📝 出现两次）
+      expect(item.querySelector('.tab-bar__overflow-icon')).toBeNull()
+      expect(item.textContent).toContain('📝 报单-IF2608')
+    })
+
+    it('隐藏标签在标签栏完全隐藏（visibility:hidden，不露半截）；可见标签自动填充至 ▾ 左侧', () => {
+      const { container } = renderManyTabs(8, 300, 100)
+      act(() => { roCallback?.([], null as unknown as ResizeObserver) })
+      const tabEls = Array.from(container.querySelectorAll('.tab-bar__scroll [role="tab"]'))
+      // 8 个等宽 100、容器 300、maxScroll=200 → 右缘>500 的索引 5,6,7 隐藏
+      expect(tabEls[5]).toHaveClass('tab-bar__tab--hidden')
+      expect(tabEls[7]).toHaveClass('tab-bar__tab--hidden')
+      expect(tabEls[0]).not.toHaveClass('tab-bar__tab--hidden')
+      // 可见标签填充（flex grow）到 ▾ 左侧，隐藏标签不 grow（也不占位）
+      expect(tabEls[0]).toHaveClass('tab-bar__tab--grow')
+      expect(tabEls[5]).not.toHaveClass('tab-bar__tab--grow')
+    })
+
+    it('滚轮横滚 clamp 到 MAX_SCROLL（2×平均宽），不越界；溢出时 preventDefault', () => {
+      const { container, scrollEl } = renderManyTabs(6, 300, 100)
+      Object.defineProperty(scrollEl, 'scrollLeft', { value: 0, writable: true, configurable: true })
+      act(() => { roCallback?.([], null as unknown as ResizeObserver) })
+      const scrollNode = container.querySelector('.tab-bar__scroll')!
+      // 下滚（deltaY 正）→ 向右；maxScroll=200
+      const evDown = new WheelEvent('wheel', { deltaY: 500, bubbles: true, cancelable: true })
+      fireEvent(scrollNode, evDown)
+      expect(evDown.defaultPrevented).toBe(true)
+      expect(scrollEl.scrollLeft).toBe(200)
+      // 上滚（deltaY 负）→ 回左，不为负
+      const evUp = new WheelEvent('wheel', { deltaY: -1000, bubbles: true, cancelable: true })
+      fireEvent(scrollNode, evUp)
+      expect(evUp.defaultPrevented).toBe(true)
+      expect(scrollEl.scrollLeft).toBe(0)
     })
   })
 })
