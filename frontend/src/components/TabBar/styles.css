@@ -9,6 +9,7 @@
 
 /* 可滚动标签区：有界滚轮横滚，隐藏滚动条 */
 .tab-bar__scroll {
+  position: relative; /* 使标签 offsetLeft 相对滚动容器，供 ▾ 点击后滚入视口 */
   display: flex;
   align-items: center;
   flex: 1;
@@ -94,9 +95,22 @@
 }
 
 .tab-bar__overflow-title {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.tab-bar__overflow-item--active {
+  color: var(--accent);
+}
+
+.tab-bar__overflow-check {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .tab-bar__tab {

@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useEffect, type KeyboardEvent } from 'react'
+import { useCallback, useMemo, useState, useRef, useEffect, type KeyboardEvent } from 'react'
 import { useTabStore, type Tab } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
@@ -71,7 +71,8 @@ export function TabBar() {
   }, [openTab])
 
   // 排除已拖入浮动窗口的标签（浮动标签从标签栏隐藏）
-  const visibleTabs = tabs.filter((t) => !windows[t.id])
+  // useMemo 稳定引用：避免 measureOverflow / RO / wheel 等依赖 visibleTabs 的 effect 每次渲染空转
+  const visibleTabs = useMemo(() => tabs.filter((t) => !windows[t.id]), [tabs, windows])
 
   // ── 溢出（▾ 下拉 + 有界滚轮）──
   const [hiddenTabIds, setHiddenTabIds] = useState<string[]>([])
@@ -81,6 +82,27 @@ export function TabBar() {
 
   const hiddenTabs = visibleTabs.filter((t) => hiddenTabIds.includes(t.id))
   const hasHidden = hiddenTabs.length > 0
+
+  // ▾ 点击项：激活 + 将目标标签滚入视口 + 关闭
+  const handleOverflowItemClick = useCallback(
+    (tab: Tab) => {
+      setActiveTab(tab.id)
+      const scrollEl = scrollRef.current
+      if (scrollEl) {
+        const targetEl = scrollEl.querySelector<HTMLElement>(`[data-tab-id="${tab.id}"]`)
+        if (targetEl) {
+          const tabEls = Array.from(scrollEl.querySelectorAll<HTMLElement>('[role="tab"]'))
+          const widths = tabEls.map((el) => el.offsetWidth)
+          const ids = visibleTabs.map((t) => t.id)
+          const { maxScroll } = computeTabOverflow(ids, scrollEl.clientWidth, widths)
+          // 目标标签滚到可视左缘；clamp 到 [0, maxScroll]
+          scrollEl.scrollLeft = Math.max(0, Math.min(targetEl.offsetLeft, maxScroll))
+        }
+      }
+      setOverflowOpen(false)
+    },
+    [setActiveTab, visibleTabs],
+  )
 
   // 测量：读取容器宽与各标签宽，computeTabOverflow 计算隐藏集
   const measureOverflow = useCallback(() => {
@@ -134,6 +156,9 @@ export function TabBar() {
       // 滚轮横滚仅作用于可滚动区内的标签；visibleTabs 与 DOM 顺序一致
       const tabEls = Array.from(scrollEl.querySelectorAll<HTMLElement>('[role="tab"]'))
       const widths = tabEls.map((el) => el.offsetWidth)
+      // 无溢出时不拦截滚轮（单标签/全部放得下），让页面正常滚动
+      const totalWidth = widths.reduce((sum, w) => sum + w, 0)
+      if (totalWidth <= scrollEl.clientWidth) return
       const ids = visibleTabs.map((t) => t.id)
       const { maxScroll } = computeTabOverflow(ids, scrollEl.clientWidth, widths)
       const target = scrollEl.scrollLeft + e.deltaX + e.deltaY
@@ -251,6 +276,7 @@ export function TabBar() {
         <div
           key={tab.id}
           role="tab"
+          data-tab-id={tab.id}
           tabIndex={0}
           aria-selected={tab.id === activeTabId}
           className={`tab-bar__tab${tab.id === activeTabId ? ' tab-bar__tab--active' : ''}`}
@@ -307,14 +333,17 @@ export function TabBar() {
                   key={tab.id}
                   type="button"
                   role="menuitem"
-                  className="tab-bar__overflow-item"
-                  onClick={() => {
-                    setActiveTab(tab.id)
-                    setOverflowOpen(false)
-                  }}
+                  aria-selected={tab.id === activeTabId}
+                  className={`tab-bar__overflow-item${tab.id === activeTabId ? ' tab-bar__overflow-item--active' : ''}`}
+                  onClick={() => handleOverflowItemClick(tab)}
                 >
                   <span className="tab-bar__overflow-icon">{tab.title.split(' ')[0]}</span>
                   <span className="tab-bar__overflow-title">{tab.title}</span>
+                  {tab.id === activeTabId && (
+                    <span className="tab-bar__overflow-check" aria-label="当前标签">
+                      ✓
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -336,7 +365,7 @@ export function TabBar() {
           aria-label="新增标签"
           title="新增标签"
           aria-expanded={addMenuOpen}
-          onClick={() => setAddMenuOpen((v) => !v)}
+          onClick={() => setAddMenuOpen(true)}
         >
           +
         </button>

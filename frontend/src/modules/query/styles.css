@@ -13,6 +13,9 @@
   background: var(--bg-panel);
   border-bottom: 1px solid var(--border-color);
   flex: 1;
+  /* 全局 .tab-bar 已改为 overflow:visible（供 TabBar 下拉溢出显示）；
+     查询子 Tab 条保持自身裁剪/滚动，避免 5 个 Tab 溢出涂抹 .panel-controls */
+  overflow-x: auto;
 }
 
 .query-panel .tab-btn {

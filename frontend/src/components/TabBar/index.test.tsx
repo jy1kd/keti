@@ -550,15 +550,20 @@ describe('TabBar', () => {
       expect(screen.queryByRole('menu', { name: '隐藏标签' })).toBeNull() // 菜单已关闭
     })
 
-    it('滚轮横滚 clamp 到 MAX_SCROLL（2×平均宽），不越界', () => {
+    it('滚轮横滚 clamp 到 MAX_SCROLL（2×平均宽），不越界；溢出时 preventDefault', () => {
       const { container, scrollEl } = renderManyTabs(6, 300, 100)
       Object.defineProperty(scrollEl, 'scrollLeft', { value: 0, writable: true, configurable: true })
       act(() => { roCallback?.([], null as unknown as ResizeObserver) })
+      const scrollNode = container.querySelector('.tab-bar__scroll')!
       // 下滚（deltaY 正）→ 向右；maxScroll=200
-      fireEvent.wheel(container.querySelector('.tab-bar__scroll')!, { deltaY: 500 })
+      const evDown = new WheelEvent('wheel', { deltaY: 500, bubbles: true, cancelable: true })
+      fireEvent(scrollNode, evDown)
+      expect(evDown.defaultPrevented).toBe(true)
       expect(scrollEl.scrollLeft).toBe(200)
       // 上滚（deltaY 负）→ 回左，不为负
-      fireEvent.wheel(container.querySelector('.tab-bar__scroll')!, { deltaY: -1000 })
+      const evUp = new WheelEvent('wheel', { deltaY: -1000, bubbles: true, cancelable: true })
+      fireEvent(scrollNode, evUp)
+      expect(evUp.defaultPrevented).toBe(true)
       expect(scrollEl.scrollLeft).toBe(0)
     })
   })
