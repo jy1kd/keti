@@ -44,6 +44,8 @@
 | 轨道 | 透明 |
 | 宽度 / 高度 | 6px |
 
+**vtable 例外**：vtable 的滑块颜色由 `scrollSliderColor` 固定，无法像原生滚动条那样 hover 变亮，故取其静止与 hover 的中间值 `rgba(139,148,158,0.45)`，观感上介于原生静止/hover 之间，不会过亮。
+
 ## 4. 修改范围
 
 ### 4.1 原生滚动条 — `frontend/src/assets/styles/global.css`
