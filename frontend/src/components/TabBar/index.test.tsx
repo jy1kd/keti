@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act, within } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { TabBar } from './index'
@@ -12,6 +12,17 @@ const detachMock = vi.hoisted(() => ({
 }))
 
 vi.mock('@/utils/detachDrag', () => detachMock)
+
+// jsdom 无 ResizeObserver；stub 记录回调，测试手动触发以控制测量时机
+let roCallback: ResizeObserverCallback | null = null
+globalThis.ResizeObserver = vi.fn().mockImplementation((cb: ResizeObserverCallback) => {
+  roCallback = cb
+  return {
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }
+}) as unknown as typeof ResizeObserver
 
 const defaultState = {
   tabs: [
@@ -471,6 +482,84 @@ describe('TabBar', () => {
       render(<TabBar />)
       expect(screen.queryByText('⚙ 设置')).toBeNull()
       expect(screen.getByText('📊 行情')).toBeInTheDocument()
+    })
+  })
+
+  // --- 标签溢出（▾ 下拉） ---
+
+  describe('标签溢出（▾ 下拉）', () => {
+    /** 渲染 N 个等宽标签，mock offsetWidth/clientWidth，触发 ResizeObserver 重算 */
+    function renderManyTabs(count: number, containerWidth: number, tabWidth: number) {
+      useTabStore.setState({
+        tabs: Array.from({ length: count }, (_, i) => ({
+          id: i === 0 ? 'tab-market' : `tab-${i}`,
+          type: (i === 0 ? 'market' : 'settings') as 'market' | 'settings',
+          title: i === 0 ? '📊 行情' : `标签 ${i}`,
+          props: {},
+          closable: i !== 0,
+        })),
+        activeTabId: 'tab-market',
+      })
+      const { container } = render(<TabBar />)
+      const scrollEl = container.querySelector('.tab-bar__scroll') as HTMLElement
+      Object.defineProperty(scrollEl, 'clientWidth', { value: containerWidth, configurable: true })
+      scrollEl.querySelectorAll('[role="tab"]').forEach((el) => {
+        Object.defineProperty(el, 'offsetWidth', { value: tabWidth, configurable: true })
+      })
+      return { container, scrollEl }
+    }
+
+    it('有隐藏标签时显示 ▾ 按钮', () => {
+      renderManyTabs(8, 300, 100)
+      act(() => { roCallback?.([], null as unknown as ResizeObserver) })
+      expect(screen.getByLabelText('溢出标签')).toBeInTheDocument()
+    })
+
+    it('无隐藏标签时不显示 ▾ 按钮', () => {
+      renderManyTabs(3, 500, 100)
+      act(() => { roCallback?.([], null as unknown as ResizeObserver) })
+      expect(screen.queryByLabelText('溢出标签')).toBeNull()
+    })
+
+    it('点击 ▾ 展开隐藏标签列表，点击某项 setActiveTab 并关闭', () => {
+      const setActiveTab = vi.fn()
+      useTabStore.setState({
+        tabs: Array.from({ length: 8 }, (_, i) => ({
+          id: i === 0 ? 'tab-market' : `tab-${i}`,
+          type: (i === 0 ? 'market' : 'settings') as 'market' | 'settings',
+          title: i === 0 ? '📊 行情' : `标签 ${i}`,
+          props: {},
+          closable: i !== 0,
+        })),
+        activeTabId: 'tab-market',
+        setActiveTab,
+      })
+      const { container } = render(<TabBar />)
+      const scrollEl = container.querySelector('.tab-bar__scroll') as HTMLElement
+      Object.defineProperty(scrollEl, 'clientWidth', { value: 300, configurable: true })
+      scrollEl.querySelectorAll('[role="tab"]').forEach((el) => {
+        Object.defineProperty(el, 'offsetWidth', { value: 100, configurable: true })
+      })
+      act(() => { roCallback?.([], null as unknown as ResizeObserver) })
+      fireEvent.click(screen.getByLabelText('溢出标签'))
+      // 隐藏标签仍渲染在滚动区（被裁剪），必须限定在菜单内查询，避免「多元素」冲突
+      const menu = screen.getByRole('menu', { name: '隐藏标签' })
+      expect(within(menu).getByText('标签 7')).toBeInTheDocument()
+      fireEvent.click(within(menu).getByText('标签 7'))
+      expect(setActiveTab).toHaveBeenCalledWith('tab-7')
+      expect(screen.queryByRole('menu', { name: '隐藏标签' })).toBeNull() // 菜单已关闭
+    })
+
+    it('滚轮横滚 clamp 到 MAX_SCROLL（2×平均宽），不越界', () => {
+      const { container, scrollEl } = renderManyTabs(6, 300, 100)
+      Object.defineProperty(scrollEl, 'scrollLeft', { value: 0, writable: true, configurable: true })
+      act(() => { roCallback?.([], null as unknown as ResizeObserver) })
+      // 下滚（deltaY 正）→ 向右；maxScroll=200
+      fireEvent.wheel(container.querySelector('.tab-bar__scroll')!, { deltaY: 500 })
+      expect(scrollEl.scrollLeft).toBe(200)
+      // 上滚（deltaY 负）→ 回左，不为负
+      fireEvent.wheel(container.querySelector('.tab-bar__scroll')!, { deltaY: -1000 })
+      expect(scrollEl.scrollLeft).toBe(0)
     })
   })
 })

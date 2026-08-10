@@ -3,6 +3,7 @@ import { useTabStore, type Tab } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
 import { isElectron } from '@/services/electron'
+import { computeTabOverflow } from './overflow'
 import './styles.css'
 
 interface ContextMenuState {
@@ -71,6 +72,77 @@ export function TabBar() {
 
   // 排除已拖入浮动窗口的标签（浮动标签从标签栏隐藏）
   const visibleTabs = tabs.filter((t) => !windows[t.id])
+
+  // ── 溢出（▾ 下拉 + 有界滚轮）──
+  const [hiddenTabIds, setHiddenTabIds] = useState<string[]>([])
+  const [overflowOpen, setOverflowOpen] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const overflowWrapRef = useRef<HTMLDivElement>(null)
+
+  const hiddenTabs = visibleTabs.filter((t) => hiddenTabIds.includes(t.id))
+  const hasHidden = hiddenTabs.length > 0
+
+  // 测量：读取容器宽与各标签宽，computeTabOverflow 计算隐藏集
+  const measureOverflow = useCallback(() => {
+    const scrollEl = scrollRef.current
+    if (!scrollEl) return
+    const tabEls = Array.from(scrollEl.querySelectorAll<HTMLElement>('[role="tab"]'))
+    const ids = visibleTabs.map((t) => t.id)
+    const widths = tabEls.map((el) => el.offsetWidth)
+    const { hiddenTabIds: hidden } = computeTabOverflow(ids, scrollEl.clientWidth, widths)
+    // 内容不变时复用 prev 引用，避免空转重渲染（React 对相同引用 bailout）
+    setHiddenTabIds((prev) =>
+      prev.length === hidden.length && prev.every((id, i) => id === hidden[i]) ? prev : hidden,
+    )
+  }, [visibleTabs])
+
+  useEffect(() => {
+    measureOverflow()
+    const scrollEl = scrollRef.current
+    if (!scrollEl || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => measureOverflow())
+    ro.observe(scrollEl)
+    return () => ro.disconnect()
+  }, [measureOverflow])
+
+  // ▾ 下拉：点击外部 / Escape 关闭
+  useEffect(() => {
+    if (!overflowOpen) return
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (overflowWrapRef.current && !overflowWrapRef.current.contains(e.target as Node)) {
+        setOverflowOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDocMouseDown)
+    return () => document.removeEventListener('mousedown', onDocMouseDown)
+  }, [overflowOpen])
+
+  useEffect(() => {
+    if (!overflowOpen) return
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') setOverflowOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [overflowOpen])
+
+  // 原生非 passive wheel 监听：React onWheel 为 passive，preventDefault 无效
+  useEffect(() => {
+    const scrollEl = scrollRef.current
+    if (!scrollEl) return
+    const onWheel = (e: WheelEvent) => {
+      // 滚轮横滚仅作用于可滚动区内的标签；visibleTabs 与 DOM 顺序一致
+      const tabEls = Array.from(scrollEl.querySelectorAll<HTMLElement>('[role="tab"]'))
+      const widths = tabEls.map((el) => el.offsetWidth)
+      const ids = visibleTabs.map((t) => t.id)
+      const { maxScroll } = computeTabOverflow(ids, scrollEl.clientWidth, widths)
+      const target = scrollEl.scrollLeft + e.deltaX + e.deltaY
+      scrollEl.scrollLeft = Math.max(0, Math.min(target, maxScroll))
+      e.preventDefault()
+    }
+    scrollEl.addEventListener('wheel', onWheel, { passive: false })
+    return () => scrollEl.removeEventListener('wheel', onWheel)
+  }, [visibleTabs])
 
   // 标签栏拖拽脱离（药丸 ghost）；阈值由 startDetachDrag 内部判定
   const handleTabPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>, tab: Tab) => {
@@ -173,6 +245,8 @@ export function TabBar() {
       aria-label="标签栏"
       onKeyDown={handleKeyDown}
     >
+      {/* 可滚动标签区：有界滚轮横滚，隐藏滚动条 */}
+      <div className="tab-bar__scroll" ref={scrollRef}>
       {visibleTabs.map((tab) => (
         <div
           key={tab.id}
@@ -212,6 +286,42 @@ export function TabBar() {
           )}
         </div>
       ))}
+      </div>
+
+      {/* ▾ 溢出按钮：有隐藏标签才显示；点击展开隐藏标签列表 */}
+      {hasHidden && (
+        <div className="tab-bar__overflow" ref={overflowWrapRef}>
+          <button
+            type="button"
+            className={`tab-bar__overflow-btn${overflowOpen ? ' tab-bar__overflow-btn--active' : ''}`}
+            aria-label="溢出标签"
+            aria-expanded={overflowOpen}
+            onClick={() => setOverflowOpen((v) => !v)}
+          >
+            ▾
+          </button>
+          {overflowOpen && (
+            <div className="tab-bar__overflow-menu" role="menu" aria-label="隐藏标签">
+              {hiddenTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="menuitem"
+                  className="tab-bar__overflow-item"
+                  onClick={() => {
+                    setActiveTab(tab.id)
+                    setOverflowOpen(false)
+                  }}
+                >
+                  <span className="tab-bar__overflow-icon">{tab.title.split(' ')[0]}</span>
+                  <span className="tab-bar__overflow-title">{tab.title}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="tab-bar__separator" />
       {/* `+` 悬停选择栏：停靠打开底部功能栏标签 */}
       <div
