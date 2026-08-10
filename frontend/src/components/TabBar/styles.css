@@ -24,8 +24,10 @@
   display: none;
 }
 
-/* 行情标签（初始页）：固定在左侧、可滚动区之外；少量左呼吸替代原 GlobalBar 16px 外层 */
-.tab-bar__market {
+/* 行情标签（初始页）：固定在左侧、可滚动区之外；少量左呼吸替代原 GlobalBar 16px 外层
+   选择器双类（0,2,0）压过 .tab-bar__tab（0,1,0）的 padding/cursor，确保 8px 左呼吸与
+   cursor:default 实际生效（此前后者后声明覆盖，左留白退化为 12px、光标为 pointer） */
+.tab-bar__market.tab-bar__tab {
   flex-shrink: 0;
   padding-left: 8px;
   cursor: default;

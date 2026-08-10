@@ -462,6 +462,25 @@ describe('TabBar', () => {
       fireEvent.keyDown(screen.getByRole('tablist'), { key: 'Enter' })
       expect(setActiveTab).not.toHaveBeenCalled()
     })
+
+    it('活跃标签为行情标签时方向键/Home/End 不切换（行情标签不参与方向键切换）', () => {
+      const setActiveTab = vi.fn()
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
+          { id: 'tab-settings-2', type: 'settings', title: '⚙ 设置 2', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-market',
+        setActiveTab,
+      })
+      render(<TabBar />)
+      // 行情标签不在 scrollTabs 中，findIndex 返回 -1，方向键/Home/End 均 no-op
+      fireEvent.keyDown(screen.getByRole('tablist'), { key: 'ArrowRight' })
+      fireEvent.keyDown(screen.getByRole('tablist'), { key: 'Home' })
+      fireEvent.keyDown(screen.getByRole('tablist'), { key: 'End' })
+      expect(setActiveTab).not.toHaveBeenCalled()
+    })
   })
 
   // --- 无障碍 ---
