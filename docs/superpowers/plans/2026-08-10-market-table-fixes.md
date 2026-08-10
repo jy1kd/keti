@@ -14,6 +14,7 @@
 - 每个 Task 严格 TDD：写失败测试 → 跑出红 → 最小实现 → 跑绿 → 提交。
 - 前端测试命令：`cd frontend && npx vitest run <相对路径>`；后端：`cd server && python -m pytest tests/test_market_service.py -v`。
 - vtable API：`ListTable` 实例有 `clearSelected()`（`node_modules/@visactor/vtable/cjs/core/BaseTable.d.ts:298`）与 `selectRow(row)`；`widthMode` 合法值 `'standard' | 'adaptive' | 'autoWidth'`，`'adaptive'` 自适应容器宽度填满。
+- 强制重订阅触发：经 `/ws/system` 的 `connection_status {mdConnected:true}` 广播（后端初始登录 `ctp_startup.py:211` 与重连成功 `:364` 都会发），由 `useSystemWs` 消费 → `markForceResubscribe()`。**不改 `services/ws.ts` / `useMarketWs.ts`**——CTP 重连对浏览器 WS 透明，治愈时机选「后端 CTP 确认连上」而非「前端 WS 打开」。
 - 现有测试基准：前端 469 个单测、后端 108 个单测，全量需保持绿。
 - 设计依据：`docs/superpowers/specs/2026-08-10-market-table-fixes-design.md`。
 
@@ -33,11 +34,9 @@
 | `frontend/src/stores/contracts.ts` | 收藏只维护状态，不再直连订阅 API |
 | `frontend/src/modules/market/store.ts` | 新增 `forceResubscribeSeq` + `markForceResubscribe` |
 | `frontend/src/hooks/useSubscriptionManager.ts` | 消费强制重订阅信号 |
-| `frontend/src/services/ws.ts` | 新增 `onOpen`/`offOpen`（触发点） |
-| `frontend/src/hooks/useMarketWs.ts` | 注册 market onOpen → `markForceResubscribe` |
+| `frontend/src/hooks/useSystemWs.ts` | 消费 `connection_status {mdConnected:true}` → `markForceResubscribe` |
 | `server/services/market_service.py` | `subscribe()` 先验证后记录（回滚假成功） |
-| `server/services/ctp_bridge.py` | `_subscribe_with_tracking` 透传 CTP 返回值 |
-| `server/services/ctp_startup.py` | `_wire_bridge` 同步权威订阅列表到 ReconnectService |
+| `server/services/ctp_startup.py` | `_subscribe_with_tracking` 透传 CTP 返回值 + `_wire_bridge` 同步权威订阅列表 |
 
 ---
 
@@ -157,9 +156,9 @@ function readCssBlock(selector: string): string {
 }
 
 describe('OptionPanel 自动填充', () => {
-  it('.options-chain-table 弹性撑满可用高度', () => {
+  it('.options-chain-table 以 height:100% 撑满可用高度（父级 .options-content 为 block 且已有 flex:1）', () => {
     const block = readCssBlock('.options-chain-table')
-    expect(block).toMatch(/flex:\s*1/)
+    expect(block).toMatch(/width:\s*100%/)
     expect(block).toMatch(/height:\s*100%/)
   })
 
@@ -202,8 +201,6 @@ Expected: FAIL — widthMode 仍为 standard；`.panel-content` 仍含 `height:1
 .options-chain-table {
   width: 100%;
   height: 100%;
-  flex: 1;
-  min-height: 0;
 }
 ```
 
@@ -775,13 +772,12 @@ git commit -m "feat(pages): 空合约浮窗内嵌合约选择器（NoContractPic
 - Modify: `frontend/src/stores/contracts.ts`（收藏不再直连订阅/退订）
 - Modify: `frontend/src/modules/market/store.ts`（forceResubscribeSeq + markForceResubscribe）
 - Modify: `frontend/src/hooks/useSubscriptionManager.ts`（消费强制重订阅信号）
-- Modify: `frontend/src/services/ws.ts`（onOpen/offOpen）
-- Modify: `frontend/src/hooks/useMarketWs.ts`（market onOpen → markForceResubscribe）
-- Test: `frontend/src/stores/contracts.test.ts`、`frontend/src/modules/market/store.test.ts`、`frontend/src/hooks/useSubscriptionManager.test.ts`、`frontend/src/hooks/useMarketWs.test.ts`
+- Modify: `frontend/src/hooks/useSystemWs.ts`（mdConnected:true → markForceResubscribe）
+- Test: `frontend/src/stores/contracts.test.ts`、`frontend/src/modules/market/store.test.ts`、`frontend/src/hooks/useSubscriptionManager.test.ts`、`frontend/src/hooks/useSystemWs.test.ts`（新建）
 
 **Interfaces:**
-- Consumes: `useMarketStore` 新增 `forceResubscribeSeq: number`、`markForceResubscribe(): void`；`WSManager.onOpen(endpoint, cb)` / `offOpen(endpoint)`。
-- Produces: `addToFavorites`/`removeFromFavorites` 不再调用 `subscribeMarket`/`unsubscribeMarket`（订阅由管理器 diff 负责）。
+- Consumes: `useMarketStore` 新增 `forceResubscribeSeq: number`、`markForceResubscribe(): void`。
+- Produces: `addToFavorites`/`removeFromFavorites` 不再调用 `subscribeMarket`/`unsubscribeMarket`（订阅由管理器 diff 负责）；`useSystemWs` 收到 `connection_status {mdConnected:true}` 时调 `markForceResubscribe()`。
 
 - [ ] **Step 1: 写失败测试**
 
@@ -873,44 +869,59 @@ it('removeFromFavorites 从收藏移除（退订由订阅管理器负责）', as
 })
 ```
 
-`frontend/src/hooks/useMarketWs.test.ts`：WSManager mock 加 `onOpen`/`offOpen`，并新增测试：
+新建 `frontend/src/hooks/useSystemWs.test.ts`（参照 `useMarketWs.test.ts` 的 WSManager mock 模式；用真实 `useConnectionStore`/`useMarketStore`，仅 mock `@/services/ws`）：
 
-```ts
-const mockOnOpen = vi.fn()
-const mockOffOpen = vi.fn()
+```tsx
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { renderHook, act } from '@testing-library/react'
+import { useSystemWs } from './useSystemWs'
+import { useMarketStore } from '@/modules/market/store'
 
+const mockConnect = vi.fn()
 vi.mock('@/services/ws', () => ({
   WSManager: vi.fn().mockImplementation(() => ({
     connect: mockConnect,
-    disconnect: mockDisconnect,
-    disconnectAll: mockDisconnectAll,
+    disconnectAll: vi.fn(),
     isConnected: vi.fn().mockReturnValue(false),
     onClose: vi.fn(),
-    onOpen: mockOnOpen,
-    offOpen: mockOffOpen,
   })),
 }))
-```
 
-```ts
-it('WS 连接（onOpen）时触发强制重订阅（markForceResubscribe）', () => {
-  useMarketStore.setState({ forceResubscribeSeq: 0 })
-  renderHook(() => useMarketWs('ws://localhost:8000'))
+describe('useSystemWs 强制重订阅触发', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    useMarketStore.setState({ forceResubscribeSeq: 0 })
+    mockConnect.mockClear()
+  })
+  afterEach(() => { vi.useRealTimers() })
 
-  const onOpenCall = mockOnOpen.mock.calls.find(([ep]: [string]) => ep === 'market')
-  expect(onOpenCall).toBeDefined()
-  const cb = onOpenCall[1] as () => void
-  act(() => { cb() })
-  expect(useMarketStore.getState().forceResubscribeSeq).toBe(1)
+  it('收到 connection_status mdConnected:true 时触发强制重订阅', () => {
+    renderHook(() => useSystemWs('ws://localhost:8000'))
+    const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
+    expect(useMarketStore.getState().forceResubscribeSeq).toBe(0)
+    act(() => {
+      onMessage({ type: 'connection_status', data: { mdConnected: true } })
+    })
+    expect(useMarketStore.getState().forceResubscribeSeq).toBe(1)
+  })
+
+  it('mdConnected:false 不触发强制重订阅', () => {
+    renderHook(() => useSystemWs('ws://localhost:8000'))
+    const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
+    act(() => {
+      onMessage({ type: 'connection_status', data: { mdConnected: false } })
+    })
+    expect(useMarketStore.getState().forceResubscribeSeq).toBe(0)
+  })
 })
 ```
 
-（`beforeEach` 里 `mockOnOpen.mockClear()` / `mockOffOpen.mockClear()`。）
+（`useSystemWs` 用真实 `useConnectionStore`，其 `setMdPhase`/`setTdPhase` 在测试中无副作用断言。）
 
 - [ ] **Step 2: 跑测试验证红**
 
-Run: `cd frontend && npx vitest run src/modules/market/store.test.ts src/hooks/useSubscriptionManager.test.ts src/stores/contracts.test.ts src/hooks/useMarketWs.test.ts`
-Expected: FAIL — `forceResubscribeSeq` 属性不存在 / 收藏仍调用订阅 API / onOpen 未触发。
+Run: `cd frontend && npx vitest run src/modules/market/store.test.ts src/hooks/useSubscriptionManager.test.ts src/stores/contracts.test.ts src/hooks/useSystemWs.test.ts`
+Expected: FAIL — `forceResubscribeSeq` 属性不存在 / 收藏仍调用订阅 API / mdConnected:true 未触发 markForceResubscribe。
 
 - [ ] **Step 3: 最小实现**
 
@@ -937,6 +948,8 @@ markForceResubscribe: () => set((state) => ({ forceResubscribeSeq: state.forceRe
 - `addToFavorites`：删掉订阅 guard（`try { await subscribeMarket(...) } catch { return false }`），直接持久化 + set。
 - `removeFromFavorites`：删掉 `unsubscribeMarket` 调用块。
 
+> **UX 提示**：`addToFavorites` 去掉订阅 guard 后恒返回 `true`，MarketPanel 批量/右键收藏 toast 计数由「实收 N」变「乐观 N」（`MarketPanel.tsx:203,332`）——订阅失败静默由管理器 diff 重试，不再阻断收藏。
+
 `frontend/src/hooks/useSubscriptionManager.ts`：
 - 读信号：`const forceResubscribeSeq = useMarketStore((s) => s.forceResubscribeSeq)`。
 - 加 ref：`const lastHandledForceResubscribeRef = useRef(0)`。
@@ -962,53 +975,52 @@ useEffect(() => {
 }, [visibleInstrumentIDs, isDragging, runFullDiff, scrollEndSeq, forceResubscribeSeq])
 ```
 
-`frontend/src/services/ws.ts`：
-- 类内加：
+`frontend/src/hooks/useSystemWs.ts`：顶部加 import：
 
 ```ts
-private openCallbacks = new Map<WSEndpoint, () => void>()
+import { useMarketStore } from '@/modules/market/store'
+```
 
-/** 注册端点连接打开回调（connect 时 WebSocket onopen 触发） */
-onOpen(endpoint: WSEndpoint, cb: () => void): void {
-  this.openCallbacks.set(endpoint, cb)
-}
+在 `handleMessage` 的 `connection_status` 分支加治愈触发：
 
-offOpen(endpoint: WSEndpoint): void {
-  this.openCallbacks.delete(endpoint)
+```ts
+if (message.type === 'connection_status') {
+  const data = message.data as {
+    mdConnected?: boolean
+    tdConnected?: boolean
+    reason?: number
+  }
+
+  // MD 状态即时更新
+  if (data.mdConnected !== undefined) {
+    setMdPhase(data.mdConnected ? 'connected' : 'disconnected')
+  }
+
+  // 治愈兜底：CTP MD 确认连上（初始登录 ctp_startup.py:211 / 重连成功 :364 广播）时
+  // 强制重订阅——后端 CTP 重连对浏览器 WS 透明，此信号才是订阅失步的正确治愈时机
+  if (data.mdConnected === true) {
+    useMarketStore.getState().markForceResubscribe()
+  }
+
+  // TD 状态即时更新
+  if (data.tdConnected !== undefined) {
+    setTdPhase(data.tdConnected ? 'connected' : 'disconnected')
+  }
 }
 ```
 
-- `connect()` 内 `ws.onmessage` 前加：
-
-```ts
-ws.onopen = () => {
-  this.openCallbacks.get(endpoint)?.()
-}
-```
-
-- `disconnect()` 内加：`this.openCallbacks.delete(endpoint)`。
-
-`frontend/src/hooks/useMarketWs.ts`：在 useReconnect 调用后加：
-
-```ts
-// WS 连接打开 → 强制重订阅：治愈后端/CTP 订阅失步（幂等，单次批量 POST）
-useEffect(() => {
-  const handleOpen = () => useMarketStore.getState().markForceResubscribe()
-  ws.onOpen('market', handleOpen)
-  return () => { ws.offOpen?.('market') }
-}, [ws])
-```
+`services/ws.ts` / `useMarketWs.ts` **保持不动**（强制重订阅不经 WS 打开事件触发）。
 
 - [ ] **Step 4: 跑测试验证绿**
 
-Run: 同 Step 2 命令 + `cd frontend && npx vitest run src/services/ws.ts`（若存在 ws 测试）。
+Run: 同 Step 2 命令 + `cd frontend && npx vitest run src/hooks/useSystemWs.test.ts`。
 Expected: PASS。
 
 - [ ] **Step 5: 提交**
 
 ```bash
-git add frontend/src/stores/contracts.ts frontend/src/stores/contracts.test.ts frontend/src/modules/market/store.ts frontend/src/modules/market/store.test.ts frontend/src/hooks/useSubscriptionManager.ts frontend/src/hooks/useSubscriptionManager.test.ts frontend/src/services/ws.ts frontend/src/hooks/useMarketWs.ts frontend/src/hooks/useMarketWs.test.ts
-git commit -m "feat(subscription): 收藏统一由订阅管理器管理 + WS 重连强制重订阅兜底"
+git add frontend/src/stores/contracts.ts frontend/src/stores/contracts.test.ts frontend/src/modules/market/store.ts frontend/src/modules/market/store.test.ts frontend/src/hooks/useSubscriptionManager.ts frontend/src/hooks/useSubscriptionManager.test.ts frontend/src/hooks/useSystemWs.ts frontend/src/hooks/useSystemWs.test.ts
+git commit -m "feat(subscription): 收藏统一由订阅管理器管理 + mdConnected 广播触发强制重订阅兜底"
 ```
 
 ---
@@ -1017,9 +1029,8 @@ git commit -m "feat(subscription): 收藏统一由订阅管理器管理 + WS 重
 
 **Files:**
 - Modify: `server/services/market_service.py:216-270`（subscribe 先验证后记录）
-- Modify: `server/services/ctp_bridge.py:338-341`（_subscribe_with_tracking 透传返回值）
-- Modify: `server/services/ctp_startup.py:343-346`（_wire_bridge 同步权威订阅列表）
-- Test: `server/tests/test_market_service.py`
+- Modify: `server/services/ctp_startup.py:336-346`（`_subscribe_with_tracking` 透传返回值 + `_wire_bridge` 同步权威订阅列表）
+- Test: `server/tests/test_market_service.py`、`server/tests/test_ctp_startup.py`
 
 **Interfaces:**
 - Consumes: `subscribe_fn` 返回 `int`（0=成功，非 0=失败）或 `None`（兼容旧测试钩子，视为成功）。
@@ -1070,6 +1081,29 @@ def test_subscribe_ctp_fn_zero_records(self):
     result = svc.subscribe(["IF2608"])
     assert result["success"] is True
     assert svc.subscription_count == 1
+```
+
+`server/tests/test_ctp_startup.py` 末尾新增（复用文件内已有 `_FakeApp`/`_FakeMdApi`/`MagicMock`/`patch` import，`_FakeApp.state.market_service` 为 MagicMock）：
+
+```python
+class TestWireBridge:
+    """_wire_bridge — 订阅 hook 透传 CTP 返回值（先验证后记录的前提）。"""
+
+    @patch("services.ctp_startup.KLineService")
+    def test_subscribe_hook_returns_ctp_result(self, MockKLine):
+        from services.ctp_startup import _wire_bridge
+
+        app = _FakeApp()
+        app.state.market_service.get_subscriptions.return_value = ["IF2608"]
+        fake_api = _FakeMdApi(config=MagicMock())
+        fake_api.subscribe = lambda insts: -1  # CTP 拒绝
+
+        _wire_bridge(app, fake_api, MagicMock())
+
+        # set_ctp_hooks 收到的 subscribe_fn 即 _subscribe_with_tracking，
+        # 必须透传 CTP 返回值（-1），供 MarketService 先验证后记录
+        subscribe_fn = app.state.market_service.set_ctp_hooks.call_args.args[0]
+        assert subscribe_fn(["IF2608"]) == -1
 ```
 
 - [ ] **Step 2: 跑测试验证红**
@@ -1146,7 +1180,7 @@ def subscribe(self, instruments: List[str]) -> dict:
     return {"success": True, "added": len(new_instruments), "alreadySubscribed": already}
 ```
 
-`server/services/ctp_bridge.py` `_subscribe_with_tracking`（338-341 行）：
+`server/services/ctp_startup.py` `_subscribe_with_tracking`（336-341 行）：
 
 ```python
 def _subscribe_with_tracking(instruments: List[str]):
@@ -1169,7 +1203,7 @@ reconnect_svc.update_subscriptions(app.state.market_service.get_subscriptions())
 
 - [ ] **Step 4: 跑测试验证绿**
 
-Run: `cd server && python -m pytest tests/test_market_service.py -v`
+Run: `cd server && python -m pytest tests/test_market_service.py tests/test_ctp_startup.py -v`
 Expected: PASS（含更新/新增用例）。
 
 - [ ] **Step 5: 全量回归**
@@ -1180,7 +1214,7 @@ Expected: 108 个单测全绿。
 - [ ] **Step 6: 提交**
 
 ```bash
-git add server/services/market_service.py server/services/ctp_bridge.py server/services/ctp_startup.py server/tests/test_market_service.py
+git add server/services/market_service.py server/services/ctp_startup.py server/tests/test_market_service.py server/tests/test_ctp_startup.py
 git commit -m "fix(market): 订阅先验证后记录 + 重连权威订阅列表（消除假成功）"
 ```
 

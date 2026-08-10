@@ -37,7 +37,7 @@
 ### 2.3 问题 3 — 自选偶尔不推数据（三层脱节）
 
 1. **前端直连退订绕过订阅管理器**：`stores/contracts.ts:103-118` `removeFromFavorites` 直接 `unsubscribeMarket([X])`，但订阅管理器 `useSubscriptionManager` 的 `subscribedRef` 仍认为 X 已订阅。X 若仍在视野内，`should` 含 X 且 `subscribedRef` 含 X → 永不重订，而后端/CTP 已退订 → 该行永久 `--`。重新收藏时 `addToFavorites` 走全新 `subscribeMarket([X])` → 才恢复。
-2. **后端订阅"假成功"**：`market_service.py:249-251` **先把合约加入 `_subscriptions` 再调 CTP**；`ctp_bridge.py:338-341` 的 `_subscribe_with_tracking` 忽略 `md_api.subscribe` 的 int 返回值。CTP 一旦拒绝（返回非 0），本地已记录、接口仍 `success:true` → 前端标记已订阅、永不重试；下一轮 diff 重试时后端返回 `alreadySubscribed:true` 再次"成功"，但 CTP 实际未订 → 无数据。
+2. **后端订阅"假成功"**：`market_service.py:249-251` **先把合约加入 `_subscriptions` 再调 CTP**；`ctp_startup.py:336-341` 的 `_subscribe_with_tracking` 忽略 `md_api.subscribe` 的 int 返回值。CTP 一旦拒绝（返回非 0），本地已记录、接口仍 `success:true` → 前端标记已订阅、永不重试；下一轮 diff 重试时后端返回 `alreadySubscribed:true` 再次"成功"，但 CTP 实际未订 → 无数据。
 3. **重连恢复用过期快照**：`reconnect.py:73-94` 重连后按 `reconnect_svc._subscriptions`（仅订阅时同步、退订不同步）恢复，而非权威的 `market_service._subscriptions`；且前端 WS 重连（`useReconnect.ts` / `services/ws.ts`）不触发任何重新订阅动作，无治愈兜底。
 
 ### 2.4 问题 4 — 右键不选中合约
@@ -61,11 +61,11 @@
 
 **决策 1 — 选中态唯一数据源 + 金色活动锚点。** `selectedContracts`（蓝色选区）是选中态的唯一数据源；vtable 原生 `selectRow` 金色高亮**保留**，作为选区内的「活动行」锚点（类似 Excel 活动单元格）。关键约束：**金色只在 `selectedInstrument ∈ selectedContracts` 时渲染**（`selectRow` effect 加守卫）——单选时金蓝重合，多选时金色落选区锚点行，锚点被移出选区则金色消失。高亮永远唯一，绝不出现第二个独立区域。`selectedInstrument` 同时承担「当前合约」业务概念（报单/K线/收藏按钮）。
 
-**决策 2 — 订阅生命周期单一负责人。** `addToFavorites` / `removeFromFavorites` 只维护 favorites 状态，订阅/退订统一由 `useSubscriptionManager` 对 `should`（可见 + 自选 + 锁定）做 diff，消除 `subscribedRef` 与后端/CTP 脱节。
+**决策 2 — 订阅生命周期单一负责人。** `addToFavorites` / `removeFromFavorites` 只维护 favorites 状态，订阅/退订统一由 `useSubscriptionManager` 对 `should`（可见 + 自选 + 锁定）做 diff，消除 `subscribedRef` 与后端/CTP 脱节。**存活前提**：管理器只挂在 `MarketPanel`（`MarketPanel.tsx:36`），成立依赖 market 为固定标签不可关闭（`tabs.ts:37`）+ TabContent 以 `display:none` 保留所有标签挂载（`TabContent/index.tsx:118-119`）；若未来 market 标签可关/惰性卸载，此决策需重新评估。**例外域**：期权链订阅 `OptionPanel.tsx:131` 直连 `subscribeMarket`，属独立订阅域，不在本次统一范围。
 
 **决策 3 — 后端先验证后记录。** `market_service.subscribe()` 先调 CTP、成功才写入 `_subscriptions`；CTP 返回非 0 → 不记录、返回 `success:false`，让前端下轮 diff 重试（消除"假成功"永久无数据）。
 
-**决策 4 — 重连双保险。** 后端重连恢复用权威 `market_service._subscriptions` 并对账补订；前端 WS（重）连接成功后触发一次「强制重订阅」（清空 `subscribedRef` 后对全部 `should` 重发一次批量订阅），WS 层兜底治愈任何失步。
+**决策 4 — 重连双保险。** 后端重连恢复用权威 `market_service._subscriptions` 并对账补订；前端收到 `/ws/system` 的 `connection_status {mdConnected:true}`（后端初始登录 `ctp_startup.py:211` 与重连成功 `:364` 都会广播）时触发一次「强制重订阅」（清空 `subscribedRef` 后对全部 `should` 重发一次批量订阅）。治愈时机选「后端 CTP 确认连上」而非「前端 WS 打开」：CTP 重连对浏览器 WS 透明（WS 在浏览器↔FastAPI 之间，不随 CTP 断），故不依赖 ws.ts 增加 onopen 成功回调——`services/ws.ts` 保持不动。
 
 **决策 5 — 空合约浮窗可交互。** 报单/K线浮窗在无 `instrumentID` 时渲染窗内 `ContractSearch`，选中后走既有 `handleSwitch` → `updateTab` 更新 tab props/title → 正文渲染，`useTabContractLocks` 自动锁定订阅。
 
@@ -78,7 +78,7 @@
 | 文件 | 改动 |
 |------|------|
 | `frontend/src/modules/options/OptionPanel.tsx` | 删除 `chainHeight()` 及内联 `style={{ height: chainHeight(...) }}` |
-| `frontend/src/modules/options/styles.css` | `.options-chain-table` 由 `width:100%` 改为 `flex:1; min-height:0; height:100%; width:100%`；`.options-panel` 由 `height:100%` 改 `flex:1 1 0; min-height:0` |
+| `frontend/src/modules/options/styles.css` | `.options-chain-table` 由 `width:100%` 改为 `width:100%; height:100%`——父级 `.options-content` 为 block 且自身 `flex:1` 已撑满可用高度，`height:100%` 即可填充（`flex:1` 在非 flex 容器内不生效故不写）；`.options-panel` 由 `height:100%` 改 `flex:1 1 0; min-height:0` |
 | `frontend/src/modules/market/styles.css` | `.panel-content` 删 `height:100%` 只留 `flex:1; min-height:0; overflow:hidden`；确认 `.market-panel` 用 `flex:1; min-height:0` 兜底（现为 `height:100%`） |
 | `frontend/src/modules/market/MarketTable.tsx` | `widthMode` 由 `'standard'` 改 `'adaptive'`（列宽按容器自适应、填满容器）；若 adaptive 挤压价格列观感不佳，回退「固定列宽 + 末尾弹性列」方案 |
 
@@ -105,18 +105,18 @@ const table = new ListTable(containerRef.current, {
 
 | 文件 | 改动 |
 |------|------|
-| `frontend/src/stores/contracts.ts` | `addToFavorites` / `removeFromFavorites` / `loadFavoriteContracts` 去掉直连 `subscribeMarket` / `unsubscribeMarket`，只维护 favorites 状态（`addToFavorites` 移除"订阅失败则不收藏"的 guard，订阅失败由管理器 diff 重试兜底） |
+| `frontend/src/stores/contracts.ts` | `addToFavorites` / `removeFromFavorites` / `loadFavoriteContracts` 去掉直连 `subscribeMarket` / `unsubscribeMarket`，只维护 favorites 状态（`addToFavorites` 移除"订阅失败则不收藏"的 guard，订阅失败由管理器 diff 重试兜底）**；注意返回值语义变化：`addToFavorites` 恒返回 `true`，MarketPanel 批量/右键收藏 toast 计数由「实收 N」变「乐观 N」（`MarketPanel.tsx:203,332`）** |
 | `frontend/src/modules/market/store.ts` | 新增 `forceResubscribeSeq: number` + `markForceResubscribe()`（monotonic 信号，语义同 `scrollEndSeq`） |
 | `frontend/src/hooks/useSubscriptionManager.ts` | 消费该序号：递增时清空 `subscribedRef` 并立即 `runFullDiff()`（对全部 `should` 重发一次批量订阅） |
-| `frontend/src/hooks/useReconnect.ts` | 连接成功回调触发 `markForceResubscribe()`（初始连接 + 断线重连都触发；`subscribeMarket` 是批量 POST，幂等且成本低） |
+| `frontend/src/hooks/useSystemWs.ts` | 收到 `connection_status {mdConnected:true}`（后端初始登录/重连成功广播）时触发 `markForceResubscribe()`；`subscribeMarket` 是批量 POST，幂等且成本低 |
 
 **后端：**
 
 | 文件 | 改动 |
 |------|------|
-| `server/services/ctp_bridge.py` | `_subscribe_with_tracking` **透传 `md_api.subscribe` 的 int 返回值**，不再吞掉 CTP 拒绝 |
+| `server/services/ctp_startup.py` | `_subscribe_with_tracking`（336-341 行）**透传 `md_api.subscribe` 的 int 返回值**，不再吞掉 CTP 拒绝 |
 | `server/services/market_service.py` | `subscribe()` 改为：**先调 CTP，成功才写入 `_subscriptions`**；CTP 返回非 0 → 不记录、返回 `success:false`（含 `message` 供前端日志） |
-| `server/services/ctp_startup.py` | 重连恢复订阅改用**权威 `market_service._subscriptions`**（而非 `reconnect_svc` 过期快照）；重连成功后对 `_subscriptions` ↔ `md_api.subscribed_instruments` 对账，缺失即补订 |
+| `server/services/ctp_startup.py` | `_wire_bridge` 重连恢复订阅改用**权威 `market_service._subscriptions`**（同步 `reconnect_svc.update_subscriptions(...)`，而非退订后残留的过期快照）；重连成功后对 `_subscriptions` ↔ `md_api.subscribed_instruments` 对账，缺失即补订 |
 
 ### 4.4 问题 4 — 右键选中
 
@@ -155,8 +155,8 @@ table.on('contextmenu_cell', (args: any) => {
 
 ### 4.6 问题 6 — 空合约浮窗可交互
 
-- `frontend/src/pages/OrderPage.tsx:55-64`：`!instrumentID` 分支（含 floating 模式）由占位文案改为窗内 `ContractSearch`，选中后调既有 `handleSwitch`；
-- `frontend/src/pages/KLinePage.tsx:94-98`：`!instrumentID` 分支同样改为窗内 `ContractSearch`，选中后调既有 `handleSwitch`。
+- `frontend/src/pages/OrderPage.tsx`：两个 `!instrumentID` 分支——**浮窗模式 55-64 与普通标签模式 86-90**——都由占位文案改为窗内合约选择器 `NoContractPicker`，选中后调既有 `handleSwitch`；
+- `frontend/src/pages/KLinePage.tsx:94-98`：`!instrumentID` 分支同样改为窗内 `NoContractPicker`，选中后调既有 `handleSwitch`。
 
 复用现有 `handleSwitch` → `updateTab` 链路，`useTabContractLocks` 在 props 更新后自动锁定订阅。
 
@@ -167,7 +167,7 @@ table.on('contextmenu_cell', (args: any) => {
 | 文件 | 原因 |
 |------|------|
 | `TQuoteTable.tsx` 表格逻辑 | 冻结列/选中态仅行情表涉及；期权表仅外层高度填充 |
-| `services/ws.ts` | WSManager 只补触发点（useReconnect 消费），不重构连接管理 |
+| `services/ws.ts` | 保持不动——强制重订阅经 `/ws/system` 的 `connection_status {mdConnected:true}` 广播触发（`useSystemWs` 消费），WSManager 的 `onopen` 无需改造成成功回调 |
 | `reconnect.py` 对外接口 | 仅 `ctp_startup.py` 改调用来源，ReconnectService 结构不动 |
 
 ## 6. 测试影响
@@ -178,8 +178,9 @@ table.on('contextmenu_cell', (args: any) => {
 | `useSubscriptionManager.test.ts` | 强制重订阅（`forceResubscribeSeq`）分支 |
 | `contracts` store 相关测试 | 去掉直连订阅后 `addToFavorites`/`removeFromFavorites` 行为 |
 | `OrderPage` / `KLinePage` 测试 | 空合约选择器断言 |
-| 后端 `test_market_service.py` | `subscribe()` CTP 失败回滚（`success:false`、不写入 `_subscriptions`） |
-| `useReconnect.test.ts` | 连接成功触发 `markForceResubscribe` |
+| 后端 `test_market_service.py` | `subscribe()` CTP 失败回滚（`success:false`、不写入 `_subscriptions`）、CTP 返回非 0 不记录、返回 0 记录 |
+| 后端 `test_ctp_startup.py` | 新增 `_wire_bridge` 订阅 hook（`_subscribe_with_tracking`）透传 CTP 返回值用例 |
+| `useSystemWs.test.ts`（新建） | 收到 `connection_status {mdConnected:true}` 触发 `markForceResubscribe` |
 
 ## 7. 验证
 
