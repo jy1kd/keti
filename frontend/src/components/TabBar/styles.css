@@ -6,11 +6,11 @@
   height: 36px;
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: thin;
+  scrollbar-width: none; /* 隐藏横向滚动条，保留可滚动性 */
 }
 
 .tab-bar::-webkit-scrollbar {
-  height: 3px;
+  display: none;
 }
 
 .tab-bar__tab {
