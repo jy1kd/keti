@@ -63,7 +63,7 @@ python -m pytest tests/test_config.py -v
 # 启动后端服务
 cd server && python start.py              # 自动选择 CTP 地址
 python start.py --reload     # 开发模式（代码变更自动重启）
-python start.py --port 8001  # 指定端口
+python start.py --port 8000  # 指定端口（默认即 8000）
 
 # CTP 连接验证（需交易时段 09:00-15:00 / 21:00-02:30）
 python server/main.py

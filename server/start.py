@@ -10,7 +10,7 @@ Address defaults are hardcoded; .env can override individual keys via:
 
 Usage:
   cd server && python start.py
-  cd server && python start.py --port 8001
+  cd server && python start.py --port 8000
   cd server && python start.py --reload
 """
 

@@ -196,7 +196,7 @@ npm install
 cd server
 python start.py              # 自动选择 CTP 地址（交易时段/7×24）
 python start.py --reload     # 开发模式（代码变更自动重启）
-python start.py --port 8001  # 指定端口
+python start.py --port 8000  # 指定端口（默认即 8000）
 
 # 启动前端（在 frontend/ 目录下，另开一个终端）
 cd frontend
