@@ -259,6 +259,13 @@ export function TabBar() {
     [],
   )
 
+  // 点完菜单项后统一关闭：右键菜单 + ▾ 下拉一起消失
+  // （右键 ▾ 隐藏标签时下拉保持展开，选中某个功能后二者同时关闭）
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null)
+    setOverflowOpen(false)
+  }, [])
+
   return (
     <div
       className="tab-bar"
@@ -374,9 +381,9 @@ export function TabBar() {
                   className={`tab-bar__overflow-item${tab.id === activeTabId ? ' tab-bar__overflow-item--active' : ''}`}
                   onClick={() => handleOverflowItemClick(tab)}
                   onContextMenu={(e) => {
-                    // 隐藏标签在滚动区外不可直接右键，这里复用在标签右键菜单，提供关闭/固定/窗口化等操作
+                    // 隐藏标签在滚动区外不可直接右键，这里复用在标签右键菜单，提供关闭/固定/窗口化等操作。
+                    // 不在此处关闭 ▾ 下拉：保持展开，等点完菜单项（mousedown 落在 wrap 外）再与右键菜单统一消失。
                     e.preventDefault()
-                    setOverflowOpen(false)
                     handleContextMenu(e, tab)
                   }}
                 >
@@ -441,7 +448,7 @@ export function TabBar() {
           <button
             type="button"
             className="tab-bar__context-item"
-            onClick={() => { closeTab(contextMenu.tabId); setContextMenu(null) }}
+            onClick={() => { closeTab(contextMenu.tabId); closeContextMenu() }}
           >
             <span className="tab-bar__context-icon">✕</span>
             <span>关闭</span>
@@ -449,7 +456,7 @@ export function TabBar() {
           <button
             type="button"
             className="tab-bar__context-item"
-            onClick={() => { closeOthers(contextMenu.tabId); setContextMenu(null) }}
+            onClick={() => { closeOthers(contextMenu.tabId); closeContextMenu() }}
           >
             <span className="tab-bar__context-icon">⊞</span>
             <span>关闭其他</span>
@@ -457,7 +464,7 @@ export function TabBar() {
           <button
             type="button"
             className="tab-bar__context-item"
-            onClick={() => { closeAll(); setContextMenu(null) }}
+            onClick={() => { closeAll(); closeContextMenu() }}
           >
             <span className="tab-bar__context-icon">⧉</span>
             <span>关闭所有</span>
@@ -465,7 +472,7 @@ export function TabBar() {
           <button
             type="button"
             className="tab-bar__context-item"
-            onClick={() => { togglePin(contextMenu.tabId); setContextMenu(null) }}
+            onClick={() => { togglePin(contextMenu.tabId); closeContextMenu() }}
           >
             {/* icon 恒定 📌，label 恒为文字：与其他菜单项 icon+label 结构一致，避免错位 */}
             <span className="tab-bar__context-icon">📌</span>
@@ -474,7 +481,7 @@ export function TabBar() {
           <button
             type="button"
             className="tab-bar__context-item"
-            onClick={() => { detachTabAt(contextMenu.tabId, { x: contextMenu.x, y: contextMenu.y }); setContextMenu(null) }}
+            onClick={() => { detachTabAt(contextMenu.tabId, { x: contextMenu.x, y: contextMenu.y }); closeContextMenu() }}
           >
             <span className="tab-bar__context-icon">🗗</span>
             <span>窗口化</span>

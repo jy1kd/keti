@@ -671,12 +671,16 @@ describe('TabBar', () => {
       act(() => { roCallback?.([], null as unknown as ResizeObserver) })
       fireEvent.click(screen.getByLabelText('溢出标签'))
       const menu = screen.getByRole('menu', { name: '隐藏标签' })
-      // 右键隐藏标签 → 打开右键菜单
+      // 右键隐藏标签 → 打开右键菜单，且 ▾ 下拉保持展开（等点完菜单项再统一消失）
       fireEvent.contextMenu(within(menu).getByText('标签 7'))
       expect(screen.getByText('固定')).toBeInTheDocument()
       expect(screen.getByText('窗口化')).toBeInTheDocument()
+      expect(screen.getByRole('menu', { name: '隐藏标签' })).toBeInTheDocument()
       fireEvent.click(screen.getByText('固定'))
       expect(togglePin).toHaveBeenCalledWith('tab-7')
+      // 点完菜单项后 ▾ 下拉与右键菜单统一消失
+      expect(screen.queryByRole('menu', { name: '隐藏标签' })).not.toBeInTheDocument()
+      expect(screen.queryByText('固定')).not.toBeInTheDocument()
     })
 
     it('▾ 菜单项不重复显示图标（title 已含 emoji 前缀）', () => {
