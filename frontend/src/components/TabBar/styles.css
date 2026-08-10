@@ -236,6 +236,13 @@
   background: var(--bg-hover, #3a3a3a);
 }
 
+.tab-bar__context-icon {
+  font-size: 13px;
+  width: 18px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
 /* `+` 新增标签选择栏（悬停弹出，锚定 + 正下方、右对齐向左展开） */
 .tab-bar__add-wrap {
   position: relative;

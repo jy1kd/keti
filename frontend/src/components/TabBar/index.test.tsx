@@ -3,7 +3,7 @@ import { render, screen, fireEvent, act, within } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { TabBar } from './index'
-import { useTabStore } from '@/stores/tabs'
+import { useTabStore, type Tab } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import { useMarketStore } from '@/modules/market/store'
 
@@ -699,6 +699,89 @@ describe('TabBar', () => {
       const scrollTabs = Array.from(container.querySelectorAll('.tab-bar__scroll [role="tab"]'))
       const order = scrollTabs.map((el) => el.getAttribute('data-tab-id'))
       expect(order).toEqual(['tab-b', 'tab-a']) // pinned 在前
+    })
+  })
+
+  // --- 右键菜单 ---
+
+  describe('右键菜单', () => {
+    const ctxTabs: Tab[] = [
+      { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+      { id: 'tab-kline', type: 'kline', title: '📈 K线', props: {}, closable: true },
+      { id: 'tab-order', type: 'order', title: '📝 报单', props: {}, closable: true, pinned: true },
+    ]
+
+    function renderWithCtx(tabId: string) {
+      useTabStore.setState({ tabs: ctxTabs, activeTabId: tabId })
+      render(<TabBar />)
+      fireEvent.contextMenu(screen.getByText(ctxTabs.find((t) => t.id === tabId)!.title))
+    }
+
+    it('右键非固定标签显示 5 项菜单', () => {
+      renderWithCtx('tab-kline')
+      expect(screen.getByText('关闭')).toBeInTheDocument()
+      expect(screen.getByText('关闭其他')).toBeInTheDocument()
+      expect(screen.getByText('关闭所有')).toBeInTheDocument()
+      expect(screen.getByText('📌 固定')).toBeInTheDocument()
+      expect(screen.getByText('窗口化')).toBeInTheDocument()
+    })
+
+    it('右键固定标签显示「取消固定」', () => {
+      renderWithCtx('tab-order')
+      fireEvent.contextMenu(screen.getByText('📝 报单'))
+      expect(screen.getByText('取消固定')).toBeInTheDocument()
+    })
+
+    it('点击「关闭」关闭该标签', () => {
+      const closeTab = vi.fn()
+      useTabStore.setState({ tabs: ctxTabs, activeTabId: 'tab-kline', closeTab })
+      render(<TabBar />)
+      fireEvent.contextMenu(screen.getByText('📈 K线'))
+      fireEvent.click(screen.getByText('关闭'))
+      expect(closeTab).toHaveBeenCalledWith('tab-kline')
+    })
+
+    it('点击「关闭其他」调用 closeOthers(tabId)', () => {
+      const closeOthers = vi.fn()
+      useTabStore.setState({ tabs: ctxTabs, activeTabId: 'tab-kline', closeOthers })
+      render(<TabBar />)
+      fireEvent.contextMenu(screen.getByText('📈 K线'))
+      fireEvent.click(screen.getByText('关闭其他'))
+      expect(closeOthers).toHaveBeenCalledWith('tab-kline')
+    })
+
+    it('点击「关闭所有」调用 closeAll', () => {
+      const closeAll = vi.fn()
+      useTabStore.setState({ tabs: ctxTabs, activeTabId: 'tab-kline', closeAll })
+      render(<TabBar />)
+      fireEvent.contextMenu(screen.getByText('📈 K线'))
+      fireEvent.click(screen.getByText('关闭所有'))
+      expect(closeAll).toHaveBeenCalled()
+    })
+
+    it('点击「固定」调用 togglePin(tabId)', () => {
+      const togglePin = vi.fn()
+      useTabStore.setState({ tabs: ctxTabs, activeTabId: 'tab-kline', togglePin })
+      render(<TabBar />)
+      fireEvent.contextMenu(screen.getByText('📈 K线'))
+      fireEvent.click(screen.getByText('📌 固定'))
+      expect(togglePin).toHaveBeenCalledWith('tab-kline')
+    })
+
+    it('点击「窗口化」调用 detachTabAt(tabId, {x,y})', () => {
+      useTabStore.setState({ tabs: ctxTabs, activeTabId: 'tab-kline' })
+      render(<TabBar />)
+      fireEvent.contextMenu(screen.getByText('📈 K线'), { clientX: 120, clientY: 80 })
+      fireEvent.click(screen.getByText('窗口化'))
+      expect(detachMock.detachTabAt).toHaveBeenCalledWith('tab-kline', { x: 120, y: 80 })
+    })
+
+    it('行情标签右键不出现菜单', () => {
+      useTabStore.setState({ tabs: ctxTabs, activeTabId: 'tab-market' })
+      render(<TabBar />)
+      fireEvent.contextMenu(screen.getByText('📊 行情'))
+      expect(screen.queryByText('关闭')).toBeNull()
+      expect(screen.queryByText('窗口化')).toBeNull()
     })
   })
 })

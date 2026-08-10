@@ -3,7 +3,6 @@ import { useTabStore, type Tab } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import { useMarketStore } from '@/modules/market/store'
 import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
-import { isElectron } from '@/services/electron'
 import { computeTabOverflow } from './overflow'
 import './styles.css'
 
@@ -11,6 +10,7 @@ interface ContextMenuState {
   tabId: string
   tabType: string
   tabTitle: string
+  pinned: boolean
   x: number
   y: number
 }
@@ -29,13 +29,16 @@ const ADD_TAB_ITEMS = [
  * 显示所有打开的标签页，支持切换、关闭、新增。
  * `+` 悬停弹出选择栏，停靠打开底部功能栏标签（报单/K线/查询/设置）。
  * 键盘导航：左/右箭头切换标签，Home/End 跳转首尾。
- * 右键菜单：在新窗口打开（仅 Electron 环境）
+ * 右键菜单：关闭/关闭其他/关闭所有/固定(取消固定)/窗口化
  */
 export function TabBar() {
   const tabs = useTabStore((s) => s.tabs)
   const activeTabId = useTabStore((s) => s.activeTabId)
   const setActiveTab = useTabStore((s) => s.setActiveTab)
   const closeTab = useTabStore((s) => s.closeTab)
+  const closeOthers = useTabStore((s) => s.closeOthers)
+  const closeAll = useTabStore((s) => s.closeAll)
+  const togglePin = useTabStore((s) => s.togglePin)
   const windows = useFloatingWindowStore((s) => s.windows)
   const suppressClickRef = useRef(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
@@ -250,34 +253,11 @@ export function TabBar() {
   const handleContextMenu = useCallback(
     (e: React.MouseEvent, tab: { id: string; type: string; title: string }) => {
       e.preventDefault()
-      setContextMenu({
-        tabId: tab.id,
-        tabType: tab.type,
-        tabTitle: tab.title,
-        x: e.clientX,
-        y: e.clientY,
-      })
+      const pinned = !!useTabStore.getState().tabs.find((t) => t.id === tab.id)?.pinned
+      setContextMenu({ tabId: tab.id, tabType: tab.type, tabTitle: tab.title, pinned, x: e.clientX, y: e.clientY })
     },
     [],
   )
-
-  // 在新窗口打开标签
-  const handleOpenInNewWindow = useCallback(async () => {
-    if (!contextMenu) return
-    const { tabType, tabId, tabTitle } = contextMenu
-
-    if (isElectron()) {
-      // Electron 环境：调用 IPC 打开新窗口
-      const { openTabWindow } = await import('@/services/electron')
-      await openTabWindow(tabType, tabId, tabTitle)
-    } else {
-      // Web 环境：在新标签页打开
-      const url = `${window.location.origin}${window.location.pathname}#/tab/${tabType}/${tabId}`
-      window.open(url, '_blank')
-    }
-
-    setContextMenu(null)
-  }, [contextMenu])
 
   return (
     <div
@@ -442,9 +422,42 @@ export function TabBar() {
           <button
             type="button"
             className="tab-bar__context-item"
-            onClick={handleOpenInNewWindow}
+            onClick={() => { closeTab(contextMenu.tabId); setContextMenu(null) }}
           >
-            🪟 在新窗口打开
+            <span className="tab-bar__context-icon">✕</span>
+            <span>关闭</span>
+          </button>
+          <button
+            type="button"
+            className="tab-bar__context-item"
+            onClick={() => { closeOthers(contextMenu.tabId); setContextMenu(null) }}
+          >
+            <span className="tab-bar__context-icon">⊞</span>
+            <span>关闭其他</span>
+          </button>
+          <button
+            type="button"
+            className="tab-bar__context-item"
+            onClick={() => { closeAll(); setContextMenu(null) }}
+          >
+            <span className="tab-bar__context-icon">⧉</span>
+            <span>关闭所有</span>
+          </button>
+          <button
+            type="button"
+            className="tab-bar__context-item"
+            onClick={() => { togglePin(contextMenu.tabId); setContextMenu(null) }}
+          >
+            <span className="tab-bar__context-icon">{contextMenu.pinned ? '📌' : ''}</span>
+            <span>{contextMenu.pinned ? '取消固定' : '📌 固定'}</span>
+          </button>
+          <button
+            type="button"
+            className="tab-bar__context-item"
+            onClick={() => { detachTabAt(contextMenu.tabId, { x: contextMenu.x, y: contextMenu.y }); setContextMenu(null) }}
+          >
+            <span className="tab-bar__context-icon">🗗</span>
+            <span>窗口化</span>
           </button>
         </div>
       )}
