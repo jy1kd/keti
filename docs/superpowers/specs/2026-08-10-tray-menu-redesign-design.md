@@ -178,7 +178,7 @@ export function buildMenuFromDef(
 
 | 文件 | 改动 |
 |---|---|
-| `__tests__/menuTemplate.test.ts`（新建） | 断言 `getAppMenuDef()` 四组结构、各子菜单 label 顺序、分隔符位置、action 类型与参数（纯数据，无 electron mock） |
+| `__tests__/menuTemplate.test.ts`（新建） | 断言 `getAppMenuDef()` 四组结构、各子菜单 label 顺序、分隔符位置、action 类型与参数（`getAppMenuDef` 为纯数据；测试仍需 mock electron，因 `menuTemplate` 经 `menuActions` 间接依赖 `electron.app`） |
 | `__tests__/menuActions.test.ts`（新建） | 逐项断言 `resolveAction` 的 IPC 发送 / `openTabWindow` / `app.quit()`（mock electron） |
 | `__tests__/trayManager.test.ts` | 重构为断言新树：一级顺序（行情/功能/设置/性能监控 四组 → 分隔符 → 退出）、子菜单完整镜像、逐项点击行为、退出调 `app.quit()` |
 | `__tests__/menuManager.test.ts` | 断言顶部菜单 = `getAppMenuDef()` 渲染 + 末尾 `viewMenu`；原有 label/点击用例保留 |
