@@ -35,7 +35,8 @@ export class TrayManager {
   initialize(mainWindow: BrowserWindow, windowManager: WindowManager): void {
     this.mainWindow = mainWindow;
 
-    // 退出标志：app.quit() 时放行窗口关闭；否则 close 事件会被拦截，应用无法退出
+    // 退出标志：app.quit() 时放行窗口关闭；否则 close 事件会被拦截，应用无法退出。
+    // 刻意不重置：本应用无「取消退出」路径（无其他 close/before-quit 拦截方），不存在需复位该标志的场景。
     app.on('before-quit', () => {
       this.isQuitting = true;
     });

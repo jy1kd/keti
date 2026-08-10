@@ -65,7 +65,7 @@ Tray 托盘菜单
 ### 菜单定义（数据）
 
 ```ts
-// menuTemplate.ts —— 纯结构，无 electron 依赖，可独立单测
+// menuTemplate.ts —— getAppMenuDef 为纯数据；menuTemplate 经 menuActions 间接依赖 electron，测试仍需 mock
 export type MarketView = 'all' | 'options' | 'favorites';
 export type FloatingTab = 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor';
 export type MenuAction =
@@ -81,6 +81,10 @@ export interface MenuItemDef {
   type?: 'normal' | 'separator';
   action?: MenuAction;
   submenu?: MenuItemDef[];
+}
+
+export interface BuildOptions {
+  omitIds?: string[];         // 按 id 递归剔除的条目（托盘把「功能」内嵌的退出移到底部）
 }
 
 // 四组原生菜单定义 —— 唯一的菜单真源
@@ -124,6 +128,7 @@ export function resolveAction(action: MenuAction, ctx: MenuContext): void {
 export function buildMenuFromDef(
   def: MenuItemDef[],
   ctx: MenuContext,
+  options?: BuildOptions,
 ): MenuItemConstructorOptions[]
 ```
 
@@ -147,10 +152,11 @@ export function buildMenuFromDef(
   ```ts
   const def: MenuItemDef[] = [
     ...getAppMenuDef(),          // 行情/功能/设置/性能监控（全部子菜单）
-    { type: 'separator' },
-    { id: 'quit', label: '退出', action: { type: 'quit' } },
+    { id: 'tray-sep', type: 'separator' },
+    { id: 'tray-quit', label: '退出', action: { type: 'quit' } },
   ];
-  this.tray.setContextMenu(Menu.buildFromTemplate(buildMenuFromDef(def, ctx)));
+  // omitIds 剔除「功能」内嵌的退出（id 'app-quit'），避免与一级底部退出重复
+  this.tray.setContextMenu(Menu.buildFromTemplate(buildMenuFromDef(def, ctx, { omitIds: ['app-quit'] })));
   ```
 
 - 保留：托盘图标点击切换显示/隐藏、关闭主窗口最小化到托盘、`showNotification`、tooltip `'SimNow 交易终端'`。
