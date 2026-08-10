@@ -336,13 +336,14 @@ describe('TabBar', () => {
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
           { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
+          { id: 'tab-settings-2', type: 'settings', title: '⚙ 设置 2', props: {}, closable: true },
         ],
-        activeTabId: 'tab-market',
+        activeTabId: 'tab-settings',
         setActiveTab,
       })
       render(<TabBar />)
       fireEvent.keyDown(screen.getByRole('tablist'), { key: 'ArrowRight' })
-      expect(setActiveTab).toHaveBeenCalledWith('tab-settings')
+      expect(setActiveTab).toHaveBeenCalledWith('tab-settings-2')
     })
 
     it('左箭头应切换到上一个标签', () => {
@@ -351,13 +352,14 @@ describe('TabBar', () => {
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
           { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
+          { id: 'tab-settings-2', type: 'settings', title: '⚙ 设置 2', props: {}, closable: true },
         ],
-        activeTabId: 'tab-settings',
+        activeTabId: 'tab-settings-2',
         setActiveTab,
       })
       render(<TabBar />)
       fireEvent.keyDown(screen.getByRole('tablist'), { key: 'ArrowLeft' })
-      expect(setActiveTab).toHaveBeenCalledWith('tab-market')
+      expect(setActiveTab).toHaveBeenCalledWith('tab-settings')
     })
 
     it('右箭头在最后一个标签应循环到第一个', () => {
@@ -366,13 +368,14 @@ describe('TabBar', () => {
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
           { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
+          { id: 'tab-settings-2', type: 'settings', title: '⚙ 设置 2', props: {}, closable: true },
         ],
-        activeTabId: 'tab-settings',
+        activeTabId: 'tab-settings-2',
         setActiveTab,
       })
       render(<TabBar />)
       fireEvent.keyDown(screen.getByRole('tablist'), { key: 'ArrowRight' })
-      expect(setActiveTab).toHaveBeenCalledWith('tab-market')
+      expect(setActiveTab).toHaveBeenCalledWith('tab-settings')
     })
 
     it('Home 键应跳转到第一个标签', () => {
@@ -381,14 +384,14 @@ describe('TabBar', () => {
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
           { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
-          { id: 'tab-settings-2', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
+          { id: 'tab-settings-2', type: 'settings', title: '⚙ 设置 2', props: {}, closable: true },
         ],
-        activeTabId: 'tab-settings',
+        activeTabId: 'tab-settings-2',
         setActiveTab,
       })
       render(<TabBar />)
       fireEvent.keyDown(screen.getByRole('tablist'), { key: 'Home' })
-      expect(setActiveTab).toHaveBeenCalledWith('tab-market')
+      expect(setActiveTab).toHaveBeenCalledWith('tab-settings')
     })
 
     it('End 键应跳转到最后一个标签', () => {
@@ -397,9 +400,9 @@ describe('TabBar', () => {
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
           { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
-          { id: 'tab-settings-2', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
+          { id: 'tab-settings-2', type: 'settings', title: '⚙ 设置 2', props: {}, closable: true },
         ],
-        activeTabId: 'tab-market',
+        activeTabId: 'tab-settings',
         setActiveTab,
       })
       render(<TabBar />)
@@ -414,7 +417,7 @@ describe('TabBar', () => {
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
           { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
-        activeTabId: 'tab-market',
+        activeTabId: 'tab-settings',
         setActiveTab,
       })
       render(<TabBar />)
@@ -521,13 +524,16 @@ describe('TabBar', () => {
     /** 渲染 N 个等宽标签，mock offsetWidth/clientWidth，触发 ResizeObserver 重算 */
     function renderManyTabs(count: number, containerWidth: number, tabWidth: number) {
       useTabStore.setState({
-        tabs: Array.from({ length: count }, (_, i) => ({
-          id: i === 0 ? 'tab-market' : `tab-${i}`,
-          type: (i === 0 ? 'market' : 'settings') as 'market' | 'settings',
-          title: i === 0 ? '📊 行情' : `标签 ${i}`,
-          props: {},
-          closable: i !== 0,
-        })),
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          ...Array.from({ length: count }, (_, i) => ({
+            id: `tab-${i + 1}`,
+            type: 'settings' as const,
+            title: `标签 ${i + 1}`,
+            props: {},
+            closable: true,
+          })),
+        ],
         activeTabId: 'tab-market',
       })
       const { container } = render(<TabBar />)
@@ -554,13 +560,16 @@ describe('TabBar', () => {
     it('点击 ▾ 展开隐藏标签列表，点击某项 setActiveTab 并关闭', () => {
       const setActiveTab = vi.fn()
       useTabStore.setState({
-        tabs: Array.from({ length: 8 }, (_, i) => ({
-          id: i === 0 ? 'tab-market' : `tab-${i}`,
-          type: (i === 0 ? 'market' : 'settings') as 'market' | 'settings',
-          title: i === 0 ? '📊 行情' : `标签 ${i}`,
-          props: {},
-          closable: i !== 0,
-        })),
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          ...Array.from({ length: 8 }, (_, i) => ({
+            id: `tab-${i + 1}`,
+            type: 'settings' as const,
+            title: `标签 ${i + 1}`,
+            props: {},
+            closable: true,
+          })),
+        ],
         activeTabId: 'tab-market',
         setActiveTab,
       })
@@ -637,6 +646,59 @@ describe('TabBar', () => {
       fireEvent(scrollNode, evUp)
       expect(evUp.defaultPrevented).toBe(true)
       expect(scrollEl.scrollLeft).toBe(0)
+    })
+  })
+
+  // --- 行情标签固定左侧 ---
+
+  describe('行情标签固定左侧', () => {
+    it('行情标签渲染在可滚动区之外（.tab-bar__market 存在且不在 .tab-bar__scroll 内）', () => {
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-kline', type: 'kline', title: '📈 K线', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-market',
+      })
+      const { container } = render(<TabBar />)
+      const marketEl = container.querySelector('.tab-bar__market')
+      expect(marketEl).toBeInTheDocument()
+      expect(marketEl?.textContent).toContain('📊 行情')
+      // 不在可滚动区内
+      expect(container.querySelector('.tab-bar__scroll')?.querySelector('.tab-bar__market')).toBeNull()
+      expect(container.querySelector('.tab-bar__scroll')?.querySelectorAll('[role="tab"]')).toHaveLength(1) // 只有 K线
+    })
+
+    it('行情标签不显示关闭按钮与置顶图标', () => {
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+        ],
+        activeTabId: 'tab-market',
+      })
+      const { container } = render(<TabBar />)
+      const marketEl = container.querySelector('.tab-bar__market')!
+      expect(marketEl.querySelector('[aria-label="关闭标签"]')).toBeNull()
+      expect(marketEl.querySelector('.tab-bar__pin')).toBeNull()
+    })
+  })
+
+  // --- 固定标签排序 ---
+
+  describe('固定标签排序', () => {
+    it('pinned 标签在可滚动区内排在最左', () => {
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-a', type: 'kline', title: '📈 A', props: {}, closable: true },
+          { id: 'tab-b', type: 'kline', title: '📈 B', props: {}, closable: true, pinned: true },
+        ],
+        activeTabId: 'tab-market',
+      })
+      const { container } = render(<TabBar />)
+      const scrollTabs = Array.from(container.querySelectorAll('.tab-bar__scroll [role="tab"]'))
+      const order = scrollTabs.map((el) => el.getAttribute('data-tab-id'))
+      expect(order).toEqual(['tab-b', 'tab-a']) // pinned 在前
     })
   })
 })

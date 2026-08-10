@@ -24,6 +24,13 @@
   display: none;
 }
 
+/* 行情标签（初始页）：固定在左侧、可滚动区之外；少量左呼吸替代原 GlobalBar 16px 外层 */
+.tab-bar__market {
+  flex-shrink: 0;
+  padding-left: 8px;
+  cursor: default;
+}
+
 /* ▾ 溢出按钮 + 下拉 */
 .tab-bar__overflow {
   position: relative;
