@@ -18,7 +18,7 @@
 | 5 | 双高亮区 | 有时屏幕出现两个批量选中高亮区域 |
 | 6 | 空合约浮窗不渲染 | 未选中合约时，经工具栏/顶部菜单打开报单、K线浮窗，窗内无实际内容（仅占位文案） |
 
-**目标**：一次性消除以上 6 个问题，核心原则——**选中态单一数据源、订阅生命周期单一负责人**。
+**目标**：一次性消除以上 6 个问题，核心原则——**选中态以蓝色选区为唯一数据源（金色活动锚点始终位于选区内）、订阅生命周期单一负责人**。
 
 ---
 
@@ -59,7 +59,7 @@
 
 ## 3. 架构决策
 
-**决策 1 — 选中态单一数据源。** 行高亮只读 `selectedContracts`（蓝色），移除 vtable 原生 `selectRow` 金色高亮。单选时集合即 `{id}` 天然单行；`selectedInstrument` 仅作「当前合约」业务概念（报单/K线/收藏按钮），不参与行高亮。
+**决策 1 — 选中态唯一数据源 + 金色活动锚点。** `selectedContracts`（蓝色选区）是选中态的唯一数据源；vtable 原生 `selectRow` 金色高亮**保留**，作为选区内的「活动行」锚点（类似 Excel 活动单元格）。关键约束：**金色只在 `selectedInstrument ∈ selectedContracts` 时渲染**（`selectRow` effect 加守卫）——单选时金蓝重合，多选时金色落选区锚点行，锚点被移出选区则金色消失。高亮永远唯一，绝不出现第二个独立区域。`selectedInstrument` 同时承担「当前合约」业务概念（报单/K线/收藏按钮）。
 
 **决策 2 — 订阅生命周期单一负责人。** `addToFavorites` / `removeFromFavorites` 只维护 favorites 状态，订阅/退订统一由 `useSubscriptionManager` 对 `should`（可见 + 自选 + 锁定）做 diff，消除 `subscribedRef` 与后端/CTP 脱节。
 
@@ -132,24 +132,26 @@ table.on('contextmenu_cell', (args: any) => {
     // 右键命中多选集合内 → 保持集合，显示多选菜单（现状不变）
     onMultiSelectContextMenuRef.current(Array.from(selected), event)
   } else {
-    // 右键落在集合外 → 先单选该合约，再显示单选菜单
+    // 右键落在集合外 → 先同步选中态到该合约，再显示单选菜单：
+    // onSelectionChange 置蓝区 = {id}，下方 handleContextMenu 置金色锚点 = id，蓝金重合
     onSelectionChangeRef.current?.(new Set([record.instrumentID]))
     onContextMenuRef.current?.(record.instrumentID, price, event)
   }
 })
 ```
 
-`frontend/src/hooks/useContractContextMenu.ts` 的 `handleContextMenu` 内调用 `useMarketStore.getState().setSelectedInstrument(instrumentID)`，同步「当前合约」（FavoritesPage 一并受益）。
+`frontend/src/hooks/useContractContextMenu.ts` 的 `handleContextMenu` 内调用 `useMarketStore.getState().setSelectedInstrument(instrumentID)`，把金色锚点同步到右键合约（FavoritesPage 一并受益）。两处更新后，右键的蓝色选区与金色锚点落在同一行，高亮立即切换。
 
-### 4.5 问题 5 — 高亮统一（单一数据源）
+### 4.5 问题 5 — 高亮统一（蓝色选区 + 金色活动锚点）
 
 `frontend/src/modules/market/MarketTable.tsx`：
 
-- 删除 `MarketTable.tsx:527-545` 的 `selectRow` 金色高亮 effect（含 rAF 滚动定位逻辑一并移除）；
-- 移除 `selectionStyle` 金色配置（`MarketTable.tsx:232-237`）——不再调用 `selectRow` 后该样式成为死代码；
-- 行高亮只读 `selectedContracts`（`bodyStyle.bgColor` 蓝色，`MarketTable.tsx:222-229`），保留 `selectedContracts` 变化时的 `setRecords` 重绘 effect（`MarketTable.tsx:518-524`）。
+- **保留** `selectRow` 金色高亮 effect（`MarketTable.tsx:527-545`）；
+- **加守卫**：仅当 `selectedInstrument ∈ selectedContracts` 才调用 `selectRow`；否则跳过（锚点被移出选区时金色消失，只剩蓝色选区）；
+- 蓝色选区高亮只读 `selectedContracts`（`bodyStyle.bgColor`，`MarketTable.tsx:222-229`），保留 `selectedContracts` 变化时的 `setRecords` 重绘 effect（`MarketTable.tsx:518-524`）；
+- **锚点同步**：多选交互把 `selectedInstrument` 更新为选区内的活动行——拖选 → 拖选起始行；Shift 范围选 / Ctrl 点击 → 点击行（现有 `click_cell` 的 `onClickRef` 已隐式触发 `setSelectedInstrument`）；单选 → 该行。
 
-配 4.4 后，左键 / 右键 / 拖选 / Shift / Ctrl+A 的高亮始终唯一。
+效果：单选金蓝同高亮单行；多选统一为「蓝底金边」的活动行锚点；配 4.4 右键后，左键 / 右键 / 拖选 / Shift / Ctrl+A 的高亮始终唯一。
 
 ### 4.6 问题 6 — 空合约浮窗可交互
 
@@ -172,7 +174,7 @@ table.on('contextmenu_cell', (args: any) => {
 
 | 测试 | 需更新 |
 |------|--------|
-| `MarketTable.test.tsx` | 右键选中态、`frozenColCount`、移除 `selectRow` 后高亮断言、`widthMode` |
+| `MarketTable.test.tsx` | 右键选中态、`frozenColCount`、`selectRow` 守卫（锚点在/不在选区）断言、`widthMode` |
 | `useSubscriptionManager.test.ts` | 强制重订阅（`forceResubscribeSeq`）分支 |
 | `contracts` store 相关测试 | 去掉直连订阅后 `addToFavorites`/`removeFromFavorites` 行为 |
 | `OrderPage` / `KLinePage` 测试 | 空合约选择器断言 |
@@ -188,14 +190,14 @@ table.on('contextmenu_cell', (args: any) => {
    - **#2** 行情表横向拖动，「合约」列固定最左侧
    - **#3** 收藏→移除→滚动→重收、以及 CTP 断线重连后，自选/可见合约数据恢复推送
    - **#4** 右键不同合约，高亮立即切换到该合约
-   - **#5** 拖选 / Shift / Ctrl+A 全选，全程只有单一蓝色高亮区
+   - **#5** 拖选 / Shift / Ctrl+A 全选，高亮始终唯一（蓝色选区 + 金色活动行锚点，无独立第二高亮区）
    - **#6** 无选中合约时从底部工具条打开报单/K线浮窗，窗内可搜索并选中合约后正常渲染
 
 ## 8. 实施顺序
 
 1. **问题 2**（独立、最小）：`frozenColCount: 1`
 2. **问题 1**（纯 CSS/配置）：期权表高度、`.panel-content` 高度链、`widthMode`
-3. **问题 4 + 5**（同属选中态重构，一并做）：右键选中 + 移除金色 `selectRow`
+3. **问题 4 + 5**（同属选中态重构，一并做）：右键选中 + `selectRow` 守卫与锚点同步
 4. **问题 6**（独立）：空合约浮窗内嵌 ContractSearch
 5. **问题 3**（前后端、改动最大放最后）：前端订阅管理器 + 后端 CTP 返回值校验/重连对账
 6. 全量测试 + 浏览器手动验证
