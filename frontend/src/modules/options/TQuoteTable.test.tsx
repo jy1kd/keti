@@ -72,6 +72,7 @@ describe('TQuoteTable', () => {
     expect(ss.visible).toBe('always')
     expect(ss.width).toBe(12)
     expect(ss.scrollSliderColor).toBe('#4a9eff')
+    expect(ss.barToSide).toBe(true)
   })
 
   it('merges calls and puts by strike price into sorted records', async () => {

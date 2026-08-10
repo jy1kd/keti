@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { GlobalBar } from '@/components/GlobalBar'
+import { BottomBar } from '@/components/BottomBar'
 import { TabContent } from '@/components/TabContent'
 import { ToastContainer } from '@/components/Toast'
 import { useSystemWs } from '@/hooks/useSystemWs'
@@ -89,10 +90,7 @@ function App() {
   return (
     <div className="app">
       <ToastContainer />
-      <GlobalBar
-        perfVisible={perfVisible}
-        onTogglePerf={() => setPerfVisible((v) => !v)}
-      />
+      <GlobalBar />
 
       {/* 浮动窗口内容 overlay：TabContent 将浮动标签内容 portal 到这里，
           与 FloatingWindow chrome 同层，脱离 .tab-content 布局/溢出/层叠干扰 */}
@@ -101,6 +99,12 @@ function App() {
       <main className="tab-main">
         <TabContent />
       </main>
+
+      {/* 底部状态栏：连接状态 + 全局工具（图标+中文名），箭头可收起/展开 */}
+      <BottomBar
+        perfVisible={perfVisible}
+        onTogglePerf={() => setPerfVisible((v) => !v)}
+      />
 
       {/* 浮动标签窗口（chrome 壳；内容由 TabContent 位移覆盖）。
           统一浮动窗模式：报单/查询/K线/设置/网络监控均以浮动窗口打开，

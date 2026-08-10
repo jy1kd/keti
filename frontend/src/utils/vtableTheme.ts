@@ -12,4 +12,6 @@ export const PROMINENT_SCROLL_STYLE = {
   scrollRailColor: '#21262d',
   width: SCROLLBAR_SIZE,
   visible: 'always' as const,
+  /** 进度条钉在表格视口底部（而非内容底部）：行数少时不再跑到上边 */
+  barToSide: true,
 }

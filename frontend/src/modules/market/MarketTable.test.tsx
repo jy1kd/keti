@@ -203,6 +203,7 @@ describe('MarketTable', () => {
     expect(ss.visible).toBe('always')
     expect(ss.width).toBeGreaterThanOrEqual(12) // 加粗滚动条，非默认细条
     expect(ss.scrollSliderColor).toBe('#4a9eff') // 高亮滑块色，便于发现
+    expect(ss.barToSide).toBe(true) // 进度条钉在视口底部，行数少时不跑到上边去
   })
 
   // --- 滚动条区域不触发多选（拖拽进度条不应误选行） ---
