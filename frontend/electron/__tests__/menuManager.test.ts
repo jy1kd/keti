@@ -23,7 +23,12 @@ describe('MenuManager', () => {
   const buildFromTemplate = Menu.buildFromTemplate as unknown as ReturnType<typeof vi.fn>;
   const setApplicationMenu = Menu.setApplicationMenu as unknown as ReturnType<typeof vi.fn>;
   let webContentsSend: ReturnType<typeof vi.fn>;
-  let mainWindow: { webContents: { send: ReturnType<typeof vi.fn> }; isDestroyed: () => boolean };
+  let mainWindow: {
+    show: ReturnType<typeof vi.fn>;
+    focus: ReturnType<typeof vi.fn>;
+    webContents: { send: ReturnType<typeof vi.fn> };
+    isDestroyed: () => boolean;
+  };
   let windowManager: { openTabWindow: ReturnType<typeof vi.fn> };
 
   const getTemplate = (): TemplateItem[] => buildFromTemplate.mock.calls[0][0];
@@ -40,6 +45,8 @@ describe('MenuManager', () => {
     vi.clearAllMocks();
     webContentsSend = vi.fn();
     mainWindow = {
+      show: vi.fn(),
+      focus: vi.fn(),
       webContents: { send: webContentsSend },
       isDestroyed: () => false,
     };
