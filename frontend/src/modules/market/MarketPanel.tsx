@@ -7,6 +7,7 @@ import { OptionPanel } from '@/modules/options/OptionPanel'
 import { MarketTable } from './MarketTable'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
+import { useTabStore } from '@/stores/tabs'
 import { useContractContextMenu } from '@/hooks/useContractContextMenu'
 import { usePointOrder } from '@/hooks/usePointOrder'
 import { useOrderStore } from '@/modules/order/store'
@@ -15,6 +16,7 @@ import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
 import { getProductName } from '@/utils/productNames'
 import { isContractActive } from '@/utils/contractStatus'
 import { API_BASE } from '@/services/api'
+import { isElectron } from '@/services/electron'
 import { toast } from '@/components/Toast'
 import './styles.css'
 
@@ -78,6 +80,25 @@ export function MarketPanel() {
       loadAllInstruments()
       loadFavoriteContracts()
     }
+  }, [])
+
+  // 顶部菜单「行情」切换：直接在行情主页内切 全部/自选/T型期权，不新建标签页
+  useEffect(() => {
+    if (!isElectron()) return
+
+    const cleanup = window.electronAPI?.onMarketView?.((view) => {
+      if (view === 'options') {
+        setViewMode('options')
+      } else {
+        setViewMode('market')
+        setActiveTab(view === 'favorites' ? 'favorites' : 'all')
+      }
+      // 切回行情主页（行情为固定标签，直接激活即可）
+      const market = useTabStore.getState().tabs.find((t) => t.type === 'market')
+      if (market) useTabStore.getState().setActiveTab(market.id)
+    })
+
+    return () => cleanup?.()
   }, [])
 
   const { handleClick, handleDoubleClick } = usePointOrder({

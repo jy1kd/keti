@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import App from './App'
 import { useConnectionStore } from '@/stores/connection'
 import { useTabStore } from '@/stores/tabs'
+import { useFloatingWindowStore } from '@/stores/floatingWindows'
 
 // Mock TabBar 组件
 vi.mock('@/components/TabBar', () => ({
@@ -43,6 +44,7 @@ describe('App Layout — 标签页系统', () => {
       ],
       activeTabId: 'tab-market',
     })
+    useFloatingWindowStore.setState({ windows: {} })
   })
 
   afterEach(() => {
@@ -106,6 +108,56 @@ describe('App Layout — 标签页系统', () => {
       expect(screen.queryByTestId('global-bar-fps')).toBeNull()
       fireEvent.keyDown(window, { key: 'M', ctrlKey: true, shiftKey: true })
       expect(screen.getByTestId('global-bar-fps')).toBeInTheDocument()
+    })
+  })
+
+  describe('顶部菜单 IPC', () => {
+    const setElectronAPI = (overrides: Record<string, any>) => {
+      ;(window as any).electronAPI = {
+        onNavigateTab: vi.fn(),
+        onOpenFloatingTab: vi.fn(),
+        onTogglePerf: vi.fn(),
+        onGetSelectedInstrument: vi.fn(),
+        ...overrides,
+      }
+      return window.electronAPI
+    }
+
+    it('onOpenFloatingTab query 打开查询浮动窗', () => {
+      const onOpenFloatingTab = vi.fn()
+      setElectronAPI({ onOpenFloatingTab })
+      render(<App />)
+      const callback = onOpenFloatingTab.mock.calls[0][0]
+      act(() => {
+        callback('query')
+      })
+      expect(useFloatingWindowStore.getState().windows['tab-query']).toBeDefined()
+      delete (window as any).electronAPI
+    })
+
+    it('onOpenFloatingTab settings 打开设置浮动窗', () => {
+      const onOpenFloatingTab = vi.fn()
+      setElectronAPI({ onOpenFloatingTab })
+      render(<App />)
+      const callback = onOpenFloatingTab.mock.calls[0][0]
+      act(() => {
+        callback('settings')
+      })
+      expect(useFloatingWindowStore.getState().windows['tab-settings']).toBeDefined()
+      delete (window as any).electronAPI
+    })
+
+    it('onTogglePerf 切换 FPS 监控', () => {
+      const onTogglePerf = vi.fn()
+      setElectronAPI({ onTogglePerf })
+      render(<App />)
+      expect(screen.queryByTestId('global-bar-fps')).toBeNull()
+      const callback = onTogglePerf.mock.calls[0][0]
+      act(() => {
+        callback()
+      })
+      expect(screen.getByTestId('global-bar-fps')).toBeInTheDocument()
+      delete (window as any).electronAPI
     })
   })
 })

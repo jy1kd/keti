@@ -5,14 +5,32 @@ import { useTabStore } from '@/stores/tabs'
 import { useConnectionStore } from '@/stores/connection'
 import { useMarketStore } from '@/modules/market/store'
 
-// Mock 统一浮动窗入口（GlobalBar 所有工具入口均打开浮动窗口）
-const { mockOpenFloatingTab } = vi.hoisted(() => ({
+// Mock 统一浮动窗入口（GlobalBar 工具入口委托给 helper；helper 自身的打开选项在
+// utils/openFloatingTab.test.ts 覆盖，此处只验证按钮→helper 的接线）
+const {
+  mockOpenFloatingTab,
+  mockOpenOrderFloating,
+  mockOpenKlineFloating,
+  mockOpenQueryFloating,
+  mockOpenSettingsFloating,
+  mockOpenIpcMonitorFloating,
+} = vi.hoisted(() => ({
   mockOpenFloatingTab: vi.fn(),
+  mockOpenOrderFloating: vi.fn(),
+  mockOpenKlineFloating: vi.fn(),
+  mockOpenQueryFloating: vi.fn(),
+  mockOpenSettingsFloating: vi.fn(),
+  mockOpenIpcMonitorFloating: vi.fn(),
 }))
 
 vi.mock('@/utils/openFloatingTab', () => ({
   openFloatingTab: mockOpenFloatingTab,
   ORDER_FLOATING_SIZE: { w: 620, h: 540 },
+  openOrderFloating: mockOpenOrderFloating,
+  openKlineFloating: mockOpenKlineFloating,
+  openQueryFloating: mockOpenQueryFloating,
+  openSettingsFloating: mockOpenSettingsFloating,
+  openIpcMonitorFloating: mockOpenIpcMonitorFloating,
 }))
 
 // Mock TabBar（GlobalBar 只承载，行为由 TabBar 自身测试覆盖）
@@ -92,44 +110,16 @@ describe('GlobalBar', () => {
       expect(screen.getByLabelText('K线')).toBeInTheDocument()
     })
 
-    it('选中合约时点击 📝 报单为选中合约打开报单浮动窗口（尺寸 620×540）', () => {
-      useMarketStore.setState({ selectedInstrument: 'IF2608' })
+    it('点击 📝 报单调用 openOrderFloating（选中合约细节由 helper 测试覆盖）', () => {
       render(<GlobalBar perfVisible={false} onTogglePerf={vi.fn()} />)
       fireEvent.click(screen.getByLabelText('报单'))
-      expect(mockOpenFloatingTab).toHaveBeenCalledWith({
-        type: 'order',
-        title: '📝 报单-IF2608',
-        props: { instrumentID: 'IF2608' },
-        size: { w: 620, h: 540 },
-      })
+      expect(mockOpenOrderFloating).toHaveBeenCalled()
     })
 
-    it('未选中合约时点击 📝 报单打开空白报单浮动窗口', () => {
-      render(<GlobalBar perfVisible={false} onTogglePerf={vi.fn()} />)
-      fireEvent.click(screen.getByLabelText('报单'))
-      expect(mockOpenFloatingTab).toHaveBeenCalledWith({
-        type: 'order',
-        title: '📝 报单',
-        props: {},
-        size: { w: 620, h: 540 },
-      })
-    })
-
-    it('选中合约时点击 📈 K线打开该合约的K线浮动窗口', () => {
-      useMarketStore.setState({ selectedInstrument: 'IF2608' })
+    it('点击 📈 K线调用 openKlineFloating', () => {
       render(<GlobalBar perfVisible={false} onTogglePerf={vi.fn()} />)
       fireEvent.click(screen.getByLabelText('K线'))
-      expect(mockOpenFloatingTab).toHaveBeenCalledWith({
-        type: 'kline',
-        title: '📈 K线-IF2608',
-        props: { instrumentID: 'IF2608' },
-      })
-    })
-
-    it('未选中合约时点击 📈 K线打开空白K线浮动窗口', () => {
-      render(<GlobalBar perfVisible={false} onTogglePerf={vi.fn()} />)
-      fireEvent.click(screen.getByLabelText('K线'))
-      expect(mockOpenFloatingTab).toHaveBeenCalledWith({ type: 'kline', title: '📈 K线', props: {} })
+      expect(mockOpenKlineFloating).toHaveBeenCalled()
     })
 
     it('渲染 📋 查询按钮', () => {
@@ -137,10 +127,10 @@ describe('GlobalBar', () => {
       expect(screen.getByLabelText('📋 查询')).toBeInTheDocument()
     })
 
-    it('点击 📋 查询按钮打开查询浮动窗口', () => {
+    it('点击 📋 查询按钮调用 openQueryFloating', () => {
       render(<GlobalBar perfVisible={false} onTogglePerf={vi.fn()} />)
       fireEvent.click(screen.getByLabelText('📋 查询'))
-      expect(mockOpenFloatingTab).toHaveBeenCalledWith({ type: 'query', title: '📋 查询' })
+      expect(mockOpenQueryFloating).toHaveBeenCalled()
     })
 
     it('渲染 ⚙ 设置按钮', () => {
@@ -148,10 +138,10 @@ describe('GlobalBar', () => {
       expect(screen.getByTitle('设置')).toBeInTheDocument()
     })
 
-    it('点击 ⚙ 设置按钮打开设置浮动窗口', () => {
+    it('点击 ⚙ 设置按钮调用 openSettingsFloating', () => {
       render(<GlobalBar perfVisible={false} onTogglePerf={vi.fn()} />)
       fireEvent.click(screen.getByTitle('设置'))
-      expect(mockOpenFloatingTab).toHaveBeenCalledWith({ type: 'settings', title: '⚙ 设置' })
+      expect(mockOpenSettingsFloating).toHaveBeenCalled()
     })
 
     it('渲染 ⋯ 更多按钮', () => {
@@ -181,11 +171,11 @@ describe('GlobalBar', () => {
       expect(onTogglePerf).toHaveBeenCalled()
     })
 
-    it('点击 🔌网络监控项打开网络监控浮动窗口', () => {
+    it('点击 🔌网络监控项调用 openIpcMonitorFloating', () => {
       render(<GlobalBar perfVisible={false} onTogglePerf={vi.fn()} />)
       fireEvent.click(screen.getByLabelText('更多'))
       fireEvent.click(screen.getByText('🔌 网络监控'))
-      expect(mockOpenFloatingTab).toHaveBeenCalledWith({ type: 'ipc-monitor', title: '📡 网络监控' })
+      expect(mockOpenIpcMonitorFloating).toHaveBeenCalled()
     })
 
     it('按 Escape 关闭菜单', () => {

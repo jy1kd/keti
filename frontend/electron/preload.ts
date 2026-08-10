@@ -28,6 +28,15 @@ export interface ElectronAPI {
   // Navigation (main → renderer)
   onNavigateTab: (callback: (tab: string) => void) => () => void;
 
+  // Menu (main → renderer): 顶部菜单打开浮动窗
+  onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor') => void) => () => void;
+
+  // Menu (main → renderer): 切换 FPS 监控
+  onTogglePerf: (callback: () => void) => () => void;
+
+  // Menu (main → renderer): 行情主页内切换视图（全部/自选/T型期权）
+  onMarketView: (callback: (view: 'all' | 'favorites' | 'options') => void) => () => void;
+
   // Data exchange (renderer → main)
   onGetSelectedInstrument: (callback: () => string) => () => void;
   sendSelectedInstrument: (instrumentID: string) => void;
@@ -68,6 +77,27 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = (_: any, tab: string) => callback(tab);
     ipcRenderer.on('navigate:tab', handler);
     return () => ipcRenderer.removeListener('navigate:tab', handler);
+  },
+
+  // Menu (main → renderer): 顶部菜单打开浮动窗
+  onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor') => void) => {
+    const handler = (_: any, tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor') => callback(tab);
+    ipcRenderer.on('menu:open-floating', handler);
+    return () => ipcRenderer.removeListener('menu:open-floating', handler);
+  },
+
+  // Menu (main → renderer): 切换 FPS 监控
+  onTogglePerf: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('menu:toggle-perf', handler);
+    return () => ipcRenderer.removeListener('menu:toggle-perf', handler);
+  },
+
+  // Menu (main → renderer): 行情主页内切换视图（全部/自选/T型期权）
+  onMarketView: (callback: (view: 'all' | 'favorites' | 'options') => void) => {
+    const handler = (_: any, view: 'all' | 'favorites' | 'options') => callback(view);
+    ipcRenderer.on('menu:market-view', handler);
+    return () => ipcRenderer.removeListener('menu:market-view', handler);
   },
 
   // Data exchange (renderer → main)

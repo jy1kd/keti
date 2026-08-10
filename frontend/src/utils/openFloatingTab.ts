@@ -1,5 +1,6 @@
 import { useTabStore, generateTabId, type TabType } from '@/stores/tabs'
 import { defaultFloatingSize } from '@/stores/floatingWindows'
+import { useMarketStore } from '@/modules/market/store'
 import { detachTabAt } from './detachDrag'
 
 interface OpenFloatingTabOptions {
@@ -29,4 +30,40 @@ export function openFloatingTab({ type, title, props = {}, size }: OpenFloatingT
   const x = Math.max(0, Math.round((window.innerWidth - w) / 2))
   const y = Math.max(0, Math.round((window.innerHeight - h) / 2 - 20))
   return detachTabAt(tabId, { x, y }, size)
+}
+
+/** 打开报单浮动窗：优先定位当前选中合约，否则空白报单窗 */
+export function openOrderFloating(): boolean {
+  const inst = useMarketStore.getState().selectedInstrument
+  return openFloatingTab({
+    type: 'order',
+    title: inst ? `📝 报单-${inst}` : '📝 报单',
+    props: inst ? { instrumentID: inst } : {},
+    size: ORDER_FLOATING_SIZE,
+  })
+}
+
+/** 打开K线浮动窗：有选中合约则直接定位到该合约 */
+export function openKlineFloating(): boolean {
+  const inst = useMarketStore.getState().selectedInstrument
+  return openFloatingTab({
+    type: 'kline',
+    title: inst ? `📈 K线-${inst}` : '📈 K线',
+    props: inst ? { instrumentID: inst } : {},
+  })
+}
+
+/** 打开查询浮动窗 */
+export function openQueryFloating(): boolean {
+  return openFloatingTab({ type: 'query', title: '📋 查询' })
+}
+
+/** 打开设置浮动窗 */
+export function openSettingsFloating(): boolean {
+  return openFloatingTab({ type: 'settings', title: '⚙ 设置' })
+}
+
+/** 打开网络监控浮动窗 */
+export function openIpcMonitorFloating(): boolean {
+  return openFloatingTab({ type: 'ipc-monitor', title: '📡 网络监控' })
 }

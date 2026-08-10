@@ -45,58 +45,37 @@ export class TrayManager {
 
     this.tray.setToolTip('SimNow 交易终端');
 
+    // 显示主窗口并向其发送 IPC（与顶部菜单打开方式同步：行情切主页视图，其余弹浮动窗）
+    const showAndSend = (channel: string, ...args: unknown[]) => {
+      if (this.mainWindow) {
+        this.mainWindow.show();
+        this.mainWindow.focus();
+        this.mainWindow.webContents.send(channel, ...args);
+      }
+    };
+
     // Build context menu
     const contextMenu = Menu.buildFromTemplate([
       {
-        label: '📊 行情',
-        click: () => {
-          if (this.mainWindow) {
-            this.mainWindow.show();
-            this.mainWindow.focus();
-            this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'market');
-          }
-        },
+        label: '📊 全部行情',
+        click: () => showAndSend(IPC_CHANNELS.MENU_MARKET_VIEW, 'all'),
       },
       {
-        label: '⭐ 自选',
-        click: () => {
-          if (this.mainWindow) {
-            this.mainWindow.show();
-            this.mainWindow.focus();
-            this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'favorites');
-          }
-        },
-      },
-      {
-        label: '📋 查询',
-        click: () => {
-          if (this.mainWindow) {
-            this.mainWindow.show();
-            this.mainWindow.focus();
-            this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'query');
-          }
-        },
+        label: '⭐ 自选行情',
+        click: () => showAndSend(IPC_CHANNELS.MENU_MARKET_VIEW, 'favorites'),
       },
       { type: 'separator' },
       {
+        label: '📋 查询窗口',
+        click: () => showAndSend(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query'),
+      },
+      {
         label: '⚙ 设置',
-        click: () => {
-          if (this.mainWindow) {
-            this.mainWindow.show();
-            this.mainWindow.focus();
-            this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'settings');
-          }
-        },
+        click: () => showAndSend(IPC_CHANNELS.MENU_OPEN_FLOATING, 'settings'),
       },
       {
         label: '📡 网络监控',
-        click: () => {
-          if (this.mainWindow) {
-            this.mainWindow.show();
-            this.mainWindow.focus();
-            this.mainWindow.webContents.send(IPC_CHANNELS.NAVIGATE_TAB, 'ipc-monitor');
-          }
-        },
+        click: () => showAndSend(IPC_CHANNELS.MENU_OPEN_FLOATING, 'ipc-monitor'),
       },
       { type: 'separator' },
       {

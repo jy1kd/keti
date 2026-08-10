@@ -29,6 +29,9 @@ exports.IPC_CHANNELS = {
     BACKEND_STATUS: 'backend:status',
     // Navigation (main → renderer)
     NAVIGATE_TAB: 'navigate:tab',
+    MENU_OPEN_FLOATING: 'menu:open-floating',
+    MENU_TOGGLE_PERF: 'menu:toggle-perf',
+    MENU_MARKET_VIEW: 'menu:market-view',
     // Data exchange (renderer → main)
     GET_SELECTED_INSTRUMENT: 'data:get-selected-instrument',
     SELECTED_INSTRUMENT_RESPONSE: 'data:selected-instrument-response',

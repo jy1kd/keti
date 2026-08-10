@@ -114,6 +114,15 @@ declare global {
       // Navigation
       onNavigateTab: (callback: (tab: string) => void) => () => void;
 
+      // Menu (main → renderer): 顶部菜单打开浮动窗
+      onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor') => void) => () => void;
+
+      // Menu (main → renderer): 切换 FPS 监控
+      onTogglePerf: (callback: () => void) => () => void;
+
+      // Menu (main → renderer): 行情主页内切换视图（全部/自选/T型期权）
+      onMarketView: (callback: (view: 'all' | 'favorites' | 'options') => void) => () => void;
+
       // Data exchange
       onGetSelectedInstrument: (callback: () => string) => () => void;
       sendSelectedInstrument: (instrumentID: string) => void;

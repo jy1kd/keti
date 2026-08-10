@@ -14,6 +14,9 @@ export interface ElectronAPI {
         pid?: number;
     }>;
     onNavigateTab: (callback: (tab: string) => void) => () => void;
+    onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor') => void) => () => void;
+    onTogglePerf: (callback: () => void) => () => void;
+    onMarketView: (callback: (view: 'all' | 'favorites' | 'options') => void) => () => void;
     onGetSelectedInstrument: (callback: () => string) => () => void;
     sendSelectedInstrument: (instrumentID: string) => void;
     onOrderUpdate: (callback: (data: any) => void) => () => void;

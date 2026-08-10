@@ -10,6 +10,13 @@ import { FloatingWindows } from '@/components/FloatingWindow'
 import { useTabStore } from '@/stores/tabs'
 import { API_BASE } from '@/services/api'
 import { isElectron } from '@/services/electron'
+import {
+  openOrderFloating,
+  openKlineFloating,
+  openQueryFloating,
+  openSettingsFloating,
+  openIpcMonitorFloating,
+} from '@/utils/openFloatingTab'
 import '@/assets/styles/global.css'
 
 function App() {
@@ -53,6 +60,44 @@ function App() {
           openTab({ type: 'ipc-monitor', title: '📡 网络监控' })
           break
       }
+    })
+
+    return () => cleanup?.()
+  }, [])
+
+  // Electron IPC — 顶部菜单打开浮动窗（报单/K线/查询）
+  useEffect(() => {
+    if (!isElectron()) return
+
+    const cleanup = window.electronAPI?.onOpenFloatingTab?.((tab) => {
+      switch (tab) {
+        case 'order':
+          openOrderFloating()
+          break
+        case 'kline':
+          openKlineFloating()
+          break
+        case 'query':
+          openQueryFloating()
+          break
+        case 'settings':
+          openSettingsFloating()
+          break
+        case 'ipc-monitor':
+          openIpcMonitorFloating()
+          break
+      }
+    })
+
+    return () => cleanup?.()
+  }, [])
+
+  // Electron IPC — 顶部菜单切换 FPS 监控
+  useEffect(() => {
+    if (!isElectron()) return
+
+    const cleanup = window.electronAPI?.onTogglePerf?.(() => {
+      setPerfVisible((v) => !v)
     })
 
     return () => cleanup?.()

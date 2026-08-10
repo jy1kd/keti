@@ -335,4 +335,31 @@ describe('MarketPanel', () => {
       props: { instrumentID: 'IF2608' },
     })
   })
+
+  describe('顶部菜单行情切换（onMarketView）', () => {
+    it('在行情主页内切换 全部/自选/T型期权，不新建标签页', () => {
+      const onMarketView = vi.fn()
+      ;(window as any).electronAPI = { onMarketView }
+      render(<MarketPanel />)
+      const callback = onMarketView.mock.calls[0][0]
+
+      act(() => {
+        callback('options')
+      })
+      expect(screen.getByTestId('option-panel')).toBeInTheDocument()
+
+      act(() => {
+        callback('favorites')
+      })
+      expect(screen.queryByTestId('option-panel')).toBeNull()
+      expect(screen.getByRole('button', { name: '自选' }).classList.contains('active')).toBe(true)
+
+      act(() => {
+        callback('all')
+      })
+      expect(screen.getByRole('button', { name: '全部' }).classList.contains('active')).toBe(true)
+
+      delete (window as any).electronAPI
+    })
+  })
 })

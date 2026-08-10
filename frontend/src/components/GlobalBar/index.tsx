@@ -2,8 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ConnectionStatus } from '@/components/ConnectionStatus'
 import { TabBar } from '@/components/TabBar'
 import { PerfMonitor } from '@/components/PerfMonitor'
-import { useMarketStore } from '@/modules/market/store'
-import { openFloatingTab, ORDER_FLOATING_SIZE } from '@/utils/openFloatingTab'
+import {
+  openOrderFloating,
+  openKlineFloating,
+  openQueryFloating,
+  openSettingsFloating,
+  openIpcMonitorFloating,
+} from '@/utils/openFloatingTab'
 import './styles.css'
 
 interface GlobalBarProps {
@@ -51,37 +56,26 @@ export function GlobalBar({ perfVisible, onTogglePerf }: GlobalBarProps) {
 
   // 统一浮动窗入口：所有右上角工具打开为浮动窗口（标签脱离标签栏，⇩ 可停靠回标签）
   const openSettings = useCallback(() => {
-    openFloatingTab({ type: 'settings', title: '⚙ 设置' })
+    openSettingsFloating()
   }, [])
 
   const openIpcMonitor = useCallback(() => {
-    openFloatingTab({ type: 'ipc-monitor', title: '📡 网络监控' })
+    openIpcMonitorFloating()
   }, [])
 
   const openQuery = useCallback(() => {
-    openFloatingTab({ type: 'query', title: '📋 查询' })
+    openQueryFloating()
   }, [])
 
   // 报单入口：优先为当前选中合约打开报单浮动窗；未选中合约时打开空白报单浮动窗
   // 尺寸对齐原 OrderPopup 弹窗（540×400）
   const openOrder = useCallback(() => {
-    const inst = useMarketStore.getState().selectedInstrument
-    openFloatingTab({
-      type: 'order',
-      title: inst ? `📝 报单-${inst}` : '📝 报单',
-      props: inst ? { instrumentID: inst } : {},
-      size: ORDER_FLOATING_SIZE,
-    })
+    openOrderFloating()
   }, [])
 
   // K线入口：打开K线浮动窗；有选中合约则直接定位到该合约
   const openKline = useCallback(() => {
-    const inst = useMarketStore.getState().selectedInstrument
-    openFloatingTab({
-      type: 'kline',
-      title: inst ? `📈 K线-${inst}` : '📈 K线',
-      props: inst ? { instrumentID: inst } : {},
-    })
+    openKlineFloating()
   }, [])
 
   return (
