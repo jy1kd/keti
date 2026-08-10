@@ -88,12 +88,6 @@
   background: var(--bg-hover, #3a3a3a);
 }
 
-.tab-bar__overflow-icon {
-  font-size: 14px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
 .tab-bar__overflow-title {
   flex: 1;
   min-width: 0;
@@ -128,6 +122,11 @@
   white-space: nowrap;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
   user-select: none;
+}
+
+/* 已收进 ▾ 下拉的隐藏标签：保留布局与测量（offsetWidth），仅不渲染视觉，避免滚动边界漏出半截 */
+.tab-bar__tab--hidden {
+  visibility: hidden;
 }
 
 .tab-bar__tab:hover {

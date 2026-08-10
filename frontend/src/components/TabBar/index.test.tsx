@@ -550,6 +550,45 @@ describe('TabBar', () => {
       expect(screen.queryByRole('menu', { name: '隐藏标签' })).toBeNull() // 菜单已关闭
     })
 
+    it('▾ 菜单项不重复显示图标（title 已含 emoji 前缀）', () => {
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-1', type: 'settings', title: '标签 1', props: {}, closable: true },
+          { id: 'tab-2', type: 'settings', title: '标签 2', props: {}, closable: true },
+          { id: 'tab-3', type: 'settings', title: '标签 3', props: {}, closable: true },
+          { id: 'tab-4', type: 'settings', title: '标签 4', props: {}, closable: true },
+          { id: 'tab-5', type: 'settings', title: '标签 5', props: {}, closable: true },
+          { id: 'tab-6', type: 'settings', title: '标签 6', props: {}, closable: true },
+          { id: 'tab-order-au', type: 'order', title: '📝 报单-IF2608', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-market',
+      })
+      const { container } = render(<TabBar />)
+      const scrollEl = container.querySelector('.tab-bar__scroll') as HTMLElement
+      Object.defineProperty(scrollEl, 'clientWidth', { value: 300, configurable: true })
+      scrollEl.querySelectorAll('[role="tab"]').forEach((el) => {
+        Object.defineProperty(el, 'offsetWidth', { value: 100, configurable: true })
+      })
+      act(() => { roCallback?.([], null as unknown as ResizeObserver) })
+      fireEvent.click(screen.getByLabelText('溢出标签'))
+      const menu = screen.getByRole('menu', { name: '隐藏标签' })
+      const item = within(menu).getByRole('menuitem', { name: /报单/ })
+      // title 已含 emoji，不应再渲染独立 icon span（否则 📝 出现两次）
+      expect(item.querySelector('.tab-bar__overflow-icon')).toBeNull()
+      expect(item.textContent).toContain('📝 报单-IF2608')
+    })
+
+    it('隐藏标签在标签栏完全隐藏（visibility:hidden，不露半截）', () => {
+      const { container } = renderManyTabs(8, 300, 100)
+      act(() => { roCallback?.([], null as unknown as ResizeObserver) })
+      const tabEls = Array.from(container.querySelectorAll('.tab-bar__scroll [role="tab"]'))
+      // 8 个等宽 100、容器 300、maxScroll=200 → 右缘>500 的索引 5,6,7 隐藏
+      expect(tabEls[5]).toHaveClass('tab-bar__tab--hidden')
+      expect(tabEls[7]).toHaveClass('tab-bar__tab--hidden')
+      expect(tabEls[0]).not.toHaveClass('tab-bar__tab--hidden')
+    })
+
     it('滚轮横滚 clamp 到 MAX_SCROLL（2×平均宽），不越界；溢出时 preventDefault', () => {
       const { container, scrollEl } = renderManyTabs(6, 300, 100)
       Object.defineProperty(scrollEl, 'scrollLeft', { value: 0, writable: true, configurable: true })

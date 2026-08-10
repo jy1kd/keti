@@ -279,7 +279,7 @@ export function TabBar() {
           data-tab-id={tab.id}
           tabIndex={0}
           aria-selected={tab.id === activeTabId}
-          className={`tab-bar__tab${tab.id === activeTabId ? ' tab-bar__tab--active' : ''}`}
+          className={`tab-bar__tab${tab.id === activeTabId ? ' tab-bar__tab--active' : ''}${hiddenTabIds.includes(tab.id) ? ' tab-bar__tab--hidden' : ''}`}
           onClick={() => {
             if (suppressClickRef.current) {
               suppressClickRef.current = false
@@ -337,7 +337,7 @@ export function TabBar() {
                   className={`tab-bar__overflow-item${tab.id === activeTabId ? ' tab-bar__overflow-item--active' : ''}`}
                   onClick={() => handleOverflowItemClick(tab)}
                 >
-                  <span className="tab-bar__overflow-icon">{tab.title.split(' ')[0]}</span>
+                  {/* title 已含 emoji 前缀（如「📝 报单-IF2608」），不再单独渲染 icon，避免图标重复 */}
                   <span className="tab-bar__overflow-title">{tab.title}</span>
                   {tab.id === activeTabId && (
                     <span className="tab-bar__overflow-check" aria-label="当前标签">
