@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState, useRef, useEffect, type KeyboardEvent } from 'react'
 import { useTabStore, type Tab } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
+import { useMarketStore } from '@/modules/market/store'
 import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
 import { isElectron } from '@/services/electron'
 import { computeTabOverflow } from './overflow'
@@ -66,7 +67,13 @@ export function TabBar() {
   }, [addMenuOpen])
 
   const handleAddItem = useCallback((item: (typeof ADD_TAB_ITEMS)[number]) => {
-    openTab({ type: item.type, title: item.title })
+    // 携带当前选中合约打开（报单/K线标签直接定位到该合约），未选中则打开空白标签
+    const inst = useMarketStore.getState().selectedInstrument
+    openTab({
+      type: item.type,
+      title: inst ? `${item.title}-${inst}` : item.title,
+      ...(inst ? { props: { instrumentID: inst } } : {}),
+    })
     setAddMenuOpen(false)
   }, [openTab])
 

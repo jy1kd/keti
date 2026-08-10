@@ -5,6 +5,7 @@ import { resolve } from 'node:path'
 import { TabBar } from './index'
 import { useTabStore } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
+import { useMarketStore } from '@/modules/market/store'
 
 const detachMock = vi.hoisted(() => ({
   startDetachDrag: vi.fn(),
@@ -52,6 +53,7 @@ describe('TabBar', () => {
     detachMock.detachTabAt.mockReset()
     useFloatingWindowStore.setState({ windows: {} })
     useTabStore.setState(defaultState)
+    useMarketStore.setState({ selectedInstrument: null })
   })
 
   // --- 渲染 ---
@@ -250,6 +252,34 @@ describe('TabBar', () => {
       hoverOpen()
       fireEvent.click(screen.getByText('⚙ 设置'))
       expect(openTab).toHaveBeenCalledWith({ type: 'settings', title: '⚙ 设置' })
+    })
+
+    it('选中合约时点击「📝 报单」带 instrumentID 打开（标题含合约代码）', () => {
+      const openTab = vi.fn(() => true)
+      useTabStore.setState({ ...defaultState, openTab })
+      useMarketStore.setState({ selectedInstrument: 'IF2608' })
+      render(<TabBar />)
+      hoverOpen()
+      fireEvent.click(screen.getByText('📝 报单'))
+      expect(openTab).toHaveBeenCalledWith({
+        type: 'order',
+        title: '📝 报单-IF2608',
+        props: { instrumentID: 'IF2608' },
+      })
+    })
+
+    it('选中合约时点击「📈 K线」带 instrumentID 打开（标题含合约代码）', () => {
+      const openTab = vi.fn(() => true)
+      useTabStore.setState({ ...defaultState, openTab })
+      useMarketStore.setState({ selectedInstrument: 'IF2608' })
+      render(<TabBar />)
+      hoverOpen()
+      fireEvent.click(screen.getByText('📈 K线'))
+      expect(openTab).toHaveBeenCalledWith({
+        type: 'kline',
+        title: '📈 K线-IF2608',
+        props: { instrumentID: 'IF2608' },
+      })
     })
 
     it('鼠标从 + 悬停区下移到菜单项不关闭选择栏（可到达并点击菜单项）', () => {
