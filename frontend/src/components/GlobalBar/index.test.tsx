@@ -10,7 +10,6 @@ const { mockOpenFloatingTab } = vi.hoisted(() => ({
 
 vi.mock('@/utils/openFloatingTab', () => ({
   openFloatingTab: mockOpenFloatingTab,
-  ORDER_FLOATING_SIZE: { w: 620, h: 540 },
 }))
 
 // Mock TabBar（GlobalBar 只承载，行为由 TabBar 自身测试覆盖）

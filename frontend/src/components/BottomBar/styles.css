@@ -27,12 +27,15 @@
   overflow: hidden;
   white-space: nowrap;
   transition: max-width 0.3s ease, opacity 0.25s ease;
+  visibility: visible;
 }
 
 .bottom-bar__tools--collapsed {
   max-width: 0;
   opacity: 0;
   pointer-events: none;
+  visibility: hidden;
+  transition: max-width 0.3s ease, opacity 0.25s ease, visibility 0s linear 0.25s;
 }
 
 .bottom-bar__tool {

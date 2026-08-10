@@ -19,7 +19,7 @@ vi.mock('@/components/TabContent', () => ({
   TabContent: () => <div data-testid="tab-content">TabContent Mock</div>,
 }))
 
-// rAF stub（GlobalBar FPS 徽标内 PerfMonitor visible=true 时使用）
+// rAF stub（BottomBar FPS 徽标内 PerfMonitor visible=true 时使用）
 let rafCallbacks: FrameRequestCallback[] = []
 let rafId = 0
 
