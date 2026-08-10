@@ -3,7 +3,6 @@ import { useTabStore, type Tab } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import { useMarketStore } from '@/modules/market/store'
 import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
-import { isElectron } from '@/services/electron'
 import { computeTabOverflow } from './overflow'
 import './styles.css'
 
@@ -11,6 +10,7 @@ interface ContextMenuState {
   tabId: string
   tabType: string
   tabTitle: string
+  pinned: boolean
   x: number
   y: number
 }
@@ -29,13 +29,16 @@ const ADD_TAB_ITEMS = [
  * 显示所有打开的标签页，支持切换、关闭、新增。
  * `+` 悬停弹出选择栏，停靠打开底部功能栏标签（报单/K线/查询/设置）。
  * 键盘导航：左/右箭头切换标签，Home/End 跳转首尾。
- * 右键菜单：在新窗口打开（仅 Electron 环境）
+ * 右键菜单：关闭/关闭其他/关闭所有/固定(取消固定)/窗口化
  */
 export function TabBar() {
   const tabs = useTabStore((s) => s.tabs)
   const activeTabId = useTabStore((s) => s.activeTabId)
   const setActiveTab = useTabStore((s) => s.setActiveTab)
   const closeTab = useTabStore((s) => s.closeTab)
+  const closeOthers = useTabStore((s) => s.closeOthers)
+  const closeAll = useTabStore((s) => s.closeAll)
+  const togglePin = useTabStore((s) => s.togglePin)
   const windows = useFloatingWindowStore((s) => s.windows)
   const suppressClickRef = useRef(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
@@ -81,13 +84,22 @@ export function TabBar() {
   // useMemo 稳定引用：避免 measureOverflow / RO / wheel 等依赖 visibleTabs 的 effect 每次渲染空转
   const visibleTabs = useMemo(() => tabs.filter((t) => !windows[t.id]), [tabs, windows])
 
+  // 行情标签（初始页）：固定在左侧、可滚动区之外；不参与滚轮/溢出/隐藏
+  const marketTab = visibleTabs.find((t) => t.type === 'market')
+
+  // 可滚动区标签：排除行情标签；pinned 靠左排序
+  const scrollTabs = useMemo(() => {
+    const rest = visibleTabs.filter((t) => t.type !== 'market')
+    return [...rest.filter((t) => t.pinned), ...rest.filter((t) => !t.pinned)]
+  }, [visibleTabs])
+
   // ── 溢出（▾ 下拉 + 有界滚轮）──
   const [hiddenTabIds, setHiddenTabIds] = useState<string[]>([])
   const [overflowOpen, setOverflowOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const overflowWrapRef = useRef<HTMLDivElement>(null)
 
-  const hiddenTabs = visibleTabs.filter((t) => hiddenTabIds.includes(t.id))
+  const hiddenTabs = scrollTabs.filter((t) => hiddenTabIds.includes(t.id))
   const hasHidden = hiddenTabs.length > 0
 
   // ▾ 点击项：激活 + 将目标标签滚入视口 + 关闭
@@ -100,7 +112,7 @@ export function TabBar() {
         if (targetEl) {
           const tabEls = Array.from(scrollEl.querySelectorAll<HTMLElement>('[role="tab"]'))
           const widths = tabEls.map((el) => el.offsetWidth)
-          const ids = visibleTabs.map((t) => t.id)
+          const ids = scrollTabs.map((t) => t.id)
           const { maxScroll } = computeTabOverflow(ids, scrollEl.clientWidth, widths)
           // 目标标签滚到可视左缘；clamp 到 [0, maxScroll]
           scrollEl.scrollLeft = Math.max(0, Math.min(targetEl.offsetLeft, maxScroll))
@@ -108,7 +120,7 @@ export function TabBar() {
       }
       setOverflowOpen(false)
     },
-    [setActiveTab, visibleTabs],
+    [setActiveTab, scrollTabs],
   )
 
   // 测量：读取容器宽与各标签宽，computeTabOverflow 计算隐藏集
@@ -116,14 +128,14 @@ export function TabBar() {
     const scrollEl = scrollRef.current
     if (!scrollEl) return
     const tabEls = Array.from(scrollEl.querySelectorAll<HTMLElement>('[role="tab"]'))
-    const ids = visibleTabs.map((t) => t.id)
+    const ids = scrollTabs.map((t) => t.id)
     const widths = tabEls.map((el) => el.offsetWidth)
     const { hiddenTabIds: hidden } = computeTabOverflow(ids, scrollEl.clientWidth, widths)
     // 内容不变时复用 prev 引用，避免空转重渲染（React 对相同引用 bailout）
     setHiddenTabIds((prev) =>
       prev.length === hidden.length && prev.every((id, i) => id === hidden[i]) ? prev : hidden,
     )
-  }, [visibleTabs])
+  }, [scrollTabs])
 
   useEffect(() => {
     measureOverflow()
@@ -166,7 +178,7 @@ export function TabBar() {
       // 无溢出时不拦截滚轮（单标签/全部放得下），让页面正常滚动
       const totalWidth = widths.reduce((sum, w) => sum + w, 0)
       if (totalWidth <= scrollEl.clientWidth) return
-      const ids = visibleTabs.map((t) => t.id)
+      const ids = scrollTabs.map((t) => t.id)
       const { maxScroll } = computeTabOverflow(ids, scrollEl.clientWidth, widths)
       const target = scrollEl.scrollLeft + e.deltaX + e.deltaY
       scrollEl.scrollLeft = Math.max(0, Math.min(target, maxScroll))
@@ -174,7 +186,7 @@ export function TabBar() {
     }
     scrollEl.addEventListener('wheel', onWheel, { passive: false })
     return () => scrollEl.removeEventListener('wheel', onWheel)
-  }, [visibleTabs])
+  }, [scrollTabs])
 
   // 标签栏拖拽脱离（药丸 ghost）；阈值由 startDetachDrag 内部判定
   const handleTabPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>, tab: Tab) => {
@@ -209,66 +221,50 @@ export function TabBar() {
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      const currentIndex = visibleTabs.findIndex((t) => t.id === activeTabId)
+      const currentIndex = scrollTabs.findIndex((t) => t.id === activeTabId)
       if (currentIndex === -1) return
 
       let nextIndex: number | null = null
 
       switch (e.key) {
         case 'ArrowRight':
-          nextIndex = (currentIndex + 1) % visibleTabs.length
+          nextIndex = (currentIndex + 1) % scrollTabs.length
           break
         case 'ArrowLeft':
-          nextIndex = (currentIndex - 1 + visibleTabs.length) % visibleTabs.length
+          nextIndex = (currentIndex - 1 + scrollTabs.length) % scrollTabs.length
           break
         case 'Home':
           nextIndex = 0
           break
         case 'End':
-          nextIndex = visibleTabs.length - 1
+          nextIndex = scrollTabs.length - 1
           break
         default:
           return
       }
 
       e.preventDefault()
-      setActiveTab(visibleTabs[nextIndex].id)
+      setActiveTab(scrollTabs[nextIndex].id)
     },
-    [visibleTabs, activeTabId, setActiveTab],
+    [scrollTabs, activeTabId, setActiveTab],
   )
 
   // 右键菜单处理
   const handleContextMenu = useCallback(
     (e: React.MouseEvent, tab: { id: string; type: string; title: string }) => {
       e.preventDefault()
-      setContextMenu({
-        tabId: tab.id,
-        tabType: tab.type,
-        tabTitle: tab.title,
-        x: e.clientX,
-        y: e.clientY,
-      })
+      const pinned = !!useTabStore.getState().tabs.find((t) => t.id === tab.id)?.pinned
+      setContextMenu({ tabId: tab.id, tabType: tab.type, tabTitle: tab.title, pinned, x: e.clientX, y: e.clientY })
     },
     [],
   )
 
-  // 在新窗口打开标签
-  const handleOpenInNewWindow = useCallback(async () => {
-    if (!contextMenu) return
-    const { tabType, tabId, tabTitle } = contextMenu
-
-    if (isElectron()) {
-      // Electron 环境：调用 IPC 打开新窗口
-      const { openTabWindow } = await import('@/services/electron')
-      await openTabWindow(tabType, tabId, tabTitle)
-    } else {
-      // Web 环境：在新标签页打开
-      const url = `${window.location.origin}${window.location.pathname}#/tab/${tabType}/${tabId}`
-      window.open(url, '_blank')
-    }
-
+  // 点完菜单项后统一关闭：右键菜单 + ▾ 下拉一起消失
+  // （右键 ▾ 隐藏标签时下拉保持展开，选中某个功能后二者同时关闭）
+  const closeContextMenu = useCallback(() => {
     setContextMenu(null)
-  }, [contextMenu])
+    setOverflowOpen(false)
+  }, [])
 
   return (
     <div
@@ -277,9 +273,37 @@ export function TabBar() {
       aria-label="标签栏"
       onKeyDown={handleKeyDown}
     >
+      {/* 行情标签（初始页）：固定左侧、不随滚轮、无右键、无图标 */}
+      {marketTab && (
+        <div
+          key={marketTab.id}
+          role="tab"
+          data-tab-id={marketTab.id}
+          tabIndex={0}
+          aria-selected={marketTab.id === activeTabId}
+          className={`tab-bar__market tab-bar__tab${marketTab.id === activeTabId ? ' tab-bar__tab--active' : ''}`}
+          onClick={() => {
+            if (suppressClickRef.current) {
+              suppressClickRef.current = false
+              return
+            }
+            setActiveTab(marketTab.id)
+          }}
+          onContextMenu={(e) => e.preventDefault()} // 行情标签无右键菜单
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              setActiveTab(marketTab.id)
+            }
+          }}
+        >
+          <span className="tab-bar__title">{marketTab.title}</span>
+        </div>
+      )}
+
       {/* 可滚动标签区：有界滚轮横滚，隐藏滚动条 */}
       <div className="tab-bar__scroll" ref={scrollRef}>
-      {visibleTabs.map((tab) => (
+      {scrollTabs.map((tab) => (
         <div
           key={tab.id}
           role="tab"
@@ -304,7 +328,20 @@ export function TabBar() {
           }}
         >
           <span className="tab-bar__title">{tab.title}</span>
-          {tab.closable && (
+          {tab.closable && tab.pinned ? (
+            <button
+              type="button"
+              aria-label="取消固定"
+              title="取消固定"
+              className="tab-bar__pin"
+              onClick={(e) => {
+                e.stopPropagation()
+                togglePin(tab.id)
+              }}
+            >
+              📌
+            </button>
+          ) : tab.closable ? (
             <button
               type="button"
               aria-label="关闭标签"
@@ -316,7 +353,7 @@ export function TabBar() {
             >
               ×
             </button>
-          )}
+          ) : null}
         </div>
       ))}
       </div>
@@ -343,6 +380,12 @@ export function TabBar() {
                   aria-selected={tab.id === activeTabId}
                   className={`tab-bar__overflow-item${tab.id === activeTabId ? ' tab-bar__overflow-item--active' : ''}`}
                   onClick={() => handleOverflowItemClick(tab)}
+                  onContextMenu={(e) => {
+                    // 隐藏标签在滚动区外不可直接右键，这里复用在标签右键菜单，提供关闭/固定/窗口化等操作。
+                    // 不在此处关闭 ▾ 下拉：保持展开，等点完菜单项（mousedown 落在 wrap 外）再与右键菜单统一消失。
+                    e.preventDefault()
+                    handleContextMenu(e, tab)
+                  }}
                 >
                   {/* title 已含 emoji 前缀（如「📝 报单-IF2608」），不再单独渲染 icon，避免图标重复 */}
                   <span className="tab-bar__overflow-title">{tab.title}</span>
@@ -405,9 +448,43 @@ export function TabBar() {
           <button
             type="button"
             className="tab-bar__context-item"
-            onClick={handleOpenInNewWindow}
+            onClick={() => { closeTab(contextMenu.tabId); closeContextMenu() }}
           >
-            🪟 在新窗口打开
+            <span className="tab-bar__context-icon">✕</span>
+            <span>关闭</span>
+          </button>
+          <button
+            type="button"
+            className="tab-bar__context-item"
+            onClick={() => { closeOthers(contextMenu.tabId); closeContextMenu() }}
+          >
+            <span className="tab-bar__context-icon">⊞</span>
+            <span>关闭其他</span>
+          </button>
+          <button
+            type="button"
+            className="tab-bar__context-item"
+            onClick={() => { closeAll(); closeContextMenu() }}
+          >
+            <span className="tab-bar__context-icon">⧉</span>
+            <span>关闭所有</span>
+          </button>
+          <button
+            type="button"
+            className="tab-bar__context-item"
+            onClick={() => { togglePin(contextMenu.tabId); closeContextMenu() }}
+          >
+            {/* icon 恒定 📌，label 恒为文字：与其他菜单项 icon+label 结构一致，避免错位 */}
+            <span className="tab-bar__context-icon">📌</span>
+            <span>{contextMenu.pinned ? '取消固定' : '固定'}</span>
+          </button>
+          <button
+            type="button"
+            className="tab-bar__context-item"
+            onClick={() => { detachTabAt(contextMenu.tabId, { x: contextMenu.x, y: contextMenu.y }); closeContextMenu() }}
+          >
+            <span className="tab-bar__context-icon">🗗</span>
+            <span>窗口化</span>
           </button>
         </div>
       )}

@@ -24,6 +24,15 @@
   display: none;
 }
 
+/* 行情标签（初始页）：固定在左侧、可滚动区之外；少量左呼吸替代原 GlobalBar 16px 外层
+   选择器双类（0,2,0）压过 .tab-bar__tab（0,1,0）的 padding/cursor，确保 8px 左呼吸与
+   cursor:default 实际生效（此前后者后声明覆盖，左留白退化为 12px、光标为 pointer） */
+.tab-bar__market.tab-bar__tab {
+  flex-shrink: 0;
+  padding-left: 8px;
+  cursor: default;
+}
+
 /* ▾ 溢出按钮 + 下拉 */
 .tab-bar__overflow {
   position: relative;
@@ -168,6 +177,27 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
+.tab-bar__pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.tab-bar__pin:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .tab-bar__add {
   display: flex;
   align-items: center;
@@ -227,6 +257,13 @@
 
 .tab-bar__context-item:hover {
   background: var(--bg-hover, #3a3a3a);
+}
+
+.tab-bar__context-icon {
+  font-size: 13px;
+  width: 18px;
+  flex-shrink: 0;
+  text-align: center;
 }
 
 /* `+` 新增标签选择栏（悬停弹出，锚定 + 正下方、右对齐向左展开） */

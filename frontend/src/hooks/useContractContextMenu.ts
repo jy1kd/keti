@@ -78,16 +78,16 @@ export function useContractContextMenu() {
     })
   }, [openTab])
 
-  // 批量打开K线浮动窗口
+  // 批量打开K线标签页（停靠，与批量报单 openOrderTabs 一致）
   const openKlineTabs = useCallback((instrumentIDs: string[]) => {
     instrumentIDs.forEach((id) => {
-      openFloatingTab({
+      openTab({
         type: 'kline',
         title: `📈 K线-${id}`,
         props: { instrumentID: id },
       })
     })
-  }, [])
+  }, [openTab])
 
   // 单选右键菜单处理：记录坐标并抑制浏览器原生菜单
   const handleContextMenu = useCallback((instrumentID: string, price: number, event: MouseEvent) => {
