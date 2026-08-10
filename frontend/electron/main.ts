@@ -5,6 +5,7 @@ import { ShortcutManager } from './shortcuts';
 import { NotificationManager } from './notificationManager';
 import { BackendManager } from './backendManager';
 import { AutoUpdaterManager } from './autoUpdater';
+import { MenuManager } from './menuManager';
 import { IPC_CHANNELS } from './ipc/index';
 import { registerWindowControlHandlers, registerWindowManagementHandlers } from './ipc/window';
 import { registerAppInfoHandlers, registerBackendManagementHandlers } from './ipc/app';
@@ -75,6 +76,9 @@ export async function initializeApp(): Promise<void> {
 
   // Create main window
   const mainWindow = windowManager.createMainWindow();
+
+  // Set application menu (custom app menu + default View menu)
+  new MenuManager().initialize(mainWindow, windowManager);
 
   // Create tray manager and initialize
   trayManager = new TrayManager();

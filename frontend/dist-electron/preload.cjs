@@ -25,6 +25,24 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
         electron_1.ipcRenderer.on('navigate:tab', handler);
         return () => electron_1.ipcRenderer.removeListener('navigate:tab', handler);
     },
+    // Menu (main → renderer): 顶部菜单打开浮动窗
+    onOpenFloatingTab: (callback) => {
+        const handler = (_, tab) => callback(tab);
+        electron_1.ipcRenderer.on('menu:open-floating', handler);
+        return () => electron_1.ipcRenderer.removeListener('menu:open-floating', handler);
+    },
+    // Menu (main → renderer): 切换 FPS 监控
+    onTogglePerf: (callback) => {
+        const handler = () => callback();
+        electron_1.ipcRenderer.on('menu:toggle-perf', handler);
+        return () => electron_1.ipcRenderer.removeListener('menu:toggle-perf', handler);
+    },
+    // Menu (main → renderer): 行情主页内切换视图（全部/自选/T型期权）
+    onMarketView: (callback) => {
+        const handler = (_, view) => callback(view);
+        electron_1.ipcRenderer.on('menu:market-view', handler);
+        return () => electron_1.ipcRenderer.removeListener('menu:market-view', handler);
+    },
     // Data exchange (renderer → main)
     onGetSelectedInstrument: (callback) => {
         const handler = () => callback();

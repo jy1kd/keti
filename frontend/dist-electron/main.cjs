@@ -15,6 +15,7 @@ const shortcuts_1 = require('./shortcuts.cjs');
 const notificationManager_1 = require('./notificationManager.cjs');
 const backendManager_1 = require('./backendManager.cjs');
 const autoUpdater_1 = require('./autoUpdater.cjs');
+const menuManager_1 = require('./menuManager.cjs');
 const index_1 = require('./ipc/index.cjs');
 const window_1 = require('./ipc/window.cjs');
 const app_1 = require('./ipc/app.cjs');
@@ -74,6 +75,8 @@ async function initializeApp() {
     windowManager = new windowManager_1.WindowManager(exports.isDev);
     // Create main window
     const mainWindow = windowManager.createMainWindow();
+    // Set application menu (custom app menu + default View menu)
+    new menuManager_1.MenuManager().initialize(mainWindow, windowManager);
     // Create tray manager and initialize
     trayManager = new trayManager_1.TrayManager();
     trayManager.initialize(mainWindow);
