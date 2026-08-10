@@ -139,7 +139,9 @@
 
 .tab-bar__add-menu {
   position: absolute;
-  top: calc(100% + 4px);
+  /* top:100% 与 + 悬停区无缝衔接：若留 4px 间隙，鼠标下移穿过间隙会触发
+     wrapper 的 mouseleave 导致选择栏在鼠标到达菜单项前关闭。 */
+  top: 100%;
   right: 0;
   z-index: 1000;
   min-width: 160px;

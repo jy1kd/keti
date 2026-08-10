@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { TabBar } from './index'
 import { useTabStore } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
@@ -239,6 +241,21 @@ describe('TabBar', () => {
       expect(openTab).toHaveBeenCalledWith({ type: 'settings', title: '⚙ 设置' })
     })
 
+    it('鼠标从 + 悬停区下移到菜单项不关闭选择栏（可到达并点击菜单项）', () => {
+      // 回归：.tab-bar__add-menu 原留 4px 间隙，鼠标下移穿过间隙会触发 wrapper
+      // mouseleave，导致选择栏在鼠标到达菜单项前关闭。此用例模拟「+ → 菜单项」的
+      // 穿行路径，断言菜单在鼠标到达时仍打开、点击成功。
+      const openTab = vi.fn(() => true)
+      useTabStore.setState({ ...defaultState, openTab })
+      render(<TabBar />)
+      hoverOpen()
+      // 鼠标下移进入菜单区（fix 后间隙并入悬停区，不再触发 wrapper mouseleave）
+      fireEvent.mouseOver(screen.getByText('📝 报单'))
+      expect(screen.getByText('📝 报单')).toBeInTheDocument()
+      fireEvent.click(screen.getByText('📝 报单'))
+      expect(openTab).toHaveBeenCalledWith({ type: 'order', title: '📝 报单' })
+    })
+
     it('点击选择栏外部关闭', () => {
       render(<TabBar />)
       hoverOpen()
@@ -253,6 +270,19 @@ describe('TabBar', () => {
       expect(screen.getByText('📝 报单')).toBeInTheDocument()
       fireEvent.keyDown(window, { key: 'Escape' })
       expect(screen.queryByText('📝 报单')).toBeNull()
+    })
+  })
+
+  // --- + 选择栏悬停可达性样式（回归） ---
+
+  describe('+ 选择栏悬停可达性样式', () => {
+    // jsdom 无法计算真实布局几何，故直接断言 CSS 源文件（同 KLinePage.style.test 模式）。
+    it('.tab-bar__add-menu 必须与 + 悬停区无缝衔接（top:100%，无 4px 死区）', () => {
+      const css = readFileSync(resolve(__dirname, 'styles.css'), 'utf-8')
+      const block = css.match(/\.tab-bar__add-menu\s*\{([^}]*)\}/)?.[1]
+      expect(block).toBeTruthy()
+      expect(block).toMatch(/top:\s*100%/)
+      expect(block).not.toMatch(/\+ 4px/)
     })
   })
 
