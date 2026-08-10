@@ -66,7 +66,7 @@ describe('App Layout — 标签页系统', () => {
     })
   })
 
-  describe('全局栏（GlobalBar）', () => {
+  describe('底部状态栏（BottomBar）', () => {
     it('显示 MD/TD 连接状态', () => {
       render(<App />)
       expect(screen.getByText('MD')).toBeInTheDocument()
@@ -96,16 +96,17 @@ describe('App Layout — 标签页系统', () => {
   })
 
   describe('性能监控', () => {
-    it('默认不渲染 ⚡FPS（已收敛进 ⋯ 更多菜单）', () => {
+    it('默认不显示 FPS 徽标（FPS 监控按钮常驻）', () => {
       render(<App />)
-      expect(screen.queryByText('⚡FPS 监控')).toBeNull()
+      expect(screen.getByLabelText('FPS 监控')).toBeInTheDocument()
+      expect(screen.queryByTestId('bottom-bar-fps')).toBeNull()
     })
 
     it('Ctrl+Shift+M 切换性能监控（显示 FPS 徽标）', () => {
       render(<App />)
-      expect(screen.queryByTestId('global-bar-fps')).toBeNull()
+      expect(screen.queryByTestId('bottom-bar-fps')).toBeNull()
       fireEvent.keyDown(window, { key: 'M', ctrlKey: true, shiftKey: true })
-      expect(screen.getByTestId('global-bar-fps')).toBeInTheDocument()
+      expect(screen.getByTestId('bottom-bar-fps')).toBeInTheDocument()
     })
   })
 })
