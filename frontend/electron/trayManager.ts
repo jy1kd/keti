@@ -2,13 +2,17 @@
  * Tray Manager
  *
  * Manages the system tray for the Electron application.
- * Supports tray icon, context menu, and notifications.
+ * The context menu mirrors the top application menu (shared template, menuTemplate.ts)
+ * plus a top-level 退出 item. Supports tray icon, context menu, and notifications.
  */
 
-import { Tray, Menu, nativeImage, BrowserWindow } from 'electron';
+import { Tray, Menu, nativeImage, app } from 'electron';
+import type { BrowserWindow } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import { IPC_CHANNELS } from './ipc/index';
+import { buildMenuFromDef, getAppMenuDef } from './menuTemplate';
+import type { MenuItemDef } from './menuTemplate';
+import type { WindowManager } from './windowManager';
 
 // Tray notification types
 export interface TrayNotification {
@@ -22,12 +26,19 @@ export interface TrayNotification {
 export class TrayManager {
   private tray: Tray | null = null;
   private mainWindow: BrowserWindow | null = null;
+  private isQuitting = false;
 
   /**
-   * Initialize the tray with a main window reference
+   * Initialize the tray with a main window and window manager reference.
+   * The context menu mirrors the native app menu (shared template) with 退出 at the bottom.
    */
-  initialize(mainWindow: BrowserWindow): void {
+  initialize(mainWindow: BrowserWindow, windowManager: WindowManager): void {
     this.mainWindow = mainWindow;
+
+    // 退出标志：app.quit() 时放行窗口关闭；否则 close 事件会被拦截，应用无法退出
+    app.on('before-quit', () => {
+      this.isQuitting = true;
+    });
 
     // Create tray icon
     const iconPath = path.join(__dirname, '../build/icon.png');
@@ -45,51 +56,14 @@ export class TrayManager {
 
     this.tray.setToolTip('SimNow 交易终端');
 
-    // 显示主窗口并向其发送 IPC（与顶部菜单打开方式同步：行情切主页视图，其余弹浮动窗）
-    const showAndSend = (channel: string, ...args: unknown[]) => {
-      if (this.mainWindow) {
-        this.mainWindow.show();
-        this.mainWindow.focus();
-        this.mainWindow.webContents.send(channel, ...args);
-      }
-    };
-
-    // Build context menu
-    const contextMenu = Menu.buildFromTemplate([
-      {
-        label: '📊 全部行情',
-        click: () => showAndSend(IPC_CHANNELS.MENU_MARKET_VIEW, 'all'),
-      },
-      {
-        label: '⭐ 自选行情',
-        click: () => showAndSend(IPC_CHANNELS.MENU_MARKET_VIEW, 'favorites'),
-      },
-      { type: 'separator' },
-      {
-        label: '📋 查询窗口',
-        click: () => showAndSend(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query'),
-      },
-      {
-        label: '⚙ 设置',
-        click: () => showAndSend(IPC_CHANNELS.MENU_OPEN_FLOATING, 'settings'),
-      },
-      {
-        label: '📡 网络监控',
-        click: () => showAndSend(IPC_CHANNELS.MENU_OPEN_FLOATING, 'ipc-monitor'),
-      },
-      { type: 'separator' },
-      {
-        label: '退出',
-        click: () => {
-          if (this.mainWindow) {
-            this.mainWindow.destroy();
-          }
-          this.destroy();
-        },
-      },
-    ]);
-
-    this.tray.setContextMenu(contextMenu);
+    // 托盘菜单 = 共享四组定义（剔除「功能」内嵌退出 app-quit）+ 一级底部退出
+    const def: MenuItemDef[] = [
+      ...getAppMenuDef(),
+      { id: 'tray-sep', type: 'separator' },
+      { id: 'tray-quit', label: '退出', action: { type: 'quit' } },
+    ];
+    const ctx = { mainWindow, windowManager };
+    this.tray.setContextMenu(Menu.buildFromTemplate(buildMenuFromDef(def, ctx, { omitIds: ['app-quit'] })));
 
     // Handle tray click (show/hide window)
     this.tray.on('click', () => {
@@ -103,10 +77,10 @@ export class TrayManager {
       }
     });
 
-    // Handle window close - minimize to tray instead of quitting
+    // Handle window close - minimize to tray instead of quitting (except while quitting)
     if (this.mainWindow) {
       this.mainWindow.on('close', (event) => {
-        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+        if (!this.isQuitting && this.mainWindow && !this.mainWindow.isDestroyed()) {
           event.preventDefault();
           this.mainWindow.hide();
         }

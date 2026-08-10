@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock electron modules
 vi.mock('electron', () => ({
+  app: { quit: vi.fn(), on: vi.fn() },
   Tray: vi.fn().mockImplementation(() => ({
     setToolTip: vi.fn(),
     setContextMenu: vi.fn(),
@@ -23,128 +23,179 @@ vi.mock('electron', () => ({
     focus: vi.fn(),
     destroy: vi.fn(),
     isVisible: vi.fn().mockReturnValue(true),
+    isDestroyed: vi.fn().mockReturnValue(false),
     on: vi.fn(),
     webContents: { send: vi.fn() },
   })),
 }));
 
-import { Menu, BrowserWindow } from 'electron';
+import { Menu, BrowserWindow, app } from 'electron';
 import { TrayManager } from '../trayManager';
 import { IPC_CHANNELS } from '../ipc/index';
 
 interface TemplateItem {
   label?: string;
   type?: string;
+  submenu?: TemplateItem[];
   click?: () => void;
 }
 
 describe('TrayManager', () => {
   const buildFromTemplate = Menu.buildFromTemplate as unknown as ReturnType<typeof vi.fn>;
   let mainWindow: any;
+  let windowManager: any;
 
   const getTemplate = (): TemplateItem[] => buildFromTemplate.mock.calls[0][0];
-  const clickItem = (label: string): void => {
-    const item = getTemplate().find((i) => i.label === label);
+  const clickItem = (itemLabel: string): void => {
+    const findIn = (items: TemplateItem[]): TemplateItem | undefined => {
+      for (const i of items) {
+        if (i.label === itemLabel) return i;
+        if (i.submenu) {
+          const found = findIn(i.submenu);
+          if (found) return found;
+        }
+      }
+      return undefined;
+    };
+    const item = findIn(getTemplate());
     item!.click!();
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
     mainWindow = new BrowserWindow() as any;
+    windowManager = { openTabWindow: vi.fn() };
   });
 
   it('should export TrayManager class', async () => {
     const { TrayManager: TM } = await import('../trayManager');
-    expect(TM).toBeDefined();
     expect(typeof TM).toBe('function');
   });
 
-  it('should create instance with initialize method', async () => {
-    const { TrayManager: TM } = await import('../trayManager');
-    const manager = new TM();
-    expect(manager.initialize).toBeDefined();
-    expect(typeof manager.initialize).toBe('function');
+  it('should return null for getTray before initialization', () => {
+    const manager = new TrayManager();
+    expect(manager.getTray()).toBeNull();
   });
 
-  it('should create instance with destroy method', async () => {
-    const { TrayManager: TM } = await import('../trayManager');
-    const manager = new TM();
-    expect(manager.destroy).toBeDefined();
-    expect(typeof manager.destroy).toBe('function');
+  it('initialize 设置托盘上下文菜单', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+    expect(manager.getTray()!.setContextMenu).toHaveBeenCalled();
   });
 
-  it('should create instance with showNotification method', async () => {
-    const { TrayManager: TM } = await import('../trayManager');
-    const manager = new TM();
-    expect(manager.showNotification).toBeDefined();
-    expect(typeof manager.showNotification).toBe('function');
+  it('一级菜单结构：行情/功能/设置/性能监控/分隔符/退出', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+    const sig = getTemplate().map((i) => (i.type === 'separator' ? '---' : i.label));
+    expect(sig).toEqual(['行情', '功能', '设置', '性能监控', '---', '退出']);
   });
 
-  it('should create instance with getTray method', async () => {
-    const { TrayManager: TM } = await import('../trayManager');
-    const manager = new TM();
-    expect(manager.getTray).toBeDefined();
-    expect(typeof manager.getTray).toBe('function');
+  it('功能子菜单不包含退出（已提到一级底部）', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+    const fnMenu = getTemplate().find((i) => i.label === '功能')!;
+    const labels = fnMenu.submenu!.map((i) => i.label).filter(Boolean);
+    expect(labels).toEqual(['📝 报单窗口', '📈 K线窗口', '📋 查询窗口']);
   });
 
-  it('should return null for getTray before initialization', async () => {
-    const { TrayManager: TM } = await import('../trayManager');
-    const manager = new TM();
-    const tray = manager.getTray();
-    expect(tray).toBeNull();
+  it('行情子菜单完整镜像：全部/T型/自选/新窗口', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+    const market = getTemplate().find((i) => i.label === '行情')!;
+    const labels = market.submenu!.map((i) => i.label).filter(Boolean);
+    expect(labels).toEqual(['📊 全部行情', '📉 T型期权', '⭐ 自选行情', '🪟 在新窗口打开']);
   });
 
-  describe('托盘菜单与顶部菜单同步', () => {
-    it('initialize 设置托盘上下文菜单', () => {
-      const manager = new TrayManager();
-      manager.initialize(mainWindow);
-      expect(manager.getTray()!.setContextMenu).toHaveBeenCalled();
-    });
+  it('点击全部行情发送 menu:market-view all 并显示主窗口', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+    clickItem('📊 全部行情');
+    expect(mainWindow.show).toHaveBeenCalled();
+    expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'all');
+  });
 
-    it('点击全部行情发送 menu:market-view all 并显示主窗口', () => {
-      const manager = new TrayManager();
-      manager.initialize(mainWindow);
-      clickItem('📊 全部行情');
-      expect(mainWindow.show).toHaveBeenCalled();
-      expect(mainWindow.focus).toHaveBeenCalled();
-      expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'all');
-    });
+  it('点击T型期权发送 menu:market-view options', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+    clickItem('📉 T型期权');
+    expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'options');
+  });
 
-    it('点击自选行情发送 menu:market-view favorites', () => {
-      const manager = new TrayManager();
-      manager.initialize(mainWindow);
-      clickItem('⭐ 自选行情');
-      expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'favorites');
-    });
+  it('点击在新窗口打开调用 windowManager.openTabWindow', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+    clickItem('🪟 在新窗口打开');
+    expect(windowManager.openTabWindow).toHaveBeenCalledWith('market', 'tab-market', '📊 行情');
+  });
 
-    it('点击查询窗口发送 menu:open-floating query', () => {
-      const manager = new TrayManager();
-      manager.initialize(mainWindow);
-      clickItem('📋 查询窗口');
-      expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query');
-    });
+  it('点击报单窗口发送 menu:open-floating order', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+    clickItem('📝 报单窗口');
+    expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'order');
+  });
 
-    it('点击设置发送 menu:open-floating settings', () => {
-      const manager = new TrayManager();
-      manager.initialize(mainWindow);
-      clickItem('⚙ 设置');
-      expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'settings');
-    });
+  it('点击K线窗口发送 menu:open-floating kline', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+    clickItem('📈 K线窗口');
+    expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'kline');
+  });
 
-    it('点击网络监控发送 menu:open-floating ipc-monitor', () => {
-      const manager = new TrayManager();
-      manager.initialize(mainWindow);
-      clickItem('📡 网络监控');
-      expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'ipc-monitor');
-    });
+  it('点击查询窗口发送 menu:open-floating query', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+    clickItem('📋 查询窗口');
+    expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query');
+  });
 
-    it('点击退出销毁主窗口与托盘', () => {
-      const manager = new TrayManager();
-      manager.initialize(mainWindow);
-      const tray = manager.getTray();
-      clickItem('退出');
-      expect(mainWindow.destroy).toHaveBeenCalled();
-      expect(tray!.destroy).toHaveBeenCalled();
-    });
+  it('点击设置发送 menu:open-floating settings', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+    clickItem('⚙ 设置');
+    expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'settings');
+  });
+
+  it('点击FPS监控发送 menu:toggle-perf', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+    clickItem('⚡FPS 监控');
+    expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_TOGGLE_PERF);
+  });
+
+  it('点击网络监控发送 menu:open-floating ipc-monitor', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+    clickItem('🔌 网络监控');
+    expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'ipc-monitor');
+  });
+
+  it('点击退出调用 app.quit', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+    clickItem('退出');
+    expect(app.quit).toHaveBeenCalled();
+  });
+
+  it('before-quit 置位后主窗口 close 不再被拦截（可正常退出）', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+
+    const closeCalls = mainWindow.on.mock.calls as [string, (e: { preventDefault: () => void }) => void][];
+    const closeHandler = closeCalls.find(([ch]) => ch === 'close')![1];
+    const event = { preventDefault: vi.fn() };
+
+    // 未退出：拦截并隐藏
+    closeHandler(event);
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+    // 触发 before-quit
+    const beforeQuitCalls = app.on.mock.calls as [string, () => void][];
+    const beforeQuitHandler = beforeQuitCalls.find(([ch]) => ch === 'before-quit')![1];
+    beforeQuitHandler();
+
+    // 退出中：放行，不再 preventDefault
+    closeHandler(event);
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
   });
 });

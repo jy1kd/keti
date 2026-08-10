@@ -82,7 +82,7 @@ export async function initializeApp(): Promise<void> {
 
   // Create tray manager and initialize
   trayManager = new TrayManager();
-  trayManager.initialize(mainWindow);
+  trayManager.initialize(mainWindow, windowManager);
 
   // Store selected instrument from renderer
   let selectedInstrument = '';
