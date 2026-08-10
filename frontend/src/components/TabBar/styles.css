@@ -122,3 +122,54 @@
 .tab-bar__context-item:hover {
   background: var(--bg-hover, #3a3a3a);
 }
+
+/* `+` 新增标签选择栏（悬停弹出，锚定 + 正下方、右对齐向左展开） */
+.tab-bar__add-wrap {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.tab-bar__add--active {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tab-bar__add-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 1000;
+  min-width: 160px;
+  background: var(--bg-secondary, #2a2a2a);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  padding: 4px 0;
+}
+
+.tab-bar__add-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary, #ddd);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.tab-bar__add-menu-item:hover {
+  background: var(--bg-hover, #3a3a3a);
+}
+
+.tab-bar__add-menu-icon {
+  font-size: 14px;
+  line-height: 1;
+}

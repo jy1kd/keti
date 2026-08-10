@@ -5,11 +5,6 @@ import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
 import { isElectron } from '@/services/electron'
 import './styles.css'
 
-interface TabBarProps {
-  /** 点击 "+" 按钮时的回调 */
-  onAddTab?: () => void
-}
-
 interface ContextMenuState {
   tabId: string
   tabType: string
@@ -18,14 +13,23 @@ interface ContextMenuState {
   y: number
 }
 
+/** `+` 悬停选择栏可打开的停靠标签类型（底部功能栏子集，固定 4 项） */
+const ADD_TAB_ITEMS = [
+  { type: 'order' as const, icon: '📝', label: '报单', title: '📝 报单' },
+  { type: 'kline' as const, icon: '📈', label: 'K线', title: '📈 K线' },
+  { type: 'query' as const, icon: '📋', label: '查询', title: '📋 查询' },
+  { type: 'settings' as const, icon: '⚙', label: '设置', title: '⚙ 设置' },
+]
+
 /**
  * 标签栏组件
  *
  * 显示所有打开的标签页，支持切换、关闭、新增。
+ * `+` 悬停弹出选择栏，停靠打开底部功能栏标签（报单/K线/查询/设置）。
  * 键盘导航：左/右箭头切换标签，Home/End 跳转首尾。
  * 右键菜单：在新窗口打开（仅 Electron 环境）
  */
-export function TabBar({ onAddTab }: TabBarProps) {
+export function TabBar() {
   const tabs = useTabStore((s) => s.tabs)
   const activeTabId = useTabStore((s) => s.activeTabId)
   const setActiveTab = useTabStore((s) => s.setActiveTab)
@@ -34,6 +38,36 @@ export function TabBar({ onAddTab }: TabBarProps) {
   const suppressClickRef = useRef(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
+
+  const [addMenuOpen, setAddMenuOpen] = useState(false)
+  const addMenuWrapRef = useRef<HTMLDivElement>(null)
+  const openTab = useTabStore((s) => s.openTab)
+
+  // 选择栏：点击外部 / Escape 关闭
+  useEffect(() => {
+    if (!addMenuOpen) return
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (addMenuWrapRef.current && !addMenuWrapRef.current.contains(e.target as Node)) {
+        setAddMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDocMouseDown)
+    return () => document.removeEventListener('mousedown', onDocMouseDown)
+  }, [addMenuOpen])
+
+  useEffect(() => {
+    if (!addMenuOpen) return
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') setAddMenuOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [addMenuOpen])
+
+  const handleAddItem = useCallback((item: (typeof ADD_TAB_ITEMS)[number]) => {
+    openTab({ type: item.type, title: item.title })
+    setAddMenuOpen(false)
+  }, [openTab])
 
   // 排除已拖入浮动窗口的标签（浮动标签从标签栏隐藏）
   const visibleTabs = tabs.filter((t) => !windows[t.id])
@@ -179,15 +213,40 @@ export function TabBar({ onAddTab }: TabBarProps) {
         </div>
       ))}
       <div className="tab-bar__separator" />
-      <button
-        type="button"
-        className="tab-bar__add"
-        aria-label="新增标签"
-        title="新增标签"
-        onClick={onAddTab}
+      {/* `+` 悬停选择栏：停靠打开底部功能栏标签 */}
+      <div
+        ref={addMenuWrapRef}
+        className="tab-bar__add-wrap"
+        onMouseEnter={() => setAddMenuOpen(true)}
+        onMouseLeave={() => setAddMenuOpen(false)}
       >
-        +
-      </button>
+        <button
+          type="button"
+          className={`tab-bar__add${addMenuOpen ? ' tab-bar__add--active' : ''}`}
+          aria-label="新增标签"
+          title="新增标签"
+          aria-expanded={addMenuOpen}
+          onClick={() => setAddMenuOpen((v) => !v)}
+        >
+          +
+        </button>
+        {addMenuOpen && (
+          <div className="tab-bar__add-menu" role="menu" aria-label="新增标签选择">
+            {ADD_TAB_ITEMS.map((item) => (
+              <button
+                key={item.type}
+                type="button"
+                role="menuitem"
+                className="tab-bar__add-menu-item"
+                onClick={() => handleAddItem(item)}
+              >
+                {/* 渲染完整 title（含图标），保证 getByText('📝 报单') 可命中单个元素 */}
+                <span className="tab-bar__add-menu-label">{item.title}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* 右键菜单 */}
       {contextMenu && (

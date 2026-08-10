@@ -190,12 +190,69 @@ describe('TabBar', () => {
       render(<TabBar />)
       expect(screen.getByLabelText('新增标签')).toBeInTheDocument()
     })
+  })
 
-    it('点击 + 按钮应调用 onAddTab', () => {
-      const onAddTab = vi.fn()
-      render(<TabBar onAddTab={onAddTab} />)
-      fireEvent.click(screen.getByLabelText('新增标签'))
-      expect(onAddTab).toHaveBeenCalledTimes(1)
+  // --- + 新增标签选择栏 ---
+
+  describe('+ 新增标签选择栏', () => {
+    // React 的 onMouseEnter/onMouseLeave 由 mouseover/mouseout 合成：在 + 按钮上
+    // fireEvent.mouseEnter 不冒泡到 wrapper 的 onMouseEnter，故用 mouseOver（会冒泡）打开、
+    // 在 wrapper 上 mouseLeave 关闭。已用探针测试验证。
+    const hoverOpen = () => fireEvent.mouseOver(screen.getByLabelText('新增标签'))
+    const hoverClose = () => {
+      const wrap = screen.getByLabelText('新增标签').parentElement!
+      fireEvent.mouseLeave(wrap)
+    }
+
+    it('悬停 + 显示选择栏（报单/K线/查询/设置）', () => {
+      render(<TabBar />)
+      hoverOpen()
+      expect(screen.getByText('📝 报单')).toBeInTheDocument()
+      expect(screen.getByText('📈 K线')).toBeInTheDocument()
+      expect(screen.getByText('📋 查询')).toBeInTheDocument()
+      expect(screen.getByText('⚙ 设置')).toBeInTheDocument()
+    })
+
+    it('移出 + 与选择栏后选择栏关闭', () => {
+      render(<TabBar />)
+      hoverOpen()
+      expect(screen.getByText('📝 报单')).toBeInTheDocument()
+      hoverClose()
+      expect(screen.queryByText('📝 报单')).toBeNull()
+    })
+
+    it('点击「📝 报单」以停靠标签打开', () => {
+      const openTab = vi.fn(() => true)
+      useTabStore.setState({ ...defaultState, openTab })
+      render(<TabBar />)
+      hoverOpen()
+      fireEvent.click(screen.getByText('📝 报单'))
+      expect(openTab).toHaveBeenCalledWith({ type: 'order', title: '📝 报单' })
+    })
+
+    it('点击「⚙ 设置」以停靠标签打开', () => {
+      const openTab = vi.fn(() => true)
+      useTabStore.setState({ ...defaultState, openTab })
+      render(<TabBar />)
+      hoverOpen()
+      fireEvent.click(screen.getByText('⚙ 设置'))
+      expect(openTab).toHaveBeenCalledWith({ type: 'settings', title: '⚙ 设置' })
+    })
+
+    it('点击选择栏外部关闭', () => {
+      render(<TabBar />)
+      hoverOpen()
+      expect(screen.getByText('📝 报单')).toBeInTheDocument()
+      fireEvent.mouseDown(document.body)
+      expect(screen.queryByText('📝 报单')).toBeNull()
+    })
+
+    it('Escape 关闭选择栏', () => {
+      render(<TabBar />)
+      hoverOpen()
+      expect(screen.getByText('📝 报单')).toBeInTheDocument()
+      fireEvent.keyDown(window, { key: 'Escape' })
+      expect(screen.queryByText('📝 报单')).toBeNull()
     })
   })
 
