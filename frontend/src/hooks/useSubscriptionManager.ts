@@ -65,7 +65,13 @@ export function useSubscriptionManager() {
       candidates.push({ id, lastVisible })
     }
     candidates.sort((a, b) => a.lastVisible - b.lastVisible)
-    return candidates.slice(0, over).map((c) => c.id)
+    const evicted = candidates.slice(0, over).map((c) => c.id)
+    if (evicted.length > 0) {
+      console.warn(
+        `[行情订阅上限] 前端软上限 ${SOFT_LIMIT} 触发：已订阅 ${subscribedRef.current.size}，本次将达 ${subscribedRef.current.size + extra}，超限 ${over}，LRU 淘汰 ${evicted.length} 个最久未见合约：${evicted.slice(0, 8).join(', ')}${evicted.length > 8 ? ' …' : ''}`,
+      )
+    }
+    return evicted
   }, [])
 
   /** 退订并 success 门控：仅成功后从 subscribedRef 删除（失败保留，等待下次重试）；返回 Promise 供「退订先行」串行化 await 使用 */
@@ -149,6 +155,11 @@ export function useSubscriptionManager() {
           if (resp?.success) {
             for (const id of ids) subscribedRef.current.set(id, Date.now())
             prefetchSnapshots(ids)
+          } else {
+            // 后端拒绝（通常是达到后端 500 订阅上限，原子整批拒绝）
+            console.error(
+              `[行情订阅上限] 后端拒绝订阅 ${ids.length} 个合约（可能达到后端 500 上限）：${resp?.message ?? 'unknown'}。当前已订阅 ${subscribedRef.current.size}，这批合约收不到行情，将在下次 diff 自动重试`,
+            )
           }
         })
         .catch((err) => console.error('[SubscriptionManager] Subscribe failed:', err))
@@ -159,6 +170,9 @@ export function useSubscriptionManager() {
     //    平时（无需腾名额）订阅与退订并行，不加延迟
     const needRoom = subscribedRef.current.size + toSubscribe.length > SOFT_LIMIT
     if (needRoom && unsubscribeIds.length > 0) {
+      console.warn(
+        `[行情订阅上限] 接近前端软上限 ${SOFT_LIMIT}：已订阅 ${subscribedRef.current.size}，新增 ${toSubscribe.length}，需先退订 ${unsubscribeIds.length} 个腾名额（退订先行，规避后端 500 整批拒绝）`,
+      )
       doUnsubscribe(unsubscribeIds).then(() => subscribeNow(toSubscribe))
     } else {
       subscribeNow(toSubscribe)

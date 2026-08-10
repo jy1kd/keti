@@ -53,6 +53,8 @@ interface SubscribeResponse {
   success: boolean
   added: string[]
   alreadySubscribed: string[]
+  /** 后端拒绝原因（达到 500 订阅上限时返回 "Subscription limit exceeded..."） */
+  message?: string
 }
 
 interface SnapshotsResponse {
