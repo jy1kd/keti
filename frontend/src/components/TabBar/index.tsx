@@ -321,7 +321,20 @@ export function TabBar() {
           }}
         >
           <span className="tab-bar__title">{tab.title}</span>
-          {tab.closable && (
+          {tab.closable && tab.pinned ? (
+            <button
+              type="button"
+              aria-label="取消固定"
+              title="取消固定"
+              className="tab-bar__pin"
+              onClick={(e) => {
+                e.stopPropagation()
+                togglePin(tab.id)
+              }}
+            >
+              📌
+            </button>
+          ) : tab.closable ? (
             <button
               type="button"
               aria-label="关闭标签"
@@ -333,7 +346,7 @@ export function TabBar() {
             >
               ×
             </button>
-          )}
+          ) : null}
         </div>
       ))}
       </div>

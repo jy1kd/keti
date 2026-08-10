@@ -198,6 +198,44 @@ describe('TabBar', () => {
     })
   })
 
+  // --- 固定标签置顶按钮 ---
+
+  describe('固定标签置顶按钮', () => {
+    it('固定标签显示 📌 取消固定按钮，不显示 × 关闭按钮；点击调用 togglePin', () => {
+      const togglePin = vi.fn()
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-pinned', type: 'kline', title: '📈 K线', props: {}, closable: true, pinned: true },
+        ],
+        activeTabId: 'tab-market',
+        togglePin,
+      })
+      render(<TabBar />)
+      const tabEl = screen.getByText('📈 K线').closest('[role="tab"]')!
+      const pinBtn = tabEl.querySelector('[aria-label="取消固定"]')
+      expect(pinBtn).toBeInTheDocument()
+      expect(pinBtn?.textContent).toContain('📌')
+      expect(tabEl.querySelector('[aria-label="关闭标签"]')).toBeNull()
+      fireEvent.click(pinBtn!)
+      expect(togglePin).toHaveBeenCalledWith('tab-pinned')
+    })
+
+    it('未固定可关闭标签仍显示 × 关闭按钮，不显示 📌 置顶按钮', () => {
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          { id: 'tab-unpinned', type: 'kline', title: '📈 K线', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-market',
+      })
+      render(<TabBar />)
+      const tabEl = screen.getByText('📈 K线').closest('[role="tab"]')!
+      expect(tabEl.querySelector('[aria-label="关闭标签"]')).toBeInTheDocument()
+      expect(tabEl.querySelector('[aria-label="取消固定"]')).toBeNull()
+    })
+  })
+
   // --- 新增标签按钮 ---
 
   describe('新增标签按钮', () => {
