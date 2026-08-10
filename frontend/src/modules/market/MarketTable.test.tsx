@@ -194,22 +194,22 @@ describe('MarketTable', () => {
     expect(record.lastPrice).toBe('--')
   })
 
-  it('横向滚动条样式明显（scrollStyle 加粗 + 高亮滑块色 + 常显）', async () => {
+  it('横向滚动条为低调细灰样式（6px + 灰色滑块 + hover 表格时浮现）', async () => {
     const { ListTable } = await import('@visactor/vtable')
     render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
     const options = (ListTable as any).mock.calls[0][1]
     const ss = options.theme.scrollStyle
     expect(ss).toBeDefined()
-    expect(ss.visible).toBe('always')
-    expect(ss.width).toBeGreaterThanOrEqual(12) // 加粗滚动条，非默认细条
-    expect(ss.scrollSliderColor).toBe('#4a9eff') // 高亮滑块色，便于发现
+    expect(ss.visible).toBe('focus') // 常显 → hover 表格时浮现
+    expect(ss.width).toBe(6) // 6px 细条
+    expect(ss.scrollSliderColor).toBe('rgba(139,148,158,0.45)') // 灰色滑块，低调不抢行情数据
     expect(ss.barToSide).toBe(true) // 进度条钉在视口底部，行数少时不跑到上边去
   })
 
   // --- 滚动条区域不触发多选（拖拽进度条不应误选行） ---
 
   describe('滚动条区域不触发多选', () => {
-    it('拖拽底部横向进度条（底部 12px 内）不误选合约行', async () => {
+    it('拖拽底部横向进度条（底部 6px 内）不误选合约行', async () => {
       const onSelectionChange = vi.fn()
       const { container } = render(
         <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={onSelectionChange} />
@@ -223,7 +223,7 @@ describe('MarketTable', () => {
       const tableEl = container.firstChild as HTMLElement
 
       await act(async () => {
-        // y=595 落在底部进度条带（600-12=588 以下）；无修复时 getCellAt 返回 row1 → 误触发多选
+        // y=595 落在底部进度条带（600-6=594 以下）；无修复时 getCellAt 返回 row1 → 误触发多选
         // 全部在 tableEl 上冒泡派发（mousemove/mouseup 监听在 window，冒泡到达且 e.target 是元素）
         tableEl.dispatchEvent(new MouseEvent('mousedown', { clientX: 400, clientY: 595, button: 0, bubbles: true }))
         tableEl.dispatchEvent(new MouseEvent('mousemove', { clientX: 500, clientY: 595, button: 0, bubbles: true }))
@@ -237,7 +237,7 @@ describe('MarketTable', () => {
       delete instance.tableNoFrameHeight
     })
 
-    it('拖拽右侧纵向滚动条（右侧 12px 内）不误选合约行', async () => {
+    it('拖拽右侧纵向滚动条（右侧 6px 内）不误选合约行', async () => {
       const onSelectionChange = vi.fn()
       const { container } = render(
         <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={onSelectionChange} />
@@ -250,7 +250,7 @@ describe('MarketTable', () => {
       const tableEl = container.firstChild as HTMLElement
 
       await act(async () => {
-        // x=795 落在右侧滚动条带（800-12=788 右侧）；无修复时 getCellAt 按 y 判行 → 误触发多选
+        // x=795 落在右侧滚动条带（800-6=794 右侧）；无修复时 getCellAt 按 y 判行 → 误触发多选
         tableEl.dispatchEvent(new MouseEvent('mousedown', { clientX: 795, clientY: 200, button: 0, bubbles: true }))
         tableEl.dispatchEvent(new MouseEvent('mousemove', { clientX: 795, clientY: 300, button: 0, bubbles: true }))
         tableEl.dispatchEvent(new MouseEvent('mouseup', { clientX: 795, clientY: 300, button: 0, bubbles: true }))

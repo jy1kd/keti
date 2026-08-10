@@ -62,16 +62,16 @@ describe('TQuoteTable', () => {
     expect(options.columns.length).toBe(13) // 6 call cols + 1 strike + 6 put cols
   })
 
-  it('采用固定列宽 standard + 明显的滚动条（与行情表格一致）', async () => {
+  it('采用固定列宽 standard + 低调滚动条（与行情表格一致）', async () => {
     render(<TQuoteTable chain={chain} />)
     const { ListTable } = await import('@visactor/vtable')
     const options = (ListTable as any).mock.calls[0][1]
     expect(options.widthMode).toBe('standard')
     const ss = options.theme.scrollStyle
     expect(ss).toBeDefined()
-    expect(ss.visible).toBe('always')
-    expect(ss.width).toBe(12)
-    expect(ss.scrollSliderColor).toBe('#4a9eff')
+    expect(ss.visible).toBe('focus')
+    expect(ss.width).toBe(6)
+    expect(ss.scrollSliderColor).toBe('rgba(139,148,158,0.45)')
     expect(ss.barToSide).toBe(true)
   })
 

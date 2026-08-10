@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { ListTable } from '@visactor/vtable'
 import type { OptionChain, OptionQuote, MarketSnapshot } from '@/services/types'
-import { PROMINENT_SCROLL_STYLE } from '@/utils/vtableTheme'
+import { SCROLL_STYLE } from '@/utils/vtableTheme'
 
 interface TQuoteRow {
   strikePrice: number
@@ -150,7 +150,7 @@ export function TQuoteTable({ chain, snapshots, volatility }: TQuoteTableProps) 
           bgColor: '#0d1117',
           borderColor: '#21262d',
         },
-        scrollStyle: { ...PROMINENT_SCROLL_STYLE },
+        scrollStyle: { ...SCROLL_STYLE },
       },
     })
 
