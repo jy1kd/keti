@@ -65,22 +65,25 @@ describe('useContractContextMenu', () => {
     })
   })
 
-  it('openKlineTabs 批量打开K线浮动窗口', () => {
+  it('openKlineTabs 批量打开K线为停靠标签（与批量报单一致，非浮动窗）', () => {
+    const openTabSpy = vi.spyOn(useTabStore.getState(), 'openTab')
     const { result } = renderHook(() => useContractContextMenu())
     act(() => {
       result.current.openKlineTabs(['IF2608', 'rb2610'])
     })
 
-    expect(mockOpenFloatingTab).toHaveBeenNthCalledWith(1, {
+    expect(openTabSpy).toHaveBeenNthCalledWith(1, {
       type: 'kline',
       title: '📈 K线-IF2608',
       props: { instrumentID: 'IF2608' },
     })
-    expect(mockOpenFloatingTab).toHaveBeenNthCalledWith(2, {
+    expect(openTabSpy).toHaveBeenNthCalledWith(2, {
       type: 'kline',
       title: '📈 K线-rb2610',
       props: { instrumentID: 'rb2610' },
     })
+    // 批量K线不再走浮动窗
+    expect(mockOpenFloatingTab).not.toHaveBeenCalled()
   })
 
   it('handleContextMenu 抑制浏览器默认菜单并记录坐标', () => {

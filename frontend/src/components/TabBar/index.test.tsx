@@ -646,6 +646,39 @@ describe('TabBar', () => {
       expect(screen.queryByRole('menu', { name: '隐藏标签' })).toBeNull() // 菜单已关闭
     })
 
+    it('▾ 下拉项右键打开该隐藏标签的右键菜单（可关闭/固定等）', () => {
+      const togglePin = vi.fn()
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+          ...Array.from({ length: 8 }, (_, i) => ({
+            id: `tab-${i + 1}`,
+            type: 'settings' as const,
+            title: `标签 ${i + 1}`,
+            props: {},
+            closable: true,
+          })),
+        ],
+        activeTabId: 'tab-market',
+        togglePin,
+      })
+      const { container } = render(<TabBar />)
+      const scrollEl = container.querySelector('.tab-bar__scroll') as HTMLElement
+      Object.defineProperty(scrollEl, 'clientWidth', { value: 300, configurable: true })
+      scrollEl.querySelectorAll('[role="tab"]').forEach((el) => {
+        Object.defineProperty(el, 'offsetWidth', { value: 100, configurable: true })
+      })
+      act(() => { roCallback?.([], null as unknown as ResizeObserver) })
+      fireEvent.click(screen.getByLabelText('溢出标签'))
+      const menu = screen.getByRole('menu', { name: '隐藏标签' })
+      // 右键隐藏标签 → 打开右键菜单
+      fireEvent.contextMenu(within(menu).getByText('标签 7'))
+      expect(screen.getByText('固定')).toBeInTheDocument()
+      expect(screen.getByText('窗口化')).toBeInTheDocument()
+      fireEvent.click(screen.getByText('固定'))
+      expect(togglePin).toHaveBeenCalledWith('tab-7')
+    })
+
     it('▾ 菜单项不重复显示图标（title 已含 emoji 前缀）', () => {
       useTabStore.setState({
         tabs: [
@@ -774,19 +807,26 @@ describe('TabBar', () => {
       fireEvent.contextMenu(screen.getByText(ctxTabs.find((t) => t.id === tabId)!.title))
     }
 
-    it('右键非固定标签显示 5 项菜单', () => {
+    it('右键非固定标签显示 5 项菜单，固定项 icon 与 label 分离对齐', () => {
       renderWithCtx('tab-kline')
       expect(screen.getByText('关闭')).toBeInTheDocument()
       expect(screen.getByText('关闭其他')).toBeInTheDocument()
       expect(screen.getByText('关闭所有')).toBeInTheDocument()
-      expect(screen.getByText('📌 固定')).toBeInTheDocument()
       expect(screen.getByText('窗口化')).toBeInTheDocument()
+      // 固定项：label 文本「固定」+ 独立 icon span 📌（与其他项结构一致，避免错位）
+      const pinItem = screen.getByText('固定').closest('button')!
+      const icon = pinItem.querySelector('.tab-bar__context-icon')
+      expect(icon).toHaveTextContent('📌')
+      expect(screen.queryByText('📌 固定')).toBeNull() // 不再把 emoji 拼进 label
     })
 
-    it('右键固定标签显示「取消固定」', () => {
+    it('右键固定标签显示「取消固定」，icon 仍在独立列', () => {
       renderWithCtx('tab-order')
       fireEvent.contextMenu(screen.getByText('📝 报单'))
-      expect(screen.getByText('取消固定')).toBeInTheDocument()
+      const pinItem = screen.getByText('取消固定').closest('button')!
+      const icon = pinItem.querySelector('.tab-bar__context-icon')
+      expect(icon).toHaveTextContent('📌')
+      expect(screen.queryByText('📌 固定')).toBeNull()
     })
 
     it('点击「关闭」关闭该标签', () => {
@@ -821,7 +861,7 @@ describe('TabBar', () => {
       useTabStore.setState({ tabs: ctxTabs, activeTabId: 'tab-kline', togglePin })
       render(<TabBar />)
       fireEvent.contextMenu(screen.getByText('📈 K线'))
-      fireEvent.click(screen.getByText('📌 固定'))
+      fireEvent.click(screen.getByText('固定'))
       expect(togglePin).toHaveBeenCalledWith('tab-kline')
     })
 

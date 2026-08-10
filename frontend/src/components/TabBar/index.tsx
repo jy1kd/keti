@@ -373,6 +373,12 @@ export function TabBar() {
                   aria-selected={tab.id === activeTabId}
                   className={`tab-bar__overflow-item${tab.id === activeTabId ? ' tab-bar__overflow-item--active' : ''}`}
                   onClick={() => handleOverflowItemClick(tab)}
+                  onContextMenu={(e) => {
+                    // 隐藏标签在滚动区外不可直接右键，这里复用在标签右键菜单，提供关闭/固定/窗口化等操作
+                    e.preventDefault()
+                    setOverflowOpen(false)
+                    handleContextMenu(e, tab)
+                  }}
                 >
                   {/* title 已含 emoji 前缀（如「📝 报单-IF2608」），不再单独渲染 icon，避免图标重复 */}
                   <span className="tab-bar__overflow-title">{tab.title}</span>
@@ -461,8 +467,9 @@ export function TabBar() {
             className="tab-bar__context-item"
             onClick={() => { togglePin(contextMenu.tabId); setContextMenu(null) }}
           >
-            <span className="tab-bar__context-icon">{contextMenu.pinned ? '📌' : ''}</span>
-            <span>{contextMenu.pinned ? '取消固定' : '📌 固定'}</span>
+            {/* icon 恒定 📌，label 恒为文字：与其他菜单项 icon+label 结构一致，避免错位 */}
+            <span className="tab-bar__context-icon">📌</span>
+            <span>{contextMenu.pinned ? '取消固定' : '固定'}</span>
           </button>
           <button
             type="button"
