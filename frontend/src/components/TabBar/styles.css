@@ -124,9 +124,16 @@
   user-select: none;
 }
 
-/* 已收进 ▾ 下拉的隐藏标签：保留布局与测量（offsetWidth），仅不渲染视觉，避免滚动边界漏出半截 */
+/* 已收进 ▾ 下拉的隐藏标签：脱离文档流（不占位、不留白）、不可见，
+   但仍保留 offsetWidth 供溢出测量；避免滚动边界漏出半截 */
 .tab-bar__tab--hidden {
+  position: absolute;
   visibility: hidden;
+}
+
+/* 存在隐藏标签时，可见标签自动填充到 ▾ 左侧（grow 吃掉剩余宽度，不留白） */
+.tab-bar__tab--grow {
+  flex: 1 1 auto;
 }
 
 .tab-bar__tab:hover {

@@ -579,7 +579,7 @@ describe('TabBar', () => {
       expect(item.textContent).toContain('📝 报单-IF2608')
     })
 
-    it('隐藏标签在标签栏完全隐藏（visibility:hidden，不露半截）', () => {
+    it('隐藏标签在标签栏完全隐藏（visibility:hidden，不露半截）；可见标签自动填充至 ▾ 左侧', () => {
       const { container } = renderManyTabs(8, 300, 100)
       act(() => { roCallback?.([], null as unknown as ResizeObserver) })
       const tabEls = Array.from(container.querySelectorAll('.tab-bar__scroll [role="tab"]'))
@@ -587,6 +587,9 @@ describe('TabBar', () => {
       expect(tabEls[5]).toHaveClass('tab-bar__tab--hidden')
       expect(tabEls[7]).toHaveClass('tab-bar__tab--hidden')
       expect(tabEls[0]).not.toHaveClass('tab-bar__tab--hidden')
+      // 可见标签填充（flex grow）到 ▾ 左侧，隐藏标签不 grow（也不占位）
+      expect(tabEls[0]).toHaveClass('tab-bar__tab--grow')
+      expect(tabEls[5]).not.toHaveClass('tab-bar__tab--grow')
     })
 
     it('滚轮横滚 clamp 到 MAX_SCROLL（2×平均宽），不越界；溢出时 preventDefault', () => {

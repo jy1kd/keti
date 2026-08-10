@@ -279,7 +279,7 @@ export function TabBar() {
           data-tab-id={tab.id}
           tabIndex={0}
           aria-selected={tab.id === activeTabId}
-          className={`tab-bar__tab${tab.id === activeTabId ? ' tab-bar__tab--active' : ''}${hiddenTabIds.includes(tab.id) ? ' tab-bar__tab--hidden' : ''}`}
+          className={`tab-bar__tab${tab.id === activeTabId ? ' tab-bar__tab--active' : ''}${hiddenTabIds.includes(tab.id) ? ' tab-bar__tab--hidden' : ''}${!hiddenTabIds.includes(tab.id) && hasHidden ? ' tab-bar__tab--grow' : ''}`}
           onClick={() => {
             if (suppressClickRef.current) {
               suppressClickRef.current = false
