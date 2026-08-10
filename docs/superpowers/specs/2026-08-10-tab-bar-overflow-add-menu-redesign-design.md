@@ -1,7 +1,7 @@
 # TabBar 标签栏功能重构 — 设计文档
 
 日期：2026-08-10
-分支：`feature/top-tab`
+分支：`feature/TabBar-refactor`
 
 ## 背景
 
