@@ -153,6 +153,42 @@ describe('MarketPanel', () => {
     expect(screen.getByTitle('搜索合约')).toBeInTheDocument()
   })
 
+  it('搜索下拉选择合约后：selectedContracts 同步为单选集（锚点守卫通过才能滚动跳转）', async () => {
+    vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
+    vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
+    useContractsStore.setState({
+      contracts: [
+        { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 1, productClass: '1' },
+        { instrumentID: 'IF2609', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 1, productClass: '1' },
+      ],
+      favorites: [],
+      isLoaded: true,
+    })
+    useMarketStore.setState({
+      snapshots: new Map(),
+      selectedInstrument: null,
+      selectedContracts: new Set(),
+    })
+
+    // jsdom 无 scrollIntoView：ContractSearch 高亮项滚动 effect 依赖它
+    const scrollIntoViewStub = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoViewStub
+
+    const user = userEvent.setup()
+    render(<MarketPanel />)
+
+    // 输入关键词 → 下拉出现 → 点击结果
+    const input = screen.getByPlaceholderText('搜索合约...')
+    await user.type(input, 'IF2608')
+    await user.click(screen.getByText('IF2608'))
+
+    // 选中合约需同步进 selectedContracts（单选集）——MarketTable 锚点守卫
+    // shouldRenderAnchor 要求 selectedInstrument ∈ selectedContracts，否则 selectRow+scroll 被跳过 → 表格不跳转
+    expect(useMarketStore.getState().selectedInstrument).toBe('IF2608')
+    expect(useMarketStore.getState().selectedContracts.has('IF2608')).toBe(true)
+    expect(useMarketStore.getState().selectedContracts.size).toBe(1)
+  })
+
   // --- 状态过滤开关 tests ---
 
   /** 设置混合合约（交易中 + 已停牌），返回 vtable options 以检查过滤结果 */

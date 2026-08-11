@@ -34,6 +34,8 @@ class MdUserApi:
         self.connection_status: str = "disconnected"  # disconnected | connecting | connected | error
         self.login_status: str = "not_logged_in"  # not_logged_in | logging_in | logged_in | error
         self.subscribed_instruments: List[str] = []
+        # 实际连接的前置地址（RegisterFront 所用），用于状态展示/诊断
+        self.front: str = config.md_front
 
     def create(self) -> None:
         """Create CTP API instance, register SPI, register front, and init.

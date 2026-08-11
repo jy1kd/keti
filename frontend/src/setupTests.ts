@@ -6,6 +6,7 @@ vi.mock('@visactor/vtable', () => {
   const mockInstance = {
     setRecords: vi.fn(),
     updateRecords: vi.fn(),
+    updateCellContentRange: vi.fn(),
     on: vi.fn(),
     release: vi.fn(),
     getBodyVisibleCellRange: vi.fn().mockReturnValue({ rowStart: 1, rowEnd: 30, colStart: 0, colEnd: 10 }),

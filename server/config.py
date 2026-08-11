@@ -32,10 +32,10 @@ class Config:
         self.app_id: str = os.getenv("CTP_APP_ID", "simnow_client")
         self.auth_code: str = os.getenv("CTP_AUTH_CODE", "0000000000000000")
         self.md_front: str = os.getenv(
-            "CTP_MD_FRONT", "tcp://182.254.243.31:40011"
+            "CTP_MD_FRONT", "tcp://182.254.243.31:30011"
         )
         self.td_front: str = os.getenv(
-            "CTP_TD_FRONT", "tcp://182.254.243.31:40001"
+            "CTP_TD_FRONT", "tcp://182.254.243.31:30001"
         )
 
     def __repr__(self) -> str:

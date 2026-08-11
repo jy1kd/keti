@@ -252,6 +252,37 @@ describe('useMarketWs', () => {
     expect(date.getSeconds()).toBe(0)
   })
 
+  it('切换 K 线周期后，实时聚合使用新周期（periodMs 经 ref 读取，非 mount 冻结闭包）', () => {
+    const appendKline = vi.fn()
+    useMarketStore.setState({ appendKline, currentPeriod: '1m', selectedInstrument: 'IF2608' })
+
+    renderHook(() => useMarketWs('ws://localhost:8000'))
+
+    const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
+
+    // mount 后切换到 5m：handleMessage 闭包在 mount 时冻结，periodMs 必须经 ref 才能拿到新周期
+    act(() => useMarketStore.getState().setPeriod('5m'))
+
+    pushAndFlush(act, onMessage, {
+      type: 'market_data',
+      data: {
+        instrumentID: 'IF2608',
+        lastPrice: 4120.0,
+        volume: 100,
+        openInterest: 500,
+        updateTime: '14:32:15',
+        updateMillisec: 0,
+      },
+    })
+
+    const klineArg = appendKline.mock.calls[0][1]
+    const date = new Date(klineArg.timestamp)
+    // 14:32:15 按 5m 向下取整 → 14:30:00（分钟 % 5 === 0，秒 === 0）；
+    // 若被 1m 周期冻结则会取整到 14:32:00（分钟 % 5 !== 0）
+    expect(date.getMinutes() % 5).toBe(0)
+    expect(date.getSeconds()).toBe(0)
+  })
+
   it('短时间内多条消息合并为一次更新', () => {
     const batchUpdate = vi.fn()
     useMarketStore.setState({ batchUpdate })

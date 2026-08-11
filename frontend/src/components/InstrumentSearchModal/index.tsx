@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import type { ContractInfo } from '@/services/types'
 import { getExchanges, getProducts, getInstruments, searchInstruments, refreshInstruments } from '@/services/api'
 import { PRODUCT_NAMES, getProductName } from '@/utils/productNames'
+import { toast } from '@/components/Toast'
 import './index.css'
 
 /** 判断字符串是否包含中文 */
@@ -154,8 +155,9 @@ export function InstrumentSearchModal({ isOpen, onClose, onAddToFavorite, onRemo
   }
 
   const handleSubscribe = (inst: ContractInfo) => {
-    // 加入收藏（自动订阅）
+    // 加入收藏（自动订阅）；反馈与 MarketPanel 其它收藏入口一致
     onAddToFavorite(inst)
+    toast.success(`${allContractIds.has(inst.instrumentID) ? '已收藏' : '已订阅'} ${inst.instrumentID}`)
   }
 
   if (!isOpen) return null
@@ -238,7 +240,10 @@ export function InstrumentSearchModal({ isOpen, onClose, onAddToFavorite, onRemo
                       {favoritedIds.has(inst.instrumentID) ? (
                         <button
                           className="btn-remove-favorite"
-                          onClick={() => onRemoveFromFavorite(inst.instrumentID)}
+                          onClick={() => {
+                            onRemoveFromFavorite(inst.instrumentID)
+                            toast.success(`已移除 ${inst.instrumentID}`)
+                          }}
                         >
                           移除
                         </button>
