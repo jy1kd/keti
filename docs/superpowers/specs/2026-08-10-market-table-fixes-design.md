@@ -74,9 +74,9 @@
 | `frontend/src/modules/options/styles.css` | `.options-panel` 由 `height:100%` 改 `flex:1 1 0; min-height:0`；`.options-content` 改 flex 列容器（`display:flex; flex-direction:column; min-height:0`）；`.options-chain-table` 由 `width:100%` 改 `width:100%; flex:1; min-height:0`——用 flex 填充（与行情页 `.market-table-container` 的 `flex:1` 同模式，避免 `height:100%` 在嵌套 flex 下百分比解析不可靠） |
 | `frontend/src/modules/options/TQuoteTable.tsx` | `widthMode` 由 `'standard'` 改 `'adaptive'`——T型期权页消除横向留白（列宽按容器自适应填满，行权价列随左右列对称增长保持居中） |
 | `frontend/src/modules/market/styles.css` | `.panel-content` 删 `height:100%` 只留 `flex:1; min-height:0; overflow:hidden`；确认 `.market-panel` 用 `flex:1; min-height:0` 兜底（现为 `height:100%`） |
-| `frontend/src/modules/market/MarketTable.tsx` | `widthMode` 由 `'standard'` 改 `'adaptive'`（列宽按容器自适应、填满容器）；若 adaptive 挤压价格列观感不佳，回退「固定列宽 + 末尾弹性列」方案 |
+| `frontend/src/modules/market/MarketTable.tsx` | `widthMode` 保持 `'standard'`（不自动填满，adaptive 实测回退），默认列宽整体放大（1400 → ~1625px）减少宽屏留白；加 `columnResizeMode:'all'` 显式保留每列拖拽缩放 |
 
-> 注：`adaptive` 会把容器宽度分配到各列，可能挤压价格列。实施时优先浏览器验证，观感不佳再改弹性尾列。
+> 注：行情表 adaptive 方案经实测回退为「固定列宽 + 默认列宽放大」；T型期权表仍用 `adaptive`（`widthMode:'adaptive'`）自动填满。
 
 ### 4.2 问题 2 — 合约列冻结
 

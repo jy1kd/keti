@@ -4,7 +4,7 @@
 
 **Goal:** 消除行情模块 5 个 UI/数据一致性问题：页面自动填充、合约列冻结、右键选中、双高亮统一、自选订阅一致性。
 
-**Architecture:** ① 布局高度链规范化 + vtable `widthMode:'adaptive'` + `frozenColCount` 填满/冻结；② 选中态统一为「蓝色选区 `selectedContracts` + 金色活动锚点 `selectedInstrument`（金在蓝内）」，`selectRow` 加守卫；③ 订阅生命周期统一由 `useSubscriptionManager` 负责（收藏不再直连 API），后端「先验证后记录」消除假成功，WS 重连触发强制重订阅兜底。
+**Architecture:** ① 布局高度链规范化 + vtable 固定列宽（默认列宽放大）+ `frozenColCount` 冻结 + `columnResizeMode:'all'` 保留每列拖拽缩放；T型期权表 `widthMode:'adaptive'` 自动填满；② 选中态统一为「蓝色选区 `selectedContracts` + 金色活动锚点 `selectedInstrument`（金在蓝内）」，`selectRow` 加守卫；③ 订阅生命周期统一由 `useSubscriptionManager` 负责（收藏不再直连 API），后端「先验证后记录」消除假成功，WS 重连触发强制重订阅兜底。
 
 **Tech Stack:** React 18 + TypeScript 5 + Vite 5 + @visactor/vtable ^1.26.4 + Zustand；后端 Python FastAPI + ctp-python。
 
@@ -104,7 +104,7 @@ git commit -m "feat(market-table): 冻结合约列为最左列 (frozenColCount=1
 - Create: `frontend/src/modules/options/OptionPanel.style.test.tsx`
 
 **Interfaces:**
-- Produces: 行情表 `widthMode: 'adaptive'`（列自适应填满容器）；`.panel-content` 无 `height:100%`；`.options-content` 为 flex 列容器、`.options-chain-table` `flex:1; min-height:0`；`TQuoteTable` `widthMode:'adaptive'`。
+- Produces: 行情表 `widthMode: 'standard'`（固定列宽，默认放大至 ~1625px）+ `columnResizeMode:'all'`（保留每列拖拽缩放）；`.panel-content` 无 `height:100%`；`.options-content` 为 flex 列容器、`.options-chain-table` `flex:1; min-height:0`；`TQuoteTable` `widthMode:'adaptive'`。
 
 - [x] **Step 1: 写失败测试**
 
@@ -177,7 +177,7 @@ Expected: FAIL — widthMode 仍为 standard；`.panel-content` 仍含 `height:1
 
 - [x] **Step 3: 最小实现**
 
-`MarketTable.tsx:196`：`widthMode: 'standard'` → `widthMode: 'adaptive'`。
+`MarketTable.tsx`：`widthMode` 保持 `'standard'`（不自动填满），默认列宽整体放大（总宽 1400 → ~1625px），并加 `columnResizeMode: 'all'` 显式保留每列拖拽缩放（adaptive 方案实测回退）。
 
 `frontend/src/modules/market/styles.css` `.panel-content`（59-64 行）：
 
@@ -1003,6 +1003,7 @@ git commit -m "fix(market): 订阅先验证后记录 + 重连权威订阅列表�
 
 ## 已完成记录
 
+- `27aaf22` fix(market): 行情表改回固定列宽并放大默认列宽，显式保留每列拖拽缩放（columnResizeMode=all） — Task 2 二次调整（撤销行情页 adaptive）
 - `f43a7cd` fix(market): T型期权表自动填充 — widthMode adaptive + options 链 flex 填充 — Task 2 补充（消除横向留白，浏览器验证待人工）
 - `cf6282b` fix(market): 订阅先验证后记录 + 重连权威订阅列表（消除假成功） — Task 6 ✅
 - `d4b9d88` feat(subscription): 收藏统一由订阅管理器管理 + mdConnected 广播触发强制重订阅兜底 — Task 5 ✅
