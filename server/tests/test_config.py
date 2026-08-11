@@ -13,31 +13,44 @@ from config import Config, load_config
 class TestConfigDefaults:
     """Test that Config provides sensible defaults."""
 
+    def _clean_env(self):
+        # 清掉外部残留的 CTP 环境变量，确保测试的是真实默认值
+        for key in ("CTP_MD_FRONT", "CTP_TD_FRONT", "CTP_BROKER_ID", "CTP_USER_ID", "CTP_PASSWORD", "CTP_APP_ID", "CTP_AUTH_CODE"):
+            os.environ.pop(key, None)
+
     def test_default_broker_id(self):
+        self._clean_env()
         cfg = Config()
         assert cfg.broker_id == "9999"
 
     def test_default_md_front(self):
+        self._clean_env()
         cfg = Config()
-        assert cfg.md_front == "tcp://182.254.243.31:40011"
+        # 默认 = 标准仿真环境（与实盘一致，含夜盘），非 7x24
+        assert cfg.md_front == "tcp://182.254.243.31:30011"
 
     def test_default_td_front(self):
+        self._clean_env()
         cfg = Config()
-        assert cfg.td_front == "tcp://182.254.243.31:40001"
+        assert cfg.td_front == "tcp://182.254.243.31:30001"
 
     def test_default_user_id(self):
+        self._clean_env()
         cfg = Config()
         assert cfg.user_id == ""
 
     def test_default_password(self):
+        self._clean_env()
         cfg = Config()
         assert cfg.password == ""
 
     def test_default_app_id(self):
+        self._clean_env()
         cfg = Config()
         assert cfg.app_id == "simnow_client"
 
     def test_default_auth_code(self):
+        self._clean_env()
         cfg = Config()
         assert cfg.auth_code == "0000000000000000"
 
