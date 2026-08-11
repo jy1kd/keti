@@ -542,7 +542,7 @@ git commit -m "feat(market-table): 高亮统一 — 金色锚点守卫+拖选锚
 - Consumes: `useMarketStore` 新增 `forceResubscribeSeq: number`、`markForceResubscribe(): void`。
 - Produces: `addToFavorites`/`removeFromFavorites` 不再调用 `subscribeMarket`/`unsubscribeMarket`（订阅由管理器 diff 负责）；`useSystemWs` 收到 `connection_status {mdConnected:true}` 时调 `markForceResubscribe()`。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `frontend/src/modules/market/store.test.ts` 追加：
 
@@ -681,12 +681,12 @@ describe('useSystemWs 强制重订阅触发', () => {
 
 （`useSystemWs` 用真实 `useConnectionStore`，其 `setMdPhase`/`setTdPhase` 在测试中无副作用断言。）
 
-- [ ] **Step 2: 跑测试验证红**
+- [x] **Step 2: 跑测试验证红**
 
 Run: `cd frontend && npx vitest run src/modules/market/store.test.ts src/hooks/useSubscriptionManager.test.ts src/stores/contracts.test.ts src/hooks/useSystemWs.test.ts`
 Expected: FAIL — `forceResubscribeSeq` 属性不存在 / 收藏仍调用订阅 API / mdConnected:true 未触发 markForceResubscribe。
 
-- [ ] **Step 3: 最小实现**
+- [x] **Step 3: 最小实现**
 
 `frontend/src/modules/market/store.ts`：
 - 接口加：
@@ -774,12 +774,12 @@ if (message.type === 'connection_status') {
 
 `services/ws.ts` / `useMarketWs.ts` **保持不动**（强制重订阅不经 WS 打开事件触发）。
 
-- [ ] **Step 4: 跑测试验证绿**
+- [x] **Step 4: 跑测试验证绿**
 
 Run: 同 Step 2 命令 + `cd frontend && npx vitest run src/hooks/useSystemWs.test.ts`。
 Expected: PASS。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add frontend/src/stores/contracts.ts frontend/src/stores/contracts.test.ts frontend/src/modules/market/store.ts frontend/src/modules/market/store.test.ts frontend/src/hooks/useSubscriptionManager.ts frontend/src/hooks/useSubscriptionManager.test.ts frontend/src/hooks/useSystemWs.ts frontend/src/hooks/useSystemWs.test.ts
@@ -996,6 +996,7 @@ git commit -m "fix(market): 订阅先验证后记录 + 重连权威订阅列表�
 
 ## 已完成记录
 
+- `d4b9d88` feat(subscription): 收藏统一由订阅管理器管理 + mdConnected 广播触发强制重订阅兜底 — Task 5 ✅
 - `9879e84` feat(market-table): 高亮统一 — 金色锚点守卫+拖选锚点同步（金在蓝内） — Task 4 ✅
 - `a272691` feat(market-table): 右键选中合约 — 同步蓝区与金色锚点 — Task 3 ✅
 - `232bf25` feat(market): 行情/期权页自动填充 — widthMode adaptive + 高度链修复 — Task 2 ✅（浏览器验证待人工）
