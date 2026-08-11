@@ -44,7 +44,7 @@ export function KLinePage({ instrumentID, tabId }: KLinePageProps) {
   const contract = contracts.find((c) => c.instrumentID === instrumentID);
   const snapshot = instrumentID ? snapshots.get(instrumentID) : null;
   const priceTick = contract?.priceTick ?? 0.2;
-  const latestPrice = snapshot?.lastPrice != null ? formatPrice(snapshot.lastPrice, priceTick) : '—';
+  const latestPrice = snapshot?.lastPrice != null ? formatPrice(snapshot.lastPrice, priceTick) : '--'
 
   // 兜底加载合约列表：直接以 K线标签启动（如 Electron 独立窗口）时行情表未挂载，
   // contracts 可能为空，搜索切换依赖合约数据。
@@ -90,42 +90,25 @@ export function KLinePage({ instrumentID, tabId }: KLinePageProps) {
 
   return (
     <div className="kline-page">
-      {/* ── 合约选择提示 ── */}
-      {!instrumentID && (
-        <div className="kline-page__no-contract">
-          请在行情表格中选择合约后打开K线标签
-        </div>
-      )}
-
-      {/* ── K线图（标题栏承载：合约代码/名称/最新价 + 周期 + 指标；drag-handle 已上移 KLineChart 标题栏） ── */}
-      {instrumentID && (
-        <div className="kline-page__content">
-          <KLineChart
-            instrument={instrumentID}
-            latestPrice={latestPrice}
-            klineData={data}
-            period={currentPeriod}
-            onPeriodChange={setPeriod}
-            // 标题栏合约代码区由搜索框替代（KLineChart 有 searchSlot 时不渲染静态合约块），
-            // key=instrumentID：切换后重挂载搜索框，回显新合约代码
-            searchSlot={
-              <ContractSearch
-                key={instrumentID}
-                contracts={contracts}
-                initialQuery={instrumentID}
-                onSelect={handleSwitch}
-              />
-            }
-          />
-        </div>
-      )}
-
-      {/* ── Electron 提示 ── */}
-      {isElectron() && (
-        <div className="kline-page__electron-info">
-          独立窗口模式
-        </div>
-      )}
+      <div className="kline-page__content">
+        <KLineChart
+          instrument={instrumentID ?? ''}
+          latestPrice={latestPrice}
+          klineData={data}
+          period={currentPeriod}
+          onPeriodChange={setPeriod}
+          searchSlot={
+            <ContractSearch
+              key={instrumentID ?? ''}
+              contracts={contracts}
+              initialQuery={instrumentID ?? ''}
+              onSelect={handleSwitch}
+              placeholder={instrumentID ? undefined : '请选择合约'}
+            />
+          }
+        />
+      </div>
+      {isElectron() && <div className="kline-page__electron-info">独立窗口模式</div>}
     </div>
-  );
+  )
 }
