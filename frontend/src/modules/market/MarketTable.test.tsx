@@ -400,6 +400,24 @@ describe('MarketTable', () => {
     expect(useMarketStore.getState().scrollEndSeq).toBeGreaterThan(0)
   })
 
+  it('键盘滚动停止（keyup 距上次 scroll <200ms）触发 markScrollEnd', async () => {
+    useMarketStore.setState({ scrollEndSeq: 0 }) // 清掉前序用例（mouseup 测试）的残留计数
+    const { ListTable } = await import('@visactor/vtable')
+    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    const instance = (ListTable as any).mock.results[0].value
+
+    // 模拟一次滚动（记录 lastScrollAtRef）
+    const scrollHandler = instance.on.mock.calls.find(([name]: [string]) => name === 'scroll')?.[1]
+    expect(scrollHandler).toBeDefined()
+    scrollHandler({ scrollTop: 300 })
+
+    // 键盘滚动无 mouseup：keyup 也应触发 markScrollEnd → 订阅立即 diff（不等 500ms 拖停）
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keyup'))
+    })
+    expect(useMarketStore.getState().scrollEndSeq).toBeGreaterThan(0)
+  })
+
   // --- onContextMenu tests ---
 
   it('接受 onContextMenu 回调', () => {
@@ -633,19 +651,22 @@ describe('MarketTable', () => {
       instance.getBodyVisibleCellRange = originalRange
     })
 
-    it('selectedContracts 变化时仍走 setRecords 全量', async () => {
+    it('selectedContracts 变化时仅重绘可见单元格（updateCellContentRange），不再全量 setRecords', async () => {
       const { ListTable } = await import('@visactor/vtable')
       const { rerender } = render(
         <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={() => {}} />
       )
       const instance = (ListTable as any).mock.results[0].value
+      instance.updateCellContentRange.mockClear()
       instance.setRecords.mockClear()
 
       rerender(
         <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set(['au2508'])} onSelectionChange={() => {}} />
       )
 
-      expect(instance.setRecords).toHaveBeenCalled()
+      // 只重绘可见区单元格（bgColor 回调重新求值），避免 1000+ 行全量重建
+      expect(instance.updateCellContentRange).toHaveBeenCalled()
+      expect(instance.setRecords).not.toHaveBeenCalled()
     })
   })
 

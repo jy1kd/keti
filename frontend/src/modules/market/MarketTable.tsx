@@ -367,16 +367,8 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     let dragSelected = new Set<string>()
 
     const getRowFromEvent = (e: MouseEvent): number => {
-      // 使用 vtable 的 API 获取准确的行索引
-      const target = e.target as HTMLElement
-      const cell = target?.closest('td') || target?.closest('[data-row]')
-      if (cell) {
-        const rowAttr = cell.getAttribute('data-row') || cell.parentElement?.getAttribute('data-row')
-        if (rowAttr) {
-          return parseInt(rowAttr, 10) - 1 // vtable 的 data-row 从 1 开始
-        }
-      }
-      // 备用方案：通过 vtable 的getCellAt 方法
+      // VTable 1.26 纯 canvas 渲染，表格内无 <td>/[data-row] 元素，
+      // 不再走 DOM 探测，直接经 getCellAt 按内容坐标解析行号。
       try {
         const rect = containerRef.current?.getBoundingClientRect()
         if (rect && tableRef.current) {
@@ -466,7 +458,8 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       debounceTimerRef.current = setTimeout(notifyVisibleRange, 100)
     })
 
-    // 滚动条释放（mouseup 距上次 scroll < 200ms）→ 最终 notify + 完整 diff 信号
+    // 滚动停止（mouseup/keyup 距上次 scroll < 200ms）→ 最终 notify + 完整 diff 信号。
+    // keyup 覆盖键盘滚动（方向键/翻页）：无 mouseup，否则要等拖停 500ms 窗口才订阅。
     const handleScrollEnd = () => {
       if (Date.now() - lastScrollAtRef.current > SCROLL_RELEASE_WINDOW_MS) return
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
@@ -474,6 +467,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       useMarketStore.getState().markScrollEnd()
     }
     window.addEventListener('mouseup', handleScrollEnd)
+    window.addEventListener('keyup', handleScrollEnd)
 
     tableRef.current = table
 
@@ -485,6 +479,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
       window.removeEventListener('mouseup', handleScrollEnd)
+      window.removeEventListener('keyup', handleScrollEnd)
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
       table.release()
     }
@@ -535,12 +530,18 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshots, visibleRangeVersion, contracts, favoritedIds])
 
-  // selectedContracts 变化时更新行高亮
+  // selectedContracts 变化时更新行高亮：仅重绘可见区单元格（bodyStyle.bgColor 回调重新求值），
+  // 避免全量 setRecords 重建 1000+ 行。滚入新区域由 vtable 滚动重绘按当前 selectedContractsRef 求值。
   useEffect(() => {
     if (!tableRef.current) return
-    // 触发 vtable 重新渲染行样式
-    // vtable 的 bodyStyle.bgColor 函数会在重绘时被调用
-    tableRef.current.setRecords(recordsRef.current)
+    try {
+      const range = tableRef.current.getBodyVisibleCellRange?.()
+      if (!range) return
+      const colCount = tableRef.current.colCount ?? columns.length
+      tableRef.current.updateCellContentRange(0, range.rowStart, colCount - 1, range.rowEnd)
+    } catch {
+      // vtable 尚未就绪
+    }
   }, [selectedContracts])
 
   // 高亮选中合约行（rAF 等 vtable setRecords 渲染完成）；金色活动锚点仅在选区内渲染
