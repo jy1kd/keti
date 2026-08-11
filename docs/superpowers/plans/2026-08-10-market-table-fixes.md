@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 消除行情模块 6 个 UI/数据一致性问题：页面自动填充、合约列冻结、右键选中、双高亮统一、空合约浮窗可交互、自选订阅一致性。
+**Goal:** 消除行情模块 5 个 UI/数据一致性问题：页面自动填充、合约列冻结、右键选中、双高亮统一、自选订阅一致性。
 
 **Architecture:** ① 布局高度链规范化 + vtable `widthMode:'adaptive'` + `frozenColCount` 填满/冻结；② 选中态统一为「蓝色选区 `selectedContracts` + 金色活动锚点 `selectedInstrument`（金在蓝内）」，`selectRow` 加守卫；③ 订阅生命周期统一由 `useSubscriptionManager` 负责（收藏不再直连 API），后端「先验证后记录」消除假成功，WS 重连触发强制重订阅兜底。
 
@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- 分支 `feature/scrollbar-refactor`；**绝不触碰**工作区未提交的 `frontend/dist-electron/**`、`实习周报*.docx`、`generate_weekly_report.py`。
+- 分支 `fix/market-table`；**绝不触碰**工作区未提交的 `frontend/dist-electron/**`、`实习周报*.docx`、`generate_weekly_report.py`。
 - 每个 Task 严格 TDD：写失败测试 → 跑出红 → 最小实现 → 跑绿 → 提交。
 - 前端测试命令：`cd frontend && npx vitest run <相对路径>`；后端：`cd server && python -m pytest tests/test_market_service.py -v`。
 - vtable API：`ListTable` 实例有 `clearSelected()`（`node_modules/@visactor/vtable/cjs/core/BaseTable.d.ts:298`）与 `selectRow(row)`；`widthMode` 合法值 `'standard' | 'adaptive' | 'autoWidth'`，`'adaptive'` 自适应容器宽度填满。
@@ -29,8 +29,6 @@
 | `frontend/src/modules/options/OptionPanel.tsx` | 删除 `chainHeight()` 固定高度 |
 | `frontend/src/modules/options/styles.css` | `.options-panel`/`.options-chain-table` 弹性填充 |
 | `frontend/src/hooks/useContractContextMenu.ts` | 右键同步 `selectedInstrument` |
-| `frontend/src/components/NoContractPicker/index.tsx` | 空合约浮窗内嵌合约选择器（新建） |
-| `frontend/src/pages/OrderPage.tsx` / `KLinePage.tsx` | 空合约分支改用 NoContractPicker |
 | `frontend/src/stores/contracts.ts` | 收藏只维护状态，不再直连订阅 API |
 | `frontend/src/modules/market/store.ts` | 新增 `forceResubscribeSeq` + `markForceResubscribe` |
 | `frontend/src/hooks/useSubscriptionManager.ts` | 消费强制重订阅信号 |
@@ -49,7 +47,7 @@
 **Interfaces:**
 - Produces: ListTable 配置含 `frozenColCount: 1`（「合约」列冻结在最左侧）
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 在 `MarketTable.test.tsx` 的 `it('creates ListTable with correct options', ...)`（约 32 行）后追加：
 
@@ -62,12 +60,12 @@ it('冻结合约列为最左列（frozenColCount=1）', async () => {
 })
 ```
 
-- [ ] **Step 2: 跑测试验证红**
+- [x] **Step 2: 跑测试验证红**
 
 Run: `cd frontend && npx vitest run src/modules/market/MarketTable.test.tsx`
 Expected: FAIL — `options.frozenColCount` 为 `undefined`，`expect(...).toBe(1)` 不通过。
 
-- [ ] **Step 3: 最小实现**
+- [x] **Step 3: 最小实现**
 
 `MarketTable.tsx` ListTable 配置（`MarketTable.tsx:194-197`）：
 
@@ -80,12 +78,12 @@ const table = new ListTable(containerRef.current, {
   ...
 ```
 
-- [ ] **Step 4: 跑测试验证绿**
+- [x] **Step 4: 跑测试验证绿**
 
 Run: `cd frontend && npx vitest run src/modules/market/MarketTable.test.tsx`
 Expected: PASS（全部用例绿）。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add frontend/src/modules/market/MarketTable.tsx frontend/src/modules/market/MarketTable.test.tsx
@@ -531,242 +529,7 @@ git commit -m "feat(market-table): 高亮统一 — 金色锚点守卫+拖选锚
 
 ---
 
-### Task 5: 空合约浮窗可交互（问题 6）
-
-**Files:**
-- Create: `frontend/src/components/NoContractPicker/index.tsx`、`frontend/src/components/NoContractPicker/index.css`
-- Modify: `frontend/src/pages/OrderPage.tsx:55-97`
-- Modify: `frontend/src/pages/KLinePage.tsx:94-98`
-- Test: `frontend/src/components/NoContractPicker/index.test.tsx`（新建）、`frontend/src/pages/OrderPage.test.tsx`（新建）、`frontend/src/pages/KLinePage.test.tsx`（新建）
-
-**Interfaces:**
-- Produces: `NoContractPicker({ contracts: ContractInfo[]; onSelect: (instrumentID: string) => void })`；被 OrderPage/KLinePage 的空合约分支复用，`onSelect` 接 `handleSwitch` → `updateTab`。
-
-- [ ] **Step 1: 写失败测试**
-
-`frontend/src/components/NoContractPicker/index.test.tsx`：
-
-```tsx
-import { describe, it, expect, vi } from 'vitest'
-import { render, fireEvent } from '@testing-library/react'
-import { NoContractPicker } from './index'
-import type { ContractInfo } from '@/services/types'
-
-vi.mock('@/components/ContractSearch', () => ({
-  ContractSearch: ({ onSelect }: { onSelect: (id: string) => void }) => (
-    <button data-testid="mock-search" onClick={() => onSelect('IF2608')}>搜索</button>
-  ),
-}))
-
-describe('NoContractPicker', () => {
-  it('渲染提示文案，选中合约后回调 onSelect', () => {
-    const onSelect = vi.fn()
-    const contracts: ContractInfo[] = [{ instrumentID: 'IF2608' } as ContractInfo]
-    const { getByText, getByTestId } = render(<NoContractPicker contracts={contracts} onSelect={onSelect} />)
-    expect(getByText('请选择合约开始')).toBeTruthy()
-    fireEvent.click(getByTestId('mock-search'))
-    expect(onSelect).toHaveBeenCalledWith('IF2608')
-  })
-})
-```
-
-`frontend/src/pages/OrderPage.test.tsx`：
-
-```tsx
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, act } from '@testing-library/react'
-import { OrderPage } from './OrderPage'
-import { useTabStore } from '@/stores/tabs'
-
-let pickerProps: { onSelect: (id: string) => void } | null = null
-vi.mock('@/components/NoContractPicker', () => ({
-  NoContractPicker: (props: any) => {
-    pickerProps = props
-    return <div data-testid="no-contract-picker" />
-  },
-}))
-vi.mock('./OrderTradeBody', () => ({ OrderTradeBody: () => null }))
-vi.mock('./AccountBar', () => ({ AccountBar: () => null }))
-vi.mock('./QuoteStatsBar', () => ({ QuoteStatsBar: () => null }))
-vi.mock('./FooterBar', () => ({ FooterBar: () => null }))
-
-describe('OrderPage 空合约可交互', () => {
-  beforeEach(() => {
-    pickerProps = null
-    useTabStore.setState({
-      tabs: [{ id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false }],
-      activeTabId: 'tab-market',
-    })
-  })
-
-  it('无合约时渲染合约选择器，选中后更新标签 props/title', () => {
-    const { getByTestId } = render(<OrderPage tabId="tab-order" />)
-    expect(getByTestId('no-contract-picker')).toBeTruthy()
-    act(() => { pickerProps!.onSelect('IF2608') })
-    const tab = useTabStore.getState().tabs.find((t) => t.id === 'tab-order')
-    expect(tab?.props.instrumentID).toBe('IF2608')
-    expect(tab?.title).toBe('📝 报单-IF2608')
-  })
-})
-```
-
-`frontend/src/pages/KLinePage.test.tsx`：
-
-```tsx
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, act } from '@testing-library/react'
-import { KLinePage } from './KLinePage'
-import { useTabStore } from '@/stores/tabs'
-
-let pickerProps: { onSelect: (id: string) => void } | null = null
-vi.mock('@/components/NoContractPicker', () => ({
-  NoContractPicker: (props: any) => {
-    pickerProps = props
-    return <div data-testid="no-contract-picker" />
-  },
-}))
-vi.mock('@/modules/market/KLineChart', () => ({ KLineChart: () => null }))
-
-describe('KLinePage 空合约可交互', () => {
-  beforeEach(() => {
-    pickerProps = null
-    useTabStore.setState({
-      tabs: [{ id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false }],
-      activeTabId: 'tab-market',
-    })
-  })
-
-  it('无合约时渲染合约选择器，选中后更新标签 props/title', () => {
-    const { getByTestId } = render(<KLinePage tabId="tab-kline" />)
-    expect(getByTestId('no-contract-picker')).toBeTruthy()
-    act(() => { pickerProps!.onSelect('IF2608') })
-    const tab = useTabStore.getState().tabs.find((t) => t.id === 'tab-kline')
-    expect(tab?.props.instrumentID).toBe('IF2608')
-    expect(tab?.title).toBe('📈 K线-IF2608')
-  })
-})
-```
-
-- [ ] **Step 2: 跑测试验证红**
-
-Run: `cd frontend && npx vitest run src/components/NoContractPicker src/pages/OrderPage.test.tsx src/pages/KLinePage.test.tsx`
-Expected: FAIL — 模块不存在 / 空合约分支仍是占位文案、无 NoContractPicker。
-
-- [ ] **Step 3: 最小实现**
-
-新建 `frontend/src/components/NoContractPicker/index.tsx`：
-
-```tsx
-import { ContractSearch } from '@/components/ContractSearch'
-import type { ContractInfo } from '@/services/types'
-import './index.css'
-
-interface NoContractPickerProps {
-  contracts: ContractInfo[]
-  onSelect: (instrumentID: string) => void
-}
-
-/** 空合约浮窗内的合约选择器：未选中合约时也可直接搜索并开始 */
-export function NoContractPicker({ contracts, onSelect }: NoContractPickerProps) {
-  return (
-    <div className="no-contract-picker">
-      <p className="no-contract-picker__hint">请选择合约开始</p>
-      <ContractSearch contracts={contracts} onSelect={onSelect} />
-    </div>
-  )
-}
-```
-
-新建 `frontend/src/components/NoContractPicker/index.css`：
-
-```css
-.no-contract-picker {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 32px 24px;
-  height: 100%;
-  box-sizing: border-box;
-}
-
-.no-contract-picker__hint {
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.no-contract-picker .contract-search {
-  width: 280px;
-}
-```
-
-`OrderPage.tsx`：
-- 顶部加 import：`import { NoContractPicker } from '@/components/NoContractPicker'`、`import { useContractsStore } from '@/stores/contracts'`。
-- 组件内加：`const contracts = useContractsStore((s) => s.contracts)`，并加兜底加载 effect（与 KLinePage 一致）：
-
-```ts
-// 兜底加载合约列表：直接以报单标签启动时 contracts 可能为空
-useEffect(() => {
-  if (contracts.length === 0) {
-    useContractsStore.getState().loadAllInstruments()
-  }
-}, [contracts.length])
-```
-
-- 浮动分支（55-64 行）的 `!instrumentID` 分支改为：
-
-```tsx
-if (floating) {
-  if (!instrumentID) {
-    return (
-      <div className="order-floating">
-        <NoContractPicker contracts={contracts} onSelect={handleSwitch} />
-      </div>
-    )
-  }
-  ...
-```
-
-- 非浮动分支（86-90 行）改为：
-
-```tsx
-{!instrumentID && (
-  <div className="order-page__no-contract">
-    <NoContractPicker contracts={contracts} onSelect={handleSwitch} />
-  </div>
-)}
-```
-
-`KLinePage.tsx`：
-- 顶部加 import：`import { NoContractPicker } from '@/components/NoContractPicker'`。
-- 94-98 行改为：
-
-```tsx
-{!instrumentID && (
-  <div className="kline-page__no-contract">
-    <NoContractPicker contracts={contracts} onSelect={handleSwitch} />
-  </div>
-)}
-```
-
-（`contracts` 与 `handleSwitch` 均已存在；`contracts` 兜底加载 effect KLinePage 已有。）
-
-- [ ] **Step 4: 跑测试验证绿**
-
-Run: 同 Step 2 命令。
-Expected: PASS。
-
-- [ ] **Step 5: 提交**
-
-```bash
-git add frontend/src/components/NoContractPicker frontend/src/pages/OrderPage.tsx frontend/src/pages/KLinePage.tsx frontend/src/pages/OrderPage.test.tsx frontend/src/pages/KLinePage.test.tsx
-git commit -m "feat(pages): 空合约浮窗内嵌合约选择器（NoContractPicker）"
-```
-
----
-
-### Task 6: 自选订阅一致性 — 前端（问题 3）
+### Task 5: 自选订阅一致性 — 前端（问题 3）
 
 **Files:**
 - Modify: `frontend/src/stores/contracts.ts`（收藏不再直连订阅/退订）
@@ -1025,7 +788,7 @@ git commit -m "feat(subscription): 收藏统一由订阅管理器管理 + mdConn
 
 ---
 
-### Task 7: 自选订阅一致性 — 后端（问题 3）
+### Task 6: 自选订阅一致性 — 后端（问题 3）
 
 **Files:**
 - Modify: `server/services/market_service.py:216-270`（subscribe 先验证后记录）
@@ -1230,9 +993,9 @@ git commit -m "fix(market): 订阅先验证后记录 + 重连权威订阅列表�
    - **#3** 收藏→移除→滚动→重收、以及 CTP 断线重连后，自选/可见合约数据恢复推送。
    - **#4** 右键不同合约，高亮立即切换到该合约。
    - **#5** 拖选/Shift/Ctrl+A，高亮始终唯一（蓝区 + 金锚，无第二高亮区）。
-   - **#6** 无选中合约时从底部工具条打开报单/K线浮窗，窗内可搜索并选中合约后正常渲染。
 
 ## 已完成记录
 
+- `2ebb2ef` feat(market-table): 冻结合约列为最左列 (frozenColCount=1) — Task 1 ✅
 - `7306127` docs: 新增行情表填充/合约列冻结/选中态与订阅一致性修复设计文档
 - `48ed839` docs: 问题5高亮方案改为保留金色作活动锚点+选区守卫
