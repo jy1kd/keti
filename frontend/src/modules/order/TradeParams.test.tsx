@@ -41,7 +41,7 @@ describe('TradeParams（任务#4）', () => {
   })
 
   it('渲染 开平/投保/有效期 三个下拉与手数步进', () => {
-    render(<TradeParams />)
+    render(<TradeParams instrumentID="IF2608" />)
     expect(screen.getByLabelText('开平')).toBeInTheDocument()
     expect(screen.getByLabelText('投保')).toBeInTheDocument()
     expect(screen.getByLabelText('有效期')).toBeInTheDocument()
@@ -49,32 +49,32 @@ describe('TradeParams（任务#4）', () => {
   })
 
   it('开平下拉当前值 = combOffsetFlag，选项映射正确', () => {
-    render(<TradeParams />)
+    render(<TradeParams instrumentID="IF2608" />)
     const select = screen.getByLabelText('开平') as HTMLSelectElement
     expect(select.value).toBe('open')
     expect(Array.from(select.options).map((o) => o.value)).toEqual(['open', 'close', 'close_today'])
   })
 
   it('选择开平 → setOrderForm({ combOffsetFlag })', () => {
-    render(<TradeParams />)
+    render(<TradeParams instrumentID="IF2608" />)
     fireEvent.change(screen.getByLabelText('开平'), { target: { value: 'close' } })
     expect(useOrderStore.getState().orderForm.combOffsetFlag).toBe('close')
   })
 
   it('选择投保 → setOrderForm({ combHedgeFlag })', () => {
-    render(<TradeParams />)
+    render(<TradeParams instrumentID="IF2608" />)
     fireEvent.change(screen.getByLabelText('投保'), { target: { value: 'hedge' } })
     expect(useOrderStore.getState().orderForm.combHedgeFlag).toBe('hedge')
   })
 
   it('选择有效期 → setOrderForm({ timeCondition })', () => {
-    render(<TradeParams />)
+    render(<TradeParams instrumentID="IF2608" />)
     fireEvent.change(screen.getByLabelText('有效期'), { target: { value: 'fok' } })
     expect(useOrderStore.getState().orderForm.timeCondition).toBe('fok')
   })
 
   it('手数 +/- 步进（最小 1）', () => {
-    render(<TradeParams />)
+    render(<TradeParams instrumentID="IF2608" />)
     fireEvent.click(screen.getByTestId('tp-volume-up'))
     expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(2)
     fireEvent.click(screen.getByTestId('tp-volume-down'))
@@ -83,13 +83,13 @@ describe('TradeParams（任务#4）', () => {
   })
 
   it('期货限价单上限 500 手提示', () => {
-    render(<TradeParams />)
+    render(<TradeParams instrumentID="IF2608" />)
     expect(screen.getByText('最大 500 手')).toBeInTheDocument()
   })
 
   it('市价单上限 60 手提示', () => {
     setForm({ orderPriceType: 'market' })
-    render(<TradeParams />)
+    render(<TradeParams instrumentID="IF2608" />)
     expect(screen.getByText('最大 60 手')).toBeInTheDocument()
   })
 
@@ -99,20 +99,20 @@ describe('TradeParams（任务#4）', () => {
       favorites: [],
       isLoaded: true,
     })
-    render(<TradeParams />)
+    render(<TradeParams instrumentID="IF2608" />)
     expect(screen.getByText('最大 100 手')).toBeInTheDocument()
   })
 
   it('手数超限 → 显示错误提示', () => {
     setForm({ volumeTotalOriginal: 600 })
-    render(<TradeParams />)
+    render(<TradeParams instrumentID="IF2608" />)
     expect(screen.getByText('数量不能超过500手')).toBeInTheDocument()
     expect(screen.getByTestId('tp-volume-hint').className).toContain('tp-hint--error')
   })
 
   it('手数 + 达上限时禁用步进按钮，不再越界累加（🟡-4）', () => {
     setForm({ volumeTotalOriginal: 500 })
-    render(<TradeParams />)
+    render(<TradeParams instrumentID="IF2608" />)
     expect(screen.getByTestId('tp-volume-up')).toBeDisabled()
     fireEvent.click(screen.getByTestId('tp-volume-up'))
     expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(500)
@@ -120,14 +120,14 @@ describe('TradeParams（任务#4）', () => {
 
   describe('快捷手数（P3 QtyPreset 集成）', () => {
     it('点击预设 → 手数设为预设值 + 步进设为预设值', () => {
-      render(<TradeParams />)
+      render(<TradeParams instrumentID="IF2608" />)
       fireEvent.click(screen.getByTestId('qty-preset-20'))
       expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(20)
       expect(useOrderStore.getState().volumeStep).toBe(20)
     })
 
     it('步进 +/− 按 volumeStep（点 20 → + → 40 → − → 20）', () => {
-      render(<TradeParams />)
+      render(<TradeParams instrumentID="IF2608" />)
       fireEvent.click(screen.getByTestId('qty-preset-20'))
       fireEvent.click(screen.getByTestId('tp-volume-up'))
       expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(40)
@@ -136,7 +136,7 @@ describe('TradeParams（任务#4）', () => {
     })
 
     it('手动输入手数不改变步进（步进 20 → 输入 35 → + → 55）', () => {
-      render(<TradeParams />)
+      render(<TradeParams instrumentID="IF2608" />)
       fireEvent.click(screen.getByTestId('qty-preset-20'))
       fireEvent.change(screen.getByTestId('tp-volume'), { target: { value: '35' } })
       expect(useOrderStore.getState().volumeStep).toBe(20)
@@ -146,7 +146,7 @@ describe('TradeParams（任务#4）', () => {
 
     it('市价 limit 60：点 20 步进 → + → 40 → + → 60 到顶禁用', () => {
       setForm({ orderPriceType: 'market' })
-      render(<TradeParams />)
+      render(<TradeParams instrumentID="IF2608" />)
       fireEvent.click(screen.getByTestId('qty-preset-20'))
       fireEvent.click(screen.getByTestId('tp-volume-up'))
       fireEvent.click(screen.getByTestId('tp-volume-up'))
@@ -156,7 +156,7 @@ describe('TradeParams（任务#4）', () => {
 
     it('市价 limit 60：点 100 预设 → 手数钳制到 60、步进为 100', () => {
       setForm({ orderPriceType: 'market' })
-      render(<TradeParams />)
+      render(<TradeParams instrumentID="IF2608" />)
       fireEvent.click(screen.getByTestId('qty-preset-100'))
       expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(60)
       expect(useOrderStore.getState().volumeStep).toBe(100)
@@ -170,7 +170,7 @@ describe('TradeParams（任务#4）', () => {
     })
 
     it('渲染 撤最新/撤全部/平净仓 按钮', () => {
-      render(<TradeParams />)
+      render(<TradeParams instrumentID="IF2608" />)
       expect(screen.getByTestId('tp-cancel-latest')).toBeInTheDocument()
       expect(screen.getByTestId('tp-cancel-all')).toBeInTheDocument()
       expect(screen.getByTestId('tp-flat-net')).toBeInTheDocument()
@@ -185,14 +185,14 @@ describe('TradeParams（任务#4）', () => {
           { orderRef: 'OTHER', instrumentID: 'IC2608', direction: '0', combOffsetFlag: '0', limitPrice: 5600, volumeTotalOriginal: 1, volumeTraded: 0, orderStatus: '2', insertTime: '09:32:00' },
         ],
       })
-      render(<TradeParams />)
+      render(<TradeParams instrumentID="IF2608" />)
       fireEvent.click(screen.getByTestId('tp-cancel-latest'))
       await act(async () => {})
       expect(apiCancelOrder).toHaveBeenCalledWith('LATEST')
     })
 
     it('撤最新但无该合约活动挂单 → 不调撤单接口', async () => {
-      render(<TradeParams />)
+      render(<TradeParams instrumentID="IF2608" />)
       fireEvent.click(screen.getByTestId('tp-cancel-latest'))
       await act(async () => {})
       expect(apiCancelOrder).not.toHaveBeenCalled()
@@ -200,7 +200,7 @@ describe('TradeParams（任务#4）', () => {
 
     it('撤全部 → 强制确认框 → 确认后调用 cancelAllOrders', async () => {
       vi.mocked(apiCancelAllOrders).mockResolvedValue({ success: true, attempted: 2, succeeded: 2, failedRefs: [] })
-      render(<TradeParams />)
+      render(<TradeParams instrumentID="IF2608" />)
       fireEvent.click(screen.getByTestId('tp-cancel-all'))
       expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
       fireEvent.click(screen.getByText('确认执行'))
@@ -209,7 +209,7 @@ describe('TradeParams（任务#4）', () => {
     })
 
     it('撤全部取消 → 不调用 cancelAllOrders', () => {
-      render(<TradeParams />)
+      render(<TradeParams instrumentID="IF2608" />)
       fireEvent.click(screen.getByTestId('tp-cancel-all'))
       fireEvent.click(screen.getByText('取消'))
       expect(apiCancelAllOrders).not.toHaveBeenCalled()
@@ -218,7 +218,7 @@ describe('TradeParams（任务#4）', () => {
 
     it('平净仓 → 强制确认框 → 确认后调用 reversePosition(当前合约)', async () => {
       vi.mocked(apiReversePosition).mockResolvedValue({ success: true, orders: [] })
-      render(<TradeParams />)
+      render(<TradeParams instrumentID="IF2608" />)
       fireEvent.click(screen.getByTestId('tp-flat-net'))
       expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
       fireEvent.click(screen.getByText('确认执行'))
@@ -229,7 +229,7 @@ describe('TradeParams（任务#4）', () => {
     it('平净仓成功 → 刷新持仓', async () => {
       const fetchPositionsSpy = vi.spyOn(useQueryStore.getState(), 'fetchPositions').mockResolvedValue(undefined)
       vi.mocked(apiReversePosition).mockResolvedValue({ success: true, orders: [] })
-      render(<TradeParams />)
+      render(<TradeParams instrumentID="IF2608" />)
       fireEvent.click(screen.getByTestId('tp-flat-net'))
       fireEvent.click(screen.getByText('确认执行'))
       await act(async () => {})
@@ -239,7 +239,7 @@ describe('TradeParams（任务#4）', () => {
 
   describe('合约搜索切换（替换箭头步进）', () => {
     it('渲染 合约 行与搜索框（回显当前合约）', () => {
-      render(<TradeParams />)
+      render(<TradeParams instrumentID="IF2608" />)
       expect(screen.getByText('合约')).toBeInTheDocument()
       const input = screen.getByPlaceholderText('搜索合约...') as HTMLInputElement
       expect(input.value).toBe('IF2608')
@@ -254,7 +254,7 @@ describe('TradeParams（任务#4）', () => {
         favorites: [],
         isLoaded: true,
       })
-      render(<TradeParams />)
+      render(<TradeParams instrumentID="IF2608" />)
       const input = screen.getByPlaceholderText('搜索合约...')
       fireEvent.change(input, { target: { value: 'IF2609' } })
       fireEvent.mouseDown(screen.getByText('IF2609'))
@@ -270,13 +270,13 @@ describe('TradeParams（任务#4）', () => {
         favorites: [],
         isLoaded: true,
       })
-      const { rerender } = render(<TradeParams />)
+      const { rerender } = render(<TradeParams instrumentID="IF2608" />)
       const input = screen.getByPlaceholderText('搜索合约...') as HTMLInputElement
       fireEvent.change(input, { target: { value: 'IF2609' } })
       fireEvent.mouseDown(screen.getByText('IF2609'))
       // orderForm.instrumentID 已切换 → key 变化强制重挂载 → 输入框回显新合约
       expect(useOrderStore.getState().orderForm.instrumentID).toBe('IF2609')
-      rerender(<TradeParams />)
+      rerender(<TradeParams instrumentID="IF2609" />)
       const input2 = screen.getByPlaceholderText('搜索合约...') as HTMLInputElement
       expect(input2.value).toBe('IF2609')
     })
@@ -291,11 +291,21 @@ describe('TradeParams（任务#4）', () => {
         favorites: [],
         isLoaded: true,
       })
-      render(<TradeParams onSwitch={onSwitch} />)
+      render(<TradeParams instrumentID="IF2608" onSwitch={onSwitch} />)
       const input = screen.getByPlaceholderText('搜索合约...')
       fireEvent.change(input, { target: { value: 'IF2609' } })
       fireEvent.mouseDown(screen.getByText('IF2609'))
       expect(onSwitch).toHaveBeenCalledWith('IF2609')
     })
+  })
+
+  it('无 instrumentID prop 时忽略 orderForm 残留（全局残留不击穿空态：请选择合约 + 操作按钮禁用）', () => {
+    // beforeEach 已把 orderForm.instrumentID 设为 'IF2608'（残留）
+    render(<TradeParams />)
+    expect(screen.getByPlaceholderText('请选择合约')).toBeInTheDocument()
+    expect(screen.queryByDisplayValue('IF2608')).toBeNull()
+    expect(screen.getByTestId('tp-cancel-latest')).toBeDisabled()
+    expect(screen.getByTestId('tp-cancel-all')).toBeDisabled()
+    expect(screen.getByTestId('tp-flat-net')).toBeDisabled()
   })
 })

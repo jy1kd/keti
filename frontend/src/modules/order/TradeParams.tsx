@@ -13,7 +13,7 @@ import { QtyPreset } from './QtyPreset'
 import './TradeParams.css'
 
 interface TradeParamsProps {
-  /** 可选覆盖合约代码（默认取 orderForm.instrumentID），用于定位 productClass 做数量上限校验 */
+  /** 当前合约代码（经 OrderPage → OrderTradeBody 传入；无合约时空态为 undefined），用于定位 productClass 做数量上限校验 */
   instrumentID?: string
   /** 合约切换回调（统一浮动窗模式）：报单浮动窗切换合约时更新所属标签页；标签页模式可不传 */
   onSwitch?: (instrumentID: string) => void
@@ -33,7 +33,9 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
   const setVolumeStep = useOrderStore((s) => s.setVolumeStep)
   const contracts = useContractsStore((s) => s.contracts)
 
-  const activeInstrument = instrumentID ?? orderForm.instrumentID
+  // 仅用 prop 定位当前合约：TradeParams 现只经 OrderPage → OrderTradeBody 渲染，总是传入 instrumentID
+  // （空态为 undefined）。不能回退 orderForm.instrumentID —— 浮动窗残留会击穿空态。
+  const activeInstrument = instrumentID ?? ''
   const productClass = useMemo(() => {
     const contract = contracts.find((c) => c.instrumentID === activeInstrument)
     return contract?.productClass ?? '1'

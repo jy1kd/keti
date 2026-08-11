@@ -44,7 +44,7 @@ export function KLinePage({ instrumentID, tabId }: KLinePageProps) {
   const contract = contracts.find((c) => c.instrumentID === instrumentID);
   const snapshot = instrumentID ? snapshots.get(instrumentID) : null;
   const priceTick = contract?.priceTick ?? 0.2;
-  const latestPrice = snapshot?.lastPrice != null ? formatPrice(snapshot.lastPrice, priceTick) : '--'
+  const latestPrice = snapshot?.lastPrice != null ? formatPrice(snapshot.lastPrice, priceTick) : '--';
 
   // 兜底加载合约列表：直接以 K线标签启动（如 Electron 独立窗口）时行情表未挂载，
   // contracts 可能为空，搜索切换依赖合约数据。
@@ -110,5 +110,5 @@ export function KLinePage({ instrumentID, tabId }: KLinePageProps) {
       </div>
       {isElectron() && <div className="kline-page__electron-info">独立窗口模式</div>}
     </div>
-  )
+  );
 }

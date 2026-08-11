@@ -12,7 +12,7 @@
 
 - 空态占位符统一为 `--`（双连字符）。
 - `volumeStep` 是 order store 的**独立字段**，不进 `OrderRequestForm`（避免污染 CTP 报单字段映射）。
-- `submitOrder` 成功写回 / `resetOrderForm` **不重置** `volumeStep`（报单后手数回 1、步进保持）。
+- `submitOrder` 成功写回 / `resetOrderForm` **不重置** `volumeStep`（报单后手数记忆保持、步进保持）。
 - 止损单 `StopOrderForm` 的手数步进**不受影响**（保持 step=1，无快捷栏）。
 - 全程 TDD：先写失败测试 → 确认失败 → 实现 → 确认通过 → 提交。
 - 前端测试命令：`cd frontend && npx vitest run <文件>`；全量：`npm test`；类型：`npx tsc --noEmit`。

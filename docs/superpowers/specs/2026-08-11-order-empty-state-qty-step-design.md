@@ -75,7 +75,7 @@
 
 - `OrderStore` 新增 `volumeStep: number`（默认 `1`）+ `setVolumeStep: (step: number) => void`。
 - 独立字段，**不进** `OrderRequestForm`（避免污染 CTP 报单映射）。
-- `submitOrder` 成功写回 / `resetOrderForm` **不改** `volumeStep` → 报单后手数回 1、步进保持。
+- `submitOrder` 成功写回 / `resetOrderForm` **不改** `volumeStep` → 报单后手数记忆保持（手数不重置）、步进保持。
 
 ### 2.2 TradeParams — 步进使用 volumeStep
 
@@ -104,7 +104,7 @@
 - **OrderPage.test**：原「无合约显示选择提示」改为断言空态——标题栏 + 参数区（`tp-volume`）+ 盘口 `--` + 搜索框 placeholder「请选择合约」；浮动空态同理。
 - **KLinePage.test**：原「无合约显示提示文案」改为断言 `KLineChart` 渲染 + `--` 最新价 + placeholder「请选择合约」。
 - **QtyPreset.test**：高亮跟随 `step`；`onSelect` 收原始预设值；原「超限钳制」测试移除（逻辑移入 TradeParams）。
-- **TradeParams.test**：新增步进测试——点 `20` 后 `+` → 40、`−` → 20；手动输入后步进保持；报单后手数回 1、步进保持。
+- **TradeParams.test**：新增步进测试——点 `20` 后 `+` → 40、`−` → 20；手动输入后步进保持；报单后手数记忆保持、步进保持。
 
 ### 3.2 边界
 
