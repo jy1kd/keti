@@ -98,12 +98,13 @@ git commit -m "feat(market-table): 冻结合约列为最左列 (frozenColCount=1
 - Modify: `frontend/src/modules/market/MarketTable.tsx:196`（widthMode）
 - Modify: `frontend/src/modules/market/styles.css:59-64`（`.panel-content`）
 - Modify: `frontend/src/modules/options/OptionPanel.tsx:18-22, 272-275`（删除 chainHeight）
-- Modify: `frontend/src/modules/options/styles.css:3-8, 146-148`（options-panel / options-chain-table）
+- Modify: `frontend/src/modules/options/styles.css:3-8, 126-130, 146-148`（options-panel / options-content / options-chain-table）
+- Modify: `frontend/src/modules/options/TQuoteTable.tsx`（widthMode adaptive）
 - Test: `frontend/src/modules/market/MarketTable.test.tsx:164-176`、`MarketPanel.style.test.tsx`
 - Create: `frontend/src/modules/options/OptionPanel.style.test.tsx`
 
 **Interfaces:**
-- Produces: 行情表 `widthMode: 'adaptive'`（列自适应填满容器）；`.panel-content` 无 `height:100%`；`.options-chain-table` `flex:1; height:100%`。
+- Produces: 行情表 `widthMode: 'adaptive'`（列自适应填满容器）；`.panel-content` 无 `height:100%`；`.options-content` 为 flex 列容器、`.options-chain-table` `flex:1; min-height:0`；`TQuoteTable` `widthMode:'adaptive'`。
 
 - [x] **Step 1: 写失败测试**
 
@@ -154,10 +155,11 @@ function readCssBlock(selector: string): string {
 }
 
 describe('OptionPanel 自动填充', () => {
-  it('.options-chain-table 以 height:100% 撑满可用高度（父级 .options-content 为 block 且已有 flex:1）', () => {
+  it('.options-chain-table 以 flex:1 撑满可用高度（父级 .options-content 为 flex 列容器）', () => {
     const block = readCssBlock('.options-chain-table')
     expect(block).toMatch(/width:\s*100%/)
-    expect(block).toMatch(/height:\s*100%/)
+    expect(block).toMatch(/flex:\s*1/)
+    expect(block).toMatch(/min-height:\s*0/)
   })
 
   it('.options-panel 用 flex 填充（非固定 height:100%，避免与工具栏叠加溢出）', () => {
@@ -193,14 +195,18 @@ Expected: FAIL — widthMode 仍为 standard；`.panel-content` 仍含 `height:1
 
 `frontend/src/modules/options/styles.css`：
 - `.options-panel`：`height: 100%;` → `flex: 1 1 0; min-height: 0;`（保留 `display:flex; flex-direction:column; padding:8px;`）。
+- `.options-content`：加 `display:flex; flex-direction:column; min-height:0;`（父级撑满可用高度，供子表 flex 填充）。
 - `.options-chain-table`：
 
 ```css
 .options-chain-table {
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 ```
+
+`frontend/src/modules/options/TQuoteTable.tsx`：`widthMode: 'standard'` → `'adaptive'`（列宽按容器自适应填满，消除 T型期权页横向留白）。
 
 - [x] **Step 4: 跑测试验证绿**
 
@@ -997,6 +1003,7 @@ git commit -m "fix(market): 订阅先验证后记录 + 重连权威订阅列表�
 
 ## 已完成记录
 
+- `f43a7cd` fix(market): T型期权表自动填充 — widthMode adaptive + options 链 flex 填充 — Task 2 补充（消除横向留白，浏览器验证待人工）
 - `cf6282b` fix(market): 订阅先验证后记录 + 重连权威订阅列表（消除假成功） — Task 6 ✅
 - `d4b9d88` feat(subscription): 收藏统一由订阅管理器管理 + mdConnected 广播触发强制重订阅兜底 — Task 5 ✅
 - `9879e84` feat(market-table): 高亮统一 — 金色锚点守卫+拖选锚点同步（金在蓝内） — Task 4 ✅

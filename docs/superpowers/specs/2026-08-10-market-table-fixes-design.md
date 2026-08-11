@@ -71,7 +71,8 @@
 | 文件 | 改动 |
 |------|------|
 | `frontend/src/modules/options/OptionPanel.tsx` | 删除 `chainHeight()` 及内联 `style={{ height: chainHeight(...) }}` |
-| `frontend/src/modules/options/styles.css` | `.options-chain-table` 由 `width:100%` 改为 `width:100%; height:100%`——父级 `.options-content` 为 block 且自身 `flex:1` 已撑满可用高度，`height:100%` 即可填充（`flex:1` 在非 flex 容器内不生效故不写）；`.options-panel` 由 `height:100%` 改 `flex:1 1 0; min-height:0` |
+| `frontend/src/modules/options/styles.css` | `.options-panel` 由 `height:100%` 改 `flex:1 1 0; min-height:0`；`.options-content` 改 flex 列容器（`display:flex; flex-direction:column; min-height:0`）；`.options-chain-table` 由 `width:100%` 改 `width:100%; flex:1; min-height:0`——用 flex 填充（与行情页 `.market-table-container` 的 `flex:1` 同模式，避免 `height:100%` 在嵌套 flex 下百分比解析不可靠） |
+| `frontend/src/modules/options/TQuoteTable.tsx` | `widthMode` 由 `'standard'` 改 `'adaptive'`——T型期权页消除横向留白（列宽按容器自适应填满，行权价列随左右列对称增长保持居中） |
 | `frontend/src/modules/market/styles.css` | `.panel-content` 删 `height:100%` 只留 `flex:1; min-height:0; overflow:hidden`；确认 `.market-panel` 用 `flex:1; min-height:0` 兜底（现为 `height:100%`） |
 | `frontend/src/modules/market/MarketTable.tsx` | `widthMode` 由 `'standard'` 改 `'adaptive'`（列宽按容器自适应、填满容器）；若 adaptive 挤压价格列观感不佳，回退「固定列宽 + 末尾弹性列」方案 |
 
