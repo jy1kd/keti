@@ -3,7 +3,8 @@
  * Tray Manager
  *
  * Manages the system tray for the Electron application.
- * Supports tray icon, context menu, and notifications.
+ * The context menu mirrors the top application menu (shared template, menuTemplate.ts)
+ * plus a top-level 退出 item. Supports tray icon, context menu, and notifications.
  */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -13,7 +14,7 @@ exports.TrayManager = void 0;
 const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
-const index_1 = require('./ipc/index.cjs');
+const menuTemplate_1 = require('./menuTemplate.cjs');
 /**
  * TrayManager class
  */
@@ -21,12 +22,19 @@ class TrayManager {
     constructor() {
         this.tray = null;
         this.mainWindow = null;
+        this.isQuitting = false;
     }
     /**
-     * Initialize the tray with a main window reference
+     * Initialize the tray with a main window and window manager reference.
+     * The context menu mirrors the native app menu (shared template) with 退出 at the bottom.
      */
-    initialize(mainWindow) {
+    initialize(mainWindow, windowManager) {
         this.mainWindow = mainWindow;
+        // 退出标志：app.quit() 时放行窗口关闭；否则 close 事件会被拦截，应用无法退出。
+        // 刻意不重置：本应用无「取消退出」路径（无其他 close/before-quit 拦截方），不存在需复位该标志的场景。
+        electron_1.app.on('before-quit', () => {
+            this.isQuitting = true;
+        });
         // Create tray icon
         const iconPath = path_1.default.join(__dirname, '../build/icon.png');
         // Check if icon file exists
@@ -41,49 +49,14 @@ class TrayManager {
             this.tray = new electron_1.Tray(icon);
         }
         this.tray.setToolTip('SimNow 交易终端');
-        // 显示主窗口并向其发送 IPC（与顶部菜单打开方式同步：行情切主页视图，其余弹浮动窗）
-        const showAndSend = (channel, ...args) => {
-            if (this.mainWindow) {
-                this.mainWindow.show();
-                this.mainWindow.focus();
-                this.mainWindow.webContents.send(channel, ...args);
-            }
-        };
-        // Build context menu
-        const contextMenu = electron_1.Menu.buildFromTemplate([
-            {
-                label: '📊 全部行情',
-                click: () => showAndSend(index_1.IPC_CHANNELS.MENU_MARKET_VIEW, 'all'),
-            },
-            {
-                label: '⭐ 自选行情',
-                click: () => showAndSend(index_1.IPC_CHANNELS.MENU_MARKET_VIEW, 'favorites'),
-            },
-            { type: 'separator' },
-            {
-                label: '📋 查询窗口',
-                click: () => showAndSend(index_1.IPC_CHANNELS.MENU_OPEN_FLOATING, 'query'),
-            },
-            {
-                label: '⚙ 设置',
-                click: () => showAndSend(index_1.IPC_CHANNELS.MENU_OPEN_FLOATING, 'settings'),
-            },
-            {
-                label: '📡 网络监控',
-                click: () => showAndSend(index_1.IPC_CHANNELS.MENU_OPEN_FLOATING, 'ipc-monitor'),
-            },
-            { type: 'separator' },
-            {
-                label: '退出',
-                click: () => {
-                    if (this.mainWindow) {
-                        this.mainWindow.destroy();
-                    }
-                    this.destroy();
-                },
-            },
-        ]);
-        this.tray.setContextMenu(contextMenu);
+        // 托盘菜单 = 共享四组定义（剔除「功能」内嵌退出 app-quit）+ 一级底部退出
+        const def = [
+            ...(0, menuTemplate_1.getAppMenuDef)(),
+            { id: 'tray-sep', type: 'separator' },
+            { id: 'tray-quit', label: '退出', action: { type: 'quit' } },
+        ];
+        const ctx = { mainWindow, windowManager };
+        this.tray.setContextMenu(electron_1.Menu.buildFromTemplate((0, menuTemplate_1.buildMenuFromDef)(def, ctx, { omitIds: ['app-quit'] })));
         // Handle tray click (show/hide window)
         this.tray.on('click', () => {
             if (this.mainWindow) {
@@ -96,10 +69,10 @@ class TrayManager {
                 }
             }
         });
-        // Handle window close - minimize to tray instead of quitting
+        // Handle window close - minimize to tray instead of quitting (except while quitting)
         if (this.mainWindow) {
             this.mainWindow.on('close', (event) => {
-                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                if (!this.isQuitting && this.mainWindow && !this.mainWindow.isDestroyed()) {
                     event.preventDefault();
                     this.mainWindow.hide();
                 }

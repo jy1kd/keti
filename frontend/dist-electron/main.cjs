@@ -79,7 +79,7 @@ async function initializeApp() {
     new menuManager_1.MenuManager().initialize(mainWindow, windowManager);
     // Create tray manager and initialize
     trayManager = new trayManager_1.TrayManager();
-    trayManager.initialize(mainWindow);
+    trayManager.initialize(mainWindow, windowManager);
     // Store selected instrument from renderer
     let selectedInstrument = '';
     // IPC handler to receive selected instrument from renderer
