@@ -38,6 +38,8 @@ export interface Tab {
   title: string
   props: Record<string, unknown>
   closable: boolean
+  /** 固定标签：滚动区置左 + 关闭其他/关闭所有跳过。缺省 = 未固定 */
+  pinned?: boolean
 }
 
 // --- 默认状态 ---
@@ -59,6 +61,13 @@ interface TabStore {
 
   /** 关闭标签页；固定标签不可关闭 */
   closeTab: (tabId: string) => void
+
+  /** 关闭除指定标签外的所有可关闭非固定标签；activeTabId 保持 */
+  closeOthers: (tabId: string) => void
+  /** 关闭所有可关闭非固定标签；activeTabId 指向剩余第一个 */
+  closeAll: () => void
+  /** 切换固定状态；closable:false 标签（行情/初始页）拒绝 */
+  togglePin: (tabId: string) => void
 
   /** 更新标签页内容（K线页内搜索切换合约）：保持 id 稳定，同步 props 与 title。
    *  若目标合约已被其他标签打开，则激活该标签并关闭当前标签，避免重复。 */
@@ -119,6 +128,7 @@ export const useTabStore = create<TabStore>((set, get) => ({
         title,
         props,
         closable,
+        pinned: false,
       }
 
       result = true
@@ -150,6 +160,37 @@ export const useTabStore = create<TabStore>((set, get) => ({
       return {
         tabs: newTabs,
         activeTabId: newActiveId,
+      }
+    })
+  },
+
+  closeOthers: (tabId) => {
+    set((state) => {
+      const target = state.tabs.find((t) => t.id === tabId)
+      if (!target) return state
+      // 保留：目标 + 不可关闭（closable:false）+ 固定标签
+      const keep = state.tabs.filter((t) => !t.closable || t.pinned || t.id === tabId)
+      if (keep.length === state.tabs.length) return state
+      return { tabs: keep, activeTabId: tabId }
+    })
+  },
+
+  closeAll: () => {
+    set((state) => {
+      const keep = state.tabs.filter((t) => !t.closable || t.pinned)
+      if (keep.length === state.tabs.length) return state
+      const activeSurvives = keep.some((t) => t.id === state.activeTabId)
+      const newActiveId = activeSurvives ? state.activeTabId : (keep[0]?.id ?? state.activeTabId)
+      return { tabs: keep, activeTabId: newActiveId }
+    })
+  },
+
+  togglePin: (tabId) => {
+    set((state) => {
+      const tab = state.tabs.find((t) => t.id === tabId)
+      if (!tab || !tab.closable) return state
+      return {
+        tabs: state.tabs.map((t) => (t.id === tabId ? { ...t, pinned: !t.pinned } : t)),
       }
     })
   },

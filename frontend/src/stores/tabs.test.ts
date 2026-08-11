@@ -320,3 +320,71 @@ describe('useTabStore', () => {
     })
   })
 })
+
+describe('closeOthers / closeAll / togglePin', () => {
+  function seed() {
+    useTabStore.setState({
+      tabs: [
+        { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+        { id: 'tab-order', type: 'order', title: '📝 报单', props: {}, closable: true, pinned: true },
+        { id: 'tab-kline', type: 'kline', title: '📈 K线', props: {}, closable: true },
+        { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
+      ],
+      activeTabId: 'tab-kline',
+    })
+  }
+
+  it('closeOthers 关闭除指定标签外的所有可关闭非固定标签，activeTabId 保持', () => {
+    seed()
+    useTabStore.getState().closeOthers('tab-kline')
+    const { tabs, activeTabId } = useTabStore.getState()
+    // 保留 market（closable:false）+ order（pinned）+ kline（目标）
+    expect(tabs.map((t) => t.id)).toEqual(['tab-market', 'tab-order', 'tab-kline'])
+    expect(activeTabId).toBe('tab-kline')
+  })
+
+  it('closeOthers 对固定目标标签同样跳过其他固定标签', () => {
+    seed()
+    useTabStore.getState().closeOthers('tab-order') // 目标是固定标签
+    const { tabs } = useTabStore.getState()
+    expect(tabs.map((t) => t.id)).toEqual(['tab-market', 'tab-order'])
+  })
+
+  it('closeAll 关闭所有可关闭非固定标签，activeTabId 指向剩余第一个', () => {
+    seed()
+    useTabStore.getState().closeAll()
+    const { tabs, activeTabId } = useTabStore.getState()
+    // 保留 market（closable:false）+ order（pinned）
+    expect(tabs.map((t) => t.id)).toEqual(['tab-market', 'tab-order'])
+    expect(activeTabId).toBe('tab-market')
+  })
+
+  it('closeAll 后活跃标签被关闭时，activeTabId 落到剩余第一个', () => {
+    useTabStore.setState({
+      tabs: [
+        { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+        { id: 'tab-kline', type: 'kline', title: '📈 K线', props: {}, closable: true },
+      ],
+      activeTabId: 'tab-kline',
+    })
+    useTabStore.getState().closeAll()
+    expect(useTabStore.getState().activeTabId).toBe('tab-market')
+  })
+
+  it('togglePin 切换 pinned；closable:false 标签拒绝固定', () => {
+    seed()
+    useTabStore.getState().togglePin('tab-kline')
+    expect(useTabStore.getState().tabs.find((t) => t.id === 'tab-kline')!.pinned).toBe(true)
+    useTabStore.getState().togglePin('tab-kline')
+    expect(useTabStore.getState().tabs.find((t) => t.id === 'tab-kline')!.pinned).toBe(false)
+    // market 不可固定
+    useTabStore.getState().togglePin('tab-market')
+    expect(useTabStore.getState().tabs.find((t) => t.id === 'tab-market')!.pinned).toBeUndefined()
+  })
+
+  it('openTab 新标签默认 pinned:false', () => {
+    useTabStore.setState({ tabs: [], activeTabId: '' })
+    useTabStore.getState().openTab({ type: 'kline', title: '📈 K线' })
+    expect(useTabStore.getState().tabs[0].pinned).toBe(false)
+  })
+})

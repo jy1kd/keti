@@ -1,27 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { GlobalBar } from './index'
 import { useTabStore } from '@/stores/tabs'
 
-// Mock 统一浮动窗入口（GlobalBar 的 + 按钮打开设置浮动窗）
-const { mockOpenFloatingTab } = vi.hoisted(() => ({
-  mockOpenFloatingTab: vi.fn(),
-}))
-
-vi.mock('@/utils/openFloatingTab', () => ({
-  openFloatingTab: mockOpenFloatingTab,
-}))
-
 // Mock TabBar（GlobalBar 只承载，行为由 TabBar 自身测试覆盖）
 vi.mock('@/components/TabBar', () => ({
-  TabBar: ({ onAddTab }: { onAddTab?: () => void }) => (
-    <div data-testid="tab-bar">
-      <span>TabBar Mock</span>
-      <button data-testid="add-tab" onClick={onAddTab}>
-        +
-      </button>
-    </div>
-  ),
+  TabBar: () => <div data-testid="tab-bar">TabBar Mock</div>,
 }))
 
 describe('GlobalBar', () => {
@@ -58,11 +42,5 @@ describe('GlobalBar', () => {
   it('不渲染应用标题「SimNow 交易终端」', () => {
     render(<GlobalBar />)
     expect(screen.queryByText('SimNow 交易终端')).toBeNull()
-  })
-
-  it('点击 + 新增标签按钮打开设置浮动窗', () => {
-    render(<GlobalBar />)
-    fireEvent.click(screen.getByTestId('add-tab'))
-    expect(mockOpenFloatingTab).toHaveBeenCalledWith({ type: 'settings', title: '⚙ 设置' })
   })
 })

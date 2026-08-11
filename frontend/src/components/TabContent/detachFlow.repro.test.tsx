@@ -49,7 +49,7 @@ function appendOverlay() {
 function renderAppShell() {
   return render(
     <>
-      <TabBar onAddTab={() => useTabStore.getState().openTab({ type: 'settings', title: '⚙ 设置' })} />
+      <TabBar />
       <div id="floating-overlay" />
       <main className="tab-main">
         <TabContent />

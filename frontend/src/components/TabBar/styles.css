@@ -4,13 +4,116 @@
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
   height: 36px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none; /* 隐藏横向滚动条，保留可滚动性 */
+  overflow: visible;   /* 允许 ▾/`+` 下拉溢出显示；滚动由 .tab-bar__scroll 承接 */
 }
 
-.tab-bar::-webkit-scrollbar {
+/* 可滚动标签区：有界滚轮横滚，隐藏滚动条 */
+.tab-bar__scroll {
+  position: relative; /* 使标签 offsetLeft 相对滚动容器，供 ▾ 点击后滚入视口 */
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.tab-bar__scroll::-webkit-scrollbar {
   display: none;
+}
+
+/* 行情标签（初始页）：固定在左侧、可滚动区之外；少量左呼吸替代原 GlobalBar 16px 外层
+   选择器双类（0,2,0）压过 .tab-bar__tab（0,1,0）的 padding/cursor，确保 8px 左呼吸与
+   cursor:default 实际生效（此前后者后声明覆盖，左留白退化为 12px、光标为 pointer） */
+.tab-bar__market.tab-bar__tab {
+  flex-shrink: 0;
+  padding-left: 8px;
+  cursor: default;
+}
+
+/* ▾ 溢出按钮 + 下拉 */
+.tab-bar__overflow {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  margin-right: 2px;
+}
+
+.tab-bar__overflow-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.tab-bar__overflow-btn:hover,
+.tab-bar__overflow-btn--active {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.tab-bar__overflow-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 1000;
+  min-width: 160px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--bg-secondary, #2a2a2a);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  padding: 4px 0;
+}
+
+.tab-bar__overflow-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary, #ddd);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.tab-bar__overflow-item:hover {
+  background: var(--bg-hover, #3a3a3a);
+}
+
+.tab-bar__overflow-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-bar__overflow-item--active {
+  color: var(--accent);
+}
+
+.tab-bar__overflow-check {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .tab-bar__tab {
@@ -28,6 +131,18 @@
   white-space: nowrap;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
   user-select: none;
+}
+
+/* 已收进 ▾ 下拉的隐藏标签：脱离文档流（不占位、不留白）、不可见，
+   但仍保留 offsetWidth 供溢出测量；避免滚动边界漏出半截 */
+.tab-bar__tab--hidden {
+  position: absolute;
+  visibility: hidden;
+}
+
+/* 存在隐藏标签时，可见标签自动填充到 ▾ 左侧（grow 吃掉剩余宽度，不留白） */
+.tab-bar__tab--grow {
+  flex: 1 1 auto;
 }
 
 .tab-bar__tab:hover {
@@ -58,6 +173,27 @@
 }
 
 .tab-bar__close:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tab-bar__pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.tab-bar__pin:hover {
   color: var(--text-primary);
   background: rgba(255, 255, 255, 0.1);
 }
@@ -121,4 +257,64 @@
 
 .tab-bar__context-item:hover {
   background: var(--bg-hover, #3a3a3a);
+}
+
+.tab-bar__context-icon {
+  font-size: 13px;
+  width: 18px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+/* `+` 新增标签选择栏（悬停弹出，锚定 + 正下方、右对齐向左展开） */
+.tab-bar__add-wrap {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.tab-bar__add--active {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tab-bar__add-menu {
+  position: absolute;
+  /* top:100% 与 + 悬停区无缝衔接：若留 4px 间隙，鼠标下移穿过间隙会触发
+     wrapper 的 mouseleave 导致选择栏在鼠标到达菜单项前关闭。 */
+  top: 100%;
+  right: 0;
+  z-index: 1000;
+  min-width: 160px;
+  background: var(--bg-secondary, #2a2a2a);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  padding: 4px 0;
+}
+
+.tab-bar__add-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary, #ddd);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.tab-bar__add-menu-item:hover {
+  background: var(--bg-hover, #3a3a3a);
+}
+
+.tab-bar__add-menu-icon {
+  font-size: 14px;
+  line-height: 1;
 }
