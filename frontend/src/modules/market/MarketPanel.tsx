@@ -117,6 +117,9 @@ export function MarketPanel() {
   const handleSelectContract = (instrumentID: string) => {
     setSelectedInstrument(instrumentID)
     setOrderInstrument(instrumentID)
+    // 同步蓝区为单选集：MarketTable 锚点守卫 shouldRenderAnchor 要求
+    // selectedInstrument ∈ selectedContracts，否则 selectRow+scroll 被跳过 → 搜索选择后表格不跳转
+    setSelectedContracts(new Set([instrumentID]))
   }
 
   return (
