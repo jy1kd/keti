@@ -13,7 +13,7 @@ import { QtyPreset } from './QtyPreset'
 import './TradeParams.css'
 
 interface TradeParamsProps {
-  /** 可选覆盖合约代码（默认取 orderForm.instrumentID），用于定位 productClass 做数量上限校验 */
+  /** 当前合约代码（经 OrderPage → OrderTradeBody 传入；无合约时空态为 undefined），用于定位 productClass 做数量上限校验 */
   instrumentID?: string
   /** 合约切换回调（统一浮动窗模式）：报单浮动窗切换合约时更新所属标签页；标签页模式可不传 */
   onSwitch?: (instrumentID: string) => void
@@ -29,9 +29,13 @@ interface TradeParamsProps {
 export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
   const orderForm = useOrderStore((s) => s.orderForm)
   const setOrderForm = useOrderStore((s) => s.setOrderForm)
+  const volumeStep = useOrderStore((s) => s.volumeStep)
+  const setVolumeStep = useOrderStore((s) => s.setVolumeStep)
   const contracts = useContractsStore((s) => s.contracts)
 
-  const activeInstrument = instrumentID ?? orderForm.instrumentID
+  // 仅用 prop 定位当前合约：TradeParams 现只经 OrderPage → OrderTradeBody 渲染，总是传入 instrumentID
+  // （空态为 undefined）。不能回退 orderForm.instrumentID —— 浮动窗残留会击穿空态。
+  const activeInstrument = instrumentID ?? ''
   const productClass = useMemo(() => {
     const contract = contracts.find((c) => c.instrumentID === activeInstrument)
     return contract?.productClass ?? '1'
@@ -118,6 +122,7 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
           contracts={contracts}
           initialQuery={activeInstrument}
           onSelect={handleContractSelect}
+          placeholder={activeInstrument ? undefined : '请选择合约'}
         />
       </div>
 
@@ -178,7 +183,7 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
             data-testid="tp-volume-down"
             aria-label="减手数"
             onClick={() =>
-              setOrderForm({ volumeTotalOriginal: Math.max(1, orderForm.volumeTotalOriginal - 1) })
+              setOrderForm({ volumeTotalOriginal: Math.max(1, orderForm.volumeTotalOriginal - volumeStep) })
             }
           >
             −
@@ -189,7 +194,7 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
             className="tp-stepper__input"
             value={orderForm.volumeTotalOriginal}
             min={1}
-            step={1}
+            step={volumeStep}
             onChange={(e) =>
               setOrderForm({ volumeTotalOriginal: Math.max(1, Number(e.target.value)) })
             }
@@ -202,7 +207,7 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
             disabled={orderForm.volumeTotalOriginal >= volumeLimit}
             onClick={() =>
               setOrderForm({
-                volumeTotalOriginal: Math.min(volumeLimit, orderForm.volumeTotalOriginal + 1),
+                volumeTotalOriginal: Math.min(volumeLimit, orderForm.volumeTotalOriginal + volumeStep),
               })
             }
           >
@@ -221,10 +226,10 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
 
       <div className="tp-row">
         <span className="tp-row__label">快捷</span>
+        {/* 点快捷只改步进基准，不改手数（用户手数保留） */}
         <QtyPreset
-          value={orderForm.volumeTotalOriginal}
-          limit={volumeLimit}
-          onSelect={(v) => setOrderForm({ volumeTotalOriginal: v })}
+          step={volumeStep}
+          onSelect={(raw) => setVolumeStep(raw)}
         />
       </div>
 
@@ -235,7 +240,7 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
           className="tp-op-btn"
           data-testid="tp-cancel-latest"
           onClick={handleCancelLatest}
-          disabled={opPending}
+          disabled={opPending || !activeInstrument}
         >
           撤最新
         </button>
@@ -244,7 +249,7 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
           className="tp-op-btn"
           data-testid="tp-cancel-all"
           onClick={() => setConfirmOp('cancelAll')}
-          disabled={opPending}
+          disabled={opPending || !activeInstrument}
         >
           撤全部
         </button>
@@ -254,7 +259,7 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
         className="tp-op-btn tp-op-btn--primary"
         data-testid="tp-flat-net"
         onClick={() => setConfirmOp('flatNet')}
-        disabled={opPending}
+        disabled={opPending || !activeInstrument}
       >
         平净仓
       </button>

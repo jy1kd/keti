@@ -8,17 +8,6 @@
   background: var(--bg-primary);
 }
 
-/* ── 无合约提示 ─────────────────────────────────────────────── */
-
-.kline-page__no-contract {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-  font-size: 14px;
-}
-
 /* ── K线图区域 ──────────────────────────────────────────────── */
 
 .kline-page__content {

@@ -5,8 +5,8 @@ import { MarketDepth } from './MarketDepth'
 import './OrderPopup.css'
 
 interface OrderTradeBodyProps {
-  /** 报单合约代码；无合约时渲染空态（由外层调用方决定是否渲染） */
-  instrumentID: string
+  /** 报单合约代码；无合约时渲染空态（--） */
+  instrumentID?: string
   /** 合约切换回调（浮动窗模式）：切换合约时更新所属标签页 */
   onSwitch?: (instrumentID: string) => void
 }

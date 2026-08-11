@@ -84,7 +84,7 @@ describe('QuoteStatsBar', () => {
   it('无快照时全部显示 — 占位', () => {
     render(<QuoteStatsBar instrumentID="IF2608" />)
     ;['今开', '昨结', '最高', '最低', '成交量', '持仓量'].forEach((label) => {
-      expect(screen.getByTestId(`qs-${label}`).textContent).toBe('—')
+      expect(screen.getByTestId(`qs-${label}`).textContent).toBe('--')
     })
   })
 

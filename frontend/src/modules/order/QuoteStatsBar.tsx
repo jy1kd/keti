@@ -21,7 +21,7 @@ function formatPrice(n: number, tick: number): string {
 }
 
 /** 缺失值占位 */
-const PLACEHOLDER = '—'
+const PLACEHOLDER = '--'
 
 /**
  * QuoteStatsBar — ⑥ 行情统计栏（仅完整态）

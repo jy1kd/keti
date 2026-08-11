@@ -10,9 +10,17 @@ interface ContractSearchProps {
   onQueryChange?: (query: string) => void
   /** 初始显示值（如回显当前选中合约）；仅初次挂载生效，选择/输入后内部接管 */
   initialQuery?: string
+  /** 空态提示（如「请选择合约」）；默认「搜索合约...」 */
+  placeholder?: string
 }
 
-export function ContractSearch({ contracts, onSelect, onQueryChange, initialQuery = '' }: ContractSearchProps) {
+export function ContractSearch({
+  contracts,
+  onSelect,
+  onQueryChange,
+  initialQuery = '',
+  placeholder = '搜索合约...',
+}: ContractSearchProps) {
   const [query, setQuery] = useState(initialQuery)
   const [isOpen, setIsOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
@@ -92,7 +100,7 @@ export function ContractSearch({ contracts, onSelect, onQueryChange, initialQuer
       <input
         ref={inputRef}
         type="text"
-        placeholder="搜索合约..."
+        placeholder={placeholder}
         className="search-input"
         value={query}
         onChange={(e) => {

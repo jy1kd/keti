@@ -133,7 +133,7 @@ describe('KLinePage', () => {
 
   it('should show dash for latest price in KLineChart header when snapshot unavailable', () => {
     render(<KLinePage instrumentID="IF2608" />);
-    expect(screen.getByTestId('latest-price').textContent).toBe('—');
+    expect(screen.getByTestId('latest-price').textContent).toBe('--');
   });
 
   // ── 搜索切换 ──
@@ -172,8 +172,11 @@ describe('KLinePage', () => {
 
   // ── 边界条件 ──
 
-  it('should show placeholder hint when no instrumentID provided', () => {
+  it('无合约时渲染空态K线图（-- 最新价 + 请选择合约搜索框）', () => {
     render(<KLinePage />);
-    expect(screen.getByText(/请在行情表格中选择合约/)).toBeDefined();
+    expect(screen.getByTestId('kline-chart')).toBeDefined();
+    expect(screen.getByTestId('latest-price').textContent).toBe('--');
+    expect(screen.getByPlaceholderText('请选择合约')).toBeDefined();
+    expect(screen.queryByText(/请在行情表格中选择合约/)).toBeNull();
   });
 });

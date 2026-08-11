@@ -92,4 +92,9 @@ describe('ContractSearch', () => {
     fireEvent.mouseDown(screen.getByText('au2508'))
     expect(screen.queryByText('au2508')).not.toBeInTheDocument()
   })
+
+  it('支持自定义 placeholder（空态提示请选择合约）', () => {
+    render(<ContractSearch contracts={[]} placeholder="请选择合约" />)
+    expect(screen.getByPlaceholderText('请选择合约')).toBeInTheDocument()
+  })
 })

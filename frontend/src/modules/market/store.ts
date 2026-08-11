@@ -104,7 +104,7 @@ export const useMarketStore = create<MarketStore>((set) => ({
       next.set(instrument, updated)
       return { klineData: next }
     }),
-  currentPeriod: '5m',
+  currentPeriod: '1m',
   setPeriod: (period) => set({ currentPeriod: period }),
   visibleInstrumentIDs: [],
   setVisibleInstrumentIDs: (ids) => set({ visibleInstrumentIDs: ids }),
