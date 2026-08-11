@@ -36,6 +36,9 @@ class StatusResponse(BaseModel):
     loggedIn: bool
     mdConnected: bool = False
     tdConnected: bool = False
+    # 实际连接的前置地址（诊断用：区分标准仿真 30011 / 7x24 40011）
+    mdFront: str = ""
+    tdFront: str = ""
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -121,16 +124,22 @@ async def status(request: Request):
     logged_in = False
     md_connected = False
     td_connected = False
+    md_front = ""
+    td_front = ""
 
     if md_api is not None:
         md_connected = md_api.connection_status == "connected"
+        md_front = getattr(md_api, "front", "")
 
     if trader_api is not None:
         td_connected = trader_api.connection_status == "connected"
         logged_in = trader_api.login_status == "logged_in"
+        td_front = getattr(trader_api, "front", "")
 
     return {
         "loggedIn": logged_in,
         "mdConnected": md_connected,
         "tdConnected": td_connected,
+        "mdFront": md_front,
+        "tdFront": td_front,
     }

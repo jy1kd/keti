@@ -17,6 +17,8 @@ export function useConnectionPoll() {
   const setMdPhase = useConnectionStore((s) => s.setMdPhase)
   const setTdPhase = useConnectionStore((s) => s.setTdPhase)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  /** 已打印过的前置地址（去重） */
+  const lastMdFrontRef = useRef<string | null>(null)
 
   useEffect(() => {
     const poll = async () => {
@@ -24,6 +26,12 @@ export function useConnectionPoll() {
         const status = await getConnectionStatus()
         setMdPhase(status.mdConnected ? 'connected' : 'disconnected')
         setTdPhase(status.tdConnected ? 'connected' : 'disconnected')
+        // 打印实际连接的 CTP 行情前置（区分标准仿真 30011 / 7x24 40011），
+        // 仅首次与变化时打印，避免每 10s 刷屏
+        if (status.mdFront && status.mdFront !== lastMdFrontRef.current) {
+          lastMdFrontRef.current = status.mdFront
+          console.info(`[CTP 行情前置] ${status.mdFront}${status.mdConnected ? ' (connected)' : ' (disconnected)'}`)
+        }
       } catch {
         // 网络错误 → 忽略，下一轮轮询会重试
         // 不在此处设为 disconnected，以免临时网络波动误报

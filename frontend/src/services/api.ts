@@ -138,6 +138,9 @@ export interface ConnectionStatusResponse {
   loggedIn: boolean
   mdConnected: boolean
   tdConnected: boolean
+  /** 实际连接的前置地址（诊断：区分标准仿真 30011 / 7x24 40011） */
+  mdFront?: string
+  tdFront?: string
 }
 
 /** 查询 CTP 连接状态（MD/TD 独立） */
