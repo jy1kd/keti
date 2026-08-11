@@ -4,8 +4,6 @@ import { useUserPrefsStore } from './userPrefs'
 import {
   getInstruments,
   getInstrumentsByIds,
-  subscribeMarket,
-  unsubscribeMarket,
 } from '@/services/api'
 
 interface ContractsStore {
@@ -68,27 +66,16 @@ export const useContractsStore = create<ContractsStore>((set, get) => ({
         }
 
         set({ favorites: result.instruments })
-        // 订阅收藏合约
-        const ids = result.instruments.map((c) => c.instrumentID)
-        await subscribeMarket(ids)
       }
     } catch (err) {
       console.error('[contracts] Failed to load favorite contracts:', err)
     }
   },
 
-  /** 添加收藏并订阅 */
+  /** 添加收藏（订阅由订阅管理器 diff 负责，失败静默重试） */
   addToFavorites: async (contract) => {
     const { favorites } = get()
     if (favorites.some((c) => c.instrumentID === contract.instrumentID)) return true
-
-    // 订阅
-    try {
-      await subscribeMarket([contract.instrumentID])
-    } catch {
-      // 订阅失败，不添加到收藏
-      return false
-    }
 
     // 持久化到 userPrefs
     const prefs = useUserPrefsStore.getState()
@@ -99,19 +86,12 @@ export const useContractsStore = create<ContractsStore>((set, get) => ({
     return true
   },
 
-  /** 移除收藏并取消订阅 */
+  /** 移除收藏（退订由订阅管理器 diff 负责） */
   removeFromFavorites: async (instrumentId) => {
     // 从 userPrefs 移除
     const prefs = useUserPrefsStore.getState()
     prefs.removeSelectedContract(instrumentId)
     prefs.saveToLocalStorage()
-
-    // 取消订阅
-    try {
-      await unsubscribeMarket([instrumentId])
-    } catch {
-      // Silent fail
-    }
 
     const { favorites } = get()
     set({ favorites: favorites.filter((c) => c.instrumentID !== instrumentId) })

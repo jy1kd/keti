@@ -19,6 +19,7 @@ describe('useSubscriptionManager 延迟退订', () => {
       lockedContracts: new Map(),
       selectedContracts: new Set(),
       scrollEndSeq: 0,
+      forceResubscribeSeq: 0,
     })
   })
   afterEach(() => { vi.useRealTimers() })
@@ -37,6 +38,22 @@ describe('useSubscriptionManager 延迟退订', () => {
     await act(async () => { vi.advanceTimersByTime(9_000) }) // 9s < 10s 宽限期
 
     expect(vi.mocked(unsubscribeMarket)).not.toHaveBeenCalled()
+  })
+
+  it('forceResubscribeSeq 递增时清空 subscribedRef 并对全部 should 重订阅', async () => {
+    const { result } = renderHook(() => useSubscriptionManager())
+
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608']))
+    await act(async () => { vi.advanceTimersByTime(110) })
+    expect(vi.mocked(subscribeMarket)).toHaveBeenCalledWith(['IF2608'])
+    vi.mocked(subscribeMarket).mockClear()
+
+    // 模拟 WS 重连触发强制重订阅：即使 IF2608 已在 subscribedRef 仍重发订阅
+    act(() => useMarketStore.getState().markForceResubscribe())
+    await act(async () => {})
+
+    expect(vi.mocked(subscribeMarket)).toHaveBeenCalledWith(['IF2608'])
+    expect(result.current.subscribed.has('IF2608')).toBe(true)
   })
 
   it('宽限期收紧到 10s：滑出超过 10s 才退订', async () => {
@@ -94,6 +111,7 @@ describe('useSubscriptionManager 拖动与 LRU', () => {
       lockedContracts: new Map(),
       selectedContracts: new Set(),
       scrollEndSeq: 0,
+      forceResubscribeSeq: 0,
     })
   })
   afterEach(() => { vi.useRealTimers() })
@@ -240,6 +258,7 @@ describe('useSubscriptionManager success 门控', () => {
       lockedContracts: new Map(),
       selectedContracts: new Set(),
       scrollEndSeq: 0,
+      forceResubscribeSeq: 0,
     })
   })
   afterEach(() => { vi.useRealTimers() })
@@ -277,6 +296,7 @@ describe('useSubscriptionManager 快照回填（方案 A）', () => {
       lockedContracts: new Map(),
       selectedContracts: new Set(),
       scrollEndSeq: 0,
+      forceResubscribeSeq: 0,
     })
   })
   afterEach(() => { vi.useRealTimers() })

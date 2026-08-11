@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { WSManager } from '@/services/ws'
 import { useConnectionStore } from '@/stores/connection'
+import { useMarketStore } from '@/modules/market/store'
 import { useReconnect } from './useReconnect'
 import type { WSMessage } from '@/services/types'
 
@@ -34,6 +35,12 @@ export function useSystemWs(wsBaseUrl: string) {
       // MD 状态即时更新
       if (data.mdConnected !== undefined) {
         setMdPhase(data.mdConnected ? 'connected' : 'disconnected')
+      }
+
+      // 治愈兜底：CTP MD 确认连上（初始登录 ctp_startup.py:211 / 重连成功 :364 广播）时
+      // 强制重订阅——后端 CTP 重连对浏览器 WS 透明，此信号才是订阅失步的正确治愈时机
+      if (data.mdConnected === true) {
+        useMarketStore.getState().markForceResubscribe()
       }
 
       // TD 状态即时更新

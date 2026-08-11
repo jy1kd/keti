@@ -79,10 +79,9 @@ describe('useContractsStore', () => {
 
   // --- loadFavoriteContracts tests ---
 
-  it('loadFavoriteContracts 从 localStorage 加载收藏合约并订阅', async () => {
+  it('loadFavoriteContracts 从 localStorage 加载收藏合约（订阅由订阅管理器负责）', async () => {
     const { getInstrumentsByIds, subscribeMarket } = await import('@/services/api')
     vi.mocked(getInstrumentsByIds).mockResolvedValue({ instruments: [mockContract], count: 1 })
-    vi.mocked(subscribeMarket).mockResolvedValue({ success: true, added: ['au2406'], alreadySubscribed: [] })
 
     useUserPrefsStore.getState().addSelectedContract('au2406')
     useUserPrefsStore.getState().saveToLocalStorage()
@@ -90,7 +89,7 @@ describe('useContractsStore', () => {
     await useContractsStore.getState().loadFavoriteContracts()
 
     expect(getInstrumentsByIds).toHaveBeenCalledWith(['au2406'])
-    expect(subscribeMarket).toHaveBeenCalledWith(['au2406'])
+    expect(subscribeMarket).not.toHaveBeenCalled()
     expect(useContractsStore.getState().favorites).toEqual([mockContract])
   })
 
@@ -105,15 +104,14 @@ describe('useContractsStore', () => {
 
   // --- addToFavorites tests ---
 
-  it('addToFavorites 添加到收藏并订阅', async () => {
+  it('addToFavorites 添加到收藏（订阅由订阅管理器负责）', async () => {
     const { subscribeMarket } = await import('@/services/api')
-    vi.mocked(subscribeMarket).mockResolvedValue({ success: true, added: ['au2406'], alreadySubscribed: [] })
 
     await useContractsStore.getState().addToFavorites(mockContract)
 
     expect(useContractsStore.getState().favorites).toEqual([mockContract])
     expect(useUserPrefsStore.getState().selectedContracts).toContain('au2406')
-    expect(subscribeMarket).toHaveBeenCalledWith(['au2406'])
+    expect(subscribeMarket).not.toHaveBeenCalled()
   })
 
   it('addToFavorites 重复添加不产生重复', async () => {
@@ -128,9 +126,8 @@ describe('useContractsStore', () => {
 
   // --- removeFromFavorites tests ---
 
-  it('removeFromFavorites 从收藏移除并取消订阅', async () => {
+  it('removeFromFavorites 从收藏移除（退订由订阅管理器负责）', async () => {
     const { unsubscribeMarket } = await import('@/services/api')
-    vi.mocked(unsubscribeMarket).mockResolvedValue({ success: true, removed: 1 })
 
     useContractsStore.setState({ favorites: [mockContract] })
     useUserPrefsStore.getState().addSelectedContract('au2406')
@@ -139,6 +136,6 @@ describe('useContractsStore', () => {
 
     expect(useContractsStore.getState().favorites).toEqual([])
     expect(useUserPrefsStore.getState().selectedContracts).not.toContain('au2406')
-    expect(unsubscribeMarket).toHaveBeenCalledWith(['au2406'])
+    expect(unsubscribeMarket).not.toHaveBeenCalled()
   })
 })
