@@ -308,7 +308,7 @@ class TestCtpHooks:
         assert svc.subscription_count == 0
 
     def test_subscribe_ctp_fn_exception_returns_failure(self):
-        """If CTP subscribe raises, returns success=False with error message."""
+        """If CTP subscribe raises, returns success=False and does NOT record (rollback)."""
         svc = MarketService()
         svc.set_ctp_hooks(
             subscribe_fn=lambda insts: (_ for _ in ()).throw(RuntimeError("CTP error")),
@@ -318,7 +318,30 @@ class TestCtpHooks:
         assert result["success"] is False
         assert "message" in result
         assert "CTP error" in result["message"]
-        assert svc.subscription_count == 1  # local state preserved
+        assert svc.subscription_count == 0  # 回滚：未写入本地（消除假成功）
+
+    def test_subscribe_ctp_fn_nonzero_returns_failure_rollback(self):
+        """If CTP subscribe returns non-zero, subscribe fails and does NOT record."""
+        svc = MarketService()
+        svc.set_ctp_hooks(
+            subscribe_fn=lambda insts: -1,  # CTP 拒绝
+            unsubscribe_fn=lambda insts: None,
+        )
+        result = svc.subscribe(["IF2608"])
+        assert result["success"] is False
+        assert "code=-1" in result["message"]
+        assert svc.subscription_count == 0  # 未写入本地（先验证后记录）
+
+    def test_subscribe_ctp_fn_zero_records(self):
+        """If CTP subscribe returns 0, subscribe succeeds and records locally."""
+        svc = MarketService()
+        svc.set_ctp_hooks(
+            subscribe_fn=lambda insts: 0,  # CTP 成功
+            unsubscribe_fn=lambda insts: None,
+        )
+        result = svc.subscribe(["IF2608"])
+        assert result["success"] is True
+        assert svc.subscription_count == 1
 
     def test_unsubscribe_ctp_fn_exception_returns_failure(self):
         """If CTP unsubscribe raises, returns success=False with error message."""

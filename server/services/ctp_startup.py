@@ -335,15 +335,18 @@ def _wire_bridge(
     # Wrap subscribe to also update ReconnectService subscription tracking
     _original_subscribe = md_api.subscribe
 
-    def _subscribe_with_tracking(instruments: List[str]) -> None:
-        _original_subscribe(instruments)
-        # Sync full subscription list to ReconnectService after each subscribe
+    def _subscribe_with_tracking(instruments: List[str]):
+        """订阅 + 同步 ReconnectService 订阅跟踪；透传 CTP 返回值（0=成功，供 MarketService 先验证后记录）。"""
+        result = _original_subscribe(instruments)
         reconnect_svc.update_subscriptions(app.state.market_service.get_subscriptions())
+        return result
 
     app.state.market_service.set_ctp_hooks(
         subscribe_fn=_subscribe_with_tracking,
         unsubscribe_fn=md_api.unsubscribe,
     )
+    # 重连恢复订阅使用权威订阅列表：随每次 wiring（含重连）同步，退订后不残留过期快照
+    reconnect_svc.update_subscriptions(app.state.market_service.get_subscriptions())
 
     def _on_front_disconnected(nReason: int) -> None:
         logger.warning("CTP front disconnected (reason=%s)", nReason)
