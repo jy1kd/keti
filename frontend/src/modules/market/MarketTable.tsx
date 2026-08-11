@@ -3,7 +3,7 @@ import { ListTable } from '@visactor/vtable'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
 import { getProductName } from '@/utils/productNames'
 import { getContractStatus, type ContractStatus } from '@/utils/contractStatus'
-import { SCROLLBAR_SIZE, PROMINENT_SCROLL_STYLE } from '@/utils/vtableTheme'
+import { SCROLLBAR_SIZE, SCROLL_STYLE } from '@/utils/vtableTheme'
 import { useMarketStore } from './store'
 
 interface MarketTableProps {
@@ -235,7 +235,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
           cellBgColor: 'rgba(240, 180, 41, 0.08)',
           inlineRowBgColor: 'rgba(240, 180, 41, 0.12)',
         },
-        scrollStyle: { ...PROMINENT_SCROLL_STYLE },
+        scrollStyle: { ...SCROLL_STYLE },
         frameStyle: {
           borderColor: '#30363d',
           cornerRadius: 0,

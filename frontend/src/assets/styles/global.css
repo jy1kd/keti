@@ -65,16 +65,26 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 4px;
+  background: rgba(139, 148, 158, 0.35);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background: rgba(139, 148, 158, 0.6);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox 支持（标准 scrollbar-color/width，当前缺失） */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 148, 158, 0.35) transparent;
 }
 
 button {

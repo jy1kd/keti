@@ -3,15 +3,15 @@
  * 保证两处横向/纵向滚动条观感一致。
  */
 
-/** vtable 滚动条厚度（px）：加粗，便于抓握与发现 */
-export const SCROLLBAR_SIZE = 12
+/** vtable 滚动条厚度（px）：6px，低调细条，与全局原生滚动条一致 */
+export const SCROLLBAR_SIZE = 6
 
-/** 明显的滚动条：加粗(12px) + 高亮蓝滑块 + 浅色轨道 + 常显 */
-export const PROMINENT_SCROLL_STYLE = {
-  scrollSliderColor: '#4a9eff',
-  scrollRailColor: '#21262d',
+/** 统一的低调滚动条：细灰滑块 + 透明轨道 + hover 表格时浮现 */
+export const SCROLL_STYLE = {
+  scrollSliderColor: 'rgba(139,148,158,0.45)',
+  scrollRailColor: 'rgba(255,255,255,0.03)',
   width: SCROLLBAR_SIZE,
-  visible: 'always' as const,
+  visible: 'focus' as const,
   /** 进度条钉在表格视口底部（而非内容底部）：行数少时不再跑到上边 */
   barToSide: true,
 }

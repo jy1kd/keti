@@ -2,9 +2,12 @@
  * Tray Manager
  *
  * Manages the system tray for the Electron application.
- * Supports tray icon, context menu, and notifications.
+ * The context menu mirrors the top application menu (shared template, menuTemplate.ts)
+ * plus a top-level 退出 item. Supports tray icon, context menu, and notifications.
  */
-import { Tray, BrowserWindow } from 'electron';
+import { Tray } from 'electron';
+import type { BrowserWindow } from 'electron';
+import type { WindowManager } from './windowManager';
 export interface TrayNotification {
     title: string;
     content: string;
@@ -15,10 +18,12 @@ export interface TrayNotification {
 export declare class TrayManager {
     private tray;
     private mainWindow;
+    private isQuitting;
     /**
-     * Initialize the tray with a main window reference
+     * Initialize the tray with a main window and window manager reference.
+     * The context menu mirrors the native app menu (shared template) with 退出 at the bottom.
      */
-    initialize(mainWindow: BrowserWindow): void;
+    initialize(mainWindow: BrowserWindow, windowManager: WindowManager): void;
     /**
      * Show a balloon notification
      */
