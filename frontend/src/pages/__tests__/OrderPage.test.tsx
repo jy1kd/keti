@@ -159,11 +159,26 @@ describe('OrderPage', () => {
     expect(screen.getByTestId('ask-1')).toBeDefined();
   });
 
-  it('浮动模式无合约时显示选择提示', () => {
-    const { container } = render(<OrderPage floating />);
-    expect(screen.getByText(/请在行情表格中选择合约/)).toBeDefined();
-    expect(container.querySelector('.order-popup__body')).toBeNull();
-  });
+  it('无合约停靠模式渲染完整空界面（参数区 + 盘口 -- + 请选择合约，操作按钮禁用）', () => {
+    render(<OrderPage />)
+    expect(screen.getByText('📝 报单')).toBeDefined()
+    expect(screen.getByTestId('tp-volume')).toBeDefined()
+    expect(screen.getByText('--')).toBeDefined()
+    expect(screen.getByPlaceholderText('请选择合约')).toBeDefined()
+    expect(screen.queryByText(/请在行情表格中选择合约/)).toBeNull()
+    expect(screen.getByTestId('tp-cancel-latest')).toBeDisabled()
+    expect(screen.getByTestId('tp-cancel-all')).toBeDisabled()
+    expect(screen.getByTestId('tp-flat-net')).toBeDisabled()
+  })
+
+  it('无合约浮动模式渲染完整空界面（账户栏 + 参数区 + 盘口 -- + 请选择合约）', () => {
+    const { container } = render(<OrderPage floating />)
+    expect(container.querySelector('.order-floating')).toBeDefined()
+    expect(container.querySelector('.order-popup__body')).toBeDefined()
+    expect(screen.getByTestId('tp-volume')).toBeDefined()
+    expect(screen.getByPlaceholderText('请选择合约')).toBeDefined()
+    expect(screen.queryByText(/请在行情表格中选择合约/)).toBeNull()
+  })
 
   it('非浮动模式同样渲染 P1 主体（标签页与弹窗统一）', () => {
     useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) });

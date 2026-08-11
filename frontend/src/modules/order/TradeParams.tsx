@@ -118,6 +118,7 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
           contracts={contracts}
           initialQuery={activeInstrument}
           onSelect={handleContractSelect}
+          placeholder={activeInstrument ? undefined : '请选择合约'}
         />
       </div>
 
@@ -235,7 +236,7 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
           className="tp-op-btn"
           data-testid="tp-cancel-latest"
           onClick={handleCancelLatest}
-          disabled={opPending}
+          disabled={opPending || !activeInstrument}
         >
           撤最新
         </button>
@@ -244,7 +245,7 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
           className="tp-op-btn"
           data-testid="tp-cancel-all"
           onClick={() => setConfirmOp('cancelAll')}
-          disabled={opPending}
+          disabled={opPending || !activeInstrument}
         >
           撤全部
         </button>
@@ -254,7 +255,7 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
         className="tp-op-btn tp-op-btn--primary"
         data-testid="tp-flat-net"
         onClick={() => setConfirmOp('flatNet')}
-        disabled={opPending}
+        disabled={opPending || !activeInstrument}
       >
         平净仓
       </button>

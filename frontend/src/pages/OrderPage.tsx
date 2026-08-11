@@ -50,23 +50,14 @@ export function OrderPage({ instrumentID, floating = false, tabId }: OrderPagePr
     }
   };
 
-  // ── 浮动窗口模式（报单标签脱离为浮动窗）──
+  // ── 浮动窗口模式（报单标签脱离为浮动窗）：恒渲染完整界面，无合约时各栏显示 -- ──
   // 统一浮动窗后承载原 OrderPopup 完整功能：账户栏 + P1 主体 + 行情统计栏（完整态）+ 底部工具条。
   if (floating) {
-    if (!instrumentID) {
-      return (
-        <div className="order-floating">
-          <div className="order-page__no-contract">
-            请在行情表格中选择合约后打开报单标签
-          </div>
-        </div>
-      );
-    }
     return (
       <div className="order-floating">
-        <AccountBar instrumentID={instrumentID} />
+        <AccountBar instrumentID={instrumentID ?? ''} />
         <OrderTradeBody instrumentID={instrumentID} onSwitch={handleSwitch} />
-        {expanded && <QuoteStatsBar instrumentID={instrumentID} />}
+        {expanded && <QuoteStatsBar instrumentID={instrumentID ?? ''} />}
         <FooterBar />
       </div>
     );
@@ -82,17 +73,8 @@ export function OrderPage({ instrumentID, floating = false, tabId }: OrderPagePr
         )}
       </div>
 
-      {/* ── 合约选择提示 ── */}
-      {!instrumentID && (
-        <div className="order-page__no-contract">
-          请在行情表格中选择合约后打开报单标签
-        </div>
-      )}
-
-      {/* ── P1 报单主体（与浮动窗共用，保证样式统一）── */}
-      {instrumentID && (
-        <OrderTradeBody instrumentID={instrumentID} onSwitch={handleSwitch} />
-      )}
+      {/* ── P1 报单主体（与浮动窗共用，保证样式统一）；无合约时空态：参数区 + 盘口 -- ── */}
+      <OrderTradeBody instrumentID={instrumentID} onSwitch={handleSwitch} />
     </div>
   );
 }
