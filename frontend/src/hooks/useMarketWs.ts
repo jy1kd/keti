@@ -125,13 +125,17 @@ export function useMarketWs(wsBaseUrl: string) {
   selectedInstrumentRef.current = selectedInstrument
   lockedContractsRef.current = lockedContracts
 
+  // currentPeriod 同理：切换 K 线周期后 handleMessage 闭包已冻结，
+  // periodMs 必须逐条消息从 ref 读，否则实时聚合一直用首次挂载的周期。
+  const currentPeriodRef = useRef(currentPeriod)
+  currentPeriodRef.current = currentPeriod
+
   // 创建全局单例 WSManager（仅创建一次）
   if (!globalWs) {
     globalWs = new WSManager(wsBaseUrl)
   }
 
   const ws = globalWs
-  const periodMs = PERIOD_MS[currentPeriod] ?? PERIOD_MS['1m']
 
   // 定时刷新缓冲区
   useEffect(() => {
@@ -173,7 +177,8 @@ export function useMarketWs(wsBaseUrl: string) {
         snap.instrumentID === selectedInstrumentRef.current ||
         lockedContractsRef.current.has(snap.instrumentID)
       if (!needsKline) return
-      // 缓冲 K 线（同一合约多次更新只保留最新）
+      // 缓冲 K 线（同一合约多次更新只保留最新）；periodMs 从 ref 读当前周期
+      const periodMs = PERIOD_MS[currentPeriodRef.current] ?? PERIOD_MS['1m']
       klineBufferRef.current.set(snap.instrumentID, snapshotToKline(snap, periodMs))
       // 计算成交量增量（CTP volume 是当日累计值）
       const id = snap.instrumentID
