@@ -69,13 +69,13 @@ const columns = [
   { field: 'priceTick', title: '最小变动价位', width: 120 },
   { field: 'expireDate', title: '到期日', width: 115 },
   { field: 'status', title: '状态', width: 85, style: statusStyle },
-  { field: 'lastPrice', title: '最新价', width: 125, style: coloredStyle },
-  { field: 'change', title: '涨跌', width: 110, style: coloredStyle },
-  { field: 'changePercent', title: '涨跌%', width: 110, style: coloredStyle },
-  { field: 'bidPrice1', title: '买一', width: 125, style: coloredStyle },
-  { field: 'askPrice1', title: '卖一', width: 125, style: coloredStyle },
-  { field: 'volume', title: '成交量', width: 120 },
-  { field: 'openInterest', title: '持仓量', width: 120 },
+  { field: 'lastPrice', title: '最新价', width: 90, style: coloredStyle },
+  { field: 'change', title: '涨跌', width: 115, style: coloredStyle },
+  { field: 'changePercent', title: '涨跌%', width: 115, style: coloredStyle },
+  { field: 'bidPrice1', title: '买一', width: 120, style: coloredStyle },
+  { field: 'askPrice1', title: '卖一', width: 120, style: coloredStyle },
+  { field: 'volume', title: '成交量', width: 90 },
+  { field: 'openInterest', title: '持仓量', width: 90 },
   { field: 'favorite', title: '⭐', width: 60 },
 ]
 
@@ -393,7 +393,9 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
           ) {
             return -1
           }
-          const cellInfo = table.getCellAt?.(x, y)
+          // getCellAt 按内容坐标解析（含滚动偏移），而 x/y 是视口坐标。
+          // 必须补 scrollLeft/scrollTop，否则滚动后返回的行号偏小 → 拖选选中错行/选不中。
+          const cellInfo = table.getCellAt?.(x + (table.scrollLeft ?? 0), y + (table.scrollTop ?? 0))
           if (cellInfo && cellInfo.row !== undefined) {
             return cellInfo.row - 1
           }

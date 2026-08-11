@@ -280,6 +280,40 @@ describe('MarketTable', () => {
     })
   })
 
+  // --- 滚动后拖选定位：getCellAt 需携带滚动偏移（否则滚动后选中错行/选不中） ---
+
+  describe('滚动后拖选定位（getCellAt 携带滚动偏移）', () => {
+    it('已滚动时 mousedown，getCellAt 应收到 y+scrollTop（内容坐标而非视口坐标）', async () => {
+      const onSelectionChange = vi.fn()
+      const { container } = render(
+        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={onSelectionChange} />
+      )
+      const { ListTable } = await import('@visactor/vtable')
+      const instance = (ListTable as any).mock.results[0].value
+      // 排除滚动条守卫：表格宽高足够大，x/y 不在边缘 6px 内
+      Object.defineProperty(instance, 'tableNoFrameWidth', { value: 1200, configurable: true })
+      Object.defineProperty(instance, 'tableNoFrameHeight', { value: 1000, configurable: true })
+      // 模拟已向下滚动 500px（1000+ 合约列表常先滚动再拖选）
+      Object.defineProperty(instance, 'scrollTop', { value: 500, configurable: true })
+      Object.defineProperty(instance, 'scrollLeft', { value: 0, configurable: true })
+      const getCellAt = vi.fn().mockReturnValue({ row: 1, col: 0 })
+      instance.getCellAt = getCellAt
+      const tableEl = container.firstChild as HTMLElement
+
+      await act(async () => {
+        // 视口 y=200；内容坐标应为 200+500=700（getCellAt 按内容行高解析，须加滚动偏移）
+        tableEl.dispatchEvent(new MouseEvent('mousedown', { clientX: 400, clientY: 200, button: 0, bubbles: true }))
+      })
+
+      expect(getCellAt).toHaveBeenCalledWith(400, 700)
+      delete instance.getCellAt
+      delete instance.tableNoFrameWidth
+      delete instance.tableNoFrameHeight
+      delete instance.scrollTop
+      delete instance.scrollLeft
+    })
+  })
+
   // --- onVisibleRangeChange tests ---
 
   it('接受 onVisibleRangeChange 回调', () => {
