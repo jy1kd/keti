@@ -105,7 +105,7 @@ git commit -m "feat(market-table): 冻结合约列为最左列 (frozenColCount=1
 **Interfaces:**
 - Produces: 行情表 `widthMode: 'adaptive'`（列自适应填满容器）；`.panel-content` 无 `height:100%`；`.options-chain-table` `flex:1; height:100%`。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `MarketTable.test.tsx` 的「columns 包含合约乘数与最小变动价位，且采用固定列宽 standard」（164 行）改为：
 
@@ -168,12 +168,12 @@ describe('OptionPanel 自动填充', () => {
 })
 ```
 
-- [ ] **Step 2: 跑测试验证红**
+- [x] **Step 2: 跑测试验证红**
 
 Run: `cd frontend && npx vitest run src/modules/market/MarketTable.test.tsx src/modules/market/MarketPanel.style.test.tsx src/modules/options/OptionPanel.style.test.tsx`
 Expected: FAIL — widthMode 仍为 standard；`.panel-content` 仍含 `height:100%`；`.options-chain-table` 无 flex/height。
 
-- [ ] **Step 3: 最小实现**
+- [x] **Step 3: 最小实现**
 
 `MarketTable.tsx:196`：`widthMode: 'standard'` → `widthMode: 'adaptive'`。
 
@@ -202,7 +202,7 @@ Expected: FAIL — widthMode 仍为 standard；`.panel-content` 仍含 `height:1
 }
 ```
 
-- [ ] **Step 4: 跑测试验证绿**
+- [x] **Step 4: 跑测试验证绿**
 
 Run: 同 Step 2 命令。
 Expected: PASS。
@@ -211,7 +211,7 @@ Expected: PASS。
 
 `cd frontend && npm run dev` + 后端 `start.py`：行情页与 T型期权页随窗口大小自适应填满（宽屏/窄屏各测一次）。若 `adaptive` 挤压价格列观感不佳，回退「固定列宽 + 末尾弹性列」并更新本任务测试（在 `MarketTable.tsx` 把末列 `favorite` 加 `width: 'auto'`/flex 并去掉 `widthMode` 断言）。
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 git add frontend/src/modules/market/MarketTable.tsx frontend/src/modules/market/styles.css frontend/src/modules/market/MarketTable.test.tsx frontend/src/modules/market/MarketPanel.style.test.tsx frontend/src/modules/options/OptionPanel.tsx frontend/src/modules/options/styles.css frontend/src/modules/options/OptionPanel.style.test.tsx
@@ -996,6 +996,7 @@ git commit -m "fix(market): 订阅先验证后记录 + 重连权威订阅列表�
 
 ## 已完成记录
 
+- `232bf25` feat(market): 行情/期权页自动填充 — widthMode adaptive + 高度链修复 — Task 2 ✅（浏览器验证待人工）
 - `2ebb2ef` feat(market-table): 冻结合约列为最左列 (frozenColCount=1) — Task 1 ✅
 - `7306127` docs: 新增行情表填充/合约列冻结/选中态与订阅一致性修复设计文档
 - `48ed839` docs: 问题5高亮方案改为保留金色作活动锚点+选区守卫
