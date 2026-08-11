@@ -15,7 +15,7 @@
 - 前端测试命令：`cd frontend && npx vitest run <相对路径>`；后端：`cd server && python -m pytest tests/test_market_service.py -v`。
 - vtable API：`ListTable` 实例有 `clearSelected()`（`node_modules/@visactor/vtable/cjs/core/BaseTable.d.ts:298`）与 `selectRow(row)`；`widthMode` 合法值 `'standard' | 'adaptive' | 'autoWidth'`，`'adaptive'` 自适应容器宽度填满。
 - 强制重订阅触发：经 `/ws/system` 的 `connection_status {mdConnected:true}` 广播（后端初始登录 `ctp_startup.py:211` 与重连成功 `:364` 都会发），由 `useSystemWs` 消费 → `markForceResubscribe()`。**不改 `services/ws.ts` / `useMarketWs.ts`**——CTP 重连对浏览器 WS 透明，治愈时机选「后端 CTP 确认连上」而非「前端 WS 打开」。
-- 现有测试基准：前端 469 个单测、后端 108 个单测，全量需保持绿。
+- 现有测试基准：前端 469 个单测全绿；后端 108 单测基准已过时，当前套件 714 个用例中有 **16 个既有失败**（test_config 默认值 / test_connection_api 登录退出 / test_market_api 深度 / test_preset 预设文件 / test_stop_order_api），经 git stash 基线复跑确认与本分支改动无关，均属环境/状态依赖。
 - 设计依据：`docs/superpowers/specs/2026-08-10-market-table-fixes-design.md`。
 
 ---
@@ -799,7 +799,7 @@ git commit -m "feat(subscription): 收藏统一由订阅管理器管理 + mdConn
 - Consumes: `subscribe_fn` 返回 `int`（0=成功，非 0=失败）或 `None`（兼容旧测试钩子，视为成功）。
 - Produces: `subscribe()` 在 CTP 失败（抛异常或返回非 0）时不写入 `_subscriptions`，返回 `success:false`。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `server/tests/test_market_service.py`：
 - 更新 `test_subscribe_ctp_fn_exception_returns_failure`（310-321 行）断言 `== 0`：
@@ -852,7 +852,7 @@ def test_subscribe_ctp_fn_zero_records(self):
 class TestWireBridge:
     """_wire_bridge — 订阅 hook 透传 CTP 返回值（先验证后记录的前提）。"""
 
-    @patch("services.ctp_startup.KLineService")
+    @patch("services.kline_service.KLineService")
     def test_subscribe_hook_returns_ctp_result(self, MockKLine):
         from services.ctp_startup import _wire_bridge
 
@@ -860,21 +860,22 @@ class TestWireBridge:
         app.state.market_service.get_subscriptions.return_value = ["IF2608"]
         fake_api = _FakeMdApi(config=MagicMock())
         fake_api.subscribe = lambda insts: -1  # CTP 拒绝
+        fake_api.unsubscribe = lambda insts: None
 
         _wire_bridge(app, fake_api, MagicMock())
 
         # set_ctp_hooks 收到的 subscribe_fn 即 _subscribe_with_tracking，
         # 必须透传 CTP 返回值（-1），供 MarketService 先验证后记录
-        subscribe_fn = app.state.market_service.set_ctp_hooks.call_args.args[0]
+        subscribe_fn = app.state.market_service.set_ctp_hooks.call_args.kwargs["subscribe_fn"]
         assert subscribe_fn(["IF2608"]) == -1
 ```
 
-- [ ] **Step 2: 跑测试验证红**
+- [x] **Step 2: 跑测试验证红**
 
-Run: `cd server && python -m pytest tests/test_market_service.py -v`
-Expected: FAIL — `test_subscribe_ctp_fn_exception_returns_failure` 断言 count==1 现仍通过但期望改为 0 而实现未改 → 红；新增两用例失败。
+Run: `cd server && python -m pytest tests/test_market_service.py tests/test_ctp_startup.py -v`
+Expected: FAIL — `test_subscribe_ctp_fn_exception_returns_failure` 断言 count==1 现仍通过但期望改为 0 而实现未改 → 红；新增两用例失败；`TestWireBridge` 透传断言失败。
 
-- [ ] **Step 3: 最小实现**
+- [x] **Step 3: 最小实现**
 
 `server/services/market_service.py` 重写 `subscribe`（216-270 行）：
 
@@ -964,17 +965,17 @@ app.state.market_service.set_ctp_hooks(
 reconnect_svc.update_subscriptions(app.state.market_service.get_subscriptions())
 ```
 
-- [ ] **Step 4: 跑测试验证绿**
+- [x] **Step 4: 跑测试验证绿**
 
 Run: `cd server && python -m pytest tests/test_market_service.py tests/test_ctp_startup.py -v`
 Expected: PASS（含更新/新增用例）。
 
-- [ ] **Step 5: 全量回归**
+- [x] **Step 5: 全量回归**
 
 Run: `cd server && python -m pytest tests/ -v`
 Expected: 108 个单测全绿。
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 git add server/services/market_service.py server/services/ctp_startup.py server/tests/test_market_service.py server/tests/test_ctp_startup.py
@@ -985,17 +986,18 @@ git commit -m "fix(market): 订阅先验证后记录 + 重连权威订阅列表�
 
 ## 收尾验证
 
-1. `cd frontend && npm test` — 前端全量绿（469 + 新增用例）。
-2. `cd server && python -m pytest tests/ -v` — 后端全量绿。
+1. `cd frontend && npm test` — 前端全量绿（469 + 本分支新增用例）。
+2. `cd server && python -m pytest tests/ -v` — 除 16 个既有失败（见 Global Constraints，经基线复跑确认与本分支无关）外全绿。
 3. `cd frontend && npm run dev` + `cd server && python start.py` 手动过一遍：
-   - **#1** 行情/期权页随窗口自适应填满（宽屏/窄屏）。
+   - **#1** 行情/期权页随窗口自适应填满（宽屏/窄屏）。⚠️ 待人工浏览器验证（widthMode adaptive 观感，必要时回退弹性尾列）
    - **#2** 行情表横向拖动，「合约」列固定最左。
-   - **#3** 收藏→移除→滚动→重收、以及 CTP 断线重连后，自选/可见合约数据恢复推送。
+   - **#3** 收藏→移除→滚动→重收、以及 CTP 断线重连后，自选/可见合约数据恢复推送。⚠️ 依赖真实 CTP 环境
    - **#4** 右键不同合约，高亮立即切换到该合约。
    - **#5** 拖选/Shift/Ctrl+A，高亮始终唯一（蓝区 + 金锚，无第二高亮区）。
 
 ## 已完成记录
 
+- `cf6282b` fix(market): 订阅先验证后记录 + 重连权威订阅列表（消除假成功） — Task 6 ✅
 - `d4b9d88` feat(subscription): 收藏统一由订阅管理器管理 + mdConnected 广播触发强制重订阅兜底 — Task 5 ✅
 - `9879e84` feat(market-table): 高亮统一 — 金色锚点守卫+拖选锚点同步（金在蓝内） — Task 4 ✅
 - `a272691` feat(market-table): 右键选中合约 — 同步蓝区与金色锚点 — Task 3 ✅
