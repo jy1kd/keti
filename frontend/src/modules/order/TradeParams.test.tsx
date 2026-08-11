@@ -32,6 +32,7 @@ function setForm(partial: Partial<ReturnType<typeof useOrderStore.getState>['ord
 describe('TradeParams（任务#4）', () => {
   beforeEach(() => {
     setForm({ instrumentID: 'IF2608', volumeTotalOriginal: 1, orderPriceType: 'limit' })
+    useOrderStore.setState({ volumeStep: 1 })
     useContractsStore.setState({
       contracts: [IF2608_CONTRACT],
       favorites: [],
@@ -118,17 +119,47 @@ describe('TradeParams（任务#4）', () => {
   })
 
   describe('快捷手数（P3 QtyPreset 集成）', () => {
-    it('点击预设 → setOrderForm({ volumeTotalOriginal })', () => {
+    it('点击预设 → 手数设为预设值 + 步进设为预设值', () => {
       render(<TradeParams />)
-      fireEvent.click(screen.getByTestId('qty-preset-50'))
-      expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(50)
+      fireEvent.click(screen.getByTestId('qty-preset-20'))
+      expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(20)
+      expect(useOrderStore.getState().volumeStep).toBe(20)
     })
 
-    it('市价单上限 60：点击 100 预设 → 钳制到 60', () => {
+    it('步进 +/− 按 volumeStep（点 20 → + → 40 → − → 20）', () => {
+      render(<TradeParams />)
+      fireEvent.click(screen.getByTestId('qty-preset-20'))
+      fireEvent.click(screen.getByTestId('tp-volume-up'))
+      expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(40)
+      fireEvent.click(screen.getByTestId('tp-volume-down'))
+      expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(20)
+    })
+
+    it('手动输入手数不改变步进（步进 20 → 输入 35 → + → 55）', () => {
+      render(<TradeParams />)
+      fireEvent.click(screen.getByTestId('qty-preset-20'))
+      fireEvent.change(screen.getByTestId('tp-volume'), { target: { value: '35' } })
+      expect(useOrderStore.getState().volumeStep).toBe(20)
+      fireEvent.click(screen.getByTestId('tp-volume-up'))
+      expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(55)
+    })
+
+    it('市价 limit 60：点 20 步进 → + → 40 → + → 60 到顶禁用', () => {
+      setForm({ orderPriceType: 'market' })
+      render(<TradeParams />)
+      fireEvent.click(screen.getByTestId('qty-preset-20'))
+      fireEvent.click(screen.getByTestId('tp-volume-up'))
+      fireEvent.click(screen.getByTestId('tp-volume-up'))
+      expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(60)
+      expect(screen.getByTestId('tp-volume-up')).toBeDisabled()
+    })
+
+    it('市价 limit 60：点 100 预设 → 手数钳制到 60、步进为 100', () => {
       setForm({ orderPriceType: 'market' })
       render(<TradeParams />)
       fireEvent.click(screen.getByTestId('qty-preset-100'))
       expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(60)
+      expect(useOrderStore.getState().volumeStep).toBe(100)
     })
   })
 

@@ -29,6 +29,8 @@ interface TradeParamsProps {
 export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
   const orderForm = useOrderStore((s) => s.orderForm)
   const setOrderForm = useOrderStore((s) => s.setOrderForm)
+  const volumeStep = useOrderStore((s) => s.volumeStep)
+  const setVolumeStep = useOrderStore((s) => s.setVolumeStep)
   const contracts = useContractsStore((s) => s.contracts)
 
   const activeInstrument = instrumentID ?? orderForm.instrumentID
@@ -179,7 +181,7 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
             data-testid="tp-volume-down"
             aria-label="减手数"
             onClick={() =>
-              setOrderForm({ volumeTotalOriginal: Math.max(1, orderForm.volumeTotalOriginal - 1) })
+              setOrderForm({ volumeTotalOriginal: Math.max(1, orderForm.volumeTotalOriginal - volumeStep) })
             }
           >
             −
@@ -190,7 +192,7 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
             className="tp-stepper__input"
             value={orderForm.volumeTotalOriginal}
             min={1}
-            step={1}
+            step={volumeStep}
             onChange={(e) =>
               setOrderForm({ volumeTotalOriginal: Math.max(1, Number(e.target.value)) })
             }
@@ -203,7 +205,7 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
             disabled={orderForm.volumeTotalOriginal >= volumeLimit}
             onClick={() =>
               setOrderForm({
-                volumeTotalOriginal: Math.min(volumeLimit, orderForm.volumeTotalOriginal + 1),
+                volumeTotalOriginal: Math.min(volumeLimit, orderForm.volumeTotalOriginal + volumeStep),
               })
             }
           >
@@ -223,9 +225,11 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
       <div className="tp-row">
         <span className="tp-row__label">快捷</span>
         <QtyPreset
-          value={orderForm.volumeTotalOriginal}
-          limit={volumeLimit}
-          onSelect={(v) => setOrderForm({ volumeTotalOriginal: v })}
+          step={volumeStep}
+          onSelect={(raw) => {
+            setOrderForm({ volumeTotalOriginal: Math.min(volumeLimit, raw) })
+            setVolumeStep(raw)
+          }}
         />
       </div>
 
