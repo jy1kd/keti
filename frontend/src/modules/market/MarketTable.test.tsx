@@ -38,6 +38,13 @@ describe('MarketTable', () => {
     expect(options.columns.length).toBeGreaterThan(0)
   })
 
+  it('冻结合约列为最左列（frozenColCount=1）', async () => {
+    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    const { ListTable } = await import('@visactor/vtable')
+    const options = (ListTable as any).mock.calls[0][1]
+    expect(options.frozenColCount).toBe(1)
+  })
+
   it('passes records from contracts to vtable', async () => {
     render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
     const { ListTable } = await import('@visactor/vtable')

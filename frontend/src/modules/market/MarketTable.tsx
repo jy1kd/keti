@@ -194,6 +194,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     const table = new ListTable(containerRef.current, {
       columns,
       records,
+      frozenColCount: 1, // 冻结「合约」列：横向拖动时固定最左侧
       widthMode: 'standard',
       theme: {
         underlayBackgroundColor: '#0d1117',
