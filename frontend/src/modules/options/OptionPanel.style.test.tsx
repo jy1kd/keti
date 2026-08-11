@@ -12,10 +12,17 @@ function readCssBlock(selector: string): string {
 }
 
 describe('OptionPanel 自动填充', () => {
-  it('.options-chain-table 以 height:100% 撑满可用高度（父级 .options-content 为 block 且已有 flex:1）', () => {
+  it('.options-chain-table 以 flex:1 撑满可用高度（父级 .options-content 为 flex 列容器）', () => {
     const block = readCssBlock('.options-chain-table')
     expect(block).toMatch(/width:\s*100%/)
-    expect(block).toMatch(/height:\s*100%/)
+    expect(block).toMatch(/flex:\s*1/)
+    expect(block).toMatch(/min-height:\s*0/)
+  })
+
+  it('.options-content 为 flex 列容器，供子表 flex 填充', () => {
+    const block = readCssBlock('.options-content')
+    expect(block).toMatch(/display:\s*flex/)
+    expect(block).toMatch(/flex-direction:\s*column/)
   })
 
   it('.options-panel 用 flex 填充（非固定 height:100%，避免与工具栏叠加溢出）', () => {

@@ -125,7 +125,7 @@ export function TQuoteTable({ chain, snapshots, volatility }: TQuoteTableProps) 
       columns,
       records: buildRecords(chain, snapshots, volatility),
       defaultRowHeight: 28,
-      widthMode: 'standard' as const,
+      widthMode: 'adaptive' as const,
       hover: { highlightMode: 'row' as const },
       theme: {
         underlayBackgroundColor: '#0d1117',
