@@ -29,3 +29,11 @@ describe('MarketPanel 工具栏紧凑排布（审查 🟡-1）', () => {
     expect(block).not.toMatch(/margin-left/)
   })
 })
+
+describe('MarketPanel 高度链修复（审查）', () => {
+  it('.panel-content 不再同时声明 flex:1 与 height:100%（双重计数）', () => {
+    const block = readCssBlock('.panel-content')
+    expect(block).toMatch(/flex:\s*1/)
+    expect(block).not.toMatch(/height:\s*100%/)
+  })
+})

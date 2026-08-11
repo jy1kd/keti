@@ -3,7 +3,6 @@ import { useOptionsStore } from './store'
 import { useMarketStore } from '@/modules/market/store'
 import { subscribeMarket, getOptionUnderlyings, getSnapshots } from '@/services/api'
 import { TQuoteTable } from './TQuoteTable'
-import type { OptionChain } from '@/services/types'
 import './styles.css'
 
 /** Debounce delay (ms) — avoids rapid re-fetches during high-frequency ticks. */
@@ -13,12 +12,6 @@ const REFRESH_DEBOUNCE_MS = 800
 function formatExpireDate(raw: string): string {
   if (raw.length === 8) return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
   return raw
-}
-
-/** Estimate table height: (strikes + header) * rowHeight + padding. */
-function chainHeight(chain: OptionChain): number {
-  const strikes = new Set([...chain.calls, ...chain.puts].map((q) => q.strikePrice)).size
-  return (Math.max(strikes, 1) + 1) * 28 + 4
 }
 
 /** Max retry attempts for loading underlyings. */
@@ -269,10 +262,7 @@ export function OptionPanel() {
           <div className="options-error">{error}</div>
         )}
         {!loading && !error && selectedChain && (
-          <div
-            className="options-chain-table"
-            style={{ height: chainHeight(selectedChain) }}
-          >
+          <div className="options-chain-table">
             <TQuoteTable chain={selectedChain} snapshots={snapshots} volatility={volatility} />
           </div>
         )}

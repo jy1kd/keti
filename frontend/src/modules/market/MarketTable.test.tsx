@@ -168,11 +168,11 @@ describe('MarketTable', () => {
     expect(statusCol.style({ table: { records }, row: 2, col: 4 })).toEqual({ color: '#d29922' })
   })
 
-  it('columns 包含合约乘数与最小变动价位，且采用固定列宽 standard', async () => {
+  it('columns 包含合约乘数与最小变动价位，且采用自适应宽度填满容器', async () => {
     const { ListTable } = await import('@visactor/vtable')
     render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
     const options = (ListTable as any).mock.calls[0][1]
-    expect(options.widthMode).toBe('standard')
+    expect(options.widthMode).toBe('adaptive')
     const titles = options.columns.map((c: { title: string }) => c.title)
     expect(titles).toContain('合约乘数')
     expect(titles).toContain('最小变动价位')

@@ -195,7 +195,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       columns,
       records,
       frozenColCount: 1, // 冻结「合约」列：横向拖动时固定最左侧
-      widthMode: 'standard',
+      widthMode: 'adaptive',
       theme: {
         underlayBackgroundColor: '#0d1117',
         defaultStyle: {
