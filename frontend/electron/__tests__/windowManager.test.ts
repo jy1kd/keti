@@ -156,4 +156,16 @@ describe('WindowManager', () => {
     // Should not throw
     manager.broadcast('test-channel', { data: 'test' });
   });
+
+  it('should create tab window with the app icon (consistent with other windows)', async () => {
+    const { BrowserWindow } = await import('electron');
+    const { WindowManager } = await import('../windowManager');
+    const manager = new WindowManager();
+    manager.createMainWindow();
+    (BrowserWindow as any).mockClear();
+    manager.openTabWindow('market', 'tab-market', '📊 行情');
+    const options = (BrowserWindow as any).mock.calls[0][0];
+    expect(options.icon).toBeDefined();
+    expect(options.icon).toContain('icon.png');
+  });
 });

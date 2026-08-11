@@ -347,12 +347,14 @@ export class WindowManager {
     const config = DEFAULT_CONFIGS[tabType] || DEFAULT_CONFIGS.main;
     const parent = this.windows.get('main');
 
+    const iconPath = path.join(__dirname, '../build/icon.png');
     const tabWindow = new BrowserWindow({
       width: config.width || 800,
       height: config.height || 600,
       minWidth: config.minWidth || 400,
       minHeight: config.minHeight || 300,
       title: tabTitle,
+      icon: iconPath,
       parent,
       modal: false,
       webPreferences: {
