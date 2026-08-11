@@ -361,7 +361,7 @@ git commit -m "feat(market-table): 右键选中合约 — 同步蓝区与金色�
 **Interfaces:**
 - Produces: 导出纯函数 `shouldRenderAnchor(selectedInstrument, selectedContracts): boolean`；selectRow effect 在锚点不在选区内时调 `clearSelected()`；`handleMouseDown` 新拖选时同步锚点。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `MarketTable.test.tsx` 顶部 import 追加 `shouldRenderAnchor`：
 
@@ -438,12 +438,12 @@ describe('selectRow 守卫', () => {
 })
 ```
 
-- [ ] **Step 2: 跑测试验证红**
+- [x] **Step 2: 跑测试验证红**
 
 Run: `cd frontend && npx vitest run src/modules/market/MarketTable.test.tsx`
 Expected: FAIL — `shouldRenderAnchor` 未导出（undefined）；selectRow 无守卫（锚点不在选区内仍 selectRow）。
 
-- [ ] **Step 3: 最小实现**
+- [x] **Step 3: 最小实现**
 
 `MarketTable.tsx` 组件外（`columns` 定义附近）加纯函数并导出：
 
@@ -513,14 +513,14 @@ const handleMouseDown = (e: MouseEvent) => {
 }
 ```
 
-- [ ] **Step 4: 跑测试验证绿**
+- [x] **Step 4: 跑测试验证绿**
 
 Run: 同 Step 2 命令。
 Expected: PASS。
 
 > 注：`instance.selectRow`/`instance.clearSelected` 来自 vitest 自动 mock 的 ListTable 实例，均为 `vi.fn()`。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add frontend/src/modules/market/MarketTable.tsx frontend/src/modules/market/MarketTable.test.tsx
@@ -996,6 +996,7 @@ git commit -m "fix(market): 订阅先验证后记录 + 重连权威订阅列表�
 
 ## 已完成记录
 
+- `9879e84` feat(market-table): 高亮统一 — 金色锚点守卫+拖选锚点同步（金在蓝内） — Task 4 ✅
 - `a272691` feat(market-table): 右键选中合约 — 同步蓝区与金色锚点 — Task 3 ✅
 - `232bf25` feat(market): 行情/期权页自动填充 — widthMode adaptive + 高度链修复 — Task 2 ✅（浏览器验证待人工）
 - `2ebb2ef` feat(market-table): 冻结合约列为最左列 (frozenColCount=1) — Task 1 ✅
