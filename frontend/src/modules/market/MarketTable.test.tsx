@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, act } from '@testing-library/react'
-import { MarketTable } from './MarketTable'
+import { MarketTable, shouldRenderAnchor } from './MarketTable'
 import { useMarketStore } from './store'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
 
@@ -602,6 +602,71 @@ describe('MarketTable', () => {
       )
 
       expect(instance.setRecords).toHaveBeenCalled()
+    })
+  })
+
+  describe('shouldRenderAnchor（金色活动锚点守卫）', () => {
+    it('锚点在选区内返回 true（单选重合 / 多选锚点在集合内）', () => {
+      expect(shouldRenderAnchor('au2508', new Set(['au2508']))).toBe(true)
+      expect(shouldRenderAnchor('au2508', new Set(['au2508', 'ag2508']))).toBe(true)
+    })
+
+    it('锚点不在选区内返回 false（防第二个高亮区）', () => {
+      expect(shouldRenderAnchor('au2508', new Set(['ag2508']))).toBe(false)
+      expect(shouldRenderAnchor('au2508', new Set())).toBe(false)
+      expect(shouldRenderAnchor(null, new Set(['au2508']))).toBe(false)
+      expect(shouldRenderAnchor(undefined, undefined)).toBe(false)
+    })
+  })
+
+  describe('selectRow 守卫', () => {
+    function stubRaf() {
+      // jsdom 可能未实现 rAF：先兜底赋值，再 spy 使其同步触发回调
+      if (!window.requestAnimationFrame) {
+        window.requestAnimationFrame = ((cb: FrameRequestCallback) => { cb(0); return 0 }) as typeof requestAnimationFrame
+      }
+      if (!window.cancelAnimationFrame) {
+        window.cancelAnimationFrame = (() => {}) as typeof cancelAnimationFrame
+      }
+      const raf = vi.spyOn(window, 'requestAnimationFrame')
+        .mockImplementation((cb: FrameRequestCallback) => { cb(0); return 0 })
+      const cancel = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {})
+      return () => { raf.mockRestore(); cancel.mockRestore() }
+    }
+
+    it('锚点在选区内：渲染金色 selectRow', async () => {
+      const restore = stubRaf()
+      render(
+        <MarketTable
+          contracts={mockContracts}
+          snapshots={mockSnapshots}
+          selectedInstrument="au2508"
+          selectedContracts={new Set(['au2508'])}
+        />
+      )
+      const { ListTable } = await import('@visactor/vtable')
+      const instance = (ListTable as any).mock.results[0].value
+      // au2508 在 contracts 中 index 0 → vtableRow 1
+      expect(instance.selectRow).toHaveBeenCalledWith(1)
+      expect(instance.clearSelected).not.toHaveBeenCalled()
+      restore()
+    })
+
+    it('锚点不在选区内：清除金色（clearSelected），不渲染独立高亮', async () => {
+      const restore = stubRaf()
+      render(
+        <MarketTable
+          contracts={mockContracts}
+          snapshots={mockSnapshots}
+          selectedInstrument="au2508"
+          selectedContracts={new Set(['ag2508'])}
+        />
+      )
+      const { ListTable } = await import('@visactor/vtable')
+      const instance = (ListTable as any).mock.results[0].value
+      expect(instance.selectRow).not.toHaveBeenCalled()
+      expect(instance.clearSelected).toHaveBeenCalled()
+      restore()
     })
   })
 })

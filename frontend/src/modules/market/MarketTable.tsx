@@ -82,6 +82,16 @@ const columns = [
 const CTP_INVALID_PRICE = 1.7976931348623157e+308
 const isValidPrice = (p: number) => p > 0 && p < CTP_INVALID_PRICE
 
+/** 金色活动锚点是否渲染：仅当锚点合约位于选中选区内（金在蓝内，防双高亮区） */
+export function shouldRenderAnchor(
+  selectedInstrument: string | null | undefined,
+  selectedContracts?: Set<string>,
+): boolean {
+  if (!selectedInstrument) return false
+  if (!selectedContracts || selectedContracts.size === 0) return false
+  return selectedContracts.has(selectedInstrument)
+}
+
 function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, isFavorited: boolean) {
   const productName = getProductName(contract.productID)
   const status = getContractStatus(contract)
@@ -405,6 +415,9 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       // 如果没有按 Ctrl/Shift，开始新的选择
       if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
         dragSelected = new Set()
+        // 锚点同步：新拖选以起始行为金色活动锚点（金始终在选区内）
+        const startRecord = recordsRef.current[rowIndex]
+        if (startRecord) useMarketStore.getState().setSelectedInstrument(startRecord.instrumentID)
       }
     }
 
@@ -527,9 +540,18 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     tableRef.current.setRecords(recordsRef.current)
   }, [selectedContracts])
 
-  // 高亮选中合约行（rAF 等 vtable setRecords 渲染完成）
+  // 高亮选中合约行（rAF 等 vtable setRecords 渲染完成）；金色活动锚点仅在选区内渲染
   useEffect(() => {
-    if (!tableRef.current || !selectedInstrument) return
+    if (!tableRef.current) return
+    if (!shouldRenderAnchor(selectedInstrument, selectedContracts)) {
+      // 锚点不在选区内 → 清除 vtable 原生金色选中，避免独立高亮区
+      try {
+        tableRef.current.clearSelected()
+      } catch {
+        // vtable 尚未就绪
+      }
+      return
+    }
     const rowIndex = contracts.findIndex((c) => c.instrumentID === selectedInstrument)
     if (rowIndex < 0) return
     const vtableRow = rowIndex + 1
@@ -546,7 +568,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       }
     })
     return () => cancelAnimationFrame(raf)
-  }, [selectedInstrument, contracts])
+  }, [selectedInstrument, selectedContracts, contracts])
 
   return <div ref={containerRef} className="market-table-container" />
 }
