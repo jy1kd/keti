@@ -168,18 +168,28 @@ describe('MarketTable', () => {
     expect(statusCol.style({ table: { records }, row: 2, col: 4 })).toEqual({ color: '#d29922' })
   })
 
-  it('columns 包含合约乘数与最小变动价位，且采用自适应宽度填满容器', async () => {
+  it('columns 包含合约乘数与最小变动价位，且采用固定列宽 standard（默认列宽放大）', async () => {
     const { ListTable } = await import('@visactor/vtable')
     render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
     const options = (ListTable as any).mock.calls[0][1]
-    expect(options.widthMode).toBe('adaptive')
+    expect(options.widthMode).toBe('standard')
     const titles = options.columns.map((c: { title: string }) => c.title)
     expect(titles).toContain('合约乘数')
     expect(titles).toContain('最小变动价位')
+    // 默认列宽放大：固定总宽明显大于原 1400，宽屏下横向留白更少
+    const totalWidth = options.columns.reduce((sum: number, c: { width?: number }) => sum + (c.width ?? 0), 0)
+    expect(totalWidth).toBeGreaterThan(1500)
     for (const col of options.columns) {
       expect(typeof col.width).toBe('number')
       expect(col.width as number).toBeGreaterThan(0)
     }
+  })
+
+  it('保留每列拖拽缩放能力（columnResizeMode=all，列可单独放大/缩小）', async () => {
+    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    const { ListTable } = await import('@visactor/vtable')
+    const options = (ListTable as any).mock.calls[0][1]
+    expect(options.columnResizeMode).toBe('all')
   })
 
   it('buildRecord 从 contract 填充合约乘数与最小变动价位（有快照）', async () => {

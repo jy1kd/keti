@@ -62,20 +62,20 @@ function statusStyle(args: any) {
 }
 
 const columns = [
-  { field: 'instrumentID', title: '合约', width: 110 },
-  { field: 'productName', title: '合约品种', width: 85 },
-  { field: 'exchangeID', title: '交易所', width: 75 },
-  { field: 'volumeMultiple', title: '合约乘数', width: 85 },
-  { field: 'priceTick', title: '最小变动价位', width: 110 },
-  { field: 'expireDate', title: '到期日', width: 100 },
-  { field: 'status', title: '状态', width: 80, style: statusStyle },
-  { field: 'lastPrice', title: '最新价', width: 110, style: coloredStyle },
-  { field: 'change', title: '涨跌', width: 100, style: coloredStyle },
-  { field: 'changePercent', title: '涨跌%', width: 100, style: coloredStyle },
-  { field: 'bidPrice1', title: '买一', width: 110, style: coloredStyle },
-  { field: 'askPrice1', title: '卖一', width: 110, style: coloredStyle },
-  { field: 'volume', title: '成交量', width: 110 },
-  { field: 'openInterest', title: '持仓量', width: 110 },
+  { field: 'instrumentID', title: '合约', width: 130 },
+  { field: 'productName', title: '合约品种', width: 100 },
+  { field: 'exchangeID', title: '交易所', width: 85 },
+  { field: 'volumeMultiple', title: '合约乘数', width: 95 },
+  { field: 'priceTick', title: '最小变动价位', width: 120 },
+  { field: 'expireDate', title: '到期日', width: 115 },
+  { field: 'status', title: '状态', width: 85, style: statusStyle },
+  { field: 'lastPrice', title: '最新价', width: 125, style: coloredStyle },
+  { field: 'change', title: '涨跌', width: 110, style: coloredStyle },
+  { field: 'changePercent', title: '涨跌%', width: 110, style: coloredStyle },
+  { field: 'bidPrice1', title: '买一', width: 125, style: coloredStyle },
+  { field: 'askPrice1', title: '卖一', width: 125, style: coloredStyle },
+  { field: 'volume', title: '成交量', width: 120 },
+  { field: 'openInterest', title: '持仓量', width: 120 },
   { field: 'favorite', title: '⭐', width: 60 },
 ]
 
@@ -205,7 +205,8 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       columns,
       records,
       frozenColCount: 1, // 冻结「合约」列：横向拖动时固定最左侧
-      widthMode: 'adaptive',
+      widthMode: 'standard',
+      columnResizeMode: 'all', // 保留每列拖拽缩放：可单独放大/缩小任意列宽
       theme: {
         underlayBackgroundColor: '#0d1117',
         defaultStyle: {
