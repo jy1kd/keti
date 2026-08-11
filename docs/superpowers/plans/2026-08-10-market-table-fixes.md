@@ -2,20 +2,20 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 消除行情模块 6 个 UI/数据一致性问题：页面自动填充、合约列冻结、右键选中、双高亮统一、空合约浮窗可交互、自选订阅一致性。
+**Goal:** 消除行情模块 5 个 UI/数据一致性问题：页面自动填充、合约列冻结、右键选中、双高亮统一、自选订阅一致性。
 
-**Architecture:** ① 布局高度链规范化 + vtable `widthMode:'adaptive'` + `frozenColCount` 填满/冻结；② 选中态统一为「蓝色选区 `selectedContracts` + 金色活动锚点 `selectedInstrument`（金在蓝内）」，`selectRow` 加守卫；③ 订阅生命周期统一由 `useSubscriptionManager` 负责（收藏不再直连 API），后端「先验证后记录」消除假成功，WS 重连触发强制重订阅兜底。
+**Architecture:** ① 布局高度链规范化 + vtable 固定列宽（默认列宽放大）+ `frozenColCount` 冻结 + `columnResizeMode:'all'` 保留每列拖拽缩放；T型期权表 `widthMode:'adaptive'` 自动填满；② 选中态统一为「蓝色选区 `selectedContracts` + 金色活动锚点 `selectedInstrument`（金在蓝内）」，`selectRow` 加守卫；③ 订阅生命周期统一由 `useSubscriptionManager` 负责（收藏不再直连 API），后端「先验证后记录」消除假成功，WS 重连触发强制重订阅兜底。
 
 **Tech Stack:** React 18 + TypeScript 5 + Vite 5 + @visactor/vtable ^1.26.4 + Zustand；后端 Python FastAPI + ctp-python。
 
 ## Global Constraints
 
-- 分支 `feature/scrollbar-refactor`；**绝不触碰**工作区未提交的 `frontend/dist-electron/**`、`实习周报*.docx`、`generate_weekly_report.py`。
+- 分支 `fix/market-table`；**绝不触碰**工作区未提交的 `frontend/dist-electron/**`、`实习周报*.docx`、`generate_weekly_report.py`。
 - 每个 Task 严格 TDD：写失败测试 → 跑出红 → 最小实现 → 跑绿 → 提交。
 - 前端测试命令：`cd frontend && npx vitest run <相对路径>`；后端：`cd server && python -m pytest tests/test_market_service.py -v`。
 - vtable API：`ListTable` 实例有 `clearSelected()`（`node_modules/@visactor/vtable/cjs/core/BaseTable.d.ts:298`）与 `selectRow(row)`；`widthMode` 合法值 `'standard' | 'adaptive' | 'autoWidth'`，`'adaptive'` 自适应容器宽度填满。
 - 强制重订阅触发：经 `/ws/system` 的 `connection_status {mdConnected:true}` 广播（后端初始登录 `ctp_startup.py:211` 与重连成功 `:364` 都会发），由 `useSystemWs` 消费 → `markForceResubscribe()`。**不改 `services/ws.ts` / `useMarketWs.ts`**——CTP 重连对浏览器 WS 透明，治愈时机选「后端 CTP 确认连上」而非「前端 WS 打开」。
-- 现有测试基准：前端 469 个单测、后端 108 个单测，全量需保持绿。
+- 现有测试基准：前端 469 个单测全绿；后端 108 单测基准已过时，当前套件 714 个用例中有 **16 个既有失败**（test_config 默认值 / test_connection_api 登录退出 / test_market_api 深度 / test_preset 预设文件 / test_stop_order_api），经 git stash 基线复跑确认与本分支改动无关，均属环境/状态依赖。
 - 设计依据：`docs/superpowers/specs/2026-08-10-market-table-fixes-design.md`。
 
 ---
@@ -29,8 +29,6 @@
 | `frontend/src/modules/options/OptionPanel.tsx` | 删除 `chainHeight()` 固定高度 |
 | `frontend/src/modules/options/styles.css` | `.options-panel`/`.options-chain-table` 弹性填充 |
 | `frontend/src/hooks/useContractContextMenu.ts` | 右键同步 `selectedInstrument` |
-| `frontend/src/components/NoContractPicker/index.tsx` | 空合约浮窗内嵌合约选择器（新建） |
-| `frontend/src/pages/OrderPage.tsx` / `KLinePage.tsx` | 空合约分支改用 NoContractPicker |
 | `frontend/src/stores/contracts.ts` | 收藏只维护状态，不再直连订阅 API |
 | `frontend/src/modules/market/store.ts` | 新增 `forceResubscribeSeq` + `markForceResubscribe` |
 | `frontend/src/hooks/useSubscriptionManager.ts` | 消费强制重订阅信号 |
@@ -49,7 +47,7 @@
 **Interfaces:**
 - Produces: ListTable 配置含 `frozenColCount: 1`（「合约」列冻结在最左侧）
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 在 `MarketTable.test.tsx` 的 `it('creates ListTable with correct options', ...)`（约 32 行）后追加：
 
@@ -62,12 +60,12 @@ it('冻结合约列为最左列（frozenColCount=1）', async () => {
 })
 ```
 
-- [ ] **Step 2: 跑测试验证红**
+- [x] **Step 2: 跑测试验证红**
 
 Run: `cd frontend && npx vitest run src/modules/market/MarketTable.test.tsx`
 Expected: FAIL — `options.frozenColCount` 为 `undefined`，`expect(...).toBe(1)` 不通过。
 
-- [ ] **Step 3: 最小实现**
+- [x] **Step 3: 最小实现**
 
 `MarketTable.tsx` ListTable 配置（`MarketTable.tsx:194-197`）：
 
@@ -80,12 +78,12 @@ const table = new ListTable(containerRef.current, {
   ...
 ```
 
-- [ ] **Step 4: 跑测试验证绿**
+- [x] **Step 4: 跑测试验证绿**
 
 Run: `cd frontend && npx vitest run src/modules/market/MarketTable.test.tsx`
 Expected: PASS（全部用例绿）。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add frontend/src/modules/market/MarketTable.tsx frontend/src/modules/market/MarketTable.test.tsx
@@ -100,14 +98,15 @@ git commit -m "feat(market-table): 冻结合约列为最左列 (frozenColCount=1
 - Modify: `frontend/src/modules/market/MarketTable.tsx:196`（widthMode）
 - Modify: `frontend/src/modules/market/styles.css:59-64`（`.panel-content`）
 - Modify: `frontend/src/modules/options/OptionPanel.tsx:18-22, 272-275`（删除 chainHeight）
-- Modify: `frontend/src/modules/options/styles.css:3-8, 146-148`（options-panel / options-chain-table）
+- Modify: `frontend/src/modules/options/styles.css:3-8, 126-130, 146-148`（options-panel / options-content / options-chain-table）
+- Modify: `frontend/src/modules/options/TQuoteTable.tsx`（widthMode adaptive）
 - Test: `frontend/src/modules/market/MarketTable.test.tsx:164-176`、`MarketPanel.style.test.tsx`
 - Create: `frontend/src/modules/options/OptionPanel.style.test.tsx`
 
 **Interfaces:**
-- Produces: 行情表 `widthMode: 'adaptive'`（列自适应填满容器）；`.panel-content` 无 `height:100%`；`.options-chain-table` `flex:1; height:100%`。
+- Produces: 行情表 `widthMode: 'standard'`（固定列宽，默认放大至 ~1625px）+ `columnResizeMode:'all'`（保留每列拖拽缩放）；`.panel-content` 无 `height:100%`；`.options-content` 为 flex 列容器、`.options-chain-table` `flex:1; min-height:0`；`TQuoteTable` `widthMode:'adaptive'`。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `MarketTable.test.tsx` 的「columns 包含合约乘数与最小变动价位，且采用固定列宽 standard」（164 行）改为：
 
@@ -156,10 +155,11 @@ function readCssBlock(selector: string): string {
 }
 
 describe('OptionPanel 自动填充', () => {
-  it('.options-chain-table 以 height:100% 撑满可用高度（父级 .options-content 为 block 且已有 flex:1）', () => {
+  it('.options-chain-table 以 flex:1 撑满可用高度（父级 .options-content 为 flex 列容器）', () => {
     const block = readCssBlock('.options-chain-table')
     expect(block).toMatch(/width:\s*100%/)
-    expect(block).toMatch(/height:\s*100%/)
+    expect(block).toMatch(/flex:\s*1/)
+    expect(block).toMatch(/min-height:\s*0/)
   })
 
   it('.options-panel 用 flex 填充（非固定 height:100%，避免与工具栏叠加溢出）', () => {
@@ -170,14 +170,14 @@ describe('OptionPanel 自动填充', () => {
 })
 ```
 
-- [ ] **Step 2: 跑测试验证红**
+- [x] **Step 2: 跑测试验证红**
 
 Run: `cd frontend && npx vitest run src/modules/market/MarketTable.test.tsx src/modules/market/MarketPanel.style.test.tsx src/modules/options/OptionPanel.style.test.tsx`
 Expected: FAIL — widthMode 仍为 standard；`.panel-content` 仍含 `height:100%`；`.options-chain-table` 无 flex/height。
 
-- [ ] **Step 3: 最小实现**
+- [x] **Step 3: 最小实现**
 
-`MarketTable.tsx:196`：`widthMode: 'standard'` → `widthMode: 'adaptive'`。
+`MarketTable.tsx`：`widthMode` 保持 `'standard'`（不自动填满），默认列宽整体放大（总宽 1400 → ~1625px），并加 `columnResizeMode: 'all'` 显式保留每列拖拽缩放（adaptive 方案实测回退）。
 
 `frontend/src/modules/market/styles.css` `.panel-content`（59-64 行）：
 
@@ -195,16 +195,20 @@ Expected: FAIL — widthMode 仍为 standard；`.panel-content` 仍含 `height:1
 
 `frontend/src/modules/options/styles.css`：
 - `.options-panel`：`height: 100%;` → `flex: 1 1 0; min-height: 0;`（保留 `display:flex; flex-direction:column; padding:8px;`）。
+- `.options-content`：加 `display:flex; flex-direction:column; min-height:0;`（父级撑满可用高度，供子表 flex 填充）。
 - `.options-chain-table`：
 
 ```css
 .options-chain-table {
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 ```
 
-- [ ] **Step 4: 跑测试验证绿**
+`frontend/src/modules/options/TQuoteTable.tsx`：`widthMode: 'standard'` → `'adaptive'`（列宽按容器自适应填满，消除 T型期权页横向留白）。
+
+- [x] **Step 4: 跑测试验证绿**
 
 Run: 同 Step 2 命令。
 Expected: PASS。
@@ -213,7 +217,7 @@ Expected: PASS。
 
 `cd frontend && npm run dev` + 后端 `start.py`：行情页与 T型期权页随窗口大小自适应填满（宽屏/窄屏各测一次）。若 `adaptive` 挤压价格列观感不佳，回退「固定列宽 + 末尾弹性列」并更新本任务测试（在 `MarketTable.tsx` 把末列 `favorite` 加 `width: 'auto'`/flex 并去掉 `widthMode` 断言）。
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 git add frontend/src/modules/market/MarketTable.tsx frontend/src/modules/market/styles.css frontend/src/modules/market/MarketTable.test.tsx frontend/src/modules/market/MarketPanel.style.test.tsx frontend/src/modules/options/OptionPanel.tsx frontend/src/modules/options/styles.css frontend/src/modules/options/OptionPanel.style.test.tsx
@@ -233,7 +237,7 @@ git commit -m "feat(market): 行情/期权页自动填充 — widthMode adaptive
 - Consumes: `onSelectionChangeRef.current`（已有）、`useMarketStore.getState().setSelectedInstrument`（已有）。
 - Produces: 右键落在集合外 → `selectedContracts={id}` + `selectedInstrument=id`；右键命中集合内 → 保持集合。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `MarketTable.test.tsx` 在「右键点击时调用 onContextMenu 并传入合约信息」（367 行）附近追加：
 
@@ -306,12 +310,12 @@ it('handleContextMenu 同步 selectedInstrument 到右键合约（金色锚点�
 })
 ```
 
-- [ ] **Step 2: 跑测试验证红**
+- [x] **Step 2: 跑测试验证红**
 
 Run: `cd frontend && npx vitest run src/modules/market/MarketTable.test.tsx src/hooks/useContractContextMenu.test.ts`
 Expected: FAIL — 右键后 `onSelectionChange` 未被调用；`selectedInstrument` 未变。
 
-- [ ] **Step 3: 最小实现**
+- [x] **Step 3: 最小实现**
 
 `MarketTable.tsx` `contextmenu_cell`（331-347 行）的 else 分支加一行：
 
@@ -340,12 +344,12 @@ const handleContextMenu = useCallback((instrumentID: string, price: number, even
 
 （`useMarketStore` 已在文件第 3 行导入。）
 
-- [ ] **Step 4: 跑测试验证绿**
+- [x] **Step 4: 跑测试验证绿**
 
 Run: 同 Step 2 命令。
 Expected: PASS。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add frontend/src/modules/market/MarketTable.tsx frontend/src/modules/market/MarketTable.test.tsx frontend/src/hooks/useContractContextMenu.ts frontend/src/hooks/useContractContextMenu.test.ts
@@ -363,7 +367,7 @@ git commit -m "feat(market-table): 右键选中合约 — 同步蓝区与金色�
 **Interfaces:**
 - Produces: 导出纯函数 `shouldRenderAnchor(selectedInstrument, selectedContracts): boolean`；selectRow effect 在锚点不在选区内时调 `clearSelected()`；`handleMouseDown` 新拖选时同步锚点。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `MarketTable.test.tsx` 顶部 import 追加 `shouldRenderAnchor`：
 
@@ -440,12 +444,12 @@ describe('selectRow 守卫', () => {
 })
 ```
 
-- [ ] **Step 2: 跑测试验证红**
+- [x] **Step 2: 跑测试验证红**
 
 Run: `cd frontend && npx vitest run src/modules/market/MarketTable.test.tsx`
 Expected: FAIL — `shouldRenderAnchor` 未导出（undefined）；selectRow 无守卫（锚点不在选区内仍 selectRow）。
 
-- [ ] **Step 3: 最小实现**
+- [x] **Step 3: 最小实现**
 
 `MarketTable.tsx` 组件外（`columns` 定义附近）加纯函数并导出：
 
@@ -515,14 +519,14 @@ const handleMouseDown = (e: MouseEvent) => {
 }
 ```
 
-- [ ] **Step 4: 跑测试验证绿**
+- [x] **Step 4: 跑测试验证绿**
 
 Run: 同 Step 2 命令。
 Expected: PASS。
 
 > 注：`instance.selectRow`/`instance.clearSelected` 来自 vitest 自动 mock 的 ListTable 实例，均为 `vi.fn()`。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add frontend/src/modules/market/MarketTable.tsx frontend/src/modules/market/MarketTable.test.tsx
@@ -531,242 +535,7 @@ git commit -m "feat(market-table): 高亮统一 — 金色锚点守卫+拖选锚
 
 ---
 
-### Task 5: 空合约浮窗可交互（问题 6）
-
-**Files:**
-- Create: `frontend/src/components/NoContractPicker/index.tsx`、`frontend/src/components/NoContractPicker/index.css`
-- Modify: `frontend/src/pages/OrderPage.tsx:55-97`
-- Modify: `frontend/src/pages/KLinePage.tsx:94-98`
-- Test: `frontend/src/components/NoContractPicker/index.test.tsx`（新建）、`frontend/src/pages/OrderPage.test.tsx`（新建）、`frontend/src/pages/KLinePage.test.tsx`（新建）
-
-**Interfaces:**
-- Produces: `NoContractPicker({ contracts: ContractInfo[]; onSelect: (instrumentID: string) => void })`；被 OrderPage/KLinePage 的空合约分支复用，`onSelect` 接 `handleSwitch` → `updateTab`。
-
-- [ ] **Step 1: 写失败测试**
-
-`frontend/src/components/NoContractPicker/index.test.tsx`：
-
-```tsx
-import { describe, it, expect, vi } from 'vitest'
-import { render, fireEvent } from '@testing-library/react'
-import { NoContractPicker } from './index'
-import type { ContractInfo } from '@/services/types'
-
-vi.mock('@/components/ContractSearch', () => ({
-  ContractSearch: ({ onSelect }: { onSelect: (id: string) => void }) => (
-    <button data-testid="mock-search" onClick={() => onSelect('IF2608')}>搜索</button>
-  ),
-}))
-
-describe('NoContractPicker', () => {
-  it('渲染提示文案，选中合约后回调 onSelect', () => {
-    const onSelect = vi.fn()
-    const contracts: ContractInfo[] = [{ instrumentID: 'IF2608' } as ContractInfo]
-    const { getByText, getByTestId } = render(<NoContractPicker contracts={contracts} onSelect={onSelect} />)
-    expect(getByText('请选择合约开始')).toBeTruthy()
-    fireEvent.click(getByTestId('mock-search'))
-    expect(onSelect).toHaveBeenCalledWith('IF2608')
-  })
-})
-```
-
-`frontend/src/pages/OrderPage.test.tsx`：
-
-```tsx
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, act } from '@testing-library/react'
-import { OrderPage } from './OrderPage'
-import { useTabStore } from '@/stores/tabs'
-
-let pickerProps: { onSelect: (id: string) => void } | null = null
-vi.mock('@/components/NoContractPicker', () => ({
-  NoContractPicker: (props: any) => {
-    pickerProps = props
-    return <div data-testid="no-contract-picker" />
-  },
-}))
-vi.mock('./OrderTradeBody', () => ({ OrderTradeBody: () => null }))
-vi.mock('./AccountBar', () => ({ AccountBar: () => null }))
-vi.mock('./QuoteStatsBar', () => ({ QuoteStatsBar: () => null }))
-vi.mock('./FooterBar', () => ({ FooterBar: () => null }))
-
-describe('OrderPage 空合约可交互', () => {
-  beforeEach(() => {
-    pickerProps = null
-    useTabStore.setState({
-      tabs: [{ id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false }],
-      activeTabId: 'tab-market',
-    })
-  })
-
-  it('无合约时渲染合约选择器，选中后更新标签 props/title', () => {
-    const { getByTestId } = render(<OrderPage tabId="tab-order" />)
-    expect(getByTestId('no-contract-picker')).toBeTruthy()
-    act(() => { pickerProps!.onSelect('IF2608') })
-    const tab = useTabStore.getState().tabs.find((t) => t.id === 'tab-order')
-    expect(tab?.props.instrumentID).toBe('IF2608')
-    expect(tab?.title).toBe('📝 报单-IF2608')
-  })
-})
-```
-
-`frontend/src/pages/KLinePage.test.tsx`：
-
-```tsx
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, act } from '@testing-library/react'
-import { KLinePage } from './KLinePage'
-import { useTabStore } from '@/stores/tabs'
-
-let pickerProps: { onSelect: (id: string) => void } | null = null
-vi.mock('@/components/NoContractPicker', () => ({
-  NoContractPicker: (props: any) => {
-    pickerProps = props
-    return <div data-testid="no-contract-picker" />
-  },
-}))
-vi.mock('@/modules/market/KLineChart', () => ({ KLineChart: () => null }))
-
-describe('KLinePage 空合约可交互', () => {
-  beforeEach(() => {
-    pickerProps = null
-    useTabStore.setState({
-      tabs: [{ id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false }],
-      activeTabId: 'tab-market',
-    })
-  })
-
-  it('无合约时渲染合约选择器，选中后更新标签 props/title', () => {
-    const { getByTestId } = render(<KLinePage tabId="tab-kline" />)
-    expect(getByTestId('no-contract-picker')).toBeTruthy()
-    act(() => { pickerProps!.onSelect('IF2608') })
-    const tab = useTabStore.getState().tabs.find((t) => t.id === 'tab-kline')
-    expect(tab?.props.instrumentID).toBe('IF2608')
-    expect(tab?.title).toBe('📈 K线-IF2608')
-  })
-})
-```
-
-- [ ] **Step 2: 跑测试验证红**
-
-Run: `cd frontend && npx vitest run src/components/NoContractPicker src/pages/OrderPage.test.tsx src/pages/KLinePage.test.tsx`
-Expected: FAIL — 模块不存在 / 空合约分支仍是占位文案、无 NoContractPicker。
-
-- [ ] **Step 3: 最小实现**
-
-新建 `frontend/src/components/NoContractPicker/index.tsx`：
-
-```tsx
-import { ContractSearch } from '@/components/ContractSearch'
-import type { ContractInfo } from '@/services/types'
-import './index.css'
-
-interface NoContractPickerProps {
-  contracts: ContractInfo[]
-  onSelect: (instrumentID: string) => void
-}
-
-/** 空合约浮窗内的合约选择器：未选中合约时也可直接搜索并开始 */
-export function NoContractPicker({ contracts, onSelect }: NoContractPickerProps) {
-  return (
-    <div className="no-contract-picker">
-      <p className="no-contract-picker__hint">请选择合约开始</p>
-      <ContractSearch contracts={contracts} onSelect={onSelect} />
-    </div>
-  )
-}
-```
-
-新建 `frontend/src/components/NoContractPicker/index.css`：
-
-```css
-.no-contract-picker {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 32px 24px;
-  height: 100%;
-  box-sizing: border-box;
-}
-
-.no-contract-picker__hint {
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.no-contract-picker .contract-search {
-  width: 280px;
-}
-```
-
-`OrderPage.tsx`：
-- 顶部加 import：`import { NoContractPicker } from '@/components/NoContractPicker'`、`import { useContractsStore } from '@/stores/contracts'`。
-- 组件内加：`const contracts = useContractsStore((s) => s.contracts)`，并加兜底加载 effect（与 KLinePage 一致）：
-
-```ts
-// 兜底加载合约列表：直接以报单标签启动时 contracts 可能为空
-useEffect(() => {
-  if (contracts.length === 0) {
-    useContractsStore.getState().loadAllInstruments()
-  }
-}, [contracts.length])
-```
-
-- 浮动分支（55-64 行）的 `!instrumentID` 分支改为：
-
-```tsx
-if (floating) {
-  if (!instrumentID) {
-    return (
-      <div className="order-floating">
-        <NoContractPicker contracts={contracts} onSelect={handleSwitch} />
-      </div>
-    )
-  }
-  ...
-```
-
-- 非浮动分支（86-90 行）改为：
-
-```tsx
-{!instrumentID && (
-  <div className="order-page__no-contract">
-    <NoContractPicker contracts={contracts} onSelect={handleSwitch} />
-  </div>
-)}
-```
-
-`KLinePage.tsx`：
-- 顶部加 import：`import { NoContractPicker } from '@/components/NoContractPicker'`。
-- 94-98 行改为：
-
-```tsx
-{!instrumentID && (
-  <div className="kline-page__no-contract">
-    <NoContractPicker contracts={contracts} onSelect={handleSwitch} />
-  </div>
-)}
-```
-
-（`contracts` 与 `handleSwitch` 均已存在；`contracts` 兜底加载 effect KLinePage 已有。）
-
-- [ ] **Step 4: 跑测试验证绿**
-
-Run: 同 Step 2 命令。
-Expected: PASS。
-
-- [ ] **Step 5: 提交**
-
-```bash
-git add frontend/src/components/NoContractPicker frontend/src/pages/OrderPage.tsx frontend/src/pages/KLinePage.tsx frontend/src/pages/OrderPage.test.tsx frontend/src/pages/KLinePage.test.tsx
-git commit -m "feat(pages): 空合约浮窗内嵌合约选择器（NoContractPicker）"
-```
-
----
-
-### Task 6: 自选订阅一致性 — 前端（问题 3）
+### Task 5: 自选订阅一致性 — 前端（问题 3）
 
 **Files:**
 - Modify: `frontend/src/stores/contracts.ts`（收藏不再直连订阅/退订）
@@ -779,7 +548,7 @@ git commit -m "feat(pages): 空合约浮窗内嵌合约选择器（NoContractPic
 - Consumes: `useMarketStore` 新增 `forceResubscribeSeq: number`、`markForceResubscribe(): void`。
 - Produces: `addToFavorites`/`removeFromFavorites` 不再调用 `subscribeMarket`/`unsubscribeMarket`（订阅由管理器 diff 负责）；`useSystemWs` 收到 `connection_status {mdConnected:true}` 时调 `markForceResubscribe()`。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `frontend/src/modules/market/store.test.ts` 追加：
 
@@ -918,12 +687,12 @@ describe('useSystemWs 强制重订阅触发', () => {
 
 （`useSystemWs` 用真实 `useConnectionStore`，其 `setMdPhase`/`setTdPhase` 在测试中无副作用断言。）
 
-- [ ] **Step 2: 跑测试验证红**
+- [x] **Step 2: 跑测试验证红**
 
 Run: `cd frontend && npx vitest run src/modules/market/store.test.ts src/hooks/useSubscriptionManager.test.ts src/stores/contracts.test.ts src/hooks/useSystemWs.test.ts`
 Expected: FAIL — `forceResubscribeSeq` 属性不存在 / 收藏仍调用订阅 API / mdConnected:true 未触发 markForceResubscribe。
 
-- [ ] **Step 3: 最小实现**
+- [x] **Step 3: 最小实现**
 
 `frontend/src/modules/market/store.ts`：
 - 接口加：
@@ -1011,12 +780,12 @@ if (message.type === 'connection_status') {
 
 `services/ws.ts` / `useMarketWs.ts` **保持不动**（强制重订阅不经 WS 打开事件触发）。
 
-- [ ] **Step 4: 跑测试验证绿**
+- [x] **Step 4: 跑测试验证绿**
 
 Run: 同 Step 2 命令 + `cd frontend && npx vitest run src/hooks/useSystemWs.test.ts`。
 Expected: PASS。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add frontend/src/stores/contracts.ts frontend/src/stores/contracts.test.ts frontend/src/modules/market/store.ts frontend/src/modules/market/store.test.ts frontend/src/hooks/useSubscriptionManager.ts frontend/src/hooks/useSubscriptionManager.test.ts frontend/src/hooks/useSystemWs.ts frontend/src/hooks/useSystemWs.test.ts
@@ -1025,7 +794,7 @@ git commit -m "feat(subscription): 收藏统一由订阅管理器管理 + mdConn
 
 ---
 
-### Task 7: 自选订阅一致性 — 后端（问题 3）
+### Task 6: 自选订阅一致性 — 后端（问题 3）
 
 **Files:**
 - Modify: `server/services/market_service.py:216-270`（subscribe 先验证后记录）
@@ -1036,7 +805,7 @@ git commit -m "feat(subscription): 收藏统一由订阅管理器管理 + mdConn
 - Consumes: `subscribe_fn` 返回 `int`（0=成功，非 0=失败）或 `None`（兼容旧测试钩子，视为成功）。
 - Produces: `subscribe()` 在 CTP 失败（抛异常或返回非 0）时不写入 `_subscriptions`，返回 `success:false`。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `server/tests/test_market_service.py`：
 - 更新 `test_subscribe_ctp_fn_exception_returns_failure`（310-321 行）断言 `== 0`：
@@ -1089,7 +858,7 @@ def test_subscribe_ctp_fn_zero_records(self):
 class TestWireBridge:
     """_wire_bridge — 订阅 hook 透传 CTP 返回值（先验证后记录的前提）。"""
 
-    @patch("services.ctp_startup.KLineService")
+    @patch("services.kline_service.KLineService")
     def test_subscribe_hook_returns_ctp_result(self, MockKLine):
         from services.ctp_startup import _wire_bridge
 
@@ -1097,21 +866,22 @@ class TestWireBridge:
         app.state.market_service.get_subscriptions.return_value = ["IF2608"]
         fake_api = _FakeMdApi(config=MagicMock())
         fake_api.subscribe = lambda insts: -1  # CTP 拒绝
+        fake_api.unsubscribe = lambda insts: None
 
         _wire_bridge(app, fake_api, MagicMock())
 
         # set_ctp_hooks 收到的 subscribe_fn 即 _subscribe_with_tracking，
         # 必须透传 CTP 返回值（-1），供 MarketService 先验证后记录
-        subscribe_fn = app.state.market_service.set_ctp_hooks.call_args.args[0]
+        subscribe_fn = app.state.market_service.set_ctp_hooks.call_args.kwargs["subscribe_fn"]
         assert subscribe_fn(["IF2608"]) == -1
 ```
 
-- [ ] **Step 2: 跑测试验证红**
+- [x] **Step 2: 跑测试验证红**
 
-Run: `cd server && python -m pytest tests/test_market_service.py -v`
-Expected: FAIL — `test_subscribe_ctp_fn_exception_returns_failure` 断言 count==1 现仍通过但期望改为 0 而实现未改 → 红；新增两用例失败。
+Run: `cd server && python -m pytest tests/test_market_service.py tests/test_ctp_startup.py -v`
+Expected: FAIL — `test_subscribe_ctp_fn_exception_returns_failure` 断言 count==1 现仍通过但期望改为 0 而实现未改 → 红；新增两用例失败；`TestWireBridge` 透传断言失败。
 
-- [ ] **Step 3: 最小实现**
+- [x] **Step 3: 最小实现**
 
 `server/services/market_service.py` 重写 `subscribe`（216-270 行）：
 
@@ -1201,17 +971,17 @@ app.state.market_service.set_ctp_hooks(
 reconnect_svc.update_subscriptions(app.state.market_service.get_subscriptions())
 ```
 
-- [ ] **Step 4: 跑测试验证绿**
+- [x] **Step 4: 跑测试验证绿**
 
 Run: `cd server && python -m pytest tests/test_market_service.py tests/test_ctp_startup.py -v`
 Expected: PASS（含更新/新增用例）。
 
-- [ ] **Step 5: 全量回归**
+- [x] **Step 5: 全量回归**
 
 Run: `cd server && python -m pytest tests/ -v`
 Expected: 108 个单测全绿。
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 git add server/services/market_service.py server/services/ctp_startup.py server/tests/test_market_service.py server/tests/test_ctp_startup.py
@@ -1222,17 +992,24 @@ git commit -m "fix(market): 订阅先验证后记录 + 重连权威订阅列表�
 
 ## 收尾验证
 
-1. `cd frontend && npm test` — 前端全量绿（469 + 新增用例）。
-2. `cd server && python -m pytest tests/ -v` — 后端全量绿。
+1. `cd frontend && npm test` — 前端全量绿（469 + 本分支新增用例）。
+2. `cd server && python -m pytest tests/ -v` — 除 16 个既有失败（见 Global Constraints，经基线复跑确认与本分支无关）外全绿。
 3. `cd frontend && npm run dev` + `cd server && python start.py` 手动过一遍：
-   - **#1** 行情/期权页随窗口自适应填满（宽屏/窄屏）。
+   - **#1** 行情/期权页随窗口自适应填满（宽屏/窄屏）。⚠️ 待人工浏览器验证（widthMode adaptive 观感，必要时回退弹性尾列）
    - **#2** 行情表横向拖动，「合约」列固定最左。
-   - **#3** 收藏→移除→滚动→重收、以及 CTP 断线重连后，自选/可见合约数据恢复推送。
+   - **#3** 收藏→移除→滚动→重收、以及 CTP 断线重连后，自选/可见合约数据恢复推送。⚠️ 依赖真实 CTP 环境
    - **#4** 右键不同合约，高亮立即切换到该合约。
    - **#5** 拖选/Shift/Ctrl+A，高亮始终唯一（蓝区 + 金锚，无第二高亮区）。
-   - **#6** 无选中合约时从底部工具条打开报单/K线浮窗，窗内可搜索并选中合约后正常渲染。
 
 ## 已完成记录
 
+- `27aaf22` fix(market): 行情表改回固定列宽并放大默认列宽，显式保留每列拖拽缩放（columnResizeMode=all） — Task 2 二次调整（撤销行情页 adaptive）
+- `f43a7cd` fix(market): T型期权表自动填充 — widthMode adaptive + options 链 flex 填充 — Task 2 补充（消除横向留白，浏览器验证待人工）
+- `cf6282b` fix(market): 订阅先验证后记录 + 重连权威订阅列表（消除假成功） — Task 6 ✅
+- `d4b9d88` feat(subscription): 收藏统一由订阅管理器管理 + mdConnected 广播触发强制重订阅兜底 — Task 5 ✅
+- `9879e84` feat(market-table): 高亮统一 — 金色锚点守卫+拖选锚点同步（金在蓝内） — Task 4 ✅
+- `a272691` feat(market-table): 右键选中合约 — 同步蓝区与金色锚点 — Task 3 ✅
+- `232bf25` feat(market): 行情/期权页自动填充 — widthMode adaptive + 高度链修复 — Task 2 ✅（浏览器验证待人工）
+- `2ebb2ef` feat(market-table): 冻结合约列为最左列 (frozenColCount=1) — Task 1 ✅
 - `7306127` docs: 新增行情表填充/合约列冻结/选中态与订阅一致性修复设计文档
 - `48ed839` docs: 问题5高亮方案改为保留金色作活动锚点+选区守卫

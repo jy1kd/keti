@@ -338,3 +338,17 @@ describe('MarketStore - scrollEndSeq', () => {
   })
 })
 
+describe('MarketStore - forceResubscribeSeq', () => {
+  beforeEach(() => {
+    useMarketStore.setState({ forceResubscribeSeq: 0 })
+  })
+
+  it('markForceResubscribe 递增强制重订阅信号', () => {
+    expect(useMarketStore.getState().forceResubscribeSeq).toBe(0)
+    useMarketStore.getState().markForceResubscribe()
+    expect(useMarketStore.getState().forceResubscribeSeq).toBe(1)
+    useMarketStore.getState().markForceResubscribe()
+    expect(useMarketStore.getState().forceResubscribeSeq).toBe(2)
+  })
+})
+

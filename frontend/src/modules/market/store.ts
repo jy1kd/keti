@@ -30,6 +30,10 @@ interface MarketStore {
   scrollEndSeq: number
   /** 标记一次滚动条释放（松手），使订阅管理器立即执行完整 diff */
   markScrollEnd: () => void
+  /** 强制重订阅信号序号（WS 重连后递增；消费后无需重置） */
+  forceResubscribeSeq: number
+  /** 标记一次强制重订阅（WS 连接成功后调用），使订阅管理器清空 subscribedRef 重发全部订阅 */
+  markForceResubscribe: () => void
 }
 
 export const useMarketStore = create<MarketStore>((set) => ({
@@ -133,4 +137,6 @@ export const useMarketStore = create<MarketStore>((set) => ({
     set({ selectedContracts: new Set(instrumentIDs) }),
   scrollEndSeq: 0,
   markScrollEnd: () => set((state) => ({ scrollEndSeq: state.scrollEndSeq + 1 })),
+  forceResubscribeSeq: 0,
+  markForceResubscribe: () => set((state) => ({ forceResubscribeSeq: state.forceResubscribeSeq + 1 })),
 }))

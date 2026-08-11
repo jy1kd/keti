@@ -232,7 +232,7 @@ class MarketService:
                 else:
                     new_instruments.append(inst)
 
-            # Check limit BEFORE adding (atomic check for batch)
+            # Check limit BEFORE calling CTP (atomic check for batch)
             if len(self._subscriptions) + len(new_instruments) > self.MAX_SUBSCRIPTIONS:
                 return {
                     "success": False,
@@ -246,14 +246,12 @@ class MarketService:
                     ),
                 }
 
-            # 先加入本地跟踪（即使 CTP 失败也保留本地状态）
-            for inst in new_instruments:
-                self._subscriptions.add(inst)
-
-        # Call CTP SubscribeMarketData for the new instruments
+        # CTP 订阅成功后才写入本地跟踪（先验证后记录）：
+        # 避免「假成功」——本地已记录但 CTP 实际未订阅 → 前端永不重试 → 永久无数据。
+        # 契约：subscribe_fn 返回 0=成功；非 0=失败；None 兼容旧测试钩子视为成功。
         if new_instruments and self._subscribe_fn is not None:
             try:
-                self._subscribe_fn(new_instruments)
+                ctp_result = self._subscribe_fn(new_instruments)
             except Exception as exc:
                 logger.warning("CTP subscribe failed for %s", new_instruments, exc_info=True)
                 return {
@@ -262,6 +260,19 @@ class MarketService:
                     "alreadySubscribed": already,
                     "message": f"CTP subscribe failed: {exc}",
                 }
+            if ctp_result is not None and ctp_result != 0:
+                logger.warning("CTP subscribe returned %s for %s", ctp_result, new_instruments)
+                return {
+                    "success": False,
+                    "added": 0,
+                    "alreadySubscribed": already,
+                    "message": f"CTP subscribe failed (code={ctp_result})",
+                }
+
+        if new_instruments:
+            with self._lock:
+                for inst in new_instruments:
+                    self._subscriptions.add(inst)
 
         return {
             "success": True,

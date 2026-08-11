@@ -62,25 +62,35 @@ function statusStyle(args: any) {
 }
 
 const columns = [
-  { field: 'instrumentID', title: '合约', width: 110 },
-  { field: 'productName', title: '合约品种', width: 85 },
-  { field: 'exchangeID', title: '交易所', width: 75 },
-  { field: 'volumeMultiple', title: '合约乘数', width: 85 },
-  { field: 'priceTick', title: '最小变动价位', width: 110 },
-  { field: 'expireDate', title: '到期日', width: 100 },
-  { field: 'status', title: '状态', width: 80, style: statusStyle },
-  { field: 'lastPrice', title: '最新价', width: 110, style: coloredStyle },
-  { field: 'change', title: '涨跌', width: 100, style: coloredStyle },
-  { field: 'changePercent', title: '涨跌%', width: 100, style: coloredStyle },
-  { field: 'bidPrice1', title: '买一', width: 110, style: coloredStyle },
-  { field: 'askPrice1', title: '卖一', width: 110, style: coloredStyle },
-  { field: 'volume', title: '成交量', width: 110 },
-  { field: 'openInterest', title: '持仓量', width: 110 },
+  { field: 'instrumentID', title: '合约', width: 130 },
+  { field: 'productName', title: '合约品种', width: 100 },
+  { field: 'exchangeID', title: '交易所', width: 85 },
+  { field: 'volumeMultiple', title: '合约乘数', width: 95 },
+  { field: 'priceTick', title: '最小变动价位', width: 120 },
+  { field: 'expireDate', title: '到期日', width: 115 },
+  { field: 'status', title: '状态', width: 85, style: statusStyle },
+  { field: 'lastPrice', title: '最新价', width: 125, style: coloredStyle },
+  { field: 'change', title: '涨跌', width: 110, style: coloredStyle },
+  { field: 'changePercent', title: '涨跌%', width: 110, style: coloredStyle },
+  { field: 'bidPrice1', title: '买一', width: 125, style: coloredStyle },
+  { field: 'askPrice1', title: '卖一', width: 125, style: coloredStyle },
+  { field: 'volume', title: '成交量', width: 120 },
+  { field: 'openInterest', title: '持仓量', width: 120 },
   { field: 'favorite', title: '⭐', width: 60 },
 ]
 
 const CTP_INVALID_PRICE = 1.7976931348623157e+308
 const isValidPrice = (p: number) => p > 0 && p < CTP_INVALID_PRICE
+
+/** 金色活动锚点是否渲染：仅当锚点合约位于选中选区内（金在蓝内，防双高亮区） */
+export function shouldRenderAnchor(
+  selectedInstrument: string | null | undefined,
+  selectedContracts?: Set<string>,
+): boolean {
+  if (!selectedInstrument) return false
+  if (!selectedContracts || selectedContracts.size === 0) return false
+  return selectedContracts.has(selectedInstrument)
+}
 
 function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, isFavorited: boolean) {
   const productName = getProductName(contract.productID)
@@ -194,7 +204,9 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     const table = new ListTable(containerRef.current, {
       columns,
       records,
+      frozenColCount: 1, // 冻结「合约」列：横向拖动时固定最左侧
       widthMode: 'standard',
+      columnResizeMode: 'all', // 保留每列拖拽缩放：可单独放大/缩小任意列宽
       theme: {
         underlayBackgroundColor: '#0d1117',
         defaultStyle: {
@@ -339,10 +351,13 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       // 如果右键点击的行在多选范围内，且有多选回调，显示多选菜单
       if (selected && selected.size > 1 && selected.has(record.instrumentID) && onMultiSelectContextMenuRef.current) {
         onMultiSelectContextMenuRef.current(Array.from(selected), event)
-      } else if (onContextMenuRef.current) {
-        // 否则显示单选菜单
+      } else {
+        // 右键落在集合外 → 先同步蓝区（单选该合约），再显示单选菜单
+        if (onSelectionChangeRef.current) {
+          onSelectionChangeRef.current(new Set([record.instrumentID]))
+        }
         const price = record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
-        onContextMenuRef.current(record.instrumentID, price, event)
+        onContextMenuRef.current?.(record.instrumentID, price, event)
       }
     })
 
@@ -401,6 +416,9 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       // 如果没有按 Ctrl/Shift，开始新的选择
       if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
         dragSelected = new Set()
+        // 锚点同步：新拖选以起始行为金色活动锚点（金始终在选区内）
+        const startRecord = recordsRef.current[rowIndex]
+        if (startRecord) useMarketStore.getState().setSelectedInstrument(startRecord.instrumentID)
       }
     }
 
@@ -523,9 +541,18 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     tableRef.current.setRecords(recordsRef.current)
   }, [selectedContracts])
 
-  // 高亮选中合约行（rAF 等 vtable setRecords 渲染完成）
+  // 高亮选中合约行（rAF 等 vtable setRecords 渲染完成）；金色活动锚点仅在选区内渲染
   useEffect(() => {
-    if (!tableRef.current || !selectedInstrument) return
+    if (!tableRef.current) return
+    if (!shouldRenderAnchor(selectedInstrument, selectedContracts)) {
+      // 锚点不在选区内 → 清除 vtable 原生金色选中，避免独立高亮区
+      try {
+        tableRef.current.clearSelected()
+      } catch {
+        // vtable 尚未就绪
+      }
+      return
+    }
     const rowIndex = contracts.findIndex((c) => c.instrumentID === selectedInstrument)
     if (rowIndex < 0) return
     const vtableRow = rowIndex + 1
@@ -542,7 +569,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       }
     })
     return () => cancelAnimationFrame(raf)
-  }, [selectedInstrument, contracts])
+  }, [selectedInstrument, selectedContracts, contracts])
 
   return <div ref={containerRef} className="market-table-container" />
 }

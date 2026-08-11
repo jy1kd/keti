@@ -93,6 +93,8 @@ export function useContractContextMenu() {
   const handleContextMenu = useCallback((instrumentID: string, price: number, event: MouseEvent) => {
     event.preventDefault()
     setMultiSelectMenu(null) // 关闭多选菜单
+    // 同步金色活动锚点到右键合约（选中态一致性：金在蓝内）
+    useMarketStore.getState().setSelectedInstrument(instrumentID)
     setContextMenu({ instrumentID, price, x: event.clientX, y: event.clientY })
   }, [])
 

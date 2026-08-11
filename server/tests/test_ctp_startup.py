@@ -283,3 +283,24 @@ class TestStartCtpTradingConnection:
         td_thread = app.state.td_thread
         assert td_thread is not None
         assert td_thread.daemon is True
+
+
+class TestWireBridge:
+    """_wire_bridge — 订阅 hook 透传 CTP 返回值（先验证后记录的前提）。"""
+
+    @patch("services.kline_service.KLineService")
+    def test_subscribe_hook_returns_ctp_result(self, MockKLine):
+        from services.ctp_startup import _wire_bridge
+
+        app = _FakeApp()
+        app.state.market_service.get_subscriptions.return_value = ["IF2608"]
+        fake_api = _FakeMdApi(config=MagicMock())
+        fake_api.subscribe = lambda insts: -1  # CTP 拒绝
+        fake_api.unsubscribe = lambda insts: None
+
+        _wire_bridge(app, fake_api, MagicMock())
+
+        # set_ctp_hooks 收到的 subscribe_fn 即 _subscribe_with_tracking，
+        # 必须透传 CTP 返回值（-1），供 MarketService 先验证后记录
+        subscribe_fn = app.state.market_service.set_ctp_hooks.call_args.kwargs["subscribe_fn"]
+        assert subscribe_fn(["IF2608"]) == -1

@@ -7,7 +7,7 @@
 
 ## 1. 背景
 
-六个 UI/数据一致性问题，均集中在行情模块（`MarketPanel` / `MarketTable`）及其周边（期权页、报单/K线浮窗、订阅管理）：
+五个 UI/数据一致性问题，均集中在行情模块（`MarketPanel` / `MarketTable`）及其周边（期权页、订阅管理）：
 
 | # | 问题 | 现象 |
 |---|------|------|
@@ -16,9 +16,8 @@
 | 3 | 自选偶尔不推数据 | 收藏的自选合约偶尔不推送行情，重新收藏（remove+add）后才恢复 |
 | 4 | 右键不选中 | 右键合约弹出菜单但不选中该合约，高亮仍停在上一左键合约 |
 | 5 | 双高亮区 | 有时屏幕出现两个批量选中高亮区域 |
-| 6 | 空合约浮窗不渲染 | 未选中合约时，经工具栏/顶部菜单打开报单、K线浮窗，窗内无实际内容（仅占位文案） |
 
-**目标**：一次性消除以上 6 个问题，核心原则——**选中态以蓝色选区为唯一数据源（金色活动锚点始终位于选区内）、订阅生命周期单一负责人**。
+**目标**：一次性消除以上 5 个问题，核心原则——**选中态以蓝色选区为唯一数据源（金色活动锚点始终位于选区内）、订阅生命周期单一负责人**。
 
 ---
 
@@ -51,10 +50,6 @@
 
 拖选 / Shift 范围选只改 `selectedContracts`、不改 `selectedInstrument` → 金色单行 + 蓝色多行 = 两个高亮区。
 
-### 2.6 问题 6 — 空合约浮窗不渲染
-
-`OrderPage.tsx:55-64`、`KLinePage.tsx:94-98` 在 `instrumentID` 为空时只渲染「请在行情表格中选择合约后打开…」占位文案，浮窗打开后无可交互内容。
-
 ---
 
 ## 3. 架构决策
@@ -67,8 +62,6 @@
 
 **决策 4 — 重连双保险。** 后端重连恢复用权威 `market_service._subscriptions` 并对账补订；前端收到 `/ws/system` 的 `connection_status {mdConnected:true}`（后端初始登录 `ctp_startup.py:211` 与重连成功 `:364` 都会广播）时触发一次「强制重订阅」（清空 `subscribedRef` 后对全部 `should` 重发一次批量订阅）。治愈时机选「后端 CTP 确认连上」而非「前端 WS 打开」：CTP 重连对浏览器 WS 透明（WS 在浏览器↔FastAPI 之间，不随 CTP 断），故不依赖 ws.ts 增加 onopen 成功回调——`services/ws.ts` 保持不动。
 
-**决策 5 — 空合约浮窗可交互。** 报单/K线浮窗在无 `instrumentID` 时渲染窗内 `ContractSearch`，选中后走既有 `handleSwitch` → `updateTab` 更新 tab props/title → 正文渲染，`useTabContractLocks` 自动锁定订阅。
-
 ---
 
 ## 4. 修改范围
@@ -78,11 +71,12 @@
 | 文件 | 改动 |
 |------|------|
 | `frontend/src/modules/options/OptionPanel.tsx` | 删除 `chainHeight()` 及内联 `style={{ height: chainHeight(...) }}` |
-| `frontend/src/modules/options/styles.css` | `.options-chain-table` 由 `width:100%` 改为 `width:100%; height:100%`——父级 `.options-content` 为 block 且自身 `flex:1` 已撑满可用高度，`height:100%` 即可填充（`flex:1` 在非 flex 容器内不生效故不写）；`.options-panel` 由 `height:100%` 改 `flex:1 1 0; min-height:0` |
+| `frontend/src/modules/options/styles.css` | `.options-panel` 由 `height:100%` 改 `flex:1 1 0; min-height:0`；`.options-content` 改 flex 列容器（`display:flex; flex-direction:column; min-height:0`）；`.options-chain-table` 由 `width:100%` 改 `width:100%; flex:1; min-height:0`——用 flex 填充（与行情页 `.market-table-container` 的 `flex:1` 同模式，避免 `height:100%` 在嵌套 flex 下百分比解析不可靠） |
+| `frontend/src/modules/options/TQuoteTable.tsx` | `widthMode` 由 `'standard'` 改 `'adaptive'`——T型期权页消除横向留白（列宽按容器自适应填满，行权价列随左右列对称增长保持居中） |
 | `frontend/src/modules/market/styles.css` | `.panel-content` 删 `height:100%` 只留 `flex:1; min-height:0; overflow:hidden`；确认 `.market-panel` 用 `flex:1; min-height:0` 兜底（现为 `height:100%`） |
-| `frontend/src/modules/market/MarketTable.tsx` | `widthMode` 由 `'standard'` 改 `'adaptive'`（列宽按容器自适应、填满容器）；若 adaptive 挤压价格列观感不佳，回退「固定列宽 + 末尾弹性列」方案 |
+| `frontend/src/modules/market/MarketTable.tsx` | `widthMode` 保持 `'standard'`（不自动填满，adaptive 实测回退），默认列宽整体放大（1400 → ~1625px）减少宽屏留白；加 `columnResizeMode:'all'` 显式保留每列拖拽缩放 |
 
-> 注：`adaptive` 会把容器宽度分配到各列，可能挤压价格列。实施时优先浏览器验证，观感不佳再改弹性尾列。
+> 注：行情表 adaptive 方案经实测回退为「固定列宽 + 默认列宽放大」；T型期权表仍用 `adaptive`（`widthMode:'adaptive'`）自动填满。
 
 ### 4.2 问题 2 — 合约列冻结
 
@@ -153,13 +147,6 @@ table.on('contextmenu_cell', (args: any) => {
 
 效果：单选金蓝同高亮单行；多选统一为「蓝底金边」的活动行锚点；配 4.4 右键后，左键 / 右键 / 拖选 / Shift / Ctrl+A 的高亮始终唯一。
 
-### 4.6 问题 6 — 空合约浮窗可交互
-
-- `frontend/src/pages/OrderPage.tsx`：两个 `!instrumentID` 分支——**浮窗模式 55-64 与普通标签模式 86-90**——都由占位文案改为窗内合约选择器 `NoContractPicker`，选中后调既有 `handleSwitch`；
-- `frontend/src/pages/KLinePage.tsx:94-98`：`!instrumentID` 分支同样改为窗内 `NoContractPicker`，选中后调既有 `handleSwitch`。
-
-复用现有 `handleSwitch` → `updateTab` 链路，`useTabContractLocks` 在 props 更新后自动锁定订阅。
-
 ---
 
 ## 5. 不修改的文件
@@ -177,7 +164,6 @@ table.on('contextmenu_cell', (args: any) => {
 | `MarketTable.test.tsx` | 右键选中态、`frozenColCount`、`selectRow` 守卫（锚点在/不在选区）断言、`widthMode` |
 | `useSubscriptionManager.test.ts` | 强制重订阅（`forceResubscribeSeq`）分支 |
 | `contracts` store 相关测试 | 去掉直连订阅后 `addToFavorites`/`removeFromFavorites` 行为 |
-| `OrderPage` / `KLinePage` 测试 | 空合约选择器断言 |
 | 后端 `test_market_service.py` | `subscribe()` CTP 失败回滚（`success:false`、不写入 `_subscriptions`）、CTP 返回非 0 不记录、返回 0 记录 |
 | 后端 `test_ctp_startup.py` | 新增 `_wire_bridge` 订阅 hook（`_subscribe_with_tracking`）透传 CTP 返回值用例 |
 | `useSystemWs.test.ts`（新建） | 收到 `connection_status {mdConnected:true}` 触发 `markForceResubscribe` |
@@ -192,13 +178,11 @@ table.on('contextmenu_cell', (args: any) => {
    - **#3** 收藏→移除→滚动→重收、以及 CTP 断线重连后，自选/可见合约数据恢复推送
    - **#4** 右键不同合约，高亮立即切换到该合约
    - **#5** 拖选 / Shift / Ctrl+A 全选，高亮始终唯一（蓝色选区 + 金色活动行锚点，无独立第二高亮区）
-   - **#6** 无选中合约时从底部工具条打开报单/K线浮窗，窗内可搜索并选中合约后正常渲染
 
 ## 8. 实施顺序
 
 1. **问题 2**（独立、最小）：`frozenColCount: 1`
 2. **问题 1**（纯 CSS/配置）：期权表高度、`.panel-content` 高度链、`widthMode`
 3. **问题 4 + 5**（同属选中态重构，一并做）：右键选中 + `selectRow` 守卫与锚点同步
-4. **问题 6**（独立）：空合约浮窗内嵌 ContractSearch
-5. **问题 3**（前后端、改动最大放最后）：前端订阅管理器 + 后端 CTP 返回值校验/重连对账
-6. 全量测试 + 浏览器手动验证
+4. **问题 3**（前后端、改动最大放最后）：前端订阅管理器 + 后端 CTP 返回值校验/重连对账
+5. 全量测试 + 浏览器手动验证

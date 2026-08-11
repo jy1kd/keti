@@ -23,6 +23,7 @@ export function useSubscriptionManager() {
   const lockedContracts = useMarketStore((s) => s.lockedContracts)
   const favorites = useContractsStore((s) => s.favorites)
   const scrollEndSeq = useMarketStore((s) => s.scrollEndSeq)
+  const forceResubscribeSeq = useMarketStore((s) => s.forceResubscribeSeq)
 
   /** 已订阅合约 → 最近可见时间戳（ms） */
   const subscribedRef = useRef<Map<string, number>>(new Map())
@@ -36,6 +37,8 @@ export function useSubscriptionManager() {
   const fullDiffTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** 已消费的滚动松手信号序号（判重，避免重复处理） */
   const lastHandledScrollEndRef = useRef(0)
+  /** 已消费的强制重订阅信号序号（判重，避免重复处理） */
+  const lastHandledForceResubscribeRef = useRef(0)
   /** 始终指向最新 runFullDiff，避免重排定时器闭包捕获旧版本 */
   const runFullDiffRef = useRef<() => void>(() => {})
 
@@ -190,6 +193,20 @@ export function useSubscriptionManager() {
 
   // 可见区变化时：刷新可见合约的 lastVisibleTime，按拖动态分流订阅/完整 diff
   useEffect(() => {
+    // 强制重订阅：WS（重）连接后清空 subscribedRef，对全部 should 重发一次批量订阅，
+    // 一次性治愈后端/CTP 订阅失步（如 CTP 重连后订阅丢失）
+    if (forceResubscribeSeq > lastHandledForceResubscribeRef.current) {
+      lastHandledForceResubscribeRef.current = forceResubscribeSeq
+      subscribedRef.current.clear()
+      recentChangesRef.current = []
+      if (fullDiffTimerRef.current) clearTimeout(fullDiffTimerRef.current)
+      runFullDiff()
+      return () => {
+        if (unsubTimerRef.current) clearTimeout(unsubTimerRef.current)
+        if (fullDiffTimerRef.current) clearTimeout(fullDiffTimerRef.current)
+      }
+    }
+
     // 滚动松手信号：跳过拖动态推断，立即完整 diff
     if (scrollEndSeq > lastHandledScrollEndRef.current) {
       lastHandledScrollEndRef.current = scrollEndSeq
@@ -228,7 +245,7 @@ export function useSubscriptionManager() {
       if (unsubTimerRef.current) clearTimeout(unsubTimerRef.current)
       if (fullDiffTimerRef.current) clearTimeout(fullDiffTimerRef.current)
     }
-  }, [visibleInstrumentIDs, isDragging, runFullDiff, scrollEndSeq])
+  }, [visibleInstrumentIDs, isDragging, runFullDiff, scrollEndSeq, forceResubscribeSeq])
 
   return {
     subscribed: subscribedRef.current,
