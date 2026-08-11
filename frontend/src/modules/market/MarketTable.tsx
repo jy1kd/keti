@@ -340,10 +340,13 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       // 如果右键点击的行在多选范围内，且有多选回调，显示多选菜单
       if (selected && selected.size > 1 && selected.has(record.instrumentID) && onMultiSelectContextMenuRef.current) {
         onMultiSelectContextMenuRef.current(Array.from(selected), event)
-      } else if (onContextMenuRef.current) {
-        // 否则显示单选菜单
+      } else {
+        // 右键落在集合外 → 先同步蓝区（单选该合约），再显示单选菜单
+        if (onSelectionChangeRef.current) {
+          onSelectionChangeRef.current(new Set([record.instrumentID]))
+        }
         const price = record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
-        onContextMenuRef.current(record.instrumentID, price, event)
+        onContextMenuRef.current?.(record.instrumentID, price, event)
       }
     })
 

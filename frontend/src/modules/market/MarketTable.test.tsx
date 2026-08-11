@@ -397,6 +397,54 @@ describe('MarketTable', () => {
     expect(onContextMenu).toHaveBeenCalledWith('au2508', 480.5, expect.any(Object))
   })
 
+  it('右键落在多选集合外时，先把该合约置为单选选中（同步蓝区）', async () => {
+    const onContextMenu = vi.fn()
+    const onSelectionChange = vi.fn()
+    render(
+      <MarketTable
+        contracts={mockContracts}
+        snapshots={mockSnapshots}
+        selectedContracts={new Set(['ag2508'])} // 集合不包含 au2508
+        onSelectionChange={onSelectionChange}
+        onContextMenu={onContextMenu}
+      />
+    )
+    const { ListTable } = await import('@visactor/vtable')
+    const tableInstance = (ListTable as any).mock.results[0].value
+    const contextmenuHandler = tableInstance.on.mock.calls.find(
+      (call: any[]) => call[0] === 'contextmenu_cell'
+    )?.[1]
+
+    contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200 } }) // row1 → au2508
+
+    expect(onSelectionChange).toHaveBeenCalledWith(new Set(['au2508']))
+    expect(onContextMenu).toHaveBeenCalledWith('au2508', 480.5, expect.any(Object))
+  })
+
+  it('右键命中多选集合内时保持集合不变，显示多选菜单', async () => {
+    const onMultiSelectContextMenu = vi.fn()
+    const onSelectionChange = vi.fn()
+    render(
+      <MarketTable
+        contracts={mockContracts}
+        snapshots={mockSnapshots}
+        selectedContracts={new Set(['au2508', 'ag2508'])}
+        onSelectionChange={onSelectionChange}
+        onMultiSelectContextMenu={onMultiSelectContextMenu}
+      />
+    )
+    const { ListTable } = await import('@visactor/vtable')
+    const tableInstance = (ListTable as any).mock.results[0].value
+    const contextmenuHandler = tableInstance.on.mock.calls.find(
+      (call: any[]) => call[0] === 'contextmenu_cell'
+    )?.[1]
+
+    contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200 } }) // au2508 在集合内
+
+    expect(onSelectionChange).not.toHaveBeenCalled()
+    expect(onMultiSelectContextMenu).toHaveBeenCalledWith(['au2508', 'ag2508'], expect.any(Object))
+  })
+
   it('右键点击无行情的合约时 price 为 0', async () => {
     const onContextMenu = vi.fn()
     render(

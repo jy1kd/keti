@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { useContractContextMenu } from './useContractContextMenu'
 import { useTabStore } from '@/stores/tabs'
+import { useMarketStore } from '@/modules/market/store'
 import { openFloatingTab } from '@/utils/openFloatingTab'
 
 // Mock 统一浮动窗入口：openOrderPopup/openQueryPopup 现为打开浮动窗口
@@ -100,6 +101,19 @@ describe('useContractContextMenu', () => {
 
     expect(preventDefault).toHaveBeenCalled()
     expect(result.current.contextMenu).toEqual({ instrumentID: 'IF2608', price: 4695, x: 120, y: 240 })
+  })
+
+  it('handleContextMenu 同步 selectedInstrument 到右键合约（金色锚点）', () => {
+    useMarketStore.setState({ selectedInstrument: null })
+    const { result } = renderHook(() => useContractContextMenu())
+    act(() => {
+      result.current.handleContextMenu('IF2608', 4695, {
+        preventDefault: vi.fn(),
+        clientX: 120,
+        clientY: 240,
+      } as unknown as MouseEvent)
+    })
+    expect(useMarketStore.getState().selectedInstrument).toBe('IF2608')
   })
 
   it('点击空白处关闭右键菜单', () => {
