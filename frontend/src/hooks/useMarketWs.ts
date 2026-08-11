@@ -131,7 +131,7 @@ export function useMarketWs(wsBaseUrl: string) {
   }
 
   const ws = globalWs
-  const periodMs = PERIOD_MS[currentPeriod] ?? PERIOD_MS['5m']
+  const periodMs = PERIOD_MS[currentPeriod] ?? PERIOD_MS['1m']
 
   // 定时刷新缓冲区
   useEffect(() => {

@@ -72,7 +72,7 @@ export function KLinePage({ instrumentID, tabId }: KLinePageProps) {
     getKlineData(instrumentID, currentPeriod, 200)
       .then((res) => {
         if (res.bars?.length) {
-          const periodMs = PERIOD_MS[currentPeriod] ?? PERIOD_MS['5m'];
+          const periodMs = PERIOD_MS[currentPeriod] ?? PERIOD_MS['1m'];
           const aligned = res.bars.map((bar) => ({
             ...bar,
             timestamp: Math.floor(bar.timestamp / periodMs) * periodMs,

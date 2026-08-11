@@ -119,20 +119,22 @@ describe('TradeParams（任务#4）', () => {
   })
 
   describe('快捷手数（P3 QtyPreset 集成）', () => {
-    it('点击预设 → 手数设为预设值 + 步进设为预设值', () => {
+    it('点击预设 → 手数保持不变、步进设为预设值', () => {
       render(<TradeParams instrumentID="IF2608" />)
+      // beforeEach 手数为 1；点 20 只改步进，不改手数
       fireEvent.click(screen.getByTestId('qty-preset-20'))
-      expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(20)
+      expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(1)
       expect(useOrderStore.getState().volumeStep).toBe(20)
     })
 
-    it('步进 +/− 按 volumeStep（点 20 → + → 40 → − → 20）', () => {
+    it('步进 +/− 按 volumeStep（手数 5 点 20 → + → 25 → − → 5）', () => {
+      setForm({ volumeTotalOriginal: 5 })
       render(<TradeParams instrumentID="IF2608" />)
       fireEvent.click(screen.getByTestId('qty-preset-20'))
       fireEvent.click(screen.getByTestId('tp-volume-up'))
-      expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(40)
+      expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(25)
       fireEvent.click(screen.getByTestId('tp-volume-down'))
-      expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(20)
+      expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(5)
     })
 
     it('手动输入手数不改变步进（步进 20 → 输入 35 → + → 55）', () => {
@@ -144,8 +146,8 @@ describe('TradeParams（任务#4）', () => {
       expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(55)
     })
 
-    it('市价 limit 60：点 20 步进 → + → 40 → + → 60 到顶禁用', () => {
-      setForm({ orderPriceType: 'market' })
+    it('市价 limit 60：手数 20 步进 20 → + → 40 → + → 60 到顶禁用', () => {
+      setForm({ orderPriceType: 'market', volumeTotalOriginal: 20 })
       render(<TradeParams instrumentID="IF2608" />)
       fireEvent.click(screen.getByTestId('qty-preset-20'))
       fireEvent.click(screen.getByTestId('tp-volume-up'))
@@ -154,11 +156,11 @@ describe('TradeParams（任务#4）', () => {
       expect(screen.getByTestId('tp-volume-up')).toBeDisabled()
     })
 
-    it('市价 limit 60：点 100 预设 → 手数钳制到 60、步进为 100', () => {
+    it('点 100 预设 → 手数不变（不钳制手数）、步进为 100', () => {
       setForm({ orderPriceType: 'market' })
       render(<TradeParams instrumentID="IF2608" />)
       fireEvent.click(screen.getByTestId('qty-preset-100'))
-      expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(60)
+      expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(1)
       expect(useOrderStore.getState().volumeStep).toBe(100)
     })
   })

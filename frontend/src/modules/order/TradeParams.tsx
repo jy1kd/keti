@@ -226,12 +226,10 @@ export function TradeParams({ instrumentID, onSwitch }: TradeParamsProps) {
 
       <div className="tp-row">
         <span className="tp-row__label">快捷</span>
+        {/* 点快捷只改步进基准，不改手数（用户手数保留） */}
         <QtyPreset
           step={volumeStep}
-          onSelect={(raw) => {
-            setOrderForm({ volumeTotalOriginal: Math.min(volumeLimit, raw) })
-            setVolumeStep(raw)
-          }}
+          onSelect={(raw) => setVolumeStep(raw)}
         />
       </div>
 

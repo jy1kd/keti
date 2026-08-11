@@ -60,6 +60,7 @@
 - `KLineChart`：`instrument={instrumentID ?? ''}`、`latestPrice` 空态 `--`、`klineData={[]}`（空网格）。
 - 搜索框 `ContractSearch`：`placeholder={instrumentID ? undefined : '请选择合约'}`，`initialQuery={instrumentID ?? ''}`。
 - 选合约后经现有 `handleSwitch` 更新标签 props/标题（`key=instrumentID` 重挂载搜索框回显）。
+- K线默认周期改为 **1m**（`market store.currentPeriod` 默认 `'1m'`，`PERIOD_MS` 回退同步为 `1m`）。
 
 ### 1.7 占位符统一为 `--`
 
@@ -84,7 +85,7 @@
 - `−`：`Math.max(1, volume - volumeStep)`。
 - 输入框 `step={volumeStep}`（原生微调箭头同步）。
 - 手动输入 onChange 只改手数、不改步进。
-- 快捷栏 `QtyPreset` 点击 `p`：`setOrderForm({ volumeTotalOriginal: Math.min(volumeLimit, p) })` + `setVolumeStep(p)`（step 用原始预设值，手数用钳制值，如市价 limit 60 点 100 → 手数 60、步进 100）。
+- 快捷栏 `QtyPreset` 点击 `p`：**只** `setVolumeStep(p)`（手数保持不变，仅改变 `+/-` 的步进；不再钳制/改写手数）。
 
 ### 2.3 QtyPreset — 高亮跟随 step
 
@@ -94,7 +95,7 @@
 - 高亮 `value === p` → `step === p`：点 20 后持续高亮 20（手数 + 到 40 仍高亮），直到点其他快捷。
 - 每个按钮 `onClick={() => onSelect(p)}`。
 
-**行为示例**：点 `20` → 手数 20、20 高亮 → `+` → 40 → `+` → 60 → `−` → 40。点 `1` → 手数 1、1 高亮 → `+` → 2。
+**行为示例**：手数 5 时点 `20` → 手数仍 5、20 高亮（步进 20）→ `+` → 25 → `+` → 45 → `−` → 25。点 `1` → 步进 1、1 高亮 → `+` → 26。
 
 ## §3 测试与边界
 
