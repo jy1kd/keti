@@ -25,6 +25,7 @@ describe('OrderStore', () => {
       orderForm: { ...DEFAULT_ORDER_FORM },
       isSubmitting: false,
       lastSubmitError: null,
+      volumeStep: 1,
     })
     vi.clearAllMocks()
   })
@@ -285,5 +286,33 @@ describe('OrderStore', () => {
 
     expect(result).toBe(false)
     expect(toast.error).toHaveBeenCalledWith('撤单失败：网络异常')
+  })
+
+  // --- volumeStep（步进基准） ---
+
+  it('默认步进基准为 1', () => {
+    expect(useOrderStore.getState().volumeStep).toBe(1)
+  })
+
+  it('setVolumeStep 写入步进基准', () => {
+    useOrderStore.getState().setVolumeStep(20)
+    expect(useOrderStore.getState().volumeStep).toBe(20)
+  })
+
+  it('resetOrderForm 重置手数为 1 但保持步进基准', () => {
+    useOrderStore.getState().setVolumeStep(20)
+    useOrderStore.getState().setOrderForm({ volumeTotalOriginal: 5 })
+    useOrderStore.getState().resetOrderForm()
+    expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(1)
+    expect(useOrderStore.getState().volumeStep).toBe(20)
+  })
+
+  it('submitOrder 成功后手数记忆且步进基准保持', async () => {
+    vi.mocked(mockSubmitOrder).mockResolvedValue({ success: true, orderRef: 'ORD-003' })
+    useOrderStore.getState().setVolumeStep(20)
+    useOrderStore.getState().setOrderForm({ instrumentID: 'IF2608', limitPrice: 4800, volumeTotalOriginal: 3 })
+    await useOrderStore.getState().submitOrder()
+    expect(useOrderStore.getState().volumeStep).toBe(20)
+    expect(useOrderStore.getState().orderForm.volumeTotalOriginal).toBe(3)
   })
 })

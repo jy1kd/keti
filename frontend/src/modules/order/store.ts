@@ -24,8 +24,11 @@ interface OrderStore {
   isSubmitting: boolean
   /** 最近一次报单失败原因（P3 乐观渲染失败回滚时顶部红条展示）；无失败为 null */
   lastSubmitError: string | null
+  /** 手数步进基准（快捷手数选中值；+/- 按此步进）。独立字段，不进 orderForm，报单后不重置 */
+  volumeStep: number
   setSelectedInstrument: (instrument: string | null) => void
   setOrderForm: (partial: Partial<OrderRequestForm>) => void
+  setVolumeStep: (step: number) => void
   resetOrderForm: () => void
   submitOrder: () => Promise<boolean>
   submitStopOrder: (triggerPriceType?: 'limit' | 'market') => Promise<boolean>
@@ -37,6 +40,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   orderForm: { ...DEFAULT_ORDER_FORM },
   isSubmitting: false,
   lastSubmitError: null,
+  volumeStep: 1,
 
   // 选中合约时更新 instrumentID 和 exchangeID，保留用户已选择的方向/开平设置
   setSelectedInstrument: (instrument) => {
@@ -61,6 +65,8 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   setOrderForm: (partial) => {
     set({ orderForm: { ...get().orderForm, ...partial } })
   },
+
+  setVolumeStep: (step) => set({ volumeStep: step }),
 
   resetOrderForm: () => {
     set({ orderForm: { ...DEFAULT_ORDER_FORM } })
