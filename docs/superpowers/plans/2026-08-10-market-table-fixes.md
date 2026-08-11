@@ -231,7 +231,7 @@ git commit -m "feat(market): 行情/期权页自动填充 — widthMode adaptive
 - Consumes: `onSelectionChangeRef.current`（已有）、`useMarketStore.getState().setSelectedInstrument`（已有）。
 - Produces: 右键落在集合外 → `selectedContracts={id}` + `selectedInstrument=id`；右键命中集合内 → 保持集合。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 `MarketTable.test.tsx` 在「右键点击时调用 onContextMenu 并传入合约信息」（367 行）附近追加：
 
@@ -304,12 +304,12 @@ it('handleContextMenu 同步 selectedInstrument 到右键合约（金色锚点�
 })
 ```
 
-- [ ] **Step 2: 跑测试验证红**
+- [x] **Step 2: 跑测试验证红**
 
 Run: `cd frontend && npx vitest run src/modules/market/MarketTable.test.tsx src/hooks/useContractContextMenu.test.ts`
 Expected: FAIL — 右键后 `onSelectionChange` 未被调用；`selectedInstrument` 未变。
 
-- [ ] **Step 3: 最小实现**
+- [x] **Step 3: 最小实现**
 
 `MarketTable.tsx` `contextmenu_cell`（331-347 行）的 else 分支加一行：
 
@@ -338,12 +338,12 @@ const handleContextMenu = useCallback((instrumentID: string, price: number, even
 
 （`useMarketStore` 已在文件第 3 行导入。）
 
-- [ ] **Step 4: 跑测试验证绿**
+- [x] **Step 4: 跑测试验证绿**
 
 Run: 同 Step 2 命令。
 Expected: PASS。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add frontend/src/modules/market/MarketTable.tsx frontend/src/modules/market/MarketTable.test.tsx frontend/src/hooks/useContractContextMenu.ts frontend/src/hooks/useContractContextMenu.test.ts
@@ -996,6 +996,7 @@ git commit -m "fix(market): 订阅先验证后记录 + 重连权威订阅列表�
 
 ## 已完成记录
 
+- `a272691` feat(market-table): 右键选中合约 — 同步蓝区与金色锚点 — Task 3 ✅
 - `232bf25` feat(market): 行情/期权页自动填充 — widthMode adaptive + 高度链修复 — Task 2 ✅（浏览器验证待人工）
 - `2ebb2ef` feat(market-table): 冻结合约列为最左列 (frozenColCount=1) — Task 1 ✅
 - `7306127` docs: 新增行情表填充/合约列冻结/选中态与订阅一致性修复设计文档
