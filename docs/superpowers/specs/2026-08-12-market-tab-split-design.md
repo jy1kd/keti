@@ -73,6 +73,8 @@ interface QuoteRecord {
 
 **通用机制迁入**（从现 `MarketTable` 原样搬移，行为不变）：vtable 虚拟滚动、按行快照引用的局部刷新、可见区通知+预加载、单击/双击/Shift范围/Ctrl增减/拖选/Ctrl+A、金色锚点守卫 `shouldRenderAnchor`、右键菜单（单选/多选）、收藏列、滚动松手 `markScrollEnd`。
 
+**调用边界**：面板先经 4.4 数据管道（排序/分组→全部/自选→筛选→仅交易中→搜索）得出有序过滤列表，再调 `spec.buildRecords` 映射为行。排序/分组在源头一次成型，过滤只剔除行不重排——期权分组在 `buildRecords` 内对过滤后的子集执行时，因过滤保持相对顺序，结果仍有序，故「排序最先」与「分组在 buildRecords 内」不冲突。
+
 - **期货 spec**：`contracts.filter(productClass==='1')` → 排序 → 扁平记录，列结构沿用现状（合约/品种/交易所/乘数/最小变动价位/到期日/状态/最新价/涨跌/涨跌%/买一/卖一/成交量/持仓量/⭐）。
 - **期权 spec**：`productClass in ('2','6')` → 按 `underlyingInstrID` 分组展平：
   - 每标底一条 `kind:'underlying'` 行（深色底+上方分隔线，「类型」列显示弱化「标」标签）+ 其后若干 `kind:'option'` 行（缩进一格）
