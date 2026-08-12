@@ -4,7 +4,7 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Request, HTTPException
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -40,19 +40,30 @@ class InsertOrderRequest(BaseModel):
     exchangeID: str = Field(default="CFFEX",
                             description="交易所（CFFEX/SHFE/CZCE/DCE/INE/GFEX）")
 
-    @field_validator("volumeTotalOriginal")
-    @classmethod
-    def validate_volume(cls, v, info):
-        """校验数量上限：市价期货≤60/期权≤30，限价期货≤500/期权≤100。"""
-        product_class = info.data.get("productClass", "1")
-        price_type = info.data.get("priceType", "2")
-        if price_type == "1":  # 市价
-            limit = 30 if product_class == "2" else 60
-        else:  # 限价
-            limit = 100 if product_class == "2" else 500
-        if v > limit:
-            raise ValueError(f"数量超限: 最大{limit}手")
-        return v
+    @model_validator(mode="after")
+    def validate_compliance(self):
+        """合规校验：数量上限 + 市价保护价/限价价格必填。
+
+        数量上限不能放在 volumeTotalOriginal 的 field_validator：Pydantic v2
+        按声明顺序校验字段，productClass（后声明）在此时尚未校验，info.data
+        取到的总是默认值 "1" —— 期权合约（productClass='2'）的 100/30 上限
+        永不生效。改用 mode="after" 时 self 已含全部字段的最终值。
+        """
+        is_market = self.priceType == "1"
+        product_class = self.productClass
+        # 数量上限：市价期货≤60/期权≤30，限价期货≤500/期权≤100
+        volume_limit = (30 if product_class == "2" else 60) if is_market \
+            else (100 if product_class == "2" else 500)
+        if self.volumeTotalOriginal > volume_limit:
+            raise ValueError(f"数量超限: 最大{volume_limit}手")
+        # 市价单必须填保护价；限价单价格必须 > 0
+        if is_market:
+            if self.stopPrice <= 0:
+                raise ValueError("市价指令必须填写保护价")
+        else:
+            if self.limitPrice <= 0:
+                raise ValueError("限价指令价格必须大于 0")
+        return self
 
     @model_validator(mode="after")
     def validate_time_volume_condition(self):

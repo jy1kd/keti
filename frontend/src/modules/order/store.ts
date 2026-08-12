@@ -122,6 +122,9 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     if (volumeErr) {
       return fail(volumeErr)
     }
+    // 透传 productClass 给服务端：期权合约(2)的数量上限(限价100/市价30)由
+    // 服务端权威校验兜底（防止绕过前端直接提交超限单）
+    submitForm = { ...submitForm, productClass }
 
     // 保护价涨跌停校验（市价单）
     if (submitForm.orderPriceType === 'market' && submitForm.stopPrice) {

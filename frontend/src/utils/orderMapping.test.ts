@@ -269,4 +269,36 @@ describe('convertOrderRequest', () => {
       volumeTotalOriginal: 3,
     })
   })
+
+  it('passes through productClass when present (期权数量上限服务端校验)', () => {
+    const form = {
+      instrumentID: 'IF2608-C-3900',
+      direction: 'buy' as const,
+      combOffsetFlag: 'open' as const,
+      orderPriceType: 'limit' as const,
+      timeCondition: 'gfd' as const,
+      limitPrice: 50.0,
+      volumeTotalOriginal: 1,
+      productClass: '2',
+    }
+
+    const result = convertOrderRequest(form)
+
+    expect(result.productClass).toBe('2')
+  })
+
+  it('omits productClass when not provided (期货默认)', () => {
+    const form = {
+      instrumentID: 'IF2608',
+      direction: 'buy' as const,
+      combOffsetFlag: 'open' as const,
+      orderPriceType: 'limit' as const,
+      timeCondition: 'gfd' as const,
+      limitPrice: 4800.0,
+      volumeTotalOriginal: 1,
+    }
+
+    const result = convertOrderRequest(form)
+    expect(result.productClass).toBeUndefined()
+  })
 })
