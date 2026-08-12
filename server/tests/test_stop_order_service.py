@@ -266,6 +266,7 @@ class TestStopOrderTrigger:
             "lastPrice": 4789.0,
         }
         service.on_market_data("IF2608", 4789.0)
+        service.wait_for_pending_triggers()
         orders = service.list_orders()
         assert orders[0]["status"] == "triggered"
 
@@ -286,6 +287,7 @@ class TestStopOrderTrigger:
             limit_price=4780.0, volume=1, stop_price=4790.0,
         )
         service.on_market_data("IF2608", 4791.0)
+        service.wait_for_pending_triggers()
         orders = service.list_orders()
         assert orders[0]["status"] == "triggered"
 
@@ -306,6 +308,7 @@ class TestStopOrderTrigger:
             limit_price=4800.0, volume=1, stop_price=4790.0,
         )
         service.on_market_data("IF2608", 4789.0)
+        service.wait_for_pending_triggers()
         mock_order_manager.insert.assert_called_once()
 
     def test_trigger_records_order_ref(self, service, mock_order_manager):
@@ -318,6 +321,7 @@ class TestStopOrderTrigger:
             limit_price=4800.0, volume=1, stop_price=4790.0,
         )
         service.on_market_data("IF2608", 4789.0)
+        service.wait_for_pending_triggers()
         orders = service.list_orders()
         assert orders[0]["orderRef"] == "ref-123"
 
@@ -331,6 +335,7 @@ class TestStopOrderTrigger:
             limit_price=4800.0, volume=1, stop_price=4790.0,
         )
         service.on_market_data("IF2608", 4789.0)
+        service.wait_for_pending_triggers()
         orders = service.list_orders()
         assert orders[0]["status"] == "trigger_failed"
 
@@ -342,6 +347,7 @@ class TestStopOrderTrigger:
         )
         # Price gaps down to 4700 (well below stop 4790)
         service.on_market_data("IF2608", 4700.0)
+        service.wait_for_pending_triggers()
         orders = service.list_orders()
         assert orders[0]["status"] == "triggered"
 
@@ -370,6 +376,7 @@ class TestStopOrderTrigger:
 
         # First trigger
         service.on_market_data("IF2608", 4789.0)
+        service.wait_for_pending_triggers()
         orders = service.list_orders()
         assert orders[0]["status"] == "triggered"
 
@@ -395,11 +402,44 @@ class TestStopOrderTrigger:
         for t in threads:
             t.join()
 
+        service.wait_for_pending_triggers()
+
         # Should only have triggered once
         orders = service.list_orders()
         assert orders[0]["status"] == "triggered"
         # OrderManager.insert should have been called only once
         assert mock_order_manager.insert.call_count == 1
+
+    def test_on_market_data_does_not_block_on_slow_insert(self, service, mock_order_manager):
+        """触发报单不在 MD 回调线程执行 — insert 阻塞时 on_market_data 也快速返回。
+
+        回归测试：修复前 _trigger_order 在回调线程内 insert(wait_response=True)
+        阻塞最长 3s，全品种行情停摆。修复后触发只入队，由工作线程执行。
+        """
+        import time as _time
+
+        def slow_insert(**kwargs):
+            _time.sleep(0.5)  # 模拟 insert 等待 CTP 回报阻塞
+            return {"success": True, "orderRef": "ref-slow", "message": "Accepted"}
+
+        mock_order_manager.insert.side_effect = slow_insert
+
+        service.submit(
+            instrument_id="IF2608", direction="0", offset_flag="0",
+            limit_price=4800.0, volume=1, stop_price=4790.0,
+        )
+
+        start = _time.monotonic()
+        service.on_market_data("IF2608", 4789.0)
+        elapsed = _time.monotonic() - start
+        # on_market_data 只入队，应立即返回（远小于 insert 的 0.5s 阻塞时间）
+        assert elapsed < 0.2
+
+        # 工作线程随后完成触发，状态正确
+        service.wait_for_pending_triggers()
+        orders = service.list_orders()
+        assert orders[0]["status"] == "triggered"
+        assert orders[0]["orderRef"] == "ref-slow"
 
 
 # ── StopOrderService: WebSocket broadcast ───────────────────────────────────
@@ -441,6 +481,7 @@ class TestStopOrderBroadcast:
         )
         broadcast_fn.reset_mock()
         service.on_market_data("IF2608", 4789.0)
+        service.wait_for_pending_triggers()
         # Should broadcast at least once (trigger + order result)
         assert broadcast_fn.call_count >= 1
 
@@ -506,6 +547,7 @@ class TestStopOrderPersistence:
         )
         # Trigger it
         svc1.on_market_data("IF2608", 4789.0)
+        svc1.wait_for_pending_triggers()
 
         svc2 = StopOrderService(
             data_dir=tmp_data_dir,
@@ -533,6 +575,7 @@ class TestStopOrderMultipleInstruments:
         )
         # Only IF2608 drops below its stop
         service.on_market_data("IF2608", 4789.0)
+        service.wait_for_pending_triggers()
         orders = service.list_orders()
         if2608 = [o for o in orders if o["instrumentID"] == "IF2608"][0]
         if2609 = [o for o in orders if o["instrumentID"] == "IF2609"][0]
