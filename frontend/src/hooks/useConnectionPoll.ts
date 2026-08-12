@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useConnectionStore } from '@/stores/connection'
 import { getConnectionStatus } from '@/services/api'
+import { getTradingSessionStatus } from '@/utils/tradingSession'
 
 /** 轮询间隔（毫秒） */
 const POLL_INTERVAL_MS = 10_000
@@ -30,7 +31,11 @@ export function useConnectionPoll() {
         // 仅首次与变化时打印，避免每 10s 刷屏
         if (status.mdFront && status.mdFront !== lastMdFrontRef.current) {
           lastMdFrontRef.current = status.mdFront
-          console.info(`[CTP 行情前置] ${status.mdFront}${status.mdConnected ? ' (connected)' : ' (disconnected)'}`)
+          // 末尾标注当前是否在交易时段（与后端 start.py 判定一致，便于区分
+          // “已连但非交易时段无行情”属正常）
+          console.info(
+            `[CTP 行情前置] ${status.mdFront}${status.mdConnected ? ' (connected)' : ' (disconnected)'} [${getTradingSessionStatus()}]`,
+          )
         }
       } catch {
         // 网络错误 → 忽略，下一轮轮询会重试
