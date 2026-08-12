@@ -19,6 +19,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
+from queue import Queue
 from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -129,8 +130,51 @@ class StopOrderService:
         self._lock = threading.Lock()
         self._broadcast_fn: Optional[Callable[[str, dict], None]] = None
 
+        # 触发报单执行队列：止损触发在 MD 行情回调线程上判定，但 insert() 默认
+        # wait_response=True 会阻塞最长 3s（event.wait）——若在回调线程内执行，
+        # 期间所有合约的行情 tick 均无法处理。因此触发只入队，由单一 daemon
+        # 工作线程串行执行（同时避免并发 ReqOrderInsert 的 CTP 非线程安全）。
+        self._trigger_queue: "Queue[tuple]" = Queue()
+        self._trigger_inflight = 0  # 进行中的触发数（wait_for_pending_triggers 用）
+        self._start_trigger_worker()
+
         # Load pending orders from disk
         self._load_from_disk()
+
+    # ── Trigger execution worker ───────────────────────────────────────────
+
+    def _start_trigger_worker(self) -> None:
+        """Start the single daemon worker that executes triggered stop orders."""
+
+        def _run() -> None:
+            while True:
+                order, last_price = self._trigger_queue.get()
+                with self._lock:
+                    self._trigger_inflight += 1
+                try:
+                    self._execute_trigger(order, last_price)
+                except Exception:
+                    logger.error("Stop order trigger execution failed: id=%s",
+                                 order.stop_order_id, exc_info=True)
+                finally:
+                    with self._lock:
+                        self._trigger_inflight -= 1
+
+        threading.Thread(target=_run, name="stop-order-trigger", daemon=True).start()
+
+    def wait_for_pending_triggers(self, timeout: float = 5.0) -> None:
+        """Block until all currently-queued trigger executions finish.
+
+        Used by tests to make async trigger execution deterministic, and by
+        shutdown paths to ensure pending triggers are drained before exit.
+        """
+        import time
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            with self._lock:
+                if self._trigger_queue.empty() and self._trigger_inflight == 0:
+                    return
+            time.sleep(0.005)
 
     # ── Broadcast hook ──────────────────────────────────────────────────────
 
@@ -265,6 +309,16 @@ class StopOrderService:
         logger.info("Stop order triggered: id=%s instrument=%s price=%s stop=%s",
                      order.stop_order_id, order.instrument_id, last_price, order.stop_price)
 
+        # 只入队：实际报单在 daemon 工作线程串行执行，MD 回调线程立即返回，
+        # 不再阻塞行情分发（insert 默认 wait_response=True 会等回报最长 3s）。
+        self._trigger_queue.put((order, last_price))
+
+    def _execute_trigger(self, order: StopOrder, last_price: float) -> None:
+        """Execute a triggered stop order (runs on the trigger worker thread).
+
+        与 _trigger_order 分离：阻塞式 insert 与状态更新不在 MD 行情回调线程执行，
+        避免全品种行情因单笔止损触发而停摆。
+        """
         # Submit the actual order
         # 市价触发：limitPrice 作为保护价传给 stop_price（CTP 市价单忽略 LimitPrice）
         # 限价触发：limitPrice 作为委托价传给 limit_price

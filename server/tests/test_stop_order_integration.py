@@ -53,6 +53,7 @@ class TestStopOrderIntegration:
             limit_price=4800.0, volume=1, stop_price=4790.0,
         )
         svc.on_market_data("IF2608", 4789.0)
+        svc.wait_for_pending_triggers()
         mock_order_manager.insert.assert_called_once()
 
     def test_stop_service_broadcast_wired(self, app_with_stop_service):
