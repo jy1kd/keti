@@ -143,7 +143,8 @@ table.on('contextmenu_cell', (args: any) => {
 - **保留** `selectRow` 金色高亮 effect（`MarketTable.tsx:527-545`）；
 - **加守卫**：仅当 `selectedInstrument ∈ selectedContracts` 才调用 `selectRow`；否则跳过（锚点被移出选区时金色消失，只剩蓝色选区）；
 - 蓝色选区高亮只读 `selectedContracts`（`bodyStyle.bgColor`，`MarketTable.tsx:222-229`），保留 `selectedContracts` 变化时的 `setRecords` 重绘 effect（`MarketTable.tsx:518-524`）；
-- **锚点同步**：多选交互把 `selectedInstrument` 更新为选区内的活动行——拖选 → 拖选起始行；Shift 范围选 / Ctrl 点击 → 点击行（现有 `click_cell` 的 `onClickRef` 已隐式触发 `setSelectedInstrument`）；单选 → 该行。
+- **锚点同步**：多选交互把 `selectedInstrument` 更新为选区内的活动行——Shift 范围选 / Ctrl 点击 → 点击行（`click_cell` 的 `onClickRef` 已隐式触发 `setSelectedInstrument`）；单选 → 该行；**普通拖选 → 不设金色锚点**（批量操作：首次 `mousemove` 时 `setSelectedInstrument(null)` 清掉锚点，拖选结束仅保留蓝色选区，金色不残留——否则拖选会把金色锚点钉在起始行，用户无法消除）。
+- **禁用 vtable 原生拖选扩展**（`select: { disableDragSelect: true }`）：拖选的蓝色选区由 window 监听（`handleMouseDown`/`handleMouseMove`）计算，金色由 `selectRow`/`clearSelected` 唯一控制；若不关掉，原生 mousemove 会把选中扩展成金色矩形，与锚点 RAF `selectRow` 竞态，二次拖选时金色矩形可能定格滞留（锚点在选区内 → `clearSelected` 永不触发 → 无法清除）。
 
 效果：单选金蓝同高亮单行；多选统一为「蓝底金边」的活动行锚点；配 4.4 右键后，左键 / 右键 / 拖选 / Shift / Ctrl+A 的高亮始终唯一。
 
