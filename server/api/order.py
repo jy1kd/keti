@@ -1,5 +1,6 @@
 """Order API — submit, cancel, query orders (PR-9)."""
 
+import asyncio
 import logging
 from typing import Optional
 
@@ -174,7 +175,10 @@ async def insert_order(request: Request, body: InsertOrderRequest):
         return {"success": False, "orderRef": "", "message": "TD not connected — call /api/connection/login first"}
 
     om = request.app.state.order_manager
-    result = om.insert(
+    # om.insert 默认 wait_response=True 阻塞等回报（≤3s），移出事件循环，
+    # 避免登录/批量撤单期间行情 WS 广播与其它 REST 请求停摆。
+    loop = asyncio.get_running_loop()
+    result = await loop.run_in_executor(None, lambda: om.insert(
         instrument_id=body.instrumentID,
         exchange_id=body.exchangeID,
         direction=body.direction,
@@ -186,7 +190,7 @@ async def insert_order(request: Request, body: InsertOrderRequest):
         volume_condition=body.volumeCondition,
         hedge_flag=body.hedgeFlag,
         stop_price=body.stopPrice,
-    )
+    ))
     return result
 
 
@@ -200,7 +204,11 @@ async def cancel_order(request: Request, body: CancelOrderRequest):
     om = request.app.state.order_manager
     logger.info("CANCEL orderRef=%s orderSysID=%s client=%s",
                 body.orderRef, body.orderSysID, request.client.host if request.client else "?")
-    return om.cancel(order_ref=body.orderRef, order_sys_id=body.orderSysID or "")
+    # om.cancel 默认 wait_response=True 阻塞（≤1s），移出事件循环
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        None, lambda: om.cancel(order_ref=body.orderRef, order_sys_id=body.orderSysID or "")
+    )
 
 
 @router.get("/status/{order_ref}")
@@ -222,7 +230,9 @@ async def cancel_all_orders(request: Request):
 
     logger.info("CANCEL_ALL client=%s", request.client.host if request.client else "?")
     om = request.app.state.order_manager
-    result = om.cancel_all()
+    # cancel_all 对每个活动单串行等待 ≤1s/单，必须移出事件循环（50 个活动单=50s）
+    loop = asyncio.get_running_loop()
+    result = await loop.run_in_executor(None, om.cancel_all)
     logger.info("CANCEL_ALL result=%s", result)
     return {"success": True, **result}
 
@@ -566,10 +576,16 @@ async def reverse_position(request: Request, body: ReverseOrderRequest):
         if price_error:
             return {"success": False, "message": price_error}
 
+    # 反向执行含多次阻塞 om.insert（wait_response=True），移出事件循环
+    loop = asyncio.get_running_loop()
     if body.executionMode == "serial":
-        result = _execute_reverse_serial(om, target, body, protection_price)
+        result = await loop.run_in_executor(
+            None, lambda: _execute_reverse_serial(om, target, body, protection_price)
+        )
     else:
-        result = _execute_reverse_parallel(om, target, body, protection_price)
+        result = await loop.run_in_executor(
+            None, lambda: _execute_reverse_parallel(om, target, body, protection_price)
+        )
 
     return result
 
@@ -600,26 +616,31 @@ async def lock_position(request: Request, body: LockOrderRequest):
         if price_error:
             return {"success": False, "message": price_error}
 
-    results = []
+    # 锁仓逐持仓阻塞 om.insert，整体移出事件循环
+    loop = asyncio.get_running_loop()
 
-    for pos in target:
-        pos_dir = pos.get("posiDirection", "")  # "2"=多, "3"=空
-        volume = pos.get("position", 0)
-        exchange_id = pos.get("exchangeID", "")
-        if volume <= 0:
-            continue
+    def _execute_lock() -> dict:
+        results = []
+        for pos in target:
+            pos_dir = pos.get("posiDirection", "")  # "2"=多, "3"=空
+            volume = pos.get("position", 0)
+            exchange_id = pos.get("exchangeID", "")
+            if volume <= 0:
+                continue
 
-        # 锁仓：反方向开仓
-        lock_dir = "1" if pos_dir == "2" else "0"
-        params = _build_open_order_params(
-            body.instrumentID, exchange_id, lock_dir, volume,
-            body.priceType, body.limitPrice,
-            body.timeCondition, protection_price,
-        )
-        result = om.insert(**params)
-        results.append({"action": "lock_open", **result})
+            # 锁仓：反方向开仓
+            lock_dir = "1" if pos_dir == "2" else "0"
+            params = _build_open_order_params(
+                body.instrumentID, exchange_id, lock_dir, volume,
+                body.priceType, body.limitPrice,
+                body.timeCondition, protection_price,
+            )
+            result = om.insert(**params)
+            results.append({"action": "lock_open", **result})
 
-    return {"success": True, "orders": results}
+        return {"success": True, "orders": results}
+
+    return await loop.run_in_executor(None, _execute_lock)
 
 
 # ── Stop order routes (PR-13) ──────────────────────────────────────────────

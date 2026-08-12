@@ -12,6 +12,8 @@ Design:
   - loggedIn reflects the TD login state (the "real" login).
 """
 
+import asyncio
+
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
@@ -74,10 +76,16 @@ async def login(body: LoginRequest, request: Request):
         }
 
     # Start TD connection and wait for result
+    # connect_trading(wait=True) 阻塞等登录回报（最长 60s），必须移出事件循环，
+    # 否则期间行情 WebSocket 广播与所有 HTTP 请求停摆。
+    loop = asyncio.get_running_loop()
     try:
-        result = connect_trading(
-            request.app, body.brokerID, body.userID, body.password,
-            wait=True,
+        result = await loop.run_in_executor(
+            None,
+            lambda: connect_trading(
+                request.app, body.brokerID, body.userID, body.password,
+                wait=True,
+            ),
         )
         return result
     except Exception as exc:

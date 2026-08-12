@@ -90,6 +90,45 @@ class TestOrderInsertApi:
         assert "orderRef" in data
 
     @pytest.mark.anyio
+    async def test_insert_does_not_block_event_loop(self):
+        """阻塞 insert 在 executor 中执行 — 慢 insert 期间事件循环仍处理其它请求。
+
+        回归测试：修复前 om.insert(wait_response=True) 直接在 async 路由内阻塞
+        事件循环，慢 insert 期间所有请求排队等待。
+        """
+        import asyncio as _asyncio
+        import time as _time
+
+        app = _make_app_with_order_manager()
+        om = app.state.order_manager
+
+        def slow_insert(**kwargs):
+            _time.sleep(0.5)  # 模拟等待 CTP 回报
+            return {"success": True, "orderRef": "ref-slow", "message": "Submitted"}
+
+        with patch.object(om, "insert", side_effect=slow_insert):
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                slow_task = _asyncio.create_task(client.post("/api/order/insert", json={
+                    "instrumentID": "IF2608",
+                    "direction": "0",
+                    "offsetFlag": "0",
+                    "limitPrice": 3850.0,
+                    "volumeTotalOriginal": 1,
+                }))
+                # 给 slow insert 一点启动时间
+                await _asyncio.sleep(0.05)
+                start_q = _time.monotonic()
+                quick = await client.post("/api/order/cancel", json={"orderRef": "nope"})
+                quick_elapsed = _time.monotonic() - start_q
+                slow = await slow_task
+
+                assert quick.status_code == 200
+                # quick 请求在 slow insert（0.5s）进行中完成，说明事件循环未被阻塞
+                assert quick_elapsed < 0.3
+                assert slow.status_code == 200
+
+    @pytest.mark.anyio
     async def test_insert_missing_instrument(self):
         app = _make_app_with_order_manager()
         transport = ASGITransport(app=app)
