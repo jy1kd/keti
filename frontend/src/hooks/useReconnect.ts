@@ -43,7 +43,6 @@ export function useReconnect(
     const timer = setTimeout(() => {
       if (ws.isConnected(endpoint)) {
         setIsReconnecting(false)
-        retryCountRef.current = 0
         return
       }
       ws.connect(endpoint, onMessageRef.current as MessageHandler)
@@ -55,6 +54,14 @@ export function useReconnect(
   useEffect(() => {
     // 初始连接
     ws.connect(endpoint, onMessageRef.current as MessageHandler)
+
+    // 连接建立成功 → 重置重试计数。
+    // 否则每次断线都永久消耗一个名额，断线满 5 次（MAX_RETRIES）后
+    // scheduleReconnect 直接放弃，行情/系统 WS 在整个应用生命周期内不再重连。
+    ws.onOpen(endpoint, () => {
+      retryCountRef.current = 0
+      setIsReconnecting(false)
+    })
 
     // 注册关闭回调 — 连接断开时触发重连
     ws.onClose(endpoint, () => {

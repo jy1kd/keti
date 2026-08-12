@@ -10,6 +10,7 @@ vi.mock('@/services/ws', () => ({
     disconnectAll: vi.fn(),
     isConnected: vi.fn().mockReturnValue(false),
     onClose: vi.fn(),
+    onOpen: vi.fn(),
   })),
 }))
 

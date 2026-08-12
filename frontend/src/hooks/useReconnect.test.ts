@@ -1,18 +1,54 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import { useReconnect } from './useReconnect'
 import type { WSManager } from '@/services/ws'
 
-// Mock WSManager
-function createMockWs(): WSManager {
-  return {
-    connect: vi.fn(),
+interface MockWs extends WSManager {
+  /** 模拟一次断线（触发已注册的 onClose 回调） */
+  __fireClose: () => void
+  /** 统计 onOpen 触发次数 */
+  __openCount: () => number
+}
+
+/**
+ * 构造可驱动生命周期的 WSManager mock：
+ * - connect 成功时（openOnConnect=true）触发已注册的 onOpen 回调；
+ * - onOpen/onClose 捕获回调，测试可手动 __fireClose 触发断线。
+ */
+function createMockWs(options: { openOnConnect?: boolean } = {}): MockWs {
+  const { openOnConnect = true } = options
+  let openCb: (() => void) | undefined
+  let closeCb: ((event: unknown) => void) | undefined
+  let connected = false
+  let openCount = 0
+
+  const ws = {
+    connect: vi.fn(() => {
+      if (openOnConnect) {
+        connected = true
+        openCount++
+        openCb?.()
+      }
+      // openOnConnect=false → 连接失败，connected 保持 false，不触发 onOpen
+    }),
     disconnect: vi.fn(),
     disconnectAll: vi.fn(),
-    isConnected: vi.fn().mockReturnValue(false),
+    isConnected: vi.fn(() => connected),
     send: vi.fn(),
-    onClose: vi.fn(),
-  } as unknown as WSManager
+    onOpen: vi.fn((_endpoint: string, cb: () => void) => {
+      openCb = cb
+    }),
+    onClose: vi.fn((_endpoint: string, cb: (event: unknown) => void) => {
+      closeCb = cb
+    }),
+    __fireClose: () => {
+      connected = false
+      closeCb?.({ code: 1006 })
+    },
+    __openCount: () => openCount,
+  } as unknown as MockWs
+
+  return ws
 }
 
 describe('useReconnect', () => {
@@ -24,49 +60,8 @@ describe('useReconnect', () => {
     vi.useRealTimers()
   })
 
-  it('does not reconnect when connection is healthy', () => {
-    const ws = createMockWs()
-    vi.mocked(ws.isConnected).mockReturnValue(true)
-
-    renderHook(() => useReconnect(ws, 'market'))
-
-    const initialCalls = vi.mocked(ws.connect).mock.calls.length
-
-    // 快进到最大等待时间，不应触发额外的重连
-    vi.advanceTimersByTime(60000)
-    expect(vi.mocked(ws.connect).mock.calls.length).toBe(initialCalls)
-  })
-
-  it('reconnects after disconnect with exponential backoff', () => {
-    const ws = createMockWs()
-    vi.mocked(ws.isConnected).mockReturnValue(false)
-
-    // 捕获 connect 调用时设置的 onclose
-    vi.mocked(ws.connect).mockImplementation(() => {
-      // 模拟 WebSocket 实例的 onclose 被设置
-    })
-
-    renderHook(() => useReconnect(ws, 'market'))
-
-    // 初始连接不会触发重连（因为 isConnected 为 false 但还没连接过）
-    // 重连逻辑应该在连接断开后触发
-    // 我们需要模拟 WSManager 的 onclose 行为
-
-    // 由于 WSManager 内部管理 WebSocket，我们通过检查 connect 调用来验证
-    // useReconnect 应该在检测到断连后调用 connect
-
-    // 第一次：检测到断连，立即尝试重连（延迟 0ms）
-    vi.advanceTimersByTime(0)
-    // connect 在 useEffect 中已经被调用一次（初始连接）
-    // 重连需要通过 WSManager 的 onclose 事件触发
-
-    // 这个测试验证 hook 的基本结构存在
-    expect(ws.connect).toBeDefined()
-  })
-
   it('exposes reconnect count and status', () => {
     const ws = createMockWs()
-    vi.mocked(ws.isConnected).mockReturnValue(false)
 
     const { result } = renderHook(() => useReconnect(ws, 'market'))
 
@@ -76,25 +71,85 @@ describe('useReconnect', () => {
     expect(typeof result.current.isReconnecting).toBe('boolean')
   })
 
-  it('gives up after max retries (5)', () => {
+  it('does not reconnect when connection is healthy', () => {
     const ws = createMockWs()
-    vi.mocked(ws.isConnected).mockReturnValue(false)
 
     renderHook(() => useReconnect(ws, 'market'))
 
-    // 模拟 5 次重连失败
-    // 退避时间: 1s, 2s, 4s, 8s, 16s = 总计 31s
-    for (let i = 0; i < 5; i++) {
-      const delay = Math.pow(2, i) * 1000
-      vi.advanceTimersByTime(delay)
+    const initialCalls = vi.mocked(ws.connect).mock.calls.length
+
+    // 连接健康（无断线事件）→ 不触发额外重连
+    act(() => {
+      vi.advanceTimersByTime(60000)
+    })
+    expect(vi.mocked(ws.connect).mock.calls.length).toBe(initialCalls)
+  })
+
+  it('reconnects after disconnect with exponential backoff', () => {
+    const ws = createMockWs()
+
+    renderHook(() => useReconnect(ws, 'market'))
+    expect(vi.mocked(ws.connect).mock.calls.length).toBe(1) // 初始连接
+
+    act(() => {
+      ws.__fireClose() // 断线
+    })
+    // 退避期内不重连
+    act(() => {
+      vi.advanceTimersByTime(999)
+    })
+    expect(vi.mocked(ws.connect).mock.calls.length).toBe(1)
+    // 1s 退避后重连
+    act(() => {
+      vi.advanceTimersByTime(1)
+    })
+    expect(vi.mocked(ws.connect).mock.calls.length).toBe(2)
+  })
+
+  it('成功重连后重置计数 — 多次断线仍持续重连', () => {
+    // 回归测试：修复前 retryCountRef 只在 isConnected 为真时归零（该分支永不生效），
+    // 断线满 5 次后 scheduleReconnect 永久放弃重连。
+    const ws = createMockWs() // 每次 connect 成功 → 触发 onOpen
+
+    renderHook(() => useReconnect(ws, 'market'))
+    // 初始连接触发 1 次 onOpen
+    expect(ws.__openCount()).toBe(1)
+
+    // 连续 6 次「断线→成功重连」：计数已重置，每次退避都从 1s 开始，永不耗尽
+    for (let i = 0; i < 6; i++) {
+      const before = vi.mocked(ws.connect).mock.calls.length
+      act(() => {
+        ws.__fireClose()
+        vi.advanceTimersByTime(1000) // 计数已重置 → 退避 1s
+      })
+      expect(vi.mocked(ws.connect).mock.calls.length).toBe(before + 1)
     }
 
-    // 第 6 次不应再重连
-    const callsBefore = vi.mocked(ws.connect).mock.calls.length
-    vi.advanceTimersByTime(32000)
-    const callsAfter = vi.mocked(ws.connect).mock.calls.length
+    // 初始 + 6 次重连，共 7 次 onOpen
+    expect(ws.__openCount()).toBe(7)
+  })
 
-    // 超过最大重试次数后不再调用 connect
-    expect(callsAfter).toBe(callsBefore)
+  it('gives up after max retries (5)', () => {
+    // 连接一直失败（不触发 onOpen）→ 计数不重置，连续 5 次后放弃
+    const ws = createMockWs({ openOnConnect: false })
+
+    renderHook(() => useReconnect(ws, 'market'))
+
+    // 5 次断线 → 每次退避后重连失败（退避 1, 2, 4, 8, 16s）
+    for (let i = 0; i < 5; i++) {
+      act(() => {
+        ws.__fireClose()
+        vi.advanceTimersByTime(Math.pow(2, i) * 1000)
+      })
+    }
+    expect(vi.mocked(ws.connect).mock.calls.length).toBe(6) // 初始 + 5 次尝试
+
+    // 第 6 次断线：已达 MAX_RETRIES，不再调度重连
+    const callsBefore = vi.mocked(ws.connect).mock.calls.length
+    act(() => {
+      ws.__fireClose()
+      vi.advanceTimersByTime(60000)
+    })
+    expect(vi.mocked(ws.connect).mock.calls.length).toBe(callsBefore)
   })
 })
