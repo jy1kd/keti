@@ -129,12 +129,18 @@ async def status(request: Request):
 
     if md_api is not None:
         md_connected = md_api.connection_status == "connected"
-        md_front = getattr(md_api, "front", "")
+        # 防御：属性存在但非字符串（mock/未初始化对象）时回退 ""，
+        # 否则 Pydantic StatusResponse.mdFront: str 校验失败 → 接口 500
+        md_front = getattr(md_api, "front", None)
+        if not isinstance(md_front, str):
+            md_front = ""
 
     if trader_api is not None:
         td_connected = trader_api.connection_status == "connected"
         logged_in = trader_api.login_status == "logged_in"
-        td_front = getattr(trader_api, "front", "")
+        td_front = getattr(trader_api, "front", None)
+        if not isinstance(td_front, str):
+            td_front = ""
 
     return {
         "loggedIn": logged_in,
