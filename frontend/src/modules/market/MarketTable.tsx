@@ -207,6 +207,12 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       frozenColCount: 1, // 冻结「合约」列：横向拖动时固定最左侧
       widthMode: 'standard',
       columnResizeMode: 'all', // 保留每列拖拽缩放：可单独放大/缩小任意列宽
+      select: {
+        // 禁用 vtable 原生拖选扩展：拖选批量选中由下方 window 监听实现（蓝区），
+        // 金色活动锚点由 shouldRenderAnchor 守卫 + selectRow/clearSelected 唯一控制。
+        // 若不关掉，二次拖选时原生金色矩形会与 RAF selectRow 竞态，定格滞留无法清除。
+        disableDragSelect: true,
+      },
       theme: {
         underlayBackgroundColor: '#0d1117',
         defaultStyle: {
@@ -365,6 +371,8 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     let isDragging = false
     let dragStartRow = -1
     let dragSelected = new Set<string>()
+    /** 本次按下是否为普通拖选（无 Ctrl/Shift）：首次 mousemove 时清掉金色锚点 */
+    let plainDragStart = false
 
     const getRowFromEvent = (e: MouseEvent): number => {
       // VTable 1.26 纯 canvas 渲染，表格内无 <td>/[data-row] 元素，
@@ -410,14 +418,21 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       // 如果没有按 Ctrl/Shift，开始新的选择
       if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
         dragSelected = new Set()
-        // 锚点同步：新拖选以起始行为金色活动锚点（金始终在选区内）
-        const startRecord = recordsRef.current[rowIndex]
-        if (startRecord) useMarketStore.getState().setSelectedInstrument(startRecord.instrumentID)
+        // 普通拖选是批量操作：不同步金色锚点到起始行。
+        // 首次 mousemove 时清掉金色锚点（见 handleMouseMove），
+        // 保证拖选结束后金色不残留，仅保留蓝色选区。
+        plainDragStart = true
       }
     }
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return
+      // 普通拖选首次移动：清掉金色锚点，避免拖选把金色钉在起始行残留无法消除。
+      // （仅在确认是拖拽而非点击时执行，点击走 click_cell 重新设置锚点，无闪烁。）
+      if (plainDragStart) {
+        plainDragStart = false
+        useMarketStore.getState().setSelectedInstrument(null)
+      }
       const rowIndex = getRowFromEvent(e)
       if (rowIndex < 0 || rowIndex >= recordsRef.current.length) return
 
@@ -439,6 +454,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     const handleMouseUp = () => {
       isDragging = false
       dragStartRow = -1
+      plainDragStart = false
     }
 
     const container = containerRef.current
