@@ -12,6 +12,8 @@ Design:
   - loggedIn reflects the TD login state (the "real" login).
 """
 
+import asyncio
+
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
@@ -74,10 +76,16 @@ async def login(body: LoginRequest, request: Request):
         }
 
     # Start TD connection and wait for result
+    # connect_trading(wait=True) 阻塞等登录回报（最长 60s），必须移出事件循环，
+    # 否则期间行情 WebSocket 广播与所有 HTTP 请求停摆。
+    loop = asyncio.get_running_loop()
     try:
-        result = connect_trading(
-            request.app, body.brokerID, body.userID, body.password,
-            wait=True,
+        result = await loop.run_in_executor(
+            None,
+            lambda: connect_trading(
+                request.app, body.brokerID, body.userID, body.password,
+                wait=True,
+            ),
         )
         return result
     except Exception as exc:
@@ -129,12 +137,18 @@ async def status(request: Request):
 
     if md_api is not None:
         md_connected = md_api.connection_status == "connected"
-        md_front = getattr(md_api, "front", "")
+        # 防御：属性存在但非字符串（mock/未初始化对象）时回退 ""，
+        # 否则 Pydantic StatusResponse.mdFront: str 校验失败 → 接口 500
+        md_front = getattr(md_api, "front", None)
+        if not isinstance(md_front, str):
+            md_front = ""
 
     if trader_api is not None:
         td_connected = trader_api.connection_status == "connected"
         logged_in = trader_api.login_status == "logged_in"
-        td_front = getattr(trader_api, "front", "")
+        td_front = getattr(trader_api, "front", None)
+        if not isinstance(td_front, str):
+            td_front = ""
 
     return {
         "loggedIn": logged_in,

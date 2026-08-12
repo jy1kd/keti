@@ -90,6 +90,45 @@ class TestOrderInsertApi:
         assert "orderRef" in data
 
     @pytest.mark.anyio
+    async def test_insert_does_not_block_event_loop(self):
+        """阻塞 insert 在 executor 中执行 — 慢 insert 期间事件循环仍处理其它请求。
+
+        回归测试：修复前 om.insert(wait_response=True) 直接在 async 路由内阻塞
+        事件循环，慢 insert 期间所有请求排队等待。
+        """
+        import asyncio as _asyncio
+        import time as _time
+
+        app = _make_app_with_order_manager()
+        om = app.state.order_manager
+
+        def slow_insert(**kwargs):
+            _time.sleep(0.5)  # 模拟等待 CTP 回报
+            return {"success": True, "orderRef": "ref-slow", "message": "Submitted"}
+
+        with patch.object(om, "insert", side_effect=slow_insert):
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                slow_task = _asyncio.create_task(client.post("/api/order/insert", json={
+                    "instrumentID": "IF2608",
+                    "direction": "0",
+                    "offsetFlag": "0",
+                    "limitPrice": 3850.0,
+                    "volumeTotalOriginal": 1,
+                }))
+                # 给 slow insert 一点启动时间
+                await _asyncio.sleep(0.05)
+                start_q = _time.monotonic()
+                quick = await client.post("/api/order/cancel", json={"orderRef": "nope"})
+                quick_elapsed = _time.monotonic() - start_q
+                slow = await slow_task
+
+                assert quick.status_code == 200
+                # quick 请求在 slow insert（0.5s）进行中完成，说明事件循环未被阻塞
+                assert quick_elapsed < 0.3
+                assert slow.status_code == 200
+
+    @pytest.mark.anyio
     async def test_insert_missing_instrument(self):
         app = _make_app_with_order_manager()
         transport = ASGITransport(app=app)
@@ -127,6 +166,111 @@ class TestOrderInsertApi:
                 "volumeTotalOriginal": 0,
             })
         assert resp.status_code == 422
+
+
+# ── Insert compliance: 期权数量上限 / 市价保护价 ──────────────────────────
+
+class TestOrderInsertCompliance:
+    """服务端权威合规校验：期权数量上限 + 市价保护价/限价价格必填。"""
+
+    @pytest.mark.anyio
+    async def test_option_limit_order_volume_limit(self):
+        """期权(productClass=2)限价单超过 100 手被拒绝。"""
+        app = _make_app_with_order_manager()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/insert", json={
+                "instrumentID": "IF2608-C-3900",
+                "direction": "0",
+                "offsetFlag": "0",
+                "priceType": "2",
+                "limitPrice": 50.0,
+                "volumeTotalOriginal": 200,
+                "productClass": "2",
+            })
+        assert resp.status_code == 422
+        assert "数量超限" in resp.text
+
+    @pytest.mark.anyio
+    async def test_option_market_order_volume_limit(self):
+        """期权(productClass=2)市价单超过 30 手被拒绝。"""
+        app = _make_app_with_order_manager()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/insert", json={
+                "instrumentID": "IF2608-C-3900",
+                "direction": "0",
+                "offsetFlag": "0",
+                "priceType": "1",
+                "stopPrice": 50.0,
+                "volumeTotalOriginal": 50,
+                "productClass": "2",
+            })
+        assert resp.status_code == 422
+        assert "数量超限" in resp.text
+
+    @pytest.mark.anyio
+    async def test_futures_limit_order_volume_within_limit(self):
+        """期货(productClass=1)限价单 200 手允许（≤500）。"""
+        app = _make_app_with_order_manager()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/insert", json={
+                "instrumentID": "IF2608",
+                "direction": "0",
+                "offsetFlag": "0",
+                "limitPrice": 3850.0,
+                "volumeTotalOriginal": 200,
+            })
+        assert resp.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_market_order_requires_stop_price(self):
+        """市价单未填保护价被拒绝。"""
+        app = _make_app_with_order_manager()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/insert", json={
+                "instrumentID": "IF2608",
+                "direction": "0",
+                "offsetFlag": "0",
+                "priceType": "1",
+                "volumeTotalOriginal": 1,
+            })
+        assert resp.status_code == 422
+        assert "保护价" in resp.text
+
+    @pytest.mark.anyio
+    async def test_market_order_with_stop_price_accepted(self):
+        """市价单填保护价后通过。"""
+        app = _make_app_with_order_manager()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/insert", json={
+                "instrumentID": "IF2608",
+                "direction": "0",
+                "offsetFlag": "0",
+                "priceType": "1",
+                "stopPrice": 4800.0,
+                "volumeTotalOriginal": 1,
+            })
+        assert resp.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_limit_order_zero_price_rejected(self):
+        """限价单 limitPrice=0 被拒绝。"""
+        app = _make_app_with_order_manager()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/api/order/insert", json={
+                "instrumentID": "IF2608",
+                "direction": "0",
+                "offsetFlag": "0",
+                "limitPrice": 0.0,
+                "volumeTotalOriginal": 1,
+            })
+        assert resp.status_code == 422
+        assert "大于 0" in resp.text
 
 
 # ── Insert validation: FOK/FAK volume condition ─────────────────────────

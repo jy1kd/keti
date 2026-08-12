@@ -6,11 +6,14 @@ type MessageCallback = (message: WSMessage) => void
 
 type CloseCallback = (event: CloseEvent) => void
 
+type OpenCallback = () => void
+
 export class WSManager {
   private baseUrl: string
   private connections: Map<string, WebSocket> = new Map()
   private callbacks: Map<string, MessageCallback> = new Map()
   private closeCallbacks: Map<string, CloseCallback> = new Map()
+  private openCallbacks: Map<string, OpenCallback> = new Map()
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl
@@ -55,6 +58,8 @@ export class WSManager {
 
     ws.onopen = () => {
       console.log(`[WS] ${endpoint} connected`)
+      const openCb = this.openCallbacks.get(endpoint)
+      if (openCb) openCb()
     }
 
     ws.onclose = (event) => {
@@ -81,6 +86,13 @@ export class WSManager {
   }
 
   /**
+   * 注册连接建立回调（用于重连计数重置）
+   */
+  onOpen(endpoint: WSEndpoint, callback: OpenCallback): void {
+    this.openCallbacks.set(endpoint, callback)
+  }
+
+  /**
    * 断开指定端点
    */
   disconnect(endpoint: WSEndpoint): void {
@@ -99,6 +111,7 @@ export class WSManager {
       this.connections.delete(endpoint)
       this.callbacks.delete(endpoint)
       this.closeCallbacks.delete(endpoint)
+      this.openCallbacks.delete(endpoint)
     }
   }
 

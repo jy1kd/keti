@@ -101,6 +101,7 @@ export interface OrderRequestForm {
   limitPrice: number
   volumeTotalOriginal: number
   stopPrice?: number
+  productClass?: string  // 1=期货, 2=期权（服务端数量上限校验用）
   arbitrageLeg1?: string  // 套利腿1合约代码
   arbitrageLeg2?: string  // 套利腿2合约代码
 }
@@ -117,6 +118,7 @@ export interface CtpOrderRequest {
   limitPrice: number
   volumeTotalOriginal: number
   stopPrice?: number
+  productClass?: string
 }
 
 export function convertOrderRequest(form: OrderRequestForm): CtpOrderRequest {
@@ -145,6 +147,9 @@ export function convertOrderRequest(form: OrderRequestForm): CtpOrderRequest {
   }
   if (form.stopPrice !== undefined) {
     result.stopPrice = form.stopPrice
+  }
+  if (form.productClass) {
+    result.productClass = form.productClass
   }
   return result
 }

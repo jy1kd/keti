@@ -235,10 +235,17 @@ class TestStatus:
 
     @pytest.mark.asyncio
     async def test_status_with_ctp_connected(self, app):
+        # loggedIn/tdConnected 由 trader_api 提供（task-09 重构后），
+        # mdConnected/mdFront 由 md_api 提供；两者都设置才能覆盖完整状态。
         md_api = MagicMock()
-        md_api.login_status = "logged_in"
         md_api.connection_status = "connected"
+        md_api.front = "tcp://182.254.243.31:30011"
+        trader_api = MagicMock()
+        trader_api.login_status = "logged_in"
+        trader_api.connection_status = "connected"
+        trader_api.front = "tcp://182.254.243.31:30001"
         app.state.md_api = md_api
+        app.state.trader_api = trader_api
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
@@ -246,7 +253,9 @@ class TestStatus:
             data = response.json()
             assert data["loggedIn"] is True
             assert data["mdConnected"] is True
-            assert data["tdConnected"] is False
+            assert data["tdConnected"] is True
+            assert data["mdFront"] == "tcp://182.254.243.31:30011"
+            assert data["tdFront"] == "tcp://182.254.243.31:30001"
 
     @pytest.mark.asyncio
     async def test_status_with_ctp_disconnected(self, app):
