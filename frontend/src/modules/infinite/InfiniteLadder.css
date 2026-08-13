@@ -27,6 +27,8 @@
   grid-template-columns: 56px 76px 1fr 76px;
   align-items: stretch;
   height: 28px;
+  /* 右缘预留与视口滚动条等宽的空白，保证列头与下方行严格对齐 */
+  padding-right: 6px;
   background: #1c2129;
   border-bottom: 1px solid #262a33;
   font-size: 11px;
@@ -50,10 +52,12 @@
   color: #c2c8d0;
 }
 .ladder-head__cell--buy {
+  justify-content: center;
   color: #f87171;
   background: rgba(239, 68, 68, 0.14);
 }
 .ladder-head__cell--sell {
+  justify-content: center;
   color: #4ade80;
   background: rgba(34, 197, 94, 0.14);
 }
@@ -61,6 +65,8 @@
 .infinite-ladder__viewport {
   flex: 1;
   overflow-y: auto;
+  /* 始终预留滚动条槽位，避免滚动条出现时行内容左移导致与列头错位 */
+  scrollbar-gutter: stable;
   min-height: 0;
 }
 .infinite-ladder__spacer {
