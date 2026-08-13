@@ -485,6 +485,9 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
         cancelAnimationFrame(mergeRafRef.current)
         mergeRafRef.current = null
       }
+      // 清空合并状态：StrictMode 下 effect setup→cleanup→setup 会重建新表实例，
+      // 若残留旧表已合并行，applyRowMerges 会误判「已合并」而跳过 mergeCells → 标底行渲染为未合并。
+      mergedRowsRef.current = new Set()
       window.removeEventListener('keydown', handleKeyDown)
       if (container) {
         container.removeEventListener('mousedown', handleMouseDown)

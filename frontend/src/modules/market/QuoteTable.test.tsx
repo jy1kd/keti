@@ -829,10 +829,34 @@ describe('QuoteTable', () => {
       render(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} />)
       const { ListTable } = await import('@visactor/vtable')
       const instance = (ListTable as any).mock.results[0].value
-      // 标底行 records index 0 → vtable 物理行 1（0=表头），整行合并
-      expect(instance.mergeCells).toHaveBeenCalledWith(0, 1, optionsSpec.columns.length - 1, 1)
+      // 标底行 records index 0 → vtable 物理行 1（0=表头），整行合并到最后一列。
+      // 硬编码期望列：optionsSpec 共 14 列 → 末列索引 13（不依赖实现同款表达式，防恒真断言）
+      expect(instance.mergeCells).toHaveBeenCalledWith(0, 1, 13, 1)
       // 期权行（物理行 2）不合并
-      expect(instance.mergeCells).not.toHaveBeenCalledWith(0, 2, optionsSpec.columns.length - 1, 2)
+      expect(instance.mergeCells).not.toHaveBeenCalledWith(0, 2, 13, 2)
+    })
+
+    it('合约列样式包装不修改共享 spec.columns（模块级常量无 style 泄漏）', async () => {
+      render(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} />)
+      const instrumentCol = optionsSpec.columns.find((c) => c.field === 'instrumentID')
+      // 包装发生在 ListTable 入参副本上，spec.columns 本身必须保持原样（instrumentID 列无 style）
+      expect(instrumentCol?.style).toBeUndefined()
+    })
+
+    it('重建数据行号漂移：撤销旧标底行合并，合并新标底行', async () => {
+      const { rerender } = render(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} />)
+      const { ListTable } = await import('@visactor/vtable')
+      const instance = (ListTable as any).mock.results[0].value
+      // 首轮：标底行（fut）在 records index 0 → vtable 物理行 1，已合并
+      expect(instance.mergeCells).toHaveBeenCalledWith(0, 1, 13, 1)
+      instance.mergeCells.mockClear()
+      instance.unmergeCells.mockClear()
+
+      // 重建：物理行 1 变为期权行（opt），标底漂移到物理行 2（fut）
+      // → 旧合并必须撤销（unmergeCells），新标底行必须合并（mergeCells）
+      rerender(<QuoteTable spec={optionsSpec} contracts={[opt, fut]} snapshots={new Map()} />)
+      expect(instance.unmergeCells).toHaveBeenCalledWith(0, 1, 13, 1)
+      expect(instance.mergeCells).toHaveBeenCalledWith(0, 2, 13, 2)
     })
 
     it('合约列样式：标底行返回红/粗/大字，期权行保持原样式', async () => {
