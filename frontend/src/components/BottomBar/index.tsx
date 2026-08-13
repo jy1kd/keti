@@ -7,6 +7,7 @@ import {
   openQueryFloating,
   openSettingsFloating,
   openIpcMonitorFloating,
+  openInfiniteFloating,
 } from '@/utils/openFloatingTab'
 import './styles.css'
 
@@ -51,6 +52,10 @@ export function BottomBar({ perfVisible, onTogglePerf }: BottomBarProps) {
     openKlineFloating()
   }, [])
 
+  const openInfinite = useCallback(() => {
+    openInfiniteFloating()
+  }, [])
+
   return (
     <footer className="bottom-bar">
       <div className="bottom-bar__left">
@@ -70,6 +75,10 @@ export function BottomBar({ perfVisible, onTogglePerf }: BottomBarProps) {
         <button type="button" className="bottom-bar__tool" aria-label="K线" title="K线" onClick={openKline}>
           <span className="bottom-bar__tool-icon">📈</span>
           <span className="bottom-bar__tool-label">K线</span>
+        </button>
+        <button type="button" className="bottom-bar__tool" aria-label="无限下单" title="无限下单" onClick={openInfinite}>
+          <span className="bottom-bar__tool-icon">♾️</span>
+          <span className="bottom-bar__tool-label">无限下单</span>
         </button>
         <button type="button" className="bottom-bar__tool" aria-label="📋 查询" title="查询" onClick={openQuery}>
           <span className="bottom-bar__tool-icon">📋</span>
