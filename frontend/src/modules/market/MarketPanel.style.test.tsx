@@ -3,10 +3,9 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 /**
- * MarketPanel 工具栏样式回归 —— 审查 🟡-1：
- * 宽屏下搜索区 max-width 360px + actions margin-left:auto 会在「全部/自选」与
- * 「仅交易中/收藏」之间产生空隙，与设计稿 §3.2 紧凑排布不一致。
- * 断言搜索区不设 max-width、操作区不设 margin-left:auto。
+ * MarketPanel 工具栏布局回归 —— 设计 4.5「功能靠左、搜索贴右」：
+ * 搜索区用 margin-left:auto 把搜索簇推到最右（不设 max-width，避免宽屏下与左侧功能集群
+ * 之间产生空隙）；操作区（仅交易中/收藏）不设 margin-left:auto，随「全部/自选」紧排。
  */
 function readCssBlock(selector: string): string {
   const css = readFileSync(resolve(__dirname, 'styles.css'), 'utf-8')
@@ -17,10 +16,10 @@ function readCssBlock(selector: string): string {
   return match[1]
 }
 
-describe('MarketPanel 工具栏紧凑排布（审查 🟡-1）', () => {
-  it('.market-toolbar__search 不设 max-width（flex 吃掉中间空间，无空隙）', () => {
+describe('MarketPanel 工具栏布局（设计 4.5：功能靠左、搜索贴右）', () => {
+  it('.market-toolbar__search 用 margin-left:auto 贴右，不设 max-width（无空隙）', () => {
     const block = readCssBlock('.market-toolbar__search')
-    expect(block).toMatch(/flex:\s*1/)
+    expect(block).toMatch(/margin-left:\s*auto/)
     expect(block).not.toMatch(/max-width/)
   })
 

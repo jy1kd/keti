@@ -13,6 +13,16 @@ vi.mock('./TQuoteView', () => ({
   TQuoteView: () => <div data-testid="tquote-view">TQuoteView Mock</div>,
 }))
 
+// Mock InstrumentSearchModal（放大镜高级搜索弹窗）
+vi.mock('@/components/InstrumentSearchModal', () => ({
+  InstrumentSearchModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+    isOpen ? (
+      <div data-testid="instrument-search-modal">
+        <button onClick={onClose}>关闭</button>
+      </div>
+    ) : null,
+}))
+
 // Mock echarts（ContextMenu 无关，但部分共享模块可能引用）
 vi.mock('echarts', () => ({
   init: vi.fn(() => ({
@@ -212,5 +222,72 @@ describe('OptionsPanel', () => {
       'FG609', 'FG609-C-1300', 'FG609-P-1300',
       'MA609', 'MA609-C-1000',
     ])
+  })
+
+  describe('工具行布局与搜索定位（Task 8）', () => {
+    it('列表视图渲染搜索框；T型报价视图隐藏列表工具行（筛选/仅交易中/收藏/搜索框）但保留 [列表|T型] 切换', async () => {
+      const user = userEvent.setup()
+      render(<OptionsPanel />)
+      // 列表视图：完整工具行存在
+      expect(screen.getByPlaceholderText('搜索合约...')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /筛选/ })).toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: 'T型报价' }))
+
+      // T型报价视图：列表工具行隐藏
+      expect(screen.queryByPlaceholderText('搜索合约...')).toBeNull()
+      expect(screen.queryByRole('button', { name: /筛选/ })).toBeNull()
+      expect(screen.queryByRole('button', { name: /仅交易中|显示全部/ })).toBeNull()
+      expect(screen.queryByRole('button', { name: '收藏' })).toBeNull()
+      // 二级切换保留
+      expect(screen.getByRole('button', { name: 'T型报价' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '列表' })).toBeInTheDocument()
+    })
+
+    it('搜索选中期权合约 → 定位到其标底分组（selectedInstrument/selectedContracts = 标底 FG609）', async () => {
+      // jsdom 无 scrollIntoView：ContractSearch 高亮项滚动 effect 依赖它
+      const scrollIntoViewStub = vi.fn()
+      Element.prototype.scrollIntoView = scrollIntoViewStub
+
+      const user = userEvent.setup()
+      render(<OptionsPanel />)
+      const input = screen.getByPlaceholderText('搜索合约...')
+      await user.type(input, 'FG609-C')
+      await user.click(screen.getByText('FG609-C-1300'))
+
+      expect(useMarketStore.getState().selectedInstrument).toBe('FG609')
+      expect(useMarketStore.getState().selectedContracts.has('FG609')).toBe(true)
+      expect(useMarketStore.getState().selectedContracts.size).toBe(1)
+    })
+
+    it('点击 🔍 打开高级搜索弹窗', async () => {
+      const user = userEvent.setup()
+      render(<OptionsPanel />)
+      expect(screen.queryByTestId('instrument-search-modal')).not.toBeInTheDocument()
+      await user.click(screen.getByTitle('搜索合约'))
+      expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
+    })
+
+    it('DOM 顺序：列表/T型报价 → 全部/自选 → 筛选 → 收藏 → 搜索框', () => {
+      const { container } = render(<OptionsPanel />)
+      const toolbar = container.querySelector('.market-toolbar') as HTMLElement
+      const mode = toolbar.querySelector('.market-toolbar__mode') as Element
+      const tabs = toolbar.querySelector('.market-toolbar__tabs') as Element
+      const filterBtn = screen.getByRole('button', { name: /筛选/ })
+      const favoriteBtn = toolbar.querySelector('.btn-favorite') as Element
+      const searchInput = toolbar.querySelector('.market-toolbar__search .search-input') as Element
+
+      const follows = (a: Element, b: Element) =>
+        (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+
+      expect(mode).toBeTruthy()
+      expect(tabs).toBeTruthy()
+      expect(favoriteBtn).toBeTruthy()
+      expect(searchInput).toBeTruthy()
+      expect(follows(mode, tabs)).toBe(true)
+      expect(follows(tabs, filterBtn)).toBe(true)
+      expect(follows(filterBtn, favoriteBtn)).toBe(true)
+      expect(follows(favoriteBtn, searchInput)).toBe(true)
+    })
   })
 })

@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { ContextMenu } from '@/components/ContextMenu'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ContractFilter } from '@/components/ContractFilter'
+import { ContractSearch } from '@/components/ContractSearch'
+import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
 import { QuoteTable } from '@/modules/market/QuoteTable'
 import { optionsSpec } from '@/modules/market/optionsSpec'
 import { deriveUnderlyingProduct, groupOptionsByUnderlying } from '@/modules/market/sort'
@@ -14,6 +16,7 @@ import { useTabStore } from '@/stores/tabs'
 import { useContractContextMenu } from '@/hooks/useContractContextMenu'
 import { usePointOrder } from '@/hooks/usePointOrder'
 import { getProductName } from '@/utils/productNames'
+import { isContractActive } from '@/utils/contractStatus'
 import { toast } from '@/components/Toast'
 import { TQuoteView } from './TQuoteView'
 import type { ContractInfo } from '@/services/types'
@@ -29,6 +32,11 @@ import './styles.css'
  */
 export function OptionsPanel() {
   const [view, setView] = useState<'list' | 'tquote'>('list')
+  const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
+  // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
+  const [filterActive, setFilterActive] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchModalOpen, setSearchModalOpen] = useState(false)
   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, favorites, addToFavorites, removeFromFavorites } = useContractsStore()
@@ -42,6 +50,13 @@ export function OptionsPanel() {
   // 期货全量 → 期权全量（分组用 futures 匹配标底行真实合约）
   const futures = useMemo(() => contracts.filter((c) => c.productClass === '1'), [contracts])
   const options = useMemo(() => contracts.filter((c) => c.productClass === '2' || c.productClass === '6'), [contracts])
+  const favoriteOptions = useMemo(
+    () => favorites.filter((c) => c.productClass === '2' || c.productClass === '6'),
+    [favorites],
+  )
+
+  // 全部/自选 基础集（自选 = 已收藏期权）
+  const baseOptions = activeTab === 'all' ? options : favoriteOptions
 
   // 筛选面板可用选项：交易所 = 期权合约去重；品种 = 标底品种（underlyingInstrID 去尾数字）去重
   const filterExchanges = useMemo(
@@ -58,15 +73,16 @@ export function OptionsPanel() {
     return m
   }, [filterProducts])
 
-  // 分组前先过滤期权（交易所 + 标底品种），再按标底分组展平为有序 ContractInfo[]
-  // （标底行在前、期权行随后；组内无可见期权时整组消失）
-  const rows = useMemo(() => {
-    const filteredOptions = filterByExchangeAndProduct(
-      options,
+  // 分组前先过滤期权（交易所 + 标底品种 + 仅交易中），再按标底分组展平为有序 ContractInfo[]
+  // （标底行在前、期权行随后；组内无可见期权时整组消失）。此列表是搜索框的作用域。
+  const listRows = useMemo(() => {
+    let filteredOptions = filterByExchangeAndProduct(
+      baseOptions,
       filter.exchanges,
       filter.products,
       (c) => deriveUnderlyingProduct(c.underlyingInstrID ?? ''),
     )
+    filteredOptions = filterActive ? filteredOptions.filter(isContractActive) : filteredOptions
     const groups = groupOptionsByUnderlying(filteredOptions, futures)
     const flat: ContractInfo[] = []
     for (const g of groups) {
@@ -74,12 +90,29 @@ export function OptionsPanel() {
       flat.push(...g.options)
     }
     return flat
-  }, [options, futures, filter])
+  }, [baseOptions, filter, filterActive, futures])
+
+  // 搜索过滤：命中 期权/标底 instrumentID + 中文品种名；空查询 = 全量
+  const rows = useMemo(() => {
+    if (!searchQuery.trim()) return listRows
+    const q = searchQuery.toLowerCase()
+    return listRows.filter((c) => {
+      const instrumentID = c.instrumentID?.toLowerCase() ?? ''
+      const instrumentName = c.instrumentName?.toLowerCase() ?? ''
+      const productName = getProductName(c.productID).toLowerCase()
+      return instrumentID.includes(q) || instrumentName.includes(q) || productName.includes(q)
+    })
+  }, [listRows, searchQuery])
 
   // 用户收藏 ID 集合（用于 ⭐ 列与右键菜单收藏态）
   const favoritedIds = useMemo(
     () => new Set(favorites.map((c) => c.instrumentID)),
     [favorites],
+  )
+  // 全系统合约 ID 集合（高级搜索弹窗「已收藏/已订阅」徽标）
+  const allContractIds = useMemo(
+    () => new Set(contracts.map((c) => c.instrumentID)),
+    [contracts],
   )
 
   const { handleClick, handleDoubleClick } = usePointOrder({
@@ -94,34 +127,143 @@ export function OptionsPanel() {
     },
   })
 
+  // 搜索定位：选中期权合约时定位到其标底分组首行（标底合约），复用 futures 页 handleSelectContract
+  // 语义（selectedInstrument ∈ selectedContracts，锚点守卫通过才能滚动跳转）。
+  const handleSelectContract = (instrumentID: string) => {
+    const inst = contracts.find((c) => c.instrumentID === instrumentID)
+    let target = instrumentID
+    // 命中期权合约 → 定位到标底；标底不在期货列表（指数期权）时保持选中该期权行
+    if (inst && (inst.productClass === '2' || inst.productClass === '6') && inst.underlyingInstrID) {
+      const underlying = contracts.find((c) => c.instrumentID === inst.underlyingInstrID)
+      if (underlying) target = underlying.instrumentID
+    }
+    setSelectedInstrument(target)
+    setOrderInstrument(target)
+    setSelectedContracts(new Set([target]))
+  }
+
   return (
     <section className="options-page">
-      {/* 二级视图切换工具栏（Task 7/8 在此叠加 全部/自选、筛选、仅交易中、收藏、搜索框） */}
+      {/* 二级视图切换工具栏：功能靠左（列表|T型 → 全部/自选 → 筛选 → 仅交易中 → 收藏），搜索贴右。
+          T型报价视图隐藏列表工具行（全部/自选、筛选、仅交易中、收藏、搜索），仅保留 [列表|T型] 切换 */}
       <div className="market-toolbar">
         <div className="market-toolbar__mode">
           <button
             className={`market-mode-btn${view === 'list' ? ' active' : ''}`}
-            onClick={() => setView('list')}
+            onClick={() => {
+              // 搜索态随视图切换清空：ContractSearch 重挂载后 input 为空，避免残留查询继续过滤列表
+              setSearchQuery('')
+              setView('list')
+            }}
           >
             列表
           </button>
           <button
             className={`market-mode-btn${view === 'tquote' ? ' active' : ''}`}
-            onClick={() => setView('tquote')}
+            onClick={() => {
+              setSearchQuery('')
+              setView('tquote')
+            }}
           >
             T型报价
           </button>
         </div>
-        <ContractFilter
-          exchanges={filterExchanges}
-          products={filterProducts}
-          productNames={filterProductNames}
-          value={filter}
-          onChange={(v) => {
-            useMarketFilterStore.getState().setExchanges('options', v.exchanges)
-            useMarketFilterStore.getState().setProducts('options', v.products)
-          }}
-        />
+        {view === 'list' && (
+          <>
+            <div className="market-toolbar__tabs">
+              <button
+                className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
+                onClick={() => setActiveTab('all')}
+              >
+                全部
+              </button>
+              <button
+                className={`btn-tab${activeTab === 'favorites' ? ' active' : ''}`}
+                onClick={() => setActiveTab('favorites')}
+              >
+                自选
+              </button>
+            </div>
+            <ContractFilter
+              exchanges={filterExchanges}
+              products={filterProducts}
+              productNames={filterProductNames}
+              value={filter}
+              onChange={(v) => {
+                useMarketFilterStore.getState().setExchanges('options', v.exchanges)
+                useMarketFilterStore.getState().setProducts('options', v.products)
+              }}
+            />
+            <div className="market-toolbar__actions">
+              <button
+                className={`btn-filter-status${filterActive ? ' active' : ''}`}
+                onClick={() => setFilterActive((v) => !v)}
+                title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
+              >
+                {filterActive ? '仅交易中' : '显示全部'}
+              </button>
+              <button
+                className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
+                disabled={!selectedInstrument && selectedContracts.size === 0}
+                onClick={async () => {
+                  // 如果有多选，批量收藏/取消收藏
+                  if (selectedContracts.size > 1) {
+                    const allFavorited = Array.from(selectedContracts).every(id => favoritedIds.has(id))
+                    if (allFavorited) {
+                      for (const id of selectedContracts) {
+                        await removeFromFavorites(id)
+                      }
+                      toast.success(`已移除 ${selectedContracts.size} 个合约`)
+                    } else {
+                      let count = 0
+                      for (const id of selectedContracts) {
+                        const inst = contracts.find(c => c.instrumentID === id)
+                        if (inst) {
+                          const success = await addToFavorites(inst)
+                          if (success) count++
+                        }
+                      }
+                      toast.success(`已收藏 ${count} 个合约`)
+                    }
+                    return
+                  }
+
+                  if (!selectedInstrument) return
+                  if (favoritedIds.has(selectedInstrument)) {
+                    await removeFromFavorites(selectedInstrument)
+                    toast.success(`已移除 ${selectedInstrument}`)
+                  } else {
+                    const inst = contracts.find(c => c.instrumentID === selectedInstrument)
+                    if (inst) {
+                      await addToFavorites(inst)
+                      toast.success(`已收藏 ${inst.instrumentID}`)
+                    }
+                  }
+                }}
+              >
+                {selectedContracts.size > 1
+                  ? (Array.from(selectedContracts).every(id => favoritedIds.has(id)) ? '批量移除' : '批量收藏')
+                  : (selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏')
+                }
+              </button>
+            </div>
+            <div className="market-toolbar__search">
+              <ContractSearch contracts={listRows} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
+              <button
+                className="btn-search-advanced"
+                title="搜索合约"
+                onClick={() => setSearchModalOpen(true)}
+              >
+                🔍
+              </button>
+              {searchQuery && (
+                <span className="search-count">
+                  {rows.length} / {listRows.length}
+                </span>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {view === 'tquote' ? (
@@ -159,6 +301,16 @@ export function OptionsPanel() {
           </ErrorBoundary>
         </div>
       )}
+
+      {/* 高级搜索弹窗（放大镜入口） */}
+      <InstrumentSearchModal
+        isOpen={searchModalOpen}
+        onClose={() => setSearchModalOpen(false)}
+        onAddToFavorite={addToFavorites}
+        onRemoveFromFavorite={removeFromFavorites}
+        allContractIds={allContractIds}
+        favoritedIds={favoritedIds}
+      />
 
       {/* 单选右键菜单 */}
       {contextMenu && (

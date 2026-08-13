@@ -143,22 +143,7 @@ export function MarketPanel() {
           保留 data-drag-handle：market 为固定标签（closable:false）故 TabContent 中惰性不触发，
           与旧 market-tabs 行为一致；保留以对齐 Phase 2 全局栏合并后的拖拽语义（审查 🔵-1）。 */}
       <div className="market-toolbar" data-drag-handle>
-        {/* 搜索 + 全部/自选 + 操作（期货页专属工具栏；期权页为独立标签，见 OptionsPanel） */}
-        <div className="market-toolbar__search">
-          <ContractSearch contracts={baseContracts} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
-          <button
-            className="btn-search-advanced"
-            title="搜索合约"
-            onClick={() => setSearchModalOpen(true)}
-          >
-            🔍
-          </button>
-          {searchQuery && (
-            <span className="search-count">
-              {displayContracts.length} / {baseContracts.length}
-            </span>
-          )}
-        </div>
+        {/* 功能靠左：全部/自选 → 筛选 → 仅交易中 → 收藏 */}
         <div className="market-toolbar__tabs">
           <button
             className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
@@ -173,17 +158,17 @@ export function MarketPanel() {
             自选
           </button>
         </div>
+        <ContractFilter
+          exchanges={filterExchanges}
+          products={filterProducts}
+          productNames={filterProductNames}
+          value={filter}
+          onChange={(v) => {
+            useMarketFilterStore.getState().setExchanges('futures', v.exchanges)
+            useMarketFilterStore.getState().setProducts('futures', v.products)
+          }}
+        />
         <div className="market-toolbar__actions">
-          <ContractFilter
-            exchanges={filterExchanges}
-            products={filterProducts}
-            productNames={filterProductNames}
-            value={filter}
-            onChange={(v) => {
-              useMarketFilterStore.getState().setExchanges('futures', v.exchanges)
-              useMarketFilterStore.getState().setProducts('futures', v.products)
-            }}
-          />
           <button
             className={`btn-filter-status${filterActive ? ' active' : ''}`}
             onClick={() => setFilterActive((v) => !v)}
@@ -238,6 +223,22 @@ export function MarketPanel() {
               : (selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏')
             }
           </button>
+        </div>
+        {/* 搜索贴右：搜索框 + 🔍 + 计数（margin-left:auto 吃掉中间空间推到最右） */}
+        <div className="market-toolbar__search">
+          <ContractSearch contracts={baseContracts} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
+          <button
+            className="btn-search-advanced"
+            title="搜索合约"
+            onClick={() => setSearchModalOpen(true)}
+          >
+            🔍
+          </button>
+          {searchQuery && (
+            <span className="search-count">
+              {displayContracts.length} / {baseContracts.length}
+            </span>
+          )}
         </div>
       </div>
 

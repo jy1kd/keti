@@ -481,4 +481,31 @@ describe('MarketPanel', () => {
       delete (window as any).electronAPI
     })
   })
+
+  describe('工具行布局（Task 8：功能靠左、搜索贴右）', () => {
+    it('DOM 顺序：全部/自选 → 筛选 → 仅交易中 → 收藏 → 搜索框', () => {
+      const { container } = render(<MarketPanel />)
+      const toolbar = container.querySelector('.market-toolbar') as HTMLElement
+      const tabs = toolbar.querySelector('.market-toolbar__tabs') as Element
+      const filterBtn = screen.getByRole('button', { name: /筛选/ })
+      const statusBtn = toolbar.querySelector('.btn-filter-status') as Element
+      const favoriteBtn = toolbar.querySelector('.btn-favorite') as Element
+      const searchBox = toolbar.querySelector('.market-toolbar__search') as Element
+      const searchInput = toolbar.querySelector('.market-toolbar__search .search-input') as Element
+
+      const follows = (a: Element, b: Element) =>
+        (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+
+      expect(tabs).toBeTruthy()
+      expect(filterBtn).toBeTruthy()
+      expect(statusBtn).toBeTruthy()
+      expect(favoriteBtn).toBeTruthy()
+      expect(searchInput).toBeTruthy()
+      expect(follows(tabs, filterBtn)).toBe(true)
+      expect(follows(filterBtn, statusBtn)).toBe(true)
+      expect(follows(statusBtn, favoriteBtn)).toBe(true)
+      expect(follows(favoriteBtn, searchBox)).toBe(true)
+      expect(follows(favoriteBtn, searchInput)).toBe(true)
+    })
+  })
 })
