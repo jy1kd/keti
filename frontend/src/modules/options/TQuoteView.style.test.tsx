@@ -25,9 +25,11 @@ describe('TQuoteView 自动填充', () => {
     expect(block).toMatch(/flex-direction:\s*column/)
   })
 
-  it('.options-panel 用 flex 填充（非固定 height:100%，避免与工具栏叠加溢出）', () => {
+  it('.options-panel 用 height:100% 填充（悬浮窗父级 display:block 定高；flex:1 在 block 父级下失效致 0 高度塌陷）', () => {
     const block = readCssBlock('.options-panel')
-    expect(block).toMatch(/flex:\s*1\s+1\s+0/)
-    expect(block).not.toMatch(/height:\s*100%/)
+    expect(block).toMatch(/height:\s*100%/)
+    expect(block).toMatch(/display:\s*flex/)
+    expect(block).toMatch(/flex-direction:\s*column/)
+    expect(block).toMatch(/min-height:\s*0/)
   })
 })

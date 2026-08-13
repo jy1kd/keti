@@ -19,9 +19,13 @@ export const ORDER_FLOATING_SIZE = { w: 620, h: 540 }
  *
  * 浮动窗口机制天然支持 标签页 ↔ 浮动窗口 双向转换（⇩ 停靠回标签栏 / 拖拽脱离），
  * 所有右上角入口统一走此函数：标签不进标签栏、以浮动窗形态弹出。
+ * openTab 会把新标签设为活跃；detachTabAt 对活跃标签脱离后又会把活跃切回 market，
+ * 会拽走主窗口当前页（如从期权页双击标底 → 主窗口跳到期货页）。故脱离成功后恢复
+ * 打开前的活跃标签，打开浮动窗不再干扰主窗口内容。
  * 返回 false 表示标签页数量达上限或脱离失败。
  */
 export function openFloatingTab({ type, title, props = {}, size }: OpenFloatingTabOptions): boolean {
+  const priorActive = useTabStore.getState().activeTabId
   const opened = useTabStore.getState().openTab({ type, title, props })
   if (!opened) return false
 
@@ -29,7 +33,9 @@ export function openFloatingTab({ type, title, props = {}, size }: OpenFloatingT
   const { w, h } = size ?? defaultFloatingSize()
   const x = Math.max(0, Math.round((window.innerWidth - w) / 2))
   const y = Math.max(0, Math.round((window.innerHeight - h) / 2 - 20))
-  return detachTabAt(tabId, { x, y }, size)
+  const ok = detachTabAt(tabId, { x, y }, size)
+  if (ok && priorActive) useTabStore.getState().setActiveTab(priorActive)
+  return ok
 }
 
 /** 打开报单浮动窗：优先定位当前选中合约，否则空白报单窗 */

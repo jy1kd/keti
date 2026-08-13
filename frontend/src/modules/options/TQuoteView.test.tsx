@@ -95,7 +95,7 @@ describe('TQuoteView (自包含)', () => {
     expect(screen.getByTestId('tquote-table').textContent).toBe('IF2608-20260815')
   })
 
-  it('renders single table when both underlying and expiry selected', async () => {
+  it('标底多到期日时默认取首条链（无到期日选择器），只渲染单表', async () => {
     mockGetOptionChains.mockResolvedValue({
       chains: [
         { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '' },
@@ -112,21 +112,16 @@ describe('TQuoteView (自包含)', () => {
     expect(tables[0].textContent).toBe('IF2608-20260815')
   })
 
-  it('到期日 select 由 optionChains 派生（标底选中后列出该标底全部到期日）', async () => {
-    mockGetOptionChains.mockResolvedValue({
-      chains: [
-        { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '' },
-        { underlying: 'IF2608', expireDate: '20260915', calls: [], puts: [], updateTime: '' },
-      ],
-    })
+  it('无到期日选择器（去 到期日 select）', async () => {
+    renderChain()
     const user = userEvent.setup()
     render(<TQuoteView />)
     const input = await screen.findByPlaceholderText('输入关键字搜索...')
     await user.click(input)
     await user.click(screen.getByText('IF2608'))
-    const select = await screen.findByLabelText(/到期日/) as HTMLSelectElement
-    const dates = Array.from(select.options).map((o) => o.value).filter(Boolean)
-    expect(dates).toEqual(['20260815', '20260915'])
+    await screen.findByTestId('tquote-table')
+    expect(screen.queryByLabelText(/到期日/)).toBeNull()
+    expect(screen.queryByRole('option', { name: /请选择到期日/ })).toBeNull()
   })
 
   it('instrumentID prop 预选标底：自动加载该标底期权链并选中', async () => {
@@ -145,14 +140,24 @@ describe('TQuoteView (自包含)', () => {
     expect(labels.length).toBeGreaterThan(0)
   })
 
-  it('sorts available underlyings lexicographically in dropdown', async () => {
+  it('按不区分大小写自然序排序标底下拉（cu2609 在 FG609 前）', async () => {
     mockGetOptionUnderlyings.mockResolvedValue({ underlyings: ['MA609', 'cu2609', 'FG609'] })
     const user = userEvent.setup()
     render(<TQuoteView />)
     const input = await screen.findByPlaceholderText('输入关键字搜索...')
     await user.click(input)
     const options = Array.from(document.querySelectorAll('.options-search-option')).map((el) => el?.textContent ?? '')
-    expect(options).toEqual(['FG609', 'MA609', 'cu2609'])
+    expect(options).toEqual(['cu2609', 'FG609', 'MA609'])
+  })
+
+  it('标底 a 开头小写排在 FG610 等大写之前（case-insensitive 字典序）', async () => {
+    mockGetOptionUnderlyings.mockResolvedValue({ underlyings: ['FG610', 'ad2608', 'MA609'] })
+    const user = userEvent.setup()
+    render(<TQuoteView />)
+    const input = await screen.findByPlaceholderText('输入关键字搜索...')
+    await user.click(input)
+    const options = Array.from(document.querySelectorAll('.options-search-option')).map((el) => el?.textContent ?? '')
+    expect(options).toEqual(['ad2608', 'FG610', 'MA609'])
   })
 
   it('不向 TQuoteTable 传递 volatility（去 IV 后无消费方）', async () => {

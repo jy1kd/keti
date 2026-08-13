@@ -2,14 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMarketStore } from '@/modules/market/store'
 import { getOptionUnderlyings, getOptionChains, getSnapshots } from '@/services/api'
 import type { OptionChain } from '@/services/types'
+import { naturalCompare } from '@/modules/market/sort'
 import { TQuoteTable } from './TQuoteTable'
 import './styles.css'
-
-/** Format YYYYMMDD → YYYY-MM-DD for display. */
-function formatExpireDate(raw: string): string {
-  if (raw.length === 8) return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
-  return raw
-}
 
 /** Max retry attempts for loading underlyings. */
 const MAX_RETRIES = 3
@@ -19,15 +14,14 @@ const RETRY_DELAY_MS = 1500
 /**
  * TQuoteView — 独立悬浮标签页的 T型报价（多实例自包含）
  *
- * 自包含：所有数据状态（optionChains / selectedUnderlying / selectedExpireDate /
- * loading / error）均为本地 useState，直接调用 @/services/api，多个悬浮实例互不干扰。
+ * 自包含：所有数据状态（optionChains / selectedUnderlying / loading / error）均为本地
+ * useState，直接调用 @/services/api，多个悬浮实例互不干扰。
  * 可选 prop `instrumentID`：挂载时自动预选该标底并加载期权链（T型报价-<标底> 标签页）。
  */
 export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
   // T型报价数据（本地状态，实例隔离）
   const [optionChains, setOptionChains] = useState<OptionChain[]>([])
   const [selectedUnderlying, setSelectedUnderlying] = useState<string | null>(null)
-  const [selectedExpireDate, setSelectedExpireDate] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -44,11 +38,11 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
   const [showUnderlyingDropdown, setShowUnderlyingDropdown] = useState(false)
   const underlyingDropdownRef = useRef<HTMLDivElement>(null)
 
-  // 排序（字典序）：availableUnderlyings 设值前排序；filteredUnderlyings 保持有序
+  // 排序（字典序，不区分大小写）：availableUnderlyings 设值前排序；filteredUnderlyings 保持有序
   const filteredUnderlyings = useMemo(() => {
     if (!underlyingSearch.trim()) return availableUnderlyings
     const q = underlyingSearch.trim().toUpperCase()
-    return availableUnderlyings.filter((u) => u.toUpperCase().includes(q)).sort()
+    return availableUnderlyings.filter((u) => u.toUpperCase().includes(q)).sort(naturalCompare)
   }, [availableUnderlyings, underlyingSearch])
 
   // Close underlying dropdown on outside click
@@ -79,7 +73,7 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
           retryCount++
           setTimeout(loadUnderlyings, RETRY_DELAY_MS)
         } else {
-          setAvailableUnderlyings([...underlyings].sort())
+          setAvailableUnderlyings([...underlyings].sort(naturalCompare))
           setUnderlyingsLoading(false)
         }
       }).catch(() => {
@@ -98,21 +92,15 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
     return () => { cancelled = true }
   }, [])
 
-  // Find the selected chain (only one at a time)
+  // 选中的期权链：无到期日选择器，取该标底的首条链（首个到期日）
   const selectedChain = useMemo(
-    () =>
-      optionChains.find(
-        (c) =>
-          (!selectedUnderlying || c.underlying === selectedUnderlying) &&
-          (!selectedExpireDate || c.expireDate === selectedExpireDate)
-      ) ?? null,
-    [optionChains, selectedUnderlying, selectedExpireDate]
+    () => optionChains.find((c) => c.underlying === selectedUnderlying) ?? null,
+    [optionChains, selectedUnderlying]
   )
 
-  // 选择标底：加载期权链 + 自动选中首个到期日
+  // 选择标底：加载期权链（默认展示首个到期日，无到期日选择器）
   const selectUnderlying = useCallback((value: string) => {
     setSelectedUnderlying(value)
-    setSelectedExpireDate(null)
     setUnderlyingSearch('')
     setShowUnderlyingDropdown(false)
     if (value) {
@@ -122,9 +110,6 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
         .then((res) => {
           const chains = res.chains ?? []
           setOptionChains(chains)
-          if (chains.length > 0) {
-            setSelectedExpireDate(chains[0].expireDate)
-          }
           setLoading(false)
         })
         .catch(() => {
@@ -167,32 +152,22 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
         })
         .catch(() => {})
     }
-    // 卸载 / selectedChain 变化（选标底、换到期日）时解锁当前链（引用计数归零才真正解锁）
+    // 卸载 / selectedChain 变化（选标底）时解锁当前链（引用计数归零才真正解锁）
     return () => {
       for (const id of ids) useMarketStore.getState().removeLockedContract(id)
     }
   }, [selectedChain, batchUpdate])
 
-  const handleExpireDateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value || null
-    setSelectedExpireDate(value)
-  }
-
   // Manual refresh underlyings
   const handleRefreshUnderlyings = () => {
     setUnderlyingsLoading(true)
     getOptionUnderlyings().then((res) => {
-      setAvailableUnderlyings([...(res.underlyings ?? [])].sort())
+      setAvailableUnderlyings([...(res.underlyings ?? [])].sort(naturalCompare))
       setUnderlyingsLoading(false)
     }).catch(() => {
       setUnderlyingsLoading(false)
     })
   }
-
-  // Expiry dropdown filtered by selected underlying（由 optionChains 本地派生）
-  const expirations = selectedUnderlying
-    ? [...new Set(optionChains.filter((c) => c.underlying === selectedUnderlying).map((c) => c.expireDate))].sort()
-    : []
 
   return (
     <div className="options-panel">
@@ -240,16 +215,6 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
           </div>
         </label>
 
-        <label>
-          到期日:
-          <select value={selectedExpireDate ?? ''} onChange={handleExpireDateChange}>
-            <option value="">请选择到期日</option>
-            {expirations.map((d) => (
-              <option key={d} value={d}>{formatExpireDate(d)}</option>
-            ))}
-          </select>
-        </label>
-
         <button
           className="options-refresh-btn"
           onClick={handleRefreshUnderlyings}
@@ -275,11 +240,7 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
         )}
         {!loading && !error && !selectedChain && (
           <div className="options-empty">
-            {!selectedUnderlying
-              ? '请先选择标的合约'
-              : !selectedExpireDate
-                ? '请选择到期日'
-                : '无匹配的期权链数据'}
+            {!selectedUnderlying ? '请先选择标的合约' : '无匹配的期权链数据'}
           </div>
         )}
       </div>

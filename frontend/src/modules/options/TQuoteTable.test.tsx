@@ -118,12 +118,20 @@ describe('TQuoteTable', () => {
     expect(options.records).toHaveLength(0)
   })
 
-  it('releases vtable instance on unmount', async () => {
-    const { unmount } = render(<TQuoteTable chain={chain} />)
+  it('卸载后延迟 250ms 释放 vtable（避让 ResizeObserver 100ms 防抖回调，防 internalProps 置 null 后 resize 崩溃）', async () => {
     const { ListTable } = await import('@visactor/vtable')
-    const instance = (ListTable as any).mock.results[0]?.value
-    unmount()
-    expect(instance?.release).toHaveBeenCalled()
+    vi.useFakeTimers()
+    try {
+      const { unmount } = render(<TQuoteTable chain={chain} />)
+      const instance = (ListTable as any).mock.results[0]?.value
+      unmount()
+      // 250ms 内尚未释放：挂起的防抖回调仍能在存活表上触发
+      expect(instance?.release).not.toHaveBeenCalled()
+      vi.advanceTimersByTime(250)
+      expect(instance?.release).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('updates records incrementally when snapshots change without recreating table', async () => {

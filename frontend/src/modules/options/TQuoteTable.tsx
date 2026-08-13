@@ -143,9 +143,17 @@ export function TQuoteTable({ chain, snapshots }: TQuoteTableProps) {
 
     tableRef.current = table
 
+    // 延迟 release：vtable 内部 ResizeObserver 对容器 100ms 防抖；若 release 先于防抖回调
+    // （internalProps 置 null），回调内 resize() 读 null 崩溃。延迟 ~250ms 释放，
+    // 让挂起回调先在存活表上触发；release 幂等（isReleased 守卫），可安全延迟。
+    // StrictMode 双挂载时，延迟释放释放的是旧脱离表，tableRef 已指向新表（仅当仍相等才置 null）。
+    const RESIZE_SETTLE_MS = 250
     return () => {
-      table.release()
-      tableRef.current = null
+      const t = table
+      setTimeout(() => {
+        t.release()
+        if (tableRef.current === t) tableRef.current = null
+      }, RESIZE_SETTLE_MS)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
