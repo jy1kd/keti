@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMarketStore } from '@/modules/market/store'
-import { subscribeMarket, unsubscribeMarket, getOptionUnderlyings, getOptionChains, getSnapshots } from '@/services/api'
+import { getOptionUnderlyings, getOptionChains, getSnapshots } from '@/services/api'
 import type { OptionChain } from '@/services/types'
 import { TQuoteTable } from './TQuoteTable'
 import './styles.css'
@@ -43,10 +43,6 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
   const [underlyingSearch, setUnderlyingSearch] = useState('')
   const [showUnderlyingDropdown, setShowUnderlyingDropdown] = useState(false)
   const underlyingDropdownRef = useRef<HTMLDivElement>(null)
-
-  // 当前已直接订阅的期权合约 ID（不经过 useSubscriptionManager 的 subscribedRef）。
-  // 用于链切换/卸载时主动退订，避免绕过 LRU 驱逐与 SOFT_LIMIT 记账导致订阅泄漏。
-  const subscribedIdsRef = useRef<string[]>([])
 
   // 排序（字典序）：availableUnderlyings 设值前排序；filteredUnderlyings 保持有序
   const filteredUnderlyings = useMemo(() => {
@@ -148,7 +144,12 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instrumentID])
 
-  // Subscribe to selected chain's option instruments + fetch snapshots
+  // 将当前链的期权合约标记为「锁定」，使共享订阅管理器（useSubscriptionManager）
+  // 把链内合约纳入 shouldSubscribe（可见 + 自选 + 锁定）并记账，锁定期间不被 LRU 驱逐。
+  // 不再直接 subscribeMarket/unsubscribeMarket：若同一期权 ID 同时出现在期权列表
+  // 可见区与 T型报价窗，直连退订会全局移除后端订阅，而管理器误以为仍在订阅，
+  // 导致列表行冻结。改走 lockedContracts（引用计数 Map）后，链切换/卸载只解锁，
+  // 管理器按宽限期（10s）优雅退订；若该合约仍在列表可见区内，管理器保留订阅。
   useEffect(() => {
     if (!selectedChain) return
     const ids = [
@@ -156,15 +157,7 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
       ...selectedChain.puts.map((q) => q.instrumentID),
     ]
     if (ids.length > 0) {
-      // 先退订上一链已订阅的合约（链切换时在订阅新链前退订）。
-      // 这些 ID 直接订阅、不进 useSubscriptionManager 的 subscribedRef，
-      // 若不主动退订会绕过 LRU 驱逐与 SOFT_LIMIT 记账，多 T型报价实例叠加
-      // 会重演后端 500 订阅上限的原子拒绝。
-      if (subscribedIdsRef.current.length > 0) {
-        unsubscribeMarket(subscribedIdsRef.current).catch(() => {})
-      }
-      subscribeMarket(ids).catch(() => {})
-      subscribedIdsRef.current = ids
+      for (const id of ids) useMarketStore.getState().addLockedContract(id)
       // Proactively fetch current snapshots so the table shows data immediately,
       // without waiting for WebSocket market_data push.
       getSnapshots(ids)
@@ -174,12 +167,9 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
         })
         .catch(() => {})
     }
-    // 组件卸载 / selectedChain 变化（选标底、换到期日）时退订当前链，避免订阅泄漏
+    // 卸载 / selectedChain 变化（选标底、换到期日）时解锁当前链（引用计数归零才真正解锁）
     return () => {
-      if (subscribedIdsRef.current.length > 0) {
-        unsubscribeMarket(subscribedIdsRef.current).catch(() => {})
-        subscribedIdsRef.current = []
-      }
+      for (const id of ids) useMarketStore.getState().removeLockedContract(id)
     }
   }, [selectedChain, batchUpdate])
 
