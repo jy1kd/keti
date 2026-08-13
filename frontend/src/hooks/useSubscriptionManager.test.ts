@@ -165,6 +165,24 @@ describe('useSubscriptionManager 拖动与 LRU', () => {
     expect(subFirst).toBeGreaterThan(unsubFirst)
   })
 
+  it('should 集超 SOFT_LIMIT 时本批最多订阅 SOFT_LIMIT，超出部分留待下次 diff 并告警', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    renderHook(() => useSubscriptionManager())
+
+    // 可见区 554 个合约（> 后端 500 上限，直接整批提交会被原子拒绝）→ 本批只能提交前 SOFT_LIMIT 个
+    const big = Array.from({ length: 554 }, (_, i) => `VIS${i}`)
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs(big))
+    await act(async () => { vi.advanceTimersByTime(110) })
+
+    // 只提交一个 ≤ SOFT_LIMIT 的批次（而非 554），超出的留待下次 diff
+    expect(vi.mocked(subscribeMarket)).toHaveBeenCalledTimes(1)
+    const batch = vi.mocked(subscribeMarket).mock.calls[0][0] as string[]
+    expect(batch).toHaveLength(480)
+    // 告警记录了丢弃数（留待下次 diff 重试）
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('留待下次 diff'))
+    warnSpy.mockRestore()
+  })
+
   it('停止后完整 diff 退订超期合约', async () => {
     renderHook(() => useSubscriptionManager())
 

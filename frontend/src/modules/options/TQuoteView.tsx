@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMarketStore } from '@/modules/market/store'
+import { useTabStore } from '@/stores/tabs'
 import { getOptionUnderlyings, getOptionChains, getSnapshots } from '@/services/api'
 import type { OptionChain } from '@/services/types'
 import { naturalCompare } from '@/modules/market/sort'
@@ -17,8 +18,10 @@ const RETRY_DELAY_MS = 1500
  * 自包含：所有数据状态（optionChains / selectedUnderlying / loading / error）均为本地
  * useState，直接调用 @/services/api，多个悬浮实例互不干扰。
  * 可选 prop `instrumentID`：挂载时自动预选该标底并加载期权链（T型报价-<标底> 标签页）。
+ * 可选 prop `tabId`：窗内切换标底时同步悬浮标签的标题与 props（updateTab 去重：若该
+ * 标底已有标签则关闭本标签并激活它，保持一标底一窗）。
  */
-export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
+export function TQuoteView({ instrumentID, tabId }: { instrumentID?: string; tabId?: string }) {
   // T型报价数据（本地状态，实例隔离）
   const [optionChains, setOptionChains] = useState<OptionChain[]>([])
   const [selectedUnderlying, setSelectedUnderlying] = useState<string | null>(null)
@@ -103,6 +106,14 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
     setSelectedUnderlying(value)
     setUnderlyingSearch('')
     setShowUnderlyingDropdown(false)
+    // 悬浮标签页：窗内切标底 → 同步标签标题/props（标题随动）。updateTab 按 type+instrumentID
+    // 去重——若该标底已有其他标签，则关闭本标签并激活它（一标底一窗的期望行为）。
+    if (tabId) {
+      useTabStore.getState().updateTab(tabId, {
+        title: value ? `📉 T型报价-${value}` : '📉 T型报价',
+        props: value ? { instrumentID: value } : {},
+      })
+    }
     if (value) {
       setLoading(true)
       setError(null)
@@ -119,7 +130,7 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
     } else {
       setOptionChains([])
     }
-  }, [])
+  }, [tabId])
 
   // 预选：挂载时若带 instrumentID prop → 自动 selectUnderlying（依赖 props.instrumentID）
   useEffect(() => {

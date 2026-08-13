@@ -116,15 +116,17 @@ export function useSubscriptionManager() {
    * 静止态直接调用，拖动停止后 500ms 调用。
    * 仍在宽限期内的合约记录 nextCheckIn，到期后再检查一次（保留到期重排链）。
    * 新批次超 SOFT_LIMIT 时「退订先行」串行化（await 退订后再订阅），规避后端 500 上限原子整批拒绝。
+   * 防御性批次上限：待订阅数超过「剩余容量 + 本批即将退订腾出的名额」时，超出的合约
+   * 本批不订阅（留待下次 diff），避免一次性提交 554 等超限批次被后端 500 上限整批拒绝。
    */
   const runFullDiff = useCallback(() => {
     const should = calculateShouldSubscribe()
     const now = Date.now()
 
-    // 1. 需要订阅的缺失合约
-    const toSubscribe: string[] = []
+    // 1. 需要订阅的缺失合约（全量候选；容量上限见 3.5，超出的留待下次 diff 重试）
+    const toSubscribeAll: string[] = []
     for (const id of should) {
-      if (!subscribedRef.current.has(id)) toSubscribe.push(id)
+      if (!subscribedRef.current.has(id)) toSubscribeAll.push(id)
     }
 
     // 2. 宽限期退订候选 + 记录最早到期时间（到期重排）
@@ -145,10 +147,22 @@ export function useSubscriptionManager() {
     for (const c of graceCandidates) {
       if (now - c.lastVisible > GRACE_MS) toUnsubscribe.add(c.id)
     }
-    for (const id of computeLruEvictions(should, toSubscribe.length)) {
+    for (const id of computeLruEvictions(should, toSubscribeAll.length)) {
       toUnsubscribe.add(id)
     }
     const unsubscribeIds = Array.from(toUnsubscribe)
+
+    // 3.5 防御性批次上限：后端 500 上限原子整批拒绝。本批容量 = SOFT_LIMIT - 已订阅 +
+    //     本批即将退订腾出的名额（退订先行会先释放这些名额）；超出的合约本批不订阅，
+    //     留待下次 diff（可见区收敛后重试）。否则 554 个可见合约会整批提交被后端拒绝。
+    const capacity = Math.max(0, SOFT_LIMIT - subscribedRef.current.size + unsubscribeIds.length)
+    const toSubscribe = toSubscribeAll.slice(0, capacity)
+    const dropped = toSubscribeAll.length - toSubscribe.length
+    if (dropped > 0) {
+      console.warn(
+        `[行情订阅上限] 可见区合约超前端软上限：本批 ${toSubscribeAll.length} 个，仅订阅前 ${toSubscribe.length} 个，${dropped} 个留待下次 diff`,
+      )
+    }
 
     // 4. 订阅动作（success 门控 + 快照回填），供串行化/并行共用
     const subscribeNow = (ids: string[]) => {

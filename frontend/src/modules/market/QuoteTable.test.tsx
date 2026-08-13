@@ -859,6 +859,25 @@ describe('QuoteTable', () => {
       expect(instance.mergeCells).toHaveBeenCalledWith(0, 2, 13, 2)
     })
 
+    it('筛选/搜索重建后同一物理行仍是标底但合约变化 → 重新 mergeCells 重捕获文本（不再跳过）', async () => {
+      // vtable mergeCells 在合并时捕获 text（this.getCellValue(startCol,startRow)）；
+      // 若跳过已合并行，物理行 1 仍是标底但 setRecords 换合约后会残留 AD2609 旧文本。
+      const ad: ContractInfo = { instrumentID: 'AD2609', instrumentName: 'AD2609', exchangeID: 'CZCE', productID: 'AD', volumeMultiple: 10, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' }
+      const ma: ContractInfo = { instrumentID: 'MA609', instrumentName: 'MA609', exchangeID: 'CZCE', productID: 'MA', volumeMultiple: 10, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' }
+      const { rerender } = render(<QuoteTable spec={optionsSpec} contracts={[ad, opt]} snapshots={new Map()} />)
+      const { ListTable } = await import('@visactor/vtable')
+      const instance = (ListTable as any).mock.results[0].value
+      // 首轮：物理行 1 = AD2609（标底），已合并
+      expect(instance.mergeCells).toHaveBeenCalledWith(0, 1, 13, 1)
+      instance.mergeCells.mockClear()
+      instance.unmergeCells.mockClear()
+
+      // 重建：物理行 1 仍是标底，但合约变为 MA609 → 旧合并必须撤销，且必须重新 mergeCells
+      rerender(<QuoteTable spec={optionsSpec} contracts={[ma, opt]} snapshots={new Map()} />)
+      expect(instance.unmergeCells).toHaveBeenCalledWith(0, 1, 13, 1)
+      expect(instance.mergeCells).toHaveBeenCalledWith(0, 1, 13, 1)
+    })
+
     it('合约列样式：标底行返回红/粗/大字，期权行保持原样式', async () => {
       render(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} />)
       const { ListTable } = await import('@visactor/vtable')

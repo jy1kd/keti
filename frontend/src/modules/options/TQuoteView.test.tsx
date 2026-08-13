@@ -3,6 +3,7 @@ import { render, screen, act, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TQuoteView } from './TQuoteView'
 import { useMarketStore } from '@/modules/market/store'
+import { useTabStore } from '@/stores/tabs'
 
 // TQuoteView 已自包含：不再依赖 useOptionsStore，直接调用 @/services/api。
 // 以下 mock 覆盖 TQuoteView 用到的所有 API 函数（subscribeMarket 保留：@/modules/market/store 仍引入）。
@@ -132,6 +133,32 @@ describe('TQuoteView (自包含)', () => {
     expect(await screen.findByTestId('tquote-table')).toBeInTheDocument()
     expect(mockGetOptionChains).toHaveBeenCalledWith('IF2608')
     expect(screen.getByTestId('tquote-table').textContent).toBe('IF2608-20260815')
+  })
+
+  it('窗内切换标底 → updateTab 同步悬浮标签标题与 props（tabId + 新合约）', async () => {
+    mockGetOptionUnderlyings.mockResolvedValue({ underlyings: ['IF2608', 'IF2609', 'MA609'] })
+    mockGetOptionChains.mockResolvedValue({
+      chains: [{ underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '' }],
+    })
+    const updateTabSpy = vi.spyOn(useTabStore.getState(), 'updateTab')
+    try {
+      const user = userEvent.setup()
+      render(<TQuoteView instrumentID="IF2608" tabId="tab-tquote-IF2608" />)
+      await screen.findByTestId('tquote-table')
+      // 挂载预选已同步一次标题（IF2608），清掉后只验证「窗内切标底」
+      updateTabSpy.mockClear()
+
+      const input = await screen.findByPlaceholderText('输入关键字搜索...')
+      await user.click(input)
+      await user.click(screen.getByText('MA609'))
+
+      expect(updateTabSpy).toHaveBeenCalledWith('tab-tquote-IF2608', {
+        title: '📉 T型报价-MA609',
+        props: { instrumentID: 'MA609' },
+      })
+    } finally {
+      updateTabSpy.mockRestore()
+    }
   })
 
   it('shows underlying selector label', async () => {

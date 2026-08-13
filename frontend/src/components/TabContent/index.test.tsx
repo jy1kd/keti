@@ -34,12 +34,13 @@ vi.mock('@/pages/KLinePage', () => ({
   ),
 }))
 
-// Mock TQuoteView 组件（T型报价独立悬浮标签；断言收到 instrumentID prop）
+// Mock TQuoteView 组件（T型报价独立悬浮标签；断言收到 instrumentID + tabId prop）
 vi.mock('@/modules/options/TQuoteView', () => ({
-  TQuoteView: ({ instrumentID }: { instrumentID?: string }) => (
+  TQuoteView: ({ instrumentID, tabId }: { instrumentID?: string; tabId?: string }) => (
     <div data-testid="tquote-view">
       T型报价 Mock
       {instrumentID && <span>标的: {instrumentID}</span>}
+      {tabId && <span data-testid="tquote-tabid">{tabId}</span>}
     </div>
   ),
 }))
@@ -177,8 +178,8 @@ describe('TabContent', () => {
       expect(screen.getByText(new RegExp(expectedText))).toBeInTheDocument()
     })
 
-    // tquote：独立悬浮标签页渲染 TQuoteView，且 props.instrumentID 透传为 instrumentID prop
-    it('应为 tquote 类型渲染 TQuoteView，并透传 props.instrumentID', () => {
+    // tquote：独立悬浮标签页渲染 TQuoteView，且 props.instrumentID + tab.id 透传
+    it('应为 tquote 类型渲染 TQuoteView，并透传 props.instrumentID 与 tabId', () => {
       const tab = makeTab({ type: 'tquote', id: 'tab-tquote-IF2608', props: { instrumentID: 'IF2608' } })
       useTabStore.setState({
         tabs: [tab],
@@ -187,6 +188,8 @@ describe('TabContent', () => {
       render(<TabContent />)
       expect(screen.getByTestId('tquote-view')).toBeInTheDocument()
       expect(screen.getByText(/标的: IF2608/)).toBeInTheDocument()
+      // tabId 透传 → TQuoteView 窗内切标底可同步该标签的标题/props
+      expect(screen.getByTestId('tquote-tabid').textContent).toBe('tab-tquote-IF2608')
     })
 
     it('tquote 空白标签（无 instrumentID）渲染 TQuoteView 不带预选', () => {

@@ -88,7 +88,7 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** 最近一次滚动发生的时间戳（松手检测窗口依据） */
   const lastScrollAtRef = useRef(0)
-  /** 已合并的标底行 vtable 物理行号集合（0=表头）：跟踪合并状态 → 撤销漂移行 + 跳过重复合并 */
+  /** 已合并的标底行 vtable 物理行号集合（0=表头）：记录上次合并范围，下次全量撤销重合并（重捕获 text） */
   const mergedRowsRef = useRef<Set<number>>(new Set())
   /** 合并兜底 rAF 句柄（渲染异步未就绪时重试；卸载/重建时清除在排队帧） */
   const mergeRafRef = useRef<number | null>(null)
@@ -144,9 +144,11 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
 
   /**
    * 合并标底行为整行表头：`mergeCells(0, row, colCount-1, row)`（vtable 行号 0=表头，记录索引 +1）。
-   * 在 setRecords 之后调用（vtable 场景图由 setRecords 同步构建，直接合并即可）：
-   * - 先撤销已合并但不再是标底的行（setRecords 重建数据后行号可能漂移，旧合并会残留在错误行）；
-   * - 再合并当前标底行，已合并行跳过（避免重复 push customMergeCell → 渲染错乱）；
+   * 在 setRecords 之后调用（vtable 场景图由 setRecords 同步构建，直接合并即可）。
+   * vtable 的 mergeCells 在合并时捕获 `text: this.getCellValue(startCol, startRow)`；
+   * setRecords 重建数据后（筛选/搜索）旧合并的 text 陈旧——同一物理行仍是标底但合约已变时，
+   * 会残留旧合约文本，且陈旧合并范围破坏行高/可见区计算。故 ALWAYS 先撤销 ALL 旧合并
+   * （含仍为标底的行），再对当前标底行重新 mergeCells，让 vtable 重捕获当前记录文本。
    * - 合并失败（渲染异步未就绪）的行不入集合，由 rAF 兜底重试（见 contracts effect）。
    */
   const applyRowMerges = useCallback(() => {
@@ -157,22 +159,17 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
     recordsRef.current.forEach((record, i) => {
       if (record.kind === 'underlying') underlyingRows.add(i + 1)
     })
-    // 撤销不再标底的行（unmergeCells 不存在则跳过，兼容无合并语义的表）
+    // mergeCells 合并时捕获 text；setRecords 重建后旧合并的 text 陈旧（筛选后标底行显示旧合约）。
+    // 因此撤销 ALL 旧合并（含仍为标底的行），再对当前标底行重新合并以重捕获文本。
     for (const row of mergedRowsRef.current) {
-      if (!underlyingRows.has(row)) {
-        try {
-          table.unmergeCells?.(0, row, lastCol, row)
-        } catch {
-          // vtable 尚未就绪，忽略
-        }
+      try {
+        table.unmergeCells?.(0, row, lastCol, row)
+      } catch {
+        // vtable 尚未就绪，忽略
       }
     }
     const next = new Set<number>()
     for (const row of underlyingRows) {
-      if (mergedRowsRef.current.has(row)) {
-        next.add(row)
-        continue
-      }
       try {
         table.mergeCells(0, row, lastCol, row)
         next.add(row)

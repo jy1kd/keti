@@ -53,7 +53,7 @@ function renderTabContent(tab: Tab, floating: boolean): React.ReactNode {
     case 'options':
       return <OptionsPanel />
     case 'tquote':
-      return <TQuoteView instrumentID={getInstrumentID(tab.props)} />
+      return <TQuoteView instrumentID={getInstrumentID(tab.props)} tabId={tab.id} />
     case 'ipc-monitor':
       return <IPCMonitorPage />
     default:
