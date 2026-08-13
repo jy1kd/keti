@@ -25,7 +25,7 @@
 
 ---
 
-### Task V2-1: 期权列表标底行 → 合并表头行（标红加粗大字）
+### Task 1: 期权列表标底行 → 合并表头行（标红加粗大字）
 
 **Files:**
 - Modify: `frontend/src/modules/market/optionsSpec.ts`（标底行 `buildRecord` 精简为只留名称）
@@ -86,7 +86,7 @@ git commit -m "feat(options): 期权列表标底行改为合并表头行（标�
 
 ---
 
-### Task V2-2: T型报价 → 独立悬浮标签页（多实例自包含）
+### Task 2: T型报价 → 独立悬浮标签页（多实例自包含）
 
 **Files:**
 - Modify: `frontend/src/stores/tabs.ts`（`TabType` 加 `'tquote'`）
@@ -174,7 +174,7 @@ git commit -m "feat(options): T型报价独立为悬浮标签页（多实例自�
 
 ---
 
-### Task V2-3: 筛选交叉过滤（交易所↔品种双向联动）
+### Task 3: 筛选交叉过滤（交易所↔品种双向联动）
 
 **Files:**
 - Modify: `frontend/src/modules/market/filter.ts`（加 `computeFilterOptions`）
