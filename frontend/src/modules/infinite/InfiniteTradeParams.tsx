@@ -121,8 +121,8 @@ export function InfiniteTradeParams({ instrumentID, onSwitch }: InfiniteTradePar
       <div className="itp-row itp-row--ops">
         <button type="button" className="itp-op-btn" onClick={handleCancelLatest} disabled={opPending || !activeInstrument}>撤最新</button>
         <button type="button" className="itp-op-btn" onClick={() => setConfirmOp('cancelAll')} disabled={opPending || !activeInstrument}>撤全部</button>
+        <button type="button" className="itp-op-btn itp-op-btn--primary" onClick={() => setConfirmOp('flatNet')} disabled={opPending || !activeInstrument}>平净仓</button>
       </div>
-      <button type="button" className="itp-op-btn itp-op-btn--primary" onClick={() => setConfirmOp('flatNet')} disabled={opPending || !activeInstrument}>平净仓</button>
 
       {confirmOp === 'cancelAll' && (
         <ConfirmDialog title="确认撤全部" details={[{ label: '范围', value: '所有未成交报单' }]}
