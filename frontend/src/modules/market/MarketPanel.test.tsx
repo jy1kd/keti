@@ -54,9 +54,9 @@ vi.mock('@/components/InstrumentSearchModal', () => ({
     ) : null,
 }))
 
-// Mock OptionPanel（T型期权模式切换测试）
-vi.mock('@/modules/options/OptionPanel', () => ({
-  OptionPanel: () => <div data-testid="option-panel">OptionPanel Mock</div>,
+// Mock TQuoteView（T型期权模式切换测试；原 OptionPanel 内容已迁入 TQuoteView）
+vi.mock('@/modules/options/TQuoteView', () => ({
+  TQuoteView: () => <div data-testid="option-panel">TQuoteView Mock</div>,
 }))
 
 // Mock echarts

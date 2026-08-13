@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
-import { OptionPanel } from './OptionPanel'
+import { TQuoteView } from './TQuoteView'
 import { useMarketStore } from '@/modules/market/store'
 import type { MarketSnapshot } from '@/services/types'
 
@@ -64,7 +64,7 @@ vi.mock('./TQuoteTable', () => ({
   ),
 }))
 
-describe('OptionPanel', () => {
+describe('TQuoteView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     storeState = {
@@ -78,23 +78,23 @@ describe('OptionPanel', () => {
   })
 
   it('renders the options panel container', () => {
-    const { container } = render(<OptionPanel />)
+    const { container } = render(<TQuoteView />)
     expect(container.firstChild).toBeTruthy()
   })
 
   it('does not auto-fetch option chains on mount', () => {
-    render(<OptionPanel />)
+    render(<TQuoteView />)
     expect(mockFetchOptionChains).not.toHaveBeenCalled()
   })
 
   it('shows placeholder text when no underlying selected', () => {
-    render(<OptionPanel />)
+    render(<TQuoteView />)
     expect(screen.getByText(/请先选择标的合约/)).toBeTruthy()
   })
 
   it('shows placeholder text when underlying selected but no expiry', () => {
     storeState.selectedUnderlying = 'IF2608'
-    render(<OptionPanel />)
+    render(<TQuoteView />)
     // There are two elements with this text: the <option> in dropdown and the <div> placeholder
     const elements = screen.getAllByText(/请选择到期日/)
     expect(elements.length).toBeGreaterThanOrEqual(1)
@@ -102,7 +102,7 @@ describe('OptionPanel', () => {
 
   it('shows loading text when loading=true', () => {
     storeState.loading = true
-    render(<OptionPanel />)
+    render(<TQuoteView />)
     // There are two elements with this text: the <option> in dropdown and the <div> content
     const elements = screen.getAllByText(/加载中/)
     expect(elements.length).toBeGreaterThanOrEqual(1)
@@ -110,7 +110,7 @@ describe('OptionPanel', () => {
 
   it('shows error message when error is set', () => {
     storeState.error = 'Failed to load'
-    render(<OptionPanel />)
+    render(<TQuoteView />)
     expect(screen.getByText(/Failed to load/)).toBeTruthy()
   })
 
@@ -125,13 +125,13 @@ describe('OptionPanel', () => {
     ]
     storeState.selectedUnderlying = 'IF2608'
     storeState.selectedExpireDate = '20260815'
-    render(<OptionPanel />)
+    render(<TQuoteView />)
     expect(screen.getByTestId('tquote-table')).toBeTruthy()
     expect(screen.getByTestId('tquote-table').textContent).toBe('IF2608-20260815')
   })
 
   it('shows underlying selector label', () => {
-    render(<OptionPanel />)
+    render(<TQuoteView />)
     const labels = screen.getAllByText(/标的/)
     expect(labels.length).toBeGreaterThan(0)
   })
@@ -139,7 +139,7 @@ describe('OptionPanel', () => {
   it('shows no match message when selection has no matching chain', () => {
     storeState.selectedUnderlying = 'IF2609'
     storeState.selectedExpireDate = '20261215'
-    render(<OptionPanel />)
+    render(<TQuoteView />)
     expect(screen.getByText(/无匹配/)).toBeTruthy()
   })
 
@@ -150,14 +150,14 @@ describe('OptionPanel', () => {
     ]
     storeState.selectedUnderlying = 'IF2608'
     storeState.selectedExpireDate = '20260815'
-    render(<OptionPanel />)
+    render(<TQuoteView />)
     const tables = screen.getAllByTestId('tquote-table')
     expect(tables).toHaveLength(1)
     expect(tables[0].textContent).toBe('IF2608-20260815')
   })
 })
 
-describe('OptionPanel - volatility real-time refresh', () => {
+describe('TQuoteView - volatility real-time refresh', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
@@ -179,7 +179,7 @@ describe('OptionPanel - volatility real-time refresh', () => {
   })
 
   it('refetches volatility when underlying snapshot changes', () => {
-    render(<OptionPanel />)
+    render(<TQuoteView />)
     // Mount: subscribe effect fetchVolatility ×1
     expect(mockFetchVolatility).toHaveBeenCalledTimes(1)
 
@@ -202,7 +202,7 @@ describe('OptionPanel - volatility real-time refresh', () => {
   })
 
   it('debounces rapid snapshot updates (only fetches once)', () => {
-    render(<OptionPanel />)
+    render(<TQuoteView />)
     expect(mockFetchVolatility).toHaveBeenCalledTimes(1)
 
     // Simulate rapid snapshot updates
@@ -240,7 +240,7 @@ describe('OptionPanel - volatility real-time refresh', () => {
   it('does not refresh when no underlying is selected', () => {
     storeState.selectedUnderlying = null
     storeState.optionChains = []
-    render(<OptionPanel />)
+    render(<TQuoteView />)
     // No subscribe effect (no chain)
     expect(mockFetchVolatility).not.toHaveBeenCalled()
 

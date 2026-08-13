@@ -55,7 +55,7 @@ function App() {
     const cleanup = window.electronAPI?.onNavigateTab?.((tab: string) => {
       switch (tab) {
         case 'market':
-          openTab({ type: 'market', title: '📊 行情' })
+          openTab({ type: 'market', title: '📊 期货' })
           break
         case 'favorites':
           openTab({ type: 'favorites', title: '⭐ 自选' })

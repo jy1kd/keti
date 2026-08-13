@@ -11,7 +11,7 @@ function readCssBlock(selector: string): string {
   return match[1]
 }
 
-describe('OptionPanel 自动填充', () => {
+describe('TQuoteView 自动填充', () => {
   it('.options-chain-table 以 flex:1 撑满可用高度（父级 .options-content 为 flex 列容器）', () => {
     const block = readCssBlock('.options-chain-table')
     expect(block).toMatch(/width:\s*100%/)

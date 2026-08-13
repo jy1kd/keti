@@ -3,7 +3,7 @@ import { ContractSearch } from '@/components/ContractSearch'
 import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
 import { ContextMenu } from '@/components/ContextMenu'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { OptionPanel } from '@/modules/options/OptionPanel'
+import { TQuoteView } from '@/modules/options/TQuoteView'
 import { QuoteTable } from './QuoteTable'
 import { futuresSpec } from './futuresSpec'
 import { useMarketStore } from './store'
@@ -219,7 +219,7 @@ export function MarketPanel() {
       </div>
 
       {viewMode === 'options' ? (
-        <OptionPanel />
+        <TQuoteView />
       ) : (
         <div className="panel-content">
           <ErrorBoundary>

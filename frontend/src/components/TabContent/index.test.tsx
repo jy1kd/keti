@@ -154,7 +154,7 @@ describe('TabContent', () => {
       ['order', '报单页面'],
       ['kline', 'K线页面'],
       ['settings', '⚙ 设置'],
-      ['options', '期权标签页'],
+      ['options', '列表'],
       ['ipc-monitor', '🔌 IPC 监控'],
       ['query', '查询面板 Mock'],
     ])('应为 %s 类型渲染对应内容', (type, expectedText) => {

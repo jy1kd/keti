@@ -19,7 +19,7 @@ const MAX_RETRIES = 3
 /** Delay between retries (ms). */
 const RETRY_DELAY_MS = 1500
 
-export function OptionPanel() {
+export function TQuoteView() {
   const optionChains = useOptionsStore((s) => s.optionChains)
   const volatility = useOptionsStore((s) => s.volatility)
   const selectedUnderlying = useOptionsStore((s) => s.selectedUnderlying)
