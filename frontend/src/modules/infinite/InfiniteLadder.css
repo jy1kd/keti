@@ -46,6 +46,7 @@
   color: #6b7280;
 }
 .ladder-head__cell--price {
+  justify-content: center; /* 价格列头居中，与行内价格对齐 */
   color: #c2c8d0;
 }
 .ladder-head__cell--buy {
@@ -66,7 +67,7 @@
   position: relative;
 }
 
-/* ── 行：四列网格，数值右对齐保证价格/量竖线对齐 ── */
+/* ── 行：四列网格，买卖量右对齐、价格列居中 ── */
 .infinite-row {
   display: grid;
   grid-template-columns: 56px 76px 1fr 76px;
@@ -132,8 +133,7 @@
 .infinite-row__price {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  padding-right: 8px;
+  justify-content: center; /* 价格列居中：两侧买卖量柱对称，数字不再贴右 */
   color: #e4e6eb;
   font-family: var(--font-mono);
 }
