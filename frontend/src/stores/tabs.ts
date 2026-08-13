@@ -9,6 +9,7 @@ export type TabType =
   | 'order'
   | 'kline'
   | 'options'
+  | 'tquote'
   | 'ipc-monitor'
   | 'settings'
   | 'query' // 查询（全局账户查询）
@@ -20,6 +21,7 @@ export const TAB_TYPES: TabType[] = [
   'order',
   'kline',
   'options',
+  'tquote',
   'ipc-monitor',
   'settings',
   'query',

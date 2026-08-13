@@ -53,6 +53,16 @@ export function openKlineFloating(): boolean {
   })
 }
 
+/** 打开 T型报价悬浮窗：传 underlyingID 则预选该标底，否则空白（窗内自选） */
+export function openTQuoteFloating(underlyingID?: string): boolean {
+  return openFloatingTab({
+    type: 'tquote',
+    title: underlyingID ? `📉 T型报价-${underlyingID}` : '📉 T型报价',
+    props: underlyingID ? { instrumentID: underlyingID } : {},
+    size: { w: 900, h: 600 },
+  })
+}
+
 /** 打开查询浮动窗 */
 export function openQueryFloating(): boolean {
   return openFloatingTab({ type: 'query', title: '📋 查询' })

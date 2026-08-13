@@ -1,12 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useOptionsStore } from './store'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMarketStore } from '@/modules/market/store'
-import { subscribeMarket, getOptionUnderlyings, getSnapshots } from '@/services/api'
+import { subscribeMarket, getOptionUnderlyings, getOptionChains, getSnapshots } from '@/services/api'
+import type { OptionChain } from '@/services/types'
 import { TQuoteTable } from './TQuoteTable'
 import './styles.css'
-
-/** Debounce delay (ms) — avoids rapid re-fetches during high-frequency ticks. */
-const REFRESH_DEBOUNCE_MS = 800
 
 /** Format YYYYMMDD → YYYY-MM-DD for display. */
 function formatExpireDate(raw: string): string {
@@ -19,18 +16,20 @@ const MAX_RETRIES = 3
 /** Delay between retries (ms). */
 const RETRY_DELAY_MS = 1500
 
-export function TQuoteView() {
-  const optionChains = useOptionsStore((s) => s.optionChains)
-  const volatility = useOptionsStore((s) => s.volatility)
-  const selectedUnderlying = useOptionsStore((s) => s.selectedUnderlying)
-  const selectedExpireDate = useOptionsStore((s) => s.selectedExpireDate)
-  const loading = useOptionsStore((s) => s.loading)
-  const error = useOptionsStore((s) => s.error)
-  const fetchOptionChains = useOptionsStore((s) => s.fetchOptionChains)
-  const fetchVolatility = useOptionsStore((s) => s.fetchVolatility)
-  const setSelectedUnderlying = useOptionsStore((s) => s.setSelectedUnderlying)
-  const setSelectedExpireDate = useOptionsStore((s) => s.setSelectedExpireDate)
-  const availableExpirations = useOptionsStore((s) => s.availableExpirations)
+/**
+ * TQuoteView — 独立悬浮标签页的 T型报价（多实例自包含）
+ *
+ * 自包含：所有数据状态（optionChains / selectedUnderlying / selectedExpireDate /
+ * loading / error）均为本地 useState，直接调用 @/services/api，多个悬浮实例互不干扰。
+ * 可选 prop `instrumentID`：挂载时自动预选该标底并加载期权链（T型报价-<标底> 标签页）。
+ */
+export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
+  // T型报价数据（本地状态，实例隔离）
+  const [optionChains, setOptionChains] = useState<OptionChain[]>([])
+  const [selectedUnderlying, setSelectedUnderlying] = useState<string | null>(null)
+  const [selectedExpireDate, setSelectedExpireDate] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Available underlyings — loaded via lightweight API on mount
   const [availableUnderlyings, setAvailableUnderlyings] = useState<string[]>([])
@@ -39,18 +38,17 @@ export function TQuoteView() {
   // Market snapshots — real-time price data for chain quotes
   const snapshots = useMarketStore((s) => s.snapshots)
   const batchUpdate = useMarketStore((s) => s.batchUpdate)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const prevPriceRef = useRef<number | null>(null)
 
   // Searchable underlying dropdown state
   const [underlyingSearch, setUnderlyingSearch] = useState('')
   const [showUnderlyingDropdown, setShowUnderlyingDropdown] = useState(false)
   const underlyingDropdownRef = useRef<HTMLDivElement>(null)
 
+  // 排序（字典序）：availableUnderlyings 设值前排序；filteredUnderlyings 保持有序
   const filteredUnderlyings = useMemo(() => {
     if (!underlyingSearch.trim()) return availableUnderlyings
     const q = underlyingSearch.trim().toUpperCase()
-    return availableUnderlyings.filter((u) => u.toUpperCase().includes(q))
+    return availableUnderlyings.filter((u) => u.toUpperCase().includes(q)).sort()
   }, [availableUnderlyings, underlyingSearch])
 
   // Close underlying dropdown on outside click
@@ -81,7 +79,7 @@ export function TQuoteView() {
           retryCount++
           setTimeout(loadUnderlyings, RETRY_DELAY_MS)
         } else {
-          setAvailableUnderlyings(underlyings)
+          setAvailableUnderlyings([...underlyings].sort())
           setUnderlyingsLoading(false)
         }
       }).catch(() => {
@@ -111,9 +109,42 @@ export function TQuoteView() {
     [optionChains, selectedUnderlying, selectedExpireDate]
   )
 
-  // No auto-load on mount: user must select underlying + expiry manually.
+  // 选择标底：加载期权链 + 自动选中首个到期日
+  const selectUnderlying = useCallback((value: string) => {
+    setSelectedUnderlying(value)
+    setSelectedExpireDate(null)
+    setUnderlyingSearch('')
+    setShowUnderlyingDropdown(false)
+    if (value) {
+      setLoading(true)
+      setError(null)
+      getOptionChains(value)
+        .then((res) => {
+          const chains = res.chains ?? []
+          setOptionChains(chains)
+          if (chains.length > 0) {
+            setSelectedExpireDate(chains[0].expireDate)
+          }
+          setLoading(false)
+        })
+        .catch(() => {
+          setError('Failed to load option chains')
+          setLoading(false)
+        })
+    } else {
+      setOptionChains([])
+    }
+  }, [])
 
-  // Subscribe to selected chain's option instruments + fetch snapshots + IVs
+  // 预选：挂载时若带 instrumentID prop → 自动 selectUnderlying（依赖 props.instrumentID）
+  useEffect(() => {
+    if (instrumentID) {
+      selectUnderlying(instrumentID)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instrumentID])
+
+  // Subscribe to selected chain's option instruments + fetch snapshots
   useEffect(() => {
     if (!selectedChain) return
     const ids = [
@@ -131,40 +162,7 @@ export function TQuoteView() {
         })
         .catch(() => {})
     }
-    fetchVolatility(selectedUnderlying ?? undefined)
-  }, [selectedChain, selectedUnderlying, fetchVolatility, batchUpdate])
-
-  // Real-time IV refresh: when underlying's lastPrice changes, debounce re-fetch volatility
-  useEffect(() => {
-    if (!selectedUnderlying) return
-    const snap = snapshots.get(selectedUnderlying)
-    if (!snap) return
-
-    const currentPrice = snap.lastPrice
-    if (prevPriceRef.current === currentPrice) return
-    prevPriceRef.current = currentPrice
-
-    if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => {
-      fetchVolatility(selectedUnderlying)
-      timerRef.current = null
-    }, REFRESH_DEBOUNCE_MS)
-  }, [snapshots, selectedUnderlying, fetchVolatility])
-
-  const selectUnderlying = (value: string) => {
-    setSelectedUnderlying(value)
-    setSelectedExpireDate(null)
-    setUnderlyingSearch('')
-    setShowUnderlyingDropdown(false)
-    if (value) {
-      fetchOptionChains(value).then(() => {
-        const { optionChains: chains, setSelectedExpireDate: setED } = useOptionsStore.getState()
-        if (chains.length > 0) {
-          setED(chains[0].expireDate)
-        }
-      })
-    }
-  }
+  }, [selectedChain, batchUpdate])
 
   const handleExpireDateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value || null
@@ -175,17 +173,17 @@ export function TQuoteView() {
   const handleRefreshUnderlyings = () => {
     setUnderlyingsLoading(true)
     getOptionUnderlyings().then((res) => {
-      setAvailableUnderlyings(res.underlyings ?? [])
+      setAvailableUnderlyings([...(res.underlyings ?? [])].sort())
       setUnderlyingsLoading(false)
     }).catch(() => {
       setUnderlyingsLoading(false)
     })
   }
 
-  // Expiry dropdown filtered by selected underlying
+  // Expiry dropdown filtered by selected underlying（由 optionChains 本地派生）
   const expirations = selectedUnderlying
     ? [...new Set(optionChains.filter((c) => c.underlying === selectedUnderlying).map((c) => c.expireDate))].sort()
-    : availableExpirations()
+    : []
 
   return (
     <div className="options-panel">
@@ -263,7 +261,7 @@ export function TQuoteView() {
         )}
         {!loading && !error && selectedChain && (
           <div className="options-chain-table">
-            <TQuoteTable chain={selectedChain} snapshots={snapshots} volatility={volatility} />
+            <TQuoteTable chain={selectedChain} snapshots={snapshots} />
           </div>
         )}
         {!loading && !error && !selectedChain && (

@@ -1,80 +1,51 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { TQuoteView } from './TQuoteView'
 import { useMarketStore } from '@/modules/market/store'
-import type { MarketSnapshot } from '@/services/types'
 
-// Mock the options store
-const mockFetchOptionChains = vi.fn().mockResolvedValue(undefined)
-const mockFetchVolatility = vi.fn().mockResolvedValue(undefined)
-const mockSetSelectedUnderlying = vi.fn()
-const mockSetSelectedExpireDate = vi.fn()
-const mockAvailableUnderlyings = vi.fn(() => ['IF2608', 'IF2609'])
-const mockAvailableExpirations = vi.fn(() => ['20260815', '20260915'])
-const mockAllStrikes = vi.fn(() => [4700, 4800])
-
-let storeState = {
-  optionChains: [] as any[],
-  volatility: new Map<string, number>(),
-  selectedUnderlying: null as string | null,
-  selectedExpireDate: null as string | null,
-  loading: false,
-  error: null as string | null,
-}
-
-function getMockState() {
-  return {
-    ...storeState,
-    fetchOptionChains: mockFetchOptionChains,
-    fetchVolatility: mockFetchVolatility,
-    setSelectedUnderlying: mockSetSelectedUnderlying,
-    setSelectedExpireDate: mockSetSelectedExpireDate,
-    availableUnderlyings: mockAvailableUnderlyings,
-    availableExpirations: mockAvailableExpirations,
-    allStrikes: mockAllStrikes,
-  }
-}
-
-vi.mock('./store', () => ({
-  useOptionsStore: Object.assign(
-    (selector: any) => {
-      if (typeof selector === 'function') {
-        return selector(getMockState())
-      }
-      return getMockState()
-    },
-    { getState: () => getMockState() }
-  ),
-}))
-
-// Use real useMarketStore — no mock, so setState triggers re-renders via zustand
-
-// Mock subscribeMarket and getOptionUnderlyings
-const mockSubscribeMarket = vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] })
+// TQuoteView 已自包含：不再依赖 useOptionsStore，直接调用 @/services/api。
+// 以下 mock 覆盖 TQuoteView 用到的所有 API 函数。
 const mockGetOptionUnderlyings = vi.fn().mockResolvedValue({ underlyings: ['IF2608', 'IF2609'] })
+const mockGetOptionChains = vi.fn().mockResolvedValue({ chains: [] })
+const mockGetVolatility = vi.fn().mockResolvedValue({ volatility: [] })
+const mockSubscribeMarket = vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] })
+const mockGetSnapshots = vi.fn().mockResolvedValue({ snapshots: {} })
+
 vi.mock('@/services/api', () => ({
-  subscribeMarket: (...args: any[]) => mockSubscribeMarket(...args),
   getOptionUnderlyings: (...args: any[]) => mockGetOptionUnderlyings(...args),
+  getOptionChains: (...args: any[]) => mockGetOptionChains(...args),
+  getVolatility: (...args: any[]) => mockGetVolatility(...args),
+  subscribeMarket: (...args: any[]) => mockSubscribeMarket(...args),
+  getSnapshots: (...args: any[]) => mockGetSnapshots(...args),
 }))
 
-// Mock TQuoteTable (renders simple div)
+// Mock TQuoteTable：捕获 props，用于断言「不再接收 volatility（去 IV）」
+const mockTQuoteTable = vi.fn()
 vi.mock('./TQuoteTable', () => ({
-  TQuoteTable: ({ chain }: { chain: any }) => (
-    <div data-testid="tquote-table">{chain.underlying}-{chain.expireDate}</div>
-  ),
+  TQuoteTable: (props: any) => {
+    mockTQuoteTable(props)
+    return (
+      <div data-testid="tquote-table">
+        {props.chain.underlying}-{props.chain.expireDate}
+      </div>
+    )
+  },
 }))
 
-describe('TQuoteView', () => {
+function renderChain(underlying = 'IF2608', expireDate = '20260815') {
+  mockGetOptionChains.mockResolvedValue({
+    chains: [{ underlying, expireDate, calls: [], puts: [], updateTime: '' }],
+  })
+}
+
+describe('TQuoteView (自包含)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    storeState = {
-      optionChains: [],
-      volatility: new Map(),
-      selectedUnderlying: null,
-      selectedExpireDate: null,
-      loading: false,
-      error: null,
-    }
+    useMarketStore.setState({ snapshots: new Map() })
+    mockGetOptionUnderlyings.mockResolvedValue({ underlyings: ['IF2608', 'IF2609'] })
+    mockGetOptionChains.mockResolvedValue({ chains: [] })
+    mockGetVolatility.mockResolvedValue({ volatility: [] })
   })
 
   it('renders the options panel container', () => {
@@ -82,180 +53,122 @@ describe('TQuoteView', () => {
     expect(container.firstChild).toBeTruthy()
   })
 
-  it('does not auto-fetch option chains on mount', () => {
+  it('无 instrumentID prop 时不自动加载期权链（需窗内自选标的）', () => {
     render(<TQuoteView />)
-    expect(mockFetchOptionChains).not.toHaveBeenCalled()
+    expect(mockGetOptionChains).not.toHaveBeenCalled()
   })
 
-  it('shows placeholder text when no underlying selected', () => {
+  it('shows placeholder text when no underlying selected', async () => {
     render(<TQuoteView />)
-    expect(screen.getByText(/请先选择标的合约/)).toBeTruthy()
+    expect(await screen.findByText(/请先选择标的合约/)).toBeTruthy()
   })
 
-  it('shows placeholder text when underlying selected but no expiry', () => {
-    storeState.selectedUnderlying = 'IF2608'
+  it('shows loading text when loading=true', async () => {
+    let resolveChains: (v: { chains: any[] }) => void
+    mockGetOptionChains.mockReturnValue(new Promise((resolve) => { resolveChains = resolve }))
+    const user = userEvent.setup()
     render(<TQuoteView />)
-    // There are two elements with this text: the <option> in dropdown and the <div> placeholder
-    const elements = screen.getAllByText(/请选择到期日/)
-    expect(elements.length).toBeGreaterThanOrEqual(1)
+    const input = await screen.findByPlaceholderText('输入关键字搜索...')
+    await user.click(input)
+    await user.click(screen.getByText('IF2608'))
+    expect(screen.getAllByText(/加载中/).length).toBeGreaterThanOrEqual(1)
+    act(() => {
+      resolveChains!({ chains: [] })
+    })
   })
 
-  it('shows loading text when loading=true', () => {
-    storeState.loading = true
+  it('shows error message when chain fetch fails', async () => {
+    mockGetOptionChains.mockRejectedValue(new Error('Failed to load option chains'))
+    const user = userEvent.setup()
     render(<TQuoteView />)
-    // There are two elements with this text: the <option> in dropdown and the <div> content
-    const elements = screen.getAllByText(/加载中/)
-    expect(elements.length).toBeGreaterThanOrEqual(1)
+    const input = await screen.findByPlaceholderText('输入关键字搜索...')
+    await user.click(input)
+    await user.click(screen.getByText('IF2608'))
+    expect(await screen.findByText(/Failed to load option chains/)).toBeTruthy()
   })
 
-  it('shows error message when error is set', () => {
-    storeState.error = 'Failed to load'
+  it('renders TQuoteTable when chain data is available', async () => {
+    renderChain()
+    const user = userEvent.setup()
     render(<TQuoteView />)
-    expect(screen.getByText(/Failed to load/)).toBeTruthy()
-  })
-
-  it('renders TQuoteTable when chain data is available', () => {
-    storeState.optionChains = [
-      {
-        underlying: 'IF2608',
-        expireDate: '20260815',
-        calls: [],
-        puts: [],
-      },
-    ]
-    storeState.selectedUnderlying = 'IF2608'
-    storeState.selectedExpireDate = '20260815'
-    render(<TQuoteView />)
-    expect(screen.getByTestId('tquote-table')).toBeTruthy()
+    const input = await screen.findByPlaceholderText('输入关键字搜索...')
+    await user.click(input)
+    await user.click(screen.getByText('IF2608'))
+    expect(await screen.findByTestId('tquote-table')).toBeInTheDocument()
     expect(screen.getByTestId('tquote-table').textContent).toBe('IF2608-20260815')
   })
 
-  it('shows underlying selector label', () => {
+  it('renders single table when both underlying and expiry selected', async () => {
+    mockGetOptionChains.mockResolvedValue({
+      chains: [
+        { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '' },
+        { underlying: 'IF2608', expireDate: '20260915', calls: [], puts: [], updateTime: '' },
+      ],
+    })
+    const user = userEvent.setup()
     render(<TQuoteView />)
-    const labels = screen.getAllByText(/标的/)
-    expect(labels.length).toBeGreaterThan(0)
-  })
-
-  it('shows no match message when selection has no matching chain', () => {
-    storeState.selectedUnderlying = 'IF2609'
-    storeState.selectedExpireDate = '20261215'
-    render(<TQuoteView />)
-    expect(screen.getByText(/无匹配/)).toBeTruthy()
-  })
-
-  it('renders single table when both underlying and expiry selected', () => {
-    storeState.optionChains = [
-      { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [] },
-      { underlying: 'IF2608', expireDate: '20260915', calls: [], puts: [] },
-    ]
-    storeState.selectedUnderlying = 'IF2608'
-    storeState.selectedExpireDate = '20260815'
-    render(<TQuoteView />)
-    const tables = screen.getAllByTestId('tquote-table')
+    const input = await screen.findByPlaceholderText('输入关键字搜索...')
+    await user.click(input)
+    await user.click(screen.getByText('IF2608'))
+    const tables = await screen.findAllByTestId('tquote-table')
     expect(tables).toHaveLength(1)
     expect(tables[0].textContent).toBe('IF2608-20260815')
   })
-})
 
-describe('TQuoteView - volatility real-time refresh', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    vi.useFakeTimers()
-    storeState = {
-      optionChains: [
-        { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [] },
+  it('到期日 select 由 optionChains 派生（标底选中后列出该标底全部到期日）', async () => {
+    mockGetOptionChains.mockResolvedValue({
+      chains: [
+        { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '' },
+        { underlying: 'IF2608', expireDate: '20260915', calls: [], puts: [], updateTime: '' },
       ],
-      volatility: new Map(),
-      selectedUnderlying: 'IF2608',
-      selectedExpireDate: '20260815',
-      loading: false,
-      error: null,
-    }
-    useMarketStore.setState({ snapshots: new Map() })
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
-  it('refetches volatility when underlying snapshot changes', () => {
+    })
+    const user = userEvent.setup()
     render(<TQuoteView />)
-    // Mount: subscribe effect fetchVolatility ×1
-    expect(mockFetchVolatility).toHaveBeenCalledTimes(1)
-
-    // Simulate underlying snapshot update via real zustand store
-    act(() => {
-      useMarketStore.setState({
-        snapshots: new Map([
-          ['IF2608', { instrumentID: 'IF2608', lastPrice: 4800 } as MarketSnapshot],
-        ]),
-      })
-    })
-
-    // Advance timers to trigger debounce
-    act(() => {
-      vi.advanceTimersByTime(1000)
-    })
-
-    expect(mockFetchVolatility).toHaveBeenCalledTimes(2)
-    expect(mockFetchVolatility).toHaveBeenLastCalledWith('IF2608')
+    const input = await screen.findByPlaceholderText('输入关键字搜索...')
+    await user.click(input)
+    await user.click(screen.getByText('IF2608'))
+    const select = await screen.findByLabelText(/到期日/) as HTMLSelectElement
+    const dates = Array.from(select.options).map((o) => o.value).filter(Boolean)
+    expect(dates).toEqual(['20260815', '20260915'])
   })
 
-  it('debounces rapid snapshot updates (only fetches once)', () => {
-    render(<TQuoteView />)
-    expect(mockFetchVolatility).toHaveBeenCalledTimes(1)
-
-    // Simulate rapid snapshot updates
-    act(() => {
-      useMarketStore.setState({
-        snapshots: new Map([
-          ['IF2608', { instrumentID: 'IF2608', lastPrice: 4800 } as MarketSnapshot],
-        ]),
-      })
+  it('instrumentID prop 预选标底：自动加载该标底期权链并选中', async () => {
+    mockGetOptionChains.mockResolvedValue({
+      chains: [{ underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '' }],
     })
-    act(() => {
-      useMarketStore.setState({
-        snapshots: new Map([
-          ['IF2608', { instrumentID: 'IF2608', lastPrice: 4801 } as MarketSnapshot],
-        ]),
-      })
-    })
-    act(() => {
-      useMarketStore.setState({
-        snapshots: new Map([
-          ['IF2608', { instrumentID: 'IF2608', lastPrice: 4802 } as MarketSnapshot],
-        ]),
-      })
-    })
-
-    // Only advance past debounce window once
-    act(() => {
-      vi.advanceTimersByTime(1000)
-    })
-
-    // Should only have fetched once more (debounced), not 3 times
-    expect(mockFetchVolatility).toHaveBeenCalledTimes(2)
+    render(<TQuoteView instrumentID="IF2608" />)
+    expect(await screen.findByTestId('tquote-table')).toBeInTheDocument()
+    expect(mockGetOptionChains).toHaveBeenCalledWith('IF2608')
+    expect(screen.getByTestId('tquote-table').textContent).toBe('IF2608-20260815')
   })
 
-  it('does not refresh when no underlying is selected', () => {
-    storeState.selectedUnderlying = null
-    storeState.optionChains = []
+  it('shows underlying selector label', async () => {
     render(<TQuoteView />)
-    // No subscribe effect (no chain)
-    expect(mockFetchVolatility).not.toHaveBeenCalled()
+    const labels = await screen.findAllByText(/标的/)
+    expect(labels.length).toBeGreaterThan(0)
+  })
 
-    act(() => {
-      useMarketStore.setState({
-        snapshots: new Map([
-          ['IF2608', { instrumentID: 'IF2608', lastPrice: 4800 } as MarketSnapshot],
-        ]),
-      })
-    })
-    act(() => {
-      vi.advanceTimersByTime(1000)
-    })
+  it('sorts available underlyings lexicographically in dropdown', async () => {
+    mockGetOptionUnderlyings.mockResolvedValue({ underlyings: ['MA609', 'cu2609', 'FG609'] })
+    const user = userEvent.setup()
+    render(<TQuoteView />)
+    const input = await screen.findByPlaceholderText('输入关键字搜索...')
+    await user.click(input)
+    const options = Array.from(document.querySelectorAll('.options-search-option')).map((el) => el?.textContent ?? '')
+    expect(options).toEqual(['FG609', 'MA609', 'cu2609'])
+  })
 
-    // Still no fetch
-    expect(mockFetchVolatility).not.toHaveBeenCalled()
+  it('不向 TQuoteTable 传递 volatility（去 IV 后无消费方）', async () => {
+    renderChain()
+    const user = userEvent.setup()
+    render(<TQuoteView />)
+    const input = await screen.findByPlaceholderText('输入关键字搜索...')
+    await user.click(input)
+    await user.click(screen.getByText('IF2608'))
+    await screen.findByTestId('tquote-table')
+    const calls = mockTQuoteTable.mock.calls
+    const props = calls[calls.length - 1]?.[0]
+    expect(props.volatility).toBeUndefined()
+    expect(props.snapshots).toBeInstanceOf(Map)
   })
 })

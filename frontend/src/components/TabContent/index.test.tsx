@@ -34,6 +34,16 @@ vi.mock('@/pages/KLinePage', () => ({
   ),
 }))
 
+// Mock TQuoteView 组件（T型报价独立悬浮标签；断言收到 instrumentID prop）
+vi.mock('@/modules/options/TQuoteView', () => ({
+  TQuoteView: ({ instrumentID }: { instrumentID?: string }) => (
+    <div data-testid="tquote-view">
+      T型报价 Mock
+      {instrumentID && <span>标的: {instrumentID}</span>}
+    </div>
+  ),
+}))
+
 // Mock detachDrag 工具（Task 5 拖拽脱离）
 const detachMock = vi.hoisted(() => ({ startDetachDrag: vi.fn(), detachTabAt: vi.fn() }))
 vi.mock('@/utils/detachDrag', () => detachMock)
@@ -154,7 +164,7 @@ describe('TabContent', () => {
       ['order', '报单页面'],
       ['kline', 'K线页面'],
       ['settings', '⚙ 设置'],
-      ['options', '列表'],
+      ['options', '自选'],
       ['ipc-monitor', '🔌 IPC 监控'],
       ['query', '查询面板 Mock'],
     ])('应为 %s 类型渲染对应内容', (type, expectedText) => {
@@ -165,6 +175,29 @@ describe('TabContent', () => {
       })
       render(<TabContent />)
       expect(screen.getByText(new RegExp(expectedText))).toBeInTheDocument()
+    })
+
+    // tquote：独立悬浮标签页渲染 TQuoteView，且 props.instrumentID 透传为 instrumentID prop
+    it('应为 tquote 类型渲染 TQuoteView，并透传 props.instrumentID', () => {
+      const tab = makeTab({ type: 'tquote', id: 'tab-tquote-IF2608', props: { instrumentID: 'IF2608' } })
+      useTabStore.setState({
+        tabs: [tab],
+        activeTabId: tab.id,
+      })
+      render(<TabContent />)
+      expect(screen.getByTestId('tquote-view')).toBeInTheDocument()
+      expect(screen.getByText(/标的: IF2608/)).toBeInTheDocument()
+    })
+
+    it('tquote 空白标签（无 instrumentID）渲染 TQuoteView 不带预选', () => {
+      const tab = makeTab({ type: 'tquote', id: 'tab-tquote' })
+      useTabStore.setState({
+        tabs: [tab],
+        activeTabId: tab.id,
+      })
+      render(<TabContent />)
+      expect(screen.getByTestId('tquote-view')).toBeInTheDocument()
+      expect(screen.queryByText(/标的:/)).toBeNull()
     })
 
     // 审查 🔵-2：自选页标题已删除，改用稳定的 data-testid 断言页面渲染

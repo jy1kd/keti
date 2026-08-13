@@ -3,6 +3,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ContractFilter } from '@/components/ContractFilter'
 import { ContractSearch } from '@/components/ContractSearch'
 import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
+import { ContextMenu } from '@/components/ContextMenu'
 import { QuoteTable } from '@/modules/market/QuoteTable'
 import { optionsSpec } from '@/modules/market/optionsSpec'
 import { deriveUnderlyingProduct, groupOptionsByUnderlying } from '@/modules/market/sort'
@@ -12,31 +13,40 @@ import { useOrderStore } from '@/modules/order/store'
 import { useContractsStore } from '@/stores/contracts'
 import { useMarketFilterStore } from '@/stores/marketFilter'
 import { useTabStore } from '@/stores/tabs'
+import { openTQuoteFloating } from '@/utils/openFloatingTab'
 import { useContractContextMenu } from '@/hooks/useContractContextMenu'
 import { useContractMenus } from '@/hooks/useContractMenus'
 import { usePointOrder } from '@/hooks/usePointOrder'
 import { getProductName } from '@/utils/productNames'
 import { isContractActive } from '@/utils/contractStatus'
 import { toast } from '@/components/Toast'
-import { TQuoteView } from './TQuoteView'
 import type { ContractInfo } from '@/services/types'
 import './styles.css'
 
 /**
- * OptionsPanel — 期权标签页（二级视图 shell）
+ * OptionsPanel — 期权标签页（列表视图）
  *
- * [列表 | T型报价] 切换：
- * - 列表（默认）：按标底分组展平的期权表（标底期货行在前 + 其后期权行），
- *   由 spec 驱动 QuoteTable 渲染，行级交互（选中/多选/右键/收藏/可见区订阅）与期货页一致；
- * - T型报价：迁入原 OptionPanel 内容（TQuoteView 原样保留）。
+ * 期权列表（默认）：按标底分组展平的期权表（标底期货行在前 + 其后期权行），
+ * 由 spec 驱动 QuoteTable 渲染，行级交互（选中/多选/右键/收藏/可见区订阅）与期货页一致。
+ * T型报价已独立为悬浮标签页（openTQuoteFloating）：
+ * - 双击标底行 → 打开 T型报价-<标底> 悬浮窗；
+ * - 右键标底行 → 「打开T型报价」上下文菜单（仅此项）；
+ * - 期权行双击/右键仍走原 报单弹窗 / 单选右键菜单。
  */
+interface UnderlyingMenuState {
+  instrumentID: string
+  x: number
+  y: number
+}
+
 export function OptionsPanel() {
-  const [view, setView] = useState<'list' | 'tquote'>('list')
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
   // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
   const [filterActive, setFilterActive] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchModalOpen, setSearchModalOpen] = useState(false)
+  // 标底行右键菜单（仅「打开T型报价」一项）
+  const [underlyingMenu, setUnderlyingMenu] = useState<UnderlyingMenuState | null>(null)
   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, favorites, addToFavorites, removeFromFavorites } = useContractsStore()
@@ -157,125 +167,119 @@ export function OptionsPanel() {
     setSelectedContracts(new Set([target]))
   }
 
+  // 标底行检测：合约 productClass === '1'（标底期货）
+  const isUnderlyingRow = (instrumentID: string) =>
+    contracts.find((c) => c.instrumentID === instrumentID)?.productClass === '1'
+
+  // 双击标底行 → 打开 T型报价-<标底> 悬浮窗；期权行 → 原 handleDoubleClick（报单弹窗）
+  const handleRowDoubleClick = (instrumentID: string, price: number) => {
+    if (isUnderlyingRow(instrumentID)) {
+      openTQuoteFloating(instrumentID)
+    } else {
+      handleDoubleClick(instrumentID, price)
+    }
+  }
+
+  // 右键标底行 → 「打开T型报价」菜单（仅此项）；期权行 → 原 handleContextMenu（单选菜单）
+  const handleRowContextMenu = (instrumentID: string, price: number, event: MouseEvent) => {
+    if (isUnderlyingRow(instrumentID)) {
+      event.preventDefault()
+      setUnderlyingMenu({ instrumentID, x: event.clientX, y: event.clientY })
+    } else {
+      handleContextMenu(instrumentID, price, event)
+    }
+  }
+
   return (
     <section className="options-page">
-      {/* 二级视图切换工具栏：功能靠左（列表|T型 → 全部/自选 → 筛选 → 仅交易中 → 收藏），搜索贴右。
-          T型报价视图隐藏列表工具行（全部/自选、筛选、仅交易中、收藏、搜索），仅保留 [列表|T型] 切换 */}
+      {/* 列表工具行：功能靠左（全部/自选 → 筛选 → 仅交易中 → 收藏），搜索贴右。
+          T型报价已独立为悬浮标签页，此处不再有 [列表|T型] 切换。 */}
       <div className="market-toolbar">
-        <div className="market-toolbar__mode">
+        <div className="market-toolbar__tabs">
           <button
-            className={`market-mode-btn${view === 'list' ? ' active' : ''}`}
-            onClick={() => {
-              // 搜索态随视图切换清空：ContractSearch 重挂载后 input 为空，避免残留查询继续过滤列表
-              setSearchQuery('')
-              setView('list')
-            }}
+            className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
+            onClick={() => setActiveTab('all')}
           >
-            列表
+            全部
           </button>
           <button
-            className={`market-mode-btn${view === 'tquote' ? ' active' : ''}`}
-            onClick={() => {
-              setSearchQuery('')
-              setView('tquote')
-            }}
+            className={`btn-tab${activeTab === 'favorites' ? ' active' : ''}`}
+            onClick={() => setActiveTab('favorites')}
           >
-            T型报价
+            自选
           </button>
         </div>
-        {view === 'list' && (
-          <>
-            <div className="market-toolbar__tabs">
-              <button
-                className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
-                onClick={() => setActiveTab('all')}
-              >
-                全部
-              </button>
-              <button
-                className={`btn-tab${activeTab === 'favorites' ? ' active' : ''}`}
-                onClick={() => setActiveTab('favorites')}
-              >
-                自选
-              </button>
-            </div>
-            <ContractFilter
-              exchanges={filterExchanges}
-              products={filterProducts}
-              productNames={filterProductNames}
-              value={filter}
-              onChange={(v) => useMarketFilterStore.getState().setFilter('options', v)}
-            />
-            <div className="market-toolbar__actions">
-              <button
-                className={`btn-filter-status${filterActive ? ' active' : ''}`}
-                onClick={() => setFilterActive((v) => !v)}
-                title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
-              >
-                {filterActive ? '仅交易中' : '显示全部'}
-              </button>
-              <button
-                className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
-                disabled={!selectedInstrument && selectedContracts.size === 0}
-                onClick={() => batchToggleFavorite(selectedInstrument, selectedContracts)}
-              >
-                {favoriteButtonLabel(selectedInstrument, selectedContracts)}
-              </button>
-            </div>
-            <div className="market-toolbar__search">
-              <ContractSearch contracts={listRows} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
-              <button
-                className="btn-search-advanced"
-                title="搜索合约"
-                onClick={() => setSearchModalOpen(true)}
-              >
-                🔍
-              </button>
-              {searchQuery && (
-                <span className="search-count">
-                  {rows.length} / {listRows.length}
-                </span>
-              )}
-            </div>
-          </>
-        )}
+        <ContractFilter
+          exchanges={filterExchanges}
+          products={filterProducts}
+          productNames={filterProductNames}
+          value={filter}
+          onChange={(v) => useMarketFilterStore.getState().setFilter('options', v)}
+        />
+        <div className="market-toolbar__actions">
+          <button
+            className={`btn-filter-status${filterActive ? ' active' : ''}`}
+            onClick={() => setFilterActive((v) => !v)}
+            title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
+          >
+            {filterActive ? '仅交易中' : '显示全部'}
+          </button>
+          <button
+            className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
+            disabled={!selectedInstrument && selectedContracts.size === 0}
+            onClick={() => batchToggleFavorite(selectedInstrument, selectedContracts)}
+          >
+            {favoriteButtonLabel(selectedInstrument, selectedContracts)}
+          </button>
+        </div>
+        <div className="market-toolbar__search">
+          <ContractSearch contracts={listRows} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
+          <button
+            className="btn-search-advanced"
+            title="搜索合约"
+            onClick={() => setSearchModalOpen(true)}
+          >
+            🔍
+          </button>
+          {searchQuery && (
+            <span className="search-count">
+              {rows.length} / {listRows.length}
+            </span>
+          )}
+        </div>
       </div>
 
-      {view === 'tquote' ? (
-        <TQuoteView />
-      ) : (
-        <div className="panel-content">
-          <ErrorBoundary>
-            <QuoteTable
-              spec={optionsSpec}
-              contracts={rows}
-              snapshots={snapshots}
-              selectedInstrument={selectedInstrument}
-              isActive={isActive}
-              onRowClick={handleClick}
-              onRowDoubleClick={handleDoubleClick}
-              onContextMenu={handleContextMenu}
-              onMultiSelectContextMenu={handleMultiSelectContextMenu}
-              onVisibleRangeChange={setVisibleInstrumentIDs}
-              favoritedIds={favoritedIds}
-              onFavoriteChange={(instrumentID, isFavorited) => {
-                if (isFavorited) {
-                  const inst = contracts.find((c) => c.instrumentID === instrumentID)
-                  if (inst) {
-                    addToFavorites(inst)
-                    toast.success(`已收藏 ${instrumentID}`)
-                  }
-                } else {
-                  removeFromFavorites(instrumentID)
-                  toast.success(`已移除 ${instrumentID}`)
+      <div className="panel-content">
+        <ErrorBoundary>
+          <QuoteTable
+            spec={optionsSpec}
+            contracts={rows}
+            snapshots={snapshots}
+            selectedInstrument={selectedInstrument}
+            isActive={isActive}
+            onRowClick={handleClick}
+            onRowDoubleClick={handleRowDoubleClick}
+            onContextMenu={handleRowContextMenu}
+            onMultiSelectContextMenu={handleMultiSelectContextMenu}
+            onVisibleRangeChange={setVisibleInstrumentIDs}
+            favoritedIds={favoritedIds}
+            onFavoriteChange={(instrumentID, isFavorited) => {
+              if (isFavorited) {
+                const inst = contracts.find((c) => c.instrumentID === instrumentID)
+                if (inst) {
+                  addToFavorites(inst)
+                  toast.success(`已收藏 ${instrumentID}`)
                 }
-              }}
-              selectedContracts={selectedContracts}
-              onSelectionChange={setSelectedContracts}
-            />
-          </ErrorBoundary>
-        </div>
-      )}
+              } else {
+                removeFromFavorites(instrumentID)
+                toast.success(`已移除 ${instrumentID}`)
+              }
+            }}
+            selectedContracts={selectedContracts}
+            onSelectionChange={setSelectedContracts}
+          />
+        </ErrorBoundary>
+      </div>
 
       {/* 高级搜索弹窗（放大镜入口） */}
       <InstrumentSearchModal
@@ -286,6 +290,22 @@ export function OptionsPanel() {
         allContractIds={allContractIds}
         favoritedIds={favoritedIds}
       />
+
+      {/* 标底行右键菜单：仅「打开T型报价」 */}
+      {underlyingMenu && (
+        <ContextMenu
+          x={underlyingMenu.x}
+          y={underlyingMenu.y}
+          items={[
+            {
+              label: '打开T型报价',
+              icon: '📉',
+              onClick: () => openTQuoteFloating(underlyingMenu.instrumentID),
+            },
+          ]}
+          onClose={() => setUnderlyingMenu(null)}
+        />
+      )}
 
       {/* 单选 + 多选右键菜单（共享 useContractMenus，与期货页一致） */}
       {singleMenu}

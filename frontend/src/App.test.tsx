@@ -157,6 +157,19 @@ describe('App Layout — 标签页系统', () => {
       delete (window as any).electronAPI
     })
 
+    it('onOpenFloatingTab tquote 打开 T型报价浮动窗（空白无预选）', () => {
+      const onOpenFloatingTab = vi.fn()
+      setElectronAPI({ onOpenFloatingTab })
+      render(<App />)
+      const callback = onOpenFloatingTab.mock.calls[0][0]
+      act(() => {
+        callback('tquote')
+      })
+      expect(useTabStore.getState().tabs.some((t) => t.type === 'tquote')).toBe(true)
+      expect(useFloatingWindowStore.getState().windows['tab-tquote']).toBeDefined()
+      delete (window as any).electronAPI
+    })
+
     it('onTogglePerf 切换 FPS 监控', () => {
       const onTogglePerf = vi.fn()
       setElectronAPI({ onTogglePerf })

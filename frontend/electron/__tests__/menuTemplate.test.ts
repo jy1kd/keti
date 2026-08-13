@@ -22,12 +22,21 @@ describe('getAppMenuDef', () => {
     expect(def.map((d) => d.label)).toEqual(['行情', '功能', '设置', '性能监控']);
   });
 
-  it('行情子菜单完整镜像：期货/期权/自选/分隔符/在新窗口打开', () => {
+  it('行情子菜单完整镜像：期货/期权/自选/T型报价/分隔符/在新窗口打开', () => {
     const market = getAppMenuDef().find((d) => d.id === 'market')!;
     const labels = market.submenu!
       .filter((i) => i.type !== 'separator')
       .map((i) => i.label);
-    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '🪟 在新窗口打开']);
+    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📉 T型报价', '🪟 在新窗口打开']);
+  });
+
+  it('行情「📉 T型报价」action 为 open-floating tquote（在分隔符前）', () => {
+    const market = getAppMenuDef().find((d) => d.id === 'market')!;
+    const tquote = market.submenu!.find((i) => i.id === 'market-tquote')!;
+    expect(tquote.label).toBe('📉 T型报价');
+    expect(tquote.action).toEqual({ type: 'open-floating', tab: 'tquote' });
+    const sep = market.submenu!.find((i) => i.type === 'separator')!;
+    expect(market.submenu!.indexOf(tquote)).toBeLessThan(market.submenu!.indexOf(sep));
   });
 
   it('行情「在新窗口打开」action 为 open-market-window', () => {

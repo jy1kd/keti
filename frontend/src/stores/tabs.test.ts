@@ -48,6 +48,7 @@ describe('useTabStore', () => {
         'order',
         'kline',
         'options',
+        'tquote',
         'ipc-monitor',
         'settings',
         'query',

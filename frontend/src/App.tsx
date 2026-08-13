@@ -21,6 +21,7 @@ import {
   openQueryFloating,
   openSettingsFloating,
   openIpcMonitorFloating,
+  openTQuoteFloating,
 } from '@/utils/openFloatingTab'
 import '@/assets/styles/global.css'
 
@@ -108,6 +109,9 @@ function App() {
           break
         case 'ipc-monitor':
           openIpcMonitorFloating()
+          break
+        case 'tquote':
+          openTQuoteFloating()
           break
       }
     })

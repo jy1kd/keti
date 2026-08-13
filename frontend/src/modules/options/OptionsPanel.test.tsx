@@ -7,12 +7,15 @@ import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
 import { useMarketFilterStore } from '@/stores/marketFilter'
 import { useTabStore } from '@/stores/tabs'
+import { useFloatingWindowStore } from '@/stores/floatingWindows'
+import { openTQuoteFloating } from '@/utils/openFloatingTab'
 import type { ContractInfo } from '@/services/types'
 
-// Mock TQuoteView（T型报价二级视图依赖链沉重，仅测切换渲染）
-vi.mock('./TQuoteView', () => ({
-  TQuoteView: () => <div data-testid="tquote-view">TQuoteView Mock</div>,
-}))
+// Mock openTQuoteFloating：T型报价已独立为悬浮标签页，标底行双击/右键均入口该函数
+vi.mock('@/utils/openFloatingTab', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/utils/openFloatingTab')>()
+  return { ...actual, openTQuoteFloating: vi.fn() }
+})
 
 // Mock InstrumentSearchModal（放大镜高级搜索弹窗）
 vi.mock('@/components/InstrumentSearchModal', () => ({
@@ -89,26 +92,13 @@ describe('OptionsPanel', () => {
     vi.clearAllMocks()
   })
 
-  it('默认视图为 列表（列表按钮 active，列表表格渲染，T型报价不渲染）', () => {
+  it('默认视图为 列表（列表表格渲染，无 [列表|T型报价] 切换，无 TQuoteView 分支）', () => {
     const { container } = render(<OptionsPanel />)
-    expect(screen.getByRole('button', { name: '列表' }).classList.contains('active')).toBe(true)
-    expect(screen.getByRole('button', { name: 'T型报价' }).classList.contains('active')).toBe(false)
     expect(container.querySelector('.market-table-container')).toBeTruthy()
+    // T型报价已独立为悬浮标签页：不再有模式切换按钮
+    expect(screen.queryByRole('button', { name: 'T型报价' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '列表' })).toBeNull()
     expect(screen.queryByTestId('tquote-view')).toBeNull()
-  })
-
-  it('点击 T型报价 切换二级视图，再切回 列表', async () => {
-    const user = userEvent.setup()
-    const { container } = render(<OptionsPanel />)
-    await user.click(screen.getByRole('button', { name: 'T型报价' }))
-    expect(screen.getByTestId('tquote-view')).toBeInTheDocument()
-    expect(container.querySelector('.market-table-container')).toBeNull()
-    expect(screen.getByRole('button', { name: 'T型报价' }).classList.contains('active')).toBe(true)
-
-    await user.click(screen.getByRole('button', { name: '列表' }))
-    expect(container.querySelector('.market-table-container')).toBeTruthy()
-    expect(screen.queryByTestId('tquote-view')).toBeNull()
-    expect(screen.getByRole('button', { name: '列表' }).classList.contains('active')).toBe(true)
   })
 
   it('分组展平：标底行在前（kind=underlying、类型「标」），期权行随后（C 前 P 后、行权价填充）', async () => {
@@ -139,7 +129,7 @@ describe('OptionsPanel', () => {
     expect(useMarketStore.getState().selectedContracts.size).toBe(1)
   })
 
-  it('右键列表行：打开单选上下文菜单（打开报单/K线/查询）', async () => {
+  it('右键列表行（期权行）：打开单选上下文菜单（打开报单/K线/查询）', async () => {
     render(<OptionsPanel />)
     const { ListTable } = await import('@visactor/vtable')
     const instance = (ListTable as any).mock.results[0].value
@@ -147,12 +137,77 @@ describe('OptionsPanel', () => {
       (call: any[]) => call[0] === 'contextmenu_cell'
     )?.[1]
     expect(contextmenuHandler).toBeDefined()
+    // row 2 = FG609-C-1300（期权行）→ 原单选菜单
     act(() => {
-      contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
+      contextmenuHandler({ row: 2, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
     })
     expect(screen.getByText('打开报单')).toBeInTheDocument()
     expect(screen.getByText('打开K线')).toBeInTheDocument()
     expect(screen.getByText('查询')).toBeInTheDocument()
+  })
+
+  it('双击标底行 → openTQuoteFloating(标底ID)（T型报价独立悬浮入口）', async () => {
+    render(<OptionsPanel />)
+    const { ListTable } = await import('@visactor/vtable')
+    const instance = (ListTable as any).mock.results[0].value
+    const clickHandler = instance.on.mock.calls.find((call: any[]) => call[0] === 'click_cell')?.[1]
+    expect(clickHandler).toBeDefined()
+    // 标底行 vtable row 1 = FG609；两次快速点击触发双击 → onRowDoubleClick → handleRowDoubleClick → openTQuoteFloating
+    act(() => {
+      clickHandler({ row: 1, col: 1, event: {} })
+      clickHandler({ row: 1, col: 1, event: {} })
+    })
+    expect(openTQuoteFloating).toHaveBeenCalledWith('FG609')
+  })
+
+  it('双击期权行 → 仍走原 handleDoubleClick（打开报单浮动窗，不触发 T型报价）', async () => {
+    render(<OptionsPanel />)
+    const { ListTable } = await import('@visactor/vtable')
+    const instance = (ListTable as any).mock.results[0].value
+    const clickHandler = instance.on.mock.calls.find((call: any[]) => call[0] === 'click_cell')?.[1]
+    act(() => {
+      clickHandler({ row: 2, col: 1, event: {} }) // vtable row 2 = FG609-C-1300（期权行）
+      clickHandler({ row: 2, col: 1, event: {} })
+    })
+    expect(openTQuoteFloating).not.toHaveBeenCalled()
+    // 原 handleDoubleClick → openOrderPopup → openFloatingTab(order) 打开报单浮动窗
+    expect(useFloatingWindowStore.getState().windows['tab-order-FG609-C-1300']).toBeDefined()
+  })
+
+  it('右键标底行 → 弹「打开T型报价」菜单（仅此项）', async () => {
+    render(<OptionsPanel />)
+    const { ListTable } = await import('@visactor/vtable')
+    const instance = (ListTable as any).mock.results[0].value
+    const contextmenuHandler = instance.on.mock.calls.find(
+      (call: any[]) => call[0] === 'contextmenu_cell'
+    )?.[1]
+    expect(contextmenuHandler).toBeDefined()
+    // row 1 = FG609（标底行）
+    act(() => {
+      contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
+    })
+    // 仅「打开T型报价」一项（不显示 打开报单/K线/查询）
+    expect(screen.getByText('打开T型报价')).toBeInTheDocument()
+    expect(screen.queryByText('打开报单')).toBeNull()
+    expect(screen.queryByText('打开K线')).toBeNull()
+    expect(screen.queryByText('查询')).toBeNull()
+  })
+
+  it('右键标底行菜单点击「打开T型报价」→ openTQuoteFloating(标底ID)', async () => {
+    const user = userEvent.setup()
+    render(<OptionsPanel />)
+    const { ListTable } = await import('@visactor/vtable')
+    const instance = (ListTable as any).mock.results[0].value
+    const contextmenuHandler = instance.on.mock.calls.find(
+      (call: any[]) => call[0] === 'contextmenu_cell'
+    )?.[1]
+    act(() => {
+      contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
+    })
+    await user.click(screen.getByText('打开T型报价'))
+    expect(openTQuoteFloating).toHaveBeenCalledWith('FG609')
+    // 点击后菜单关闭
+    expect(screen.queryByText('打开T型报价')).toBeNull()
   })
 
   it('收藏列点击：未收藏 → addToFavorites(inst)', async () => {
@@ -251,23 +306,15 @@ describe('OptionsPanel', () => {
   })
 
   describe('工具行布局与搜索定位（Task 8）', () => {
-    it('列表视图渲染搜索框；T型报价视图隐藏列表工具行（筛选/仅交易中/收藏/搜索框）但保留 [列表|T型] 切换', async () => {
-      const user = userEvent.setup()
+    it('工具行始终渲染列表集群（筛选/仅交易中/收藏/搜索框），无 [列表|T型] 切换', () => {
       render(<OptionsPanel />)
-      // 列表视图：完整工具行存在
       expect(screen.getByPlaceholderText('搜索合约...')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /筛选/ })).toBeInTheDocument()
-
-      await user.click(screen.getByRole('button', { name: 'T型报价' }))
-
-      // T型报价视图：列表工具行隐藏
-      expect(screen.queryByPlaceholderText('搜索合约...')).toBeNull()
-      expect(screen.queryByRole('button', { name: /筛选/ })).toBeNull()
-      expect(screen.queryByRole('button', { name: /仅交易中|显示全部/ })).toBeNull()
-      expect(screen.queryByRole('button', { name: '收藏' })).toBeNull()
-      // 二级切换保留
-      expect(screen.getByRole('button', { name: 'T型报价' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: '列表' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /仅交易中|显示全部/ })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '收藏' })).toBeInTheDocument()
+      // 无模式切换按钮
+      expect(screen.queryByRole('button', { name: 'T型报价' })).toBeNull()
+      expect(screen.queryByRole('button', { name: '列表' })).toBeNull()
     })
 
     it('搜索选中期权合约 → 定位到其标底分组（selectedInstrument/selectedContracts = 标底 FG609）', async () => {
@@ -294,10 +341,10 @@ describe('OptionsPanel', () => {
       expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
     })
 
-    it('DOM 顺序：列表/T型报价 → 全部/自选 → 筛选 → 收藏 → 搜索框', () => {
+    it('DOM 顺序：全部/自选 → 筛选 → 收藏 → 搜索框（无 [列表|T型] 切换）', () => {
       const { container } = render(<OptionsPanel />)
       const toolbar = container.querySelector('.market-toolbar') as HTMLElement
-      const mode = toolbar.querySelector('.market-toolbar__mode') as Element
+      expect(toolbar.querySelector('.market-toolbar__mode')).toBeNull()
       const tabs = toolbar.querySelector('.market-toolbar__tabs') as Element
       const filterBtn = screen.getByRole('button', { name: /筛选/ })
       const favoriteBtn = toolbar.querySelector('.btn-favorite') as Element
@@ -306,11 +353,9 @@ describe('OptionsPanel', () => {
       const follows = (a: Element, b: Element) =>
         (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
 
-      expect(mode).toBeTruthy()
       expect(tabs).toBeTruthy()
       expect(favoriteBtn).toBeTruthy()
       expect(searchInput).toBeTruthy()
-      expect(follows(mode, tabs)).toBe(true)
       expect(follows(tabs, filterBtn)).toBe(true)
       expect(follows(filterBtn, favoriteBtn)).toBe(true)
       expect(follows(favoriteBtn, searchInput)).toBe(true)

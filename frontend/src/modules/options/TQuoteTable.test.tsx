@@ -59,7 +59,11 @@ describe('TQuoteTable', () => {
     expect(ListTable).toHaveBeenCalledTimes(1)
     const options = (ListTable as any).mock.calls[0][1]
     expect(options.columns).toBeDefined()
-    expect(options.columns.length).toBe(13) // 6 call cols + 1 strike + 6 put cols
+    expect(options.columns.length).toBe(11) // 5 call cols + 1 strike + 5 put cols（已去除 IV 列）
+    // 不再渲染 IV 列
+    const fields = options.columns.map((c: any) => c.field)
+    expect(fields).not.toContain('callIV')
+    expect(fields).not.toContain('putIV')
   })
 
   it('采用自适应宽度填满容器 + 低调滚动条（与行情表格一致）', async () => {
@@ -112,52 +116,6 @@ describe('TQuoteTable', () => {
     const { ListTable } = await import('@visactor/vtable')
     const options = (ListTable as any).mock.calls[0][1]
     expect(options.records).toHaveLength(0)
-  })
-
-  it('formats impliedVolatility as percentage string', async () => {
-    render(<TQuoteTable chain={chain} />)
-    const { ListTable } = await import('@visactor/vtable')
-    const options = (ListTable as any).mock.calls[0][1]
-    const row = options.records[0]
-    // IV 0.22 → "22.00%"
-    expect(row.callIV).toBe('22.00%')
-    expect(row.putIV).toBe('20.00%')
-  })
-
-  it('shows placeholder for zero impliedVolatility', async () => {
-    const chainZero: OptionChain = {
-      underlying: 'IF2608',
-      expireDate: '20260815',
-      calls: [makeQuote({ instrumentID: 'IF2608-C-4700', strikePrice: 4700, impliedVolatility: 0 })],
-      puts: [makeQuote({ instrumentID: 'IF2608-P-4700', strikePrice: 4700, impliedVolatility: 0 })],
-      updateTime: '2026-07-24T10:00:00',
-    }
-    render(<TQuoteTable chain={chainZero} />)
-    const { ListTable } = await import('@visactor/vtable')
-    const options = (ListTable as any).mock.calls[0][1]
-    expect(options.records[0].callIV).toBe('--')
-    expect(options.records[0].putIV).toBe('--')
-  })
-
-  it('prefers volatility map over quote impliedVolatility', async () => {
-    const volMap = new Map([
-      ['IF2608-C-4700', 0.35],
-      ['IF2608-P-4700', 0.42],
-    ])
-    render(<TQuoteTable chain={chain} volatility={volMap} />)
-    const { ListTable } = await import('@visactor/vtable')
-    const options = (ListTable as any).mock.calls[0][1]
-    // IV from volatility map (0.35 → "35.00%"), not from quote (0.22)
-    expect(options.records[0].callIV).toBe('35.00%')
-    expect(options.records[0].putIV).toBe('42.00%')
-  })
-
-  it('falls back to quote impliedVolatility when instrument not in volatility map', async () => {
-    const volMap = new Map([['OTHER-INSTRUMENT', 0.99]])
-    render(<TQuoteTable chain={chain} volatility={volMap} />)
-    const { ListTable } = await import('@visactor/vtable')
-    const options = (ListTable as any).mock.calls[0][1]
-    expect(options.records[0].callIV).toBe('22.00%')
   })
 
   it('releases vtable instance on unmount', async () => {

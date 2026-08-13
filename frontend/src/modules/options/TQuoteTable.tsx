@@ -11,22 +11,18 @@ interface TQuoteRow {
   callAskPrice: number | string
   callVolume: number | string
   callOpenInterest: number | string
-  callIV: string
   // Put columns
   putLastPrice: number | string
   putBidPrice: number | string
   putAskPrice: number | string
   putVolume: number | string
   putOpenInterest: number | string
-  putIV: string
 }
 
 interface TQuoteTableProps {
   chain: OptionChain
   /** Market snapshots for real-time price data. */
   snapshots?: Map<string, MarketSnapshot>
-  /** Implied volatility from /api/market/volatility (instrumentID → IV). Takes precedence over quote.impliedVolatility. */
-  volatility?: Map<string, number>
 }
 
 const PLACEHOLDER = '--'
@@ -35,7 +31,6 @@ const PLACEHOLDER = '--'
 function buildRecords(
   chain: OptionChain,
   snapshots?: Map<string, MarketSnapshot>,
-  volatility?: Map<string, number>,
 ): TQuoteRow[] {
   const strikeMap = new Map<number, { call?: OptionQuote; put?: OptionQuote }>()
 
@@ -61,11 +56,7 @@ function buildRecords(
     const cSnap = c ? snapshots?.get(c.instrumentID) : undefined
     const pSnap = p ? snapshots?.get(p.instrumentID) : undefined
 
-    const fmtIV = (iv: number) => (iv > 0 ? `${(iv * 100).toFixed(2)}%` : PLACEHOLDER)
     const valOrDash = (v: number | undefined) => (v != null && v > 0 ? v : PLACEHOLDER)
-    // IV: prefer live volatility map, fall back to chain quote value
-    const ivOf = (q: OptionQuote | undefined) =>
-      q ? (volatility?.get(q.instrumentID) ?? q.impliedVolatility) : 0
 
     return {
       strikePrice: strike,
@@ -74,13 +65,11 @@ function buildRecords(
       callAskPrice: cSnap?.askPrice1 ?? valOrDash(c?.askPrice),
       callVolume: cSnap?.volume ?? valOrDash(c?.volume),
       callOpenInterest: cSnap?.openInterest ?? valOrDash(c?.openInterest),
-      callIV: c ? fmtIV(ivOf(c)) : PLACEHOLDER,
       putLastPrice: pSnap?.lastPrice ?? valOrDash(p?.lastPrice),
       putBidPrice: pSnap?.bidPrice1 ?? valOrDash(p?.bidPrice),
       putAskPrice: pSnap?.askPrice1 ?? valOrDash(p?.askPrice),
       putVolume: pSnap?.volume ?? valOrDash(p?.volume),
       putOpenInterest: pSnap?.openInterest ?? valOrDash(p?.openInterest),
-      putIV: p ? fmtIV(ivOf(p)) : PLACEHOLDER,
     }
   })
 }
@@ -91,7 +80,6 @@ const STRIKE_BG = 'rgba(255,255,255,0.04)'
 
 const columns = [
   // ── Call columns (left) ──
-  { field: 'callIV', title: 'IV', width: 70, headerStyle: { color: CALL_COLOR } },
   { field: 'callOpenInterest', title: '持仓', width: 70, headerStyle: { color: CALL_COLOR } },
   { field: 'callVolume', title: '成交', width: 70, headerStyle: { color: CALL_COLOR } },
   { field: 'callAskPrice', title: '卖价', width: 80, headerStyle: { color: CALL_COLOR } },
@@ -110,10 +98,9 @@ const columns = [
   { field: 'putAskPrice', title: '卖价', width: 80, headerStyle: { color: PUT_COLOR } },
   { field: 'putVolume', title: '成交', width: 70, headerStyle: { color: PUT_COLOR } },
   { field: 'putOpenInterest', title: '持仓', width: 70, headerStyle: { color: PUT_COLOR } },
-  { field: 'putIV', title: 'IV', width: 70, headerStyle: { color: PUT_COLOR } },
 ]
 
-export function TQuoteTable({ chain, snapshots, volatility }: TQuoteTableProps) {
+export function TQuoteTable({ chain, snapshots }: TQuoteTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
 
@@ -123,7 +110,7 @@ export function TQuoteTable({ chain, snapshots, volatility }: TQuoteTableProps) 
 
     const table = new ListTable(containerRef.current, {
       columns,
-      records: buildRecords(chain, snapshots, volatility),
+      records: buildRecords(chain, snapshots),
       defaultRowHeight: 28,
       widthMode: 'adaptive' as const,
       hover: { highlightMode: 'row' as const },
@@ -164,8 +151,8 @@ export function TQuoteTable({ chain, snapshots, volatility }: TQuoteTableProps) 
 
   // Update records when data changes without rebuilding the table.
   useEffect(() => {
-    tableRef.current?.setRecords(buildRecords(chain, snapshots, volatility))
-  }, [chain, snapshots, volatility])
+    tableRef.current?.setRecords(buildRecords(chain, snapshots))
+  }, [chain, snapshots])
 
   return <div ref={containerRef} style={{ width: '100%', height: '100%', background: '#0d1117' }} />
 }
