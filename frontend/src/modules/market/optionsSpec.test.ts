@@ -24,4 +24,15 @@ describe('optionsSpec', () => {
     expect(r.contractType).toBe('C')
     expect(r.strikePrice).toBe(1300)
   })
+
+  it('标底行记录只含名称与 kind，行情字段置空', () => {
+    const r = optionsSpec.buildRecord(fut /* productClass '1' FG609 */, undefined, false)
+    expect(r.kind).toBe('underlying')
+    expect(r.instrumentID).toBe('FG609')
+    expect(r.contractType).toBe('标')
+    // 不再填充行情数据字段（整行合并后只显示名称）
+    expect(r.lastPrice).toBeUndefined()
+    expect(r.change).toBeUndefined()
+    expect(r.bidPrice1).toBeUndefined()
+  })
 })

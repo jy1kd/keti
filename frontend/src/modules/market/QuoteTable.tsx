@@ -38,6 +38,28 @@ interface QuoteTableProps {
 /** mouseup 距上次 scroll 在此窗口内视为滚动条释放（松手） */
 const SCROLL_RELEASE_WINDOW_MS = 200
 
+/** 标底行（合并表头行）合约列样式：红/粗/大字（比默认 12 加大） */
+const UNDERLYING_HEADER_STYLE = { color: '#f87171', fontWeight: 'bold', fontSize: 14 }
+
+/**
+ * 合约列样式包装：标底行（整行合并后该样式作用于合并单元格）→ 红/粗/大字；
+ * 其余行保持列原样式（optionsSpec 合约列无 style，futuresSpec 若有则透传）。
+ * 不修改 spec.columns（模块级共享常量），仅对 ListTable 传入一份包装副本。
+ */
+function withUnderlyingHeaderStyle(columns: QuoteTableSpec['columns']): QuoteTableSpec['columns'] {
+  return columns.map((col) => {
+    if (col.field !== 'instrumentID') return col
+    return {
+      ...col,
+      style: (args: any) => {
+        const record = args.table?.records?.[args.row - 1]
+        if (record?.kind === 'underlying') return UNDERLYING_HEADER_STYLE
+        return col.style?.(args)
+      },
+    }
+  })
+}
+
 export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isActive, onRowClick, onRowDoubleClick, onContextMenu, onMultiSelectContextMenu, onVisibleRangeChange, favoritedIds, onFavoriteChange, selectedContracts, onSelectionChange }: QuoteTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
@@ -66,6 +88,10 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** 最近一次滚动发生的时间戳（松手检测窗口依据） */
   const lastScrollAtRef = useRef(0)
+  /** 已合并的标底行 vtable 物理行号集合（0=表头）：跟踪合并状态 → 撤销漂移行 + 跳过重复合并 */
+  const mergedRowsRef = useRef<Set<number>>(new Set())
+  /** 合并兜底 rAF 句柄（渲染异步未就绪时重试；卸载/重建时清除在排队帧） */
+  const mergeRafRef = useRef<number | null>(null)
 
   useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
@@ -116,6 +142,47 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
     setTimeout(notifyVisibleRange, 0)
   }, [notifyVisibleRange])
 
+  /**
+   * 合并标底行为整行表头：`mergeCells(0, row, colCount-1, row)`（vtable 行号 0=表头，记录索引 +1）。
+   * 在 setRecords 之后调用（vtable 场景图由 setRecords 同步构建，直接合并即可）：
+   * - 先撤销已合并但不再是标底的行（setRecords 重建数据后行号可能漂移，旧合并会残留在错误行）；
+   * - 再合并当前标底行，已合并行跳过（避免重复 push customMergeCell → 渲染错乱）；
+   * - 合并失败（渲染异步未就绪）的行不入集合，由 rAF 兜底重试（见 contracts effect）。
+   */
+  const applyRowMerges = useCallback(() => {
+    const table = tableRef.current
+    if (!table || typeof table.mergeCells !== 'function') return
+    const lastCol = spec.columns.length - 1
+    const underlyingRows = new Set<number>()
+    recordsRef.current.forEach((record, i) => {
+      if (record.kind === 'underlying') underlyingRows.add(i + 1)
+    })
+    // 撤销不再标底的行（unmergeCells 不存在则跳过，兼容无合并语义的表）
+    for (const row of mergedRowsRef.current) {
+      if (!underlyingRows.has(row)) {
+        try {
+          table.unmergeCells?.(0, row, lastCol, row)
+        } catch {
+          // vtable 尚未就绪，忽略
+        }
+      }
+    }
+    const next = new Set<number>()
+    for (const row of underlyingRows) {
+      if (mergedRowsRef.current.has(row)) {
+        next.add(row)
+        continue
+      }
+      try {
+        table.mergeCells(0, row, lastCol, row)
+        next.add(row)
+      } catch {
+        // 本轮未就绪，留待下一轮 setRecords/rAF 重试
+      }
+    }
+    mergedRowsRef.current = next
+  }, [spec])
+
   useEffect(() => {
     if (!containerRef.current) return
 
@@ -123,7 +190,7 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
     recordsRef.current = records
 
     const table = new ListTable(containerRef.current, {
-      columns: spec.columns,
+      columns: withUnderlyingHeaderStyle(spec.columns),
       records,
       frozenColCount: 1, // 冻结「合约」列：横向拖动时固定最左侧
       widthMode: 'standard',
@@ -246,7 +313,7 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
       }
 
       // 触发回调：双击优先，否则单击
-      const price = record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
+      const price = record.lastPrice == null || record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
       if (isDoubleClick && onDblClickRef.current) {
         onDblClickRef.current(record.instrumentID, price)
       } else if (onClickRef.current) {
@@ -287,7 +354,7 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
         if (onSelectionChangeRef.current) {
           onSelectionChangeRef.current(new Set([record.instrumentID]))
         }
-        const price = record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
+        const price = record.lastPrice == null || record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
         onContextMenuRef.current?.(record.instrumentID, price, event)
       }
     })
@@ -413,6 +480,11 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
     tableRef.current = table
 
     return () => {
+      // 清除排队中的合并兜底帧（表已 release，避免对已释放实例补合并）
+      if (mergeRafRef.current != null && typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(mergeRafRef.current)
+        mergeRafRef.current = null
+      }
       window.removeEventListener('keydown', handleKeyDown)
       if (container) {
         container.removeEventListener('mousedown', handleMouseDown)
@@ -435,6 +507,17 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
     rowSnapshotRef.current = contracts.map((c) => snapshots.get(c.instrumentID))
     tableRef.current.setRecords(records)
     lastClickedIndexRef.current = null
+    // 标底行合并：setRecords 场景图同步构建，直接合并；rAF 兜底重试渲染异步未就绪的行
+    applyRowMerges()
+    if (mergeRafRef.current != null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(mergeRafRef.current)
+    }
+    if (typeof requestAnimationFrame === 'function') {
+      mergeRafRef.current = requestAnimationFrame(() => {
+        mergeRafRef.current = null
+        applyRowMerges()
+      })
+    }
     // 合约重建后延迟补报可见区（隐藏面板不参与上报）
     scheduleVisibleRangeReport()
     // eslint-disable-next-line react-hooks/exhaustive-deps

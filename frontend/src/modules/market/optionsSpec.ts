@@ -21,13 +21,17 @@ const columns = [
 
 function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, isFavorited: boolean): QuoteRecord {
   const kind: QuoteRowKind = contract.productClass === '1' ? 'underlying' : 'option'
+  // 标底行：整行合并为表头（只显示合约名，标红加粗大字），不再填充任何行情/静态字段
+  if (kind === 'underlying') {
+    return { instrumentID: contract.instrumentID, kind, contractType: '标' }
+  }
   const status = getContractStatus(contract)
-  const contractType = kind === 'underlying' ? '标' : (contract.optionsType === '1' ? 'C' : 'P')
+  const contractType = contract.optionsType === '1' ? 'C' : 'P'
   const base = {
     instrumentID: contract.instrumentID,
     kind,
     contractType,
-    strikePrice: kind === 'option' ? contract.strikePrice : PLACEHOLDER,
+    strikePrice: contract.strikePrice,
     expireDate: contract.expireDate || PLACEHOLDER,
     exchangeID: contract.exchangeID || PLACEHOLDER,
     status,

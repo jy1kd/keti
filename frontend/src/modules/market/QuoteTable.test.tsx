@@ -3,6 +3,7 @@ import { render, act } from '@testing-library/react'
 import { QuoteTable } from './QuoteTable'
 import { shouldRenderAnchor } from './quoteTableCore'
 import { futuresSpec } from './futuresSpec'
+import { optionsSpec } from './optionsSpec'
 import { useMarketStore } from './store'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
 
@@ -816,5 +817,50 @@ describe('QuoteTable', () => {
     )
     expect(onVisibleRangeChange).toHaveBeenCalled()
     expect(onVisibleRangeChange.mock.calls[0][0]).toEqual(expect.arrayContaining(['au2508', 'ag2508']))
+  })
+
+  // --- 期权标底行 → 合并整行表头（Task 1） ---
+
+  describe('标底行合并为整行表头', () => {
+    const fut: ContractInfo = { instrumentID: 'FG609', instrumentName: 'FG609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' }
+    const opt: ContractInfo = { instrumentID: 'FG609-C-1300', instrumentName: 'FG609-C-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'FG609', optionsType: '1', strikePrice: 1300 }
+
+    it('标底行渲染后调用 mergeCells 整行合并，期权行不合并', async () => {
+      render(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} />)
+      const { ListTable } = await import('@visactor/vtable')
+      const instance = (ListTable as any).mock.results[0].value
+      // 标底行 records index 0 → vtable 物理行 1（0=表头），整行合并
+      expect(instance.mergeCells).toHaveBeenCalledWith(0, 1, optionsSpec.columns.length - 1, 1)
+      // 期权行（物理行 2）不合并
+      expect(instance.mergeCells).not.toHaveBeenCalledWith(0, 2, optionsSpec.columns.length - 1, 2)
+    })
+
+    it('合约列样式：标底行返回红/粗/大字，期权行保持原样式', async () => {
+      render(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} />)
+      const { ListTable } = await import('@visactor/vtable')
+      const options = (ListTable as any).mock.calls[0][1]
+      const instrumentCol = options.columns.find((c: { field: string }) => c.field === 'instrumentID')
+      expect(typeof instrumentCol.style).toBe('function')
+      const records = [
+        optionsSpec.buildRecord(fut, undefined, false),
+        optionsSpec.buildRecord(opt, undefined, false),
+      ]
+      // 标底行（row=1 → records[0]）
+      expect(instrumentCol.style({ table: { records }, row: 1, col: 0 })).toEqual({ color: '#f87171', fontWeight: 'bold', fontSize: 14 })
+      // 期权行（row=2 → records[1]）无叠加样式
+      expect(instrumentCol.style({ table: { records }, row: 2, col: 0 })).toBeUndefined()
+    })
+
+    it('单击合并后的标底行仍解析为 underlying 行并触发 onSelectionChange', async () => {
+      const onSelectionChange = vi.fn()
+      render(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} onSelectionChange={onSelectionChange} />)
+      const { ListTable } = await import('@visactor/vtable')
+      const instance = (ListTable as any).mock.results[0].value
+      const clickHandler = instance.on.mock.calls.find((call: any[]) => call[0] === 'click_cell')?.[1]
+      expect(clickHandler).toBeDefined()
+      // vtable 合并单元格的 row 指向被合并首行（标底行）；col 落在中间列（非收藏列）
+      clickHandler({ row: 1, col: 5, event: {} })
+      expect(onSelectionChange).toHaveBeenCalledWith(new Set(['FG609']))
+    })
   })
 })

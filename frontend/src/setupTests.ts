@@ -7,6 +7,8 @@ vi.mock('@visactor/vtable', () => {
     setRecords: vi.fn(),
     updateRecords: vi.fn(),
     updateCellContentRange: vi.fn(),
+    mergeCells: vi.fn(),
+    unmergeCells: vi.fn(),
     on: vi.fn(),
     release: vi.fn(),
     getBodyVisibleCellRange: vi.fn().mockReturnValue({ rowStart: 1, rowEnd: 30, colStart: 0, colEnd: 10 }),
