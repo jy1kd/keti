@@ -278,3 +278,20 @@
   color: var(--accent);
   border-color: var(--accent);
 }
+
+/* ── PositionsQuery 合约筛选输入框 ─────────────────── */
+
+.position-search {
+  flex: 0 0 200px;
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.position-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
