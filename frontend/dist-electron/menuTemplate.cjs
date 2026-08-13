@@ -20,8 +20,8 @@ function getAppMenuDef() {
             id: 'market',
             label: '行情',
             submenu: [
-                { id: 'market-all', label: '📊 全部行情', action: { type: 'market-view', view: 'all' } },
-                { id: 'market-options', label: '📉 T型期权', action: { type: 'market-view', view: 'options' } },
+                { id: 'market-all', label: '📊 期货', action: { type: 'market-view', view: 'all' } },
+                { id: 'market-options', label: '📉 期权', action: { type: 'market-view', view: 'options' } },
                 { id: 'market-favorites', label: '⭐ 自选行情', action: { type: 'market-view', view: 'favorites' } },
                 { id: 'market-sep1', type: 'separator' },
                 { id: 'market-new-window', label: '🪟 在新窗口打开', action: { type: 'open-market-window' } },
