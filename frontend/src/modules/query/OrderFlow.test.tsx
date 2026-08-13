@@ -145,4 +145,19 @@ describe('OrderFlow', () => {
     const { container } = render(<OrderFlow />)
     expect(container.firstChild).toHaveClass('order-flow')
   })
+
+  it('renders provided orders prop instead of store orders', () => {
+    useQueryStore.setState({ orders: mockOrders })
+    const filtered = mockOrders.filter((o) => o.orderRef === '1001')
+    render(<OrderFlow orders={filtered} />)
+    expect(screen.getByText('1001')).toBeInTheDocument()
+    expect(screen.queryByText('1002')).not.toBeInTheDocument()
+    expect(screen.queryByText('1003')).not.toBeInTheDocument()
+  })
+
+  it('renders custom empty text when orders prop is empty', () => {
+    useQueryStore.setState({ orders: mockOrders })
+    render(<OrderFlow orders={[]} emptyText="无匹配报单" />)
+    expect(screen.getByText('无匹配报单')).toBeInTheDocument()
+  })
 })
