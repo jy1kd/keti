@@ -3,9 +3,13 @@ import { ContractSearch } from '@/components/ContractSearch'
 import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
 import { ContextMenu } from '@/components/ContextMenu'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { ContractFilter } from '@/components/ContractFilter'
 import { QuoteTable } from './QuoteTable'
 import { futuresSpec } from './futuresSpec'
+import { sortFutures } from './sort'
+import { filterByExchangeAndProduct } from './filter'
 import { useMarketStore } from './store'
+import { useMarketFilterStore } from '@/stores/marketFilter'
 import { useContractsStore } from '@/stores/contracts'
 import { useTabStore } from '@/stores/tabs'
 import { useContractContextMenu } from '@/hooks/useContractContextMenu'
@@ -27,14 +31,45 @@ export function MarketPanel() {
   // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
   const [filterActive, setFilterActive] = useState(false)
 
+  // 期货页筛选态（交易所+品种多选，独立于期权页，localStorage 持久化）
+  const filter = useMarketFilterStore((s) => s.futures)
+
+  // 期货全量（期货页只展示期货合约）+ 排序（数据管道第一步，设计 §3 决策 3）
+  const sortedFutures = useMemo(
+    () => sortFutures(contracts.filter((c) => c.productClass === '1')),
+    [contracts],
+  )
+  // 自选视图同样只展示期货合约
+  const favoriteFutures = useMemo(
+    () => favorites.filter((c) => c.productClass === '1'),
+    [favorites],
+  )
+
   // Display contracts based on active tab
-  const baseContracts = activeTab === 'all' ? contracts : favorites
+  const baseContracts = activeTab === 'all' ? sortedFutures : favoriteFutures
+
+  // 筛选面板可用选项：交易所 = 期货合约去重；品种 = productID 去重（保持排序后顺序）
+  const filterExchanges = useMemo(
+    () => Array.from(new Set(sortedFutures.map((c) => c.exchangeID))),
+    [sortedFutures],
+  )
+  const filterProducts = useMemo(
+    () => Array.from(new Set(sortedFutures.map((c) => c.productID))),
+    [sortedFutures],
+  )
+  const filterProductNames = useMemo(() => {
+    const m: Record<string, string> = {}
+    for (const p of filterProducts) m[p] = getProductName(p)
+    return m
+  }, [filterProducts])
 
   // 搜索过滤
   const [searchQuery, setSearchQuery] = useState('')
   const displayContracts = useMemo(() => {
+    // 数据管道：全部/自选 → 筛选（交易所+品种）→ 仅交易中 → 搜索
+    let base = filterByExchangeAndProduct(baseContracts, filter.exchanges, filter.products, (c) => c.productID)
     // 过滤开关：默认仅显示交易中合约
-    let base = filterActive ? baseContracts.filter(isContractActive) : baseContracts
+    base = filterActive ? base.filter(isContractActive) : base
     if (!searchQuery.trim()) return base
     const q = searchQuery.toLowerCase()
     return base.filter((c) => {
@@ -49,7 +84,7 @@ export function MarketPanel() {
         productName.includes(q)
       )
     })
-  }, [baseContracts, searchQuery, filterActive])
+  }, [baseContracts, filter, searchQuery, filterActive])
 
   // User-favorited IDs (for modal "已订阅" badge and button state)
   const favoritedIds = useMemo(
@@ -139,6 +174,16 @@ export function MarketPanel() {
           </button>
         </div>
         <div className="market-toolbar__actions">
+          <ContractFilter
+            exchanges={filterExchanges}
+            products={filterProducts}
+            productNames={filterProductNames}
+            value={filter}
+            onChange={(v) => {
+              useMarketFilterStore.getState().setExchanges('futures', v.exchanges)
+              useMarketFilterStore.getState().setProducts('futures', v.products)
+            }}
+          />
           <button
             className={`btn-filter-status${filterActive ? ' active' : ''}`}
             onClick={() => setFilterActive((v) => !v)}

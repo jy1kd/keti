@@ -7,6 +7,7 @@ import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import { useMarketWs } from '@/hooks/useMarketWs'
 import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
 import { useContractsStore } from '@/stores/contracts'
+import { useMarketFilterStore } from '@/stores/marketFilter'
 
 // Mock TabBar 组件
 vi.mock('@/components/TabBar', () => ({
@@ -183,6 +184,15 @@ describe('App Layout — 标签页系统', () => {
       expect(useSubscriptionManager).toHaveBeenCalledTimes(1)
       expect(loadAllSpy).toHaveBeenCalledTimes(1)
       expect(loadFavSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it('启动时加载持久化筛选（useMarketFilterStore.load）', () => {
+      vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
+      vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
+      const loadSpy = vi.spyOn(useMarketFilterStore.getState(), 'load').mockImplementation(() => {})
+      render(<App />)
+      expect(loadSpy).toHaveBeenCalledTimes(1)
+      loadSpy.mockRestore()
     })
   })
 })

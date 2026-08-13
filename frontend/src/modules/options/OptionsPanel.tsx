@@ -1,15 +1,19 @@
 import { useMemo, useState } from 'react'
 import { ContextMenu } from '@/components/ContextMenu'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { ContractFilter } from '@/components/ContractFilter'
 import { QuoteTable } from '@/modules/market/QuoteTable'
 import { optionsSpec } from '@/modules/market/optionsSpec'
-import { groupOptionsByUnderlying } from '@/modules/market/sort'
+import { deriveUnderlyingProduct, groupOptionsByUnderlying } from '@/modules/market/sort'
+import { filterByExchangeAndProduct } from '@/modules/market/filter'
 import { useMarketStore } from '@/modules/market/store'
 import { useOrderStore } from '@/modules/order/store'
 import { useContractsStore } from '@/stores/contracts'
+import { useMarketFilterStore } from '@/stores/marketFilter'
 import { useTabStore } from '@/stores/tabs'
 import { useContractContextMenu } from '@/hooks/useContractContextMenu'
 import { usePointOrder } from '@/hooks/usePointOrder'
+import { getProductName } from '@/utils/productNames'
 import { toast } from '@/components/Toast'
 import { TQuoteView } from './TQuoteView'
 import type { ContractInfo } from '@/services/types'
@@ -32,18 +36,45 @@ export function OptionsPanel() {
   // 期权标签是否激活：激活翻转为 true 时 QuoteTable 重报可见区，订阅管理器立即补订阅
   const isActive = useTabStore((s) => s.tabs.some((t) => t.type === 'options' && t.id === s.activeTabId))
 
-  // 期货全量 → 期权全量 → 分组展平为有序 ContractInfo[]（标底行在前、期权行随后）
+  // 期权页筛选态（交易所+标底品种多选，独立于期货页，localStorage 持久化）
+  const filter = useMarketFilterStore((s) => s.options)
+
+  // 期货全量 → 期权全量（分组用 futures 匹配标底行真实合约）
+  const futures = useMemo(() => contracts.filter((c) => c.productClass === '1'), [contracts])
+  const options = useMemo(() => contracts.filter((c) => c.productClass === '2' || c.productClass === '6'), [contracts])
+
+  // 筛选面板可用选项：交易所 = 期权合约去重；品种 = 标底品种（underlyingInstrID 去尾数字）去重
+  const filterExchanges = useMemo(
+    () => Array.from(new Set(options.map((c) => c.exchangeID))),
+    [options],
+  )
+  const filterProducts = useMemo(
+    () => Array.from(new Set(options.map((c) => deriveUnderlyingProduct(c.underlyingInstrID ?? '')))),
+    [options],
+  )
+  const filterProductNames = useMemo(() => {
+    const m: Record<string, string> = {}
+    for (const p of filterProducts) m[p] = getProductName(p)
+    return m
+  }, [filterProducts])
+
+  // 分组前先过滤期权（交易所 + 标底品种），再按标底分组展平为有序 ContractInfo[]
+  // （标底行在前、期权行随后；组内无可见期权时整组消失）
   const rows = useMemo(() => {
-    const futures = contracts.filter((c) => c.productClass === '1')
-    const options = contracts.filter((c) => c.productClass === '2' || c.productClass === '6')
-    const groups = groupOptionsByUnderlying(options, futures)
+    const filteredOptions = filterByExchangeAndProduct(
+      options,
+      filter.exchanges,
+      filter.products,
+      (c) => deriveUnderlyingProduct(c.underlyingInstrID ?? ''),
+    )
+    const groups = groupOptionsByUnderlying(filteredOptions, futures)
     const flat: ContractInfo[] = []
     for (const g of groups) {
       if (g.underlying) flat.push(g.underlying)
       flat.push(...g.options)
     }
     return flat
-  }, [contracts])
+  }, [options, futures, filter])
 
   // 用户收藏 ID 集合（用于 ⭐ 列与右键菜单收藏态）
   const favoritedIds = useMemo(
@@ -81,6 +112,16 @@ export function OptionsPanel() {
             T型报价
           </button>
         </div>
+        <ContractFilter
+          exchanges={filterExchanges}
+          products={filterProducts}
+          productNames={filterProductNames}
+          value={filter}
+          onChange={(v) => {
+            useMarketFilterStore.getState().setExchanges('options', v.exchanges)
+            useMarketFilterStore.getState().setProducts('options', v.products)
+          }}
+        />
       </div>
 
       {view === 'tquote' ? (

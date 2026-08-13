@@ -10,6 +10,7 @@ import { useMarketWs } from '@/hooks/useMarketWs'
 import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
 import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
+import { useMarketFilterStore } from '@/stores/marketFilter'
 import { FloatingWindows } from '@/components/FloatingWindow'
 import { useTabStore } from '@/stores/tabs'
 import { API_BASE } from '@/services/api'
@@ -42,10 +43,11 @@ function App() {
   useMarketWs(API_BASE.replace('http', 'ws'))
   useSubscriptionManager()
 
-  // 启动时加载全量合约 + 收藏合约（原先在 MarketPanel，现上移共享）
+  // 启动时加载全量合约 + 收藏合约（原先在 MarketPanel，现上移共享）+ 持久化筛选
   useEffect(() => {
     useContractsStore.getState().loadAllInstruments()
     useContractsStore.getState().loadFavoriteContracts()
+    useMarketFilterStore.getState().load()
   }, [])
 
   // Electron IPC — 监听托盘菜单导航消息

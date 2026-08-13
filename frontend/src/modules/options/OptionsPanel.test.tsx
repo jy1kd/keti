@@ -5,6 +5,7 @@ import { OptionsPanel } from './OptionsPanel'
 import { optionsSpec } from '@/modules/market/optionsSpec'
 import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
+import { useMarketFilterStore } from '@/stores/marketFilter'
 import type { ContractInfo } from '@/services/types'
 
 // Mock TQuoteView（T型报价二级视图依赖链沉重，仅测切换渲染）
@@ -31,10 +32,22 @@ vi.mock('echarts', () => ({
 const fut: ContractInfo = { instrumentID: 'FG609', instrumentName: 'FG609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' }
 const optC: ContractInfo = { instrumentID: 'FG609-C-1300', instrumentName: 'FG609-C-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'FG609', optionsType: '1', strikePrice: 1300 }
 const optP: ContractInfo = { instrumentID: 'FG609-P-1300', instrumentName: 'FG609-P-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'FG609', optionsType: '2', strikePrice: 1300 }
+const futMA: ContractInfo = { instrumentID: 'MA609', instrumentName: 'MA609', exchangeID: 'CZCE', productID: 'MA', volumeMultiple: 10, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' }
+const optMA: ContractInfo = { instrumentID: 'MA609-C-1000', instrumentName: 'MA609-C-1000', exchangeID: 'CZCE', productID: 'MAC', volumeMultiple: 10, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'MA609', optionsType: '1', strikePrice: 1000 }
+const futCu: ContractInfo = { instrumentID: 'cu2609', instrumentName: 'cu2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' }
+const optCu: ContractInfo = { instrumentID: 'cu2609-C-70000', instrumentName: 'cu2609-C-70000', exchangeID: 'SHFE', productID: 'cu_c', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'cu2609', optionsType: '1', strikePrice: 70000 }
 
 function setupContracts() {
   useContractsStore.setState({
     contracts: [fut, optC, optP],
+    favorites: [],
+    isLoaded: true,
+  })
+}
+
+function setupFilterContracts() {
+  useContractsStore.setState({
+    contracts: [fut, optC, optP, futMA, optMA, futCu, optCu],
     favorites: [],
     isLoaded: true,
   })
@@ -48,6 +61,10 @@ describe('OptionsPanel', () => {
       selectedContracts: new Set(),
       visibleInstrumentIDs: [],
       scrollEndSeq: 0,
+    })
+    useMarketFilterStore.setState({
+      futures: { exchanges: [], products: [] },
+      options: { exchanges: [], products: [] },
     })
     setupContracts()
     vi.clearAllMocks()
@@ -142,5 +159,58 @@ describe('OptionsPanel', () => {
     expect(visible).toContain('FG609')
     expect(visible).toContain('FG609-C-1300')
     expect(visible).toContain('FG609-P-1300')
+  })
+
+  // --- 交易所+品种多选筛选（Task 7） ---
+
+  /** 读取最近一次 setRecords 的合约 ID 序列 */
+  function latestRecordIDs(instance: any): string[] {
+    const last = instance.setRecords.mock.calls.at(-1)?.[0] ?? []
+    return last.map((r: any) => r.instrumentID)
+  }
+
+  it('渲染「筛选」按钮，空筛选无徽标', () => {
+    render(<OptionsPanel />)
+    expect(screen.getByRole('button', { name: /筛选/ })).toBeInTheDocument()
+    expect(screen.queryByTestId('contract-filter-badge')).toBeNull()
+  })
+
+  it('按标底品种过滤：勾选 玻璃 后只保留 FG 组（标底行+期权行），其余组消失', async () => {
+    setupFilterContracts()
+    const user = userEvent.setup()
+    render(<OptionsPanel />)
+    await user.click(screen.getByRole('button', { name: /筛选/ }))
+    await user.click(screen.getByRole('checkbox', { name: /玻璃/ }))
+    const { ListTable } = await import('@visactor/vtable')
+    const instance = (ListTable as any).mock.results[0].value
+    expect(latestRecordIDs(instance)).toEqual(['FG609', 'FG609-C-1300', 'FG609-P-1300'])
+  })
+
+  it('按交易所过滤：勾选 SHFE 后只保留 cu 组（标底行+期权行）', async () => {
+    setupFilterContracts()
+    const user = userEvent.setup()
+    render(<OptionsPanel />)
+    await user.click(screen.getByRole('button', { name: /筛选/ }))
+    await user.click(screen.getByRole('checkbox', { name: 'SHFE' }))
+    const { ListTable } = await import('@visactor/vtable')
+    const instance = (ListTable as any).mock.results[0].value
+    expect(latestRecordIDs(instance)).toEqual(['cu2609', 'cu2609-C-70000'])
+  })
+
+  it('清空筛选后恢复全量分组', async () => {
+    setupFilterContracts()
+    const user = userEvent.setup()
+    render(<OptionsPanel />)
+    await user.click(screen.getByRole('button', { name: /筛选/ }))
+    await user.click(screen.getByRole('checkbox', { name: /玻璃/ }))
+    await user.click(screen.getByRole('button', { name: '清空' }))
+    const { ListTable } = await import('@visactor/vtable')
+    const instance = (ListTable as any).mock.results[0].value
+    // 全量：cu < FG < MA 按标底自然序
+    expect(latestRecordIDs(instance)).toEqual([
+      'cu2609', 'cu2609-C-70000',
+      'FG609', 'FG609-C-1300', 'FG609-P-1300',
+      'MA609', 'MA609-C-1000',
+    ])
   })
 })
