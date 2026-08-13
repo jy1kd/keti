@@ -388,3 +388,18 @@ describe('closeOthers / closeAll / togglePin', () => {
     expect(useTabStore.getState().tabs[0].pinned).toBe(false)
   })
 })
+
+describe('双固定标签初始化', () => {
+  beforeEach(() => useTabStore.setState({ tabs: [{ id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false }, { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false }], activeTabId: 'tab-market' }))
+
+  it('初始含期货+期权两个不可关闭标签', () => {
+    const { tabs } = useTabStore.getState()
+    expect(tabs.map((t) => t.title)).toEqual(['📊 期货', '📈 期权'])
+    expect(tabs.every((t) => !t.closable)).toBe(true)
+  })
+
+  it('closeTab 拒绝关闭固定标签', () => {
+    useTabStore.getState().closeTab('tab-market')
+    expect(useTabStore.getState().tabs.length).toBe(2)
+  })
+})

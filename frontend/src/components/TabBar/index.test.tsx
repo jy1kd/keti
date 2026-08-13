@@ -777,6 +777,32 @@ describe('TabBar', () => {
     })
   })
 
+  // --- 双固定标签（期货 + 期权） ---
+
+  describe('双固定标签（期货 + 期权）', () => {
+    it('固定区同时渲染「📊 期货」「📈 期权」，期权标签不在可滚动区', () => {
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
+          { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false },
+          { id: 'tab-kline', type: 'kline', title: '📈 K线', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-market',
+      })
+      const { container } = render(<TabBar />)
+      const marketEl = container.querySelector('.tab-bar__market[data-tab-id="tab-market"]')
+      const optionsEl = container.querySelector('.tab-bar__market[data-tab-id="tab-options"]')
+      expect(marketEl).toBeInTheDocument()
+      expect(optionsEl).toBeInTheDocument()
+      expect(marketEl?.textContent).toContain('📊 期货')
+      expect(optionsEl?.textContent).toContain('📈 期权')
+      // 固定区在可滚动区之外；可滚动区只有 K线
+      const scrollEl = container.querySelector('.tab-bar__scroll')
+      expect(scrollEl?.querySelector('.tab-bar__market')).toBeNull()
+      expect(scrollEl?.querySelectorAll('[role="tab"]')).toHaveLength(1)
+    })
+  })
+
   // --- 固定标签排序 ---
 
   describe('固定标签排序', () => {

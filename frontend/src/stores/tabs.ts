@@ -44,13 +44,10 @@ export interface Tab {
 
 // --- 默认状态 ---
 
-const DEFAULT_TAB: Tab = {
-  id: 'tab-market',
-  type: 'market',
-  title: '📊 行情',
-  props: {},
-  closable: false,
-}
+const DEFAULT_TABS: Tab[] = [
+  { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
+  { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false },
+]
 
 interface TabStore {
   tabs: Tab[]
@@ -91,8 +88,8 @@ export function generateTabId(type: TabType, props?: Record<string, unknown>): s
 // --- Store ---
 
 export const useTabStore = create<TabStore>((set, get) => ({
-  tabs: [DEFAULT_TAB],
-  activeTabId: DEFAULT_TAB.id,
+  tabs: DEFAULT_TABS,
+  activeTabId: DEFAULT_TABS[0].id,
 
   openTab: ({ type, title, props = {}, closable = true }) => {
     const tabId = generateTabId(type, props)
@@ -154,7 +151,7 @@ export const useTabStore = create<TabStore>((set, get) => ({
         const closedIndex = state.tabs.indexOf(tab)
         // 优先激活后一个，否则前一个
         const nextTab = newTabs[closedIndex] ?? newTabs[closedIndex - 1]
-        newActiveId = nextTab?.id ?? DEFAULT_TAB.id
+        newActiveId = nextTab?.id ?? DEFAULT_TABS[0].id
       }
 
       return {
