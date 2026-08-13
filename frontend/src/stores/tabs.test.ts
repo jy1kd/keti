@@ -48,6 +48,7 @@ describe('useTabStore', () => {
         'ipc-monitor',
         'settings',
         'query',
+        'infinite',
       ])
     })
 

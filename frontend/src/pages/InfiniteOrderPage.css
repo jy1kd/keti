@@ -1,0 +1,16 @@
+/* ── InfiniteOrderPage ──────────────────────────────────────── */
+
+.infinite-order-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--bg-primary);
+}
+
+.infinite-order-page__title {
+  padding: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
