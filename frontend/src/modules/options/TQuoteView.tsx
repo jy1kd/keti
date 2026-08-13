@@ -95,14 +95,22 @@ export function TQuoteView({ instrumentID, tabId }: { instrumentID?: string; tab
     return () => { cancelled = true }
   }, [])
 
-  // 选中的期权链：无到期日选择器，取该标底的首条链（首个到期日）
-  const selectedChain = useMemo(
-    () => optionChains.find((c) => c.underlying === selectedUnderlying) ?? null,
-    [optionChains, selectedUnderlying]
-  )
+  // 选中的期权链：无到期日选择器，取该标底的首条链——按到期日升序取最早到期日，
+  // 而非依赖响应顺序（后端返回顺序不保证，同标底多到期日时需确定性选链）
+  const selectedChain = useMemo(() => {
+    if (!selectedUnderlying) return null
+    const candidates = optionChains
+      .filter((c) => c.underlying === selectedUnderlying)
+      .sort((a, b) => a.expireDate.localeCompare(b.expireDate))
+    return candidates[0] ?? null
+  }, [optionChains, selectedUnderlying])
+
+  /** 最近一次请求的标底（请求竞态守卫：慢响应的旧标底响应不得覆盖新选标底） */
+  const lastRequestedUnderlyingRef = useRef<string | null>(null)
 
   // 选择标底：加载期权链（默认展示首个到期日，无到期日选择器）
   const selectUnderlying = useCallback((value: string) => {
+    lastRequestedUnderlyingRef.current = value
     setSelectedUnderlying(value)
     setUnderlyingSearch('')
     setShowUnderlyingDropdown(false)
@@ -119,11 +127,14 @@ export function TQuoteView({ instrumentID, tabId }: { instrumentID?: string; tab
       setError(null)
       getOptionChains(value)
         .then((res) => {
+          // 过期响应守卫：期间已切到其它标底 → 忽略本次（旧标底慢响应不得覆盖新选标底）
+          if (lastRequestedUnderlyingRef.current !== value) return
           const chains = res.chains ?? []
           setOptionChains(chains)
           setLoading(false)
         })
         .catch(() => {
+          if (lastRequestedUnderlyingRef.current !== value) return
           setError('Failed to load option chains')
           setLoading(false)
         })

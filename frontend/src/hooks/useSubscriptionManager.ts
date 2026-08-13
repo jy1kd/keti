@@ -18,6 +18,17 @@ const DRAG_THRESHOLD = 2
 /** 订阅软上限（< 后端 500） */
 const SOFT_LIMIT = 480
 
+/** 可见合约集是否相同（无序比较）：仅可见区真实变化才计入拖动检测 */
+function sameVisibleSet(a: string[] | null, b: string[]): boolean {
+  if (!a) return false
+  if (a.length !== b.length) return false
+  const set = new Set(b)
+  for (const id of a) {
+    if (!set.has(id)) return false
+  }
+  return true
+}
+
 export function useSubscriptionManager() {
   const visibleInstrumentIDs = useMarketStore((s) => s.visibleInstrumentIDs)
   const lockedContracts = useMarketStore((s) => s.lockedContracts)
@@ -33,6 +44,8 @@ export function useSubscriptionManager() {
   const recentChangesRef = useRef<number[]>([])
   /** 是否已完成首次挂载（挂载本身不计入拖动变化，避免把首个可见窗口误判为拖动） */
   const didMountRef = useRef(false)
+  /** 上一次可见合约集（拖动检测去重：锁定/自选等非可见变化不喂入拖动判定） */
+  const prevVisibleRef = useRef<string[] | null>(null)
   /** 最近一次完整 diff 的定时器（拖动停止后执行） */
   const fullDiffTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** 已消费的滚动松手信号序号（判重，避免重复处理） */
@@ -234,9 +247,15 @@ export function useSubscriptionManager() {
     }
 
     const now = Date.now()
+    const prevVisible = prevVisibleRef.current
+    prevVisibleRef.current = visibleInstrumentIDs
     if (didMountRef.current) {
-      // 非首次：记录本次可见区变化，用于拖动检测
-      recentChangesRef.current = [...recentChangesRef.current.filter((t) => now - t < DRAG_WINDOW_MS), now]
+      // 仅当可见集真实变化才记录拖动变化：锁定/自选等应订阅集变化（runFullDiff 变化触发本
+      // effect）不参与拖动态判定，否则 T型报价 锁定/解锁合约（可见集不变）会被误判为拖动，
+      // 把该次完整 diff 拖到 500ms 后。
+      if (!sameVisibleSet(prevVisible, visibleInstrumentIDs)) {
+        recentChangesRef.current = [...recentChangesRef.current.filter((t) => now - t < DRAG_WINDOW_MS), now]
+      }
     } else {
       // 首次挂载：不计入拖动变化（避免把首个可见窗口误判为拖动，导致首次订阅被拖到停止后）
       didMountRef.current = true

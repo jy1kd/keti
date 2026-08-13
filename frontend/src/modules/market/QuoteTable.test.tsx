@@ -905,5 +905,52 @@ describe('QuoteTable', () => {
       clickHandler({ row: 1, col: 5, event: {} })
       expect(onSelectionChange).toHaveBeenCalledWith(new Set(['FG609']))
     })
+
+    it('同步已合并全部标底行时不调度 rAF 兜底（避免白做一轮重合并）', async () => {
+      const { ListTable } = await import('@visactor/vtable')
+      let rafCalls = 0
+      const rafSpy = vi.spyOn(window, 'requestAnimationFrame')
+        .mockImplementation((cb: FrameRequestCallback) => { rafCalls++; cb(0); return rafCalls })
+      try {
+        render(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} />)
+        const instance = (ListTable as any).mock.results[0].value
+        // 同步 pass 已合并全部标底行（mergeCells 不抛错）→ 不再调度 rAF 兜底重试
+        expect(rafCalls).toBe(0)
+        expect(instance.mergeCells).toHaveBeenCalledTimes(1)
+      } finally {
+        rafSpy.mockRestore()
+      }
+    })
+
+    it('同步合并未完成（标底行未就绪）时调度 rAF 兜底重试', async () => {
+      const { ListTable } = await import('@visactor/vtable')
+      let rafCalls = 0
+      const rafSpy = vi.spyOn(window, 'requestAnimationFrame')
+        .mockImplementation((cb: FrameRequestCallback) => { rafCalls++; cb(0); return rafCalls })
+      const cafSpy = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {})
+      let instance: any = null
+      try {
+        const { rerender } = render(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} />)
+        instance = (ListTable as any).mock.results[0].value
+        // 基线：同步 pass 全部合并成功 → 不调度 rAF 兜底
+        expect(rafCalls).toBe(0)
+        expect(instance.mergeCells).toHaveBeenCalledTimes(1)
+
+        // 模拟渲染异步未就绪：同步合并抛错 → applyRowMerges 返回 false → 调度 rAF 兜底重试
+        instance.mergeCells.mockReset()
+        instance.mergeCells.mockImplementationOnce(() => { throw new Error('not ready') })
+        rerender(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} />)
+
+        // rAF 兜底已调度（同步 pass 未完成）
+        expect(rafCalls).toBe(1)
+        // 同步 1 次（抛错）+ rAF 重试 1 次（成功）
+        expect(instance.mergeCells).toHaveBeenCalledTimes(2)
+      } finally {
+        rafSpy.mockRestore()
+        cafSpy.mockRestore()
+        // 清除本次排队的 once 实现，避免泄漏到后续用例（共享 mock 实例）
+        instance?.mergeCells?.mockReset()
+      }
+    })
   })
 })

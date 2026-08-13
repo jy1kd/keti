@@ -103,6 +103,8 @@ const columns = [
 export function TQuoteTable({ chain, snapshots }: TQuoteTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
+  /** 延迟释放定时器句柄：同一实例至多一个挂起释放定时器，避免快速开合叠加定时器 */
+  const releaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Mount/unmount: create and release the vtable instance exactly once.
   useEffect(() => {
@@ -150,7 +152,11 @@ export function TQuoteTable({ chain, snapshots }: TQuoteTableProps) {
     const RESIZE_SETTLE_MS = 250
     return () => {
       const t = table
-      setTimeout(() => {
+      // 同实例至多保留一个挂起释放定时器：快速开合（cleanup 连续触发）时先清掉旧定时器，
+      // 再调度新的一次释放，避免多个 release 定时器叠加。
+      if (releaseTimerRef.current) clearTimeout(releaseTimerRef.current)
+      releaseTimerRef.current = setTimeout(() => {
+        releaseTimerRef.current = null
         t.release()
         if (tableRef.current === t) tableRef.current = null
       }, RESIZE_SETTLE_MS)

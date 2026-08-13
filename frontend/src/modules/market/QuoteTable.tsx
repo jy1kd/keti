@@ -150,10 +150,11 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
    * 会残留旧合约文本，且陈旧合并范围破坏行高/可见区计算。故 ALWAYS 先撤销 ALL 旧合并
    * （含仍为标底的行），再对当前标底行重新 mergeCells，让 vtable 重捕获当前记录文本。
    * - 合并失败（渲染异步未就绪）的行不入集合，由 rAF 兜底重试（见 contracts effect）。
+   * - 返回是否全部当前标底行均已合并（未完成时调用方调度 rAF 兜底重试）。
    */
-  const applyRowMerges = useCallback(() => {
+  const applyRowMerges = useCallback((): boolean => {
     const table = tableRef.current
-    if (!table || typeof table.mergeCells !== 'function') return
+    if (!table || typeof table.mergeCells !== 'function') return false
     const lastCol = spec.columns.length - 1
     const underlyingRows = new Set<number>()
     recordsRef.current.forEach((record, i) => {
@@ -178,6 +179,7 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
       }
     }
     mergedRowsRef.current = next
+    return next.size === underlyingRows.size
   }, [spec])
 
   useEffect(() => {
@@ -507,12 +509,13 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
     rowSnapshotRef.current = contracts.map((c) => snapshots.get(c.instrumentID))
     tableRef.current.setRecords(records)
     lastClickedIndexRef.current = null
-    // 标底行合并：setRecords 场景图同步构建，直接合并；rAF 兜底重试渲染异步未就绪的行
-    applyRowMerges()
+    // 标底行合并：setRecords 场景图同步构建，直接合并；rAF 兜底重试仅当同步合并未完成时调度
+    // （同步已合并全部标底行则无需再白做一轮 unmerge+remerge）
+    const mergedAll = applyRowMerges()
     if (mergeRafRef.current != null && typeof cancelAnimationFrame === 'function') {
       cancelAnimationFrame(mergeRafRef.current)
     }
-    if (typeof requestAnimationFrame === 'function') {
+    if (!mergedAll && typeof requestAnimationFrame === 'function') {
       mergeRafRef.current = requestAnimationFrame(() => {
         mergeRafRef.current = null
         applyRowMerges()

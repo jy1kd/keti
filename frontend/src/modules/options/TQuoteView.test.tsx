@@ -113,6 +113,25 @@ describe('TQuoteView (自包含)', () => {
     expect(tables[0].textContent).toBe('IF2608-20260815')
   })
 
+  it('同标底多到期日乱序时按最早到期日确定选链（不依赖响应顺序）', async () => {
+    mockGetOptionChains.mockResolvedValue({
+      chains: [
+        { underlying: 'IF2608', expireDate: '20260915', calls: [], puts: [], updateTime: '' },
+        { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '' },
+        { underlying: 'IF2608', expireDate: '20261215', calls: [], puts: [], updateTime: '' },
+      ],
+    })
+    const user = userEvent.setup()
+    render(<TQuoteView />)
+    const input = await screen.findByPlaceholderText('输入关键字搜索...')
+    await user.click(input)
+    await user.click(screen.getByText('IF2608'))
+    const tables = await screen.findAllByTestId('tquote-table')
+    expect(tables).toHaveLength(1)
+    // 选中最早到期日（20260815），而非响应顺序的首条（20260915）
+    expect(tables[0].textContent).toBe('IF2608-20260815')
+  })
+
   it('无到期日选择器（去 到期日 select）', async () => {
     renderChain()
     const user = userEvent.setup()
@@ -133,6 +152,36 @@ describe('TQuoteView (自包含)', () => {
     expect(await screen.findByTestId('tquote-table')).toBeInTheDocument()
     expect(mockGetOptionChains).toHaveBeenCalledWith('IF2608')
     expect(screen.getByTestId('tquote-table').textContent).toBe('IF2608-20260815')
+  })
+
+  it('selectUnderlying 请求竞态：慢响应的旧标底不覆盖新选标底', async () => {
+    // 标底 A（IF2608）的请求挂起（慢响应）；标底 B（IF2609）的请求立即返回
+    let resolveA: (v: { chains: any[] }) => void
+    const slowA = new Promise<{ chains: any[] }>((resolve) => { resolveA = resolve })
+    mockGetOptionChains.mockReturnValueOnce(slowA)
+    mockGetOptionChains.mockResolvedValue({
+      chains: [{ underlying: 'IF2609', expireDate: '20260915', calls: [], puts: [], updateTime: '' }],
+    })
+    const user = userEvent.setup()
+    // 挂载预选 A（IF2608）→ getOptionChains('IF2608') 挂起
+    render(<TQuoteView instrumentID="IF2608" />)
+    expect(mockGetOptionChains).toHaveBeenCalledWith('IF2608')
+
+    // 切到 B（IF2609）：B 响应先到 → 渲染 B 的表
+    const input = await screen.findByPlaceholderText('输入关键字搜索...')
+    await user.click(input)
+    await user.click(screen.getByText('IF2609'))
+    expect(await screen.findByTestId('tquote-table')).toBeInTheDocument()
+    expect(screen.getByTestId('tquote-table').textContent).toBe('IF2609-20260915')
+
+    // A 的慢响应晚到 → 必须被忽略（请求序列守卫），不覆盖为 IF2608
+    act(() => {
+      resolveA!({ chains: [{ underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '' }] })
+    })
+    await screen.findByTestId('tquote-table')
+    expect(screen.getByTestId('tquote-table').textContent).toBe('IF2609-20260915')
+    const lastProps = mockTQuoteTable.mock.calls[mockTQuoteTable.mock.calls.length - 1]?.[0]
+    expect(lastProps.chain.underlying).toBe('IF2609')
   })
 
   it('窗内切换标底 → updateTab 同步悬浮标签标题与 props（tabId + 新合约）', async () => {

@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { StrictMode } from 'react'
+import { render, cleanup } from '@testing-library/react'
 import { TQuoteTable } from './TQuoteTable'
 import type { OptionChain, OptionQuote, MarketSnapshot } from '@/services/types'
 
@@ -45,7 +46,15 @@ describe('TQuoteTable', () => {
   }
 
   beforeEach(() => {
+    vi.useFakeTimers()
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    // 先卸载（fake timers 仍生效：卸载调度的延迟 release 定时器是 fake 的），
+    // 再切回真实定时器丢弃全部挂起 fake 定时器 → 无真实 250ms release 定时器泄漏到后续用例。
+    cleanup()
+    vi.useRealTimers()
   })
 
   it('renders a container element', () => {
@@ -120,18 +129,29 @@ describe('TQuoteTable', () => {
 
   it('卸载后延迟 250ms 释放 vtable（避让 ResizeObserver 100ms 防抖回调，防 internalProps 置 null 后 resize 崩溃）', async () => {
     const { ListTable } = await import('@visactor/vtable')
-    vi.useFakeTimers()
-    try {
-      const { unmount } = render(<TQuoteTable chain={chain} />)
-      const instance = (ListTable as any).mock.results[0]?.value
-      unmount()
-      // 250ms 内尚未释放：挂起的防抖回调仍能在存活表上触发
-      expect(instance?.release).not.toHaveBeenCalled()
-      vi.advanceTimersByTime(250)
-      expect(instance?.release).toHaveBeenCalledTimes(1)
-    } finally {
-      vi.useRealTimers()
-    }
+    const { unmount } = render(<TQuoteTable chain={chain} />)
+    const instance = (ListTable as any).mock.results[0]?.value
+    unmount()
+    // 250ms 内尚未释放：挂起的防抖回调仍能在存活表上触发
+    expect(instance?.release).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(250)
+    expect(instance?.release).toHaveBeenCalledTimes(1)
+  })
+
+  it('快速挂载→卸载→挂载：同实例至多保留一个释放定时器，旧表仍被释放一次', async () => {
+    const { ListTable } = await import('@visactor/vtable')
+    // StrictMode 双挂载使同一实例经历 setup→cleanup→setup（挂载期）+ 真实卸载 cleanup，
+    // 模拟快速开合：每次 cleanup 前取消上一释放定时器 → 仅最新一次释放生效（不叠加）
+    const { unmount } = render(
+      <StrictMode><TQuoteTable chain={chain} /></StrictMode>
+    )
+    const instance = (ListTable as any).mock.results[0]?.value
+    expect(instance?.release).not.toHaveBeenCalled()
+    unmount()
+    expect(instance?.release).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(250)
+    // 只发生一次释放（旧挂起定时器已被最新 cleanup 取消）
+    expect(instance?.release).toHaveBeenCalledTimes(1)
   })
 
   it('updates records incrementally when snapshots change without recreating table', async () => {

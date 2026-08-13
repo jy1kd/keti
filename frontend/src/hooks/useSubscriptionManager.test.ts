@@ -167,20 +167,53 @@ describe('useSubscriptionManager 拖动与 LRU', () => {
 
   it('should 集超 SOFT_LIMIT 时本批最多订阅 SOFT_LIMIT，超出部分留待下次 diff 并告警', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      renderHook(() => useSubscriptionManager())
+
+      // 可见区 554 个合约（> 后端 500 上限，直接整批提交会被原子拒绝）→ 本批只能提交前 SOFT_LIMIT 个
+      const big = Array.from({ length: 554 }, (_, i) => `VIS${i}`)
+      act(() => useMarketStore.getState().setVisibleInstrumentIDs(big))
+      await act(async () => { vi.advanceTimersByTime(110) })
+
+      // 只提交一个 ≤ SOFT_LIMIT 的批次（而非 554），超出的留待下次 diff
+      expect(vi.mocked(subscribeMarket)).toHaveBeenCalledTimes(1)
+      const batch = vi.mocked(subscribeMarket).mock.calls[0][0] as string[]
+      expect(batch).toHaveLength(480)
+      // 告警记录了丢弃数（留待下次 diff 重试）
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('留待下次 diff'))
+
+      // 下次 diff 重试被丢弃的余量（VIS480..VIS553，74 个）：可见区收窄到余量 → 容量释放
+      // → 第二次订阅批次包含全部余量合约。两次可见变化在 300ms 内被判为拖动态，
+      // 完整 diff 在拖停后 500ms 执行（需推进定时器越过拖停窗口）。
+      vi.mocked(subscribeMarket).mockClear()
+      act(() => useMarketStore.getState().setVisibleInstrumentIDs(big.slice(480)))
+      await act(async () => { vi.advanceTimersByTime(110) })
+      await act(async () => { vi.advanceTimersByTime(500) })
+
+      const retried = vi.mocked(subscribeMarket).mock.calls.flat(2) as string[]
+      expect(retried.length).toBe(74)
+      expect(retried.sort()).toEqual(big.slice(480).sort())
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('锁定/解锁合约变化不喂入拖动启发（可见集未变 → 立即 diff，不误判拖动）', async () => {
     renderHook(() => useSubscriptionManager())
 
-    // 可见区 554 个合约（> 后端 500 上限，直接整批提交会被原子拒绝）→ 本批只能提交前 SOFT_LIMIT 个
-    const big = Array.from({ length: 554 }, (_, i) => `VIS${i}`)
-    act(() => useMarketStore.getState().setVisibleInstrumentIDs(big))
+    act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608']))
     await act(async () => { vi.advanceTimersByTime(110) })
+    vi.mocked(subscribeMarket).mockClear()
 
-    // 只提交一个 ≤ SOFT_LIMIT 的批次（而非 554），超出的留待下次 diff
-    expect(vi.mocked(subscribeMarket)).toHaveBeenCalledTimes(1)
-    const batch = vi.mocked(subscribeMarket).mock.calls[0][0] as string[]
-    expect(batch).toHaveLength(480)
-    // 告警记录了丢弃数（留待下次 diff 重试）
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('留待下次 diff'))
-    warnSpy.mockRestore()
+    // 两次锁定变化在 300ms 内（可见集不变）：若被误判为拖动态，第二次锁定的完整 diff
+    // 会被拖到 500ms 拖停窗口后，订阅即时性受损
+    act(() => useMarketStore.getState().addLockedContract('au2508'))
+    await act(async () => { vi.advanceTimersByTime(100) })
+    act(() => useMarketStore.getState().addLockedContract('ag2508'))
+    await act(async () => {})
+
+    // 无 500ms 拖停延迟：第二次锁定立即触发完整 diff，订阅新锁定合约
+    expect(vi.mocked(subscribeMarket)).toHaveBeenCalledWith(['ag2508'])
   })
 
   it('停止后完整 diff 退订超期合约', async () => {
