@@ -30,10 +30,13 @@ export function ContractFilter({ allContracts, getProduct, productNames, value, 
 
   const activeCount = value.exchanges.length + value.products.length
 
-  // 动态可用选项：exchanges = 有合约满足已选品种的交易所；products = 有合约满足已选交易所的品种
+  // 动态可用选项：exchanges = 有合约满足已选品种的交易所；products = 有合约满足已选交易所的品种。
+  // getProduct 是纯映射函数（合约 → 品种键），结果只由 allContracts 与已选值决定，因此不列入依赖数组——
+  // 否则父组件内联箭头（每行情 tick 新建实例）会令本 useMemo 在每次渲染都重算（Critical #4）。
   const { exchanges: availableExchanges, products: availableProducts } = useMemo(
     () => computeFilterOptions(allContracts, value.exchanges, value.products, getProduct),
-    [allContracts, value.exchanges, value.products, getProduct],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getProduct 为纯函数，结果只依赖前三个参数
+    [allContracts, value.exchanges, value.products],
   )
   // 已选项并回可用列表：被交叉过滤掉的已选项仍显示（勾选）可取消
   const displayExchanges = useMemo(

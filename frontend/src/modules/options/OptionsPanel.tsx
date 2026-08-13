@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ContractFilter } from '@/components/ContractFilter'
 import { ContractSearch } from '@/components/ContractSearch'
@@ -47,6 +47,20 @@ export function OptionsPanel() {
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   // 标底行右键菜单（仅「打开T型报价」一项）
   const [underlyingMenu, setUnderlyingMenu] = useState<UnderlyingMenuState | null>(null)
+  // 标底右键菜单容器 ref：外部点击关闭时判断点击是否落在菜单内
+  const underlyingMenuRef = useRef<HTMLDivElement>(null)
+
+  // 点击菜单外部关闭标底右键菜单（ContextMenu 本身仅监听 Escape / 点击项，此处补外部点击关闭）
+  useEffect(() => {
+    if (!underlyingMenu) return
+    const onMouseDown = (e: MouseEvent) => {
+      if (underlyingMenuRef.current && !underlyingMenuRef.current.contains(e.target as Node)) {
+        setUnderlyingMenu(null)
+      }
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    return () => document.removeEventListener('mousedown', onMouseDown)
+  }, [underlyingMenu])
   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, favorites, addToFavorites, removeFromFavorites } = useContractsStore()
@@ -139,7 +153,12 @@ export function OptionsPanel() {
     onOrder: ({ instrumentID, price }) => {
       setSelectedInstrument(instrumentID)
       setOrderInstrument(instrumentID)
-      setOrderForm({ limitPrice: price })
+      // 标底行（productClass '1'）无 lastPrice，单击回调 price=0；
+      // 不得用它覆盖报单表已填的 limitPrice（Critical #3）。期权行照常填充快照价。
+      const inst = contracts.find((c) => c.instrumentID === instrumentID)
+      if (!(inst && inst.productClass === '1')) {
+        setOrderForm({ limitPrice: price })
+      }
     },
     onFill: ({ instrumentID }) => {
       setSelectedInstrument(instrumentID)
@@ -177,12 +196,21 @@ export function OptionsPanel() {
 
   // 右键标底行 → 「打开T型报价」菜单（仅此项）；期权行 → 原 handleContextMenu（单选菜单）
   const handleRowContextMenu = (instrumentID: string, price: number, event: MouseEvent) => {
+    // 先关闭任何已打开的单选/多选菜单与标底菜单，避免两个菜单叠加（Critical #2）
+    closeMenus()
+    setUnderlyingMenu(null)
     if (isUnderlyingRow(instrumentID)) {
       event.preventDefault()
       setUnderlyingMenu({ instrumentID, x: event.clientX, y: event.clientY })
     } else {
       handleContextMenu(instrumentID, price, event)
     }
+  }
+
+  // 多选右键：先关闭标底菜单再走原多选菜单，避免两个菜单叠加（Critical #2）
+  const handleMultiSelectContextMenuWrapped = (instrumentIDs: string[], event: MouseEvent) => {
+    setUnderlyingMenu(null)
+    handleMultiSelectContextMenu(instrumentIDs, event)
   }
 
   return (
@@ -255,7 +283,7 @@ export function OptionsPanel() {
             onRowClick={handleClick}
             onRowDoubleClick={handleRowDoubleClick}
             onContextMenu={handleRowContextMenu}
-            onMultiSelectContextMenu={handleMultiSelectContextMenu}
+            onMultiSelectContextMenu={handleMultiSelectContextMenuWrapped}
             onVisibleRangeChange={setVisibleInstrumentIDs}
             favoritedIds={favoritedIds}
             onFavoriteChange={(instrumentID, isFavorited) => {
@@ -286,20 +314,22 @@ export function OptionsPanel() {
         favoritedIds={favoritedIds}
       />
 
-      {/* 标底行右键菜单：仅「打开T型报价」 */}
+      {/* 标底行右键菜单：仅「打开T型报价」（ref 用于外部点击关闭判断） */}
       {underlyingMenu && (
-        <ContextMenu
-          x={underlyingMenu.x}
-          y={underlyingMenu.y}
-          items={[
-            {
-              label: '打开T型报价',
-              icon: '📉',
-              onClick: () => openTQuoteFloating(underlyingMenu.instrumentID),
-            },
-          ]}
-          onClose={() => setUnderlyingMenu(null)}
-        />
+        <div ref={underlyingMenuRef}>
+          <ContextMenu
+            x={underlyingMenu.x}
+            y={underlyingMenu.y}
+            items={[
+              {
+                label: '打开T型报价',
+                icon: '📉',
+                onClick: () => openTQuoteFloating(underlyingMenu.instrumentID),
+              },
+            ]}
+            onClose={() => setUnderlyingMenu(null)}
+          />
+        </div>
       )}
 
       {/* 单选 + 多选右键菜单（共享 useContractMenus，与期货页一致） */}

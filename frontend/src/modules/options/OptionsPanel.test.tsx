@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { OptionsPanel } from './OptionsPanel'
 import { optionsSpec } from '@/modules/market/optionsSpec'
 import { useMarketStore } from '@/modules/market/store'
+import { useOrderStore } from '@/modules/order/store'
 import { useContractsStore } from '@/stores/contracts'
 import { useMarketFilterStore } from '@/stores/marketFilter'
 import { useTabStore } from '@/stores/tabs'
@@ -360,5 +361,76 @@ describe('OptionsPanel', () => {
       expect(follows(filterBtn, favoriteBtn)).toBe(true)
       expect(follows(favoriteBtn, searchInput)).toBe(true)
     })
+  })
+
+  it('单击标底行（productClass 1，无 lastPrice）不覆盖报单表 limitPrice（Critical #3）', async () => {
+    // 预填报单价格，验证标底行单击不会把它归零
+    useOrderStore.setState((s) => ({ orderForm: { ...s.orderForm, limitPrice: 1500 } }))
+    render(<OptionsPanel />)
+    const { ListTable } = await import('@visactor/vtable')
+    const instance = (ListTable as any).mock.results[0].value
+    const clickHandler = instance.on.mock.calls.find((call: any[]) => call[0] === 'click_cell')?.[1]
+    expect(clickHandler).toBeDefined()
+    act(() => {
+      clickHandler({ row: 1, col: 1, event: {} }) // row 1 = FG609（标底行）
+    })
+    // 选中同步照常，但 limitPrice 保持用户已填值（不被 price=0 覆盖）
+    expect(useMarketStore.getState().selectedInstrument).toBe('FG609')
+    expect(useOrderStore.getState().orderForm.instrumentID).toBe('FG609')
+    expect(useOrderStore.getState().orderForm.limitPrice).toBe(1500)
+  })
+
+  it('右键标底行后点击菜单外部 → 关闭标底菜单（Critical #2 外部点击关闭）', async () => {
+    render(<OptionsPanel />)
+    const { ListTable } = await import('@visactor/vtable')
+    const instance = (ListTable as any).mock.results[0].value
+    const contextmenuHandler = instance.on.mock.calls.find(
+      (call: any[]) => call[0] === 'contextmenu_cell'
+    )?.[1]
+    act(() => {
+      contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
+    })
+    expect(screen.getByText('打开T型报价')).toBeInTheDocument()
+    fireEvent.mouseDown(document.body)
+    expect(screen.queryByText('打开T型报价')).toBeNull()
+  })
+
+  it('右键期权行打开单选菜单后，再右键标底行 → 单选菜单关闭，仅剩标底菜单（不叠加，Critical #2）', async () => {
+    render(<OptionsPanel />)
+    const { ListTable } = await import('@visactor/vtable')
+    const instance = (ListTable as any).mock.results[0].value
+    const contextmenuHandler = instance.on.mock.calls.find(
+      (call: any[]) => call[0] === 'contextmenu_cell'
+    )?.[1]
+    // 先右键期权行（row 2 = FG609-C-1300）→ 打开单选菜单（打开报单/K线/查询）
+    act(() => {
+      contextmenuHandler({ row: 2, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
+    })
+    expect(screen.getByText('打开报单')).toBeInTheDocument()
+    // 再右键标底行（row 1 = FG609）→ 单选菜单应关闭，仅剩「打开T型报价」
+    act(() => {
+      contextmenuHandler({ row: 1, col: 0, event: { clientX: 150, clientY: 250, preventDefault: vi.fn() } })
+    })
+    expect(screen.queryByText('打开报单')).toBeNull()
+    expect(screen.queryByText('打开K线')).toBeNull()
+    expect(screen.getByText('打开T型报价')).toBeInTheDocument()
+  })
+
+  it('右键标底行打开标底菜单后，再右键期权行 → 标底菜单关闭，只显示单选菜单（不叠加，Critical #2）', async () => {
+    render(<OptionsPanel />)
+    const { ListTable } = await import('@visactor/vtable')
+    const instance = (ListTable as any).mock.results[0].value
+    const contextmenuHandler = instance.on.mock.calls.find(
+      (call: any[]) => call[0] === 'contextmenu_cell'
+    )?.[1]
+    act(() => {
+      contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
+    })
+    expect(screen.getByText('打开T型报价')).toBeInTheDocument()
+    act(() => {
+      contextmenuHandler({ row: 2, col: 0, event: { clientX: 150, clientY: 250, preventDefault: vi.fn() } })
+    })
+    expect(screen.queryByText('打开T型报价')).toBeNull()
+    expect(screen.getByText('打开报单')).toBeInTheDocument()
   })
 })

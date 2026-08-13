@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMarketStore } from '@/modules/market/store'
-import { subscribeMarket, getOptionUnderlyings, getOptionChains, getSnapshots } from '@/services/api'
+import { subscribeMarket, unsubscribeMarket, getOptionUnderlyings, getOptionChains, getSnapshots } from '@/services/api'
 import type { OptionChain } from '@/services/types'
 import { TQuoteTable } from './TQuoteTable'
 import './styles.css'
@@ -43,6 +43,10 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
   const [underlyingSearch, setUnderlyingSearch] = useState('')
   const [showUnderlyingDropdown, setShowUnderlyingDropdown] = useState(false)
   const underlyingDropdownRef = useRef<HTMLDivElement>(null)
+
+  // 当前已直接订阅的期权合约 ID（不经过 useSubscriptionManager 的 subscribedRef）。
+  // 用于链切换/卸载时主动退订，避免绕过 LRU 驱逐与 SOFT_LIMIT 记账导致订阅泄漏。
+  const subscribedIdsRef = useRef<string[]>([])
 
   // 排序（字典序）：availableUnderlyings 设值前排序；filteredUnderlyings 保持有序
   const filteredUnderlyings = useMemo(() => {
@@ -152,7 +156,15 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
       ...selectedChain.puts.map((q) => q.instrumentID),
     ]
     if (ids.length > 0) {
+      // 先退订上一链已订阅的合约（链切换时在订阅新链前退订）。
+      // 这些 ID 直接订阅、不进 useSubscriptionManager 的 subscribedRef，
+      // 若不主动退订会绕过 LRU 驱逐与 SOFT_LIMIT 记账，多 T型报价实例叠加
+      // 会重演后端 500 订阅上限的原子拒绝。
+      if (subscribedIdsRef.current.length > 0) {
+        unsubscribeMarket(subscribedIdsRef.current).catch(() => {})
+      }
       subscribeMarket(ids).catch(() => {})
+      subscribedIdsRef.current = ids
       // Proactively fetch current snapshots so the table shows data immediately,
       // without waiting for WebSocket market_data push.
       getSnapshots(ids)
@@ -161,6 +173,13 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
           if (snaps.length > 0) batchUpdate(snaps)
         })
         .catch(() => {})
+    }
+    // 组件卸载 / selectedChain 变化（选标底、换到期日）时退订当前链，避免订阅泄漏
+    return () => {
+      if (subscribedIdsRef.current.length > 0) {
+        unsubscribeMarket(subscribedIdsRef.current).catch(() => {})
+        subscribedIdsRef.current = []
+      }
     }
   }, [selectedChain, batchUpdate])
 

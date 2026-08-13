@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, act, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TQuoteView } from './TQuoteView'
 import { useMarketStore } from '@/modules/market/store'
@@ -8,15 +8,15 @@ import { useMarketStore } from '@/modules/market/store'
 // 以下 mock 覆盖 TQuoteView 用到的所有 API 函数。
 const mockGetOptionUnderlyings = vi.fn().mockResolvedValue({ underlyings: ['IF2608', 'IF2609'] })
 const mockGetOptionChains = vi.fn().mockResolvedValue({ chains: [] })
-const mockGetVolatility = vi.fn().mockResolvedValue({ volatility: [] })
 const mockSubscribeMarket = vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] })
+const mockUnsubscribeMarket = vi.fn().mockResolvedValue({ success: true, removed: 0 })
 const mockGetSnapshots = vi.fn().mockResolvedValue({ snapshots: {} })
 
 vi.mock('@/services/api', () => ({
   getOptionUnderlyings: (...args: any[]) => mockGetOptionUnderlyings(...args),
   getOptionChains: (...args: any[]) => mockGetOptionChains(...args),
-  getVolatility: (...args: any[]) => mockGetVolatility(...args),
   subscribeMarket: (...args: any[]) => mockSubscribeMarket(...args),
+  unsubscribeMarket: (...args: any[]) => mockUnsubscribeMarket(...args),
   getSnapshots: (...args: any[]) => mockGetSnapshots(...args),
 }))
 
@@ -45,7 +45,6 @@ describe('TQuoteView (自包含)', () => {
     useMarketStore.setState({ snapshots: new Map() })
     mockGetOptionUnderlyings.mockResolvedValue({ underlyings: ['IF2608', 'IF2609'] })
     mockGetOptionChains.mockResolvedValue({ chains: [] })
-    mockGetVolatility.mockResolvedValue({ volatility: [] })
   })
 
   it('renders the options panel container', () => {
@@ -170,5 +169,61 @@ describe('TQuoteView (自包含)', () => {
     const props = calls[calls.length - 1]?.[0]
     expect(props.volatility).toBeUndefined()
     expect(props.snapshots).toBeInstanceOf(Map)
+  })
+
+  it('订阅后卸载组件 → 退订该链全部合约（避免订阅泄漏）', async () => {
+    mockGetOptionChains.mockResolvedValue({
+      chains: [{
+        underlying: 'IF2608',
+        expireDate: '20260815',
+        calls: [{ instrumentID: 'IF2608-C-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
+        puts: [{ instrumentID: 'IF2608-P-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
+        updateTime: '',
+      }],
+    })
+    const { unmount } = render(<TQuoteView instrumentID="IF2608" />)
+    await waitFor(() => {
+      expect(mockSubscribeMarket).toHaveBeenCalledWith(['IF2608-C-1300', 'IF2608-P-1300'])
+    })
+    unmount()
+    expect(mockUnsubscribeMarket).toHaveBeenCalledWith(['IF2608-C-1300', 'IF2608-P-1300'])
+  })
+
+  it('切换标的链 → 先退订上一链合约，再订阅新链（无泄漏叠加）', async () => {
+    mockGetOptionChains.mockResolvedValue({
+      chains: [{
+        underlying: 'IF2608',
+        expireDate: '20260815',
+        calls: [{ instrumentID: 'IF2608-C-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
+        puts: [{ instrumentID: 'IF2608-P-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
+        updateTime: '',
+      }],
+    })
+    const { rerender } = render(<TQuoteView instrumentID="IF2608" />)
+    await waitFor(() => {
+      expect(mockSubscribeMarket).toHaveBeenCalledWith(['IF2608-C-1300', 'IF2608-P-1300'])
+    })
+    mockGetOptionChains.mockResolvedValue({
+      chains: [{
+        underlying: 'IF2609',
+        expireDate: '20260815',
+        calls: [{ instrumentID: 'IF2609-C-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
+        puts: [{ instrumentID: 'IF2609-P-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
+        updateTime: '',
+      }],
+    })
+    rerender(<TQuoteView instrumentID="IF2609" />)
+    // 退订先于重新订阅（React effect cleanup 先于新 effect 运行）
+    await waitFor(() => {
+      expect(mockUnsubscribeMarket).toHaveBeenCalledWith(['IF2608-C-1300', 'IF2608-P-1300'])
+    })
+    await waitFor(() => {
+      expect(mockSubscribeMarket).toHaveBeenCalledWith(['IF2609-C-1300', 'IF2609-P-1300'])
+    })
+    const unsubOrder = vi.mocked(mockUnsubscribeMarket).mock.invocationCallOrder[0]
+    const subCalls = vi.mocked(mockSubscribeMarket).mock.invocationCallOrder
+    const resubOrder = subCalls[subCalls.length - 1]
+    expect(resubOrder).toBeDefined()
+    expect(unsubOrder).toBeLessThan(resubOrder!)
   })
 })
