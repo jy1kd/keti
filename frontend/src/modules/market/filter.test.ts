@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { ContractInfo } from '@/services/types'
-import { filterByExchangeAndProduct } from './filter'
+import { computeFilterOptions, filterByExchangeAndProduct } from './filter'
 import { deriveUnderlyingProduct } from './sort'
 
 const c = (instrumentID: string, exchangeID: string, productID: string, underlyingInstrID?: string): ContractInfo =>
@@ -27,5 +27,30 @@ describe('filterByExchangeAndProduct', () => {
     const opts = [c('FG609-C-1300', 'CZCE', 'FGC', 'FG609'), c('MA609-C-1000', 'CZCE', 'MAC', 'MA609')]
     const r = filterByExchangeAndProduct(opts, [], ['FG'], (x) => deriveUnderlyingProduct(x.underlyingInstrID ?? ''))
     expect(r.map((x) => x.instrumentID)).toEqual(['FG609-C-1300'])
+  })
+})
+
+describe('computeFilterOptions', () => {
+  const list = [
+    c('FG609', 'CZCE', 'FG'), c('cu2609', 'SHFE', 'cu'),
+    c('MA609', 'CZCE', 'MA'), c('MA610', 'CZCE', 'MA'),
+  ]
+  it('未选任何筛选时列出全部交易所与品种', () => {
+    const r = computeFilterOptions(list, [], [], (x) => x.productID)
+    expect(r.exchanges).toEqual(['CZCE', 'SHFE'])
+    expect(r.products).toEqual(['FG', 'cu', 'MA'])
+  })
+  it('选品种后交易所只剩有该品种的交易所', () => {
+    const r = computeFilterOptions(list, [], ['MA'], (x) => x.productID)
+    expect(r.exchanges).toEqual(['CZCE'])
+  })
+  it('选交易所后品种只剩该所有合约的品种', () => {
+    const r = computeFilterOptions(list, ['SHFE'], [], (x) => x.productID)
+    expect(r.products).toEqual(['cu'])
+  })
+  it('已选品种与已选交易所交集（不影响可用项）', () => {
+    const r = computeFilterOptions(list, ['CZCE'], ['FG'], (x) => x.productID)
+    expect(r.exchanges).toEqual(['CZCE'])
+    expect(r.products).toEqual(['FG', 'MA'])
   })
 })

@@ -1,12 +1,14 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
 import type { MarketFilter } from '@/modules/market/filter'
+import { computeFilterOptions } from '@/modules/market/filter'
+import type { ContractInfo } from '@/services/types'
 import './styles.css'
 
 interface ContractFilterProps {
-  /** 可选交易所 ID 列表（空=无选项） */
-  exchanges: string[]
-  /** 可选品种（productID）列表 */
-  products: string[]
+  /** 全量合约（交叉计算可选交易所/品种；期货页=全量期货，期权页=全量期权） */
+  allContracts: ContractInfo[]
+  /** 合约 → 品种键（期货页=productID，期权页=标底品种） */
+  getProduct: (c: ContractInfo) => string
   /** productID → 品种中文名 */
   productNames: Record<string, string>
   value: MarketFilter
@@ -18,13 +20,30 @@ interface ContractFilterProps {
  * 「筛选」按钮 + 点击展开下拉：交易所 checkbox 列表、品种 checkbox 列表
  * （中文名 + 内嵌关键词过滤输入）、「清空」按钮；点击外部/Esc 关闭；
  * 按钮显示已选数徽标（交易所+品种合计）。
+ * 列表内容由 computeFilterOptions 交叉联动（选交易所→品种列表收窄到该所品种，反之亦然）；
+ * 已选项即使被交叉过滤掉也「并回」展示列表（保持勾选，可取消）。
  */
-export function ContractFilter({ exchanges, products, productNames, value, onChange }: ContractFilterProps) {
+export function ContractFilter({ allContracts, getProduct, productNames, value, onChange }: ContractFilterProps) {
   const [open, setOpen] = useState(false)
   const [keyword, setKeyword] = useState('')
   const rootRef = useRef<HTMLDivElement>(null)
 
   const activeCount = value.exchanges.length + value.products.length
+
+  // 动态可用选项：exchanges = 有合约满足已选品种的交易所；products = 有合约满足已选交易所的品种
+  const { exchanges: availableExchanges, products: availableProducts } = useMemo(
+    () => computeFilterOptions(allContracts, value.exchanges, value.products, getProduct),
+    [allContracts, value.exchanges, value.products, getProduct],
+  )
+  // 已选项并回可用列表：被交叉过滤掉的已选项仍显示（勾选）可取消
+  const displayExchanges = useMemo(
+    () => Array.from(new Set([...value.exchanges, ...availableExchanges])),
+    [value.exchanges, availableExchanges],
+  )
+  const displayProducts = useMemo(
+    () => Array.from(new Set([...value.products, ...availableProducts])),
+    [value.products, availableProducts],
+  )
 
   // 点击外部 / Esc 关闭
   useEffect(() => {
@@ -45,13 +64,13 @@ export function ContractFilter({ exchanges, products, productNames, value, onCha
 
   // 品种关键词过滤（仅过滤展示列表，不影响已选值）
   const shownProducts = useMemo(() => {
-    if (!keyword.trim()) return products
+    if (!keyword.trim()) return displayProducts
     const q = keyword.toLowerCase()
-    return products.filter((p) => {
+    return displayProducts.filter((p) => {
       const name = productNames[p] ?? p
       return p.toLowerCase().includes(q) || name.toLowerCase().includes(q)
     })
-  }, [keyword, products, productNames])
+  }, [keyword, displayProducts, productNames])
 
   const toggle = (key: 'exchanges' | 'products', item: string) => {
     const list = value[key]
@@ -83,10 +102,10 @@ export function ContractFilter({ exchanges, products, productNames, value, onCha
           <div className="contract-filter__section">
             <div className="contract-filter__section-title">交易所</div>
             <div className="contract-filter__list">
-              {exchanges.length === 0 ? (
+              {displayExchanges.length === 0 ? (
                 <div className="contract-filter__empty">无</div>
               ) : (
-                exchanges.map((ex) => (
+                displayExchanges.map((ex) => (
                   <label key={ex} className="contract-filter__item">
                     <input type="checkbox" checked={value.exchanges.includes(ex)} onChange={() => toggle('exchanges', ex)} />
                     <span>{ex}</span>

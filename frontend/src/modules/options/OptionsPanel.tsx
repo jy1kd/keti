@@ -68,20 +68,15 @@ export function OptionsPanel() {
   // 全部/自选 基础集（自选 = 已收藏期权）
   const baseOptions = activeTab === 'all' ? options : favoriteOptions
 
-  // 筛选面板可用选项：交易所 = 期权合约去重；品种 = 标底品种（underlyingInstrID 去尾数字）去重
-  const filterExchanges = useMemo(
-    () => Array.from(new Set(options.map((c) => c.exchangeID))),
-    [options],
-  )
-  const filterProducts = useMemo(
-    () => Array.from(new Set(options.map((c) => deriveUnderlyingProduct(c.underlyingInstrID ?? '')))),
-    [options],
-  )
+  // 筛选面板品种中文名（显示用；可选交易所/品种列表由 ContractFilter 内经 computeFilterOptions 交叉计算，品种=标底品种）
   const filterProductNames = useMemo(() => {
     const m: Record<string, string> = {}
-    for (const p of filterProducts) m[p] = getProductName(p)
+    for (const o of options) {
+      const p = deriveUnderlyingProduct(o.underlyingInstrID ?? '')
+      if (!(p in m)) m[p] = getProductName(p)
+    }
     return m
-  }, [filterProducts])
+  }, [options])
 
   // 分组前先过滤期权（交易所 + 标底品种 + 仅交易中），再按标底分组展平为有序 ContractInfo[]
   // （标底行在前、期权行随后；组内无可见期权时整组消失）。此列表是搜索框的作用域。
@@ -210,8 +205,8 @@ export function OptionsPanel() {
           </button>
         </div>
         <ContractFilter
-          exchanges={filterExchanges}
-          products={filterProducts}
+          allContracts={options}
+          getProduct={(c) => deriveUnderlyingProduct(c.underlyingInstrID ?? '')}
           productNames={filterProductNames}
           value={filter}
           onChange={(v) => useMarketFilterStore.getState().setFilter('options', v)}

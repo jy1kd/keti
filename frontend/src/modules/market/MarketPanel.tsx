@@ -53,20 +53,12 @@ export function MarketPanel() {
   // Display contracts based on active tab
   const baseContracts = activeTab === 'all' ? sortedFutures : sortedFavorites
 
-  // 筛选面板可用选项：交易所 = 期货合约去重；品种 = productID 去重（保持排序后顺序）
-  const filterExchanges = useMemo(
-    () => Array.from(new Set(sortedFutures.map((c) => c.exchangeID))),
-    [sortedFutures],
-  )
-  const filterProducts = useMemo(
-    () => Array.from(new Set(sortedFutures.map((c) => c.productID))),
-    [sortedFutures],
-  )
+  // 筛选面板品种中文名（显示用；可选交易所/品种列表由 ContractFilter 内经 computeFilterOptions 交叉计算）
   const filterProductNames = useMemo(() => {
     const m: Record<string, string> = {}
-    for (const p of filterProducts) m[p] = getProductName(p)
+    for (const c of sortedFutures) m[c.productID] = getProductName(c.productID)
     return m
-  }, [filterProducts])
+  }, [sortedFutures])
 
   // 搜索过滤
   const [searchQuery, setSearchQuery] = useState('')
@@ -179,8 +171,8 @@ export function MarketPanel() {
           </button>
         </div>
         <ContractFilter
-          exchanges={filterExchanges}
-          products={filterProducts}
+          allContracts={sortedFutures}
+          getProduct={(c) => c.productID}
           productNames={filterProductNames}
           value={filter}
           onChange={(v) => useMarketFilterStore.getState().setFilter('futures', v)}
