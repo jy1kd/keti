@@ -95,7 +95,7 @@ describe('TrayManager', () => {
     manager.initialize(mainWindow, windowManager);
     const fnMenu = getTemplate().find((i) => i.label === '功能')!;
     const labels = fnMenu.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📝 报单窗口', '📈 K线窗口', '📋 查询窗口']);
+    expect(labels).toEqual(['📝 报单窗口', '📈 K线窗口', '📋 查询窗口', '📋 报单查询窗口', '📋 持仓查询窗口']);
   });
 
   it('行情子菜单完整镜像：全部/T型/自选/新窗口', () => {

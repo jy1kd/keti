@@ -17,6 +17,8 @@ import {
   openQueryFloating,
   openSettingsFloating,
   openIpcMonitorFloating,
+  openOrdersQueryFloating,
+  openPositionsQueryFloating,
 } from '@/utils/openFloatingTab'
 import '@/assets/styles/global.css'
 
@@ -86,6 +88,12 @@ function App() {
           break
         case 'ipc-monitor':
           openIpcMonitorFloating()
+          break
+        case 'query-orders':
+          openOrdersQueryFloating()
+          break
+        case 'query-positions':
+          openPositionsQueryFloating()
           break
       }
     })
