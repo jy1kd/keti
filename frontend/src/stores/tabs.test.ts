@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useTabStore, TAB_TYPES, PINNED_TAB_TYPE } from './tabs'
 
+// 模块加载时捕获 store 真实默认态：vitest 默认按文件隔离，此时 store 尚未被任何测试污染
+const defaultTabStoreState = useTabStore.getState()
+
 describe('useTabStore', () => {
   beforeEach(() => {
     // 重置 store 为默认值
@@ -401,5 +404,17 @@ describe('双固定标签初始化', () => {
   it('closeTab 拒绝关闭固定标签', () => {
     useTabStore.getState().closeTab('tab-market')
     expect(useTabStore.getState().tabs.length).toBe(2)
+  })
+})
+
+describe('双固定标签默认初始化（未播种）', () => {
+  it('store 默认态含期货+期权两个不可关闭标签，activeTabId 指向 tab-market', () => {
+    // 重置到模块加载时捕获的真实默认态（不依赖 beforeEach 播种）
+    useTabStore.setState(defaultTabStoreState, true)
+    const { tabs, activeTabId } = useTabStore.getState()
+    expect(tabs.length).toBe(2)
+    expect(tabs.map((t) => t.title)).toEqual(['📊 期货', '📈 期权'])
+    expect(tabs.every((t) => t.closable === false)).toBe(true)
+    expect(activeTabId).toBe('tab-market')
   })
 })
