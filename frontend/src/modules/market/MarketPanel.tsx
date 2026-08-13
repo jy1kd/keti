@@ -4,7 +4,8 @@ import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
 import { ContextMenu } from '@/components/ContextMenu'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { OptionPanel } from '@/modules/options/OptionPanel'
-import { MarketTable } from './MarketTable'
+import { QuoteTable } from './QuoteTable'
+import { futuresSpec } from './futuresSpec'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
 import { useTabStore } from '@/stores/tabs'
@@ -222,7 +223,8 @@ export function MarketPanel() {
       ) : (
         <div className="panel-content">
           <ErrorBoundary>
-            <MarketTable
+            <QuoteTable
+              spec={futuresSpec}
               contracts={displayContracts}
               snapshots={snapshots}
               selectedInstrument={selectedInstrument}

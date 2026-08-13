@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { MarketTable } from '@/modules/market/MarketTable'
+import { QuoteTable } from '@/modules/market/QuoteTable'
+import { futuresSpec } from '@/modules/market/futuresSpec'
 import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
 import { useContractContextMenu } from '@/hooks/useContractContextMenu'
@@ -65,7 +66,8 @@ export function FavoritesPage() {
   return (
     <div className="favorites-page" data-testid="favorites-page">
       <div className="favorites-page__table">
-        <MarketTable
+        <QuoteTable
+          spec={futuresSpec}
           contracts={favorites}
           snapshots={snapshots}
           selectedInstrument={selectedInstrument}

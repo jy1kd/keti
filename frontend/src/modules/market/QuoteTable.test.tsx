@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, act } from '@testing-library/react'
-import { MarketTable, shouldRenderAnchor } from './MarketTable'
+import { QuoteTable } from './QuoteTable'
+import { shouldRenderAnchor } from './quoteTableCore'
+import { futuresSpec } from './futuresSpec'
 import { useMarketStore } from './store'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
 
-describe('MarketTable', () => {
+describe('QuoteTable', () => {
   const mockContracts: ContractInfo[] = [
     { instrumentID: 'au2508', instrumentName: '黄金2508', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '20250815', isTrading: 1, productClass: "1" },
     { instrumentID: 'ag2508', instrumentName: '白银2508', exchangeID: 'SHFE', productID: 'ag', volumeMultiple: 15, priceTick: 1, expireDate: '20250815', isTrading: 1, productClass: "1" },
@@ -25,13 +27,13 @@ describe('MarketTable', () => {
   })
 
   it('renders a container div', () => {
-    const { container } = render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    const { container } = render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
     expect(container.firstChild).toBeTruthy()
   })
 
   it('creates ListTable with correct options', async () => {
     const { ListTable } = await import('@visactor/vtable')
-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
     expect(ListTable).toHaveBeenCalledTimes(1)
     const options = (ListTable as any).mock.calls[0][1]
     expect(options.columns).toBeDefined()
@@ -39,21 +41,21 @@ describe('MarketTable', () => {
   })
 
   it('冻结合约列为最左列（frozenColCount=1）', async () => {
-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
     const { ListTable } = await import('@visactor/vtable')
     const options = (ListTable as any).mock.calls[0][1]
     expect(options.frozenColCount).toBe(1)
   })
 
   it('passes records from contracts to vtable', async () => {
-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
     const { ListTable } = await import('@visactor/vtable')
     const options = (ListTable as any).mock.calls[0][1]
     expect(options.records).toHaveLength(2)
   })
 
   it('shows placeholder for contracts without snapshots', async () => {
-    render(<MarketTable contracts={mockContracts} snapshots={new Map()} />)
+    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={new Map()} />)
     const { ListTable } = await import('@visactor/vtable')
     const options = (ListTable as any).mock.calls[0][1]
     expect(options.records).toHaveLength(2)
@@ -61,7 +63,7 @@ describe('MarketTable', () => {
   })
 
   it('releases vtable instance on unmount', async () => {
-    const { unmount } = render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    const { unmount } = render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
     unmount()
     expect(true).toBe(true)
   })
@@ -80,7 +82,7 @@ describe('MarketTable', () => {
       } as MarketSnapshot],
     ])
 
-    render(<MarketTable contracts={mockContracts} snapshots={snapshots} />)
+    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={snapshots} />)
     const { ListTable } = await import('@visactor/vtable')
     const options = (ListTable as any).mock.calls[0][1]
     const record = options.records[0]
@@ -94,7 +96,7 @@ describe('MarketTable', () => {
   // --- 状态列 tests ---
 
   it('状态列为到期日右侧的列', async () => {
-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
     const { ListTable } = await import('@visactor/vtable')
     const options = (ListTable as any).mock.calls[0][1]
     const titles = options.columns.map((c: { title: string }) => c.title)
@@ -107,7 +109,7 @@ describe('MarketTable', () => {
     const contracts: ContractInfo[] = [
       { instrumentID: 'au9999', instrumentName: '测试', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 0, productClass: "1" },
     ]
-    render(<MarketTable contracts={contracts} snapshots={new Map()} />)
+    render(<QuoteTable spec={futuresSpec} contracts={contracts} snapshots={new Map()} />)
     const { ListTable } = await import('@visactor/vtable')
     const options = (ListTable as any).mock.calls[0][1]
     expect(options.records[0].status).toBe('已停牌')
@@ -117,7 +119,7 @@ describe('MarketTable', () => {
     const contracts: ContractInfo[] = [
       { instrumentID: 'au2501', instrumentName: '测试', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '20240101', isTrading: 1, productClass: "1" },
     ]
-    render(<MarketTable contracts={contracts} snapshots={new Map()} />)
+    render(<QuoteTable spec={futuresSpec} contracts={contracts} snapshots={new Map()} />)
     const { ListTable } = await import('@visactor/vtable')
     const options = (ListTable as any).mock.calls[0][1]
     expect(options.records[0].status).toBe('已到期')
@@ -127,7 +129,7 @@ describe('MarketTable', () => {
     const contracts: ContractInfo[] = [
       { instrumentID: 'au2612', instrumentName: '测试', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 1, productClass: "1" },
     ]
-    render(<MarketTable contracts={contracts} snapshots={new Map()} />)
+    render(<QuoteTable spec={futuresSpec} contracts={contracts} snapshots={new Map()} />)
     const { ListTable } = await import('@visactor/vtable')
     const options = (ListTable as any).mock.calls[0][1]
     expect(options.records[0].status).toBe('交易中')
@@ -138,7 +140,7 @@ describe('MarketTable', () => {
       { instrumentID: 'au2612', instrumentName: '测试A', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 1, productClass: "1" },
       { instrumentID: 'au2613', instrumentName: '测试B', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 1, productClass: "1" },
     ]
-    render(<MarketTable contracts={contracts} snapshots={new Map()} />)
+    render(<QuoteTable spec={futuresSpec} contracts={contracts} snapshots={new Map()} />)
     const { ListTable } = await import('@visactor/vtable')
     const options = (ListTable as any).mock.calls[0][1]
     // 状态列 style 函数应存在
@@ -159,7 +161,7 @@ describe('MarketTable', () => {
       { instrumentID: 'au2612', instrumentName: '测试A', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 1, productClass: "1" },
       { instrumentID: 'au2613', instrumentName: '测试B', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 0, productClass: "1" },
     ]
-    render(<MarketTable contracts={contracts} snapshots={new Map()} />)
+    render(<QuoteTable spec={futuresSpec} contracts={contracts} snapshots={new Map()} />)
     const { ListTable } = await import('@visactor/vtable')
     const options = (ListTable as any).mock.calls[0][1]
     const statusCol = options.columns.find((c: { title: string }) => c.title === '状态')
@@ -170,7 +172,7 @@ describe('MarketTable', () => {
 
   it('columns 包含合约乘数与最小变动价位，且采用固定列宽 standard（默认列宽放大）', async () => {
     const { ListTable } = await import('@visactor/vtable')
-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
     const options = (ListTable as any).mock.calls[0][1]
     expect(options.widthMode).toBe('standard')
     const titles = options.columns.map((c: { title: string }) => c.title)
@@ -186,7 +188,7 @@ describe('MarketTable', () => {
   })
 
   it('保留每列拖拽缩放能力（columnResizeMode=all，列可单独放大/缩小）', async () => {
-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
     const { ListTable } = await import('@visactor/vtable')
     const options = (ListTable as any).mock.calls[0][1]
     expect(options.columnResizeMode).toBe('all')
@@ -194,7 +196,7 @@ describe('MarketTable', () => {
 
   it('buildRecord 从 contract 填充合约乘数与最小变动价位（有快照）', async () => {
     const { ListTable } = await import('@visactor/vtable')
-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
     const options = (ListTable as any).mock.calls[0][1]
     const record = options.records[0] // au2508
     expect(record.volumeMultiple).toBe(1000)
@@ -203,7 +205,7 @@ describe('MarketTable', () => {
 
   it('无快照时合约乘数/最小变动价位仍从 contract 显示（静态列）', async () => {
     const { ListTable } = await import('@visactor/vtable')
-    render(<MarketTable contracts={mockContracts} snapshots={new Map()} />)
+    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={new Map()} />)
     const options = (ListTable as any).mock.calls[0][1]
     const record = options.records[0]
     expect(record.volumeMultiple).toBe(1000)
@@ -213,7 +215,7 @@ describe('MarketTable', () => {
 
   it('横向滚动条为低调细灰样式（6px + 灰色滑块 + hover 表格时浮现）', async () => {
     const { ListTable } = await import('@visactor/vtable')
-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
     const options = (ListTable as any).mock.calls[0][1]
     const ss = options.theme.scrollStyle
     expect(ss).toBeDefined()
@@ -229,7 +231,7 @@ describe('MarketTable', () => {
     it('拖拽底部横向进度条（底部 6px 内）不误选合约行', async () => {
       const onSelectionChange = vi.fn()
       const { container } = render(
-        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={onSelectionChange} />
+        <QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={onSelectionChange} />
       )
       const { ListTable } = await import('@visactor/vtable')
       const instance = (ListTable as any).mock.results[0].value
@@ -257,7 +259,7 @@ describe('MarketTable', () => {
     it('拖拽右侧纵向滚动条（右侧 6px 内）不误选合约行', async () => {
       const onSelectionChange = vi.fn()
       const { container } = render(
-        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={onSelectionChange} />
+        <QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={onSelectionChange} />
       )
       const { ListTable } = await import('@visactor/vtable')
       const instance = (ListTable as any).mock.results[0].value
@@ -286,7 +288,7 @@ describe('MarketTable', () => {
     it('已滚动时 mousedown，getCellAt 应收到 y+scrollTop（内容坐标而非视口坐标）', async () => {
       const onSelectionChange = vi.fn()
       const { container } = render(
-        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={onSelectionChange} />
+        <QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={onSelectionChange} />
       )
       const { ListTable } = await import('@visactor/vtable')
       const instance = (ListTable as any).mock.results[0].value
@@ -319,7 +321,7 @@ describe('MarketTable', () => {
   it('接受 onVisibleRangeChange 回调', () => {
     const onVisibleRangeChange = vi.fn()
     render(
-      <MarketTable
+      <QuoteTable spec={futuresSpec}
         contracts={mockContracts}
         snapshots={mockSnapshots}
         onVisibleRangeChange={onVisibleRangeChange}
@@ -332,7 +334,7 @@ describe('MarketTable', () => {
   it('初始渲染后调用 onVisibleRangeChange', async () => {
     const onVisibleRangeChange = vi.fn()
     render(
-      <MarketTable
+      <QuoteTable spec={futuresSpec}
         contracts={mockContracts}
         snapshots={mockSnapshots}
         onVisibleRangeChange={onVisibleRangeChange}
@@ -353,7 +355,7 @@ describe('MarketTable', () => {
   it('contracts 变化时更新可见行', async () => {
     const onVisibleRangeChange = vi.fn()
     const { rerender } = render(
-      <MarketTable
+      <QuoteTable spec={futuresSpec}
         contracts={mockContracts}
         snapshots={mockSnapshots}
         onVisibleRangeChange={onVisibleRangeChange}
@@ -370,7 +372,7 @@ describe('MarketTable', () => {
     ]
 
     rerender(
-      <MarketTable
+      <QuoteTable spec={futuresSpec}
         contracts={newContracts}
         snapshots={mockSnapshots}
         onVisibleRangeChange={onVisibleRangeChange}
@@ -385,7 +387,7 @@ describe('MarketTable', () => {
 
   it('滚动条释放（mouseup 距上次 scroll <200ms）触发 markScrollEnd', async () => {
     const { ListTable } = await import('@visactor/vtable')
-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
     const instance = (ListTable as any).mock.results[0].value
 
     // 模拟一次滚动（记录 lastScrollAtRef）
@@ -403,7 +405,7 @@ describe('MarketTable', () => {
   it('键盘滚动停止（keyup 距上次 scroll <200ms）触发 markScrollEnd', async () => {
     useMarketStore.setState({ scrollEndSeq: 0 }) // 清掉前序用例（mouseup 测试）的残留计数
     const { ListTable } = await import('@visactor/vtable')
-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
+    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
     const instance = (ListTable as any).mock.results[0].value
 
     // 模拟一次滚动（记录 lastScrollAtRef）
@@ -423,7 +425,7 @@ describe('MarketTable', () => {
   it('接受 onContextMenu 回调', () => {
     const onContextMenu = vi.fn()
     render(
-      <MarketTable
+      <QuoteTable spec={futuresSpec}
         contracts={mockContracts}
         snapshots={mockSnapshots}
         onContextMenu={onContextMenu}
@@ -436,7 +438,7 @@ describe('MarketTable', () => {
   it('右键点击时调用 onContextMenu 并传入合约信息', async () => {
     const onContextMenu = vi.fn()
     render(
-      <MarketTable
+      <QuoteTable spec={futuresSpec}
         contracts={mockContracts}
         snapshots={mockSnapshots}
         onContextMenu={onContextMenu}
@@ -463,7 +465,7 @@ describe('MarketTable', () => {
     const onContextMenu = vi.fn()
     const onSelectionChange = vi.fn()
     render(
-      <MarketTable
+      <QuoteTable spec={futuresSpec}
         contracts={mockContracts}
         snapshots={mockSnapshots}
         selectedContracts={new Set(['ag2508'])} // 集合不包含 au2508
@@ -487,7 +489,7 @@ describe('MarketTable', () => {
     const onMultiSelectContextMenu = vi.fn()
     const onSelectionChange = vi.fn()
     render(
-      <MarketTable
+      <QuoteTable spec={futuresSpec}
         contracts={mockContracts}
         snapshots={mockSnapshots}
         selectedContracts={new Set(['au2508', 'ag2508'])}
@@ -510,7 +512,7 @@ describe('MarketTable', () => {
   it('右键点击无行情的合约时 price 为 0', async () => {
     const onContextMenu = vi.fn()
     render(
-      <MarketTable
+      <QuoteTable spec={futuresSpec}
         contracts={mockContracts}
         snapshots={new Map()}
         onContextMenu={onContextMenu}
@@ -530,11 +532,11 @@ describe('MarketTable', () => {
 
   // --- 局部更新 tests ---
 
-  describe('MarketTable 局部更新', () => {
+  describe('QuoteTable 局部更新', () => {
     it('snapshots 变化时调用 updateRecords 而非 setRecords', async () => {
       const { ListTable } = await import('@visactor/vtable')
       const { rerender } = render(
-        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} />
+        <QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />
       )
 
       // 初始渲染调用了 setRecords
@@ -545,7 +547,7 @@ describe('MarketTable', () => {
       // 新的快照（au2508 价格变化，自 diff 检测到该行变化）
       const newSnapshots = new Map(mockSnapshots)
       newSnapshots.set('au2508', { ...newSnapshots.get('au2508')!, lastPrice: 490 } as any)
-      rerender(<MarketTable contracts={mockContracts} snapshots={newSnapshots} />)
+      rerender(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={newSnapshots} />)
 
       expect(instance.updateRecords).toHaveBeenCalled()
       expect(instance.setRecords).not.toHaveBeenCalled()
@@ -557,7 +559,7 @@ describe('MarketTable', () => {
     it('更新第二个合约时索引为 1（0-based 记录索引）', async () => {
       const { ListTable } = await import('@visactor/vtable')
       const { rerender } = render(
-        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} />
+        <QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />
       )
       const instance = (ListTable as any).mock.results[0].value
       instance.updateRecords.mockClear()
@@ -565,7 +567,7 @@ describe('MarketTable', () => {
       // 新的快照（ag2508 价格变化，ag2508 在 contracts 中 index 1）
       const newSnapshots = new Map(mockSnapshots)
       newSnapshots.set('ag2508', { ...newSnapshots.get('ag2508')!, lastPrice: 6600 } as any)
-      rerender(<MarketTable contracts={mockContracts} snapshots={newSnapshots} />)
+      rerender(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={newSnapshots} />)
 
       expect(instance.updateRecords).toHaveBeenCalled()
       const updateCalls = instance.updateRecords.mock.calls as [any[], number[]][]
@@ -575,7 +577,7 @@ describe('MarketTable', () => {
     it('多次 tick 后行索引映射保持（局部更新仍更新正确行）', async () => {
       const { ListTable } = await import('@visactor/vtable')
       const { rerender } = render(
-        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} />
+        <QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />
       )
       const instance = (ListTable as any).mock.results[0].value
       instance.updateRecords.mockClear()
@@ -583,7 +585,7 @@ describe('MarketTable', () => {
       // 第 1 次 tick：au2508 价格变化 → 0-based 行索引 [0]
       const snapshots1 = new Map(mockSnapshots)
       snapshots1.set('au2508', { ...snapshots1.get('au2508')!, lastPrice: 490 } as any)
-      rerender(<MarketTable contracts={mockContracts} snapshots={snapshots1} />)
+      rerender(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={snapshots1} />)
 
       const calls1 = instance.updateRecords.mock.calls as [any[], number[]][]
       expect(calls1.length).toBeGreaterThan(0)
@@ -593,7 +595,7 @@ describe('MarketTable', () => {
       // 第 2 次 tick：ag2508 价格变化 → 0-based 行索引 [1]（映射未因上次局部更新而错位）
       const snapshots2 = new Map(snapshots1)
       snapshots2.set('ag2508', { ...snapshots2.get('ag2508')!, lastPrice: 6600 } as any)
-      rerender(<MarketTable contracts={mockContracts} snapshots={snapshots2} />)
+      rerender(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={snapshots2} />)
 
       const calls2 = instance.updateRecords.mock.calls as [any[], number[]][]
       expect(calls2.length).toBeGreaterThan(0)
@@ -624,7 +626,7 @@ describe('MarketTable', () => {
         } as MarketSnapshot])
       )
 
-      const { rerender } = render(<MarketTable contracts={manyContracts} snapshots={baseSnapshots} />)
+      const { rerender } = render(<QuoteTable spec={futuresSpec} contracts={manyContracts} snapshots={baseSnapshots} />)
       const instance = (ListTable as any).mock.results[0].value
       instance.updateRecords.mockClear()
       instance.setRecords.mockClear()
@@ -636,13 +638,13 @@ describe('MarketTable', () => {
       // 只改屏幕外的合约 C0（index 0）→ 不应触发 updateRecords
       const snap1 = new Map(baseSnapshots)
       snap1.set('C0', { ...snap1.get('C0')!, lastPrice: 3999 } as any)
-      rerender(<MarketTable contracts={manyContracts} snapshots={snap1} />)
+      rerender(<QuoteTable spec={futuresSpec} contracts={manyContracts} snapshots={snap1} />)
       expect(instance.updateRecords).not.toHaveBeenCalled()
 
       // 改可见区合约 C25（index 25）→ 应触发 updateRecords 且索引为 25
       const snap2 = new Map(snap1)
       snap2.set('C25', { ...snap2.get('C25')!, lastPrice: 4001 } as any)
-      rerender(<MarketTable contracts={manyContracts} snapshots={snap2} />)
+      rerender(<QuoteTable spec={futuresSpec} contracts={manyContracts} snapshots={snap2} />)
       expect(instance.updateRecords).toHaveBeenCalled()
       const rows = instance.updateRecords.mock.calls.flatMap((c: [any[], number[]]) => c[1])
       expect(rows).toContain(25)
@@ -654,14 +656,14 @@ describe('MarketTable', () => {
     it('selectedContracts 变化时仅重绘可见单元格（updateCellContentRange），不再全量 setRecords', async () => {
       const { ListTable } = await import('@visactor/vtable')
       const { rerender } = render(
-        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={() => {}} />
+        <QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={() => {}} />
       )
       const instance = (ListTable as any).mock.results[0].value
       instance.updateCellContentRange.mockClear()
       instance.setRecords.mockClear()
 
       rerender(
-        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set(['au2508'])} onSelectionChange={() => {}} />
+        <QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set(['au2508'])} onSelectionChange={() => {}} />
       )
 
       // 只重绘可见区单元格（bgColor 回调重新求值），避免 1000+ 行全量重建
@@ -702,7 +704,7 @@ describe('MarketTable', () => {
     it('锚点在选区内：渲染金色 selectRow', async () => {
       const restore = stubRaf()
       render(
-        <MarketTable
+        <QuoteTable spec={futuresSpec}
           contracts={mockContracts}
           snapshots={mockSnapshots}
           selectedInstrument="au2508"
@@ -720,7 +722,7 @@ describe('MarketTable', () => {
     it('锚点不在选区内：清除金色（clearSelected），不渲染独立高亮', async () => {
       const restore = stubRaf()
       render(
-        <MarketTable
+        <QuoteTable spec={futuresSpec}
           contracts={mockContracts}
           snapshots={mockSnapshots}
           selectedInstrument="au2508"
@@ -733,5 +735,58 @@ describe('MarketTable', () => {
       expect(instance.clearSelected).toHaveBeenCalled()
       restore()
     })
+  })
+
+  // --- spec 驱动新增行为 tests ---
+
+  it('bodyStyle.bgColor：spec.rowStyle 行级底色优先于多选蓝高亮', async () => {
+    const spec = {
+      columns: futuresSpec.columns,
+      buildRecord: futuresSpec.buildRecord,
+      // 标底行深色底（Task 6 期权表语义），此处用 kind 区分
+      rowStyle: (r: { kind: string }) => (r.kind === 'underlying' ? { bgColor: '#161b22' } : undefined),
+    }
+    render(
+      <QuoteTable spec={spec as any}
+        contracts={mockContracts}
+        snapshots={mockSnapshots}
+        selectedContracts={new Set(['au2508'])}
+      />
+    )
+    const { ListTable } = await import('@visactor/vtable')
+    const options = (ListTable as any).mock.calls[0][1]
+    const bgColor = options.theme.bodyStyle.bgColor
+    expect(typeof bgColor).toBe('function')
+    // 行级样式优先：au2508 虽在选中蓝区，但 spec.rowStyle 命中标底行 → 深色底
+    expect(bgColor({ table: { records: [{ instrumentID: 'au2508', kind: 'underlying' }] }, row: 1 })).toBe('#161b22')
+    // 无 rowStyle 且被选中 → 蓝高亮
+    expect(bgColor({ table: { records: [{ instrumentID: 'au2508', kind: 'normal' }] }, row: 1 })).toBe('rgba(59, 130, 246, 0.15)')
+    // 无 rowStyle 且未选中 → 默认底
+    expect(bgColor({ table: { records: [{ instrumentID: 'ag2508', kind: 'normal' }] }, row: 1 })).toBe('#0d1117')
+  })
+
+  it('isActive 翻转为 true 时重报可见区（notifyVisibleRange）', async () => {
+    const onVisibleRangeChange = vi.fn()
+    const { rerender } = render(
+      <QuoteTable spec={futuresSpec}
+        contracts={mockContracts}
+        snapshots={mockSnapshots}
+        isActive={false}
+        onVisibleRangeChange={onVisibleRangeChange}
+      />
+    )
+    // 初始渲染的 setTimeout(notifyVisibleRange,0) 在 fake timers 下需推进才会触发 → 清掉
+    await act(async () => { await vi.advanceTimersByTimeAsync(100) })
+    onVisibleRangeChange.mockClear()
+
+    rerender(
+      <QuoteTable spec={futuresSpec}
+        contracts={mockContracts}
+        snapshots={mockSnapshots}
+        isActive={true}
+        onVisibleRangeChange={onVisibleRangeChange}
+      />
+    )
+    expect(onVisibleRangeChange).toHaveBeenCalled()
   })
 })
