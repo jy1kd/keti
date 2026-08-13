@@ -81,4 +81,31 @@ describe('useMarketFilterStore', () => {
     expect(useMarketFilterStore.getState().futures.exchanges).toEqual(['SHFE'])
     expect(useMarketFilterStore.getState().options).toEqual(EMPTY_FILTER)
   })
+
+  it('setFilter 一次更新指定页交易所+品种（单一 localStorage 写）', () => {
+    useMarketFilterStore.getState().setFilter('futures', { exchanges: ['SHFE'], products: ['cu'] })
+    const { futures, options } = useMarketFilterStore.getState()
+    expect(futures).toEqual({ exchanges: ['SHFE'], products: ['cu'] })
+    expect(options).toEqual(EMPTY_FILTER)
+  })
+
+  it('load 遇「合法 JSON 但形状损坏」时回退默认，不抛错', () => {
+    // {futures: 5} 解析成功但非对象 → 回退空筛选
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ futures: 5, options: null }))
+    useMarketFilterStore.getState().load()
+    expect(useMarketFilterStore.getState().futures).toEqual(EMPTY_FILTER)
+    expect(useMarketFilterStore.getState().options).toEqual(EMPTY_FILTER)
+
+    // {futures: {exchanges: 'x'}} 字段非数组 → futures 回退，options 正常恢复
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        futures: { exchanges: 'x', products: [] },
+        options: { exchanges: ['CZCE'], products: ['FG'] },
+      }),
+    )
+    useMarketFilterStore.getState().load()
+    expect(useMarketFilterStore.getState().futures).toEqual(EMPTY_FILTER)
+    expect(useMarketFilterStore.getState().options).toEqual({ exchanges: ['CZCE'], products: ['FG'] })
+  })
 })

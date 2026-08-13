@@ -50,6 +50,9 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
   const favoritedIdsRef = useRef(favoritedIds)
   const selectedContractsRef = useRef(selectedContracts)
   const onSelectionChangeRef = useRef(onSelectionChange)
+  /** 最近一次 isActive：隐藏面板（isActive=false，display:none）挂载/重建时不上报可见区，
+   *  避免覆盖活跃面板的可见范围 → 活跃表失去订阅（Critical #1）。undefined=未指定→按历史行为上报。 */
+  const isActiveRef = useRef(isActive)
   /** dev 守卫：记录最近一次 spec 引用，检测运行时 spec 身份变化（spec 必须为稳定常量） */
   const specRef = useRef(spec)
   const lastClickedIndexRef = useRef<number | null>(null)
@@ -73,6 +76,7 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
   useEffect(() => { favoritedIdsRef.current = favoritedIds }, [favoritedIds])
   useEffect(() => { selectedContractsRef.current = selectedContracts }, [selectedContracts])
   useEffect(() => { onSelectionChangeRef.current = onSelectionChange }, [onSelectionChange])
+  useEffect(() => { isActiveRef.current = isActive }, [isActive])
 
   // 开发期守卫：spec 必须为模块级稳定常量（futuresSpec/optionsSpec）。运行时替换 spec 会
   // 导致表格陈旧——columns/buildRecord/rowStyle 冻结在首渲染闭包内。仅 dev 告警，不抛错。
@@ -104,6 +108,13 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
       // vtable 尚未就绪
     }
   }, [])
+
+  // 挂载/重建后延迟上报可见区。隐藏面板（isActive=false）跳过，避免覆盖活跃面板的可见范围；
+  // 激活时由 isActive 翻转 effect 补报（见组件底部）。
+  const scheduleVisibleRangeReport = useCallback(() => {
+    if (isActiveRef.current === false) return
+    setTimeout(notifyVisibleRange, 0)
+  }, [notifyVisibleRange])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -378,8 +389,8 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
       window.addEventListener('mouseup', handleMouseUp)
     }
 
-    // 初始渲染后触发一次（延迟确保 vtable 就绪）
-    setTimeout(notifyVisibleRange, 0)
+    // 初始渲染后触发一次（延迟确保 vtable 就绪；隐藏面板不参与上报）
+    scheduleVisibleRangeReport()
 
     // 滚动时触发（100ms 防抖）
     table.on('scroll', () => {
@@ -424,7 +435,8 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
     rowSnapshotRef.current = contracts.map((c) => snapshots.get(c.instrumentID))
     tableRef.current.setRecords(records)
     lastClickedIndexRef.current = null
-    setTimeout(notifyVisibleRange, 0)
+    // 合约重建后延迟补报可见区（隐藏面板不参与上报）
+    scheduleVisibleRangeReport()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contracts, favoritedIds])
 

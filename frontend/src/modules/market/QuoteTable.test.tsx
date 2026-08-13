@@ -789,4 +789,32 @@ describe('QuoteTable', () => {
     )
     expect(onVisibleRangeChange).toHaveBeenCalled()
   })
+
+  it('Critical #1：隐藏面板（isActive=false）挂载不调用 onVisibleRangeChange，激活翻转为 true 时重报', async () => {
+    const onVisibleRangeChange = vi.fn()
+    const { rerender } = render(
+      <QuoteTable spec={futuresSpec}
+        contracts={mockContracts}
+        snapshots={mockSnapshots}
+        isActive={false}
+        onVisibleRangeChange={onVisibleRangeChange}
+      />
+    )
+    // 挂载后推进 timers：隐藏面板（display:none）的挂载 setTimeout 必须被跳过，
+    // 否则会覆盖活跃面板（期货/期权）的可见范围 → 活跃表失去订阅
+    await act(async () => { await vi.advanceTimersByTimeAsync(100) })
+    expect(onVisibleRangeChange).not.toHaveBeenCalled()
+
+    // 激活翻转为 true → isActive 翻转 effect 立即重报可见区
+    rerender(
+      <QuoteTable spec={futuresSpec}
+        contracts={mockContracts}
+        snapshots={mockSnapshots}
+        isActive={true}
+        onVisibleRangeChange={onVisibleRangeChange}
+      />
+    )
+    expect(onVisibleRangeChange).toHaveBeenCalled()
+    expect(onVisibleRangeChange.mock.calls[0][0]).toEqual(expect.arrayContaining(['au2508', 'ag2508']))
+  })
 })

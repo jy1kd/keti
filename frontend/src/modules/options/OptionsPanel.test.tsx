@@ -6,6 +6,7 @@ import { optionsSpec } from '@/modules/market/optionsSpec'
 import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
 import { useMarketFilterStore } from '@/stores/marketFilter'
+import { useTabStore } from '@/stores/tabs'
 import type { ContractInfo } from '@/services/types'
 
 // Mock TQuoteView（T型报价二级视图依赖链沉重，仅测切换渲染）
@@ -75,6 +76,14 @@ describe('OptionsPanel', () => {
     useMarketFilterStore.setState({
       futures: { exchanges: [], products: [] },
       options: { exchanges: [], products: [] },
+    })
+    // 期货/期权双固定标签，默认激活期货 → 期权面板 isActive=false（隐藏）
+    useTabStore.setState({
+      tabs: [
+        { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
+        { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false },
+      ],
+      activeTabId: 'tab-market',
     })
     setupContracts()
     vi.clearAllMocks()
@@ -159,9 +168,16 @@ describe('OptionsPanel', () => {
     expect(addSpy).toHaveBeenCalledWith(fut)
   })
 
-  it('可见区上报：挂载后经 onVisibleRangeChange 上报可见合约（驱动共享订阅管理器）', async () => {
+  it('可见区上报：期权标签激活时挂载后上报可见合约（驱动共享订阅管理器）', async () => {
+    // 期权标签激活：QuoteTable isActive=true → 挂载后 setTimeout(notifyVisibleRange,0) 上报可见区
+    useTabStore.setState({
+      tabs: [
+        { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
+        { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false },
+      ],
+      activeTabId: 'tab-options',
+    })
     render(<OptionsPanel />)
-    // QuoteTable 挂载后 setTimeout(notifyVisibleRange, 0) 触发一次上报
     await act(async () => {
       await new Promise((r) => setTimeout(r, 10))
     })
@@ -169,6 +185,16 @@ describe('OptionsPanel', () => {
     expect(visible).toContain('FG609')
     expect(visible).toContain('FG609-C-1300')
     expect(visible).toContain('FG609-P-1300')
+  })
+
+  it('可见区上报：期权标签隐藏（期货激活）时挂载不上报，避免覆盖期货可见范围（Critical #1）', async () => {
+    // 默认标签态 activeTabId='tab-market' → 期权面板 isActive=false（TabContent display:none 隐藏）
+    useMarketStore.setState({ visibleInstrumentIDs: [] })
+    render(<OptionsPanel />)
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10))
+    })
+    expect(useMarketStore.getState().visibleInstrumentIDs).toEqual([])
   })
 
   // --- 交易所+品种多选筛选（Task 7） ---

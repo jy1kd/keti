@@ -64,4 +64,29 @@ describe('groupOptionsByUnderlying', () => {
     const groups = groupOptionsByUnderlying([opt('IO2609-C-4000', 'CFFEX', 'IO', 'IO2609', '1', 4000)], [])
     expect(groups[0].underlying).toBeUndefined()
   })
+
+  it('组内排序首维（到期日）：同标底、同类型、同行权价，仅到期日不同 → 先到期在前', () => {
+    const futures = [fut('FG609', 'CZCE', 'FG')]
+    const options = [
+      opt('FG609-C-1300', 'CZCE', 'FGC', 'FG609', '1', 1300, '20260930'),
+      opt('FG609-C-1300', 'CZCE', 'FGC', 'FG609', '1', 1300, '20260630'),
+    ]
+    const groups = groupOptionsByUnderlying(options, futures)
+    expect(groups[0].options.map((o) => o.expireDate)).toEqual(['20260630', '20260930'])
+  })
+
+  it('组内排序次/末维（类型/行权价）：同标底、同到期日，C 前 P 后、行权价升序', () => {
+    const futures = [fut('FG609', 'CZCE', 'FG')]
+    const options = [
+      opt('FG609-P-1250', 'CZCE', 'FGP', 'FG609', '2', 1250, '20260630'),
+      opt('FG609-C-1300', 'CZCE', 'FGC', 'FG609', '1', 1300, '20260630'),
+      opt('FG609-C-1200', 'CZCE', 'FGC', 'FG609', '1', 1200, '20260630'),
+    ]
+    const groups = groupOptionsByUnderlying(options, futures)
+    expect(groups[0].options.map((o) => o.instrumentID)).toEqual([
+      'FG609-C-1200',
+      'FG609-C-1300',
+      'FG609-P-1250',
+    ])
+  })
 })

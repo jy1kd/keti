@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { MarketFilter } from '@/modules/market/filter'
+import { EMPTY_FILTER } from '@/modules/market/filter'
 
 const STORAGE_KEY = 'simnow-market-filter'
 
@@ -10,13 +11,25 @@ interface MarketFilterStore {
   options: MarketFilter
   setExchanges: (page: Page, exchanges: string[]) => void
   setProducts: (page: Page, products: string[]) => void
+  /** 一次 set 同时写入交易所+品种（单一 localStorage 写），ContractFilter onChange 用 */
+  setFilter: (page: Page, filter: MarketFilter) => void
   reset: (page: Page) => void
   load: () => void
 }
 
+/** 形状校验：合法筛选态必须为对象且 exchanges/products 均为数组；任一不满足 → 空筛选 */
+function isValidFilter(v: unknown): v is MarketFilter {
+  return (
+    !!v &&
+    typeof v === 'object' &&
+    Array.isArray((v as MarketFilter).exchanges) &&
+    Array.isArray((v as MarketFilter).products)
+  )
+}
+
 export const useMarketFilterStore = create<MarketFilterStore>((set) => ({
-  futures: { exchanges: [], products: [] },
-  options: { exchanges: [], products: [] },
+  futures: EMPTY_FILTER,
+  options: EMPTY_FILTER,
   setExchanges: (page, exchanges) =>
     set((s) => {
       const next = { futures: s.futures, options: s.options }
@@ -29,10 +42,16 @@ export const useMarketFilterStore = create<MarketFilterStore>((set) => ({
       next[page] = { ...s[page], products }
       return next
     }),
+  setFilter: (page, filter) =>
+    set((s) => {
+      const next = { futures: s.futures, options: s.options }
+      next[page] = { exchanges: [...filter.exchanges], products: [...filter.products] }
+      return next
+    }),
   reset: (page) =>
     set((s) => {
       const next = { futures: s.futures, options: s.options }
-      next[page] = { exchanges: [], products: [] }
+      next[page] = EMPTY_FILTER
       return next
     }),
   load: () => {
@@ -40,9 +59,10 @@ export const useMarketFilterStore = create<MarketFilterStore>((set) => ({
       const raw = localStorage.getItem(STORAGE_KEY)
       if (!raw) return
       const data = JSON.parse(raw)
+      const dataObj = data && typeof data === 'object' ? (data as Record<string, unknown>) : {}
       set({
-        futures: data.futures ?? { exchanges: [], products: [] },
-        options: data.options ?? { exchanges: [], products: [] },
+        futures: isValidFilter(dataObj.futures) ? dataObj.futures : EMPTY_FILTER,
+        options: isValidFilter(dataObj.options) ? dataObj.options : EMPTY_FILTER,
       })
     } catch {
       /* 忽略损坏数据 */

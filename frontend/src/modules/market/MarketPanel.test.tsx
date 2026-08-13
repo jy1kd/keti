@@ -508,4 +508,30 @@ describe('MarketPanel', () => {
       expect(follows(favoriteBtn, searchInput)).toBe(true)
     })
   })
+
+  describe('自选视图排序（spec 决策 3：排序同样作用于自选基础集）', () => {
+    it('自选按 交易所→品种→月份 排序（输入无序）', async () => {
+      useContractsStore.setState({
+        contracts: [
+          { instrumentID: 'FG610', instrumentName: '玻璃610', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20261031', isTrading: 1, productClass: '1' },
+          { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
+          { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
+        ],
+        favorites: [
+          { instrumentID: 'FG610', instrumentName: '玻璃610', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20261031', isTrading: 1, productClass: '1' },
+          { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
+          { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
+        ],
+        isLoaded: true,
+      })
+      const user = userEvent.setup()
+      render(<MarketPanel />)
+      await user.click(screen.getByRole('button', { name: '自选' }))
+      const { ListTable } = await import('@visactor/vtable')
+      const instance = (ListTable as any).mock.results[0].value
+      const last = instance.setRecords.mock.calls.at(-1)?.[0] ?? []
+      // SHFE 在 CZCE 前；CZCE 内 FG 月份数字升序：cu2609 < FG609 < FG610
+      expect(last.map((r: any) => r.instrumentID)).toEqual(['cu2609', 'FG609', 'FG610'])
+    })
+  })
 })
