@@ -55,7 +55,7 @@ export type OrderEntry = RawOrder
 type TradeEntry = RawTrade
 export type PositionEntry = RawPosition
 
-export type QueryTab = 'orders' | 'trades' | 'positions' | 'account' | 'stop_orders'
+export type QueryTab = 'trades' | 'account' | 'stop_orders'
 
 interface QueryStore {
   // Tab
@@ -101,7 +101,7 @@ interface QueryStore {
 
 export const useQueryStore = create<QueryStore>((set, get) => ({
   // Tab
-  activeTab: 'orders',
+  activeTab: 'trades',
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   // Data
@@ -202,11 +202,7 @@ export const useQueryStore = create<QueryStore>((set, get) => ({
       const withTimeout = (promise: Promise<void>, name: string) =>
         Promise.race([promise, timeout(10000).then(() => { throw new Error(`${name} timeout`) })])
 
-      await withTimeout(get().fetchOrders(), 'fetchOrders')
-      await delay(1200)
       await withTimeout(get().fetchTrades(), 'fetchTrades')
-      await delay(1200)
-      await withTimeout(get().fetchPositions(), 'fetchPositions')
       await delay(1200)
       await withTimeout(get().fetchAccount(), 'fetchAccount')
       await delay(1200)

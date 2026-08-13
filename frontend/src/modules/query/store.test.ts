@@ -28,7 +28,7 @@ describe('QueryStore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useQueryStore.setState({
-      activeTab: 'orders',
+      activeTab: 'trades',
       orders: [],
       trades: [],
       positions: [],
@@ -44,8 +44,8 @@ describe('QueryStore', () => {
 
   // ── Tab switching ──────────────────────────────────────────────
 
-  it('defaults to orders tab', () => {
-    expect(useQueryStore.getState().activeTab).toBe('orders')
+  it('defaults to trades tab', () => {
+    expect(useQueryStore.getState().activeTab).toBe('trades')
   })
 
   it('sets active tab', () => {
@@ -54,7 +54,7 @@ describe('QueryStore', () => {
   })
 
   it('supports all remaining tab values', () => {
-    const tabs = ['orders', 'trades', 'positions', 'account', 'stop_orders'] as const
+    const tabs = ['trades', 'account', 'stop_orders'] as const
     for (const tab of tabs) {
       useQueryStore.getState().setActiveTab(tab)
       expect(useQueryStore.getState().activeTab).toBe(tab)
@@ -156,7 +156,7 @@ describe('QueryStore', () => {
 
   // ── Refresh All ────────────────────────────────────────────────
 
-  it('refreshAll calls all fetch methods', async () => {
+  it('refreshAll calls remaining fetch methods (trades/account/stopOrders)', async () => {
     mockRefreshOrders.mockResolvedValue({ orders: [], count: 0 })
     mockRefreshTrades.mockResolvedValue({ trades: [], count: 0 })
     mockRefreshPositions.mockResolvedValue({ positions: [], count: 0 })
@@ -165,11 +165,11 @@ describe('QueryStore', () => {
 
     await useQueryStore.getState().refreshAll()
 
-    expect(mockRefreshOrders).toHaveBeenCalled()
     expect(mockRefreshTrades).toHaveBeenCalled()
-    expect(mockRefreshPositions).toHaveBeenCalled()
     expect(mockRefreshAccount).toHaveBeenCalled()
     expect(mockGetStopOrders).toHaveBeenCalled()
+    expect(mockRefreshOrders).not.toHaveBeenCalled()
+    expect(mockRefreshPositions).not.toHaveBeenCalled()
   })
 
   it('refreshAll skips when paused', async () => {
@@ -177,7 +177,7 @@ describe('QueryStore', () => {
 
     await useQueryStore.getState().refreshAll()
 
-    expect(mockRefreshOrders).not.toHaveBeenCalled()
+    expect(mockRefreshTrades).not.toHaveBeenCalled()
   })
 
   it('refreshAll skips when already refreshing', async () => {
@@ -186,7 +186,7 @@ describe('QueryStore', () => {
 
     await useQueryStore.getState().refreshAll()
 
-    expect(mockRefreshOrders).not.toHaveBeenCalled()
+    expect(mockRefreshTrades).not.toHaveBeenCalled()
   })
 
   it('refreshAll sets isRefreshing flag', async () => {

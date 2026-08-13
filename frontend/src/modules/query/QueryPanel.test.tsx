@@ -22,7 +22,7 @@ vi.mock('../../services/api', () => ({
 describe('QueryPanel', () => {
   beforeEach(() => {
     useQueryStore.setState({
-      activeTab: 'orders',
+      activeTab: 'trades',
       orders: [],
       trades: [],
       positions: [],
@@ -33,33 +33,30 @@ describe('QueryPanel', () => {
     })
   })
 
-  it('删除冗余「查询面板」标题，工具栏直接承载 5 个子 Tab', () => {
+  it('删除冗余「查询面板」标题，工具栏直接承载 3 个子 Tab', () => {
     render(<QueryPanel />)
     expect(screen.queryByText('查询面板')).not.toBeInTheDocument()
     // 子 Tab 仍在工具栏内
-    expect(screen.getByText('报单')).toBeInTheDocument()
     expect(screen.getByText('成交')).toBeInTheDocument()
   })
 
-  it('renders all 5 tab buttons', () => {
+  it('renders 3 tab buttons', () => {
     render(<QueryPanel />)
-    expect(screen.getByText('报单')).toBeInTheDocument()
     expect(screen.getByText('成交')).toBeInTheDocument()
-    expect(screen.getByText('持仓')).toBeInTheDocument()
     expect(screen.getByText('资金')).toBeInTheDocument()
     expect(screen.getByText('止损单')).toBeInTheDocument()
   })
 
-  it('defaults to orders tab', () => {
+  it('defaults to trades tab', () => {
     render(<QueryPanel />)
-    expect(screen.getByText('报单')).toHaveClass('active')
+    expect(screen.getByText('成交')).toHaveClass('active')
   })
 
   it('switches tab on click', () => {
     render(<QueryPanel />)
-    fireEvent.click(screen.getByText('成交'))
-    expect(screen.getByText('成交')).toHaveClass('active')
-    expect(screen.getByText('报单')).not.toHaveClass('active')
+    fireEvent.click(screen.getByText('资金'))
+    expect(screen.getByText('资金')).toHaveClass('active')
+    expect(screen.getByText('成交')).not.toHaveClass('active')
   })
 
   it('renders pause button', () => {
@@ -85,21 +82,10 @@ describe('QueryPanel', () => {
     expect(container.firstChild).toHaveClass('query-panel')
   })
 
-  it('renders OrderFlow when orders tab active', () => {
-    render(<QueryPanel />)
-    expect(screen.getByText('暂无报单数据')).toBeInTheDocument()
-  })
-
   it('renders TradeFlow when trades tab active', () => {
     useQueryStore.setState({ activeTab: 'trades' })
     render(<QueryPanel />)
     expect(screen.getByText('暂无成交数据')).toBeInTheDocument()
-  })
-
-  it('renders Position when positions tab active', () => {
-    useQueryStore.setState({ activeTab: 'positions' })
-    render(<QueryPanel />)
-    expect(screen.getByText('暂无持仓数据')).toBeInTheDocument()
   })
 
   it('renders AccountQuery when account tab active', () => {
@@ -118,5 +104,11 @@ describe('QueryPanel', () => {
     render(<QueryPanel />)
     expect(screen.queryByText('合约')).not.toBeInTheDocument()
     expect(screen.queryByText('K线')).not.toBeInTheDocument()
+  })
+
+  it('不再显示 报单/持仓 Tab（已独立成窗口）', () => {
+    render(<QueryPanel />)
+    expect(screen.queryByText('报单')).not.toBeInTheDocument()
+    expect(screen.queryByText('持仓')).not.toBeInTheDocument()
   })
 })
