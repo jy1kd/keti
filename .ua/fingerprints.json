@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "971d2868e7cdbccd6085f836700c8568527bdcfc",
-  "generatedAt": "2026-08-12T08:04:51.203Z",
+  "gitCommitHash": "2fcd67b89b72c76202163c7bad6073cb6ed08b80",
+  "generatedAt": "2026-08-13T08:04:27.894494+00:00",
   "files": {
     ".gitattributes": {
       "filePath": ".gitattributes",
@@ -1914,7 +1914,7 @@
     },
     "frontend/src/components/BottomBar/index.tsx": {
       "filePath": "frontend/src/components/BottomBar/index.tsx",
-      "contentHash": "4ab52d4dd901699d586b1b644676ea7168e994b7ba37beb155aba5393fb5b2cc",
+      "contentHash": "f1cd0afd6ba1622dc6e69a6fb511e8ab389252a3fa27a2b0b0b3e3e8143fbf92",
       "functions": [
         {
           "name": "BottomBar",
@@ -1922,7 +1922,7 @@
             "{ perfVisible, onTogglePerf }"
           ],
           "exported": true,
-          "lineCount": 93
+          "lineCount": 101
         }
       ],
       "classes": [],
@@ -1947,16 +1947,6 @@
           ]
         },
         {
-          "source": "@/utils/openFloatingTab",
-          "specifiers": [
-            "openOrderFloating",
-            "openKlineFloating",
-            "openQueryFloating",
-            "openSettingsFloating",
-            "openIpcMonitorFloating"
-          ]
-        },
-        {
           "source": "./styles.css",
           "specifiers": []
         }
@@ -1964,7 +1954,7 @@
       "exports": [
         "BottomBar"
       ],
-      "totalLines": 121,
+      "totalLines": 129,
       "hasStructuralAnalysis": true
     },
     "frontend/src/components/ConfirmDialog/ConfirmDialog.test.tsx": {
@@ -3337,7 +3327,7 @@
     },
     "frontend/src/components/TabBar/index.tsx": {
       "filePath": "frontend/src/components/TabBar/index.tsx",
-      "contentHash": "cc5c5c9ec886a19773f48c636265a2337c53223805999d4ab64d01dea808cf41",
+      "contentHash": "8b1137dc152e9704ed75c3b10c5664b94eed61059dd5ba318c1b9351f9da3646",
       "functions": [
         {
           "name": "TabBar",
@@ -3670,16 +3660,17 @@
     },
     "frontend/src/components/TabContent/index.tsx": {
       "filePath": "frontend/src/components/TabContent/index.tsx",
-      "contentHash": "93f056da9d63ab27025bf13de8ba9ae01c499cc28fed5be2452baf02f70e10c2",
+      "contentHash": "41205c6b5ea7c099b321e69be8429f33c86ac4599f0944a0d3a674eef37d6752",
       "functions": [
         {
           "name": "getInstrumentID",
           "params": [
-            "props"
+            "props",
+            "unknown>"
           ],
-          "returnType": "string | undefined",
           "exported": false,
-          "lineCount": 3
+          "lineCount": 3,
+          "returnType": "string | undefined"
         },
         {
           "name": "renderTabContent",
@@ -3687,9 +3678,9 @@
             "tab",
             "floating"
           ],
-          "returnType": "React.ReactNode",
           "exported": false,
-          "lineCount": 28
+          "lineCount": 36,
+          "returnType": "React.ReactNode"
         },
         {
           "name": "TabContent",
@@ -3770,6 +3761,12 @@
           ]
         },
         {
+          "source": "@/pages/InfiniteOrderPage",
+          "specifiers": [
+            "InfiniteOrderPage"
+          ]
+        },
+        {
           "source": "./styles.css",
           "specifiers": []
         }
@@ -3777,7 +3774,7 @@
       "exports": [
         "TabContent"
       ],
-      "totalLines": 141,
+      "totalLines": 149,
       "hasStructuralAnalysis": true
     },
     "frontend/src/components/Toast/index.test.tsx": {
@@ -4735,7 +4732,7 @@
     },
     "frontend/src/hooks/useTabContractLocks.ts": {
       "filePath": "frontend/src/hooks/useTabContractLocks.ts",
-      "contentHash": "919e5fb6454c97c2402adde72ec2711a30cd4babd5f852bec12ef84ddc0218c9",
+      "contentHash": "99fdcbb09f74a3b0ce462bfcb89aba3b93f03ad241d9a39745d059f4f47353e8",
       "functions": [
         {
           "name": "useTabContractLocks",
@@ -4769,7 +4766,7 @@
       "exports": [
         "useTabContractLocks"
       ],
-      "totalLines": 61,
+      "totalLines": 60,
       "hasStructuralAnalysis": true
     },
     "frontend/src/main.tsx": {
@@ -7482,25 +7479,17 @@
     },
     "frontend/src/modules/order/myOrders.ts": {
       "filePath": "frontend/src/modules/order/myOrders.ts",
-      "contentHash": "040df129dfbd8fab1b12c2c5c21af8eb9fd5677500147a12e9ff463880b8aabe",
+      "contentHash": "deb61573eee31b34537d85dd743f24ddbfa36f584afd8fb5204efe49fe19940f",
       "functions": [
-        {
-          "name": "isActive",
-          "params": [
-            "s"
-          ],
-          "exported": false,
-          "lineCount": 1
-        },
         {
           "name": "aggregateMyOrders",
           "params": [
             "orders",
             "instrumentID"
           ],
-          "returnType": "MyOrderAgg",
           "exported": true,
-          "lineCount": 35
+          "lineCount": 40,
+          "returnType": "MyOrderAgg"
         }
       ],
       "classes": [],
@@ -7509,7 +7498,7 @@
         "ACTIVE_ORDER_STATUSES",
         "aggregateMyOrders"
       ],
-      "totalLines": 81,
+      "totalLines": 85,
       "hasStructuralAnalysis": true
     },
     "frontend/src/modules/order/store.test.ts": {
@@ -9863,17 +9852,18 @@
     },
     "frontend/src/stores/tabs.ts": {
       "filePath": "frontend/src/stores/tabs.ts",
-      "contentHash": "f773cd75f4850edca49626e67f072a50295da028aea837108fc6de94dd6fb499",
+      "contentHash": "9703b11075e7a75ae1bd0c8eb0f49c1d81927dbc07bb5738ad5fbe7915fe2bff",
       "functions": [
         {
           "name": "generateTabId",
           "params": [
             "type",
-            "props"
+            "props?",
+            "unknown>"
           ],
-          "returnType": "string",
           "exported": true,
-          "lineCount": 4
+          "lineCount": 4,
+          "returnType": "string"
         }
       ],
       "classes": [],
@@ -9892,7 +9882,7 @@
         "generateTabId",
         "useTabStore"
       ],
-      "totalLines": 244,
+      "totalLines": 245,
       "hasStructuralAnalysis": true
     },
     "frontend/src/stores/userPrefs.test.ts": {
@@ -10346,51 +10336,58 @@
     },
     "frontend/src/utils/openFloatingTab.ts": {
       "filePath": "frontend/src/utils/openFloatingTab.ts",
-      "contentHash": "ac2353b2d3ec8a7a306ddcd6a230da4fd2d858b85e9defe17dc3e810cc7703f8",
+      "contentHash": "116159656ba6eda49299c81932a8b7f04efec5f276e634be3ed41c0509a7da34",
       "functions": [
         {
           "name": "openFloatingTab",
           "params": [
             "{ type, title, props = {}, size }"
           ],
-          "returnType": "boolean",
           "exported": true,
-          "lineCount": 10
+          "lineCount": 10,
+          "returnType": "boolean"
         },
         {
           "name": "openOrderFloating",
           "params": [],
-          "returnType": "boolean",
           "exported": true,
-          "lineCount": 9
+          "lineCount": 9,
+          "returnType": "boolean"
         },
         {
           "name": "openKlineFloating",
           "params": [],
-          "returnType": "boolean",
           "exported": true,
-          "lineCount": 8
+          "lineCount": 8,
+          "returnType": "boolean"
         },
         {
           "name": "openQueryFloating",
           "params": [],
-          "returnType": "boolean",
           "exported": true,
-          "lineCount": 3
+          "lineCount": 3,
+          "returnType": "boolean"
         },
         {
           "name": "openSettingsFloating",
           "params": [],
-          "returnType": "boolean",
           "exported": true,
-          "lineCount": 3
+          "lineCount": 3,
+          "returnType": "boolean"
         },
         {
           "name": "openIpcMonitorFloating",
           "params": [],
-          "returnType": "boolean",
           "exported": true,
-          "lineCount": 3
+          "lineCount": 3,
+          "returnType": "boolean"
+        },
+        {
+          "name": "openInfiniteFloating",
+          "params": [],
+          "exported": true,
+          "lineCount": 8,
+          "returnType": "boolean"
         }
       ],
       "classes": [],
@@ -10429,9 +10426,10 @@
         "openKlineFloating",
         "openQueryFloating",
         "openSettingsFloating",
-        "openIpcMonitorFloating"
+        "openIpcMonitorFloating",
+        "openInfiniteFloating"
       ],
-      "totalLines": 70,
+      "totalLines": 79,
       "hasStructuralAnalysis": true
     },
     "frontend/src/utils/orderMapping.test.ts": {
@@ -18837,6 +18835,394 @@
       "exports": [],
       "totalLines": 56,
       "hasStructuralAnalysis": false
+    },
+    "frontend/src/modules/infinite/InfiniteLadder.tsx": {
+      "filePath": "frontend/src/modules/infinite/InfiniteLadder.tsx",
+      "contentHash": "7cc80711f47589094b1ddffa4dd4d730517e44f1bcdeb6d3894040710e4761bd",
+      "functions": [
+        {
+          "name": "InfiniteLadder",
+          "params": [
+            "{ snapshot, priceTick, instrumentID }"
+          ],
+          "exported": true,
+          "lineCount": 194
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useEffect",
+            "useMemo",
+            "useRef",
+            "useState"
+          ]
+        },
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "MarketSnapshot"
+          ]
+        },
+        {
+          "source": "@/modules/query/store",
+          "specifiers": [
+            "useQueryStore"
+          ]
+        },
+        {
+          "source": "@/modules/order/myOrders",
+          "specifiers": [
+            "aggregateMyOrders"
+          ]
+        },
+        {
+          "source": "@/components/ConfirmDialog",
+          "specifiers": [
+            "ConfirmDialog"
+          ]
+        },
+        {
+          "source": "./store",
+          "specifiers": [
+            "useInfiniteOrderStore",
+            "InfiniteOrderIntent"
+          ]
+        },
+        {
+          "source": "./ladderUtils",
+          "specifiers": [
+            "buildPriceAxis",
+            "buildDepthMaps",
+            "isValidPrice",
+            "roundToTick",
+            "formatTickPrice"
+          ]
+        },
+        {
+          "source": "./InfiniteLadder.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [
+        "InfiniteLadder"
+      ],
+      "totalLines": 213,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/infinite/InfiniteTradeParams.tsx": {
+      "filePath": "frontend/src/modules/infinite/InfiniteTradeParams.tsx",
+      "contentHash": "bb83f88314b065042a3ca5b5039ea0eed819be691a3be58380eb04760a35006c",
+      "functions": [
+        {
+          "name": "InfiniteTradeParams",
+          "params": [
+            "{ instrumentID, onSwitch }"
+          ],
+          "exported": true,
+          "lineCount": 118
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useMemo",
+            "useState"
+          ]
+        },
+        {
+          "source": "./store",
+          "specifiers": [
+            "useInfiniteOrderStore"
+          ]
+        },
+        {
+          "source": "@/stores/contracts",
+          "specifiers": [
+            "useContractsStore"
+          ]
+        },
+        {
+          "source": "@/modules/query/store",
+          "specifiers": [
+            "useQueryStore"
+          ]
+        },
+        {
+          "source": "@/utils/validators",
+          "specifiers": [
+            "validateVolumeWithLimit",
+            "getVolumeLimit"
+          ]
+        },
+        {
+          "source": "@/services/api",
+          "specifiers": [
+            "reversePosition"
+          ]
+        },
+        {
+          "source": "@/modules/order/myOrders",
+          "specifiers": [
+            "ACTIVE_ORDER_STATUSES"
+          ]
+        },
+        {
+          "source": "@/components/ConfirmDialog",
+          "specifiers": [
+            "ConfirmDialog"
+          ]
+        },
+        {
+          "source": "@/components/Toast",
+          "specifiers": [
+            "toast"
+          ]
+        },
+        {
+          "source": "@/components/ContractSearch",
+          "specifiers": [
+            "ContractSearch"
+          ]
+        },
+        {
+          "source": "@/modules/order/QtyPreset",
+          "specifiers": [
+            "QtyPreset"
+          ]
+        },
+        {
+          "source": "./store",
+          "specifiers": [
+            "InfiniteOrderState"
+          ]
+        },
+        {
+          "source": "./InfiniteTradeParams.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [
+        "InfiniteTradeParams"
+      ],
+      "totalLines": 137,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/infinite/ladderUtils.ts": {
+      "filePath": "frontend/src/modules/infinite/ladderUtils.ts",
+      "contentHash": "d3c899968c3c7e41cb2eb0d674d0cbf0e728fdb8ded1d9f8c21ba8cabb075120",
+      "functions": [
+        {
+          "name": "isValidPrice",
+          "params": [
+            "p"
+          ],
+          "exported": true,
+          "lineCount": 3,
+          "returnType": "boolean"
+        },
+        {
+          "name": "tickDecimals",
+          "params": [
+            "tick"
+          ],
+          "exported": true,
+          "lineCount": 4,
+          "returnType": "number"
+        },
+        {
+          "name": "formatTickPrice",
+          "params": [
+            "n",
+            "tick"
+          ],
+          "exported": true,
+          "lineCount": 3,
+          "returnType": "string"
+        },
+        {
+          "name": "roundToTick",
+          "params": [
+            "v",
+            "tick"
+          ],
+          "exported": true,
+          "lineCount": 4,
+          "returnType": "number"
+        },
+        {
+          "name": "buildPriceAxis",
+          "params": [
+            "lowerLimit",
+            "upperLimit",
+            "tick"
+          ],
+          "exported": true,
+          "lineCount": 14,
+          "returnType": "number[]"
+        },
+        {
+          "name": "buildDepthMaps",
+          "params": [
+            "snapshot"
+          ],
+          "exported": true,
+          "lineCount": 4
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@/services/types",
+          "specifiers": [
+            "MarketSnapshot"
+          ]
+        }
+      ],
+      "exports": [
+        "CTP_INVALID_PRICE",
+        "isValidPrice",
+        "tickDecimals",
+        "formatTickPrice",
+        "roundToTick",
+        "buildPriceAxis",
+        "buildDepthMaps"
+      ],
+      "totalLines": 58,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/modules/infinite/store.ts": {
+      "filePath": "frontend/src/modules/infinite/store.ts",
+      "contentHash": "8c88bcb6ee3735c808eef8f6f65781a17b3f7e320a1adc303291a7d28a3a1997",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "zustand",
+          "specifiers": [
+            "create"
+          ]
+        },
+        {
+          "source": "@/services/api",
+          "specifiers": [
+            "submitOrder"
+          ]
+        },
+        {
+          "source": "@/components/Toast",
+          "specifiers": [
+            "toast"
+          ]
+        },
+        {
+          "source": "@/stores/contracts",
+          "specifiers": [
+            "useContractsStore"
+          ]
+        },
+        {
+          "source": "@/utils/validators",
+          "specifiers": [
+            "validateVolumeWithLimit"
+          ]
+        },
+        {
+          "source": "@/utils/orderMapping",
+          "specifiers": [
+            "OrderRequestForm"
+          ]
+        }
+      ],
+      "exports": [
+        "useInfiniteOrderStore"
+      ],
+      "totalLines": 93,
+      "hasStructuralAnalysis": true
+    },
+    "frontend/src/pages/InfiniteOrderPage.tsx": {
+      "filePath": "frontend/src/pages/InfiniteOrderPage.tsx",
+      "contentHash": "17b8afcea589947507e51c4a81f8ef210edf8333b114ba02bc19c04e619e6031",
+      "functions": [
+        {
+          "name": "InfiniteOrderPage",
+          "params": [
+            "{ instrumentID, tabId }"
+          ],
+          "exported": true,
+          "lineCount": 56
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useEffect"
+          ]
+        },
+        {
+          "source": "@/modules/order/AccountBar",
+          "specifiers": [
+            "AccountBar"
+          ]
+        },
+        {
+          "source": "@/modules/infinite/InfiniteTradeParams",
+          "specifiers": [
+            "InfiniteTradeParams"
+          ]
+        },
+        {
+          "source": "@/modules/infinite/InfiniteLadder",
+          "specifiers": [
+            "InfiniteLadder"
+          ]
+        },
+        {
+          "source": "@/modules/infinite/store",
+          "specifiers": [
+            "useInfiniteOrderStore"
+          ]
+        },
+        {
+          "source": "@/stores/contracts",
+          "specifiers": [
+            "useContractsStore"
+          ]
+        },
+        {
+          "source": "@/modules/market/store",
+          "specifiers": [
+            "useMarketStore"
+          ]
+        },
+        {
+          "source": "@/modules/query/store",
+          "specifiers": [
+            "useQueryStore"
+          ]
+        },
+        {
+          "source": "@/stores/tabs",
+          "specifiers": [
+            "useTabStore"
+          ]
+        },
+        {
+          "source": "./InfiniteOrderPage.css",
+          "specifiers": []
+        }
+      ],
+      "exports": [
+        "InfiniteOrderPage"
+      ],
+      "totalLines": 73,
+      "hasStructuralAnalysis": true
     }
   }
 }
