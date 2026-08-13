@@ -235,6 +235,12 @@ export interface ContractInfo {
   expireDate: string
   isTrading: number  // 0=不可交易, 1=可交易
   productClass: string  // "1"=期货, "2"=期权, "3"=组合
+  /** 期权标的合约 ID（期权有值，如 "FG609"） */
+  underlyingInstrID?: string
+  /** 期权类型："1"=看涨(call), "2"=看跌(put) */
+  optionsType?: string
+  /** 行权价（期权有值） */
+  strikePrice?: number
 }
 
 export interface QuoteDepth {

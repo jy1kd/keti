@@ -78,26 +78,33 @@ describe('MenuManager', () => {
   });
 
   describe('行情', () => {
-    it('包含 全部行情/T型期权/自选行情/在新窗口打开', () => {
+    it('包含 期货/期权/自选行情/T型报价/在新窗口打开', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
       const labels = getMenu('行情')
         .submenu!.map((i) => i.label)
         .filter(Boolean);
-      expect(labels).toEqual(['📊 全部行情', '📉 T型期权', '⭐ 自选行情', '🪟 在新窗口打开']);
+      expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📉 T型报价', '🪟 在新窗口打开']);
     });
 
-    it('点击全部行情发送 menu:market-view all', () => {
+    it('点击 T型报价 发送 menu:open-floating tquote', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
-      clickItem('行情', '📊 全部行情');
+      clickItem('行情', '📉 T型报价');
+      expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'tquote');
+    });
+
+    it('点击期货发送 menu:market-view all', () => {
+      const manager = new MenuManager();
+      manager.initialize(mainWindow, windowManager);
+      clickItem('行情', '📊 期货');
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'all');
     });
 
-    it('点击T型期权发送 menu:market-view options', () => {
+    it('点击期权发送 menu:market-view options', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
-      clickItem('行情', '📉 T型期权');
+      clickItem('行情', '📉 期权');
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'options');
     });
 
@@ -112,7 +119,7 @@ describe('MenuManager', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
       clickItem('行情', '🪟 在新窗口打开');
-      expect(windowManager.openTabWindow).toHaveBeenCalledWith('market', 'tab-market', '📊 行情');
+      expect(windowManager.openTabWindow).toHaveBeenCalledWith('market', 'tab-market', '📊 期货');
     });
   });
 

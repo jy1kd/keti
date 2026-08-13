@@ -39,7 +39,7 @@ describe('resolveAction', () => {
 
   it('open-market-window: 调 windowManager.openTabWindow', () => {
     resolveAction({ type: 'open-market-window' }, ctx);
-    expect(ctx.windowManager.openTabWindow).toHaveBeenCalledWith('market', 'tab-market', '📊 行情');
+    expect(ctx.windowManager.openTabWindow).toHaveBeenCalledWith('market', 'tab-market', '📊 期货');
   });
 
   it('toggle-perf: 发送 menu:toggle-perf 但不 show/focus', () => {

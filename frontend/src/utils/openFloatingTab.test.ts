@@ -73,4 +73,17 @@ describe('openFloatingTab helpers — 顶部菜单打开浮动窗', () => {
     expect(tab!.title).toBe('📡 网络监控');
     expect(useFloatingWindowStore.getState().windows['tab-ipc-monitor']).toBeDefined();
   });
+
+  it('打开浮动窗后保持原活跃标签（openTab 激活 + detachTabAt 切回 market 后恢复 priorActive）', () => {
+    useTabStore.setState({
+      tabs: [
+        { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
+        { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false },
+      ],
+      activeTabId: 'tab-options',
+    });
+    openQueryFloating();
+    expect(useTabStore.getState().activeTabId).toBe('tab-options');
+    expect(useFloatingWindowStore.getState().windows['tab-query']).toBeDefined();
+  });
 });

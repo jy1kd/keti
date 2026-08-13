@@ -29,12 +29,12 @@ export interface ElectronAPI {
   onNavigateTab: (callback: (tab: string) => void) => () => void;
 
   // Menu (main → renderer): 顶部菜单打开浮动窗
-  onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor') => void) => () => void;
+  onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor' | 'tquote') => void) => () => void;
 
   // Menu (main → renderer): 切换 FPS 监控
   onTogglePerf: (callback: () => void) => () => void;
 
-  // Menu (main → renderer): 行情主页内切换视图（全部/自选/T型期权）
+  // Menu (main → renderer): 行情主页内切换视图（期货/自选/期权）
   onMarketView: (callback: (view: 'all' | 'favorites' | 'options') => void) => () => void;
 
   // Data exchange (renderer → main)
@@ -80,8 +80,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // Menu (main → renderer): 顶部菜单打开浮动窗
-  onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor') => void) => {
-    const handler = (_: any, tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor') => callback(tab);
+  onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor' | 'tquote') => void) => {
+    const handler = (_: any, tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor' | 'tquote') => callback(tab);
     ipcRenderer.on('menu:open-floating', handler);
     return () => ipcRenderer.removeListener('menu:open-floating', handler);
   },
@@ -93,7 +93,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('menu:toggle-perf', handler);
   },
 
-  // Menu (main → renderer): 行情主页内切换视图（全部/自选/T型期权）
+  // Menu (main → renderer): 行情主页内切换视图（期货/自选/期权）
   onMarketView: (callback: (view: 'all' | 'favorites' | 'options') => void) => {
     const handler = (_: any, view: 'all' | 'favorites' | 'options') => callback(view);
     ipcRenderer.on('menu:market-view', handler);

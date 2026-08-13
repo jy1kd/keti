@@ -304,19 +304,19 @@
   border-color: var(--accent);
 }
 
-/* 搜索区：内联搜索 + 高级弹窗入口（合并原「搜索合约」按钮）
-   flex:1 吃掉中间空间，不设 max-width（审查 🟡-1：避免宽屏下与 tabs 之间出现空隙） */
+/* 搜索区：内联搜索 + 高级弹窗入口。margin-left:auto 吃掉中间空间，把搜索簇推到最右
+   （功能靠左、搜索贴右；flex-shrink:0 保证窄屏下输入框不塌缩） */
 .market-toolbar__search {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex: 1;
-  min-width: 0;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .market-toolbar__search .contract-search {
-  flex: 1;
-  width: auto;
+  flex: 0 0 auto;
+  width: 200px;
 }
 
 .market-toolbar__search .search-input {

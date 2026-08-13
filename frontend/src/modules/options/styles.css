@@ -1,9 +1,25 @@
-/* ── OptionPanel 样式 ─────────────────────────────────────────────────── */
+/* ── OptionsPanel 外层页容器（二级切换 shell，同 market-panel 布局语义） ── */
+
+.options-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.options-page .panel-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── TQuoteView（原 OptionPanel）样式 ─────────────────────────────────── */
 
 .options-panel {
   display: flex;
   flex-direction: column;
-  flex: 1 1 0;
+  height: 100%;
   min-height: 0;
   padding: 8px;
 }

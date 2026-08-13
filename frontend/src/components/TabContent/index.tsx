@@ -4,6 +4,8 @@ import { useFloatingWindowStore, FLOATING_CHROME_H } from '@/stores/floatingWind
 import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
 import { MarketPanel } from '@/modules/market/MarketPanel'
 import { QueryPanel } from '@/modules/query/QueryPanel'
+import { OptionsPanel } from '@/modules/options/OptionsPanel'
+import { TQuoteView } from '@/modules/options/TQuoteView'
 import { FavoritesPage } from '@/pages/FavoritesPage'
 import { OrderPage } from '@/pages/OrderPage'
 import { KLinePage } from '@/pages/KLinePage'
@@ -58,7 +60,9 @@ function renderTabContent(tab: Tab, floating: boolean): React.ReactNode {
     case 'settings':
       return <SettingsPage />
     case 'options':
-      return <div className="tab-placeholder">📉 期权标签页</div>
+      return <OptionsPanel />
+    case 'tquote':
+      return <TQuoteView instrumentID={getInstrumentID(tab.props)} tabId={tab.id} />
     case 'ipc-monitor':
       return <IPCMonitorPage />
     default:

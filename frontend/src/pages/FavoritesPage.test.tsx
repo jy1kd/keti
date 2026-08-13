@@ -14,9 +14,9 @@ vi.mock('@/utils/openFloatingTab', () => ({
 
 const mockOpenFloatingTab = vi.mocked(openFloatingTab)
 
-// Mock MarketTable to simplify testing
-vi.mock('@/modules/market/MarketTable', () => ({
-  MarketTable: ({ contracts, onFavoriteChange, onRowDoubleClick, onContextMenu }: any) => (
+// Mock QuoteTable to simplify testing
+vi.mock('@/modules/market/QuoteTable', () => ({
+  QuoteTable: ({ contracts, onFavoriteChange, onRowDoubleClick, onContextMenu }: any) => (
     <div data-testid="market-table">
       <span data-testid="contract-count">{contracts.length}</span>
       {contracts.map((c: any) => (

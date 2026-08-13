@@ -11,7 +11,7 @@ import { resolveAction } from './menuActions';
 import type { MenuContext } from './menuActions';
 
 export type MarketView = 'all' | 'options' | 'favorites';
-export type FloatingTab = 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor';
+export type FloatingTab = 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor' | 'tquote';
 
 export type MenuAction =
   | { type: 'market-view'; view: MarketView }
@@ -43,9 +43,10 @@ export function getAppMenuDef(): MenuItemDef[] {
       id: 'market',
       label: '行情',
       submenu: [
-        { id: 'market-all', label: '📊 全部行情', action: { type: 'market-view', view: 'all' } },
-        { id: 'market-options', label: '📉 T型期权', action: { type: 'market-view', view: 'options' } },
+        { id: 'market-all', label: '📊 期货', action: { type: 'market-view', view: 'all' } },
+        { id: 'market-options', label: '📉 期权', action: { type: 'market-view', view: 'options' } },
         { id: 'market-favorites', label: '⭐ 自选行情', action: { type: 'market-view', view: 'favorites' } },
+        { id: 'market-tquote', label: '📉 T型报价', action: { type: 'open-floating', tab: 'tquote' } },
         { id: 'market-sep1', type: 'separator' },
         { id: 'market-new-window', label: '🪟 在新窗口打开', action: { type: 'open-market-window' } },
       ],

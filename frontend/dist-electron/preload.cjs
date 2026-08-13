@@ -37,7 +37,7 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
         electron_1.ipcRenderer.on('menu:toggle-perf', handler);
         return () => electron_1.ipcRenderer.removeListener('menu:toggle-perf', handler);
     },
-    // Menu (main → renderer): 行情主页内切换视图（全部/自选/T型期权）
+    // Menu (main → renderer): 行情主页内切换视图（期货/自选/期权）
     onMarketView: (callback) => {
         const handler = (_, view) => callback(view);
         electron_1.ipcRenderer.on('menu:market-view', handler);

@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
-import { MarketTable } from '@/modules/market/MarketTable'
+import { QuoteTable } from '@/modules/market/QuoteTable'
+import { futuresSpec } from '@/modules/market/futuresSpec'
 import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
+import { useTabStore } from '@/stores/tabs'
 import { useContractContextMenu } from '@/hooks/useContractContextMenu'
 import { toast } from '@/components/Toast'
 import './FavoritesPage.css'
@@ -21,6 +23,9 @@ export function FavoritesPage() {
   const selectedInstrument = useMarketStore((s) => s.selectedInstrument)
   const setSelectedInstrument = useMarketStore((s) => s.setSelectedInstrument)
   const { contextMenu, openOrderPopup, openQueryPopup, openKlineTab, handleContextMenu } = useContractContextMenu()
+
+  // 自选标签是否激活：隐藏面板（display:none）不参与可见区上报，避免覆盖活跃面板可见范围
+  const isActive = useTabStore((s) => s.tabs.some((t) => t.type === 'favorites' && t.id === s.activeTabId))
 
   const favoritedIds = useMemo(
     () => new Set(favorites.map((c) => c.instrumentID)),
@@ -65,10 +70,12 @@ export function FavoritesPage() {
   return (
     <div className="favorites-page" data-testid="favorites-page">
       <div className="favorites-page__table">
-        <MarketTable
+        <QuoteTable
+          spec={futuresSpec}
           contracts={favorites}
           snapshots={snapshots}
           selectedInstrument={selectedInstrument}
+          isActive={isActive}
           onRowClick={handleRowClick}
           onRowDoubleClick={handleRowDoubleClick}
           onContextMenu={handleContextMenu}

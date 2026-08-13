@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, act } from '@testing-library/react'
-import { MarketTable } from './MarketTable'
+import { QuoteTable } from './QuoteTable'
+import { futuresSpec } from './futuresSpec'
 import { useMarketStore } from './store'
 import type { ContractInfo } from '@/services/types'
 
@@ -35,7 +36,8 @@ describe('二次拖选金色高亮不滞留', () => {
     const selectedInstrument = useMarketStore((s) => s.selectedInstrument)
     const selectedContracts = useMarketStore((s) => s.selectedContracts)
     return (
-      <MarketTable
+      <QuoteTable
+        spec={futuresSpec}
         contracts={contracts}
         snapshots={new Map()}
         selectedInstrument={selectedInstrument}
@@ -76,7 +78,7 @@ describe('二次拖选金色高亮不滞留', () => {
   })
 
   it('关闭 vtable 原生拖选扩展（select.disableDragSelect=true，双保险）', async () => {
-    render(<MarketTable contracts={contracts} snapshots={new Map()} />)
+    render(<QuoteTable spec={futuresSpec} contracts={contracts} snapshots={new Map()} />)
     const { ListTable } = await import('@visactor/vtable')
     const options = (ListTable as any).mock.calls[0][1]
     expect(options.select?.disableDragSelect).toBe(true)
