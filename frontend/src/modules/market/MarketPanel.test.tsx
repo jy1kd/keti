@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MarketPanel } from './MarketPanel'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
+import { useTabStore } from '@/stores/tabs'
 import { openFloatingTab } from '@/utils/openFloatingTab'
 import type { MarketSnapshot } from '@/services/types'
 
@@ -54,11 +55,6 @@ vi.mock('@/components/InstrumentSearchModal', () => ({
     ) : null,
 }))
 
-// Mock TQuoteView（T型期权模式切换测试；原 OptionPanel 内容已迁入 TQuoteView）
-vi.mock('@/modules/options/TQuoteView', () => ({
-  TQuoteView: () => <div data-testid="option-panel">TQuoteView Mock</div>,
-}))
-
 // Mock echarts
 vi.mock('echarts', () => ({
   init: vi.fn(() => ({
@@ -107,12 +103,11 @@ describe('MarketPanel', () => {
     vi.clearAllMocks()
   })
 
-  it('删除冗余「行情面板」标题（合并为单条工具栏）', () => {
+  it('删除冗余「行情面板」标题；无 行情/T型期权 模式切换按钮（期货/期权为独立固定标签）', () => {
     render(<MarketPanel />)
     expect(screen.queryByText('行情面板')).not.toBeInTheDocument()
-    // 行情/期权模式切换保留在工具栏内
-    expect(screen.getByText('行情')).toBeInTheDocument()
-    expect(screen.getByText('T型期权')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '行情' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'T型期权' })).toBeNull()
   })
 
   it('renders with market-panel class', () => {
@@ -222,16 +217,6 @@ describe('MarketPanel', () => {
     expect(screen.queryByTestId('instrument-search-modal')).not.toBeInTheDocument()
     await user.click(screen.getByTitle('搜索合约'))
     expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
-  })
-
-  it('点击 T型期权 切换到期权模式，行情工具栏保留模式切换', async () => {
-    const user = userEvent.setup()
-    render(<MarketPanel />)
-    expect(screen.queryByTestId('option-panel')).not.toBeInTheDocument()
-    await user.click(screen.getByText('T型期权'))
-    expect(screen.getByTestId('option-panel')).toBeInTheDocument()
-    expect(screen.getByText('行情')).toBeInTheDocument()
-    expect(screen.getByText('T型期权')).toBeInTheDocument()
   })
 
   // --- 标签页打开方式测试 (PR-R13) ---
@@ -351,7 +336,19 @@ describe('MarketPanel', () => {
   })
 
   describe('顶部菜单行情切换（onMarketView）', () => {
-    it('在行情主页内切换 全部/自选/T型期权，不新建标签页', () => {
+    /** 期货/期权双固定标签（Task 2 默认态） */
+    function setupTabs(activeTabId: string) {
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
+          { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false },
+        ],
+        activeTabId,
+      })
+    }
+
+    it('view=options → 激活期权标签（tab-options），不切期货页内部视图', () => {
+      setupTabs('tab-market')
       const onMarketView = vi.fn()
       ;(window as any).electronAPI = { onMarketView }
       render(<MarketPanel />)
@@ -360,17 +357,27 @@ describe('MarketPanel', () => {
       act(() => {
         callback('options')
       })
-      expect(screen.getByTestId('option-panel')).toBeInTheDocument()
+      expect(useTabStore.getState().activeTabId).toBe('tab-options')
+      delete (window as any).electronAPI
+    })
+
+    it('view=favorites/all → 激活期货标签并切内部 自选/全部', () => {
+      setupTabs('tab-options')
+      const onMarketView = vi.fn()
+      ;(window as any).electronAPI = { onMarketView }
+      render(<MarketPanel />)
+      const callback = onMarketView.mock.calls[0][0]
 
       act(() => {
         callback('favorites')
       })
-      expect(screen.queryByTestId('option-panel')).toBeNull()
+      expect(useTabStore.getState().activeTabId).toBe('tab-market')
       expect(screen.getByRole('button', { name: '自选' }).classList.contains('active')).toBe(true)
 
       act(() => {
         callback('all')
       })
+      expect(useTabStore.getState().activeTabId).toBe('tab-market')
       expect(screen.getByRole('button', { name: '全部' }).classList.contains('active')).toBe(true)
 
       delete (window as any).electronAPI

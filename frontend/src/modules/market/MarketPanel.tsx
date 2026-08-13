@@ -3,7 +3,6 @@ import { ContractSearch } from '@/components/ContractSearch'
 import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
 import { ContextMenu } from '@/components/ContextMenu'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { TQuoteView } from '@/modules/options/TQuoteView'
 import { QuoteTable } from './QuoteTable'
 import { futuresSpec } from './futuresSpec'
 import { useMarketStore } from './store'
@@ -25,7 +24,6 @@ export function MarketPanel() {
   const { contextMenu, multiSelectMenu, openOrderPopup, openQueryPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
-  const [viewMode, setViewMode] = useState<'market' | 'options'>('market')
   // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
   const [filterActive, setFilterActive] = useState(false)
 
@@ -64,18 +62,18 @@ export function MarketPanel() {
     [contracts]
   )
 
-  // 顶部菜单「行情」切换：直接在行情主页内切 全部/自选/T型期权，不新建标签页
+  // 顶部菜单「行情」切换（设计 §4.1）：期货/期权为独立固定标签。
+  // options → 激活期权标签；all/favorites → 激活期货标签并切内部全部/自选。
   useEffect(() => {
     if (!isElectron()) return
 
     const cleanup = window.electronAPI?.onMarketView?.((view) => {
       if (view === 'options') {
-        setViewMode('options')
-      } else {
-        setViewMode('market')
-        setActiveTab(view === 'favorites' ? 'favorites' : 'all')
+        const options = useTabStore.getState().tabs.find((t) => t.type === 'options')
+        if (options) useTabStore.getState().setActiveTab(options.id)
+        return
       }
-      // 切回行情主页（行情为固定标签，直接激活即可）
+      setActiveTab(view === 'favorites' ? 'favorites' : 'all')
       const market = useTabStore.getState().tabs.find((t) => t.type === 'market')
       if (market) useTabStore.getState().setActiveTab(market.id)
     })
@@ -110,148 +108,124 @@ export function MarketPanel() {
           保留 data-drag-handle：market 为固定标签（closable:false）故 TabContent 中惰性不触发，
           与旧 market-tabs 行为一致；保留以对齐 Phase 2 全局栏合并后的拖拽语义（审查 🔵-1）。 */}
       <div className="market-toolbar" data-drag-handle>
-        {/* 左：行情/期权模式切换 */}
-        <div className="market-toolbar__mode">
+        {/* 搜索 + 全部/自选 + 操作（期货页专属工具栏；期权页为独立标签，见 OptionsPanel） */}
+        <div className="market-toolbar__search">
+          <ContractSearch contracts={baseContracts} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
           <button
-            className={`market-mode-btn${viewMode === 'market' ? ' active' : ''}`}
-            onClick={() => setViewMode('market')}
+            className="btn-search-advanced"
+            title="搜索合约"
+            onClick={() => setSearchModalOpen(true)}
           >
-            行情
+            🔍
+          </button>
+          {searchQuery && (
+            <span className="search-count">
+              {displayContracts.length} / {baseContracts.length}
+            </span>
+          )}
+        </div>
+        <div className="market-toolbar__tabs">
+          <button
+            className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
+            onClick={() => setActiveTab('all')}
+          >
+            全部
           </button>
           <button
-            className={`market-mode-btn${viewMode === 'options' ? ' active' : ''}`}
-            onClick={() => setViewMode('options')}
+            className={`btn-tab${activeTab === 'favorites' ? ' active' : ''}`}
+            onClick={() => setActiveTab('favorites')}
           >
-            T型期权
+            自选
           </button>
         </div>
-
-        {/* 中/右：搜索 + 全部/自选 + 操作（仅行情模式展示，期权模式只有模式切换） */}
-        {viewMode === 'market' && (
-          <>
-            <div className="market-toolbar__search">
-              <ContractSearch contracts={baseContracts} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
-              <button
-                className="btn-search-advanced"
-                title="搜索合约"
-                onClick={() => setSearchModalOpen(true)}
-              >
-                🔍
-              </button>
-              {searchQuery && (
-                <span className="search-count">
-                  {displayContracts.length} / {baseContracts.length}
-                </span>
-              )}
-            </div>
-            <div className="market-toolbar__tabs">
-              <button
-                className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
-                onClick={() => setActiveTab('all')}
-              >
-                全部
-              </button>
-              <button
-                className={`btn-tab${activeTab === 'favorites' ? ' active' : ''}`}
-                onClick={() => setActiveTab('favorites')}
-              >
-                自选
-              </button>
-            </div>
-            <div className="market-toolbar__actions">
-              <button
-                className={`btn-filter-status${filterActive ? ' active' : ''}`}
-                onClick={() => setFilterActive((v) => !v)}
-                title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
-              >
-                {filterActive ? '仅交易中' : '显示全部'}
-              </button>
-              <button
-                className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
-                disabled={!selectedInstrument && selectedContracts.size === 0}
-                onClick={async () => {
-                  // 如果有多选，批量收藏/取消收藏
-                  if (selectedContracts.size > 1) {
-                    const allFavorited = Array.from(selectedContracts).every(id => favoritedIds.has(id))
-                    if (allFavorited) {
-                      // 全部已收藏，批量取消
-                      for (const id of selectedContracts) {
-                        await removeFromFavorites(id)
-                      }
-                      toast.success(`已移除 ${selectedContracts.size} 个合约`)
-                    } else {
-                      // 批量收藏
-                      let count = 0
-                      for (const id of selectedContracts) {
-                        const inst = contracts.find(c => c.instrumentID === id)
-                        if (inst) {
-                          const success = await addToFavorites(inst)
-                          if (success) count++
-                        }
-                      }
-                      toast.success(`已收藏 ${count} 个合约`)
-                    }
-                    return
+        <div className="market-toolbar__actions">
+          <button
+            className={`btn-filter-status${filterActive ? ' active' : ''}`}
+            onClick={() => setFilterActive((v) => !v)}
+            title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
+          >
+            {filterActive ? '仅交易中' : '显示全部'}
+          </button>
+          <button
+            className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
+            disabled={!selectedInstrument && selectedContracts.size === 0}
+            onClick={async () => {
+              // 如果有多选，批量收藏/取消收藏
+              if (selectedContracts.size > 1) {
+                const allFavorited = Array.from(selectedContracts).every(id => favoritedIds.has(id))
+                if (allFavorited) {
+                  // 全部已收藏，批量取消
+                  for (const id of selectedContracts) {
+                    await removeFromFavorites(id)
                   }
-
-                  // 单个合约收藏/取消收藏
-                  if (!selectedInstrument) return
-                  if (favoritedIds.has(selectedInstrument)) {
-                    await removeFromFavorites(selectedInstrument)
-                    toast.success(`已移除 ${selectedInstrument}`)
-                  } else {
-                    const inst = contracts.find(c => c.instrumentID === selectedInstrument)
+                  toast.success(`已移除 ${selectedContracts.size} 个合约`)
+                } else {
+                  // 批量收藏
+                  let count = 0
+                  for (const id of selectedContracts) {
+                    const inst = contracts.find(c => c.instrumentID === id)
                     if (inst) {
-                      await addToFavorites(inst)
-                      toast.success(`已收藏 ${inst.instrumentID}`)
+                      const success = await addToFavorites(inst)
+                      if (success) count++
                     }
                   }
-                }}
-              >
-                {selectedContracts.size > 1
-                  ? (Array.from(selectedContracts).every(id => favoritedIds.has(id)) ? '批量移除' : '批量收藏')
-                  : (selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏')
+                  toast.success(`已收藏 ${count} 个合约`)
                 }
-              </button>
-            </div>
-          </>
-        )}
+                return
+              }
+
+              // 单个合约收藏/取消收藏
+              if (!selectedInstrument) return
+              if (favoritedIds.has(selectedInstrument)) {
+                await removeFromFavorites(selectedInstrument)
+                toast.success(`已移除 ${selectedInstrument}`)
+              } else {
+                const inst = contracts.find(c => c.instrumentID === selectedInstrument)
+                if (inst) {
+                  await addToFavorites(inst)
+                  toast.success(`已收藏 ${inst.instrumentID}`)
+                }
+              }
+            }}
+          >
+            {selectedContracts.size > 1
+              ? (Array.from(selectedContracts).every(id => favoritedIds.has(id)) ? '批量移除' : '批量收藏')
+              : (selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏')
+            }
+          </button>
+        </div>
       </div>
 
-      {viewMode === 'options' ? (
-        <TQuoteView />
-      ) : (
-        <div className="panel-content">
-          <ErrorBoundary>
-            <QuoteTable
-              spec={futuresSpec}
-              contracts={displayContracts}
-              snapshots={snapshots}
-              selectedInstrument={selectedInstrument}
-              onRowClick={handleClick}
-              onRowDoubleClick={handleDoubleClick}
-              onContextMenu={handleContextMenu}
-              onMultiSelectContextMenu={handleMultiSelectContextMenu}
-              onVisibleRangeChange={setVisibleInstrumentIDs}
-              favoritedIds={favoritedIds}
-              onFavoriteChange={(instrumentID, isFavorited) => {
-                if (isFavorited) {
-                  const inst = contracts.find(c => c.instrumentID === instrumentID)
-                  if (inst) {
-                    addToFavorites(inst)
-                    toast.success(`已收藏 ${instrumentID}`)
-                  }
-                } else {
-                  removeFromFavorites(instrumentID)
-                  toast.success(`已移除 ${instrumentID}`)
+      <div className="panel-content">
+        <ErrorBoundary>
+          <QuoteTable
+            spec={futuresSpec}
+            contracts={displayContracts}
+            snapshots={snapshots}
+            selectedInstrument={selectedInstrument}
+            onRowClick={handleClick}
+            onRowDoubleClick={handleDoubleClick}
+            onContextMenu={handleContextMenu}
+            onMultiSelectContextMenu={handleMultiSelectContextMenu}
+            onVisibleRangeChange={setVisibleInstrumentIDs}
+            favoritedIds={favoritedIds}
+            onFavoriteChange={(instrumentID, isFavorited) => {
+              if (isFavorited) {
+                const inst = contracts.find(c => c.instrumentID === instrumentID)
+                if (inst) {
+                  addToFavorites(inst)
+                  toast.success(`已收藏 ${instrumentID}`)
                 }
-              }}
-              selectedContracts={selectedContracts}
-              onSelectionChange={setSelectedContracts}
-            />
-          </ErrorBoundary>
-        </div>
-      )}
+              } else {
+                removeFromFavorites(instrumentID)
+                toast.success(`已移除 ${instrumentID}`)
+              }
+            }}
+            selectedContracts={selectedContracts}
+            onSelectionChange={setSelectedContracts}
+          />
+        </ErrorBoundary>
+      </div>
 
       <InstrumentSearchModal
         isOpen={searchModalOpen}

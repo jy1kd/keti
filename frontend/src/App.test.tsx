@@ -48,7 +48,7 @@ describe('App Layout — 标签页系统', () => {
     useConnectionStore.setState({ mdConnected: false, tdConnected: false })
     useTabStore.setState({
       tabs: [
-        { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+        { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
       ],
       activeTabId: 'tab-market',
     })
