@@ -48,13 +48,18 @@ export function aggregateMyOrders(orders: RawOrderEntry[], instrumentID: string)
   let totalBuyCount = 0
   let totalSellCount = 0
 
+  // 浮点键规范：limitPrice 可能携带 1e-13 噪声（如 Math.round(n/tick)*tick），
+  // 统一到 6 位小数，保证与阶梯/盘口 tick 归一化价格严格 === 匹配。
+  const roundPrice = (p: number) => Math.round(p * 1e6) / 1e6
+
   for (const o of orders) {
     if (o.instrumentID !== instrumentID) continue
     if (!isActive(o.orderStatus)) continue
     const remaining = o.volumeTotalOriginal - (o.volumeTraded ?? 0)
     if (remaining <= 0) continue
 
-    const level = byPrice.get(o.limitPrice) ?? {
+    const price = roundPrice(o.limitPrice)
+    const level = byPrice.get(price) ?? {
       buyVolume: 0,
       sellVolume: 0,
       buyCount: 0,
@@ -73,7 +78,7 @@ export function aggregateMyOrders(orders: RawOrderEntry[], instrumentID: string)
       level.sellRefs.push(o.orderRef)
       totalSellCount += 1
     }
-    byPrice.set(o.limitPrice, level)
+    byPrice.set(price, level)
   }
 
   return { byPrice, totalBuyCount, totalSellCount }

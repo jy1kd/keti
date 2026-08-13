@@ -86,6 +86,7 @@ export function InfiniteLadder({ snapshot, priceTick, instrumentID }: InfiniteLa
   const onScroll = () => {
     const el = viewportRef.current
     if (!el) return
+    setScrollTop(el.scrollTop)
     if (programmaticRef.current) {
       programmaticRef.current = false
       return
@@ -93,7 +94,6 @@ export function InfiniteLadder({ snapshot, priceTick, instrumentID }: InfiniteLa
     followRef.current = false
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
     idleTimerRef.current = setTimeout(() => { followRef.current = true }, 3000)
-    setScrollTop(el.scrollTop)
   }
 
   useEffect(() => () => { if (idleTimerRef.current) clearTimeout(idleTimerRef.current) }, [])
@@ -133,7 +133,7 @@ export function InfiniteLadder({ snapshot, priceTick, instrumentID }: InfiniteLa
       <div className="infinite-ladder__head">
         <span>可撤</span><span>买入量</span><span>价格</span><span>卖出量</span>
       </div>
-      <div className="infinite-ladder__viewport" ref={viewportRef} onScroll={onScroll}>
+      <div className="infinite-ladder__viewport" data-testid="infinite-ladder__viewport" ref={viewportRef} onScroll={onScroll}>
         <div className="infinite-ladder__spacer" style={{ height: totalH }}>
           <div style={{ transform: `translateY(${start * ROW_HEIGHT}px)` }}>
             {axis.slice(start, end).map((price, i) => {
