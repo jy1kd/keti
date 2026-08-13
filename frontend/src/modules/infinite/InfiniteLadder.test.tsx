@@ -28,12 +28,12 @@ describe('InfiniteLadder', () => {
     useQueryStore.setState({ orders: [] })
   })
 
-  it('渲染四列表头 可撤/买入量/价格/卖出量', () => {
+  it('渲染四列表头 可撤/买入/价格/卖出', () => {
     render(<InfiniteLadder snapshot={snap()} priceTick={0.2} instrumentID="IF2608" />)
     expect(screen.getByText('可撤')).toBeInTheDocument()
-    expect(screen.getByText('买入量')).toBeInTheDocument()
+    expect(screen.getByText('买入')).toBeInTheDocument()
     expect(screen.getByText('价格')).toBeInTheDocument()
-    expect(screen.getByText('卖出量')).toBeInTheDocument()
+    expect(screen.getByText('卖出')).toBeInTheDocument()
   })
 
   it('窗口化：仅渲染可视区行，而非全轴', () => {

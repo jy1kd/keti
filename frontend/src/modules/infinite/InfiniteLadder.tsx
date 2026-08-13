@@ -131,7 +131,10 @@ export function InfiniteLadder({ snapshot, priceTick, instrumentID }: InfiniteLa
     <div className="infinite-ladder">
       {banner && <div className="infinite-ladder__banner" role="alert">{banner}</div>}
       <div className="infinite-ladder__head">
-        <span>可撤</span><span>买入量</span><span>价格</span><span>卖出量</span>
+        <span className="ladder-head__cell ladder-head__cell--cancel">可撤</span>
+        <span className="ladder-head__cell ladder-head__cell--buy">买入</span>
+        <span className="ladder-head__cell ladder-head__cell--price">价格</span>
+        <span className="ladder-head__cell ladder-head__cell--sell">卖出</span>
       </div>
       <div className="infinite-ladder__viewport" data-testid="infinite-ladder__viewport" ref={viewportRef} onScroll={onScroll}>
         <div className="infinite-ladder__spacer" style={{ height: totalH }}>
