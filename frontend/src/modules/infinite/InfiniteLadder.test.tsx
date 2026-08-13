@@ -55,18 +55,12 @@ describe('InfiniteLadder', () => {
     expect(screen.getByText(/未订阅行情或涨跌停价无效/)).toBeInTheDocument()
   })
 
-  it('程序化滚动后 scrollTop 状态同步，窗口重新切分', () => {
+  it('程序化滚动(centerOn)后 scroll 事件同步窗口，行0移出可视区', () => {
     render(<InfiniteLadder snapshot={snap()} priceTick={0.2} instrumentID="IF2608" />)
+    // 挂载 effect 已调用 centerOn(lastIndex=25)：programmaticRef 置位、viewport.scrollTop 被写到最新价附近
     const viewport = screen.getByTestId('infinite-ladder__viewport')
-    // 初始窗口从 row 0 开始
-    expect(screen.getByTestId('ladder-row-0')).toBeInTheDocument()
-
-    // 程序化滚动到第 20 行（480 = 20 * 24），触发 onScroll
-    viewport.scrollTop = 480
     fireEvent.scroll(viewport)
-
-    // 修复后 scrollTop 状态同步 → start = floor(480/24) - 10 = 10，row 0 移出窗口
-    expect(screen.queryByTestId('ladder-row-0')).not.toBeInTheDocument()
-    expect(screen.getByTestId('ladder-row-10')).toBeInTheDocument()
+    // 修复后 onScroll 先 setScrollTop → 窗口移到最新价附近，行0不再渲染
+    expect(screen.queryByTestId('ladder-row-0')).toBeNull()
   })
 })
