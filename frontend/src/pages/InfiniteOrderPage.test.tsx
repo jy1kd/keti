@@ -28,13 +28,11 @@ describe('InfiniteOrderPage', () => {
     useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) })
   })
 
-  it('渲染账户栏、参数区、阶梯、右侧功能 tab', () => {
+  it('渲染账户栏、参数区、阶梯', () => {
     render(<InfiniteOrderPage instrumentID="IF2608" />)
     expect(screen.getByTestId('infinite-order-page')).toBeInTheDocument()
     expect(screen.getByTestId('account-bar')).toBeInTheDocument()
     expect(screen.getByText('可撤')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '持仓' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '委托' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '成交' })).toBeInTheDocument()
+    expect(screen.getByText('价格')).toBeInTheDocument()
   })
 })
