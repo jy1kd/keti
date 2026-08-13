@@ -747,7 +747,7 @@ describe('QuoteTable', () => {
       rowStyle: (r: { kind: string }) => (r.kind === 'underlying' ? { bgColor: '#161b22' } : undefined),
     }
     render(
-      <QuoteTable spec={spec as any}
+      <QuoteTable spec={spec}
         contracts={mockContracts}
         snapshots={mockSnapshots}
         selectedContracts={new Set(['au2508'])}

@@ -6,7 +6,11 @@ import { useMarketStore } from './store'
 import { PLACEHOLDER, shouldRenderAnchor, type QuoteRecord, type QuoteTableSpec } from './quoteTableCore'
 
 interface QuoteTableProps {
-  /** spec 驱动：列定义 + buildRecord（期货 futuresSpec / 期权 optionsSpec 复用） */
+  /**
+   * 行情表 spec（列定义 + buildRecord + 可选行级样式）。
+   * 必须为模块级稳定常量（如 futuresSpec/optionsSpec），运行时不得替换；
+   * 传入身份会变化的 spec 将导致表格陈旧（columns/buildRecord/rowStyle 被冻结）。
+   */
   spec: QuoteTableSpec
   contracts: ContractInfo[]
   snapshots: Map<string, MarketSnapshot>
@@ -46,6 +50,8 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
   const favoritedIdsRef = useRef(favoritedIds)
   const selectedContractsRef = useRef(selectedContracts)
   const onSelectionChangeRef = useRef(onSelectionChange)
+  /** dev 守卫：记录最近一次 spec 引用，检测运行时 spec 身份变化（spec 必须为稳定常量） */
+  const specRef = useRef(spec)
   const lastClickedIndexRef = useRef<number | null>(null)
   const lastClickTimeRef = useRef<number>(0)
   const lastClickRowRef = useRef<number>(-1)
@@ -67,6 +73,15 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
   useEffect(() => { favoritedIdsRef.current = favoritedIds }, [favoritedIds])
   useEffect(() => { selectedContractsRef.current = selectedContracts }, [selectedContracts])
   useEffect(() => { onSelectionChangeRef.current = onSelectionChange }, [onSelectionChange])
+
+  // 开发期守卫：spec 必须为模块级稳定常量（futuresSpec/optionsSpec）。运行时替换 spec 会
+  // 导致表格陈旧——columns/buildRecord/rowStyle 冻结在首渲染闭包内。仅 dev 告警，不抛错。
+  useEffect(() => {
+    if (import.meta.env.DEV && specRef.current !== spec) {
+      console.warn('[QuoteTable] spec 身份变化——spec 必须为稳定常量，运行时替换不支持')
+    }
+    specRef.current = spec
+  }, [spec])
 
   // 可见行检测函数（提取为共享），包含预加载
   const notifyVisibleRange = useCallback(() => {
