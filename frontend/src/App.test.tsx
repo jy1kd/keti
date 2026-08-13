@@ -4,6 +4,9 @@ import App from './App'
 import { useConnectionStore } from '@/stores/connection'
 import { useTabStore } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
+import { useMarketWs } from '@/hooks/useMarketWs'
+import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
+import { useContractsStore } from '@/stores/contracts'
 
 // Mock TabBar 组件
 vi.mock('@/components/TabBar', () => ({
@@ -19,6 +22,11 @@ vi.mock('@/components/TabBar', () => ({
 vi.mock('@/components/TabContent', () => ({
   TabContent: () => <div data-testid="tab-content">TabContent Mock</div>,
 }))
+
+// Mock 共享行情基础设施（App 挂载的全局单例）— 避免测试环境建立真实 WS 连接与订阅。
+// TabContent 已 mock，MarketPanel 不会渲染，但 App 直接挂载这两个 hook。
+vi.mock('@/hooks/useMarketWs', () => ({ useMarketWs: vi.fn() }))
+vi.mock('@/hooks/useSubscriptionManager', () => ({ useSubscriptionManager: vi.fn() }))
 
 // rAF stub（BottomBar FPS 徽标内 PerfMonitor visible=true 时使用）
 let rafCallbacks: FrameRequestCallback[] = []
@@ -159,6 +167,22 @@ describe('App Layout — 标签页系统', () => {
       })
       expect(screen.getByTestId('bottom-bar-fps')).toBeInTheDocument()
       delete (window as any).electronAPI
+    })
+  })
+
+  describe('共享行情基础设施（上移 App，期货/期权双面板单例）', () => {
+    it('挂载 useMarketWs 与 useSubscriptionManager 各一次，并启动时加载合约/收藏', () => {
+      vi.clearAllMocks()
+      const loadAllSpy = vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
+      const loadFavSpy = vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
+
+      render(<App />)
+
+      expect(useMarketWs).toHaveBeenCalledTimes(1)
+      expect(useMarketWs).toHaveBeenCalledWith('ws://localhost:8000')
+      expect(useSubscriptionManager).toHaveBeenCalledTimes(1)
+      expect(loadAllSpy).toHaveBeenCalledTimes(1)
+      expect(loadFavSpy).toHaveBeenCalledTimes(1)
     })
   })
 })

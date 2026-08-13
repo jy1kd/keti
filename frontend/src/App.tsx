@@ -6,7 +6,10 @@ import { ToastContainer } from '@/components/Toast'
 import { useSystemWs } from '@/hooks/useSystemWs'
 import { useConnectionPoll } from '@/hooks/useConnectionPoll'
 import { useTabContractLocks } from '@/hooks/useTabContractLocks'
+import { useMarketWs } from '@/hooks/useMarketWs'
+import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
 import { useMarketStore } from '@/modules/market/store'
+import { useContractsStore } from '@/stores/contracts'
 import { FloatingWindows } from '@/components/FloatingWindow'
 import { useTabStore } from '@/stores/tabs'
 import { API_BASE } from '@/services/api'
@@ -32,6 +35,18 @@ function App() {
 
   // 打开标签的合约锁定订阅（K线/报单标签的合约永不退订，保证数据流）
   useTabContractLocks()
+
+  // 共享行情基础设施：行情 WS 单例 + 订阅管理器，挂载在 App 全局，
+  // 期货/期权双面板共享同一份订阅生命周期与 WS 单例（useSubscriptionManager 的
+  // subscribedRef 组件私有，若双份挂载会双份 diff 冲突，故必须单例）
+  useMarketWs(API_BASE.replace('http', 'ws'))
+  useSubscriptionManager()
+
+  // 启动时加载全量合约 + 收藏合约（原先在 MarketPanel，现上移共享）
+  useEffect(() => {
+    useContractsStore.getState().loadAllInstruments()
+    useContractsStore.getState().loadFavoriteContracts()
+  }, [])
 
   // Electron IPC — 监听托盘菜单导航消息
   useEffect(() => {

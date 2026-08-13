@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ContractSearch } from '@/components/ContractSearch'
 import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
 import { ContextMenu } from '@/components/ContextMenu'
@@ -11,11 +11,8 @@ import { useTabStore } from '@/stores/tabs'
 import { useContractContextMenu } from '@/hooks/useContractContextMenu'
 import { usePointOrder } from '@/hooks/usePointOrder'
 import { useOrderStore } from '@/modules/order/store'
-import { useMarketWs } from '@/hooks/useMarketWs'
-import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
 import { getProductName } from '@/utils/productNames'
 import { isContractActive } from '@/utils/contractStatus'
-import { API_BASE } from '@/services/api'
 import { isElectron } from '@/services/electron'
 import { toast } from '@/components/Toast'
 import './styles.css'
@@ -23,17 +20,13 @@ import './styles.css'
 export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
-  const { contracts, favorites, addToFavorites, removeFromFavorites, loadAllInstruments, loadFavoriteContracts } = useContractsStore()
+  const { contracts, favorites, addToFavorites, removeFromFavorites } = useContractsStore()
   const { contextMenu, multiSelectMenu, openOrderPopup, openQueryPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
   const [viewMode, setViewMode] = useState<'market' | 'options'>('market')
   // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
   const [filterActive, setFilterActive] = useState(false)
-  const loadedRef = useRef(false)
-
-  // 订阅管理器
-  useSubscriptionManager()
 
   // Display contracts based on active tab
   const baseContracts = activeTab === 'all' ? contracts : favorites
@@ -69,18 +62,6 @@ export function MarketPanel() {
     () => new Set(contracts.map(c => c.instrumentID)),
     [contracts]
   )
-
-  // WebSocket 行情推送（单例模式）
-  useMarketWs(API_BASE.replace('http', 'ws'))
-
-  // 启动时加载全量合约 + 收藏合约
-  useEffect(() => {
-    if (!loadedRef.current) {
-      loadedRef.current = true
-      loadAllInstruments()
-      loadFavoriteContracts()
-    }
-  }, [])
 
   // 顶部菜单「行情」切换：直接在行情主页内切 全部/自选/T型期权，不新建标签页
   useEffect(() => {

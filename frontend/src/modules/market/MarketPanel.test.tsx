@@ -32,13 +32,6 @@ vi.mock('@/services/api', () => ({
   API_BASE: 'http://localhost:8000',
 }))
 
-// Mock useMarketWs
-const mockUseMarketWs = vi.fn()
-vi.mock('@/hooks/useMarketWs', () => ({
-  useMarketWs: (...args: unknown[]) => mockUseMarketWs(...args),
-  PERIOD_MS: { '5m': 300000 },
-}))
-
 // Mock usePointOrder — capture callbacks for PR-R13 tests
 let capturedPointOrderOpts: any = null
 vi.mock('@/hooks/usePointOrder', () => ({
@@ -125,21 +118,6 @@ describe('MarketPanel', () => {
   it('renders with market-panel class', () => {
     const { container } = render(<MarketPanel />)
     expect(container.firstChild).toHaveClass('market-panel')
-  })
-
-  it('启动时调用 loadAllInstruments 和 loadFavoriteContracts 加载合约', () => {
-    const loadAllSpy = vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
-    const loadFavSpy = vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
-    render(<MarketPanel />)
-    expect(loadAllSpy).toHaveBeenCalled()
-    expect(loadFavSpy).toHaveBeenCalled()
-    loadAllSpy.mockRestore()
-    loadFavSpy.mockRestore()
-  })
-
-  it('启动时调用 useMarketWs 连接 WebSocket 行情推送', () => {
-    render(<MarketPanel />)
-    expect(mockUseMarketWs).toHaveBeenCalledWith('ws://localhost:8000')
   })
 
   it('renders 全部 and 自选 tabs', () => {
