@@ -67,3 +67,13 @@ export function openSettingsFloating(): boolean {
 export function openIpcMonitorFloating(): boolean {
   return openFloatingTab({ type: 'ipc-monitor', title: '📡 网络监控' })
 }
+
+/** 打开无限下单浮动窗：有选中合约则直接定位到该合约 */
+export function openInfiniteFloating(): boolean {
+  const inst = useMarketStore.getState().selectedInstrument
+  return openFloatingTab({
+    type: 'infinite',
+    title: inst ? `♾️ 无限下单-${inst}` : '♾️ 无限下单',
+    props: inst ? { instrumentID: inst } : {},
+  })
+}

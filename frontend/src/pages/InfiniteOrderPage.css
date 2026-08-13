@@ -1,0 +1,4 @@
+.infinite-order-page { display: flex; flex-direction: column; height: 100%; background: #1a1d23; }
+.infinite-order-page__top { display: flex; align-items: center; gap: 16px; padding: 6px 12px; background: #242830; border-bottom: 1px solid #3a3f4b; }
+.infinite-order-page__limits { font-size: 12px; color: #9ca3af; }
+.infinite-order-page__body { flex: 1; display: grid; grid-template-columns: 220px 1fr; grid-template-rows: minmax(0, 1fr); min-height: 0; }

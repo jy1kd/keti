@@ -89,4 +89,10 @@ describe('aggregateMyOrders（P3 盘口我方挂单聚合）', () => {
   it('ACTIVE_ORDER_STATUSES 覆盖 1/2/3', () => {
     expect(ACTIVE_ORDER_STATUSES).toEqual(['1', '2', '3'])
   })
+
+  it('浮点限价键规范：4694.600000001 → 4694.6', () => {
+    const orders = [order({ orderRef: 'A', limitPrice: 4694.600000001 })]
+    const agg = aggregateMyOrders(orders, 'IF2608')
+    expect(agg.byPrice.get(4694.6)?.buyVolume).toBe(5)
+  })
 })

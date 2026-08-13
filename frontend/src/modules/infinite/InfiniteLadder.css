@@ -1,0 +1,145 @@
+.infinite-ladder {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: #161a21;
+  border: 1px solid #262a33;
+  border-radius: 6px;
+}
+.infinite-ladder--empty {
+  align-items: center;
+  justify-content: center;
+  color: #8b949e;
+  font-size: 12px;
+}
+.infinite-ladder__banner {
+  background: #7f1d1d;
+  color: #fca5a5;
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+/* ── 列头：买入红 / 卖出绿，点击方向一目了然 ── */
+.infinite-ladder__head {
+  display: grid;
+  grid-template-columns: 56px 76px 1fr 76px;
+  align-items: stretch;
+  height: 28px;
+  /* 右缘预留与视口滚动条等宽的空白，保证列头与下方行严格对齐 */
+  padding-right: 6px;
+  background: #1c2129;
+  border-bottom: 1px solid #262a33;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.ladder-head__cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 8px;
+  color: #8b949e;
+}
+.ladder-head__cell--cancel {
+  justify-content: flex-start;
+  padding-left: 8px;
+  color: #6b7280;
+}
+.ladder-head__cell--price {
+  justify-content: center; /* 价格列头居中，与行内价格对齐 */
+  color: #c2c8d0;
+}
+.ladder-head__cell--buy {
+  justify-content: center;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.14);
+}
+.ladder-head__cell--sell {
+  justify-content: center;
+  color: #4ade80;
+  background: rgba(34, 197, 94, 0.14);
+}
+
+.infinite-ladder__viewport {
+  flex: 1;
+  overflow-y: auto;
+  /* 始终预留滚动条槽位，避免滚动条出现时行内容左移导致与列头错位 */
+  scrollbar-gutter: stable;
+  min-height: 0;
+}
+.infinite-ladder__spacer {
+  position: relative;
+}
+
+/* ── 行：四列网格，买卖量右对齐、价格列居中 ── */
+.infinite-row {
+  display: grid;
+  grid-template-columns: 56px 76px 1fr 76px;
+  align-items: stretch;
+  height: 24px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid #1e2229;
+}
+.infinite-row--last {
+  background: #1d3557;
+}
+
+.infinite-row__cancel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 6px;
+}
+.infinite-row__my {
+  border: none;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+  color: #fff;
+}
+.infinite-row__my--buy {
+  background: #b91c1c;
+}
+.infinite-row__my--sell {
+  background: #15803d;
+}
+
+/* ── 买/卖列：整列常驻方向色带，悬停单元格加深，明确可点方向 ── */
+.infinite-row__bid,
+.infinite-row__ask {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 8px;
+  cursor: pointer;
+  transition: background-color 0.12s;
+}
+.infinite-row__bid {
+  color: #f87171;
+  background-color: rgba(239, 68, 68, 0.06);
+  background-image: linear-gradient(to left, rgba(239, 68, 68, 0.24) var(--vol-pct), transparent var(--vol-pct));
+}
+.infinite-row__bid:hover {
+  background-color: rgba(239, 68, 68, 0.2);
+}
+.infinite-row__ask {
+  color: #4ade80;
+  background-color: rgba(34, 197, 94, 0.06);
+  background-image: linear-gradient(to right, rgba(34, 197, 94, 0.24) var(--vol-pct), transparent var(--vol-pct));
+}
+.infinite-row__ask:hover {
+  background-color: rgba(34, 197, 94, 0.2);
+}
+
+.infinite-row__price {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* 价格列居中：两侧买卖量柱对称，数字不再贴右 */
+  color: #e4e6eb;
+  font-family: var(--font-mono);
+}

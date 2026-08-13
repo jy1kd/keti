@@ -12,6 +12,7 @@ export type TabType =
   | 'ipc-monitor'
   | 'settings'
   | 'query' // 查询（全局账户查询）
+  | 'infinite'
 
 /** 所有标签页类型 */
 export const TAB_TYPES: TabType[] = [
@@ -23,6 +24,7 @@ export const TAB_TYPES: TabType[] = [
   'ipc-monitor',
   'settings',
   'query',
+  'infinite',
 ]
 
 /** 固定标签页类型（始终存在，不可关闭） */

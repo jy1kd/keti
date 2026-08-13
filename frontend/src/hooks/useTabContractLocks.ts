@@ -5,7 +5,7 @@ import { useMarketStore } from '@/modules/market/store'
 /**
  * 需要锁定订阅的标签类型（打开标签的合约永不退订）
  */
-const LOCKABLE_TAB_TYPES = new Set(['kline', 'order'])
+const LOCKABLE_TAB_TYPES = new Set(['kline', 'order', 'infinite'])
 
 /**
  * useTabContractLocks — 打开标签的合约锁定

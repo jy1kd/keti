@@ -9,6 +9,7 @@ import { OrderPage } from '@/pages/OrderPage'
 import { KLinePage } from '@/pages/KLinePage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { IPCMonitorPage } from '@/pages/IPCMonitorPage'
+import { InfiniteOrderPage } from '@/pages/InfiniteOrderPage'
 import './styles.css'
 
 /**
@@ -42,6 +43,14 @@ function renderTabContent(tab: Tab, floating: boolean): React.ReactNode {
       )
     case 'kline':
       return <KLinePage instrumentID={getInstrumentID(tab.props)} tabId={tab.id} />
+    case 'infinite':
+      return (
+        <InfiniteOrderPage
+          instrumentID={getInstrumentID(tab.props)}
+          floating={floating}
+          tabId={tab.id}
+        />
+      )
     case 'favorites':
       return <FavoritesPage />
     case 'query':

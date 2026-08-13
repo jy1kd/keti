@@ -1,0 +1,15 @@
+.infinite-trade-params { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: #242830; }
+.itp-row { display: flex; align-items: center; gap: 8px; }
+.itp-row__label { width: 44px; color: #9ca3af; font-size: 12px; flex-shrink: 0; }
+/* 合约搜索：在窄面板内收缩填充，覆盖 ContractSearch 默认 width:220px，避免溢出 */
+.infinite-trade-params .contract-search { flex: 1; min-width: 0; }
+.infinite-trade-params .contract-search .search-input { width: 100%; min-width: 0; }
+.itp-row__select { flex: 1; background: #2d3139; color: #e4e6eb; border: 1px solid #3a3f4b; border-radius: 4px; height: 28px; }
+.itp-stepper { display: flex; }
+.itp-stepper__btn { width: 28px; background: #2d3139; color: #e4e6eb; border: 1px solid #3a3f4b; }
+.itp-stepper__input { width: 64px; flex: none; text-align: center; background: #2d3139; color: #e4e6eb; border: 1px solid #3a3f4b; }
+.itp-hint { font-size: 11px; color: #6b7280; }
+.itp-hint--error { color: #ef4444; }
+.itp-row--ops { display: flex; gap: 8px; }
+.itp-op-btn { flex: 1; height: 28px; padding: 0 4px; background: #2d3139; color: #e4e6eb; border: 1px solid #3a3f4b; border-radius: 4px; cursor: pointer; }
+.itp-op-btn--primary { background: #2563eb; color: #fff; }
