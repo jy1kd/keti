@@ -177,4 +177,26 @@ describe('Position', () => {
     expect(orderTab?.props.instrumentID).toBe('IF2608')
     expect(activeTabId).toBe('tab-order-IF2608')
   })
+
+  it('renders provided positions prop instead of store positions', () => {
+    useQueryStore.setState({
+      positions: [
+        { instrumentID: 'IF2608', posiDirection: '2', position: 2, positionCost: 9600, positionProfit: 100, openCost: 9600, useMargin: 96000, todayPosition: 1, ydPosition: 1, tradingDay: '20260727' },
+        { instrumentID: 'IF2609', posiDirection: '3', position: 1, positionCost: 4900, positionProfit: -50, openCost: 4900, useMargin: 49000, todayPosition: 0, ydPosition: 1, tradingDay: '20260727' },
+      ],
+    })
+    render(<Position positions={[{ instrumentID: 'IF2608', posiDirection: '2', position: 2, positionCost: 9600, positionProfit: 100, openCost: 9600, useMargin: 96000, todayPosition: 1, ydPosition: 1, tradingDay: '20260727' }]} />)
+    expect(screen.getByText('IF2608')).toBeInTheDocument()
+    expect(screen.queryByText('IF2609')).not.toBeInTheDocument()
+  })
+
+  it('renders custom empty text when positions prop is empty', () => {
+    useQueryStore.setState({
+      positions: [
+        { instrumentID: 'IF2608', posiDirection: '2', position: 2, positionCost: 9600, positionProfit: 100, openCost: 9600, useMargin: 96000, todayPosition: 1, ydPosition: 1, tradingDay: '20260727' },
+      ],
+    })
+    render(<Position positions={[]} emptyText="无匹配持仓" />)
+    expect(screen.getByText('无匹配持仓')).toBeInTheDocument()
+  })
 })

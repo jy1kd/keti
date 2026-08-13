@@ -53,7 +53,7 @@ interface RawPosition {
 // 前端使用类型（放宽约束，允许 CTP 原始字符串）
 export type OrderEntry = RawOrder
 type TradeEntry = RawTrade
-type PositionEntry = RawPosition
+export type PositionEntry = RawPosition
 
 export type QueryTab = 'orders' | 'trades' | 'positions' | 'account' | 'stop_orders'
 

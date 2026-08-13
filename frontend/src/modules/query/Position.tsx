@@ -1,13 +1,21 @@
 import { useCallback } from 'react'
-import { useQueryStore } from './store'
+import { useQueryStore, type PositionEntry } from './store'
 import { useOrderStore } from '../order/store'
 import { useMarketStore } from '../market/store'
 import { useTabStore } from '@/stores/tabs'
 
 const DIRECTION_MAP: Record<string, string> = { '2': '多', '3': '空' }
 
-export function Position() {
-  const positions = useQueryStore((s) => s.positions)
+interface PositionProps {
+  /** 可选：外部传入持仓列表；缺省读 store */
+  positions?: PositionEntry[]
+  /** 可选：空态文案；缺省「暂无持仓数据」 */
+  emptyText?: string
+}
+
+export function Position({ positions: propPositions, emptyText = '暂无持仓数据' }: PositionProps) {
+  const storePositions = useQueryStore((s) => s.positions)
+  const positions = propPositions ?? storePositions
   const setSelectedInstrument = useOrderStore((s) => s.setSelectedInstrument)
   const setOrderForm = useOrderStore((s) => s.setOrderForm)
 
@@ -50,7 +58,7 @@ export function Position() {
   if (positions.length === 0) {
     return (
       <div className="position-table-wrap">
-        <div className="flow-empty">暂无持仓数据</div>
+        <div className="flow-empty">{emptyText}</div>
       </div>
     )
   }
