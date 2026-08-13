@@ -13,7 +13,7 @@ export interface InfiniteOrderIntent {
   timeCondition: 'gfd' | 'fok' | 'fak'
 }
 
-interface InfiniteOrderState {
+export interface InfiniteOrderState {
   instrumentID: string
   exchangeID: string
   combOffsetFlag: 'open' | 'close' | 'close_today'
