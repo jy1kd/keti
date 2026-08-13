@@ -22,12 +22,12 @@ describe('getAppMenuDef', () => {
     expect(def.map((d) => d.label)).toEqual(['行情', '功能', '设置', '性能监控']);
   });
 
-  it('行情子菜单完整镜像：全部/T型/自选/分隔符/在新窗口打开', () => {
+  it('行情子菜单完整镜像：期货/期权/自选/分隔符/在新窗口打开', () => {
     const market = getAppMenuDef().find((d) => d.id === 'market')!;
     const labels = market.submenu!
       .filter((i) => i.type !== 'separator')
       .map((i) => i.label);
-    expect(labels).toEqual(['📊 全部行情', '📉 T型期权', '⭐ 自选行情', '🪟 在新窗口打开']);
+    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '🪟 在新窗口打开']);
   });
 
   it('行情「在新窗口打开」action 为 open-market-window', () => {

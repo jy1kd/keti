@@ -120,7 +120,7 @@ declare global {
       // Menu (main → renderer): 切换 FPS 监控
       onTogglePerf: (callback: () => void) => () => void;
 
-      // Menu (main → renderer): 行情主页内切换视图（全部/自选/T型期权）
+      // Menu (main → renderer): 行情主页内切换视图（期货/自选/期权）
       onMarketView: (callback: (view: 'all' | 'favorites' | 'options') => void) => () => void;
 
       // Data exchange

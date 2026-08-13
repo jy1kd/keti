@@ -36,7 +36,7 @@ export function resolveAction(action: MenuAction, ctx: MenuContext): void {
       return showAndSend(ctx, IPC_CHANNELS.MENU_OPEN_FLOATING, action.tab);
     case 'open-market-window':
       if (ctx.windowManager) {
-        ctx.windowManager.openTabWindow('market', 'tab-market', '📊 行情');
+        ctx.windowManager.openTabWindow('market', 'tab-market', '📊 期货');
       }
       return;
     case 'toggle-perf':
