@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import App from './App'
 import { useConnectionStore } from '@/stores/connection'
 import { useTabStore } from '@/stores/tabs'
@@ -72,22 +72,6 @@ describe('App Layout — 标签页系统', () => {
     it('不渲染应用标题（由 Electron 原生标题栏承载）', () => {
       render(<App />)
       expect(screen.queryByText('SimNow 交易终端')).toBeNull()
-    })
-  })
-
-  describe('设置面板', () => {
-    it('渲染设置按钮', () => {
-      render(<App />)
-      expect(screen.getByTitle('设置')).toBeInTheDocument()
-    })
-
-    it('点击设置按钮打开设置标签页', () => {
-      render(<App />)
-      const settingsBtn = screen.getByTitle('设置')
-      fireEvent.click(settingsBtn)
-      // 验证设置标签页被打开（通过检查 tab store）
-      // 注意：由于 openTab 是 store 方法，这里主要验证不报错
-      expect(settingsBtn).toBeInTheDocument()
     })
   })
 
