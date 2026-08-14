@@ -867,10 +867,13 @@ class TestInstrumentSearch:
 class TestPresetInstruments:
     """get_preset_instruments and refresh_preset_instruments."""
 
-    def test_get_preset_returns_empty_initially(self):
+    def test_get_preset_returns_preset_instruments(self):
+        """get_preset_instruments 读取 data/preset_instruments.json 预设合约列表（仓库自带，非空）。"""
         svc = MarketService()
         result = svc.get_preset_instruments()
-        assert result["instruments"] == []
+        assert isinstance(result["instruments"], list)
+        assert len(result["instruments"]) > 0
+        assert all(isinstance(i, str) and i for i in result["instruments"])
 
     def test_refresh_preset_detects_front_month(self):
         svc = MarketService()
