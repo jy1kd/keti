@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MarketPanel } from './MarketPanel'
+import { futuresSpec } from './futuresSpec'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
+import { useCollectionsStore } from '@/stores/collections'
 import { useMarketFilterStore } from '@/stores/marketFilter'
 import { useTabStore } from '@/stores/tabs'
 import { openFloatingTab } from '@/utils/openFloatingTab'
@@ -99,7 +101,8 @@ describe('MarketPanel', () => {
       snapshots: new Map(),
       scrollEndSeq: 0,
     })
-    useContractsStore.setState({ contracts: [], favorites: [], isLoaded: false })
+    useContractsStore.setState({ contracts: [], isLoaded: false })
+    useCollectionsStore.setState({ collections: [], loaded: true })
     useMarketFilterStore.setState({
       futures: { exchanges: [], products: [] },
       options: { exchanges: [], products: [] },
@@ -139,7 +142,6 @@ describe('MarketPanel', () => {
         { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 1, productClass: '1' },
         { instrumentID: 'IF2609', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 1, productClass: '1' },
       ],
-      favorites: [],
       isLoaded: true,
     })
     useMarketStore.setState({
@@ -178,7 +180,6 @@ describe('MarketPanel', () => {
         { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 1, productClass: '1' },
         { instrumentID: 'IF9999', instrumentName: '停牌合约', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 0, productClass: '1' },
       ],
-      favorites: [],
       isLoaded: true,
     })
     useMarketStore.setState({
@@ -234,7 +235,6 @@ describe('MarketPanel', () => {
       contracts: [
         { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260821', isTrading: 1, productClass: '1' },
       ],
-      favorites: [],
       isLoaded: true,
     })
     useMarketStore.setState({
@@ -340,6 +340,20 @@ describe('MarketPanel', () => {
     })
   })
 
+  it('⭐ 列点击 → 打开 CollectionPicker（选夹面板）', async () => {
+    setupContracts()
+    render(<MarketPanel />)
+    const { ListTable } = await import('@visactor/vtable')
+    const instance = (ListTable as any).mock.results[0].value
+    const clickHandler = instance.on.mock.calls.find((call: any[]) => call[0] === 'click_cell')?.[1]
+    expect(clickHandler).toBeDefined()
+    act(() => {
+      clickHandler({ row: 1, col: futuresSpec.columns.length - 1, event: {} })
+    })
+    // 单选面板标题「收藏到收藏夹」出现（IF2608）
+    expect(screen.getByText('收藏到收藏夹')).toBeInTheDocument()
+  })
+
   describe('交易所+品种多选筛选（Task 7）', () => {
     /** 三合约跨两交易所/两品种，用于筛选断言 */
     function setupFilterContracts() {
@@ -349,7 +363,6 @@ describe('MarketPanel', () => {
           { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
           { instrumentID: 'MA609', instrumentName: '甲醇609', exchangeID: 'CZCE', productID: 'MA', volumeMultiple: 10, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
         ],
-        favorites: [],
         isLoaded: true,
       })
     }
@@ -372,7 +385,6 @@ describe('MarketPanel', () => {
           { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
           { instrumentID: 'FG609-C-1300', instrumentName: 'FG609-C-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'FG609' },
         ],
-        favorites: [],
         isLoaded: true,
       })
       render(<MarketPanel />)
@@ -414,11 +426,11 @@ describe('MarketPanel', () => {
           { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
           { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
         ],
-        favorites: [
-          { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
-          { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
-        ],
         isLoaded: true,
+      })
+      useCollectionsStore.setState({
+        collections: [{ id: 'c1', name: '默认', instrumentIDs: ['cu2609', 'FG609'] }],
+        loaded: true,
       })
       const user = userEvent.setup()
       render(<MarketPanel />)
@@ -517,12 +529,11 @@ describe('MarketPanel', () => {
           { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
           { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
         ],
-        favorites: [
-          { instrumentID: 'FG610', instrumentName: '玻璃610', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20261031', isTrading: 1, productClass: '1' },
-          { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
-          { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
-        ],
         isLoaded: true,
+      })
+      useCollectionsStore.setState({
+        collections: [{ id: 'c1', name: '默认', instrumentIDs: ['FG610', 'cu2609', 'FG609'] }],
+        loaded: true,
       })
       const user = userEvent.setup()
       render(<MarketPanel />)

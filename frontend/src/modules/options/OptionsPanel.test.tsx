@@ -55,7 +55,6 @@ const optCu: ContractInfo = { instrumentID: 'cu2609-C-70000', instrumentName: 'c
 function setupContracts() {
   useContractsStore.setState({
     contracts: [fut, optC, optP],
-    favorites: [],
     isLoaded: true,
   })
 }
@@ -63,7 +62,6 @@ function setupContracts() {
 function setupFilterContracts() {
   useContractsStore.setState({
     contracts: [fut, optC, optP, futMA, optMA, futCu, optCu],
-    favorites: [],
     isLoaded: true,
   })
 }
@@ -211,8 +209,7 @@ describe('OptionsPanel', () => {
     expect(screen.queryByText('打开T型报价')).toBeNull()
   })
 
-  it('收藏列点击：未收藏 → addToFavorites(inst)', async () => {
-    const addSpy = vi.spyOn(useContractsStore.getState(), 'addToFavorites').mockResolvedValue(true)
+  it('收藏列点击 → 打开 CollectionPicker（选夹面板）', async () => {
     render(<OptionsPanel />)
     const { ListTable } = await import('@visactor/vtable')
     const instance = (ListTable as any).mock.results[0].value
@@ -221,7 +218,8 @@ describe('OptionsPanel', () => {
     act(() => {
       clickHandler({ row: 1, col: favoriteCol, event: {} })
     })
-    expect(addSpy).toHaveBeenCalledWith(fut)
+    // 单选面板标题「收藏到收藏夹」出现（FG609 标底行）
+    expect(screen.getByText('收藏到收藏夹')).toBeInTheDocument()
   })
 
   it('可见区上报：期权标签激活时挂载后上报可见合约（驱动共享订阅管理器）', async () => {

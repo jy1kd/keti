@@ -2,9 +2,7 @@ import { useCallback } from 'react'
 import type { ReactNode } from 'react'
 import { ContextMenu } from '@/components/ContextMenu'
 import { toast } from '@/components/Toast'
-import type { ContractInfo } from '@/services/types'
 
-/** 单选右键菜单状态（来自 useContractContextMenu.contextMenu） */
 interface SingleMenuState {
   instrumentID: string
   price: number
@@ -12,7 +10,6 @@ interface SingleMenuState {
   y: number
 }
 
-/** 多选右键菜单状态（来自 useContractContextMenu.multiSelectMenu） */
 interface MultiMenuState {
   instrumentIDs: string[]
   x: number
@@ -22,12 +19,18 @@ interface MultiMenuState {
 interface UseContractMenusArgs {
   contextMenu: SingleMenuState | null
   multiSelectMenu: MultiMenuState | null
-  /** 已收藏合约 ID 集合（菜单收藏态与批量收藏判断） */
+  /** 收藏态集合（行情页 = 任一夹；夹页 = 本夹） */
   favoritedIds: Set<string>
-  /** 全量合约（收藏/取消收藏时查找合约对象） */
-  contracts: ContractInfo[]
-  addToFavorites: (inst: ContractInfo) => Promise<boolean> | boolean
-  removeFromFavorites: (instrumentID: string) => Promise<unknown> | void
+  /** 收藏交互模式：picker（行情页，弹选夹面板）| folder（夹页，直接切本夹） */
+  favoriteMode: 'picker' | 'folder'
+  /** picker 模式：打开选夹面板 */
+  onOpenFavoritePicker?: (instrumentIDs: string[]) => void
+  /** picker 模式：批量取消收藏（从所有夹移除） */
+  onRemoveFromAll?: (instrumentIDs: string[]) => void
+  /** folder 模式：本夹内切换收藏 */
+  onToggleInFolder?: (instrumentID: string) => void
+  /** folder 模式：批量从本夹移除 */
+  onRemoveFromFolderBatch?: (instrumentIDs: string[]) => void
   openOrderPopup: (instrumentID: string) => void
   openQueryPopup: (instrumentID: string) => void
   openKlineTab: (instrumentID: string) => void
@@ -37,25 +40,21 @@ interface UseContractMenusArgs {
 }
 
 /**
- * useContractMenus — 合约单选/多选右键菜单 + 工具栏批量收藏共享逻辑。
+ * useContractMenus — 合约右键菜单 + 工具栏收藏共享逻辑（picker / folder 双模式）。
  *
- * 期货页（MarketPanel）与期权页（OptionsPanel）此前各自内联约 80 行相同的
- * ContextMenu JSX（开报单/K线/查询/收藏/复制）与工具栏收藏按钮的批量
- * allFavorited/count 逻辑，抽取为本 hook 复用，行为保持一致。
- *
- * 返回：
- * - singleMenu / multiMenu：可直接渲染的右键菜单 JSX 块；
- * - batchToggleFavorite(selectedInstrument, selectedContracts)：工具栏收藏按钮点击处理；
- * - favoriteButtonLabel(selectedInstrument, selectedContracts)：工具栏收藏按钮文案。
+ * - picker（行情页）：收藏项统一弹 CollectionPicker；批量取消收藏 = 从所有夹移除。
+ * - folder（夹页）：收藏项直接切本夹 / 批量从本夹移除。
  */
 export function useContractMenus(args: UseContractMenusArgs) {
   const {
     contextMenu,
     multiSelectMenu,
     favoritedIds,
-    contracts,
-    addToFavorites,
-    removeFromFavorites,
+    favoriteMode,
+    onOpenFavoritePicker,
+    onRemoveFromAll,
+    onToggleInFolder,
+    onRemoveFromFolderBatch,
     openOrderPopup,
     openQueryPopup,
     openKlineTab,
@@ -64,61 +63,26 @@ export function useContractMenus(args: UseContractMenusArgs) {
     closeMenus,
   } = args
 
-  /** 工具栏收藏按钮：多选批量收藏/取消收藏；单选切换收藏 */
-  const batchToggleFavorite = useCallback(async (
+  /** 工具栏收藏按钮：弹选夹面板（picker 模式）；folder 模式不渲染工具栏收藏 */
+  const batchToggleFavorite = useCallback((
     selectedInstrument: string | null,
     selectedContracts: Set<string>,
   ) => {
-    // 如果有多选，批量收藏/取消收藏
-    if (selectedContracts.size > 1) {
-      const allFavorited = Array.from(selectedContracts).every((id) => favoritedIds.has(id))
-      if (allFavorited) {
-        // 全部已收藏，批量取消
-        for (const id of selectedContracts) {
-          await removeFromFavorites(id)
-        }
-        toast.success(`已移除 ${selectedContracts.size} 个合约`)
-      } else {
-        // 批量收藏
-        let count = 0
-        for (const id of selectedContracts) {
-          const inst = contracts.find((c) => c.instrumentID === id)
-          if (inst) {
-            const success = await addToFavorites(inst)
-            if (success) count++
-          }
-        }
-        toast.success(`已收藏 ${count} 个合约`)
-      }
-      return
-    }
+    if (favoriteMode !== 'picker') return
+    const ids = selectedContracts.size > 0
+      ? Array.from(selectedContracts)
+      : selectedInstrument ? [selectedInstrument] : []
+    if (ids.length > 0) onOpenFavoritePicker?.(ids)
+  }, [favoriteMode, onOpenFavoritePicker])
 
-    // 单个合约收藏/取消收藏
-    if (!selectedInstrument) return
-    if (favoritedIds.has(selectedInstrument)) {
-      await removeFromFavorites(selectedInstrument)
-      toast.success(`已移除 ${selectedInstrument}`)
-    } else {
-      const inst = contracts.find((c) => c.instrumentID === selectedInstrument)
-      if (inst) {
-        await addToFavorites(inst)
-        toast.success(`已收藏 ${inst.instrumentID}`)
-      }
-    }
-  }, [favoritedIds, contracts, addToFavorites, removeFromFavorites])
-
-  /** 工具栏收藏按钮文案：多选 → 批量移除/批量收藏；单选 → 移除/收藏 */
   const favoriteButtonLabel = useCallback((
     selectedInstrument: string | null,
     selectedContracts: Set<string>,
   ): string => {
-    if (selectedContracts.size > 1) {
-      return Array.from(selectedContracts).every((id) => favoritedIds.has(id)) ? '批量移除' : '批量收藏'
-    }
-    return selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏'
+    if (selectedContracts.size > 1) return '批量收藏'
+    return selectedInstrument && favoritedIds.has(selectedInstrument) ? '收藏夹' : '收藏'
   }, [favoritedIds])
 
-  /** 单选右键菜单（开报单/K线/查询/收藏/复制合约代码） */
   const singleMenu: ReactNode = contextMenu ? (
     <ContextMenu
       x={contextMenu.x}
@@ -127,81 +91,64 @@ export function useContractMenus(args: UseContractMenusArgs) {
         { label: '打开报单', icon: '📝', onClick: () => openOrderPopup(contextMenu.instrumentID) },
         { label: '打开K线', icon: '📈', onClick: () => openKlineTab(contextMenu.instrumentID) },
         { label: '查询', icon: '📋', onClick: () => openQueryPopup(contextMenu.instrumentID) },
-        {
-          label: favoritedIds.has(contextMenu.instrumentID) ? '取消收藏' : '收藏',
-          icon: favoritedIds.has(contextMenu.instrumentID) ? '★' : '⭐',
-          onClick: () => {
-            if (favoritedIds.has(contextMenu.instrumentID)) {
-              removeFromFavorites(contextMenu.instrumentID)
-              toast.success(`已移除 ${contextMenu.instrumentID}`)
-            } else {
-              const inst = contracts.find((c) => c.instrumentID === contextMenu.instrumentID)
-              if (inst) {
-                addToFavorites(inst)
-                toast.success(`已收藏 ${contextMenu.instrumentID}`)
-              }
+        favoriteMode === 'folder'
+          ? {
+              label: favoritedIds.has(contextMenu.instrumentID) ? '从本夹移除' : '收藏到本夹',
+              icon: favoritedIds.has(contextMenu.instrumentID) ? '★' : '⭐',
+              onClick: () => onToggleInFolder?.(contextMenu.instrumentID),
             }
-          },
-        },
+          : {
+              label: '收藏到收藏夹…',
+              icon: '⭐',
+              onClick: () => onOpenFavoritePicker?.([contextMenu.instrumentID]),
+            },
         { label: '复制合约代码', icon: '📋', onClick: () => navigator.clipboard.writeText(contextMenu.instrumentID) },
       ]}
       onClose={closeMenus}
     />
   ) : null
 
-  /** 多选右键菜单（批量开报单/K线/收藏/取消收藏/复制代码） */
   const multiMenu: ReactNode = multiSelectMenu ? (() => {
-    // 计算已收藏和未收藏的数量
-    const unfavoritedIds = multiSelectMenu.instrumentIDs.filter((id) => !favoritedIds.has(id))
-    const favoritedIdsInSelection = multiSelectMenu.instrumentIDs.filter((id) => favoritedIds.has(id))
+    const favoritedInSelection = multiSelectMenu.instrumentIDs.filter((id) => favoritedIds.has(id))
+    const favoriteItem =
+      favoriteMode === 'folder'
+        ? {
+            label: `批量从本夹移除 (${favoritedInSelection.length}个)`,
+            icon: '★',
+            disabled: favoritedInSelection.length === 0,
+            onClick: () => {
+              onRemoveFromFolderBatch?.(favoritedInSelection)
+              toast.success(`已从本夹移除 ${favoritedInSelection.length} 个合约`)
+            },
+          }
+        : {
+            label: `批量收藏到收藏夹… (${multiSelectMenu.instrumentIDs.length}个)`,
+            icon: '⭐',
+            onClick: () => onOpenFavoritePicker?.(multiSelectMenu.instrumentIDs),
+          }
+    const removeAllItem =
+      favoriteMode === 'folder'
+        ? null
+        : {
+            label: `批量取消收藏 (${favoritedInSelection.length}个)`,
+            icon: '★',
+            disabled: favoritedInSelection.length === 0,
+            onClick: () => {
+              onRemoveFromAll?.(favoritedInSelection)
+              toast.success(`已移除 ${favoritedInSelection.length} 个合约的全部收藏`)
+            },
+          }
 
     return (
       <ContextMenu
         x={multiSelectMenu.x}
         y={multiSelectMenu.y}
         items={[
-          {
-            label: `批量打开报单 (${multiSelectMenu.instrumentIDs.length}个)`,
-            icon: '📝',
-            onClick: () => openOrderTabs(multiSelectMenu.instrumentIDs),
-          },
-          {
-            label: `批量打开K线 (${multiSelectMenu.instrumentIDs.length}个)`,
-            icon: '📈',
-            onClick: () => openKlineTabs(multiSelectMenu.instrumentIDs),
-          },
-          {
-            label: `批量收藏 (${unfavoritedIds.length}个)`,
-            icon: '⭐',
-            disabled: unfavoritedIds.length === 0,
-            onClick: async () => {
-              let count = 0
-              for (const id of unfavoritedIds) {
-                const inst = contracts.find((c) => c.instrumentID === id)
-                if (inst) {
-                  const success = await addToFavorites(inst)
-                  if (success) count++
-                }
-              }
-              toast.success(`已收藏 ${count} 个合约`)
-            },
-          },
-          {
-            label: `批量取消收藏 (${favoritedIdsInSelection.length}个)`,
-            icon: '★',
-            disabled: favoritedIdsInSelection.length === 0,
-            onClick: async () => {
-              for (const id of favoritedIdsInSelection) {
-                await removeFromFavorites(id)
-              }
-              toast.success(`已移除 ${favoritedIdsInSelection.length} 个合约`)
-            },
-          },
-          {
-            label: `复制合约代码 (${multiSelectMenu.instrumentIDs.length}个)`,
-            icon: '📋',
-            onClick: () => navigator.clipboard.writeText(multiSelectMenu.instrumentIDs.join(',')),
-          },
+          { label: `批量打开报单 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📝', onClick: () => openOrderTabs(multiSelectMenu.instrumentIDs) },
+          { label: `批量打开K线 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📈', onClick: () => openKlineTabs(multiSelectMenu.instrumentIDs) },
+          favoriteItem,
+          ...(removeAllItem ? [removeAllItem] : []),
+          { label: `复制合约代码 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📋', onClick: () => navigator.clipboard.writeText(multiSelectMenu.instrumentIDs.join(',')) },
         ]}
         onClose={closeMenus}
       />

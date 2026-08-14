@@ -21,17 +21,17 @@ function findProductIdsByChineseName(keyword: string): string[] {
 interface Props {
   isOpen: boolean
   onClose: () => void
-  /** 加入收藏（自动订阅） */
-  onAddToFavorite: (instrument: ContractInfo) => void
-  /** 移除收藏（取消订阅） */
-  onRemoveFromFavorite: (instrumentId: string) => void
+  /** 打开选夹面板（收藏入口） */
+  onOpenFavoritePicker: (instrumentID: string) => void
+  /** 从所有收藏夹移除 */
+  onRemoveFromAllCollections: (instrumentIDs: string[]) => void
   /** All contract IDs in the system */
   allContractIds: Set<string>
   /** Favorited IDs (show "移除" button) */
   favoritedIds: Set<string>
 }
 
-export function InstrumentSearchModal({ isOpen, onClose, onAddToFavorite, onRemoveFromFavorite, allContractIds, favoritedIds }: Props) {
+export function InstrumentSearchModal({ isOpen, onClose, onOpenFavoritePicker, onRemoveFromAllCollections, allContractIds, favoritedIds }: Props) {
   const [exchanges, setExchanges] = useState<string[]>([])
   const [products, setProducts] = useState<string[]>([])
   const [instruments, setInstruments] = useState<ContractInfo[]>([])
@@ -154,11 +154,7 @@ export function InstrumentSearchModal({ isOpen, onClose, onAddToFavorite, onRemo
     }
   }
 
-  const handleSubscribe = (inst: ContractInfo) => {
-    // 加入收藏（自动订阅）；反馈与 MarketPanel 其它收藏入口一致
-    onAddToFavorite(inst)
-    toast.success(`${allContractIds.has(inst.instrumentID) ? '已收藏' : '已订阅'} ${inst.instrumentID}`)
-  }
+  const handleSubscribe = (inst: ContractInfo) => onOpenFavoritePicker(inst.instrumentID)
 
   if (!isOpen) return null
 
@@ -241,7 +237,7 @@ export function InstrumentSearchModal({ isOpen, onClose, onAddToFavorite, onRemo
                         <button
                           className="btn-remove-favorite"
                           onClick={() => {
-                            onRemoveFromFavorite(inst.instrumentID)
+                            onRemoveFromAllCollections([inst.instrumentID])
                             toast.success(`已移除 ${inst.instrumentID}`)
                           }}
                         >
