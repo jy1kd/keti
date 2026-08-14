@@ -63,10 +63,14 @@ describe('QuoteTable', () => {
     expect(options.records[0].lastPrice).toBe('--')
   })
 
-  it('releases vtable instance on unmount', async () => {
+  it('unmount 延迟 release（vtable RO 竞态防护）：卸载不立即释放，250ms 后释放一次', async () => {
+    const { ListTable } = await import('@visactor/vtable')
     const { unmount } = render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
+    const instance = (ListTable as any).mock.results[0].value
     unmount()
-    expect(true).toBe(true)
+    expect(instance.release).not.toHaveBeenCalled() // 延迟释放：卸载瞬间不 release（防 RO 回调读已释放实例）
+    act(() => { vi.advanceTimersByTime(250) })
+    expect(instance.release).toHaveBeenCalledTimes(1)
   })
 
   it('涨跌幅以 preSettlementPrice 为基准（非 preClosePrice）', async () => {

@@ -37,6 +37,8 @@ interface QuoteTableProps {
 
 /** mouseup 距上次 scroll 在此窗口内视为滚动条释放（松手） */
 const SCROLL_RELEASE_WINDOW_MS = 200
+/** vtable 卸载延迟释放窗口：覆盖其内部 ResizeObserver 100ms 防抖，防 release 后 resize 读 null 崩溃 */
+const RESIZE_SETTLE_MS = 250
 
 /** 标底行（合并表头行）合约列样式：红/粗/大字（比默认 12 加大） */
 const UNDERLYING_HEADER_STYLE = { color: '#f87171', fontWeight: 'bold', fontSize: 14 }
@@ -92,6 +94,8 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
   const mergedRowsRef = useRef<Set<number>>(new Set())
   /** 合并兜底 rAF 句柄（渲染异步未就绪时重试；卸载/重建时清除在排队帧） */
   const mergeRafRef = useRef<number | null>(null)
+  /** 延迟释放定时器句柄：同一实例至多一个挂起释放定时器（vtable RO 竞态，见 cleanup） */
+  const releaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
@@ -496,7 +500,19 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
       window.removeEventListener('mouseup', handleScrollEnd)
       window.removeEventListener('keyup', handleScrollEnd)
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-      table.release()
+      // 同步置 null：后续 effect（records/局部刷新/选中）检查 tableRef.current 即跳过，不再触碰已脱离表
+      tableRef.current = null
+      // 延迟 release：vtable 内部 ResizeObserver 对容器 100ms 防抖；若 release 先于防抖回调
+      // （internalProps 置 null），回调内 resize()→getElement() 读 null 崩溃（收藏夹开成悬浮窗后
+      // 挂载/卸载频繁，触发率上升）。延迟 ~250ms 释放，让挂起回调先在存活表上触发；release 幂等。
+      // 同实例至多一个挂起释放定时器：快速开合时先清旧再排新（dev StrictMode 双挂载下最早实例
+      // 的释放可能被后一 cleanup 取消——dev-only 窗口，生产单挂载不受影响）。
+      const t = table
+      if (releaseTimerRef.current) clearTimeout(releaseTimerRef.current)
+      releaseTimerRef.current = setTimeout(() => {
+        releaseTimerRef.current = null
+        t.release()
+      }, RESIZE_SETTLE_MS)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 

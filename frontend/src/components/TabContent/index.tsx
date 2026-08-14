@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom'
+import { useEffect } from 'react'
 import { useTabStore, type Tab } from '@/stores/tabs'
 import { useFloatingWindowStore, FLOATING_CHROME_H } from '@/stores/floatingWindows'
 import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
@@ -96,6 +97,17 @@ export function TabContent() {
   const tabs = useTabStore((s) => s.tabs)
   const activeTabId = useTabStore((s) => s.activeTabId)
   const windows = useFloatingWindowStore((s) => s.windows)
+
+  // 切标签后：若焦点落在被隐藏（aria-hidden="true"）的面板内则 blur。display:none 面板
+  // 无法保留焦点，且浏览器对「aria-hidden 祖先进 contains focused descendant」报警
+  // （如 collections-page 按钮聚焦时切走标签）。同一 commit 内 aria-hidden 已随
+  // activeTabId 更新，effect 在 commit 后跑、能看到新隐藏态。
+  useEffect(() => {
+    const el = document.activeElement as HTMLElement | null
+    if (el && el.closest('.tab-content__panel[aria-hidden="true"]')) {
+      el.blur()
+    }
+  }, [activeTabId])
 
   // 主窗口内容区展示的有效活跃标签：若活跃标签已浮动（脱离为弹窗），主窗口回退到
   // 默认行情标签页，保证「拖出弹窗后主窗口下方不空白」。正常路径下 detachTabAt 已
