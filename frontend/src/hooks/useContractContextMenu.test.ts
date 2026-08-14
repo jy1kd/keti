@@ -5,7 +5,7 @@ import { useTabStore } from '@/stores/tabs'
 import { useMarketStore } from '@/modules/market/store'
 import { openFloatingTab } from '@/utils/openFloatingTab'
 
-// Mock 统一浮动窗入口：openOrderPopup/openQueryPopup 现为打开浮动窗口
+// Mock 统一浮动窗入口：openOrderPopup 现为打开浮动窗口
 vi.mock('@/utils/openFloatingTab', () => ({
   openFloatingTab: vi.fn(),
   ORDER_FLOATING_SIZE: { w: 620, h: 540 },

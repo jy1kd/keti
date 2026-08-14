@@ -52,6 +52,8 @@ describe('getAppMenuDef', () => {
       .map((i) => i.label);
     expect(labels).toEqual(['📝 报单窗口', '📈 K线窗口', '📋 报单查询窗口', '📋 持仓查询窗口', '💰 资金查询窗口', '退出']);
     expect(fnMenu.submenu!.some((i) => i.id === 'app-quit')).toBe(true);
+    // 资金查询窗口：open-floating query-account
+    expect(fnMenu.submenu!.some((i) => i.id === 'func-query-account' && i.action?.type === 'open-floating' && i.action.tab === 'query-account')).toBe(true);
   });
 
   it('设置子菜单仅 ⚙ 设置', () => {

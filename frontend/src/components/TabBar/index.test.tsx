@@ -262,6 +262,7 @@ describe('TabBar', () => {
       hoverOpen()
       expect(screen.getByText('📝 报单')).toBeInTheDocument()
       expect(screen.getByText('📈 K线')).toBeInTheDocument()
+      expect(screen.getByText('♾️ 无限下单')).toBeInTheDocument()
       expect(screen.getByText('⚙ 设置')).toBeInTheDocument()
     })
 

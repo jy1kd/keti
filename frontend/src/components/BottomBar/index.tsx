@@ -22,7 +22,7 @@ interface BottomBarProps {
  *
  * 承接原 GlobalBar 中除「工作区标签」外的全部内容：
  * - 左：连接状态（MD/TD 指示灯）
- * - 中：全局工具（报单/K线/查询/设置/FPS/网络监控，图标 + 中文名）
+ * - 中：全局工具（报单/K线/无限下单/设置/FPS/网络监控，图标 + 中文名）
  * - 右：`>`/`<` 箭头，点击切换工具区全部展开 / 全部隐藏（max-width + opacity 动画）
  */
 export function BottomBar({ perfVisible, onTogglePerf }: BottomBarProps) {

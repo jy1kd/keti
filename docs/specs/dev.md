@@ -106,15 +106,12 @@ frontend/
 │   │   │   ├── OptionPanel.tsx    # 期权面板
 │   │   │   ├── TQuoteTable.tsx    # T型报价表格（含波动率）
 │   │   │   └── store.ts           # 期权状态管理（Zustand）
-│   │   └── query/             # 查询模块
-│   │       ├── QueryPanel.tsx     # 查询面板主组件（含暂停更新按钮）
+│   │   └── query/             # 查询模块（独立查询窗口）
+│   │       ├── OrdersQuery.tsx    # 报单查询窗口
 │   │       ├── OrderFlow.tsx      # 报单流水（增量更新、新数据高亮）
-│   │       ├── TradeFlow.tsx      # 成交流水（增量更新、新数据高亮）
+│   │       ├── PositionsQuery.tsx # 持仓查询窗口
 │   │       ├── Position.tsx       # 持仓查询（支持点击平仓）
-│   │       ├── AccountQuery.tsx   # 账户资金查询
-│   │       ├── QuoteQuery.tsx     # 报价查询（五档深度）
-│   │       ├── ContractQuery.tsx  # 合约查询
-│   │       ├── StopOrderList.tsx  # 止损单列表
+│   │       ├── AccountQuery.tsx   # 资金查询窗口（账户资金）
 │   │       └── store.ts           # 查询状态管理（Zustand）
 │   ├── services/              # API服务层
 │   │   ├── api.ts             # REST API封装（Axios）
@@ -206,13 +203,13 @@ App.tsx
 │   ├── OrderForm/             # 报单表单
 │   ├── StopOrderForm/         # 止损单表单
 │   └── QuickActions/          # 快捷操作（一键反向、一键锁仓）
-├── QueryPanel/                # 查询面板（底部）
+├── Query/                     # 查询模块（独立查询窗口）
+│   ├── OrdersQuery/           # 报单查询窗口
 │   ├── OrderFlow/             # 报单流水
-│   ├── TradeFlow/             # 成交流水
+│   ├── PositionsQuery/        # 持仓查询窗口
 │   ├── Position/              # 持仓查询
-│   ├── QuoteQuery/            # 报价查询
-│   ├── ContractQuery/         # 合约查询
-│   └── StopOrderList/         # 止损单列表
+│   ├── AccountQuery/          # 资金查询窗口
+│   └── store.ts               # 查询状态管理（Zustand）
 └── PerfMonitor/               # 性能监控（P2，默认隐藏）
 ```
 
@@ -230,14 +227,11 @@ App.tsx
 | **OrderForm** | 报单表单 | 限价/市价、价格步进、快捷键 |
 | **StopOrderForm** | 止损单表单 | 止损价设置、提交止损单 |
 | **QuickActions** | 快捷操作 | 一键反向、一键锁仓 |
-| **QueryPanel** | 查询面板容器 | 多Tab切换、暂停更新 |
+| **OrdersQuery** | 报单查询窗口 | 状态筛选、暂停更新、C键撤销全部 |
 | **OrderFlow** | 报单流水 | 增量更新、新数据高亮、时间倒序 |
-| **TradeFlow** | 成交流水 | 增量更新、新数据高亮、时间倒序 |
+| **PositionsQuery** | 持仓查询窗口 | 合约筛选、暂停更新 |
 | **Position** | 持仓查询 | 点击持仓直接平仓 |
-| **AccountQuery** | 账户资金查询 | 可用余额、冻结资金、持仓盈亏、实时更新 |
-| **QuoteQuery** | 报价查询 | 五档行情深度展示 |
-| **ContractQuery** | 合约查询 | 合约详细信息展示 |
-| **StopOrderList** | 止损单列表 | 止损单状态展示、取消操作 |
+| **AccountQuery** | 资金查询窗口 | 可用余额、冻结资金、持仓盈亏、实时更新 |
 | **PerfMonitor** | 性能监控 | FPS监控、渲染耗时统计 |
 
 ### 3.2 状态管理
@@ -329,8 +323,8 @@ interface QueryStore {
 │  - K线图                        │                               │
 │                                 │                               │
 ├─────────────────────────────────┴───────────────────────────────┤
-│ 查询面板（底部）                                                 │
-│ [报单流水] [成交流水] [持仓] [资金] [报价] [合约] [止损单]        │
+│ 查询窗口（独立浮动窗）                                          │
+│ 报单查询 / 持仓查询 / 资金查询                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -1351,8 +1345,8 @@ async def global_exception_handler(request, exc):
 |------|------|----------|
 | 增量更新 | 新数据插入顶部，不重新渲染整个列表 | query/store.ts |
 | 新数据高亮 | 新数据背景色闪烁（持续2秒） | OrderFlow.tsx |
-| 自动滚动 | 新数据自动滚动到可视区域 | QueryPanel.tsx |
-| 暂停更新 | 用户可暂停自动更新 | QueryPanel.tsx |
+| 自动滚动 | 新数据自动滚动到可视区域 | OrdersQuery.tsx |
+| 暂停更新 | 用户可暂停自动更新 | OrdersQuery.tsx |
 
 ### 8.3 内存优化
 

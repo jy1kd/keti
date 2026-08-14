@@ -26,7 +26,7 @@ export function OrdersQuery() {
   const handleCancelAll = useQueryStore((s) => s.handleCancelAll)
   const [filter, setFilter] = useState<OrderFilter>('all')
 
-  // 10s 自刷新：完成后调度下一次，避免重入（对齐 QueryPanel 节奏）
+  // 10s 自刷新：完成后调度下一次，避免重入（对齐查询窗口节奏）
   useEffect(() => {
     let cancelled = false
     let timer: ReturnType<typeof setTimeout>
@@ -42,7 +42,7 @@ export function OrdersQuery() {
     }
   }, [fetchOrders])
 
-  // C 快捷键撤销全部：输入框/文本域聚焦时不触发（沿用 QueryPanel 语义）
+  // C 快捷键撤销全部：输入框/文本域聚焦时不触发（沿用查询窗口语义）
   const onKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'c' || e.key === 'C') {
