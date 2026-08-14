@@ -78,13 +78,13 @@ describe('MenuManager', () => {
   });
 
   describe('行情', () => {
-    it('包含 期货/期权/自选行情/K线/T型报价/在新窗口打开', () => {
+    it('包含 期货/期权/收藏夹/K线/T型报价/在新窗口打开', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
       const labels = getMenu('行情')
         .submenu!.map((i) => i.label)
         .filter(Boolean);
-      expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']);
+      expect(labels).toEqual(['📊 期货', '📉 期权', '📁 收藏夹', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']);
     });
 
     it('点击 T型报价 发送 menu:open-floating tquote', () => {
@@ -115,10 +115,10 @@ describe('MenuManager', () => {
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'options');
     });
 
-    it('点击自选行情发送 menu:market-view favorites', () => {
+    it('点击收藏夹发送 menu:market-view favorites', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
-      clickItem('行情', '⭐ 自选行情');
+      clickItem('行情', '📁 收藏夹');
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'favorites');
     });
 

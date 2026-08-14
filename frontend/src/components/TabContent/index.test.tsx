@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { TabContent } from './index'
 import { useTabStore, type Tab, type TabType } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
+import { useCollectionsStore } from '@/stores/collections'
 
 // Mock MarketPanel 组件（避免依赖复杂子组件）
 vi.mock('@/modules/market/MarketPanel', () => ({
@@ -173,7 +174,7 @@ describe('TabContent', () => {
       ['order', '报单页面'],
       ['kline', 'K线页面'],
       ['settings', '⚙ 设置'],
-      ['options', '自选'],
+      ['options', '筛选'],
       ['ipc-monitor', '🔌 IPC 监控'],
       ['query-account', '资金查询 Mock'],
       ['query-orders', '报单查询'],
@@ -213,15 +214,47 @@ describe('TabContent', () => {
       expect(screen.queryByText(/标的:/)).toBeNull()
     })
 
-    // 审查 🔵-2：自选页标题已删除，改用稳定的 data-testid 断言页面渲染
-    it('应为 favorites 类型渲染自选页', () => {
-      const tab = makeTab({ type: 'favorites' })
+    it('应为 collections 类型渲染收藏夹管理页', () => {
+      const tab = makeTab({ type: 'collections' })
       useTabStore.setState({
         tabs: [tab],
         activeTabId: tab.id,
       })
       render(<TabContent />)
-      expect(screen.getByTestId('favorites-page')).toBeInTheDocument()
+      expect(screen.getByTestId('collections-page')).toBeInTheDocument()
+    })
+
+    it('应为 collection 类型渲染单收藏夹页，并透传 collectionId 与 tabId', () => {
+      const tab = makeTab({ type: 'collection', id: 'tab-collection-coll-x', props: { collectionId: 'coll-x' } })
+      useTabStore.setState({
+        tabs: [tab],
+        activeTabId: tab.id,
+      })
+      // 预置 coll-x 收藏夹：页面查到该夹并渲染其内容（空夹态），证明 collectionId prop 已透传；
+      // 若未透传，collectionId 为空串 → 查不到 → 渲染「收藏夹不存在」
+      useCollectionsStore.setState({ collections: [{ id: 'coll-x', name: '测试夹', instrumentIDs: [] }], loaded: true })
+      render(<TabContent />)
+      expect(screen.getByTestId('collection-page')).toBeInTheDocument()
+      expect(screen.getByText('收藏夹为空')).toBeInTheDocument()
+    })
+
+    it('切标签时 blur 被隐藏面板内的焦点元素（aria-hidden 焦点警告修复）', () => {
+      useCollectionsStore.setState({ collections: [{ id: 'a', name: 'A', instrumentIDs: [] }], loaded: true })
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
+          { id: 'tab-collections', type: 'collections', title: '📁 收藏夹', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-collections',
+      })
+      render(<TabContent />)
+      const renameBtn = screen.getAllByText('重命名')[0] as HTMLElement
+      renameBtn.focus()
+      expect(document.activeElement).toBe(renameBtn)
+      // 切到期货标签 → collections 面板 aria-hidden=true；effect 应 blur 面板内焦点元素
+      act(() => { useTabStore.getState().setActiveTab('tab-market') })
+      expect(document.activeElement).not.toBe(renameBtn)
+      expect(document.activeElement?.tagName).toBe('BODY')
     })
   })
 

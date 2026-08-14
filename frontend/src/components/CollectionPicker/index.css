@@ -1,0 +1,108 @@
+/* 收藏夹选择面板（复用 modal-overlay/modal-content 骨架） */
+.collection-picker {
+  width: 320px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.collection-picker__list {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding: 4px 0;
+}
+
+.collection-picker__row {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.collection-picker__row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.collection-picker__row input[type='checkbox'] {
+  accent-color: var(--color-primary, #4a9eff);
+}
+
+.collection-picker__name {
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.collection-picker__count {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.collection-picker__empty {
+  padding: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: 12px;
+}
+
+.collection-picker__new {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.collection-picker__new input {
+  flex: 1;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.collection-picker__new button {
+  padding: 4px 10px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.collection-picker__footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.collection-picker__manage {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.collection-picker__remove-all {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--color-error);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.collection-picker__confirm {
+  padding: 4px 16px;
+  background: var(--color-primary, #4a9eff);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}

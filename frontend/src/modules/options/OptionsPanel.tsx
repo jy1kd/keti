@@ -11,15 +11,15 @@ import { filterByExchangeAndProduct } from '@/modules/market/filter'
 import { useMarketStore } from '@/modules/market/store'
 import { useOrderStore } from '@/modules/order/store'
 import { useContractsStore } from '@/stores/contracts'
+import { useCollectionsStore, unionFavoritedIds } from '@/stores/collections'
 import { useMarketFilterStore } from '@/stores/marketFilter'
 import { useTabStore } from '@/stores/tabs'
 import { openTQuoteFloating } from '@/utils/openFloatingTab'
 import { useContractContextMenu } from '@/hooks/useContractContextMenu'
 import { useContractMenus } from '@/hooks/useContractMenus'
 import { usePointOrder } from '@/hooks/usePointOrder'
+import { CollectionPicker } from '@/components/CollectionPicker'
 import { getProductName } from '@/utils/productNames'
-import { isContractActive } from '@/utils/contractStatus'
-import { toast } from '@/components/Toast'
 import type { ContractInfo } from '@/services/types'
 import './styles.css'
 
@@ -40,9 +40,6 @@ interface UnderlyingMenuState {
 }
 
 export function OptionsPanel() {
-  const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
-  // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
-  const [filterActive, setFilterActive] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   // 标底行右键菜单（仅「打开T型报价」一项）
@@ -63,8 +60,11 @@ export function OptionsPanel() {
   }, [underlyingMenu])
   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
-  const { contracts, favorites, addToFavorites, removeFromFavorites } = useContractsStore()
+  const contracts = useContractsStore((s) => s.contracts)
+  const collections = useCollectionsStore((s) => s.collections)
   const { contextMenu, multiSelectMenu, openOrderPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
+  // 收藏选夹面板（⭐ / 右键 / 工具栏 / 搜索弹窗统一入口）
+  const [picker, setPicker] = useState<{ instrumentIDs: string[] } | null>(null)
   // 期权标签是否激活：激活翻转为 true 时 QuoteTable 重报可见区，订阅管理器立即补订阅
   const isActive = useTabStore((s) => s.tabs.some((t) => t.type === 'options' && t.id === s.activeTabId))
 
@@ -74,13 +74,14 @@ export function OptionsPanel() {
   // 期货全量 → 期权全量（分组用 futures 匹配标底行真实合约）
   const futures = useMemo(() => contracts.filter((c) => c.productClass === '1'), [contracts])
   const options = useMemo(() => contracts.filter((c) => c.productClass === '2' || c.productClass === '6'), [contracts])
-  const favoriteOptions = useMemo(
-    () => favorites.filter((c) => c.productClass === '2' || c.productClass === '6'),
-    [favorites],
+  // ⭐ 填充态 = 任一收藏夹内的合约（union）；仅用于 ⭐ 列/收藏按钮状态，不再做内部自选视图
+  const favoritedIds = useMemo(
+    () => unionFavoritedIds(collections),
+    [collections],
   )
 
-  // 全部/自选 基础集（自选 = 已收藏期权）
-  const baseOptions = activeTab === 'all' ? options : favoriteOptions
+  // 期权页基础集 = 全部期权（已去除 [全部|自选] 内部视图）
+  const baseOptions = options
 
   // 筛选面板品种中文名（显示用；可选交易所/品种列表由 ContractFilter 内经 computeFilterOptions 交叉计算，品种=标底品种）
   const filterProductNames = useMemo(() => {
@@ -92,16 +93,15 @@ export function OptionsPanel() {
     return m
   }, [options])
 
-  // 分组前先过滤期权（交易所 + 标底品种 + 仅交易中），再按标底分组展平为有序 ContractInfo[]
+  // 分组前先过滤期权（交易所 + 标底品种），再按标底分组展平为有序 ContractInfo[]
   // （标底行在前、期权行随后；组内无可见期权时整组消失）。此列表是搜索框的作用域。
   const listRows = useMemo(() => {
-    let filteredOptions = filterByExchangeAndProduct(
+    const filteredOptions = filterByExchangeAndProduct(
       baseOptions,
       filter.exchanges,
       filter.products,
       (c) => deriveUnderlyingProduct(c.underlyingInstrID ?? ''),
     )
-    filteredOptions = filterActive ? filteredOptions.filter(isContractActive) : filteredOptions
     const groups = groupOptionsByUnderlying(filteredOptions, futures)
     const flat: ContractInfo[] = []
     for (const g of groups) {
@@ -109,7 +109,7 @@ export function OptionsPanel() {
       flat.push(...g.options)
     }
     return flat
-  }, [baseOptions, filter, filterActive, futures])
+  }, [baseOptions, filter, futures])
 
   // 搜索过滤：命中 期权/标底 instrumentID + 中文品种名；空查询 = 全量
   const rows = useMemo(() => {
@@ -123,19 +123,14 @@ export function OptionsPanel() {
     })
   }, [listRows, searchQuery])
 
-  // 用户收藏 ID 集合（用于 ⭐ 列与右键菜单收藏态）
-  const favoritedIds = useMemo(
-    () => new Set(favorites.map((c) => c.instrumentID)),
-    [favorites],
-  )
-  // 右键菜单 JSX 与工具栏批量收藏共享逻辑（与期货页一致，见 useContractMenus）
+  // 右键菜单 JSX 与工具栏收藏共享逻辑（picker 模式：统一弹选夹面板，与期货页一致，见 useContractMenus）
   const { singleMenu, multiMenu, batchToggleFavorite, favoriteButtonLabel } = useContractMenus({
     contextMenu,
     multiSelectMenu,
     favoritedIds,
-    contracts,
-    addToFavorites,
-    removeFromFavorites,
+    favoriteMode: 'picker',
+    onOpenFavoritePicker: (instrumentIDs) => setPicker({ instrumentIDs }),
+    onRemoveFromAll: (instrumentIDs) => useCollectionsStore.getState().removeFromAllCollections(instrumentIDs),
     openOrderPopup,
     openKlineTab,
     openOrderTabs,
@@ -214,23 +209,9 @@ export function OptionsPanel() {
 
   return (
     <section className="options-page">
-      {/* 列表工具行：功能靠左（全部/自选 → 筛选 → 仅交易中 → 收藏），搜索贴右。
-          T型报价已独立为悬浮标签页，此处不再有 [列表|T型] 切换。 */}
+      {/* 列表工具行：功能靠左（筛选 → 收藏），搜索贴右。
+          T型报价已独立为悬浮标签页；[全部|自选] 与 [仅交易中] 已去除。 */}
       <div className="market-toolbar">
-        <div className="market-toolbar__tabs">
-          <button
-            className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
-            onClick={() => setActiveTab('all')}
-          >
-            全部
-          </button>
-          <button
-            className={`btn-tab${activeTab === 'favorites' ? ' active' : ''}`}
-            onClick={() => setActiveTab('favorites')}
-          >
-            自选
-          </button>
-        </div>
         <ContractFilter
           allContracts={options}
           getProduct={(c) => deriveUnderlyingProduct(c.underlyingInstrID ?? '')}
@@ -239,13 +220,6 @@ export function OptionsPanel() {
           onChange={(v) => useMarketFilterStore.getState().setFilter('options', v)}
         />
         <div className="market-toolbar__actions">
-          <button
-            className={`btn-filter-status${filterActive ? ' active' : ''}`}
-            onClick={() => setFilterActive((v) => !v)}
-            title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
-          >
-            {filterActive ? '仅交易中' : '显示全部'}
-          </button>
           <button
             className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
             disabled={!selectedInstrument && selectedContracts.size === 0}
@@ -285,18 +259,7 @@ export function OptionsPanel() {
             onMultiSelectContextMenu={handleMultiSelectContextMenuWrapped}
             onVisibleRangeChange={setVisibleInstrumentIDs}
             favoritedIds={favoritedIds}
-            onFavoriteChange={(instrumentID, isFavorited) => {
-              if (isFavorited) {
-                const inst = contracts.find((c) => c.instrumentID === instrumentID)
-                if (inst) {
-                  addToFavorites(inst)
-                  toast.success(`已收藏 ${instrumentID}`)
-                }
-              } else {
-                removeFromFavorites(instrumentID)
-                toast.success(`已移除 ${instrumentID}`)
-              }
-            }}
+            onFavoriteChange={(instrumentID) => setPicker({ instrumentIDs: [instrumentID] })}
             selectedContracts={selectedContracts}
             onSelectionChange={setSelectedContracts}
           />
@@ -307,8 +270,8 @@ export function OptionsPanel() {
       <InstrumentSearchModal
         isOpen={searchModalOpen}
         onClose={() => setSearchModalOpen(false)}
-        onAddToFavorite={addToFavorites}
-        onRemoveFromFavorite={removeFromFavorites}
+        onOpenFavoritePicker={(instrumentID) => setPicker({ instrumentIDs: [instrumentID] })}
+        onRemoveFromAllCollections={(ids) => useCollectionsStore.getState().removeFromAllCollections(ids)}
         allContractIds={allContractIds}
         favoritedIds={favoritedIds}
       />
@@ -334,6 +297,13 @@ export function OptionsPanel() {
       {/* 单选 + 多选右键菜单（共享 useContractMenus，与期货页一致） */}
       {singleMenu}
       {multiMenu}
+
+      {/* 收藏选夹面板（⭐ / 右键 / 工具栏 / 搜索弹窗统一汇聚于此） */}
+      <CollectionPicker
+        isOpen={!!picker}
+        instrumentIDs={picker?.instrumentIDs ?? []}
+        onClose={() => setPicker(null)}
+      />
     </section>
   )
 }

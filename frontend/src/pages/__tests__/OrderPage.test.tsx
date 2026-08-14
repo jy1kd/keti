@@ -60,7 +60,6 @@ describe('OrderPage', () => {
     useOrderStore.getState().resetOrderForm();
     useContractsStore.setState({
       contracts: [IF2608_CONTRACT],
-      favorites: [],
       isLoaded: true,
     });
     useMarketStore.setState({ snapshots: new Map() });

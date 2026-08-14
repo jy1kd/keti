@@ -55,7 +55,6 @@ const optCu: ContractInfo = { instrumentID: 'cu2609-C-70000', instrumentName: 'c
 function setupContracts() {
   useContractsStore.setState({
     contracts: [fut, optC, optP],
-    favorites: [],
     isLoaded: true,
   })
 }
@@ -63,7 +62,6 @@ function setupContracts() {
 function setupFilterContracts() {
   useContractsStore.setState({
     contracts: [fut, optC, optP, futMA, optMA, futCu, optCu],
-    favorites: [],
     isLoaded: true,
   })
 }
@@ -209,8 +207,7 @@ describe('OptionsPanel', () => {
     expect(screen.queryByText('打开T型报价')).toBeNull()
   })
 
-  it('收藏列点击：未收藏 → addToFavorites(inst)', async () => {
-    const addSpy = vi.spyOn(useContractsStore.getState(), 'addToFavorites').mockResolvedValue(true)
+  it('收藏列点击 → 打开 CollectionPicker（选夹面板）', async () => {
     render(<OptionsPanel />)
     const { ListTable } = await import('@visactor/vtable')
     const instance = (ListTable as any).mock.results[0].value
@@ -219,7 +216,8 @@ describe('OptionsPanel', () => {
     act(() => {
       clickHandler({ row: 1, col: favoriteCol, event: {} })
     })
-    expect(addSpy).toHaveBeenCalledWith(fut)
+    // 单选面板标题「收藏到收藏夹」出现（FG609 标底行）
+    expect(screen.getByText('收藏到收藏夹')).toBeInTheDocument()
   })
 
   it('可见区上报：期权标签激活时挂载后上报可见合约（驱动共享订阅管理器）', async () => {
@@ -305,11 +303,10 @@ describe('OptionsPanel', () => {
   })
 
   describe('工具行布局与搜索定位（Task 8）', () => {
-    it('工具行始终渲染列表集群（筛选/仅交易中/收藏/搜索框），无 [列表|T型] 切换', () => {
+    it('工具行始终渲染列表集群（筛选/收藏/搜索框），无 [列表|T型] 切换', () => {
       render(<OptionsPanel />)
       expect(screen.getByPlaceholderText('搜索合约...')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /筛选/ })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /仅交易中|显示全部/ })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: '收藏' })).toBeInTheDocument()
       // 无模式切换按钮
       expect(screen.queryByRole('button', { name: 'T型报价' })).toBeNull()
@@ -340,11 +337,11 @@ describe('OptionsPanel', () => {
       expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
     })
 
-    it('DOM 顺序：全部/自选 → 筛选 → 收藏 → 搜索框（无 [列表|T型] 切换）', () => {
+    it('DOM 顺序：筛选 → 收藏 → 搜索框（无 [全部|自选] 与 [列表|T型] 切换）', () => {
       const { container } = render(<OptionsPanel />)
       const toolbar = container.querySelector('.market-toolbar') as HTMLElement
       expect(toolbar.querySelector('.market-toolbar__mode')).toBeNull()
-      const tabs = toolbar.querySelector('.market-toolbar__tabs') as Element
+      expect(toolbar.querySelector('.market-toolbar__tabs')).toBeNull()
       const filterBtn = screen.getByRole('button', { name: /筛选/ })
       const favoriteBtn = toolbar.querySelector('.btn-favorite') as Element
       const searchInput = toolbar.querySelector('.market-toolbar__search .search-input') as Element
@@ -352,10 +349,8 @@ describe('OptionsPanel', () => {
       const follows = (a: Element, b: Element) =>
         (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
 
-      expect(tabs).toBeTruthy()
       expect(favoriteBtn).toBeTruthy()
       expect(searchInput).toBeTruthy()
-      expect(follows(tabs, filterBtn)).toBe(true)
       expect(follows(filterBtn, favoriteBtn)).toBe(true)
       expect(follows(favoriteBtn, searchInput)).toBe(true)
     })

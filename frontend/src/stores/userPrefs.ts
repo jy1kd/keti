@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { HotKeyConfig, QuickTradeConfig } from '@/services/types'
+import type { Collection } from './collections'
 
 const STORAGE_KEY = 'simnow-user-prefs'
 
@@ -40,52 +41,32 @@ export const DEFAULT_QUICK_TRADE_CONFIG: QuickTradeConfig = {
 }
 
 interface UserPrefsStore {
-  selectedContracts: string[]
+  collections: Collection[]
   hotKeys: HotKeyConfig
   quickTradeConfig: QuickTradeConfig
   setHotKey: (action: string, key: string) => void
   setHotKeys: (hotKeys: HotKeyConfig) => void
   setQuickTradeConfig: (config: Partial<QuickTradeConfig>) => void
-  addSelectedContract: (instrumentId: string) => void
-  removeSelectedContract: (instrumentId: string) => void
+  setCollections: (collections: Collection[]) => void
   saveToLocalStorage: () => void
   loadFromLocalStorage: () => void
 }
 
 export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
-  selectedContracts: [],
+  collections: [],
   hotKeys: { ...DEFAULT_HOT_KEYS },
   quickTradeConfig: { ...DEFAULT_QUICK_TRADE_CONFIG },
 
   setHotKey: (action, key) =>
-    set((state) => ({
-      hotKeys: { ...state.hotKeys, [action]: key },
-    })),
-
+    set((state) => ({ hotKeys: { ...state.hotKeys, [action]: key } })),
   setHotKeys: (hotKeys) => set({ hotKeys: { ...hotKeys } }),
-
   setQuickTradeConfig: (config) =>
-    set((state) => ({
-      quickTradeConfig: { ...state.quickTradeConfig, ...config },
-    })),
-
-  addSelectedContract: (instrumentId) =>
-    set((state) => {
-      if (state.selectedContracts.includes(instrumentId)) return state
-      return { selectedContracts: [...state.selectedContracts, instrumentId] }
-    }),
-
-  removeSelectedContract: (instrumentId) =>
-    set((state) => ({
-      selectedContracts: state.selectedContracts.filter((id) => id !== instrumentId),
-    })),
+    set((state) => ({ quickTradeConfig: { ...state.quickTradeConfig, ...config } })),
+  setCollections: (collections) => set({ collections }),
 
   saveToLocalStorage: () => {
-    const { selectedContracts, hotKeys, quickTradeConfig } = get()
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ selectedContracts, hotKeys, quickTradeConfig })
-    )
+    const { collections, hotKeys, quickTradeConfig } = get()
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ collections, hotKeys, quickTradeConfig }))
   },
 
   loadFromLocalStorage: () => {
@@ -93,8 +74,14 @@ export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
       const raw = localStorage.getItem(STORAGE_KEY)
       if (!raw) return
       const data = JSON.parse(raw)
+      let collections: Collection[] = Array.isArray(data.collections) ? data.collections : []
+      // 迁移：旧版 selectedContracts（扁平收藏） → 默认收藏夹（仅当无 collections 时）
+      const legacy = Array.isArray(data.selectedContracts) ? data.selectedContracts : []
+      if (collections.length === 0 && legacy.length > 0) {
+        collections = [{ id: 'coll-default', name: '默认收藏夹', instrumentIDs: legacy }]
+      }
       set({
-        selectedContracts: data.selectedContracts ?? [],
+        collections,
         hotKeys: data.hotKeys ?? { ...DEFAULT_HOT_KEYS },
         quickTradeConfig: data.quickTradeConfig ?? { ...DEFAULT_QUICK_TRADE_CONFIG },
       })

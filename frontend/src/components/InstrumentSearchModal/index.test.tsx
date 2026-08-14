@@ -41,16 +41,15 @@ describe('InstrumentSearchModal 收藏/移除反馈', () => {
     vi.clearAllMocks()
   })
 
-  it('点击收藏弹出 toast 提示「已收藏」', async () => {
+  it('点击收藏 → onOpenFavoritePicker(instrumentID)（打开选夹面板）', async () => {
     const { getInstruments } = await import('@/services/api')
-    const successSpy = vi.spyOn(toast, 'success')
-    const onAdd = vi.fn()
+    const onOpen = vi.fn()
     render(
       <InstrumentSearchModal
         isOpen
         onClose={vi.fn()}
-        onAddToFavorite={onAdd}
-        onRemoveFromFavorite={vi.fn()}
+        onOpenFavoritePicker={onOpen}
+        onRemoveFromAllCollections={vi.fn()}
         allContractIds={new Set(['IF2608'])}
         favoritedIds={new Set()}
       />,
@@ -63,11 +62,10 @@ describe('InstrumentSearchModal 收藏/移除反馈', () => {
 
     await userEvent.setup().click(favBtn as HTMLButtonElement)
 
-    expect(onAdd).toHaveBeenCalledWith(mockContract)
-    expect(successSpy).toHaveBeenCalledWith('已收藏 IF2608')
+    expect(onOpen).toHaveBeenCalledWith('IF2608')
   })
 
-  it('点击移除弹出 toast 提示「已移除」', async () => {
+  it('点击移除 → onRemoveFromAllCollections 被调用 + toast 提示「已移除」', async () => {
     const { getInstruments } = await import('@/services/api')
     const successSpy = vi.spyOn(toast, 'success')
     const onRemove = vi.fn()
@@ -75,8 +73,8 @@ describe('InstrumentSearchModal 收藏/移除反馈', () => {
       <InstrumentSearchModal
         isOpen
         onClose={vi.fn()}
-        onAddToFavorite={vi.fn()}
-        onRemoveFromFavorite={onRemove}
+        onOpenFavoritePicker={vi.fn()}
+        onRemoveFromAllCollections={onRemove}
         allContractIds={new Set(['IF2608'])}
         favoritedIds={new Set(['IF2608'])}
       />,
@@ -88,7 +86,7 @@ describe('InstrumentSearchModal 收藏/移除反馈', () => {
 
     await userEvent.setup().click(removeBtn as HTMLButtonElement)
 
-    expect(onRemove).toHaveBeenCalledWith('IF2608')
+    expect(onRemove).toHaveBeenCalledWith(['IF2608'])
     expect(successSpy).toHaveBeenCalledWith('已移除 IF2608')
   })
 })

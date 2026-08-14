@@ -10,6 +10,7 @@ import { useMarketWs } from '@/hooks/useMarketWs'
 import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
 import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
+import { useCollectionsStore } from '@/stores/collections'
 import { useMarketFilterStore } from '@/stores/marketFilter'
 import { FloatingWindows } from '@/components/FloatingWindow'
 import { useTabStore } from '@/stores/tabs'
@@ -30,7 +31,7 @@ import '@/assets/styles/global.css'
 
 function App() {
   const openTab = useTabStore((s) => s.openTab)
-  // StrictMode 开发双挂载守卫：启动加载只执行一次（loadAllInstruments/loadFavoriteContracts/load）
+  // StrictMode 开发双挂载守卫：启动加载只执行一次（loadAllInstruments/loadCollections/load）
   const startupLoadedRef = useRef(false)
 
   // System WebSocket — 监听 MD/TD 连接状态即时推送
@@ -48,13 +49,13 @@ function App() {
   useMarketWs(API_BASE.replace('http', 'ws'))
   useSubscriptionManager()
 
-  // 启动时加载全量合约 + 收藏合约（原先在 MarketPanel，现上移共享）+ 持久化筛选。
+  // 启动时加载全量合约 + 收藏夹（原先在 MarketPanel，现上移共享）+ 持久化筛选。
   // StrictMode 开发双挂载会重复执行 effect：用 useRef 守卫保证只加载一次。
   useEffect(() => {
     if (startupLoadedRef.current) return
     startupLoadedRef.current = true
     useContractsStore.getState().loadAllInstruments()
-    useContractsStore.getState().loadFavoriteContracts()
+    useCollectionsStore.getState().loadCollections()
     useMarketFilterStore.getState().load()
   }, [])
 
@@ -68,7 +69,7 @@ function App() {
           openTab({ type: 'market', title: '📊 期货' })
           break
         case 'favorites':
-          openTab({ type: 'favorites', title: '⭐ 自选' })
+          openTab({ type: 'collections', title: '📁 收藏夹' })
           break
         case 'order':
           openTab({ type: 'order', title: '📝 五档下单' })

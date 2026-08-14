@@ -59,7 +59,6 @@ describe('KLinePage', () => {
           productClass: '1',
         },
       ],
-      favorites: [],
       isLoaded: true,
     });
     // Set up tab store：K线标签页

@@ -48,7 +48,6 @@ describe('QuoteStatsBar', () => {
     useMarketStore.setState({ snapshots: new Map() })
     useContractsStore.setState({
       contracts: [IF2608_CONTRACT],
-      favorites: [],
       isLoaded: true,
     })
   })
@@ -90,7 +89,7 @@ describe('QuoteStatsBar', () => {
 
   it('快照无 priceTick 时按默认 0.2 精度（期权等取合约价）', () => {
     // 无合约匹配 → priceTick 默认 0.2
-    useContractsStore.setState({ contracts: [], favorites: [], isLoaded: true })
+    useContractsStore.setState({ contracts: [], isLoaded: true })
     useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) })
     render(<QuoteStatsBar instrumentID="IF2608" />)
     expect(screen.getByTestId('qs-今开').textContent).toBe('4680.0')

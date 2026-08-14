@@ -5,7 +5,8 @@ import { create } from 'zustand'
 /** 标签页类型 */
 export type TabType =
   | 'market'
-  | 'favorites'
+  | 'collections' // 收藏夹管理页
+  | 'collection' // 单个收藏夹页
   | 'order'
   | 'kline'
   | 'options'
@@ -20,7 +21,8 @@ export type TabType =
 /** 所有标签页类型 */
 export const TAB_TYPES: TabType[] = [
   'market',
-  'favorites',
+  'collections',
+  'collection',
   'order',
   'kline',
   'options',
@@ -61,7 +63,7 @@ interface TabStore {
   tabs: Tab[]
   activeTabId: string
 
-  /** 打开标签页；相同 type+instrumentID 去重，超上限拒绝。返回 true 表示成功打开/激活 */
+  /** 打开标签页；相同 type+instrumentID/collectionId 去重，超上限拒绝。返回 true 表示成功打开/激活 */
   openTab: (options: { type: TabType; title: string; props?: Record<string, unknown>; closable?: boolean }) => boolean
 
   /** 关闭标签页；固定标签不可关闭 */
@@ -89,8 +91,9 @@ interface TabStore {
 
 /** 生成标签页 ID */
 export function generateTabId(type: TabType, props?: Record<string, unknown>): string {
-  const suffix = props?.instrumentID ? `-${props.instrumentID}` : ''
-  return `tab-${type}${suffix}`
+  const suffix = props?.collectionId ?? props?.instrumentID
+  const suffixStr = typeof suffix === 'string' ? `-${suffix}` : ''
+  return `tab-${type}${suffixStr}`
 }
 
 // --- Store ---
@@ -104,14 +107,17 @@ export const useTabStore = create<TabStore>((set, get) => ({
     let result = false
 
     set((state) => {
-      // 去重：优先按 id（type+instrumentID）匹配；K线页内切换合约后 tab id 保持稳定，
-      // 再按 type+instrumentID 内容匹配。命中时同步 props/title，自愈陈旧内容。
+      // 去重：优先按 id（type+instrumentID/collectionId）匹配；K线页内切换合约后 tab id 保持稳定，
+      // 再按 type+instrumentID 或 type+collectionId 内容匹配。命中时同步 props/title，自愈陈旧内容。
       const existing = state.tabs.find(
         (t) =>
           t.id === tabId ||
           (typeof props.instrumentID === 'string' &&
             t.type === type &&
-            t.props.instrumentID === props.instrumentID),
+            t.props.instrumentID === props.instrumentID) ||
+          (typeof props.collectionId === 'string' &&
+            t.type === type &&
+            t.props.collectionId === props.collectionId),
       )
       if (existing) {
         result = true

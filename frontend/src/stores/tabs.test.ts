@@ -44,7 +44,8 @@ describe('useTabStore', () => {
     it('应定义所有标签页类型', () => {
       expect(TAB_TYPES).toEqual([
         'market',
-        'favorites',
+        'collections',
+        'collection',
         'order',
         'kline',
         'options',
@@ -60,6 +61,15 @@ describe('useTabStore', () => {
 
     it('PINNED_TAB_TYPE 应为 market', () => {
       expect(PINNED_TAB_TYPE).toBe('market')
+    })
+  })
+
+  // --- generateTabId ---
+
+  describe('generateTabId', () => {
+    it('generateTabId 支持 collectionId 后缀', async () => {
+      const { generateTabId } = await import('./tabs')
+      expect(generateTabId('collection', { collectionId: 'coll-x' })).toBe('tab-collection-coll-x')
     })
   })
 
@@ -102,7 +112,7 @@ describe('useTabStore', () => {
 
     it('打开标签页时默认 closable 为 true', () => {
       const { openTab } = useTabStore.getState()
-      openTab({ type: 'favorites', title: '⭐ 自选' })
+      openTab({ type: 'collections', title: '📁 收藏夹' })
 
       const state = useTabStore.getState()
       expect(state.tabs[1].closable).toBe(true)
@@ -110,7 +120,7 @@ describe('useTabStore', () => {
 
     it('打开标签页时可自定义 closable', () => {
       const { openTab } = useTabStore.getState()
-      openTab({ type: 'favorites', title: '⭐ 自选', closable: false })
+      openTab({ type: 'collections', title: '📁 收藏夹', closable: false })
 
       const state = useTabStore.getState()
       expect(state.tabs[1].closable).toBe(false)
@@ -134,6 +144,21 @@ describe('useTabStore', () => {
       // 活跃标签页不变
       expect(useTabStore.getState().activeTabId).not.toBe('tab-order-contract99')
     })
+
+    it('openTab 按 type+collectionId 去重（激活已有）', () => {
+      const { openTab } = useTabStore.getState()
+      openTab({ type: 'collection', title: '📁 A', props: { collectionId: 'coll-x' } })
+      const result = openTab({ type: 'collection', title: '📁 A', props: { collectionId: 'coll-x' } })
+      expect(result).toBe(true)
+      expect(useTabStore.getState().tabs.filter((t) => t.type === 'collection')).toHaveLength(1)
+    })
+
+    it('可同时打开多个不同 collectionId 的夹标签', () => {
+      const { openTab } = useTabStore.getState()
+      openTab({ type: 'collection', title: '📁 A', props: { collectionId: 'a' } })
+      openTab({ type: 'collection', title: '📁 B', props: { collectionId: 'b' } })
+      expect(useTabStore.getState().tabs.filter((t) => t.type === 'collection')).toHaveLength(2)
+    })
   })
 
   // --- closeTab ---
@@ -141,7 +166,7 @@ describe('useTabStore', () => {
   describe('closeTab', () => {
     it('应关闭指定标签页', () => {
       const { openTab, closeTab } = useTabStore.getState()
-      openTab({ type: 'favorites', title: '⭐ 自选' })
+      openTab({ type: 'collections', title: '📁 收藏夹' })
 
       expect(useTabStore.getState().tabs).toHaveLength(2)
 
@@ -155,31 +180,31 @@ describe('useTabStore', () => {
 
     it('关闭活跃标签页时应激活相邻标签页', () => {
       const { openTab, closeTab } = useTabStore.getState()
-      openTab({ type: 'favorites', title: '⭐ 自选' })
+      openTab({ type: 'collections', title: '📁 收藏夹' })
       openTab({ type: 'settings', title: '⚙ 设置' })
 
-      // 当前：market, favorites, settings (active)
+      // 当前：market, collections, settings (active)
       expect(useTabStore.getState().activeTabId).toBe('tab-settings')
 
       const settingsTabId = useTabStore.getState().tabs[2].id
       closeTab(settingsTabId)
 
-      // 关闭 settings 后，应激活 favorites（前一个）
-      expect(useTabStore.getState().activeTabId).toBe('tab-favorites')
+      // 关闭 settings 后，应激活 collections（前一个）
+      expect(useTabStore.getState().activeTabId).toBe('tab-collections')
     })
 
     it('关闭中间活跃标签页时应激活后一个标签页', () => {
       const { openTab, closeTab, setActiveTab } = useTabStore.getState()
-      openTab({ type: 'favorites', title: '⭐ 自选' })
+      openTab({ type: 'collections', title: '📁 收藏夹' })
       openTab({ type: 'settings', title: '⚙ 设置' })
 
       const favTabId = useTabStore.getState().tabs[1].id
       setActiveTab(favTabId)
 
-      // 当前：market, favorites (active), settings
+      // 当前：market, collections (active), settings
       closeTab(favTabId)
 
-      // 关闭中间的 favorites，应激活 settings（后一个）
+      // 关闭中间的 collections，应激活 settings（后一个）
       expect(useTabStore.getState().activeTabId).toBe('tab-settings')
     })
 
@@ -282,7 +307,7 @@ describe('useTabStore', () => {
   describe('setActiveTab', () => {
     it('应设置指定标签页为活跃', () => {
       const { openTab, setActiveTab } = useTabStore.getState()
-      openTab({ type: 'favorites', title: '⭐ 自选' })
+      openTab({ type: 'collections', title: '📁 收藏夹' })
 
       const favTabId = useTabStore.getState().tabs[1].id
       setActiveTab(favTabId)
@@ -319,11 +344,11 @@ describe('useTabStore', () => {
 
     it('不传 props 时应返回同类型的第一个标签页', () => {
       const { openTab, getTabByType } = useTabStore.getState()
-      openTab({ type: 'favorites', title: '⭐ 自选' })
+      openTab({ type: 'collections', title: '📁 收藏夹' })
 
-      const tab = getTabByType('favorites')
+      const tab = getTabByType('collections')
       expect(tab).toBeDefined()
-      expect(tab?.type).toBe('favorites')
+      expect(tab?.type).toBe('collections')
     })
   })
 })

@@ -22,12 +22,12 @@ describe('getAppMenuDef', () => {
     expect(def.map((d) => d.label)).toEqual(['行情', '交易', '查询', '设置']);
   });
 
-  it('行情子菜单：期货/期权/自选/K线/T型报价/新窗口', () => {
+  it('行情子菜单：期货/期权/收藏夹/K线/T型报价/新窗口', () => {
     const market = getAppMenuDef().find((d) => d.id === 'market')!;
     const labels = market.submenu!
       .filter((i) => i.type !== 'separator')
       .map((i) => i.label);
-    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']);
+    expect(labels).toEqual(['📊 期货', '📉 期权', '📁 收藏夹', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']);
   });
 
   it('行情「📈 K线」action 为 open-floating kline（在首个分隔符后）', () => {

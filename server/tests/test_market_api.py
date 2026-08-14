@@ -334,8 +334,9 @@ class TestGetDepth:
         assert resp.status_code == 200
         data = resp.json()
         assert data["instrumentID"] == "IF2608"
-        assert len(data["bids"]) == 5
-        assert len(data["asks"]) == 5
+        # depth 返回快照中实际存在的档位（播种 2 档，非固定 5 档）
+        assert len(data["bids"]) == 2
+        assert len(data["asks"]) == 2
         assert data["bids"][0]["price"] == 3849.8
         assert data["bids"][0]["volume"] == 10
         assert data["asks"][0]["price"] == 3850.2

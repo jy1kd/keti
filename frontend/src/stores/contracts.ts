@@ -1,33 +1,20 @@
 import { create } from 'zustand'
 import type { ContractInfo } from '@/services/types'
-import { useUserPrefsStore } from './userPrefs'
-import {
-  getInstruments,
-  getInstrumentsByIds,
-} from '@/services/api'
+import { getInstruments } from '@/services/api'
 
 interface ContractsStore {
   /** 全量合约列表（从 API 加载） */
   contracts: ContractInfo[]
-  /** 收藏合约列表（用户管理，自动订阅） */
-  favorites: ContractInfo[]
   /** 是否已加载全量合约 */
   isLoaded: boolean
   /** 批量设置合约列表 */
   setContracts: (contracts: ContractInfo[]) => void
   /** 加载全量合约 */
   loadAllInstruments: () => Promise<void>
-  /** 加载收藏合约并订阅 */
-  loadFavoriteContracts: () => Promise<void>
-  /** 添加收藏并订阅 */
-  addToFavorites: (contract: ContractInfo) => Promise<boolean>
-  /** 移除收藏并取消订阅 */
-  removeFromFavorites: (instrumentId: string) => Promise<void>
 }
 
-export const useContractsStore = create<ContractsStore>((set, get) => ({
+export const useContractsStore = create<ContractsStore>((set) => ({
   contracts: [],
-  favorites: [],
   isLoaded: false,
 
   setContracts: (contracts) => set({ contracts }),
@@ -40,60 +27,5 @@ export const useContractsStore = create<ContractsStore>((set, get) => ({
     } catch (err) {
       console.error('[contracts] Failed to load all instruments:', err)
     }
-  },
-
-  /** 从 localStorage 加载收藏合约并订阅 */
-  loadFavoriteContracts: async () => {
-    const prefs = useUserPrefsStore.getState()
-    prefs.loadFromLocalStorage()
-    const selectedIds = useUserPrefsStore.getState().selectedContracts
-
-    if (selectedIds.length === 0) {
-      set({ favorites: [] })
-      return
-    }
-
-    try {
-      const result = await getInstrumentsByIds(selectedIds)
-      if (result.instruments?.length) {
-        // 清理无效 ID（已下架的合约）
-        const validIds = new Set(result.instruments.map((c) => c.instrumentID))
-        const invalidIds = selectedIds.filter((id) => !validIds.has(id))
-        if (invalidIds.length > 0) {
-          const prefs = useUserPrefsStore.getState()
-          invalidIds.forEach((id) => prefs.removeSelectedContract(id))
-          prefs.saveToLocalStorage()
-        }
-
-        set({ favorites: result.instruments })
-      }
-    } catch (err) {
-      console.error('[contracts] Failed to load favorite contracts:', err)
-    }
-  },
-
-  /** 添加收藏（订阅由订阅管理器 diff 负责，失败静默重试） */
-  addToFavorites: async (contract) => {
-    const { favorites } = get()
-    if (favorites.some((c) => c.instrumentID === contract.instrumentID)) return true
-
-    // 持久化到 userPrefs
-    const prefs = useUserPrefsStore.getState()
-    prefs.addSelectedContract(contract.instrumentID)
-    prefs.saveToLocalStorage()
-
-    set({ favorites: [...favorites, contract] })
-    return true
-  },
-
-  /** 移除收藏（退订由订阅管理器 diff 负责） */
-  removeFromFavorites: async (instrumentId) => {
-    // 从 userPrefs 移除
-    const prefs = useUserPrefsStore.getState()
-    prefs.removeSelectedContract(instrumentId)
-    prefs.saveToLocalStorage()
-
-    const { favorites } = get()
-    set({ favorites: favorites.filter((c) => c.instrumentID !== instrumentId) })
   },
 }))

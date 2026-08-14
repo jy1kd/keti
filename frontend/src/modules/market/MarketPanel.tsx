@@ -10,26 +10,26 @@ import { filterByExchangeAndProduct } from './filter'
 import { useMarketStore } from './store'
 import { useMarketFilterStore } from '@/stores/marketFilter'
 import { useContractsStore } from '@/stores/contracts'
+import { useCollectionsStore, unionFavoritedIds } from '@/stores/collections'
 import { useTabStore } from '@/stores/tabs'
 import { useContractContextMenu } from '@/hooks/useContractContextMenu'
 import { useContractMenus } from '@/hooks/useContractMenus'
 import { usePointOrder } from '@/hooks/usePointOrder'
+import { CollectionPicker } from '@/components/CollectionPicker'
 import { useOrderStore } from '@/modules/order/store'
 import { getProductName } from '@/utils/productNames'
-import { isContractActive } from '@/utils/contractStatus'
 import { isElectron } from '@/services/electron'
-import { toast } from '@/components/Toast'
 import './styles.css'
 
 export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
-  const { contracts, favorites, addToFavorites, removeFromFavorites } = useContractsStore()
+  const contracts = useContractsStore((s) => s.contracts)
+  const collections = useCollectionsStore((s) => s.collections)
   const { contextMenu, multiSelectMenu, openOrderPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
-  // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
-  const [filterActive, setFilterActive] = useState(false)
+  // 收藏选夹面板（⭐ / 右键 / 工具栏 / 搜索弹窗统一入口）
+  const [picker, setPicker] = useState<{ instrumentIDs: string[] } | null>(null)
 
   // 期货标签是否激活：激活翻转为 true 时 QuoteTable 重报可见区，订阅管理器立即补订阅。
   // TabContent 同时挂载期货/期权两面板，隐藏面板（isActive=false）不得上报可见区，
@@ -44,14 +44,14 @@ export function MarketPanel() {
     () => sortFutures(contracts.filter((c) => c.productClass === '1')),
     [contracts],
   )
-  // 自选视图同样只展示期货合约，且同样应用排序（spec 决策 3：排序作用于全部/自选两种基础集）
-  const sortedFavorites = useMemo(
-    () => sortFutures(favorites.filter((c) => c.productClass === '1')),
-    [favorites],
+  // ⭐ 填充态 = 任一收藏夹内的合约（union）；仅用于 ⭐ 列/收藏按钮状态，不再做内部自选视图
+  const favoritedIds = useMemo(
+    () => unionFavoritedIds(collections),
+    [collections],
   )
 
-  // Display contracts based on active tab
-  const baseContracts = activeTab === 'all' ? sortedFutures : sortedFavorites
+  // 期货页基础集 = 全部期货（已去除 [全部|自选] 内部视图）
+  const baseContracts = sortedFutures
 
   // 筛选面板品种中文名（显示用；可选交易所/品种列表由 ContractFilter 内经 computeFilterOptions 交叉计算）
   const filterProductNames = useMemo(() => {
@@ -63,10 +63,8 @@ export function MarketPanel() {
   // 搜索过滤
   const [searchQuery, setSearchQuery] = useState('')
   const displayContracts = useMemo(() => {
-    // 数据管道：全部/自选 → 筛选（交易所+品种）→ 仅交易中 → 搜索
+    // 数据管道：全部期货 → 筛选（交易所+品种）→ 搜索
     let base = filterByExchangeAndProduct(baseContracts, filter.exchanges, filter.products, (c) => c.productID)
-    // 过滤开关：默认仅显示交易中合约
-    base = filterActive ? base.filter(isContractActive) : base
     if (!searchQuery.trim()) return base
     const q = searchQuery.toLowerCase()
     return base.filter((c) => {
@@ -81,21 +79,16 @@ export function MarketPanel() {
         productName.includes(q)
       )
     })
-  }, [baseContracts, filter, searchQuery, filterActive])
+  }, [baseContracts, filter, searchQuery])
 
-  // User-favorited IDs (for modal "已订阅" badge and button state)
-  const favoritedIds = useMemo(
-    () => new Set(favorites.map(c => c.instrumentID)),
-    [favorites]
-  )
-  // 右键菜单 JSX 与工具栏批量收藏共享逻辑（与期权页一致，见 useContractMenus）
+  // 右键菜单 JSX 与工具栏收藏共享逻辑（picker 模式：统一弹选夹面板，与期权页一致，见 useContractMenus）
   const { singleMenu, multiMenu, batchToggleFavorite, favoriteButtonLabel } = useContractMenus({
     contextMenu,
     multiSelectMenu,
     favoritedIds,
-    contracts,
-    addToFavorites,
-    removeFromFavorites,
+    favoriteMode: 'picker',
+    onOpenFavoritePicker: (instrumentIDs) => setPicker({ instrumentIDs }),
+    onRemoveFromAll: (instrumentIDs) => useCollectionsStore.getState().removeFromAllCollections(instrumentIDs),
     openOrderPopup,
     openKlineTab,
     openOrderTabs,
@@ -109,7 +102,7 @@ export function MarketPanel() {
   )
 
   // 顶部菜单「行情」切换（设计 §4.1）：期货/期权为独立固定标签。
-  // options → 激活期权标签；all/favorites → 激活期货标签并切内部全部/自选。
+  // options → 激活期权标签；favorites → 打开收藏夹管理页；all → 激活期货标签。
   useEffect(() => {
     if (!isElectron()) return
 
@@ -119,7 +112,10 @@ export function MarketPanel() {
         if (options) useTabStore.getState().setActiveTab(options.id)
         return
       }
-      setActiveTab(view === 'favorites' ? 'favorites' : 'all')
+      if (view === 'favorites') {
+        useTabStore.getState().openTab({ type: 'collections', title: '📁 收藏夹' })
+        return
+      }
       const market = useTabStore.getState().tabs.find((t) => t.type === 'market')
       if (market) useTabStore.getState().setActiveTab(market.id)
     })
@@ -150,25 +146,11 @@ export function MarketPanel() {
 
   return (
     <section className="market-panel">
-      {/* 行情页工具栏：合并 market-tabs（模式切换）+ panel-header（搜索/全部自选/操作）为单行。
+      {/* 行情页工具栏：筛选 → 仅交易中 → 收藏 → 搜索（已去除 [全部|自选] 内部视图切换）。
           保留 data-drag-handle：market 为固定标签（closable:false）故 TabContent 中惰性不触发，
           与旧 market-tabs 行为一致；保留以对齐 Phase 2 全局栏合并后的拖拽语义（审查 🔵-1）。 */}
       <div className="market-toolbar" data-drag-handle>
-        {/* 功能靠左：全部/自选 → 筛选 → 仅交易中 → 收藏 */}
-        <div className="market-toolbar__tabs">
-          <button
-            className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
-            onClick={() => setActiveTab('all')}
-          >
-            全部
-          </button>
-          <button
-            className={`btn-tab${activeTab === 'favorites' ? ' active' : ''}`}
-            onClick={() => setActiveTab('favorites')}
-          >
-            自选
-          </button>
-        </div>
+        {/* 功能靠左：筛选 → 收藏 */}
         <ContractFilter
           allContracts={sortedFutures}
           getProduct={(c) => c.productID}
@@ -177,13 +159,6 @@ export function MarketPanel() {
           onChange={(v) => useMarketFilterStore.getState().setFilter('futures', v)}
         />
         <div className="market-toolbar__actions">
-          <button
-            className={`btn-filter-status${filterActive ? ' active' : ''}`}
-            onClick={() => setFilterActive((v) => !v)}
-            title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
-          >
-            {filterActive ? '仅交易中' : '显示全部'}
-          </button>
           <button
             className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
             disabled={!selectedInstrument && selectedContracts.size === 0}
@@ -224,18 +199,7 @@ export function MarketPanel() {
             onMultiSelectContextMenu={handleMultiSelectContextMenu}
             onVisibleRangeChange={setVisibleInstrumentIDs}
             favoritedIds={favoritedIds}
-            onFavoriteChange={(instrumentID, isFavorited) => {
-              if (isFavorited) {
-                const inst = contracts.find(c => c.instrumentID === instrumentID)
-                if (inst) {
-                  addToFavorites(inst)
-                  toast.success(`已收藏 ${instrumentID}`)
-                }
-              } else {
-                removeFromFavorites(instrumentID)
-                toast.success(`已移除 ${instrumentID}`)
-              }
-            }}
+            onFavoriteChange={(instrumentID) => setPicker({ instrumentIDs: [instrumentID] })}
             selectedContracts={selectedContracts}
             onSelectionChange={setSelectedContracts}
           />
@@ -245,8 +209,8 @@ export function MarketPanel() {
       <InstrumentSearchModal
         isOpen={searchModalOpen}
         onClose={() => setSearchModalOpen(false)}
-        onAddToFavorite={addToFavorites}
-        onRemoveFromFavorite={removeFromFavorites}
+        onOpenFavoritePicker={(instrumentID) => setPicker({ instrumentIDs: [instrumentID] })}
+        onRemoveFromAllCollections={(ids) => useCollectionsStore.getState().removeFromAllCollections(ids)}
         allContractIds={allContractIds}
         favoritedIds={favoritedIds}
       />
@@ -254,6 +218,13 @@ export function MarketPanel() {
       {/* 单选 + 多选右键菜单（共享 useContractMenus，与期权页一致） */}
       {singleMenu}
       {multiMenu}
+
+      {/* 收藏选夹面板（⭐ / 右键 / 工具栏 / 搜索弹窗统一汇聚于此） */}
+      <CollectionPicker
+        isOpen={!!picker}
+        instrumentIDs={picker?.instrumentIDs ?? []}
+        onClose={() => setPicker(null)}
+      />
     </section>
   )
 }

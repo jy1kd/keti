@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom'
+import { useEffect } from 'react'
 import { useTabStore, type Tab } from '@/stores/tabs'
 import { useFloatingWindowStore, FLOATING_CHROME_H } from '@/stores/floatingWindows'
 import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
@@ -8,7 +9,8 @@ import { OrdersQuery } from '@/modules/query/OrdersQuery'
 import { PositionsQuery } from '@/modules/query/PositionsQuery'
 import { OptionsPanel } from '@/modules/options/OptionsPanel'
 import { TQuoteView } from '@/modules/options/TQuoteView'
-import { FavoritesPage } from '@/pages/FavoritesPage'
+import { CollectionsPage } from '@/pages/CollectionsPage'
+import { CollectionPage } from '@/pages/CollectionPage'
 import { OrderPage } from '@/pages/OrderPage'
 import { KLinePage } from '@/pages/KLinePage'
 import { SettingsPage } from '@/pages/SettingsPage'
@@ -22,6 +24,13 @@ import './styles.css'
  */
 function getInstrumentID(props: Record<string, unknown>): string | undefined {
   return typeof props.instrumentID === 'string' ? props.instrumentID : undefined
+}
+
+/**
+ * 安全地从 tab.props 中提取 collectionId 字符串（收藏夹标签页用）。
+ */
+function getCollectionId(props: Record<string, unknown>): string {
+  return typeof props.collectionId === 'string' ? props.collectionId : ''
 }
 
 /**
@@ -54,8 +63,10 @@ function renderTabContent(tab: Tab, floating: boolean): React.ReactNode {
           tabId={tab.id}
         />
       )
-    case 'favorites':
-      return <FavoritesPage />
+    case 'collections':
+      return <CollectionsPage />
+    case 'collection':
+      return <CollectionPage collectionId={getCollectionId(tab.props)} tabId={tab.id} />
     case 'query-orders':
       return <OrdersQuery />
     case 'query-positions':
@@ -85,6 +96,17 @@ export function TabContent() {
   const tabs = useTabStore((s) => s.tabs)
   const activeTabId = useTabStore((s) => s.activeTabId)
   const windows = useFloatingWindowStore((s) => s.windows)
+
+  // 切标签后：若焦点落在被隐藏（aria-hidden="true"）的面板内则 blur。display:none 面板
+  // 无法保留焦点，且浏览器对「aria-hidden 祖先进 contains focused descendant」报警
+  // （如 collections-page 按钮聚焦时切走标签）。同一 commit 内 aria-hidden 已随
+  // activeTabId 更新，effect 在 commit 后跑、能看到新隐藏态。
+  useEffect(() => {
+    const el = document.activeElement as HTMLElement | null
+    if (el && el.closest('.tab-content__panel[aria-hidden="true"]')) {
+      el.blur()
+    }
+  }, [activeTabId])
 
   // 主窗口内容区展示的有效活跃标签：若活跃标签已浮动（脱离为弹窗），主窗口回退到
   // 默认行情标签页，保证「拖出弹窗后主窗口下方不空白」。正常路径下 detachTabAt 已

@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MarketPanel } from './MarketPanel'
+import { futuresSpec } from './futuresSpec'
 import { useMarketStore } from './store'
 import { useContractsStore } from '@/stores/contracts'
+import { useCollectionsStore } from '@/stores/collections'
 import { useMarketFilterStore } from '@/stores/marketFilter'
 import { useTabStore } from '@/stores/tabs'
 import { openFloatingTab } from '@/utils/openFloatingTab'
@@ -99,7 +101,8 @@ describe('MarketPanel', () => {
       snapshots: new Map(),
       scrollEndSeq: 0,
     })
-    useContractsStore.setState({ contracts: [], favorites: [], isLoaded: false })
+    useContractsStore.setState({ contracts: [], isLoaded: false })
+    useCollectionsStore.setState({ collections: [], loaded: true })
     useMarketFilterStore.setState({
       futures: { exchanges: [], products: [] },
       options: { exchanges: [], products: [] },
@@ -120,10 +123,10 @@ describe('MarketPanel', () => {
     expect(container.firstChild).toHaveClass('market-panel')
   })
 
-  it('renders 全部 and 自选 tabs', () => {
+  it('已去除 [全部|自选] 内部视图切换按钮', () => {
     render(<MarketPanel />)
-    expect(screen.getByText('全部')).toBeInTheDocument()
-    expect(screen.getByText('自选')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '自选' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '全部' })).not.toBeInTheDocument()
   })
 
   it('renders 高级搜索按钮（合并搜索入口）', () => {
@@ -133,13 +136,11 @@ describe('MarketPanel', () => {
 
   it('搜索下拉选择合约后：selectedContracts 同步为单选集（锚点守卫通过才能滚动跳转）', async () => {
     vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
-    vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
     useContractsStore.setState({
       contracts: [
         { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 1, productClass: '1' },
         { instrumentID: 'IF2609', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 1, productClass: '1' },
       ],
-      favorites: [],
       isLoaded: true,
     })
     useMarketStore.setState({
@@ -167,55 +168,6 @@ describe('MarketPanel', () => {
     expect(useMarketStore.getState().selectedContracts.size).toBe(1)
   })
 
-  // --- 状态过滤开关 tests ---
-
-  /** 设置混合合约（交易中 + 已停牌），返回 vtable options 以检查过滤结果 */
-  function setupMixedContracts() {
-    vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
-    vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
-    useContractsStore.setState({
-      contracts: [
-        { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 1, productClass: '1' },
-        { instrumentID: 'IF9999', instrumentName: '停牌合约', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 0, productClass: '1' },
-      ],
-      favorites: [],
-      isLoaded: true,
-    })
-    useMarketStore.setState({
-      snapshots: new Map(),
-      selectedInstrument: null,
-    })
-  }
-
-  it('渲染状态过滤开关按钮', () => {
-    render(<MarketPanel />)
-    expect(screen.getByText('显示全部')).toBeInTheDocument()
-  })
-
-  it('默认关闭过滤，显示全部合约（含已停牌）', async () => {
-    setupMixedContracts()
-    render(<MarketPanel />)
-    const { ListTable } = await import('@visactor/vtable')
-    const options = (ListTable as any).mock.calls[0][1]
-    const ids = options.records.map((r: any) => r.instrumentID)
-    expect(ids).toEqual(['IF2608', 'IF9999'])
-  })
-
-  it('点击过滤开关切换为仅显示交易中合约', async () => {
-    setupMixedContracts()
-    const user = userEvent.setup()
-    render(<MarketPanel />)
-    // 默认显示全部
-    await user.click(screen.getByText('显示全部'))
-    expect(screen.getByText('仅交易中')).toBeInTheDocument()
-    const { ListTable } = await import('@visactor/vtable')
-    const instance = (ListTable as any).mock.results[0].value
-    // 过滤切换后通过 setRecords 更新表格记录
-    const lastRecords = instance.setRecords.mock.calls.at(-1)?.[0] ?? []
-    const ids = lastRecords.map((r: any) => r.instrumentID)
-    expect(ids).toEqual(['IF2608'])
-  })
-
   it('点击 高级 按钮打开搜索弹窗', async () => {
     const user = userEvent.setup()
     render(<MarketPanel />)
@@ -226,15 +178,13 @@ describe('MarketPanel', () => {
 
   // --- 标签页打开方式测试 (PR-R13) ---
 
-  /** 设置测试合约数据并阻止 loadAllInstruments/loadFavoriteContracts 覆盖 */
+  /** 设置测试合约数据并阻止 loadAllInstruments 覆盖 */
   function setupContracts() {
     vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
-    vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
     useContractsStore.setState({
       contracts: [
         { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260821', isTrading: 1, productClass: '1' },
       ],
-      favorites: [],
       isLoaded: true,
     })
     useMarketStore.setState({
@@ -340,6 +290,20 @@ describe('MarketPanel', () => {
     })
   })
 
+  it('⭐ 列点击 → 打开 CollectionPicker（选夹面板）', async () => {
+    setupContracts()
+    render(<MarketPanel />)
+    const { ListTable } = await import('@visactor/vtable')
+    const instance = (ListTable as any).mock.results[0].value
+    const clickHandler = instance.on.mock.calls.find((call: any[]) => call[0] === 'click_cell')?.[1]
+    expect(clickHandler).toBeDefined()
+    act(() => {
+      clickHandler({ row: 1, col: futuresSpec.columns.length - 1, event: {} })
+    })
+    // 单选面板标题「收藏到收藏夹」出现（IF2608）
+    expect(screen.getByText('收藏到收藏夹')).toBeInTheDocument()
+  })
+
   describe('交易所+品种多选筛选（Task 7）', () => {
     /** 三合约跨两交易所/两品种，用于筛选断言 */
     function setupFilterContracts() {
@@ -349,7 +313,6 @@ describe('MarketPanel', () => {
           { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
           { instrumentID: 'MA609', instrumentName: '甲醇609', exchangeID: 'CZCE', productID: 'MA', volumeMultiple: 10, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
         ],
-        favorites: [],
         isLoaded: true,
       })
     }
@@ -372,7 +335,6 @@ describe('MarketPanel', () => {
           { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
           { instrumentID: 'FG609-C-1300', instrumentName: 'FG609-C-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'FG609' },
         ],
-        favorites: [],
         isLoaded: true,
       })
       render(<MarketPanel />)
@@ -407,30 +369,6 @@ describe('MarketPanel', () => {
       await user.click(screen.getByRole('button', { name: '清空' }))
       expect(latestRecordIDs(instance)).toEqual(['cu2609', 'FG609', 'MA609'])
     })
-
-    it('筛选在 自选 视图同样生效', async () => {
-      useContractsStore.setState({
-        contracts: [
-          { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
-          { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
-        ],
-        favorites: [
-          { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
-          { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
-        ],
-        isLoaded: true,
-      })
-      const user = userEvent.setup()
-      render(<MarketPanel />)
-      // 切到自选：仅 cu2609 + FG609
-      await user.click(screen.getByRole('button', { name: '自选' }))
-      // 勾选交易所 SHFE → 自选里只剩 cu2609
-      await user.click(screen.getByRole('button', { name: /筛选/ }))
-      await user.click(screen.getByRole('checkbox', { name: 'SHFE' }))
-      const { ListTable } = await import('@visactor/vtable')
-      const instance = (ListTable as any).mock.results[0].value
-      expect(latestRecordIDs(instance)).toEqual(['cu2609'])
-    })
   })
 
   describe('顶部菜单行情切换（onMarketView）', () => {
@@ -459,7 +397,7 @@ describe('MarketPanel', () => {
       delete (window as any).electronAPI
     })
 
-    it('view=favorites/all → 激活期货标签并切内部 自选/全部', () => {
+    it('view=favorites → 打开收藏夹管理页（collections 标签）', () => {
       setupTabs('tab-options')
       const onMarketView = vi.fn()
       ;(window as any).electronAPI = { onMarketView }
@@ -469,26 +407,34 @@ describe('MarketPanel', () => {
       act(() => {
         callback('favorites')
       })
-      expect(useTabStore.getState().activeTabId).toBe('tab-market')
-      expect(screen.getByRole('button', { name: '自选' }).classList.contains('active')).toBe(true)
+      expect(useTabStore.getState().tabs.some((t) => t.type === 'collections')).toBe(true)
+      // 期货页无内部 自选 视图可切
+      expect(screen.queryByRole('button', { name: '自选' })).not.toBeInTheDocument()
+
+      delete (window as any).electronAPI
+    })
+
+    it('view=all → 激活期货标签', () => {
+      setupTabs('tab-options')
+      const onMarketView = vi.fn()
+      ;(window as any).electronAPI = { onMarketView }
+      render(<MarketPanel />)
+      const callback = onMarketView.mock.calls[0][0]
 
       act(() => {
         callback('all')
       })
       expect(useTabStore.getState().activeTabId).toBe('tab-market')
-      expect(screen.getByRole('button', { name: '全部' }).classList.contains('active')).toBe(true)
 
       delete (window as any).electronAPI
     })
   })
 
   describe('工具行布局（Task 8：功能靠左、搜索贴右）', () => {
-    it('DOM 顺序：全部/自选 → 筛选 → 仅交易中 → 收藏 → 搜索框', () => {
+    it('DOM 顺序：筛选 → 收藏 → 搜索框', () => {
       const { container } = render(<MarketPanel />)
       const toolbar = container.querySelector('.market-toolbar') as HTMLElement
-      const tabs = toolbar.querySelector('.market-toolbar__tabs') as Element
       const filterBtn = screen.getByRole('button', { name: /筛选/ })
-      const statusBtn = toolbar.querySelector('.btn-filter-status') as Element
       const favoriteBtn = toolbar.querySelector('.btn-favorite') as Element
       const searchBox = toolbar.querySelector('.market-toolbar__search') as Element
       const searchInput = toolbar.querySelector('.market-toolbar__search .search-input') as Element
@@ -496,42 +442,12 @@ describe('MarketPanel', () => {
       const follows = (a: Element, b: Element) =>
         (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
 
-      expect(tabs).toBeTruthy()
       expect(filterBtn).toBeTruthy()
-      expect(statusBtn).toBeTruthy()
       expect(favoriteBtn).toBeTruthy()
       expect(searchInput).toBeTruthy()
-      expect(follows(tabs, filterBtn)).toBe(true)
-      expect(follows(filterBtn, statusBtn)).toBe(true)
-      expect(follows(statusBtn, favoriteBtn)).toBe(true)
+      expect(follows(filterBtn, favoriteBtn)).toBe(true)
       expect(follows(favoriteBtn, searchBox)).toBe(true)
       expect(follows(favoriteBtn, searchInput)).toBe(true)
-    })
-  })
-
-  describe('自选视图排序（spec 决策 3：排序同样作用于自选基础集）', () => {
-    it('自选按 交易所→品种→月份 排序（输入无序）', async () => {
-      useContractsStore.setState({
-        contracts: [
-          { instrumentID: 'FG610', instrumentName: '玻璃610', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20261031', isTrading: 1, productClass: '1' },
-          { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
-          { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
-        ],
-        favorites: [
-          { instrumentID: 'FG610', instrumentName: '玻璃610', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20261031', isTrading: 1, productClass: '1' },
-          { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
-          { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
-        ],
-        isLoaded: true,
-      })
-      const user = userEvent.setup()
-      render(<MarketPanel />)
-      await user.click(screen.getByRole('button', { name: '自选' }))
-      const { ListTable } = await import('@visactor/vtable')
-      const instance = (ListTable as any).mock.results[0].value
-      const last = instance.setRecords.mock.calls.at(-1)?.[0] ?? []
-      // SHFE 在 CZCE 前；CZCE 内 FG 月份数字升序：cu2609 < FG609 < FG610
-      expect(last.map((r: any) => r.instrumentID)).toEqual(['cu2609', 'FG609', 'FG610'])
     })
   })
 })

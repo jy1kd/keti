@@ -150,7 +150,7 @@ class TestStopOrderListAPI:
         response = client.get("/api/order/stop/list")
         assert response.status_code == 200
         data = response.json()
-        assert "orders" in data
+        assert "stopOrders" in data
         assert data["count"] == 1
 
     def test_list_calls_service(self, client, mock_stop_service):

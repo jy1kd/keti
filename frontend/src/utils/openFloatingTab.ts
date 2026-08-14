@@ -71,6 +71,16 @@ export function openTQuoteFloating(underlyingID?: string): boolean {
   })
 }
 
+/** 打开收藏夹悬浮窗：初始即为悬浮窗口（可 ⇩ 停靠回标签栏） */
+export function openCollectionFloating(collectionId: string, name: string): boolean {
+  return openFloatingTab({
+    type: 'collection',
+    title: `📁 ${name}`,
+    props: { collectionId },
+    size: { w: 900, h: 600 },
+  })
+}
+
 /** 打开设置浮动窗 */
 export function openSettingsFloating(): boolean {
   return openFloatingTab({ type: 'settings', title: '⚙ 设置' })
