@@ -98,12 +98,12 @@ describe('TrayManager', () => {
     expect(labels).toEqual(['📝 报单窗口', '📈 K线窗口', '📋 查询窗口', '📋 报单查询窗口', '📋 持仓查询窗口']);
   });
 
-  it('行情子菜单完整镜像：期货/期权/自选/T型报价/新窗口', () => {
+  it('行情子菜单完整镜像：期货/期权/收藏夹/T型报价/新窗口', () => {
     const manager = new TrayManager();
     manager.initialize(mainWindow, windowManager);
     const market = getTemplate().find((i) => i.label === '行情')!;
     const labels = market.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📉 T型报价', '🪟 在新窗口打开']);
+    expect(labels).toEqual(['📊 期货', '📉 期权', '📁 收藏夹', '📉 T型报价', '🪟 在新窗口打开']);
   });
 
   it('点击期货发送 menu:market-view all 并显示主窗口', () => {

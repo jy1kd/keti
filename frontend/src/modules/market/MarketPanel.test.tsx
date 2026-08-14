@@ -468,7 +468,7 @@ describe('MarketPanel', () => {
       delete (window as any).electronAPI
     })
 
-    it('view=favorites/all → 激活期货标签并切内部 自选/全部', () => {
+    it('view=favorites → 打开收藏夹管理页（collections 标签），不切期货页内部 自选', () => {
       setupTabs('tab-options')
       const onMarketView = vi.fn()
       ;(window as any).electronAPI = { onMarketView }
@@ -478,8 +478,18 @@ describe('MarketPanel', () => {
       act(() => {
         callback('favorites')
       })
-      expect(useTabStore.getState().activeTabId).toBe('tab-market')
-      expect(screen.getByRole('button', { name: '自选' }).classList.contains('active')).toBe(true)
+      expect(useTabStore.getState().tabs.some((t) => t.type === 'collections')).toBe(true)
+      expect(screen.getByRole('button', { name: '自选' }).classList.contains('active')).toBe(false)
+
+      delete (window as any).electronAPI
+    })
+
+    it('view=all → 激活期货标签并切内部 全部', () => {
+      setupTabs('tab-options')
+      const onMarketView = vi.fn()
+      ;(window as any).electronAPI = { onMarketView }
+      render(<MarketPanel />)
+      const callback = onMarketView.mock.calls[0][0]
 
       act(() => {
         callback('all')

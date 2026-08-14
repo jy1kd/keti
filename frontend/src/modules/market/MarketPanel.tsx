@@ -114,7 +114,7 @@ export function MarketPanel() {
   )
 
   // 顶部菜单「行情」切换（设计 §4.1）：期货/期权为独立固定标签。
-  // options → 激活期权标签；all/favorites → 激活期货标签并切内部全部/自选。
+  // options → 激活期权标签；favorites → 打开收藏夹管理页；all → 激活期货标签并切内部全部。
   useEffect(() => {
     if (!isElectron()) return
 
@@ -124,7 +124,11 @@ export function MarketPanel() {
         if (options) useTabStore.getState().setActiveTab(options.id)
         return
       }
-      setActiveTab(view === 'favorites' ? 'favorites' : 'all')
+      if (view === 'favorites') {
+        useTabStore.getState().openTab({ type: 'collections', title: '📁 收藏夹' })
+        return
+      }
+      setActiveTab('all')
       const market = useTabStore.getState().tabs.find((t) => t.type === 'market')
       if (market) useTabStore.getState().setActiveTab(market.id)
     })
