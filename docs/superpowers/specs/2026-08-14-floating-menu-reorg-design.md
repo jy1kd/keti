@@ -36,7 +36,7 @@
 | 后端 | **零改动**。仅前端 UI 与 Electron 菜单层 |
 | 资金查询窗口 | **视为已存在**，本次不动其实现 |
 | BottomBar / TabBar 工具按钮 | **除 FPS 移除外不动**（报单/K线/无限下单/设置/网络监控按钮保留） |
-| `query` 标签类型 / `openQueryFloating` / `QueryPanel` / store 瘦身 | **留给查询解散后续 Task**，本次只清菜单入口（`func-query` 菜单项 + `FloatingTab` 的 `'query'`） |
+| `query` 标签类型 / `openQueryFloating` / `QueryPanel` / store 瘦身 | **留给查询解散后续 Task**；本次仅清查询窗口全部入口：`func-query` 菜单项 + `FloatingTab` 的 `'query'` + `App.tsx` 失效 `case 'query'`（顺带消除既有 TS2678 编译错，见 4.2） |
 | FPS 监控 | **完整下线**：菜单 / 托盘 / BottomBar 按钮 / 快捷键 / `PerfMonitor` 组件 / `toggle-perf` IPC 全删 |
 | 托盘 | **方案 A**：继续镜像 `getAppMenuDef()`，自动获得四组结构 |
 
@@ -111,7 +111,7 @@
 |---|---|---|
 | 1 | 资金查询窗口按**已存在**处理，不重复建设 | 用户指定；本分支 Task 1-2 已完成 |
 | 2 | 无限下单**加入**交易菜单，补齐 IPC 链路（`App.tsx` 加 `case 'infinite'` → `openInfiniteFloating`） | 用户指定 |
-| 3 | 旧「📋 查询窗口」菜单项移除 + `FloatingTab` 删 `'query'`；`query` 代码层删除留给查询解散后续 Task | 查询解散收尾 + 范围边界 |
+| 3 | 旧「📋 查询窗口」菜单项移除 + `FloatingTab` 删 `'query'` + `App.tsx` 失效 `case 'query'` 清理；`query` 标签类型 / 组件 / store 删除留给查询解散后续 Task | 查询解散收尾 + 范围边界 + 消除既有 TS2678 |
 | 4 | FPS 监控**完整下线**（Electron + Web 全链路） | 用户指定 |
 | 5 | 「性能监控」组解散，网络监控并入设置 | 四类化 |
 | 6 | 「功能」组解散，报单/无限下单入交易、K线入行情 | 四类化 |
@@ -146,7 +146,7 @@
 | `electron/menuTemplate.ts` | `FloatingTab` 加 `'infinite'`（见 4.1）；交易组 `trade-infinite` 菜单项 |
 | `electron/preload.ts` | `onOpenFloatingTab` 类型（接口 + 实现 handler 两处）加 `'infinite'` |
 | `src/services/electron.ts` | `onOpenFloatingTab` 回调类型加 `'infinite'` |
-| `src/App.tsx` | `onOpenFloatingTab` switch 加 `case 'infinite': openInfiniteFloating(); break`；import 加 `openInfiniteFloating` |
+| `src/App.tsx` | `onOpenFloatingTab` switch 加 `case 'infinite': openInfiniteFloating(); break`；import 加 `openInfiniteFloating`。**同时删失效 `case 'query'` 与 `openQueryFloating` import**（旧查询窗口最后一个入口移除后已无人可触发，且当前为既有 TS2678 编译错误） |
 
 > `openInfiniteFloating()` 已存在于 `utils/openFloatingTab.ts`（有选中合约则定位），无需新增。
 
@@ -217,7 +217,7 @@
 | 1 | 四类分组（行情/交易/查询/设置） | 用户指定 |
 | 2 | K线归行情、报单归交易 | 行情图表 vs 报单操作的业务语义 |
 | 3 | 无限下单加入交易菜单 | 用户指定；补齐 `open-floating infinite` IPC 链路 |
-| 4 | 旧查询窗口菜单项移除，代码层删除留给查询解散 Task | 与 `2026-08-14-query-dissolve-account-window` 计划 Task 4 衔接，避免范围重复 |
+| 4 | 旧查询窗口菜单项 + 失效 `App.tsx` case 移除，代码层删除留给查询解散 Task | 与 `2026-08-14-query-dissolve-account-window` 计划 Task 4 衔接，避免范围重复 |
 | 5 | FPS 完整下线（含 Web 端按钮/快捷键/组件/IPC） | 用户指定「完整下线」 |
 | 6 | 性能监控组解散，网络监控并入设置 | 四类化后无独立分组必要 |
 | 7 | 托盘镜像四组（方案 A） | 用户指定；单一真源，改动最小 |
