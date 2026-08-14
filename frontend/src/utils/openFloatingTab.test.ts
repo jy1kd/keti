@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useTabStore } from '@/stores/tabs';
 import { useFloatingWindowStore } from '@/stores/floatingWindows';
 import { useMarketStore } from '@/modules/market/store';
-import { openOrderFloating, openKlineFloating, openQueryFloating, openSettingsFloating, openIpcMonitorFloating } from './openFloatingTab';
+import { openFloatingTab, openOrderFloating, openKlineFloating, openAccountQueryFloating, openSettingsFloating, openIpcMonitorFloating, computeAccountWindowHeight, fitAccountWindowToContent } from './openFloatingTab';
 
 describe('openFloatingTab helpers — 顶部菜单打开浮动窗', () => {
   beforeEach(() => {
@@ -13,12 +13,12 @@ describe('openFloatingTab helpers — 顶部菜单打开浮动窗', () => {
 
   const tabByType = (type: string) => useTabStore.getState().tabs.find((t) => t.type === type);
 
-  it('openQueryFloating 打开查询浮动窗', () => {
-    openQueryFloating();
-    const tab = tabByType('query');
+  it('openAccountQueryFloating 打开资金查询浮动窗', () => {
+    openAccountQueryFloating();
+    const tab = tabByType('query-account');
     expect(tab).toBeDefined();
-    expect(tab!.title).toBe('📋 查询');
-    expect(useFloatingWindowStore.getState().windows['tab-query']).toBeDefined();
+    expect(tab!.title).toBe('💰 资金查询');
+    expect(useFloatingWindowStore.getState().windows['tab-query-account']).toBeDefined();
   });
 
   it('openOrderFloating 无选中合约时打开空白报单窗', () => {
@@ -82,8 +82,56 @@ describe('openFloatingTab helpers — 顶部菜单打开浮动窗', () => {
       ],
       activeTabId: 'tab-options',
     });
-    openQueryFloating();
+    openAccountQueryFloating();
     expect(useTabStore.getState().activeTabId).toBe('tab-options');
-    expect(useFloatingWindowStore.getState().windows['tab-query']).toBeDefined();
+    expect(useFloatingWindowStore.getState().windows['tab-query-account']).toBeDefined();
+  });
+
+  it('openFloatingTab 支持自定义 position（不再居中）', () => {
+    openFloatingTab({ type: 'query-account', title: '💰 资金查询', size: { w: 800, h: 600 }, position: { x: 100, y: 200 } });
+    const win = useFloatingWindowStore.getState().windows['tab-query-account'];
+    expect(win).toMatchObject({ x: 100, y: 200, w: 800, h: 600 });
+  });
+
+  it('openAccountQueryFloating 对齐行情表格（同尺寸同位置）', () => {
+    // jsdom 视口 1024×768；表格须在视口内，否则 detachTabAt 会把 x 钳回 0（正确行为）
+    const rect = { left: 50, top: 100, width: 900, height: 600, bottom: 700, right: 950 } as DOMRect;
+    const el = { getBoundingClientRect: () => rect } as unknown as Element;
+    const spy = vi.spyOn(document, 'querySelector').mockImplementation((sel: string) =>
+      sel === '.market-table-container' ? el : null
+    );
+    openAccountQueryFloating();
+    const win = useFloatingWindowStore.getState().windows['tab-query-account'];
+    expect(win).toMatchObject({ x: 50, y: 100, w: 900, h: 600 });
+    spy.mockRestore();
+  });
+
+  it('openAccountQueryFloating 无行情表格时回退默认（仍能打开）', () => {
+    const spy = vi.spyOn(document, 'querySelector').mockReturnValue(null);
+    openAccountQueryFloating();
+    expect(useFloatingWindowStore.getState().windows['tab-query-account']).toBeDefined();
+    spy.mockRestore();
+  });
+
+  it('computeAccountWindowHeight 收缩到刚好容纳卡片（网格 + 内容 padding + 标题条）', () => {
+    expect(computeAccountWindowHeight(130, 700)).toBe(178); // 130 + 16 padding + 32 chrome
+  });
+
+  it('computeAccountWindowHeight 高度已够则不收缩（避免裁卡）', () => {
+    expect(computeAccountWindowHeight(130, 150)).toBeNull();
+  });
+
+  it('fitAccountWindowToContent 收缩窗口并保持底部锚定', () => {
+    useFloatingWindowStore.setState({
+      windows: { 'tab-query-account': { x: 50, y: 100, w: 900, h: 700, z: 1 } },
+    });
+    const grid = { offsetHeight: 130 } as HTMLElement;
+    const spy = vi.spyOn(document, 'querySelector').mockImplementation((sel: string) =>
+      sel === '#floating-overlay .account-query .account-grid' ? grid : null
+    );
+    expect(fitAccountWindowToContent()).toBe(true);
+    const win = useFloatingWindowStore.getState().windows['tab-query-account'];
+    expect(win).toMatchObject({ x: 50, y: 622, w: 900, h: 178 }); // bottom 800 锚定
+    spy.mockRestore();
   });
 });

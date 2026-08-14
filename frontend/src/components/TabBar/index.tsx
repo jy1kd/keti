@@ -20,7 +20,6 @@ const ADD_TAB_ITEMS = [
   { type: 'order' as const, icon: '📝', label: '报单', title: '📝 报单' },
   { type: 'kline' as const, icon: '📈', label: 'K线', title: '📈 K线' },
   { type: 'infinite' as const, icon: '♾️', label: '无限下单', title: '♾️ 无限下单' },
-  { type: 'query' as const, icon: '📋', label: '查询', title: '📋 查询' },
   { type: 'settings' as const, icon: '⚙', label: '设置', title: '⚙ 设置' },
 ]
 
@@ -28,7 +27,7 @@ const ADD_TAB_ITEMS = [
  * 标签栏组件
  *
  * 显示所有打开的标签页，支持切换、关闭、新增。
- * `+` 悬停弹出选择栏，停靠打开底部功能栏标签（报单/K线/查询/设置）。
+ * `+` 悬停弹出选择栏，停靠打开底部功能栏标签（报单/K线/无限下单/设置）。
  * 键盘导航：左/右箭头切换标签，Home/End 跳转首尾。
  * 右键菜单：关闭/关闭其他/关闭所有/固定(取消固定)/窗口化
  */

@@ -257,12 +257,12 @@ describe('TabBar', () => {
       fireEvent.mouseLeave(wrap)
     }
 
-    it('悬停 + 显示选择栏（报单/K线/查询/设置）', () => {
+    it('悬停 + 显示选择栏（报单/K线/无限下单/设置）', () => {
       render(<TabBar />)
       hoverOpen()
       expect(screen.getByText('📝 报单')).toBeInTheDocument()
       expect(screen.getByText('📈 K线')).toBeInTheDocument()
-      expect(screen.getByText('📋 查询')).toBeInTheDocument()
+      expect(screen.getByText('♾️ 无限下单')).toBeInTheDocument()
       expect(screen.getByText('⚙ 设置')).toBeInTheDocument()
     })
 

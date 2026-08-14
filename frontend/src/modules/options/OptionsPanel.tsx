@@ -64,7 +64,7 @@ export function OptionsPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, favorites, addToFavorites, removeFromFavorites } = useContractsStore()
-  const { contextMenu, multiSelectMenu, openOrderPopup, openQueryPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
+  const { contextMenu, multiSelectMenu, openOrderPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
   // 期权标签是否激活：激活翻转为 true 时 QuoteTable 重报可见区，订阅管理器立即补订阅
   const isActive = useTabStore((s) => s.tabs.some((t) => t.type === 'options' && t.id === s.activeTabId))
 
@@ -137,7 +137,6 @@ export function OptionsPanel() {
     addToFavorites,
     removeFromFavorites,
     openOrderPopup,
-    openQueryPopup,
     openKlineTab,
     openOrderTabs,
     openKlineTabs,

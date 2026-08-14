@@ -34,7 +34,7 @@ interface FloatingWindowStore {
   resize: (tabId: string, rect: { x: number; y: number; w: number; h: number }) => void
   /** 点击浮动窗口置顶（z 递增） */
   focus: (tabId: string) => void
-  /** 通用置顶：任意弹窗（order/query 等）点击/打开时升到全局最高 z，返回新 z */
+  /** 通用置顶：任意弹窗（order 等）点击/打开时升到全局最高 z，返回新 z */
   bringToFront: (key: string) => number
 }
 

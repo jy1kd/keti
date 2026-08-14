@@ -25,7 +25,7 @@ export function MarketPanel() {
   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const { contracts, favorites, addToFavorites, removeFromFavorites } = useContractsStore()
-  const { contextMenu, multiSelectMenu, openOrderPopup, openQueryPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
+  const { contextMenu, multiSelectMenu, openOrderPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
   // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
@@ -97,7 +97,6 @@ export function MarketPanel() {
     addToFavorites,
     removeFromFavorites,
     openOrderPopup,
-    openQueryPopup,
     openKlineTab,
     openOrderTabs,
     openKlineTabs,

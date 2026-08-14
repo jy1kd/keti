@@ -4,73 +4,35 @@ import { useQueryStore } from './store'
 // Mock API functions — store 使用 refresh* 函数（POST /refresh 触发 CTP 查询）
 vi.mock('../../services/api', () => ({
   refreshOrders: vi.fn(),
-  refreshTrades: vi.fn(),
   refreshPositions: vi.fn(),
   refreshAccount: vi.fn(),
-  getStopOrders: vi.fn(),
   cancelOrder: vi.fn(),
   cancelAllOrders: vi.fn(),
-  cancelStopOrder: vi.fn(),
 }))
 
-import { refreshOrders, refreshTrades, refreshPositions, refreshAccount, getStopOrders, cancelOrder, cancelAllOrders, cancelStopOrder } from '../../services/api'
+import { refreshOrders, refreshPositions, refreshAccount, cancelOrder, cancelAllOrders } from '../../services/api'
 
 const mockRefreshOrders = vi.mocked(refreshOrders)
-const mockRefreshTrades = vi.mocked(refreshTrades)
 const mockRefreshPositions = vi.mocked(refreshPositions)
 const mockRefreshAccount = vi.mocked(refreshAccount)
-const mockGetStopOrders = vi.mocked(getStopOrders)
 const mockCancelOrder = vi.mocked(cancelOrder)
 const mockCancelAllOrders = vi.mocked(cancelAllOrders)
-const mockCancelStopOrder = vi.mocked(cancelStopOrder)
 
 describe('QueryStore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useQueryStore.setState({
-      activeTab: 'trades',
       orders: [],
-      trades: [],
       positions: [],
       account: null,
-      stopOrders: [],
       isPaused: false,
-      isLoading: false,
-      isRefreshing: false,
       newOrderRefs: new Set(),
-      newTradeIDs: new Set(),
     })
   })
 
-  // ── Tab switching ──────────────────────────────────────────────
-
-  it('defaults to trades tab', () => {
-    expect(useQueryStore.getState().activeTab).toBe('trades')
-  })
-
-  it('sets active tab', () => {
-    useQueryStore.getState().setActiveTab('trades')
-    expect(useQueryStore.getState().activeTab).toBe('trades')
-  })
-
-  it('supports all remaining tab values', () => {
-    const tabs = ['trades', 'account', 'stop_orders'] as const
-    for (const tab of tabs) {
-      useQueryStore.getState().setActiveTab(tab)
-      expect(useQueryStore.getState().activeTab).toBe(tab)
-    }
-  })
-
-  // ── Pause / Resume ─────────────────────────────────────────────
+  // ── Pause ──────────────────────────────────────────────────────
 
   it('defaults to not paused', () => {
-    expect(useQueryStore.getState().isPaused).toBe(false)
-  })
-
-  it('toggles pause', () => {
-    useQueryStore.getState().togglePause()
-    expect(useQueryStore.getState().isPaused).toBe(true)
-    useQueryStore.getState().togglePause()
     expect(useQueryStore.getState().isPaused).toBe(false)
   })
 
@@ -84,30 +46,14 @@ describe('QueryStore', () => {
 
     await useQueryStore.getState().fetchOrders()
 
-    const state = useQueryStore.getState()
-    expect(state.orders).toHaveLength(1)
-    expect(state.orders[0].orderRef).toBe('1001')
+    expect(useQueryStore.getState().orders).toHaveLength(1)
+    expect(useQueryStore.getState().orders[0].orderRef).toBe('1001')
   })
 
   it('fetchOrders handles API error gracefully', async () => {
     mockRefreshOrders.mockRejectedValue(new Error('network'))
-
     await useQueryStore.getState().fetchOrders()
-
     expect(useQueryStore.getState().orders).toEqual([])
-  })
-
-  // ── Fetch Trades ───────────────────────────────────────────────
-
-  it('fetchTrades populates trades from API', async () => {
-    const mockTrades = [
-      { tradeID: 'T001', orderRef: '1001', instrumentID: 'IF2608', direction: '0', offsetFlag: '0', price: 4800, volume: 1, tradeTime: '09:30:01' },
-    ]
-    mockRefreshTrades.mockResolvedValue({ trades: mockTrades, count: 1 })
-
-    await useQueryStore.getState().fetchTrades()
-
-    expect(useQueryStore.getState().trades).toHaveLength(1)
   })
 
   // ── Fetch Positions ────────────────────────────────────────────
@@ -140,72 +86,6 @@ describe('QueryStore', () => {
     expect(useQueryStore.getState().account?.balance).toBe(100000)
   })
 
-  // ── Fetch Stop Orders ──────────────────────────────────────────
-
-  it('fetchStopOrders populates stop orders from API', async () => {
-    const mockStopOrders = [
-      { stopOrderID: 'S001', instrumentID: 'IF2608', direction: 'sell', offsetFlag: '1', limitPrice: 4790, volume: 1, stopPrice: 4790, status: 'pending', createdAt: '09:30:00' },
-    ]
-    mockGetStopOrders.mockResolvedValue({ stopOrders: mockStopOrders, count: 1 })
-
-    await useQueryStore.getState().fetchStopOrders()
-
-    expect(useQueryStore.getState().stopOrders).toHaveLength(1)
-    expect(useQueryStore.getState().stopOrders[0].status).toBe('pending')
-  })
-
-  // ── Refresh All ────────────────────────────────────────────────
-
-  it('refreshAll calls remaining fetch methods (trades/account/stopOrders)', async () => {
-    mockRefreshOrders.mockResolvedValue({ orders: [], count: 0 })
-    mockRefreshTrades.mockResolvedValue({ trades: [], count: 0 })
-    mockRefreshPositions.mockResolvedValue({ positions: [], count: 0 })
-    mockRefreshAccount.mockResolvedValue(null as never)
-    mockGetStopOrders.mockResolvedValue({ stopOrders: [], count: 0 })
-
-    await useQueryStore.getState().refreshAll()
-
-    expect(mockRefreshTrades).toHaveBeenCalled()
-    expect(mockRefreshAccount).toHaveBeenCalled()
-    expect(mockGetStopOrders).toHaveBeenCalled()
-    expect(mockRefreshOrders).not.toHaveBeenCalled()
-    expect(mockRefreshPositions).not.toHaveBeenCalled()
-  })
-
-  it('refreshAll skips when paused', async () => {
-    useQueryStore.setState({ isPaused: true })
-
-    await useQueryStore.getState().refreshAll()
-
-    expect(mockRefreshTrades).not.toHaveBeenCalled()
-  })
-
-  it('refreshAll skips when already refreshing', async () => {
-    // 模拟正在进行中的刷新
-    useQueryStore.setState({ isRefreshing: true })
-
-    await useQueryStore.getState().refreshAll()
-
-    expect(mockRefreshTrades).not.toHaveBeenCalled()
-  })
-
-  it('refreshAll sets isRefreshing flag', async () => {
-    mockRefreshOrders.mockResolvedValue({ orders: [], count: 0 })
-    mockRefreshTrades.mockResolvedValue({ trades: [], count: 0 })
-    mockRefreshPositions.mockResolvedValue({ positions: [], count: 0 })
-    mockRefreshAccount.mockResolvedValue(null as never)
-    mockGetStopOrders.mockResolvedValue({ stopOrders: [], count: 0 })
-
-    // 刷新前，isRefreshing 应为 false
-    expect(useQueryStore.getState().isRefreshing).toBe(false)
-
-    // 执行刷新
-    await useQueryStore.getState().refreshAll()
-
-    // 刷新完成后，isRefreshing 应为 false
-    expect(useQueryStore.getState().isRefreshing).toBe(false)
-  })
-
   // ── Cancel Order ───────────────────────────────────────────────
 
   it('handleCancelOrder calls API and removes from orders', async () => {
@@ -220,7 +100,6 @@ describe('QueryStore', () => {
 
     expect(result).toBe(true)
     expect(mockCancelOrder).toHaveBeenCalledWith('1001')
-    // F3: 乐观更新应使用 CTP 编码 '5'（已撤单），而非 'canceled'
     expect(useQueryStore.getState().orders[0].orderStatus).toBe('5')
   })
 
@@ -233,22 +112,6 @@ describe('QueryStore', () => {
 
     expect(result).toBe(true)
     expect(mockCancelAllOrders).toHaveBeenCalled()
-  })
-
-  // ── Cancel Stop Order ──────────────────────────────────────────
-
-  it('handleCancelStopOrder calls API and updates status', async () => {
-    useQueryStore.setState({
-      stopOrders: [
-        { stopOrderID: 'S001', instrumentID: 'IF2608', direction: 'sell', offsetFlag: '1', limitPrice: 4790, volume: 1, stopPrice: 4790, status: 'pending', createdAt: '09:30:00' },
-      ],
-    })
-    mockCancelStopOrder.mockResolvedValue({ success: true })
-
-    const result = await useQueryStore.getState().handleCancelStopOrder('S001')
-
-    expect(result).toBe(true)
-    expect(useQueryStore.getState().stopOrders[0].status).toBe('canceled')
   })
 
   // ── Incremental Order Update ───────────────────────────────────
@@ -279,18 +142,7 @@ describe('QueryStore', () => {
     expect(state.orders).toHaveLength(1)
     expect(state.orders[0].volumeTraded).toBe(1)
     expect(state.orders[0].orderStatus).toBe('3')
-    // Updated order should NOT be marked as new
     expect(state.newOrderRefs.has('1001')).toBe(false)
-  })
-
-  // ── Incremental Trade Update ───────────────────────────────────
-
-  it('upsertTrade inserts new trade at top', () => {
-    const trade = { tradeID: 'T002', orderRef: '1002', instrumentID: 'IF2608', direction: '0', offsetFlag: '0', price: 4810, volume: 1, tradeTime: '09:32:00' }
-    useQueryStore.getState().upsertTrade(trade)
-
-    expect(useQueryStore.getState().trades).toHaveLength(1)
-    expect(useQueryStore.getState().newTradeIDs.has('T002')).toBe(true)
   })
 
   // ── Clear New Highlights ───────────────────────────────────────
@@ -302,13 +154,5 @@ describe('QueryStore', () => {
 
     expect(useQueryStore.getState().newOrderRefs.has('1001')).toBe(false)
     expect(useQueryStore.getState().newOrderRefs.has('1002')).toBe(true)
-  })
-
-  it('clearNewTradeID removes from highlight set', () => {
-    useQueryStore.setState({ newTradeIDs: new Set(['T001']) })
-
-    useQueryStore.getState().clearNewTradeID('T001')
-
-    expect(useQueryStore.getState().newTradeIDs.has('T001')).toBe(false)
   })
 })

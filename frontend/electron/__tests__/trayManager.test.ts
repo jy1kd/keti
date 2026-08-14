@@ -95,7 +95,7 @@ describe('TrayManager', () => {
     manager.initialize(mainWindow, windowManager);
     const fnMenu = getTemplate().find((i) => i.label === '功能')!;
     const labels = fnMenu.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📝 报单窗口', '📈 K线窗口', '📋 查询窗口', '📋 报单查询窗口', '📋 持仓查询窗口']);
+    expect(labels).toEqual(['📝 报单窗口', '📈 K线窗口', '📋 报单查询窗口', '📋 持仓查询窗口', '💰 资金查询窗口']);
   });
 
   it('行情子菜单完整镜像：期货/期权/自选/T型报价/新窗口', () => {
@@ -142,11 +142,11 @@ describe('TrayManager', () => {
     expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'kline');
   });
 
-  it('点击查询窗口发送 menu:open-floating query', () => {
+  it('点击资金查询窗口发送 menu:open-floating query-account', () => {
     const manager = new TrayManager();
     manager.initialize(mainWindow, windowManager);
-    clickItem('📋 查询窗口');
-    expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query');
+    clickItem('💰 资金查询窗口');
+    expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query-account');
   });
 
   it('点击设置发送 menu:open-floating settings', () => {

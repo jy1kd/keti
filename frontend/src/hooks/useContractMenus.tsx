@@ -29,7 +29,6 @@ interface UseContractMenusArgs {
   addToFavorites: (inst: ContractInfo) => Promise<boolean> | boolean
   removeFromFavorites: (instrumentID: string) => Promise<unknown> | void
   openOrderPopup: (instrumentID: string) => void
-  openQueryPopup: (instrumentID: string) => void
   openKlineTab: (instrumentID: string) => void
   openOrderTabs: (instrumentIDs: string[]) => void
   openKlineTabs: (instrumentIDs: string[]) => void
@@ -40,7 +39,7 @@ interface UseContractMenusArgs {
  * useContractMenus — 合约单选/多选右键菜单 + 工具栏批量收藏共享逻辑。
  *
  * 期货页（MarketPanel）与期权页（OptionsPanel）此前各自内联约 80 行相同的
- * ContextMenu JSX（开报单/K线/查询/收藏/复制）与工具栏收藏按钮的批量
+ * ContextMenu JSX（开报单/K线/收藏/复制）与工具栏收藏按钮的批量
  * allFavorited/count 逻辑，抽取为本 hook 复用，行为保持一致。
  *
  * 返回：
@@ -57,7 +56,6 @@ export function useContractMenus(args: UseContractMenusArgs) {
     addToFavorites,
     removeFromFavorites,
     openOrderPopup,
-    openQueryPopup,
     openKlineTab,
     openOrderTabs,
     openKlineTabs,
@@ -118,7 +116,7 @@ export function useContractMenus(args: UseContractMenusArgs) {
     return selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏'
   }, [favoritedIds])
 
-  /** 单选右键菜单（开报单/K线/查询/收藏/复制合约代码） */
+  /** 单选右键菜单（开报单/K线/收藏/复制合约代码） */
   const singleMenu: ReactNode = contextMenu ? (
     <ContextMenu
       x={contextMenu.x}
@@ -126,7 +124,6 @@ export function useContractMenus(args: UseContractMenusArgs) {
       items={[
         { label: '打开报单', icon: '📝', onClick: () => openOrderPopup(contextMenu.instrumentID) },
         { label: '打开K线', icon: '📈', onClick: () => openKlineTab(contextMenu.instrumentID) },
-        { label: '查询', icon: '📋', onClick: () => openQueryPopup(contextMenu.instrumentID) },
         {
           label: favoritedIds.has(contextMenu.instrumentID) ? '取消收藏' : '收藏',
           icon: favoritedIds.has(contextMenu.instrumentID) ? '★' : '⭐',

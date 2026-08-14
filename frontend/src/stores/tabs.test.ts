@@ -51,10 +51,10 @@ describe('useTabStore', () => {
         'tquote',
         'ipc-monitor',
         'settings',
-        'query',
         'infinite',
         'query-orders',
         'query-positions',
+        'query-account',
       ])
     })
 

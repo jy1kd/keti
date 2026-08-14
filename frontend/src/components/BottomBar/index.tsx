@@ -4,7 +4,6 @@ import { PerfMonitor } from '@/components/PerfMonitor'
 import {
   openOrderFloating,
   openKlineFloating,
-  openQueryFloating,
   openSettingsFloating,
   openIpcMonitorFloating,
   openInfiniteFloating,
@@ -23,7 +22,7 @@ interface BottomBarProps {
  *
  * 承接原 GlobalBar 中除「工作区标签」外的全部内容：
  * - 左：连接状态（MD/TD 指示灯）
- * - 中：全局工具（报单/K线/查询/设置/FPS/网络监控，图标 + 中文名）
+ * - 中：全局工具（报单/K线/无限下单/设置/FPS/网络监控，图标 + 中文名）
  * - 右：`>`/`<` 箭头，点击切换工具区全部展开 / 全部隐藏（max-width + opacity 动画）
  */
 export function BottomBar({ perfVisible, onTogglePerf }: BottomBarProps) {
@@ -36,10 +35,6 @@ export function BottomBar({ perfVisible, onTogglePerf }: BottomBarProps) {
 
   const openIpcMonitor = useCallback(() => {
     openIpcMonitorFloating()
-  }, [])
-
-  const openQuery = useCallback(() => {
-    openQueryFloating()
   }, [])
 
   // 报单入口：优先为当前选中合约打开报单浮动窗；未选中合约时打开空白报单浮动窗
@@ -79,10 +74,6 @@ export function BottomBar({ perfVisible, onTogglePerf }: BottomBarProps) {
         <button type="button" className="bottom-bar__tool" aria-label="无限下单" title="无限下单" onClick={openInfinite}>
           <span className="bottom-bar__tool-icon">♾️</span>
           <span className="bottom-bar__tool-label">无限下单</span>
-        </button>
-        <button type="button" className="bottom-bar__tool" aria-label="📋 查询" title="查询" onClick={openQuery}>
-          <span className="bottom-bar__tool-icon">📋</span>
-          <span className="bottom-bar__tool-label">查询</span>
         </button>
         <button type="button" className="bottom-bar__tool" aria-label="设置" title="设置" onClick={openSettings}>
           <span className="bottom-bar__tool-icon">⚙</span>

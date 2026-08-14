@@ -133,15 +133,15 @@ describe('App Layout — 标签页系统', () => {
       return window.electronAPI
     }
 
-    it('onOpenFloatingTab query 打开查询浮动窗', () => {
+    it('onOpenFloatingTab query-account 打开资金查询浮动窗', () => {
       const onOpenFloatingTab = vi.fn()
       setElectronAPI({ onOpenFloatingTab })
       render(<App />)
       const callback = onOpenFloatingTab.mock.calls[0][0]
       act(() => {
-        callback('query')
+        callback('query-account')
       })
-      expect(useFloatingWindowStore.getState().windows['tab-query']).toBeDefined()
+      expect(useFloatingWindowStore.getState().windows['tab-query-account']).toBeDefined()
       delete (window as any).electronAPI
     })
 

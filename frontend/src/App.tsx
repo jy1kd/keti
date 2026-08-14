@@ -18,11 +18,11 @@ import { isElectron } from '@/services/electron'
 import {
   openOrderFloating,
   openKlineFloating,
-  openQueryFloating,
   openSettingsFloating,
   openIpcMonitorFloating,
   openOrdersQueryFloating,
   openPositionsQueryFloating,
+  openAccountQueryFloating,
   openTQuoteFloating,
 } from '@/utils/openFloatingTab'
 import '@/assets/styles/global.css'
@@ -73,9 +73,6 @@ function App() {
         case 'order':
           openTab({ type: 'order', title: '📝 报单' })
           break
-        case 'query':
-          openTab({ type: 'query', title: '📋 查询' })
-          break
         case 'kline':
           openTab({ type: 'kline', title: '📈 K线' })
           break
@@ -103,9 +100,6 @@ function App() {
         case 'kline':
           openKlineFloating()
           break
-        case 'query':
-          openQueryFloating()
-          break
         case 'settings':
           openSettingsFloating()
           break
@@ -117,6 +111,9 @@ function App() {
           break
         case 'query-positions':
           openPositionsQueryFloating()
+          break
+        case 'query-account':
+          openAccountQueryFloating()
           break
         case 'tquote':
           openTQuoteFloating()

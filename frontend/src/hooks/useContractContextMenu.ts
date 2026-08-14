@@ -41,14 +41,6 @@ export function useContractContextMenu() {
     })
   }, [])
 
-  // 打开查询浮动窗口（统一浮动窗模式；传入合约并选中，使查询面板合约/K线子页显示该合约）
-  const openQueryPopup = useCallback((instrumentID: string) => {
-    if (instrumentID) {
-      useMarketStore.getState().setSelectedInstrument(instrumentID)
-    }
-    openFloatingTab({ type: 'query', title: '📋 查询' })
-  }, [])
-
   // 打开单个报单标签页
   const openOrderTab = useCallback((instrumentID: string) => {
     openTab({
@@ -121,7 +113,6 @@ export function useContractContextMenu() {
     contextMenu,
     multiSelectMenu,
     openOrderPopup,
-    openQueryPopup,
     openOrderTab,
     openKlineTab,
     openOrderTabs,
