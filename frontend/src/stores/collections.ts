@@ -56,6 +56,11 @@ export const useCollectionsStore = create<CollectionsStore>((set, get) => ({
       return
     }
     const allIds = Array.from(new Set(collections.flatMap((c) => c.instrumentIDs)))
+    // 守卫：所有夹均为空时不调 API——后端 ids 为空会回退返回全市场合约（1000+）
+    if (allIds.length === 0) {
+      set({ collections, loaded: true })
+      return
+    }
     try {
       const result = await getInstrumentsByIds(allIds)
       const byId = new Set((result.instruments ?? []).map((c) => c.instrumentID))

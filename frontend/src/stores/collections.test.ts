@@ -83,6 +83,15 @@ describe('useCollectionsStore', () => {
     expect(useCollectionsStore.getState().loaded).toBe(true)
   })
 
+  it('loadCollections：存在夹但全部为空时不调 API（避免后端空 ids 回退全市场）', async () => {
+    const { getInstrumentsByIds } = await import('@/services/api')
+    useUserPrefsStore.getState().setCollections([{ id: 'a', name: 'A', instrumentIDs: [] }])
+    await useCollectionsStore.getState().loadCollections()
+    expect(getInstrumentsByIds).not.toHaveBeenCalled()
+    expect(useCollectionsStore.getState().collections).toEqual([{ id: 'a', name: 'A', instrumentIDs: [] }])
+    expect(useCollectionsStore.getState().loaded).toBe(true)
+  })
+
   it('纯派生函数', () => {
     const cols = [
       { id: 'a', name: 'A', instrumentIDs: ['au2406', 'rb2406'] },
