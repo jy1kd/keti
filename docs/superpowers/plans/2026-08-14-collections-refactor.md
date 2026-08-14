@@ -142,9 +142,8 @@ describe('useCollectionsStore', () => {
 
   it('loadCollections：union 一次拉取解析，无效 ID 清理并回写', async () => {
     const { getInstrumentsByIds } = await import('@/services/api')
-    const store = useCollectionsStore.getState()
-    const id = store.createCollection('A')
-    useCollectionsStore.setState({ collections: [{ id, name: 'A', instrumentIDs: ['au2406', 'delisted1'] }] })
+    // 经 userPrefs 播种（loadCollections 从 userPrefs 读取，直接 set collections store 会被覆盖）
+    useUserPrefsStore.getState().setCollections([{ id: 'a', name: 'A', instrumentIDs: ['au2406', 'delisted1'] }])
     vi.mocked(getInstrumentsByIds).mockResolvedValue({ instruments: [mockContract], count: 1 })
     await useCollectionsStore.getState().loadCollections()
     const coll = useCollectionsStore.getState().collections[0]
@@ -217,7 +216,7 @@ describe('useUserPrefsStore collections', () => {
 })
 ```
 
-**同时**：删除 `userPrefs.test.ts` 中四个 `selectedContracts` 相关测试（`addSelectedContract 添加自选合约`、`addSelectedContract 重复添加不会产生重复项`、`removeSelectedContract 移除自选合约`、`saveToLocalStorage 持久化`/`loadFromLocalStorage` 中的 `selectedContracts` 断言），并把 `beforeEach` 的 `selectedContracts: []` 改为 `collections: []`。
+**注意（预检裁定）**：保留 `userPrefs.test.ts` 既有四个 `selectedContracts` 测试原样——`selectedContracts` 字段在 Task 1 仍保留（废弃，供 `contracts.ts` 收藏 action 消费直到 Task 7），相关测试继续有效。`beforeEach` 增加 `collections: []` 即可。
 
 - [ ] **Step 4: 运行测试确认失败**
 
@@ -240,18 +239,23 @@ export const DEFAULT_QUICK_TRADE_CONFIG: QuickTradeConfig = { /* 原样保留 */
 
 interface UserPrefsStore {
   collections: Collection[]
+  /** 已废弃：保留至 Task 7 与 contracts.ts 收藏 action 一并移除（Task 1 移除会破坏 contracts.test.ts 运行） */
+  selectedContracts: string[]
   hotKeys: HotKeyConfig
   quickTradeConfig: QuickTradeConfig
   setHotKey: (action: string, key: string) => void
   setHotKeys: (hotKeys: HotKeyConfig) => void
   setQuickTradeConfig: (config: Partial<QuickTradeConfig>) => void
   setCollections: (collections: Collection[]) => void
+  addSelectedContract: (instrumentId: string) => void
+  removeSelectedContract: (instrumentId: string) => void
   saveToLocalStorage: () => void
   loadFromLocalStorage: () => void
 }
 
-export const useUserPrefsStore = create<UserPrefsStore>((set) => ({
+export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
   collections: [],
+  selectedContracts: [],
   hotKeys: { ...DEFAULT_HOT_KEYS },
   quickTradeConfig: { ...DEFAULT_QUICK_TRADE_CONFIG },
 
@@ -262,9 +266,19 @@ export const useUserPrefsStore = create<UserPrefsStore>((set) => ({
     set((state) => ({ quickTradeConfig: { ...state.quickTradeConfig, ...config } })),
   setCollections: (collections) => set({ collections }),
 
+  addSelectedContract: (instrumentId) =>
+    set((state) => {
+      if (state.selectedContracts.includes(instrumentId)) return state
+      return { selectedContracts: [...state.selectedContracts, instrumentId] }
+    }),
+  removeSelectedContract: (instrumentId) =>
+    set((state) => ({
+      selectedContracts: state.selectedContracts.filter((id) => id !== instrumentId),
+    })),
+
   saveToLocalStorage: () => {
-    const { collections, hotKeys, quickTradeConfig } = get()
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ collections, hotKeys, quickTradeConfig }))
+    const { collections, selectedContracts, hotKeys, quickTradeConfig } = get()
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ collections, selectedContracts, hotKeys, quickTradeConfig }))
   },
 
   loadFromLocalStorage: () => {
@@ -273,13 +287,14 @@ export const useUserPrefsStore = create<UserPrefsStore>((set) => ({
       if (!raw) return
       const data = JSON.parse(raw)
       let collections: Collection[] = Array.isArray(data.collections) ? data.collections : []
-      // 迁移：旧版 selectedContracts（扁平收藏） → 默认收藏夹
+      // 迁移：旧版 selectedContracts（扁平收藏） → 默认收藏夹（仅当无 collections 时）
       const legacy = Array.isArray(data.selectedContracts) ? data.selectedContracts : []
       if (collections.length === 0 && legacy.length > 0) {
         collections = [{ id: 'coll-default', name: '默认收藏夹', instrumentIDs: legacy }]
       }
       set({
         collections,
+        selectedContracts: Array.isArray(data.selectedContracts) ? data.selectedContracts : [],
         hotKeys: data.hotKeys ?? { ...DEFAULT_HOT_KEYS },
         quickTradeConfig: data.quickTradeConfig ?? { ...DEFAULT_QUICK_TRADE_CONFIG },
       })
@@ -1205,7 +1220,7 @@ interface Props {
 - `MarketPanel.test.tsx`：
   - `useContractsStore.setState({ contracts: [], favorites: [], isLoaded: false })` → 去掉 `favorites` 字段；改为 `useCollectionsStore.setState({ collections: [], loaded: true })`
   - 所有 `favorites: [...]` 播种改为 `useCollectionsStore.setState({ collections: [{ id: 'c1', name: '默认', instrumentIDs: ['cu2609', 'FG609'] }] })`（对应 411/512 自选视图测试）
-  - `view=favorites/all → 激活期货标签并切内部 自选/全部` 测试（line 462）改断言：`callback('favorites')` → `useTabStore.getState().tabs.some((t) => t.type === 'collections') === true`（此测试最终态以 Task 8 为准，本任务先按「打开管理页」断言——若 TabContent 未挂 collections 页面类型，此处先断言 openTab 已调用；**实现提示**：本任务可先改 onMarketView 行为，Task 8 收尾）
+  - `onMarketView` 测试（line 462）**本任务不改**——内部 `[全部|自选]` 视图仍存在，`view=favorites` → `setActiveTab('favorites')` 继续有效；Task 8 才改向打开管理页
   - DOM 顺序测试（line 486）不变（按钮结构保留）
   - 新增：⭐ 点击 → 打开 CollectionPicker（`render` 后 `fireEvent.click` ⭐ 列回调，断言 `screen.getByText('收藏到收藏夹')` 出现）
 - `OptionsPanel.test.tsx`：
@@ -1397,6 +1412,9 @@ export function CollectionPage({ collectionId, tabId }: { collectionId: string; 
 
 `App.tsx` onNavigateTab：`case 'favorites': openTab({ type: 'collections', title: '📁 收藏夹' }); break`
 
+**删除 FavoritesPage（预检裁定）**：Task 4 移除 `'favorites'` tab type 后，`FavoritesPage.tsx` 的 `t.type === 'favorites'` 比较会变 TS2367 类型错误（阻断 `tsc --noEmit`），且 TabContent 已不再导入它——故在本任务一并删除三个文件（不再等 Task 7）：
+`git rm frontend/src/pages/FavoritesPage.tsx frontend/src/pages/FavoritesPage.test.tsx frontend/src/pages/FavoritesPage.css`
+
 - [ ] **Step 5: 更新 TabContent 测试**
 
 `TabContent/index.test.tsx`：原 `favorites` 渲染用例改为 `collections` 渲染 `<CollectionsPage />`（断言 `data-testid="collections-page"`）；新增 `collection` 用例（断言 `data-testid="collection-page"` 且传入 collectionId）。
@@ -1410,7 +1428,8 @@ Expected: PASS（若 App.test 因 onNavigateTab 变化失败，属 Task 7 范围
 
 ```bash
 git add frontend/src/stores/tabs.ts frontend/src/components/TabContent/index.tsx frontend/src/App.tsx frontend/src/pages/CollectionsPage.tsx frontend/src/pages/CollectionsPage.css frontend/src/pages/CollectionPage.tsx frontend/src/pages/CollectionPage.css frontend/src/stores/tabs.test.ts frontend/src/components/TabContent/index.test.tsx
-git commit -m "feat(collections): 标签系统改造（collections/collection 类型 + 页面壳 + TabContent）
+git rm frontend/src/pages/FavoritesPage.tsx frontend/src/pages/FavoritesPage.test.tsx frontend/src/pages/FavoritesPage.css
+git commit -m "feat(collections): 标签系统改造（collections/collection 类型 + 页面壳 + TabContent + 删 FavoritesPage）
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
@@ -1498,9 +1517,9 @@ describe('CollectionsPage', () => {
 
   it('删除需确认；确认后夹被删除，不影响合约本身', () => {
     render(<CollectionsPage />)
-    fireEvent.click(screen.getAllByText('删除')[0])
-    expect(screen.getByText('删除收藏夹')).toBeDefined()
-    fireEvent.click(screen.getByText('删除')) // 确认弹窗内按钮
+    fireEvent.click(screen.getAllByText('删除')[0]) // 行内删除按钮
+    expect(screen.getByText('删除收藏夹')).toBeDefined() // 确认弹窗出现
+    fireEvent.click(screen.getByTestId('confirm-delete')) // 弹窗内确认按钮（唯一 testid）
     expect(useCollectionsStore.getState().collections.find((c) => c.id === 'a')).toBeUndefined()
     expect(useCollectionsStore.getState().collections.find((c) => c.id === 'b')).toBeDefined()
   })
@@ -1626,7 +1645,7 @@ export function CollectionsPage() {
             <p>「{collections.find((c) => c.id === deletingId)?.name}」内的合约仅从本夹移除，不影响其他收藏夹与合约本身。</p>
             <div className="collections-page__confirm-actions">
               <button onClick={() => setDeletingId(null)}>取消</button>
-              <button className="collections-page__btn--danger" onClick={confirmDelete}>删除</button>
+              <button data-testid="confirm-delete" className="collections-page__btn--danger" onClick={confirmDelete}>删除</button>
             </div>
           </div>
         </div>
@@ -1830,6 +1849,7 @@ vi.mock('@/modules/market/QuoteTable', () => ({
         <div key={c.instrumentID} data-testid={`row-${c.instrumentID}`}>
           <span>{c.instrumentID}</span>
           <button data-testid={`fav-${c.instrumentID}`} onClick={() => onFavoriteChange?.(c.instrumentID, true)}>⭐</button>
+          <button data-testid={`ctx-${c.instrumentID}`} onClick={() => onContextMenu?.(c.instrumentID, 0, { preventDefault: vi.fn(), clientX: 100, clientY: 200 })}>右键</button>
         </div>
       ))}
     </div>
@@ -1878,7 +1898,8 @@ describe('CollectionPage', () => {
 
   it('右键菜单含「从本夹移除」', () => {
     render(<CollectionPage collectionId="a" tabId="tab-collection-a" />)
-    fireEvent.click(screen.getByTestId('row-IF2608'))
+    fireEvent.click(screen.getByTestId('ctx-IF2608'))
+    expect(screen.getByText('从本夹移除')).toBeDefined() // IF2608 在本夹 → folder 模式单选右键为「从本夹移除」
   })
 
   it('空夹态', () => {
@@ -2185,20 +2206,19 @@ const calculateShouldSubscribe = useCallback((): Set<string> => {
 - 移除所有播种 `favorites` 后断言「自选自动订阅」的用例（改为断言收藏不再自动订阅：`favorites` 不在 should → 不订阅）
 - 保留 可见区/锁定/宽限期/LRU/批次上限 用例（原断言不受影响，仅删除 favorites 相关部分）
 
-- [ ] **Step 3: 改 `stores/contracts.ts` 清理 favorites**
+- [ ] **Step 3: 改 `stores/contracts.ts` 清理 favorites + userPrefs 移除废弃字段**
 
-删除：`favorites` 字段、`loadFavoriteContracts`、`addToFavorites`、`removeFromFavorites`、`getInstrumentsByIds`/`useUserPrefsStore` import。保留 `contracts/isLoaded/setContracts/loadAllInstruments`。
+- 删除 `contracts.ts`：`favorites` 字段、`loadFavoriteContracts`、`addToFavorites`、`removeFromFavorites`、`getInstrumentsByIds`/`useUserPrefsStore` import。保留 `contracts/isLoaded/setContracts/loadAllInstruments`
+- 删除 `userPrefs.ts`（Task 1 保留的废弃字段）：`selectedContracts`、`addSelectedContract`、`removeSelectedContract` 及其在 `saveToLocalStorage`/`loadFromLocalStorage`/interface 中的引用（`saveToLocalStorage` 不再持久化它；`loadFromLocalStorage` 仍读旧数据做迁移——`const legacy = Array.isArray(data.selectedContracts) ...` 逻辑保留）
 
-- [ ] **Step 4: 更新 `contracts.test.ts`**
+- [ ] **Step 4: 更新 `contracts.test.ts` + `userPrefs.test.ts`**
 
-- `beforeEach` setState 去掉 `favorites`
-- 删除 `loadFavoriteContracts`/`addToFavorites`/`removeFromFavorites` 相关用例（`collections.test.ts` 已覆盖等价能力）
-- `vi.mock('@/services/api')` 保留 `getInstruments`（loadAllInstruments 用）；多余 mock 可留
+- `contracts.test.ts`：`beforeEach` setState 去掉 `favorites`；删除 `loadFavoriteContracts`/`addToFavorites`/`removeFromFavorites` 相关用例（`collections.test.ts` 已覆盖等价能力）；`vi.mock('@/services/api')` 保留 `getInstruments`（loadAllInstruments 用），多余 mock 可留
+- `userPrefs.test.ts`：删除四个 `selectedContracts` 测试（`addSelectedContract 添加自选合约`、`addSelectedContract 重复添加不会产生重复项`、`removeSelectedContract 移除自选合约`、`saveToLocalStorage 持久化`/`loadFromLocalStorage` 中的 `selectedContracts` 断言）；`beforeEach` 去掉 `selectedContracts` 字段
 
-- [ ] **Step 5: 改 `App.tsx` 启动 + 删 FavoritesPage**
+- [ ] **Step 5: 改 `App.tsx` 启动加载**
 
 - import 加 `useCollectionsStore`；启动 effect 里 `useContractsStore.getState().loadFavoriteContracts()` → `useCollectionsStore.getState().loadCollections()`
-- 删除文件 `frontend/src/pages/FavoritesPage.tsx`、`FavoritesPage.test.tsx`、`FavoritesPage.css`
 
 - [ ] **Step 6: 更新 `App.test.tsx`**
 
@@ -2206,15 +2226,14 @@ const calculateShouldSubscribe = useCallback((): Set<string> => {
 
 - [ ] **Step 7: 全量回归（本任务中途红，Task 8 收口前先局部跑）**
 
-Run: `cd frontend && npx vitest run src/hooks/useSubscriptionManager.test.ts src/stores/contracts.test.ts src/App.test.tsx`
-Expected: PASS（若其它文件引用 `contracts.favorites` 报错，是遗漏的消费点——grep `\.favorites|addToFavorites|removeFromFavorites|loadFavoriteContracts` 全仓库修复）
+Run: `cd frontend && npx vitest run src/hooks/useSubscriptionManager.test.ts src/stores/contracts.test.ts src/stores/userPrefs.test.ts src/App.test.tsx`
+Expected: PASS（若其它文件引用 `contracts.favorites` 报错，是遗漏的消费点——grep `\.favorites|addToFavorites|removeFromFavorites|loadFavoriteContracts|selectedContracts` 全仓库修复）
 
 - [ ] **Step 8: 提交**
 
 ```bash
-git add frontend/src/hooks/useSubscriptionManager.ts frontend/src/hooks/useSubscriptionManager.test.ts frontend/src/stores/contracts.ts frontend/src/stores/contracts.test.ts frontend/src/App.tsx frontend/src/App.test.tsx
-git rm frontend/src/pages/FavoritesPage.tsx frontend/src/pages/FavoritesPage.test.tsx frontend/src/pages/FavoritesPage.css
-git commit -m "refactor(collections): 订阅去 favorites + contracts 清理 + 启动 loadCollections + 删 FavoritesPage
+git add frontend/src/hooks/useSubscriptionManager.ts frontend/src/hooks/useSubscriptionManager.test.ts frontend/src/stores/contracts.ts frontend/src/stores/contracts.test.ts frontend/src/stores/userPrefs.ts frontend/src/stores/userPrefs.test.ts frontend/src/App.tsx frontend/src/App.test.tsx
+git commit -m "refactor(collections): 订阅去 favorites + contracts/userPrefs 清理废弃收藏字段 + 启动 loadCollections
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
