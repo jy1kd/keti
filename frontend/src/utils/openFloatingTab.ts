@@ -9,6 +9,8 @@ interface OpenFloatingTabOptions {
   props?: Record<string, unknown>
   /** 浮动窗初始尺寸；缺省用 defaultFloatingSize() */
   size?: { w: number; h: number }
+  /** 浮动窗初始位置（viewport 坐标）；缺省按窗口居中 */
+  position?: { x: number; y: number }
 }
 
 /** 报单浮动窗初始尺寸（对齐原 OrderPopup 弹窗：宽 540 固定、高按内容约 620） */
@@ -24,15 +26,15 @@ export const ORDER_FLOATING_SIZE = { w: 620, h: 540 }
  * 打开前的活跃标签，打开浮动窗不再干扰主窗口内容。
  * 返回 false 表示标签页数量达上限或脱离失败。
  */
-export function openFloatingTab({ type, title, props = {}, size }: OpenFloatingTabOptions): boolean {
+export function openFloatingTab({ type, title, props = {}, size, position }: OpenFloatingTabOptions): boolean {
   const priorActive = useTabStore.getState().activeTabId
   const opened = useTabStore.getState().openTab({ type, title, props })
   if (!opened) return false
 
   const tabId = generateTabId(type, props)
   const { w, h } = size ?? defaultFloatingSize()
-  const x = Math.max(0, Math.round((window.innerWidth - w) / 2))
-  const y = Math.max(0, Math.round((window.innerHeight - h) / 2 - 20))
+  const x = position ? position.x : Math.max(0, Math.round((window.innerWidth - w) / 2))
+  const y = position ? position.y : Math.max(0, Math.round((window.innerHeight - h) / 2 - 20))
   const ok = detachTabAt(tabId, { x, y }, size)
   if (ok && priorActive) useTabStore.getState().setActiveTab(priorActive)
   return ok
@@ -99,7 +101,16 @@ export function openPositionsQueryFloating(): boolean {
   return openFloatingTab({ type: 'query-positions', title: '📋 持仓查询' })
 }
 
-/** 打开资金查询浮动窗 */
+/** 打开资金查询浮动窗：对齐行情表格（同尺寸同位置），打开时不覆盖工具栏/标签栏等 */
 export function openAccountQueryFloating(): boolean {
+  const rect = document.querySelector<HTMLElement>('.market-table-container')?.getBoundingClientRect()
+  if (rect && rect.width > 0 && rect.height > 0) {
+    return openFloatingTab({
+      type: 'query-account',
+      title: '💰 资金查询',
+      size: { w: Math.round(rect.width), h: Math.round(rect.height) },
+      position: { x: Math.round(rect.left), y: Math.round(rect.top) },
+    })
+  }
   return openFloatingTab({ type: 'query-account', title: '💰 资金查询' })
 }
