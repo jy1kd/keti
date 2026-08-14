@@ -29,23 +29,8 @@ vi.mock('@/components/TabContent', () => ({
 vi.mock('@/hooks/useMarketWs', () => ({ useMarketWs: vi.fn() }))
 vi.mock('@/hooks/useSubscriptionManager', () => ({ useSubscriptionManager: vi.fn() }))
 
-// rAF stub（BottomBar FPS 徽标内 PerfMonitor visible=true 时使用）
-let rafCallbacks: FrameRequestCallback[] = []
-let rafId = 0
-
 describe('App Layout — 标签页系统', () => {
   beforeEach(() => {
-    rafCallbacks = []
-    rafId = 0
-    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
-      rafCallbacks.push(cb)
-      return ++rafId
-    })
-    vi.stubGlobal('cancelAnimationFrame', (id: number) => {
-      rafCallbacks = rafCallbacks.filter((_, i) => i + 1 !== id)
-    })
-    vi.stubGlobal('performance', { now: () => 0 })
-
     useConnectionStore.setState({ mdConnected: false, tdConnected: false })
     useTabStore.setState({
       tabs: [
@@ -106,27 +91,11 @@ describe('App Layout — 标签页系统', () => {
     })
   })
 
-  describe('性能监控', () => {
-    it('默认不显示 FPS 徽标（FPS 监控按钮常驻）', () => {
-      render(<App />)
-      expect(screen.getByLabelText('FPS 监控')).toBeInTheDocument()
-      expect(screen.queryByTestId('bottom-bar-fps')).toBeNull()
-    })
-
-    it('Ctrl+Shift+M 切换性能监控（显示 FPS 徽标）', () => {
-      render(<App />)
-      expect(screen.queryByTestId('bottom-bar-fps')).toBeNull()
-      fireEvent.keyDown(window, { key: 'M', ctrlKey: true, shiftKey: true })
-      expect(screen.getByTestId('bottom-bar-fps')).toBeInTheDocument()
-    })
-  })
-
   describe('顶部菜单 IPC', () => {
     const setElectronAPI = (overrides: Record<string, any>) => {
       ;(window as any).electronAPI = {
         onNavigateTab: vi.fn(),
         onOpenFloatingTab: vi.fn(),
-        onTogglePerf: vi.fn(),
         onGetSelectedInstrument: vi.fn(),
         ...overrides,
       }
@@ -203,19 +172,6 @@ describe('App Layout — 标签页系统', () => {
         callback('infinite')
       })
       expect(useFloatingWindowStore.getState().windows['tab-infinite']).toBeDefined()
-      delete (window as any).electronAPI
-    })
-
-    it('onTogglePerf 切换 FPS 监控', () => {
-      const onTogglePerf = vi.fn()
-      setElectronAPI({ onTogglePerf })
-      render(<App />)
-      expect(screen.queryByTestId('bottom-bar-fps')).toBeNull()
-      const callback = onTogglePerf.mock.calls[0][0]
-      act(() => {
-        callback()
-      })
-      expect(screen.getByTestId('bottom-bar-fps')).toBeInTheDocument()
       delete (window as any).electronAPI
     })
   })

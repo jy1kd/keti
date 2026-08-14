@@ -31,9 +31,6 @@ export interface ElectronAPI {
   // Menu (main → renderer): 顶部菜单打开浮动窗
   onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'infinite' | 'settings' | 'ipc-monitor' | 'tquote' | 'query-orders' | 'query-positions' | 'query-account') => void) => () => void;
 
-  // Menu (main → renderer): 切换 FPS 监控
-  onTogglePerf: (callback: () => void) => () => void;
-
   // Menu (main → renderer): 行情主页内切换视图（期货/自选/期权）
   onMarketView: (callback: (view: 'all' | 'favorites' | 'options') => void) => () => void;
 
@@ -84,13 +81,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = (_: any, tab: 'order' | 'kline' | 'infinite' | 'settings' | 'ipc-monitor' | 'tquote' | 'query-orders' | 'query-positions' | 'query-account') => callback(tab);
     ipcRenderer.on('menu:open-floating', handler);
     return () => ipcRenderer.removeListener('menu:open-floating', handler);
-  },
-
-  // Menu (main → renderer): 切换 FPS 监控
-  onTogglePerf: (callback: () => void) => {
-    const handler = () => callback();
-    ipcRenderer.on('menu:toggle-perf', handler);
-    return () => ipcRenderer.removeListener('menu:toggle-perf', handler);
   },
 
   // Menu (main → renderer): 行情主页内切换视图（期货/自选/期权）

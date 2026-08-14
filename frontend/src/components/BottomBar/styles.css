@@ -73,22 +73,6 @@
   font-size: 12px;
 }
 
-/* FPS 徽标：仅 perfVisible 时内联显示 */
-.bottom-bar__fps {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  margin: 0 6px;
-  padding: 2px 8px;
-  font-size: 11px;
-  font-family: var(--font-mono);
-  color: #3fb950;
-  border: 1px solid #30363d;
-  border-radius: 4px;
-  background: rgba(63, 185, 80, 0.08);
-  white-space: nowrap;
-}
-
 /* 箭头开关：始终可见，不随工具区收缩 */
 .bottom-bar__toggle {
   display: flex;

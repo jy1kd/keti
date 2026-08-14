@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react'
 import { ConnectionStatus } from '@/components/ConnectionStatus'
-import { PerfMonitor } from '@/components/PerfMonitor'
 import {
   openOrderFloating,
   openKlineFloating,
@@ -10,22 +9,15 @@ import {
 } from '@/utils/openFloatingTab'
 import './styles.css'
 
-interface BottomBarProps {
-  /** 性能监控（⚡FPS）是否可见 */
-  perfVisible: boolean
-  /** 切换性能监控 */
-  onTogglePerf: () => void
-}
-
 /**
  * BottomBar — 底部状态栏
  *
  * 承接原 GlobalBar 中除「工作区标签」外的全部内容：
  * - 左：连接状态（MD/TD 指示灯）
- * - 中：全局工具（报单/K线/无限下单/设置/FPS/网络监控，图标 + 中文名）
+ * - 中：全局工具（报单/K线/无限下单/设置/网络监控，图标 + 中文名）
  * - 右：`>`/`<` 箭头，点击切换工具区全部展开 / 全部隐藏（max-width + opacity 动画）
  */
-export function BottomBar({ perfVisible, onTogglePerf }: BottomBarProps) {
+export function BottomBar() {
   const [toolsExpanded, setToolsExpanded] = useState(true)
 
   // 统一浮动窗入口：所有工具打开为浮动窗口（委托给共享 helper，与顶部菜单一致）
@@ -79,28 +71,10 @@ export function BottomBar({ perfVisible, onTogglePerf }: BottomBarProps) {
           <span className="bottom-bar__tool-icon">⚙</span>
           <span className="bottom-bar__tool-label">设置</span>
         </button>
-        <button
-          type="button"
-          className={`bottom-bar__tool${perfVisible ? ' bottom-bar__tool--active' : ''}`}
-          aria-label="FPS 监控"
-          title="FPS 监控 (Ctrl+Shift+M)"
-          aria-pressed={perfVisible}
-          onClick={onTogglePerf}
-        >
-          <span className="bottom-bar__tool-icon">⚡</span>
-          <span className="bottom-bar__tool-label">FPS 监控</span>
-        </button>
         <button type="button" className="bottom-bar__tool" aria-label="网络监控" title="网络监控" onClick={openIpcMonitor}>
           <span className="bottom-bar__tool-icon">🔌</span>
           <span className="bottom-bar__tool-label">网络监控</span>
         </button>
-
-        {/* FPS 徽标：仅 perfVisible 时内联显示 */}
-        {perfVisible && (
-          <span className="bottom-bar__fps" data-testid="bottom-bar-fps" title="FPS 监控 (Ctrl+Shift+M)">
-            ⚡<PerfMonitor visible />
-          </span>
-        )}
       </div>
 
       {/* 箭头开关：展开时 `<`（点击收起），收起时 `>`（点击展开） */}
