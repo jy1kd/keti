@@ -23,6 +23,7 @@ import {
   openIpcMonitorFloating,
   openOrdersQueryFloating,
   openPositionsQueryFloating,
+  openAccountQueryFloating,
   openTQuoteFloating,
 } from '@/utils/openFloatingTab'
 import '@/assets/styles/global.css'
@@ -117,6 +118,9 @@ function App() {
           break
         case 'query-positions':
           openPositionsQueryFloating()
+          break
+        case 'query-account':
+          openAccountQueryFloating()
           break
         case 'tquote':
           openTQuoteFloating()

@@ -55,6 +55,7 @@ describe('useTabStore', () => {
         'infinite',
         'query-orders',
         'query-positions',
+        'query-account',
       ])
     })
 

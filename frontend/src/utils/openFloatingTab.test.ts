@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { useTabStore } from '@/stores/tabs';
 import { useFloatingWindowStore } from '@/stores/floatingWindows';
 import { useMarketStore } from '@/modules/market/store';
-import { openOrderFloating, openKlineFloating, openQueryFloating, openSettingsFloating, openIpcMonitorFloating } from './openFloatingTab';
+import { openOrderFloating, openKlineFloating, openAccountQueryFloating, openSettingsFloating, openIpcMonitorFloating } from './openFloatingTab';
 
 describe('openFloatingTab helpers — 顶部菜单打开浮动窗', () => {
   beforeEach(() => {
@@ -13,12 +13,12 @@ describe('openFloatingTab helpers — 顶部菜单打开浮动窗', () => {
 
   const tabByType = (type: string) => useTabStore.getState().tabs.find((t) => t.type === type);
 
-  it('openQueryFloating 打开查询浮动窗', () => {
-    openQueryFloating();
-    const tab = tabByType('query');
+  it('openAccountQueryFloating 打开资金查询浮动窗', () => {
+    openAccountQueryFloating();
+    const tab = tabByType('query-account');
     expect(tab).toBeDefined();
-    expect(tab!.title).toBe('📋 查询');
-    expect(useFloatingWindowStore.getState().windows['tab-query']).toBeDefined();
+    expect(tab!.title).toBe('💰 资金查询');
+    expect(useFloatingWindowStore.getState().windows['tab-query-account']).toBeDefined();
   });
 
   it('openOrderFloating 无选中合约时打开空白报单窗', () => {
@@ -82,8 +82,8 @@ describe('openFloatingTab helpers — 顶部菜单打开浮动窗', () => {
       ],
       activeTabId: 'tab-options',
     });
-    openQueryFloating();
+    openAccountQueryFloating();
     expect(useTabStore.getState().activeTabId).toBe('tab-options');
-    expect(useFloatingWindowStore.getState().windows['tab-query']).toBeDefined();
+    expect(useFloatingWindowStore.getState().windows['tab-query-account']).toBeDefined();
   });
 });

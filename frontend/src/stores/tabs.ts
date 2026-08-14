@@ -16,6 +16,7 @@ export type TabType =
   | 'infinite'
   | 'query-orders' // 报单查询（独立窗口）
   | 'query-positions' // 持仓查询（独立窗口）
+  | 'query-account' // 资金查询（独立窗口）
 
 /** 所有标签页类型 */
 export const TAB_TYPES: TabType[] = [
@@ -31,6 +32,7 @@ export const TAB_TYPES: TabType[] = [
   'infinite',
   'query-orders',
   'query-positions',
+  'query-account',
 ]
 
 /** 固定标签页类型（始终存在，不可关闭） */

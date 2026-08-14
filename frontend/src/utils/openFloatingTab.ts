@@ -103,3 +103,8 @@ export function openOrdersQueryFloating(): boolean {
 export function openPositionsQueryFloating(): boolean {
   return openFloatingTab({ type: 'query-positions', title: '📋 持仓查询' })
 }
+
+/** 打开资金查询浮动窗 */
+export function openAccountQueryFloating(): boolean {
+  return openFloatingTab({ type: 'query-account', title: '💰 资金查询' })
+}
