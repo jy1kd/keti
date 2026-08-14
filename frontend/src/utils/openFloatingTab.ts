@@ -69,11 +69,6 @@ export function openTQuoteFloating(underlyingID?: string): boolean {
   })
 }
 
-/** 打开查询浮动窗 */
-export function openQueryFloating(): boolean {
-  return openFloatingTab({ type: 'query', title: '📋 查询' })
-}
-
 /** 打开设置浮动窗 */
 export function openSettingsFloating(): boolean {
   return openFloatingTab({ type: 'settings', title: '⚙ 设置' })

@@ -32,9 +32,10 @@ describe('resolveAction', () => {
   });
 
   it('open-floating: show+focus 主窗并发送 menu:open-floating', () => {
-    resolveAction({ type: 'open-floating', tab: 'query' }, ctx);
+    resolveAction({ type: 'open-floating', tab: 'query-account' }, ctx);
     expect(ctx.mainWindow.show).toHaveBeenCalled();
-    expect(ctx.mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query');
+    expect(ctx.mainWindow.focus).toHaveBeenCalled();
+    expect(ctx.mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query-account');
   });
 
   it('open-floating: 透传 query-orders / query-positions', () => {

@@ -11,7 +11,7 @@ import { resolveAction } from './menuActions';
 import type { MenuContext } from './menuActions';
 
 export type MarketView = 'all' | 'options' | 'favorites';
-export type FloatingTab = 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor' | 'tquote' | 'query-orders' | 'query-positions' | 'query-account';
+export type FloatingTab = 'order' | 'kline' | 'settings' | 'ipc-monitor' | 'tquote' | 'query-orders' | 'query-positions' | 'query-account';
 
 export type MenuAction =
   | { type: 'market-view'; view: MarketView }
@@ -57,7 +57,6 @@ export function getAppMenuDef(): MenuItemDef[] {
       submenu: [
         { id: 'func-order', label: '📝 报单窗口', action: { type: 'open-floating', tab: 'order' } },
         { id: 'func-kline', label: '📈 K线窗口', action: { type: 'open-floating', tab: 'kline' } },
-        { id: 'func-query', label: '📋 查询窗口', action: { type: 'open-floating', tab: 'query' } },
         { id: 'func-query-orders', label: '📋 报单查询窗口', action: { type: 'open-floating', tab: 'query-orders' } },
         { id: 'func-query-positions', label: '📋 持仓查询窗口', action: { type: 'open-floating', tab: 'query-positions' } },
         { id: 'func-query-account', label: '💰 资金查询窗口', action: { type: 'open-floating', tab: 'query-account' } },

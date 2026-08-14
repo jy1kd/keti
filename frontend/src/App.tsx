@@ -18,7 +18,6 @@ import { isElectron } from '@/services/electron'
 import {
   openOrderFloating,
   openKlineFloating,
-  openQueryFloating,
   openSettingsFloating,
   openIpcMonitorFloating,
   openOrdersQueryFloating,
@@ -100,9 +99,6 @@ function App() {
           break
         case 'kline':
           openKlineFloating()
-          break
-        case 'query':
-          openQueryFloating()
           break
         case 'settings':
           openSettingsFloating()

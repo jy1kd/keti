@@ -124,13 +124,13 @@ describe('MenuManager', () => {
   });
 
   describe('功能', () => {
-    it('包含 报单窗口/K线窗口/查询窗口/退出', () => {
+    it('包含 报单窗口/K线窗口/报单查询窗口/持仓查询窗口/资金查询窗口/退出', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
       const labels = getMenu('功能')
         .submenu!.map((i) => i.label)
         .filter(Boolean);
-      expect(labels).toEqual(['📝 报单窗口', '📈 K线窗口', '📋 查询窗口', '📋 报单查询窗口', '📋 持仓查询窗口', '退出']);
+      expect(labels).toEqual(['📝 报单窗口', '📈 K线窗口', '📋 报单查询窗口', '📋 持仓查询窗口', '💰 资金查询窗口', '退出']);
     });
 
     it('点击报单窗口发送 menu:open-floating order', () => {
@@ -147,11 +147,11 @@ describe('MenuManager', () => {
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'kline');
     });
 
-    it('点击查询窗口发送 menu:open-floating query', () => {
+    it('点击资金查询窗口发送 menu:open-floating query-account', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
-      clickItem('功能', '📋 查询窗口');
-      expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query');
+      clickItem('功能', '💰 资金查询窗口');
+      expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query-account');
     });
 
     it('点击退出调用 app.quit', () => {

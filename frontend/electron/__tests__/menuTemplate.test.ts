@@ -45,12 +45,12 @@ describe('getAppMenuDef', () => {
     expect(newWindow.action).toEqual({ type: 'open-market-window' });
   });
 
-  it('功能子菜单包含报单/K线/查询/分隔符/退出(app-quit)', () => {
+  it('功能子菜单包含报单/K线/报单查询/持仓查询/资金查询/分隔符/退出(app-quit)', () => {
     const fnMenu = getAppMenuDef().find((d) => d.id === 'function')!;
     const labels = fnMenu.submenu!
       .filter((i) => i.type !== 'separator')
       .map((i) => i.label);
-    expect(labels).toEqual(['📝 报单窗口', '📈 K线窗口', '📋 查询窗口', '📋 报单查询窗口', '📋 持仓查询窗口', '💰 资金查询窗口', '退出']);
+    expect(labels).toEqual(['📝 报单窗口', '📈 K线窗口', '📋 报单查询窗口', '📋 持仓查询窗口', '💰 资金查询窗口', '退出']);
     expect(fnMenu.submenu!.some((i) => i.id === 'app-quit')).toBe(true);
   });
 

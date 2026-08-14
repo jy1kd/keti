@@ -12,7 +12,6 @@ export type TabType =
   | 'tquote'
   | 'ipc-monitor'
   | 'settings'
-  | 'query' // 查询（全局账户查询）
   | 'infinite'
   | 'query-orders' // 报单查询（独立窗口）
   | 'query-positions' // 持仓查询（独立窗口）
@@ -28,7 +27,6 @@ export const TAB_TYPES: TabType[] = [
   'tquote',
   'ipc-monitor',
   'settings',
-  'query',
   'infinite',
   'query-orders',
   'query-positions',
