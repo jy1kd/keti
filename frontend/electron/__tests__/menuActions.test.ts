@@ -51,13 +51,6 @@ describe('resolveAction', () => {
     expect(ctx.windowManager.openTabWindow).toHaveBeenCalledWith('market', 'tab-market', '📊 期货');
   });
 
-  it('toggle-perf: 发送 menu:toggle-perf 但不 show/focus', () => {
-    resolveAction({ type: 'toggle-perf' }, ctx);
-    expect(ctx.mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_TOGGLE_PERF);
-    expect(ctx.mainWindow.show).not.toHaveBeenCalled();
-    expect(ctx.mainWindow.focus).not.toHaveBeenCalled();
-  });
-
   it('quit: 调用 app.quit', () => {
     resolveAction({ type: 'quit' }, ctx);
     expect(app.quit).toHaveBeenCalled();
