@@ -1,4 +1,3 @@
-.collections-page,
 .collection-page {
   display: flex;
   flex-direction: column;
@@ -7,7 +6,30 @@
   background: var(--bg-primary);
 }
 
-.collections-page__empty,
+.collection-page .panel-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.collection-page__table {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.collection-page__section-title {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
 .collection-page__empty {
   flex: 1;
   display: flex;
@@ -17,7 +39,6 @@
   color: var(--text-secondary);
 }
 
-.collections-page__hint,
 .collection-page__hint {
   font-size: 13px;
   margin-top: 8px;

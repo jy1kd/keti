@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { TabContent } from './index'
 import { useTabStore, type Tab, type TabType } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
+import { useCollectionsStore } from '@/stores/collections'
 
 // Mock MarketPanel 组件（避免依赖复杂子组件）
 vi.mock('@/modules/market/MarketPanel', () => ({
@@ -229,10 +230,12 @@ describe('TabContent', () => {
         tabs: [tab],
         activeTabId: tab.id,
       })
+      // 预置 coll-x 收藏夹：页面查到该夹并渲染其内容（空夹态），证明 collectionId prop 已透传；
+      // 若未透传，collectionId 为空串 → 查不到 → 渲染「收藏夹不存在」
+      useCollectionsStore.setState({ collections: [{ id: 'coll-x', name: '测试夹', instrumentIDs: [] }], loaded: true })
       render(<TabContent />)
       expect(screen.getByTestId('collection-page')).toBeInTheDocument()
-      // 页面壳渲染收藏夹 id，证明 collectionId prop 已透传
-      expect(screen.getByText(/收藏夹 coll-x/)).toBeInTheDocument()
+      expect(screen.getByText('收藏夹为空')).toBeInTheDocument()
     })
   })
 
