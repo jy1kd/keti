@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { CollectionsPage } from './CollectionsPage'
 import { useCollectionsStore } from '@/stores/collections'
 import { useTabStore } from '@/stores/tabs'
+import { useFloatingWindowStore } from '@/stores/floatingWindows'
 
 vi.mock('@/components/Toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
@@ -39,11 +40,13 @@ describe('CollectionsPage', () => {
     expect(useCollectionsStore.getState().collections.some((c) => c.name === '新夹')).toBe(true)
   })
 
-  it('打开收藏夹 → 打开 collection 标签（按 collectionId 去重）', () => {
+  it('打开收藏夹 → 初始为悬浮窗口（openCollectionFloating）且按 collectionId 去重', () => {
     render(<CollectionsPage />)
     fireEvent.click(screen.getAllByText('打开')[0])
     const state = useTabStore.getState()
     expect(state.tabs.some((t) => t.type === 'collection' && t.props.collectionId === 'a')).toBe(true)
+    // 初始即悬浮：tab-collection-a 已 detach 进浮动窗
+    expect(useFloatingWindowStore.getState().windows['tab-collection-a']).toBeTruthy()
     fireEvent.click(screen.getAllByText('打开')[0])
     expect(useTabStore.getState().tabs.filter((t) => t.type === 'collection')).toHaveLength(1)
   })

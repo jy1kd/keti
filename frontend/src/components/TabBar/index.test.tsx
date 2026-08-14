@@ -6,6 +6,7 @@ import { TabBar } from './index'
 import { useTabStore, type Tab } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import { useMarketStore } from '@/modules/market/store'
+import { useCollectionsStore } from '@/stores/collections'
 
 const detachMock = vi.hoisted(() => ({
   startDetachDrag: vi.fn(),
@@ -13,6 +14,11 @@ const detachMock = vi.hoisted(() => ({
 }))
 
 vi.mock('@/utils/detachDrag', () => detachMock)
+
+const openFloatingMock = vi.hoisted(() => ({
+  openCollectionFloating: vi.fn(),
+}))
+vi.mock('@/utils/openFloatingTab', () => openFloatingMock)
 
 // jsdom 无 ResizeObserver；stub 记录回调，测试手动触发以控制测量时机
 let roCallback: ResizeObserverCallback | null = null
@@ -349,6 +355,69 @@ describe('TabBar', () => {
       expect(screen.getByText('📝 报单')).toBeInTheDocument()
       fireEvent.keyDown(window, { key: 'Escape' })
       expect(screen.queryByText('📝 报单')).toBeNull()
+    })
+  })
+
+  // --- 收藏夹快速入口（顶栏 hover 弹层） ---
+
+  describe('收藏夹快速入口（hover 弹层）', () => {
+    beforeEach(() => {
+      vi.clearAllMocks()
+      useCollectionsStore.setState({
+        collections: [
+          { id: 'a', name: '农产品', instrumentIDs: ['au2406', 'rb2406'] },
+          { id: 'b', name: '黑色系', instrumentIDs: [] },
+        ],
+        loaded: true,
+      })
+    })
+
+    const hoverOpen = () => fireEvent.mouseOver(screen.getByRole('button', { name: '收藏夹' }))
+    const hoverClose = () => {
+      const wrap = screen.getByRole('button', { name: '收藏夹' }).parentElement!
+      fireEvent.mouseLeave(wrap)
+    }
+
+    it('悬停 📁 显示弹层（新建输入 + 收藏夹列表 + 管理链接）', () => {
+      render(<TabBar />)
+      hoverOpen()
+      expect(screen.getByPlaceholderText(/新建收藏夹/)).toBeInTheDocument()
+      expect(screen.getByText('📁 农产品')).toBeInTheDocument()
+      expect(screen.getByText('📁 黑色系')).toBeInTheDocument()
+      expect(screen.getByText('2')).toBeInTheDocument() // 农产品合约数
+      expect(screen.getByText(/管理收藏夹/)).toBeInTheDocument()
+    })
+
+    it('移出弹层关闭', () => {
+      render(<TabBar />)
+      hoverOpen()
+      expect(screen.getByText('📁 农产品')).toBeInTheDocument()
+      hoverClose()
+      expect(screen.queryByText('📁 农产品')).toBeNull()
+    })
+
+    it('点击收藏夹项 → openCollectionFloating + 关闭弹层', () => {
+      render(<TabBar />)
+      hoverOpen()
+      fireEvent.click(screen.getByText('📁 农产品'))
+      expect(openFloatingMock.openCollectionFloating).toHaveBeenCalledWith('a', '农产品')
+      expect(screen.queryByText('📁 农产品')).toBeNull()
+    })
+
+    it('新建收藏夹 → createCollection', () => {
+      render(<TabBar />)
+      hoverOpen()
+      fireEvent.change(screen.getByPlaceholderText(/新建收藏夹/), { target: { value: '新夹' } })
+      fireEvent.click(screen.getByText('+ 新建'))
+      expect(useCollectionsStore.getState().collections.some((c) => c.name === '新夹')).toBe(true)
+    })
+
+    it('`+` 菜单「📁 收藏夹」项 → 关闭 + 菜单并弹出收藏夹弹层', () => {
+      render(<TabBar />)
+      fireEvent.mouseOver(screen.getByLabelText('新增标签'))
+      fireEvent.click(screen.getByText('📁 收藏夹'))
+      expect(screen.queryByText('📝 报单')).toBeNull() // + 菜单已关
+      expect(screen.getByText('📁 农产品')).toBeInTheDocument() // 弹层已开
     })
   })
 

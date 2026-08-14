@@ -198,6 +198,36 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* 收藏夹快速入口按钮（hover 弹出悬浮弹层） */
+.tab-bar__collections-wrap {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.tab-bar__collections {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-right: 2px;
+  font-size: 14px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.tab-bar__collections:hover,
+.tab-bar__collections--active {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .tab-bar__add {
   display: flex;
   align-items: center;

@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useCollectionsStore } from '@/stores/collections'
 import { useTabStore } from '@/stores/tabs'
+import { openCollectionFloating } from '@/utils/openFloatingTab'
 import { toast } from '@/components/Toast'
 import './CollectionsPage.css'
 
 export function CollectionsPage() {
   const { collections, createCollection, renameCollection, deleteCollection } = useCollectionsStore()
-  const openTab = useTabStore((s) => s.openTab)
   const updateTab = useTabStore((s) => s.updateTab)
   const [newName, setNewName] = useState('')
   const [renamingId, setRenamingId] = useState<string | null>(null)
@@ -21,8 +21,9 @@ export function CollectionsPage() {
     toast.success(`已新建收藏夹「${name}」`)
   }
 
+  // 打开收藏夹 → 初始即为悬浮窗口（openFloatingTab 打开后立即脱离；可 ⇩ 停靠回标签栏）
   const openCollection = (id: string, name: string) => {
-    openTab({ type: 'collection', title: `📁 ${name}`, props: { collectionId: id } })
+    openCollectionFloating(id, name)
   }
 
   const startRename = (id: string, name: string) => {

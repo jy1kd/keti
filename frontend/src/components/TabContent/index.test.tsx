@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { TabContent } from './index'
 import { useTabStore, type Tab, type TabType } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
@@ -174,7 +174,7 @@ describe('TabContent', () => {
       ['order', '报单页面'],
       ['kline', 'K线页面'],
       ['settings', '⚙ 设置'],
-      ['options', '自选'],
+      ['options', '筛选'],
       ['ipc-monitor', '🔌 IPC 监控'],
       ['query', '查询面板 Mock'],
       ['query-orders', '报单查询'],
@@ -236,6 +236,25 @@ describe('TabContent', () => {
       render(<TabContent />)
       expect(screen.getByTestId('collection-page')).toBeInTheDocument()
       expect(screen.getByText('收藏夹为空')).toBeInTheDocument()
+    })
+
+    it('切标签时 blur 被隐藏面板内的焦点元素（aria-hidden 焦点警告修复）', () => {
+      useCollectionsStore.setState({ collections: [{ id: 'a', name: 'A', instrumentIDs: [] }], loaded: true })
+      useTabStore.setState({
+        tabs: [
+          { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
+          { id: 'tab-collections', type: 'collections', title: '📁 收藏夹', props: {}, closable: true },
+        ],
+        activeTabId: 'tab-collections',
+      })
+      render(<TabContent />)
+      const renameBtn = screen.getAllByText('重命名')[0] as HTMLElement
+      renameBtn.focus()
+      expect(document.activeElement).toBe(renameBtn)
+      // 切到期货标签 → collections 面板 aria-hidden=true；effect 应 blur 面板内焦点元素
+      act(() => { useTabStore.getState().setActiveTab('tab-market') })
+      expect(document.activeElement).not.toBe(renameBtn)
+      expect(document.activeElement?.tagName).toBe('BODY')
     })
   })
 

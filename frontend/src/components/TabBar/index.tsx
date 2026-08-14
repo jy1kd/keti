@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState, useRef, useEffect, type KeyboardEvent }
 import { useTabStore, type Tab } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import { useMarketStore } from '@/modules/market/store'
+import { CollectionsFlyout } from '@/components/CollectionsFlyout'
 import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
 import { computeTabOverflow } from './overflow'
 import './styles.css'
@@ -48,6 +49,29 @@ export function TabBar() {
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const addMenuWrapRef = useRef<HTMLDivElement>(null)
   const openTab = useTabStore((s) => s.openTab)
+
+  // 收藏夹快速入口（顶栏 📁 hover / `+` 菜单项）：悬浮弹层
+  const [collectionsOpen, setCollectionsOpen] = useState(false)
+  const collectionsWrapRef = useRef<HTMLDivElement>(null)
+
+  // 收藏夹弹层：点击外部 / Escape 关闭
+  useEffect(() => {
+    if (!collectionsOpen) return
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (collectionsWrapRef.current && !collectionsWrapRef.current.contains(e.target as Node)) {
+        setCollectionsOpen(false)
+      }
+    }
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') setCollectionsOpen(false)
+    }
+    document.addEventListener('mousedown', onDocMouseDown)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDocMouseDown)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [collectionsOpen])
 
   // 选择栏：点击外部 / Escape 关闭
   useEffect(() => {
@@ -403,6 +427,25 @@ export function TabBar() {
       )}
 
       <div className="tab-bar__separator" />
+      {/* 收藏夹快速入口：hover 弹出（新建 + 列表，点击直接打开为悬浮窗） */}
+      <div
+        ref={collectionsWrapRef}
+        className="tab-bar__collections-wrap"
+        onMouseEnter={() => setCollectionsOpen(true)}
+        onMouseLeave={() => setCollectionsOpen(false)}
+      >
+        <button
+          type="button"
+          className={`tab-bar__collections${collectionsOpen ? ' tab-bar__collections--active' : ''}`}
+          aria-label="收藏夹"
+          title="收藏夹"
+          aria-expanded={collectionsOpen}
+          onClick={() => setCollectionsOpen((v) => !v)}
+        >
+          📁
+        </button>
+        {collectionsOpen && <CollectionsFlyout onClose={() => setCollectionsOpen(false)} />}
+      </div>
       {/* `+` 悬停选择栏：停靠打开底部功能栏标签 */}
       <div
         ref={addMenuWrapRef}
@@ -434,6 +477,18 @@ export function TabBar() {
                 <span className="tab-bar__add-menu-label">{item.title}</span>
               </button>
             ))}
+            {/* 收藏夹：点击关闭 `+` 菜单并弹出收藏夹快速入口（悬浮弹层） */}
+            <button
+              type="button"
+              role="menuitem"
+              className="tab-bar__add-menu-item"
+              onClick={() => {
+                setAddMenuOpen(false)
+                setCollectionsOpen(true)
+              }}
+            >
+              <span className="tab-bar__add-menu-label">📁 收藏夹</span>
+            </button>
           </div>
         )}
       </div>
