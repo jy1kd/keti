@@ -83,27 +83,43 @@ describe('TrayManager', () => {
     expect(manager.getTray()!.setContextMenu).toHaveBeenCalled();
   });
 
-  it('一级菜单结构：行情/功能/设置/性能监控/分隔符/退出', () => {
+  it('一级菜单结构：行情/交易/查询/设置/分隔符/退出', () => {
     const manager = new TrayManager();
     manager.initialize(mainWindow, windowManager);
     const sig = getTemplate().map((i) => (i.type === 'separator' ? '---' : i.label));
-    expect(sig).toEqual(['行情', '功能', '设置', '性能监控', '---', '退出']);
+    expect(sig).toEqual(['行情', '交易', '查询', '设置', '---', '退出']);
   });
 
-  it('功能子菜单不包含退出（已提到一级底部）', () => {
+  it('设置子菜单不包含退出（已提到一级底部）', () => {
     const manager = new TrayManager();
     manager.initialize(mainWindow, windowManager);
-    const fnMenu = getTemplate().find((i) => i.label === '功能')!;
-    const labels = fnMenu.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📝 报单窗口', '📈 K线窗口', '📋 报单查询窗口', '📋 持仓查询窗口', '💰 资金查询窗口']);
+    const settingsMenu = getTemplate().find((i) => i.label === '设置')!;
+    const labels = settingsMenu.submenu!.map((i) => i.label).filter(Boolean);
+    expect(labels).toEqual(['⚙ 设置', '🔌 网络监控']);
   });
 
-  it('行情子菜单完整镜像：期货/期权/自选/T型报价/新窗口', () => {
+  it('行情子菜单完整镜像：期货/期权/自选/K线窗口/T型报价/新窗口', () => {
     const manager = new TrayManager();
     manager.initialize(mainWindow, windowManager);
     const market = getTemplate().find((i) => i.label === '行情')!;
     const labels = market.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📉 T型报价', '🪟 在新窗口打开']);
+    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📈 K线窗口', '📉 T型报价', '🪟 在新窗口打开']);
+  });
+
+  it('交易子菜单包含 报单窗口/无限下单窗口', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+    const trade = getTemplate().find((i) => i.label === '交易')!;
+    const labels = trade.submenu!.map((i) => i.label).filter(Boolean);
+    expect(labels).toEqual(['📝 报单窗口', '♾️ 无限下单窗口']);
+  });
+
+  it('查询子菜单包含 报单查询/持仓查询/资金查询', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+    const query = getTemplate().find((i) => i.label === '查询')!;
+    const labels = query.submenu!.map((i) => i.label).filter(Boolean);
+    expect(labels).toEqual(['📋 报单查询窗口', '📋 持仓查询窗口', '💰 资金查询窗口']);
   });
 
   it('点击期货发送 menu:market-view all 并显示主窗口', () => {
@@ -154,13 +170,6 @@ describe('TrayManager', () => {
     manager.initialize(mainWindow, windowManager);
     clickItem('⚙ 设置');
     expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'settings');
-  });
-
-  it('点击FPS监控发送 menu:toggle-perf', () => {
-    const manager = new TrayManager();
-    manager.initialize(mainWindow, windowManager);
-    clickItem('⚡FPS 监控');
-    expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_TOGGLE_PERF);
   });
 
   it('点击网络监控发送 menu:open-floating ipc-monitor', () => {
