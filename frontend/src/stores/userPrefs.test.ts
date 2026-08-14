@@ -9,6 +9,7 @@ describe('useUserPrefsStore', () => {
     // 重置 store 为默认值
     useUserPrefsStore.setState({
       selectedContracts: [],
+      collections: [],
       hotKeys: { ...DEFAULT_HOT_KEYS },
     })
   })
@@ -75,5 +76,44 @@ describe('useUserPrefsStore', () => {
     const state = useUserPrefsStore.getState()
     expect(state.selectedContracts).toEqual([])
     expect(state.hotKeys).toEqual(DEFAULT_HOT_KEYS)
+  })
+})
+
+describe('useUserPrefsStore collections', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useUserPrefsStore.setState({
+      collections: [],
+      hotKeys: { ...DEFAULT_HOT_KEYS },
+      quickTradeConfig: { lock: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, reverse: { close: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, open: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, executionMode: 'serial' }, confirmBeforeExecute: true },
+    })
+  })
+
+  it('setCollections + saveToLocalStorage 持久化', () => {
+    const coll = [{ id: 'coll-x', name: 'A', instrumentIDs: ['au2406'] }]
+    useUserPrefsStore.getState().setCollections(coll)
+    useUserPrefsStore.getState().saveToLocalStorage()
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+    expect(stored.collections).toEqual(coll)
+  })
+
+  it('loadFromLocalStorage 迁移：旧 selectedContracts → 默认收藏夹', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ selectedContracts: ['au2406', 'rb2406'], hotKeys: { buy: 'F2' } })
+    )
+    useUserPrefsStore.getState().loadFromLocalStorage()
+    expect(useUserPrefsStore.getState().collections).toEqual([
+      { id: 'coll-default', name: '默认收藏夹', instrumentIDs: ['au2406', 'rb2406'] },
+    ])
+  })
+
+  it('已有 collections 时不覆盖（无迁移）', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ selectedContracts: ['au2406'], collections: [{ id: 'a', name: 'A', instrumentIDs: ['rb2406'] }] })
+    )
+    useUserPrefsStore.getState().loadFromLocalStorage()
+    expect(useUserPrefsStore.getState().collections).toEqual([{ id: 'a', name: 'A', instrumentIDs: ['rb2406'] }])
   })
 })
