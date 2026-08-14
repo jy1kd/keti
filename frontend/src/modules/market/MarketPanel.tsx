@@ -29,7 +29,6 @@ export function MarketPanel() {
   const collections = useCollectionsStore((s) => s.collections)
   const { contextMenu, multiSelectMenu, openOrderPopup, openQueryPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
   // 收藏选夹面板（⭐ / 右键 / 工具栏 / 搜索弹窗统一入口）
   const [picker, setPicker] = useState<{ instrumentIDs: string[] } | null>(null)
   // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
@@ -48,19 +47,14 @@ export function MarketPanel() {
     () => sortFutures(contracts.filter((c) => c.productClass === '1')),
     [contracts],
   )
-  // 自选视图基础集 = 任一收藏夹内期货合约（spec §5.4：期货页自选 = 期货合约中已收藏者）
+  // ⭐ 填充态 = 任一收藏夹内的合约（union）；仅用于 ⭐ 列/收藏按钮状态，不再做内部自选视图
   const favoritedIds = useMemo(
     () => unionFavoritedIds(collections),
     [collections],
   )
-  // 自选视图同样只展示期货合约，且同样应用排序（spec 决策 3：排序作用于全部/自选两种基础集）
-  const sortedFavorites = useMemo(
-    () => sortFutures(contracts.filter((c) => c.productClass === '1' && favoritedIds.has(c.instrumentID))),
-    [contracts, favoritedIds],
-  )
 
-  // Display contracts based on active tab
-  const baseContracts = activeTab === 'all' ? sortedFutures : sortedFavorites
+  // 期货页基础集 = 全部期货（已去除 [全部|自选] 内部视图）
+  const baseContracts = sortedFutures
 
   // 筛选面板品种中文名（显示用；可选交易所/品种列表由 ContractFilter 内经 computeFilterOptions 交叉计算）
   const filterProductNames = useMemo(() => {
@@ -114,7 +108,7 @@ export function MarketPanel() {
   )
 
   // 顶部菜单「行情」切换（设计 §4.1）：期货/期权为独立固定标签。
-  // options → 激活期权标签；favorites → 打开收藏夹管理页；all → 激活期货标签并切内部全部。
+  // options → 激活期权标签；favorites → 打开收藏夹管理页；all → 激活期货标签。
   useEffect(() => {
     if (!isElectron()) return
 
@@ -128,7 +122,6 @@ export function MarketPanel() {
         useTabStore.getState().openTab({ type: 'collections', title: '📁 收藏夹' })
         return
       }
-      setActiveTab('all')
       const market = useTabStore.getState().tabs.find((t) => t.type === 'market')
       if (market) useTabStore.getState().setActiveTab(market.id)
     })
@@ -159,25 +152,11 @@ export function MarketPanel() {
 
   return (
     <section className="market-panel">
-      {/* 行情页工具栏：合并 market-tabs（模式切换）+ panel-header（搜索/全部自选/操作）为单行。
+      {/* 行情页工具栏：筛选 → 仅交易中 → 收藏 → 搜索（已去除 [全部|自选] 内部视图切换）。
           保留 data-drag-handle：market 为固定标签（closable:false）故 TabContent 中惰性不触发，
           与旧 market-tabs 行为一致；保留以对齐 Phase 2 全局栏合并后的拖拽语义（审查 🔵-1）。 */}
       <div className="market-toolbar" data-drag-handle>
-        {/* 功能靠左：全部/自选 → 筛选 → 仅交易中 → 收藏 */}
-        <div className="market-toolbar__tabs">
-          <button
-            className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
-            onClick={() => setActiveTab('all')}
-          >
-            全部
-          </button>
-          <button
-            className={`btn-tab${activeTab === 'favorites' ? ' active' : ''}`}
-            onClick={() => setActiveTab('favorites')}
-          >
-            自选
-          </button>
-        </div>
+        {/* 功能靠左：筛选 → 仅交易中 → 收藏 */}
         <ContractFilter
           allContracts={sortedFutures}
           getProduct={(c) => c.productID}

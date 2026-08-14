@@ -123,10 +123,10 @@ describe('MarketPanel', () => {
     expect(container.firstChild).toHaveClass('market-panel')
   })
 
-  it('renders 全部 and 自选 tabs', () => {
+  it('已去除 [全部|自选] 内部视图切换按钮', () => {
     render(<MarketPanel />)
-    expect(screen.getByText('全部')).toBeInTheDocument()
-    expect(screen.getByText('自选')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '自选' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '全部' })).not.toBeInTheDocument()
   })
 
   it('renders 高级搜索按钮（合并搜索入口）', () => {
@@ -416,30 +416,6 @@ describe('MarketPanel', () => {
       await user.click(screen.getByRole('button', { name: '清空' }))
       expect(latestRecordIDs(instance)).toEqual(['cu2609', 'FG609', 'MA609'])
     })
-
-    it('筛选在 自选 视图同样生效', async () => {
-      useContractsStore.setState({
-        contracts: [
-          { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
-          { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
-        ],
-        isLoaded: true,
-      })
-      useCollectionsStore.setState({
-        collections: [{ id: 'c1', name: '默认', instrumentIDs: ['cu2609', 'FG609'] }],
-        loaded: true,
-      })
-      const user = userEvent.setup()
-      render(<MarketPanel />)
-      // 切到自选：仅 cu2609 + FG609
-      await user.click(screen.getByRole('button', { name: '自选' }))
-      // 勾选交易所 SHFE → 自选里只剩 cu2609
-      await user.click(screen.getByRole('button', { name: /筛选/ }))
-      await user.click(screen.getByRole('checkbox', { name: 'SHFE' }))
-      const { ListTable } = await import('@visactor/vtable')
-      const instance = (ListTable as any).mock.results[0].value
-      expect(latestRecordIDs(instance)).toEqual(['cu2609'])
-    })
   })
 
   describe('顶部菜单行情切换（onMarketView）', () => {
@@ -468,7 +444,7 @@ describe('MarketPanel', () => {
       delete (window as any).electronAPI
     })
 
-    it('view=favorites → 打开收藏夹管理页（collections 标签），不切期货页内部 自选', () => {
+    it('view=favorites → 打开收藏夹管理页（collections 标签）', () => {
       setupTabs('tab-options')
       const onMarketView = vi.fn()
       ;(window as any).electronAPI = { onMarketView }
@@ -479,12 +455,13 @@ describe('MarketPanel', () => {
         callback('favorites')
       })
       expect(useTabStore.getState().tabs.some((t) => t.type === 'collections')).toBe(true)
-      expect(screen.getByRole('button', { name: '自选' }).classList.contains('active')).toBe(false)
+      // 期货页无内部 自选 视图可切
+      expect(screen.queryByRole('button', { name: '自选' })).not.toBeInTheDocument()
 
       delete (window as any).electronAPI
     })
 
-    it('view=all → 激活期货标签并切内部 全部', () => {
+    it('view=all → 激活期货标签', () => {
       setupTabs('tab-options')
       const onMarketView = vi.fn()
       ;(window as any).electronAPI = { onMarketView }
@@ -495,17 +472,15 @@ describe('MarketPanel', () => {
         callback('all')
       })
       expect(useTabStore.getState().activeTabId).toBe('tab-market')
-      expect(screen.getByRole('button', { name: '全部' }).classList.contains('active')).toBe(true)
 
       delete (window as any).electronAPI
     })
   })
 
   describe('工具行布局（Task 8：功能靠左、搜索贴右）', () => {
-    it('DOM 顺序：全部/自选 → 筛选 → 仅交易中 → 收藏 → 搜索框', () => {
+    it('DOM 顺序：筛选 → 仅交易中 → 收藏 → 搜索框', () => {
       const { container } = render(<MarketPanel />)
       const toolbar = container.querySelector('.market-toolbar') as HTMLElement
-      const tabs = toolbar.querySelector('.market-toolbar__tabs') as Element
       const filterBtn = screen.getByRole('button', { name: /筛选/ })
       const statusBtn = toolbar.querySelector('.btn-filter-status') as Element
       const favoriteBtn = toolbar.querySelector('.btn-favorite') as Element
@@ -515,41 +490,14 @@ describe('MarketPanel', () => {
       const follows = (a: Element, b: Element) =>
         (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
 
-      expect(tabs).toBeTruthy()
       expect(filterBtn).toBeTruthy()
       expect(statusBtn).toBeTruthy()
       expect(favoriteBtn).toBeTruthy()
       expect(searchInput).toBeTruthy()
-      expect(follows(tabs, filterBtn)).toBe(true)
       expect(follows(filterBtn, statusBtn)).toBe(true)
       expect(follows(statusBtn, favoriteBtn)).toBe(true)
       expect(follows(favoriteBtn, searchBox)).toBe(true)
       expect(follows(favoriteBtn, searchInput)).toBe(true)
-    })
-  })
-
-  describe('自选视图排序（spec 决策 3：排序同样作用于自选基础集）', () => {
-    it('自选按 交易所→品种→月份 排序（输入无序）', async () => {
-      useContractsStore.setState({
-        contracts: [
-          { instrumentID: 'FG610', instrumentName: '玻璃610', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20261031', isTrading: 1, productClass: '1' },
-          { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
-          { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
-        ],
-        isLoaded: true,
-      })
-      useCollectionsStore.setState({
-        collections: [{ id: 'c1', name: '默认', instrumentIDs: ['FG610', 'cu2609', 'FG609'] }],
-        loaded: true,
-      })
-      const user = userEvent.setup()
-      render(<MarketPanel />)
-      await user.click(screen.getByRole('button', { name: '自选' }))
-      const { ListTable } = await import('@visactor/vtable')
-      const instance = (ListTable as any).mock.results[0].value
-      const last = instance.setRecords.mock.calls.at(-1)?.[0] ?? []
-      // SHFE 在 CZCE 前；CZCE 内 FG 月份数字升序：cu2609 < FG609 < FG610
-      expect(last.map((r: any) => r.instrumentID)).toEqual(['cu2609', 'FG609', 'FG610'])
     })
   })
 })

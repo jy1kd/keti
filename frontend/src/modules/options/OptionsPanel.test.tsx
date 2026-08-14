@@ -340,11 +340,11 @@ describe('OptionsPanel', () => {
       expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
     })
 
-    it('DOM 顺序：全部/自选 → 筛选 → 收藏 → 搜索框（无 [列表|T型] 切换）', () => {
+    it('DOM 顺序：筛选 → 收藏 → 搜索框（无 [全部|自选] 与 [列表|T型] 切换）', () => {
       const { container } = render(<OptionsPanel />)
       const toolbar = container.querySelector('.market-toolbar') as HTMLElement
       expect(toolbar.querySelector('.market-toolbar__mode')).toBeNull()
-      const tabs = toolbar.querySelector('.market-toolbar__tabs') as Element
+      expect(toolbar.querySelector('.market-toolbar__tabs')).toBeNull()
       const filterBtn = screen.getByRole('button', { name: /筛选/ })
       const favoriteBtn = toolbar.querySelector('.btn-favorite') as Element
       const searchInput = toolbar.querySelector('.market-toolbar__search .search-input') as Element
@@ -352,10 +352,8 @@ describe('OptionsPanel', () => {
       const follows = (a: Element, b: Element) =>
         (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
 
-      expect(tabs).toBeTruthy()
       expect(favoriteBtn).toBeTruthy()
       expect(searchInput).toBeTruthy()
-      expect(follows(tabs, filterBtn)).toBe(true)
       expect(follows(filterBtn, favoriteBtn)).toBe(true)
       expect(follows(favoriteBtn, searchInput)).toBe(true)
     })

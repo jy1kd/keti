@@ -41,7 +41,6 @@ interface UnderlyingMenuState {
 }
 
 export function OptionsPanel() {
-  const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
   // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
   const [filterActive, setFilterActive] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -78,18 +77,14 @@ export function OptionsPanel() {
   // 期货全量 → 期权全量（分组用 futures 匹配标底行真实合约）
   const futures = useMemo(() => contracts.filter((c) => c.productClass === '1'), [contracts])
   const options = useMemo(() => contracts.filter((c) => c.productClass === '2' || c.productClass === '6'), [contracts])
-  // 自选视图基础集 = 任一收藏夹内期权合约（spec §5.4：期权页自选 = 期权合约中已收藏者）
+  // ⭐ 填充态 = 任一收藏夹内的合约（union）；仅用于 ⭐ 列/收藏按钮状态，不再做内部自选视图
   const favoritedIds = useMemo(
     () => unionFavoritedIds(collections),
     [collections],
   )
-  const favoriteOptions = useMemo(
-    () => options.filter((c) => favoritedIds.has(c.instrumentID)),
-    [options, favoritedIds],
-  )
 
-  // 全部/自选 基础集（自选 = 已收藏期权）
-  const baseOptions = activeTab === 'all' ? options : favoriteOptions
+  // 期权页基础集 = 全部期权（已去除 [全部|自选] 内部视图）
+  const baseOptions = options
 
   // 筛选面板品种中文名（显示用；可选交易所/品种列表由 ContractFilter 内经 computeFilterOptions 交叉计算，品种=标底品种）
   const filterProductNames = useMemo(() => {
@@ -219,23 +214,9 @@ export function OptionsPanel() {
 
   return (
     <section className="options-page">
-      {/* 列表工具行：功能靠左（全部/自选 → 筛选 → 仅交易中 → 收藏），搜索贴右。
-          T型报价已独立为悬浮标签页，此处不再有 [列表|T型] 切换。 */}
+      {/* 列表工具行：功能靠左（筛选 → 仅交易中 → 收藏），搜索贴右。
+          T型报价已独立为悬浮标签页；[全部|自选] 内部视图已去除。 */}
       <div className="market-toolbar">
-        <div className="market-toolbar__tabs">
-          <button
-            className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
-            onClick={() => setActiveTab('all')}
-          >
-            全部
-          </button>
-          <button
-            className={`btn-tab${activeTab === 'favorites' ? ' active' : ''}`}
-            onClick={() => setActiveTab('favorites')}
-          >
-            自选
-          </button>
-        </div>
         <ContractFilter
           allContracts={options}
           getProduct={(c) => deriveUnderlyingProduct(c.underlyingInstrID ?? '')}
