@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useTabStore } from '@/stores/tabs';
 import { useFloatingWindowStore } from '@/stores/floatingWindows';
 import { useMarketStore } from '@/modules/market/store';
-import { openFloatingTab, openOrderFloating, openKlineFloating, openAccountQueryFloating, openSettingsFloating, openIpcMonitorFloating } from './openFloatingTab';
+import { openFloatingTab, openOrderFloating, openKlineFloating, openAccountQueryFloating, openSettingsFloating, openIpcMonitorFloating, computeAccountWindowHeight, fitAccountWindowToContent } from './openFloatingTab';
 
 describe('openFloatingTab helpers — 顶部菜单打开浮动窗', () => {
   beforeEach(() => {
@@ -110,6 +110,28 @@ describe('openFloatingTab helpers — 顶部菜单打开浮动窗', () => {
     const spy = vi.spyOn(document, 'querySelector').mockReturnValue(null);
     openAccountQueryFloating();
     expect(useFloatingWindowStore.getState().windows['tab-query-account']).toBeDefined();
+    spy.mockRestore();
+  });
+
+  it('computeAccountWindowHeight 收缩到刚好容纳卡片（网格 + 内容 padding + 标题条）', () => {
+    expect(computeAccountWindowHeight(130, 700)).toBe(178); // 130 + 16 padding + 32 chrome
+  });
+
+  it('computeAccountWindowHeight 高度已够则不收缩（避免裁卡）', () => {
+    expect(computeAccountWindowHeight(130, 150)).toBeNull();
+  });
+
+  it('fitAccountWindowToContent 收缩窗口并保持底部锚定', () => {
+    useFloatingWindowStore.setState({
+      windows: { 'tab-query-account': { x: 50, y: 100, w: 900, h: 700, z: 1 } },
+    });
+    const grid = { offsetHeight: 130 } as HTMLElement;
+    const spy = vi.spyOn(document, 'querySelector').mockImplementation((sel: string) =>
+      sel === '#floating-overlay .account-query .account-grid' ? grid : null
+    );
+    expect(fitAccountWindowToContent()).toBe(true);
+    const win = useFloatingWindowStore.getState().windows['tab-query-account'];
+    expect(win).toMatchObject({ x: 50, y: 622, w: 900, h: 178 }); // bottom 800 锚定
     spy.mockRestore();
   });
 });
