@@ -15,9 +15,6 @@ vi.mock('@/modules/market/MarketPanel', () => ({
 vi.mock('@/pages/SettingsPage', () => ({
   SettingsPage: () => <div data-testid="settings-page">设置页面</div>,
 }))
-vi.mock('@/modules/query/QueryPanel', () => ({
-  QueryPanel: () => <div data-testid="query-panel">查询面板</div>,
-}))
 vi.mock('@/pages/OrderPage', () => ({
   OrderPage: () => <div data-testid="order-page">报单页面</div>,
 }))
