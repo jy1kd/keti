@@ -130,7 +130,7 @@ describe('MenuManager', () => {
       const labels = getMenu('功能')
         .submenu!.map((i) => i.label)
         .filter(Boolean);
-      expect(labels).toEqual(['📝 报单窗口', '📈 K线窗口', '📋 查询窗口', '退出']);
+      expect(labels).toEqual(['📝 报单窗口', '📈 K线窗口', '📋 查询窗口', '📋 报单查询窗口', '📋 持仓查询窗口', '退出']);
     });
 
     it('点击报单窗口发送 menu:open-floating order', () => {

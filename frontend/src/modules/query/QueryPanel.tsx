@@ -1,16 +1,12 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect } from 'react'
 import { useQueryStore } from './store'
-import { OrderFlow } from './OrderFlow'
 import { TradeFlow } from './TradeFlow'
-import { Position } from './Position'
 import { AccountQuery } from './AccountQuery'
 import { StopOrderList } from './StopOrderList'
 import './styles.css'
 
 const TABS = [
-  { key: 'orders' as const, label: '报单' },
   { key: 'trades' as const, label: '成交' },
-  { key: 'positions' as const, label: '持仓' },
   { key: 'account' as const, label: '资金' },
   { key: 'stop_orders' as const, label: '止损单' },
 ]
@@ -22,7 +18,6 @@ export function QueryPanel() {
   const isLoading = useQueryStore((s) => s.isLoading)
   const togglePause = useQueryStore((s) => s.togglePause)
   const refreshAll = useQueryStore((s) => s.refreshAll)
-  const handleCancelAll = useQueryStore((s) => s.handleCancelAll)
 
   // Initial data load
   useEffect(() => {
@@ -45,33 +40,10 @@ export function QueryPanel() {
 
   // 注意：WebSocket 行情推送由 MarketPanel 中的 useMarketWs 单例管理
 
-  // C key shortcut — cancel all active orders (when orders tab is active)
-  const onKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'c' || e.key === 'C') {
-        // Ignore if user is typing in an input
-        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-        if (activeTab === 'orders') {
-          handleCancelAll()
-        }
-      }
-    },
-    [activeTab, handleCancelAll]
-  )
-
-  useEffect(() => {
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onKeyDown])
-
   const renderContent = () => {
     switch (activeTab) {
-      case 'orders':
-        return <OrderFlow />
       case 'trades':
         return <TradeFlow />
-      case 'positions':
-        return <Position />
       case 'account':
         return <AccountQuery />
       case 'stop_orders':

@@ -157,6 +157,30 @@ describe('App Layout — 标签页系统', () => {
       delete (window as any).electronAPI
     })
 
+    it('onOpenFloatingTab query-orders 打开报单查询浮动窗', () => {
+      const onOpenFloatingTab = vi.fn()
+      setElectronAPI({ onOpenFloatingTab })
+      render(<App />)
+      const callback = onOpenFloatingTab.mock.calls[0][0]
+      act(() => {
+        callback('query-orders')
+      })
+      expect(useFloatingWindowStore.getState().windows['tab-query-orders']).toBeDefined()
+      delete (window as any).electronAPI
+    })
+
+    it('onOpenFloatingTab query-positions 打开持仓查询浮动窗', () => {
+      const onOpenFloatingTab = vi.fn()
+      setElectronAPI({ onOpenFloatingTab })
+      render(<App />)
+      const callback = onOpenFloatingTab.mock.calls[0][0]
+      act(() => {
+        callback('query-positions')
+      })
+      expect(useFloatingWindowStore.getState().windows['tab-query-positions']).toBeDefined()
+      delete (window as any).electronAPI
+    })
+
     it('onOpenFloatingTab tquote 打开 T型报价浮动窗（空白无预选）', () => {
       const onOpenFloatingTab = vi.fn()
       setElectronAPI({ onOpenFloatingTab })

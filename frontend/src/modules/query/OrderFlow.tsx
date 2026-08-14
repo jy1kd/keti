@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { useQueryStore } from './store'
+import { useQueryStore, type OrderEntry } from './store'
 
 /** CTP orderStatus → 中文映射 */
 const STATUS_MAP: Record<string, string> = {
@@ -30,8 +30,16 @@ function isActiveOrder(status: string): boolean {
   return status === '1' || status === '2' || status === '3'
 }
 
-export function OrderFlow() {
-  const orders = useQueryStore((s) => s.orders)
+interface OrderFlowProps {
+  /** 可选：外部传入报单列表；缺省读 store */
+  orders?: OrderEntry[]
+  /** 可选：空态文案；缺省「暂无报单数据」 */
+  emptyText?: string
+}
+
+export function OrderFlow({ orders: propOrders, emptyText = '暂无报单数据' }: OrderFlowProps) {
+  const storeOrders = useQueryStore((s) => s.orders)
+  const orders = propOrders ?? storeOrders
   const newOrderRefs = useQueryStore((s) => s.newOrderRefs)
   const clearNewOrderRef = useQueryStore((s) => s.clearNewOrderRef)
   const handleCancelOrder = useQueryStore((s) => s.handleCancelOrder)
@@ -77,7 +85,7 @@ export function OrderFlow() {
         <div className="flow-toolbar">
           <button className="btn-cancel-all" disabled>撤销全部</button>
         </div>
-        <div className="flow-empty">暂无报单数据</div>
+        <div className="flow-empty">{emptyText}</div>
       </div>
     )
   }

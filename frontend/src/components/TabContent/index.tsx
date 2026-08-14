@@ -4,6 +4,8 @@ import { useFloatingWindowStore, FLOATING_CHROME_H } from '@/stores/floatingWind
 import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
 import { MarketPanel } from '@/modules/market/MarketPanel'
 import { QueryPanel } from '@/modules/query/QueryPanel'
+import { OrdersQuery } from '@/modules/query/OrdersQuery'
+import { PositionsQuery } from '@/modules/query/PositionsQuery'
 import { OptionsPanel } from '@/modules/options/OptionsPanel'
 import { TQuoteView } from '@/modules/options/TQuoteView'
 import { FavoritesPage } from '@/pages/FavoritesPage'
@@ -57,6 +59,10 @@ function renderTabContent(tab: Tab, floating: boolean): React.ReactNode {
       return <FavoritesPage />
     case 'query':
       return <QueryPanel />
+    case 'query-orders':
+      return <OrdersQuery />
+    case 'query-positions':
+      return <PositionsQuery />
     case 'settings':
       return <SettingsPage />
     case 'options':

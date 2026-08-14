@@ -37,6 +37,14 @@ describe('resolveAction', () => {
     expect(ctx.mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query');
   });
 
+  it('open-floating: 透传 query-orders / query-positions', () => {
+    resolveAction({ type: 'open-floating', tab: 'query-orders' }, ctx);
+    expect(ctx.mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query-orders');
+
+    resolveAction({ type: 'open-floating', tab: 'query-positions' }, ctx);
+    expect(ctx.mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query-positions');
+  });
+
   it('open-market-window: 调 windowManager.openTabWindow', () => {
     resolveAction({ type: 'open-market-window' }, ctx);
     expect(ctx.windowManager.openTabWindow).toHaveBeenCalledWith('market', 'tab-market', '📊 期货');

@@ -115,7 +115,7 @@ declare global {
       onNavigateTab: (callback: (tab: string) => void) => () => void;
 
       // Menu (main → renderer): 顶部菜单打开浮动窗
-      onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor' | 'tquote') => void) => () => void;
+      onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor' | 'tquote' | 'query-orders' | 'query-positions') => void) => () => void;
 
       // Menu (main → renderer): 切换 FPS 监控
       onTogglePerf: (callback: () => void) => () => void;

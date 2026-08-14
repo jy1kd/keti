@@ -256,3 +256,42 @@
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
 }
+
+/* ── OrdersQuery 状态筛选按钮 ─────────────────────── */
+
+.query-filter-btn {
+  padding: 3px 10px;
+  font-size: 11px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.query-filter-btn:hover {
+  color: var(--text-primary);
+}
+
+.query-filter-btn.active {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ── PositionsQuery 合约筛选输入框 ─────────────────── */
+
+.position-search {
+  flex: 0 0 200px;
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.position-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}

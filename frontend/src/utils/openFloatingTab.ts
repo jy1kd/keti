@@ -93,3 +93,13 @@ export function openInfiniteFloating(): boolean {
     props: inst ? { instrumentID: inst } : {},
   })
 }
+
+/** 打开报单查询浮动窗 */
+export function openOrdersQueryFloating(): boolean {
+  return openFloatingTab({ type: 'query-orders', title: '📋 报单查询' })
+}
+
+/** 打开持仓查询浮动窗 */
+export function openPositionsQueryFloating(): boolean {
+  return openFloatingTab({ type: 'query-positions', title: '📋 持仓查询' })
+}
