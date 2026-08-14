@@ -411,14 +411,6 @@ describe('TabBar', () => {
       fireEvent.click(screen.getByText('+ 新建'))
       expect(useCollectionsStore.getState().collections.some((c) => c.name === '新夹')).toBe(true)
     })
-
-    it('`+` 菜单「📁 收藏夹」项 → 关闭 + 菜单并弹出收藏夹弹层', () => {
-      render(<TabBar />)
-      fireEvent.mouseOver(screen.getByLabelText('新增标签'))
-      fireEvent.click(screen.getByText('📁 收藏夹'))
-      expect(screen.queryByText('📝 报单')).toBeNull() // + 菜单已关
-      expect(screen.getByText('📁 农产品')).toBeInTheDocument() // 弹层已开
-    })
   })
 
   // --- + 选择栏悬停可达性样式（回归） ---

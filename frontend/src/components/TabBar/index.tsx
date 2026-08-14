@@ -477,18 +477,6 @@ export function TabBar() {
                 <span className="tab-bar__add-menu-label">{item.title}</span>
               </button>
             ))}
-            {/* 收藏夹：点击关闭 `+` 菜单并弹出收藏夹快速入口（悬浮弹层） */}
-            <button
-              type="button"
-              role="menuitem"
-              className="tab-bar__add-menu-item"
-              onClick={() => {
-                setAddMenuOpen(false)
-                setCollectionsOpen(true)
-              }}
-            >
-              <span className="tab-bar__add-menu-label">📁 收藏夹</span>
-            </button>
           </div>
         )}
       </div>

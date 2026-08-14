@@ -305,11 +305,10 @@ describe('OptionsPanel', () => {
   })
 
   describe('工具行布局与搜索定位（Task 8）', () => {
-    it('工具行始终渲染列表集群（筛选/仅交易中/收藏/搜索框），无 [列表|T型] 切换', () => {
+    it('工具行始终渲染列表集群（筛选/收藏/搜索框），无 [列表|T型] 切换', () => {
       render(<OptionsPanel />)
       expect(screen.getByPlaceholderText('搜索合约...')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /筛选/ })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /仅交易中|显示全部/ })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: '收藏' })).toBeInTheDocument()
       // 无模式切换按钮
       expect(screen.queryByRole('button', { name: 'T型报价' })).toBeNull()

@@ -18,7 +18,6 @@ import { usePointOrder } from '@/hooks/usePointOrder'
 import { CollectionPicker } from '@/components/CollectionPicker'
 import { useOrderStore } from '@/modules/order/store'
 import { getProductName } from '@/utils/productNames'
-import { isContractActive } from '@/utils/contractStatus'
 import { isElectron } from '@/services/electron'
 import './styles.css'
 
@@ -31,8 +30,6 @@ export function MarketPanel() {
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   // 收藏选夹面板（⭐ / 右键 / 工具栏 / 搜索弹窗统一入口）
   const [picker, setPicker] = useState<{ instrumentIDs: string[] } | null>(null)
-  // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
-  const [filterActive, setFilterActive] = useState(false)
 
   // 期货标签是否激活：激活翻转为 true 时 QuoteTable 重报可见区，订阅管理器立即补订阅。
   // TabContent 同时挂载期货/期权两面板，隐藏面板（isActive=false）不得上报可见区，
@@ -66,10 +63,8 @@ export function MarketPanel() {
   // 搜索过滤
   const [searchQuery, setSearchQuery] = useState('')
   const displayContracts = useMemo(() => {
-    // 数据管道：全部/自选 → 筛选（交易所+品种）→ 仅交易中 → 搜索
+    // 数据管道：全部期货 → 筛选（交易所+品种）→ 搜索
     let base = filterByExchangeAndProduct(baseContracts, filter.exchanges, filter.products, (c) => c.productID)
-    // 过滤开关：默认仅显示交易中合约
-    base = filterActive ? base.filter(isContractActive) : base
     if (!searchQuery.trim()) return base
     const q = searchQuery.toLowerCase()
     return base.filter((c) => {
@@ -84,7 +79,7 @@ export function MarketPanel() {
         productName.includes(q)
       )
     })
-  }, [baseContracts, filter, searchQuery, filterActive])
+  }, [baseContracts, filter, searchQuery])
 
   // 右键菜单 JSX 与工具栏收藏共享逻辑（picker 模式：统一弹选夹面板，与期权页一致，见 useContractMenus）
   const { singleMenu, multiMenu, batchToggleFavorite, favoriteButtonLabel } = useContractMenus({
@@ -156,7 +151,7 @@ export function MarketPanel() {
           保留 data-drag-handle：market 为固定标签（closable:false）故 TabContent 中惰性不触发，
           与旧 market-tabs 行为一致；保留以对齐 Phase 2 全局栏合并后的拖拽语义（审查 🔵-1）。 */}
       <div className="market-toolbar" data-drag-handle>
-        {/* 功能靠左：筛选 → 仅交易中 → 收藏 */}
+        {/* 功能靠左：筛选 → 收藏 */}
         <ContractFilter
           allContracts={sortedFutures}
           getProduct={(c) => c.productID}
@@ -165,13 +160,6 @@ export function MarketPanel() {
           onChange={(v) => useMarketFilterStore.getState().setFilter('futures', v)}
         />
         <div className="market-toolbar__actions">
-          <button
-            className={`btn-filter-status${filterActive ? ' active' : ''}`}
-            onClick={() => setFilterActive((v) => !v)}
-            title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
-          >
-            {filterActive ? '仅交易中' : '显示全部'}
-          </button>
           <button
             className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
             disabled={!selectedInstrument && selectedContracts.size === 0}

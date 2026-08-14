@@ -20,7 +20,6 @@ import { useContractMenus } from '@/hooks/useContractMenus'
 import { usePointOrder } from '@/hooks/usePointOrder'
 import { CollectionPicker } from '@/components/CollectionPicker'
 import { getProductName } from '@/utils/productNames'
-import { isContractActive } from '@/utils/contractStatus'
 import type { ContractInfo } from '@/services/types'
 import './styles.css'
 
@@ -41,8 +40,6 @@ interface UnderlyingMenuState {
 }
 
 export function OptionsPanel() {
-  // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
-  const [filterActive, setFilterActive] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   // 标底行右键菜单（仅「打开T型报价」一项）
@@ -96,16 +93,15 @@ export function OptionsPanel() {
     return m
   }, [options])
 
-  // 分组前先过滤期权（交易所 + 标底品种 + 仅交易中），再按标底分组展平为有序 ContractInfo[]
+  // 分组前先过滤期权（交易所 + 标底品种），再按标底分组展平为有序 ContractInfo[]
   // （标底行在前、期权行随后；组内无可见期权时整组消失）。此列表是搜索框的作用域。
   const listRows = useMemo(() => {
-    let filteredOptions = filterByExchangeAndProduct(
+    const filteredOptions = filterByExchangeAndProduct(
       baseOptions,
       filter.exchanges,
       filter.products,
       (c) => deriveUnderlyingProduct(c.underlyingInstrID ?? ''),
     )
-    filteredOptions = filterActive ? filteredOptions.filter(isContractActive) : filteredOptions
     const groups = groupOptionsByUnderlying(filteredOptions, futures)
     const flat: ContractInfo[] = []
     for (const g of groups) {
@@ -113,7 +109,7 @@ export function OptionsPanel() {
       flat.push(...g.options)
     }
     return flat
-  }, [baseOptions, filter, filterActive, futures])
+  }, [baseOptions, filter, futures])
 
   // 搜索过滤：命中 期权/标底 instrumentID + 中文品种名；空查询 = 全量
   const rows = useMemo(() => {
@@ -214,8 +210,8 @@ export function OptionsPanel() {
 
   return (
     <section className="options-page">
-      {/* 列表工具行：功能靠左（筛选 → 仅交易中 → 收藏），搜索贴右。
-          T型报价已独立为悬浮标签页；[全部|自选] 内部视图已去除。 */}
+      {/* 列表工具行：功能靠左（筛选 → 收藏），搜索贴右。
+          T型报价已独立为悬浮标签页；[全部|自选] 与 [仅交易中] 已去除。 */}
       <div className="market-toolbar">
         <ContractFilter
           allContracts={options}
@@ -225,13 +221,6 @@ export function OptionsPanel() {
           onChange={(v) => useMarketFilterStore.getState().setFilter('options', v)}
         />
         <div className="market-toolbar__actions">
-          <button
-            className={`btn-filter-status${filterActive ? ' active' : ''}`}
-            onClick={() => setFilterActive((v) => !v)}
-            title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
-          >
-            {filterActive ? '仅交易中' : '显示全部'}
-          </button>
           <button
             className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
             disabled={!selectedInstrument && selectedContracts.size === 0}

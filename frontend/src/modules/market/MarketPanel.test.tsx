@@ -168,53 +168,6 @@ describe('MarketPanel', () => {
     expect(useMarketStore.getState().selectedContracts.size).toBe(1)
   })
 
-  // --- 状态过滤开关 tests ---
-
-  /** 设置混合合约（交易中 + 已停牌），返回 vtable options 以检查过滤结果 */
-  function setupMixedContracts() {
-    vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
-    useContractsStore.setState({
-      contracts: [
-        { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 1, productClass: '1' },
-        { instrumentID: 'IF9999', instrumentName: '停牌合约', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 0, productClass: '1' },
-      ],
-      isLoaded: true,
-    })
-    useMarketStore.setState({
-      snapshots: new Map(),
-      selectedInstrument: null,
-    })
-  }
-
-  it('渲染状态过滤开关按钮', () => {
-    render(<MarketPanel />)
-    expect(screen.getByText('显示全部')).toBeInTheDocument()
-  })
-
-  it('默认关闭过滤，显示全部合约（含已停牌）', async () => {
-    setupMixedContracts()
-    render(<MarketPanel />)
-    const { ListTable } = await import('@visactor/vtable')
-    const options = (ListTable as any).mock.calls[0][1]
-    const ids = options.records.map((r: any) => r.instrumentID)
-    expect(ids).toEqual(['IF2608', 'IF9999'])
-  })
-
-  it('点击过滤开关切换为仅显示交易中合约', async () => {
-    setupMixedContracts()
-    const user = userEvent.setup()
-    render(<MarketPanel />)
-    // 默认显示全部
-    await user.click(screen.getByText('显示全部'))
-    expect(screen.getByText('仅交易中')).toBeInTheDocument()
-    const { ListTable } = await import('@visactor/vtable')
-    const instance = (ListTable as any).mock.results[0].value
-    // 过滤切换后通过 setRecords 更新表格记录
-    const lastRecords = instance.setRecords.mock.calls.at(-1)?.[0] ?? []
-    const ids = lastRecords.map((r: any) => r.instrumentID)
-    expect(ids).toEqual(['IF2608'])
-  })
-
   it('点击 高级 按钮打开搜索弹窗', async () => {
     const user = userEvent.setup()
     render(<MarketPanel />)
@@ -478,11 +431,10 @@ describe('MarketPanel', () => {
   })
 
   describe('工具行布局（Task 8：功能靠左、搜索贴右）', () => {
-    it('DOM 顺序：筛选 → 仅交易中 → 收藏 → 搜索框', () => {
+    it('DOM 顺序：筛选 → 收藏 → 搜索框', () => {
       const { container } = render(<MarketPanel />)
       const toolbar = container.querySelector('.market-toolbar') as HTMLElement
       const filterBtn = screen.getByRole('button', { name: /筛选/ })
-      const statusBtn = toolbar.querySelector('.btn-filter-status') as Element
       const favoriteBtn = toolbar.querySelector('.btn-favorite') as Element
       const searchBox = toolbar.querySelector('.market-toolbar__search') as Element
       const searchInput = toolbar.querySelector('.market-toolbar__search .search-input') as Element
@@ -491,11 +443,9 @@ describe('MarketPanel', () => {
         (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
 
       expect(filterBtn).toBeTruthy()
-      expect(statusBtn).toBeTruthy()
       expect(favoriteBtn).toBeTruthy()
       expect(searchInput).toBeTruthy()
-      expect(follows(filterBtn, statusBtn)).toBe(true)
-      expect(follows(statusBtn, favoriteBtn)).toBe(true)
+      expect(follows(filterBtn, favoriteBtn)).toBe(true)
       expect(follows(favoriteBtn, searchBox)).toBe(true)
       expect(follows(favoriteBtn, searchInput)).toBe(true)
     })
