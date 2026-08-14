@@ -10,11 +10,11 @@
 
 ## Global Constraints
 
-- **资金查询窗口 `query-account` 视为已存在**，本次不改其实现。
+- **资金查询 `query-account` 视为已存在**，本次不改其实现。
 - **只动原生菜单 + 托盘 + FPS 下线链 + 无限下单 IPC 链**。BottomBar/TabBar 工具按钮除 FPS 移除外**不动**。
 - **`query` 标签类型 / `openQueryFloating` / `QueryPanel` / store 瘦身不在此计划内**（留给查询解散后续 Task）；但 `menuTemplate.ts` 的 `FloatingTab` 删 `'query'`、`App.tsx` 删失效 `case 'query'`（消除既有 TS2678）在本计划内。
 - **后端零改动**。
-- 菜单 label 沿用「窗口」后缀（新增项为 `♾️ 无限下单窗口`）。
+- **菜单 label 不带「窗口」后缀**；报单入口统一改名「五档下单」（菜单/BottomBar/TabBar/标签页标题），「报单查询」窗口名保留。
 - 每个 Task 结束：`git status` 干净、相关测试绿、代码可编译（TS 严格模式）。删除 `'toggle-perf'` 时必须同步删完 `menuActions.ts` 的 case（否则 TS2678）。
 - Commit 一次只针对一个功能点，禁攒大量改动一次性提交。
 - 参考设计文档：`docs/superpowers/specs/2026-08-14-floating-menu-reorg-design.md`。
@@ -62,18 +62,18 @@ describe('getAppMenuDef', () => {
     expect(def.map((d) => d.label)).toEqual(['行情', '交易', '查询', '设置']);
   });
 
-  it('行情子菜单：期货/期权/自选/K线窗口/T型报价/新窗口', () => {
+  it('行情子菜单：期货/期权/自选/K线/T型报价/新窗口', () => {
     const market = getAppMenuDef().find((d) => d.id === 'market')!;
     const labels = market.submenu!
       .filter((i) => i.type !== 'separator')
       .map((i) => i.label);
-    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📈 K线窗口', '📉 T型报价', '🪟 在新窗口打开']);
+    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']);
   });
 
-  it('行情「📈 K线窗口」action 为 open-floating kline（在首个分隔符后）', () => {
+  it('行情「📈 K线」action 为 open-floating kline（在首个分隔符后）', () => {
     const market = getAppMenuDef().find((d) => d.id === 'market')!;
     const kline = market.submenu!.find((i) => i.id === 'market-kline')!;
-    expect(kline.label).toBe('📈 K线窗口');
+    expect(kline.label).toBe('📈 K线');
     expect(kline.action).toEqual({ type: 'open-floating', tab: 'kline' });
     const sep = market.submenu!.find((i) => i.type === 'separator')!;
     expect(market.submenu!.indexOf(kline)).toBeGreaterThan(market.submenu!.indexOf(sep));
@@ -94,13 +94,13 @@ describe('getAppMenuDef', () => {
     expect(newWindow.action).toEqual({ type: 'open-market-window' });
   });
 
-  it('交易子菜单：报单窗口 / 无限下单窗口', () => {
+  it('交易子菜单：五档下单 / 无限下单', () => {
     const trade = getAppMenuDef().find((d) => d.id === 'trade')!;
     const labels = trade.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📝 报单窗口', '♾️ 无限下单窗口']);
+    expect(labels).toEqual(['📝 五档下单', '♾️ 无限下单']);
   });
 
-  it('交易「无限下单窗口」action 为 open-floating infinite', () => {
+  it('交易「无限下单」action 为 open-floating infinite', () => {
     const trade = getAppMenuDef().find((d) => d.id === 'trade')!;
     const infinite = trade.submenu!.find((i) => i.id === 'trade-infinite')!;
     expect(infinite.action).toEqual({ type: 'open-floating', tab: 'infinite' });
@@ -109,7 +109,7 @@ describe('getAppMenuDef', () => {
   it('查询子菜单：报单查询/持仓查询/资金查询', () => {
     const query = getAppMenuDef().find((d) => d.id === 'query')!;
     const labels = query.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📋 报单查询窗口', '📋 持仓查询窗口', '💰 资金查询窗口']);
+    expect(labels).toEqual(['📋 报单查询', '📋 持仓查询', '💰 资金查询']);
   });
 
   it('设置子菜单：设置/网络监控/退出，app-quit 在设置组', () => {
@@ -211,7 +211,7 @@ export function getAppMenuDef(): MenuItemDef[] {
         { id: 'market-options', label: '📉 期权', action: { type: 'market-view', view: 'options' } },
         { id: 'market-favorites', label: '⭐ 自选行情', action: { type: 'market-view', view: 'favorites' } },
         { id: 'market-sep1', type: 'separator' },
-        { id: 'market-kline', label: '📈 K线窗口', action: { type: 'open-floating', tab: 'kline' } },
+        { id: 'market-kline', label: '📈 K线', action: { type: 'open-floating', tab: 'kline' } },
         { id: 'market-tquote', label: '📉 T型报价', action: { type: 'open-floating', tab: 'tquote' } },
         { id: 'market-sep2', type: 'separator' },
         { id: 'market-new-window', label: '🪟 在新窗口打开', action: { type: 'open-market-window' } },
@@ -221,17 +221,17 @@ export function getAppMenuDef(): MenuItemDef[] {
       id: 'trade',
       label: '交易',
       submenu: [
-        { id: 'trade-order', label: '📝 报单窗口', action: { type: 'open-floating', tab: 'order' } },
-        { id: 'trade-infinite', label: '♾️ 无限下单窗口', action: { type: 'open-floating', tab: 'infinite' } },
+        { id: 'trade-order', label: '📝 五档下单', action: { type: 'open-floating', tab: 'order' } },
+        { id: 'trade-infinite', label: '♾️ 无限下单', action: { type: 'open-floating', tab: 'infinite' } },
       ],
     },
     {
       id: 'query',
       label: '查询',
       submenu: [
-        { id: 'query-orders', label: '📋 报单查询窗口', action: { type: 'open-floating', tab: 'query-orders' } },
-        { id: 'query-positions', label: '📋 持仓查询窗口', action: { type: 'open-floating', tab: 'query-positions' } },
-        { id: 'query-account', label: '💰 资金查询窗口', action: { type: 'open-floating', tab: 'query-account' } },
+        { id: 'query-orders', label: '📋 报单查询', action: { type: 'open-floating', tab: 'query-orders' } },
+        { id: 'query-positions', label: '📋 持仓查询', action: { type: 'open-floating', tab: 'query-positions' } },
+        { id: 'query-account', label: '💰 资金查询', action: { type: 'open-floating', tab: 'query-account' } },
       ],
     },
     {
@@ -749,15 +749,15 @@ git commit -m "refactor(fps): FPS 监控完整下线（菜单/托盘/按钮/快�
     expect(labels).toEqual(['⚙ 设置', '🔌 网络监控']);
   });
 ```
-- 第 106 行行情子菜单断言 → `expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📈 K线窗口', '📉 T型报价', '🪟 在新窗口打开']);`
+- 第 106 行行情子菜单断言 → `expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']);`
 - 第 101-107 行用例之后加交易/查询子菜单用例：
 ```ts
-  it('交易子菜单包含 报单窗口/无限下单窗口', () => {
+  it('交易子菜单包含 五档下单/无限下单', () => {
     const manager = new TrayManager();
     manager.initialize(mainWindow, windowManager);
     const trade = getTemplate().find((i) => i.label === '交易')!;
     const labels = trade.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📝 报单窗口', '♾️ 无限下单窗口']);
+    expect(labels).toEqual(['📝 五档下单', '♾️ 无限下单']);
   });
 
   it('查询子菜单包含 报单查询/持仓查询/资金查询', () => {
@@ -765,7 +765,7 @@ git commit -m "refactor(fps): FPS 监控完整下线（菜单/托盘/按钮/快�
     manager.initialize(mainWindow, windowManager);
     const query = getTemplate().find((i) => i.label === '查询')!;
     const labels = query.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📋 报单查询窗口', '📋 持仓查询窗口', '💰 资金查询窗口']);
+    expect(labels).toEqual(['📋 报单查询', '📋 持仓查询', '💰 资金查询']);
   });
 ```
 - 删「点击FPS监控发送 menu:toggle-perf」用例（第 159-164 行）：
@@ -783,56 +783,56 @@ git commit -m "refactor(fps): FPS 监控完整下线（菜单/托盘/按钮/快�
 
 `frontend/electron/__tests__/menuManager.test.ts`：
 - 第 67 行 → `expect(labels).toEqual(['行情', '交易', '查询', '设置', undefined]);`
-- `describe('行情')` 内 labels 断言（第 87 行）→ `['📊 期货', '📉 期权', '⭐ 自选行情', '📈 K线窗口', '📉 T型报价', '🪟 在新窗口打开']`；并在该 describe 内加 K线 点击用例：
+- `describe('行情')` 内 labels 断言（第 87 行）→ `['📊 期货', '📉 期权', '⭐ 自选行情', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']`；并在该 describe 内加 K线 点击用例：
 ```ts
-    it('点击K线窗口发送 menu:open-floating kline', () => {
+    it('点击K线发送 menu:open-floating kline', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
-      clickItem('行情', '📈 K线窗口');
+      clickItem('行情', '📈 K线');
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'kline');
     });
 ```
 - `describe('功能')`（第 126-163 行）整体替换为 `交易` + `查询` 两个 describe：
 ```ts
   describe('交易', () => {
-    it('包含 报单窗口/无限下单窗口', () => {
+    it('包含 五档下单/无限下单', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
       const labels = getMenu('交易')
         .submenu!.map((i) => i.label)
         .filter(Boolean);
-      expect(labels).toEqual(['📝 报单窗口', '♾️ 无限下单窗口']);
+      expect(labels).toEqual(['📝 五档下单', '♾️ 无限下单']);
     });
 
-    it('点击报单窗口发送 menu:open-floating order', () => {
+    it('点击五档下单发送 menu:open-floating order', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
-      clickItem('交易', '📝 报单窗口');
+      clickItem('交易', '📝 五档下单');
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'order');
     });
 
-    it('点击无限下单窗口发送 menu:open-floating infinite', () => {
+    it('点击无限下单发送 menu:open-floating infinite', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
-      clickItem('交易', '♾️ 无限下单窗口');
+      clickItem('交易', '♾️ 无限下单');
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'infinite');
     });
   });
 
   describe('查询', () => {
-    it('包含 报单查询窗口/持仓查询窗口/资金查询窗口', () => {
+    it('包含 报单查询/持仓查询/资金查询', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
       const labels = getMenu('查询')
         .submenu!.map((i) => i.label)
         .filter(Boolean);
-      expect(labels).toEqual(['📋 报单查询窗口', '📋 持仓查询窗口', '💰 资金查询窗口']);
+      expect(labels).toEqual(['📋 报单查询', '📋 持仓查询', '💰 资金查询']);
     });
 
-    it('点击资金查询窗口发送 menu:open-floating query-account', () => {
+    it('点击资金查询发送 menu:open-floating query-account', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
-      clickItem('查询', '💰 资金查询窗口');
+      clickItem('查询', '💰 资金查询');
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query-account');
     });
   });
@@ -872,7 +872,7 @@ git commit -m "refactor(fps): FPS 监控完整下线（菜单/托盘/按钮/快�
   });
 ```
 - 删 `describe('性能监控')`（第 174-197 行）。
-- 第 203 行 `clickItem('功能', '📝 报单窗口')` → `clickItem('交易', '📝 报单窗口')`。
+- 第 203 行 `clickItem('功能', '📝 五档下单')` → `clickItem('交易', '📝 五档下单')`。
 
 - [ ] **Step 4: 跑测试确认通过**
 
@@ -913,8 +913,8 @@ Expected: 重新生成 `dist-electron/`（`menuTemplate.cjs` 含四组、`preloa
 
 - [ ] **Step 4: 核对产物菜单**
 
-Run: `cd frontend && grep -n "无限下单窗口\|FPS 监控\|性能监控\|📋 查询窗口" dist-electron/menuTemplate.cjs`
-Expected: 命中 `♾️ 无限下单窗口`；不命中 `⚡FPS 监控` / `性能监控` / `📋 查询窗口`。
+Run: `cd frontend && grep -n "无限下单\|FPS 监控\|性能监控\|📋 查询窗口" dist-electron/menuTemplate.cjs`
+Expected: 命中 `♾️ 无限下单`；不命中 `⚡FPS 监控` / `性能监控` / `📋 查询窗口`。
 
 - [ ] **Step 5: Commit 构建产物**
 

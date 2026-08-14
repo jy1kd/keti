@@ -256,7 +256,7 @@ describe('MarketPanel', () => {
 
     expect(mockOpenFloatingTab).toHaveBeenCalledWith({
       type: 'order',
-      title: '📝 报单-IF2608',
+      title: '📝 五档下单-IF2608',
       props: { instrumentID: 'IF2608' },
       size: { w: 620, h: 540 },
     })
@@ -308,7 +308,7 @@ describe('MarketPanel', () => {
     // 应打开报单浮动窗口
     expect(mockOpenFloatingTab).toHaveBeenCalledWith({
       type: 'order',
-      title: '📝 报单-IF2608',
+      title: '📝 五档下单-IF2608',
       props: { instrumentID: 'IF2608' },
       size: { w: 620, h: 540 },
     })

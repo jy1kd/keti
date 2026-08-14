@@ -38,7 +38,7 @@ describe('useContractContextMenu', () => {
 
     expect(mockOpenFloatingTab).toHaveBeenCalledWith({
       type: 'order',
-      title: '📝 报单-IF2608',
+      title: '📝 五档下单-IF2608',
       props: { instrumentID: 'IF2608' },
       size: { w: 620, h: 540 },
     })

@@ -25,7 +25,7 @@ describe('openFloatingTab helpers — 顶部菜单打开浮动窗', () => {
     openOrderFloating();
     const tab = tabByType('order');
     expect(tab).toBeDefined();
-    expect(tab!.title).toBe('📝 报单');
+    expect(tab!.title).toBe('📝 五档下单');
     expect(tab!.props.instrumentID).toBeUndefined();
     expect(useFloatingWindowStore.getState().windows['tab-order']).toBeDefined();
   });
@@ -35,7 +35,7 @@ describe('openFloatingTab helpers — 顶部菜单打开浮动窗', () => {
     openOrderFloating();
     const tab = tabByType('order');
     expect(tab).toBeDefined();
-    expect(tab!.title).toBe('📝 报单-IF2608');
+    expect(tab!.title).toBe('📝 五档下单-IF2608');
     expect(tab!.props.instrumentID).toBe('IF2608');
     expect(useFloatingWindowStore.getState().windows['tab-order-IF2608']).toBeDefined();
   });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { GlobalBar } from '@/components/GlobalBar'
 import { BottomBar } from '@/components/BottomBar'
 import { TabContent } from '@/components/TabContent'
@@ -23,12 +23,12 @@ import {
   openOrdersQueryFloating,
   openPositionsQueryFloating,
   openAccountQueryFloating,
+  openInfiniteFloating,
   openTQuoteFloating,
 } from '@/utils/openFloatingTab'
 import '@/assets/styles/global.css'
 
 function App() {
-  const [perfVisible, setPerfVisible] = useState(false)
   const openTab = useTabStore((s) => s.openTab)
   // StrictMode 开发双挂载守卫：启动加载只执行一次（loadAllInstruments/loadFavoriteContracts/load）
   const startupLoadedRef = useRef(false)
@@ -71,7 +71,7 @@ function App() {
           openTab({ type: 'favorites', title: '⭐ 自选' })
           break
         case 'order':
-          openTab({ type: 'order', title: '📝 报单' })
+          openTab({ type: 'order', title: '📝 五档下单' })
           break
         case 'kline':
           openTab({ type: 'kline', title: '📈 K线' })
@@ -88,7 +88,7 @@ function App() {
     return () => cleanup?.()
   }, [])
 
-  // Electron IPC — 顶部菜单打开浮动窗（报单/K线/查询）
+  // Electron IPC — 顶部菜单打开浮动窗（报单/K线/无限下单/查询/设置等）
   useEffect(() => {
     if (!isElectron()) return
 
@@ -99,6 +99,9 @@ function App() {
           break
         case 'kline':
           openKlineFloating()
+          break
+        case 'infinite':
+          openInfiniteFloating()
           break
         case 'settings':
           openSettingsFloating()
@@ -124,17 +127,6 @@ function App() {
     return () => cleanup?.()
   }, [])
 
-  // Electron IPC — 顶部菜单切换 FPS 监控
-  useEffect(() => {
-    if (!isElectron()) return
-
-    const cleanup = window.electronAPI?.onTogglePerf?.(() => {
-      setPerfVisible((v) => !v)
-    })
-
-    return () => cleanup?.()
-  }, [])
-
   // Electron IPC — 响应获取选中合约请求
   useEffect(() => {
     if (!isElectron()) return
@@ -151,18 +143,6 @@ function App() {
     return () => cleanup?.()
   }, [])
 
-  // Ctrl+Shift+M 切换性能监控
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'M') {
-        e.preventDefault()
-        setPerfVisible((v) => !v)
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
-
   return (
     <div className="app">
       <ToastContainer />
@@ -177,13 +157,10 @@ function App() {
       </main>
 
       {/* 底部状态栏：连接状态 + 全局工具（图标+中文名），箭头可收起/展开 */}
-      <BottomBar
-        perfVisible={perfVisible}
-        onTogglePerf={() => setPerfVisible((v) => !v)}
-      />
+      <BottomBar />
 
       {/* 浮动标签窗口（chrome 壳；内容由 TabContent 位移覆盖）。
-          统一浮动窗模式：报单/查询/K线/设置/网络监控均以浮动窗口打开，
+          统一浮动窗模式：报单/K线/无限下单/设置/网络监控均以浮动窗口打开，
           支持 ⇩ 停靠回标签栏 / 拖拽脱离 双向转换。 */}
       <FloatingWindows />
     </div>

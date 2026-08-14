@@ -70,7 +70,7 @@ function makeTab(overrides: Partial<Tab> & { type: TabType }): Tab {
 }
 
 const MARKET_TAB = makeTab({ type: 'market', title: '📊 行情', closable: false })
-const ORDER_TAB = makeTab({ type: 'order', title: '📝 报单', props: { instrumentID: 'IF2608' } })
+const ORDER_TAB = makeTab({ type: 'order', title: '📝 五档下单', props: { instrumentID: 'IF2608' } })
 const SETTINGS_TAB = makeTab({ type: 'settings', title: '⚙ 设置' })
 
 /** 获取所有面板（包括隐藏的） */

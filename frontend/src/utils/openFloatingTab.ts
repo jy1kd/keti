@@ -45,7 +45,7 @@ export function openOrderFloating(): boolean {
   const inst = useMarketStore.getState().selectedInstrument
   return openFloatingTab({
     type: 'order',
-    title: inst ? `📝 报单-${inst}` : '📝 报单',
+    title: inst ? `📝 五档下单-${inst}` : '📝 五档下单',
     props: inst ? { instrumentID: inst } : {},
     size: ORDER_FLOATING_SIZE,
   })

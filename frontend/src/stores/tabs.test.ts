@@ -68,7 +68,7 @@ describe('useTabStore', () => {
   describe('openTab', () => {
     it('应打开新标签页并设为活跃，返回 true', () => {
       const { openTab } = useTabStore.getState()
-      const result = openTab({ type: 'order', title: '📝 报单-au2406', props: { instrumentID: 'au2406' } })
+      const result = openTab({ type: 'order', title: '📝 五档下单-au2406', props: { instrumentID: 'au2406' } })
 
       expect(result).toBe(true)
       const state = useTabStore.getState()
@@ -81,8 +81,8 @@ describe('useTabStore', () => {
 
     it('不应重复打开相同 type+instrumentID 的标签页（应激活已有，返回 true）', () => {
       const { openTab } = useTabStore.getState()
-      openTab({ type: 'order', title: '📝 报单-au2406', props: { instrumentID: 'au2406' } })
-      const result = openTab({ type: 'order', title: '📝 报单-au2406', props: { instrumentID: 'au2406' } })
+      openTab({ type: 'order', title: '📝 五档下单-au2406', props: { instrumentID: 'au2406' } })
+      const result = openTab({ type: 'order', title: '📝 五档下单-au2406', props: { instrumentID: 'au2406' } })
 
       expect(result).toBe(true)
       const state = useTabStore.getState()
@@ -92,8 +92,8 @@ describe('useTabStore', () => {
 
     it('应支持打开不同 instrumentID 的同类型标签页', () => {
       const { openTab } = useTabStore.getState()
-      openTab({ type: 'order', title: '📝 报单-au2406', props: { instrumentID: 'au2406' } })
-      openTab({ type: 'order', title: '📝 报单-rb2406', props: { instrumentID: 'rb2406' } })
+      openTab({ type: 'order', title: '📝 五档下单-au2406', props: { instrumentID: 'au2406' } })
+      openTab({ type: 'order', title: '📝 五档下单-rb2406', props: { instrumentID: 'rb2406' } })
 
       const state = useTabStore.getState()
       expect(state.tabs).toHaveLength(3) // market + au2406 + rb2406
@@ -121,14 +121,14 @@ describe('useTabStore', () => {
 
       // 打开 14 个额外标签页（加上 market = 15）
       for (let i = 0; i < 14; i++) {
-        const result = openTab({ type: 'order', title: `📝 报单-合约${i}`, props: { instrumentID: `contract${i}` } })
+        const result = openTab({ type: 'order', title: `📝 五档下单-合约${i}`, props: { instrumentID: `contract${i}` } })
         expect(result).toBe(true)
       }
 
       expect(useTabStore.getState().tabs).toHaveLength(15)
 
       // 第 16 个应该返回 false
-      const overflowResult = openTab({ type: 'order', title: '📝 报单-合约99', props: { instrumentID: 'contract99' } })
+      const overflowResult = openTab({ type: 'order', title: '📝 五档下单-合约99', props: { instrumentID: 'contract99' } })
       expect(overflowResult).toBe(false)
       expect(useTabStore.getState().tabs).toHaveLength(15)
       // 活跃标签页不变
@@ -303,7 +303,7 @@ describe('useTabStore', () => {
   describe('getTabByType', () => {
     it('应返回指定类型和 props 的标签页', () => {
       const { openTab, getTabByType } = useTabStore.getState()
-      openTab({ type: 'order', title: '📝 报单-au2406', props: { instrumentID: 'au2406' } })
+      openTab({ type: 'order', title: '📝 五档下单-au2406', props: { instrumentID: 'au2406' } })
 
       const tab = getTabByType('order', { instrumentID: 'au2406' })
       expect(tab).toBeDefined()
@@ -333,7 +333,7 @@ describe('closeOthers / closeAll / togglePin', () => {
     useTabStore.setState({
       tabs: [
         { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-        { id: 'tab-order', type: 'order', title: '📝 报单', props: {}, closable: true, pinned: true },
+        { id: 'tab-order', type: 'order', title: '📝 五档下单', props: {}, closable: true, pinned: true },
         { id: 'tab-kline', type: 'kline', title: '📈 K线', props: {}, closable: true },
         { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
       ],

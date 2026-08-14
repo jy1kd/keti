@@ -17,7 +17,7 @@ interface ContextMenuState {
 
 /** `+` 悬停选择栏可打开的停靠标签类型（底部功能栏子集，固定 4 项） */
 const ADD_TAB_ITEMS = [
-  { type: 'order' as const, icon: '📝', label: '报单', title: '📝 报单' },
+  { type: 'order' as const, icon: '📝', label: '五档下单', title: '📝 五档下单' },
   { type: 'kline' as const, icon: '📈', label: 'K线', title: '📈 K线' },
   { type: 'infinite' as const, icon: '♾️', label: '无限下单', title: '♾️ 无限下单' },
   { type: 'settings' as const, icon: '⚙', label: '设置', title: '⚙ 设置' },
@@ -387,7 +387,7 @@ export function TabBar() {
                     handleContextMenu(e, tab)
                   }}
                 >
-                  {/* title 已含 emoji 前缀（如「📝 报单-IF2608」），不再单独渲染 icon，避免图标重复 */}
+                  {/* title 已含 emoji 前缀（如「📝 五档下单-IF2608」），不再单独渲染 icon，避免图标重复 */}
                   <span className="tab-bar__overflow-title">{tab.title}</span>
                   {tab.id === activeTabId && (
                     <span className="tab-bar__overflow-check" aria-label="当前标签">
@@ -429,7 +429,7 @@ export function TabBar() {
                 className="tab-bar__add-menu-item"
                 onClick={() => handleAddItem(item)}
               >
-                {/* 渲染完整 title（含图标），保证 getByText('📝 报单') 可命中单个元素 */}
+                {/* 渲染完整 title（含图标），保证 getByText('📝 五档下单') 可命中单个元素 */}
                 <span className="tab-bar__add-menu-label">{item.title}</span>
               </button>
             ))}

@@ -31,11 +31,6 @@ function resolveAction(action, ctx) {
                 ctx.windowManager.openTabWindow('market', 'tab-market', '📊 期货');
             }
             return;
-        case 'toggle-perf':
-            if (ctx.mainWindow && !ctx.mainWindow.isDestroyed()) {
-                ctx.mainWindow.webContents.send(index_1.IPC_CHANNELS.MENU_TOGGLE_PERF);
-            }
-            return;
         case 'quit':
             electron_1.app.quit();
             return;

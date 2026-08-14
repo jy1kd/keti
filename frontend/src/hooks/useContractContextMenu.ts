@@ -35,7 +35,7 @@ export function useContractContextMenu() {
   const openOrderPopup = useCallback((instrumentID: string) => {
     openFloatingTab({
       type: 'order',
-      title: `📝 报单-${instrumentID}`,
+      title: `📝 五档下单-${instrumentID}`,
       props: { instrumentID },
       size: ORDER_FLOATING_SIZE,
     })
@@ -45,7 +45,7 @@ export function useContractContextMenu() {
   const openOrderTab = useCallback((instrumentID: string) => {
     openTab({
       type: 'order',
-      title: `📝 报单-${instrumentID}`,
+      title: `📝 五档下单-${instrumentID}`,
       props: { instrumentID },
     })
   }, [openTab])
@@ -64,7 +64,7 @@ export function useContractContextMenu() {
     instrumentIDs.forEach((id) => {
       openTab({
         type: 'order',
-        title: `📝 报单-${id}`,
+        title: `📝 五档下单-${id}`,
         props: { instrumentID: id },
       })
     })

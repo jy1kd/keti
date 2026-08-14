@@ -57,7 +57,7 @@ export class TrayManager {
 
     this.tray.setToolTip('SimNow 交易终端');
 
-    // 托盘菜单 = 共享四组定义（剔除「功能」内嵌退出 app-quit）+ 一级底部退出
+    // 托盘菜单 = 共享四组定义（剔除「设置」内嵌退出 app-quit）+ 一级底部退出
     const def: MenuItemDef[] = [
       ...getAppMenuDef(),
       { id: 'tray-sep', type: 'separator' },
