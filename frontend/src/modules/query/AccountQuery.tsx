@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useQueryStore } from './store'
 
 const CTP_INVALID = 1.7976931348623157e+308
@@ -9,6 +10,23 @@ function fmt(n: number): string {
 
 export function AccountQuery() {
   const account = useQueryStore((s) => s.account)
+  const fetchAccount = useQueryStore((s) => s.fetchAccount)
+
+  // 10s 自刷新：完成后调度下一次，避免重入（对齐 OrdersQuery 节奏）
+  useEffect(() => {
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout>
+    const schedule = async () => {
+      await fetchAccount()
+      if (cancelled) return
+      timer = setTimeout(schedule, 10000)
+    }
+    schedule()
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [fetchAccount])
 
   if (!account) {
     return (

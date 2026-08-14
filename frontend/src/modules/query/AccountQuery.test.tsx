@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { AccountQuery } from './AccountQuery'
 import { useQueryStore } from './store'
+import { refreshAccount } from '../../services/api'
+const mockRefreshAccount = vi.mocked(refreshAccount)
 
 vi.mock('../../services/api', () => ({
   getOrders: vi.fn().mockResolvedValue({ orders: [], count: 0 }),
@@ -62,5 +64,17 @@ describe('AccountQuery', () => {
   it('renders with account-query class', () => {
     const { container } = render(<AccountQuery />)
     expect(container.firstChild).toHaveClass('account-query')
+  })
+
+  it('挂载时自刷新拉取账户数据', async () => {
+    const mockAccount = {
+      accountID: 'test', balance: 100000, available: 50000, frozenMargin: 10000,
+      currMargin: 40000, commission: 100, closeProfit: 500, positionProfit: 200,
+      deposit: 0, withdraw: 0, preBalance: 99800, tradingDay: '20260727',
+    }
+    mockRefreshAccount.mockResolvedValue(mockAccount as never)
+    useQueryStore.setState({ account: null })
+    render(<AccountQuery />)
+    expect(await screen.findByText('100000.00')).toBeInTheDocument()
   })
 })
