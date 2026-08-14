@@ -85,12 +85,12 @@ export function TabBar() {
   // useMemo 稳定引用：避免 measureOverflow / RO / wheel 等依赖 visibleTabs 的 effect 每次渲染空转
   const visibleTabs = useMemo(() => tabs.filter((t) => !windows[t.id]), [tabs, windows])
 
-  // 行情标签（初始页）：固定在左侧、可滚动区之外；不参与滚轮/溢出/隐藏
-  const marketTab = visibleTabs.find((t) => t.type === 'market')
+  // 固定标签（期货/期权等 closable:false）：固定在左侧、可滚动区之外；不参与滚轮/溢出/隐藏
+  const fixedTabs = visibleTabs.filter((t) => !t.closable)
 
-  // 可滚动区标签：排除行情标签；pinned 靠左排序
+  // 可滚动区标签：排除固定标签；pinned 靠左排序
   const scrollTabs = useMemo(() => {
-    const rest = visibleTabs.filter((t) => t.type !== 'market')
+    const rest = visibleTabs.filter((t) => t.closable)
     return [...rest.filter((t) => t.pinned), ...rest.filter((t) => !t.pinned)]
   }, [visibleTabs])
 
@@ -274,33 +274,33 @@ export function TabBar() {
       aria-label="标签栏"
       onKeyDown={handleKeyDown}
     >
-      {/* 行情标签（初始页）：固定左侧、不随滚轮、无右键、无图标 */}
-      {marketTab && (
+      {/* 固定标签（期货/期权等 closable:false）：固定左侧、不随滚轮、无右键、无图标 */}
+      {fixedTabs.map((tab) => (
         <div
-          key={marketTab.id}
+          key={tab.id}
           role="tab"
-          data-tab-id={marketTab.id}
+          data-tab-id={tab.id}
           tabIndex={0}
-          aria-selected={marketTab.id === activeTabId}
-          className={`tab-bar__market tab-bar__tab${marketTab.id === activeTabId ? ' tab-bar__tab--active' : ''}`}
+          aria-selected={tab.id === activeTabId}
+          className={`tab-bar__market tab-bar__tab${tab.id === activeTabId ? ' tab-bar__tab--active' : ''}`}
           onClick={() => {
             if (suppressClickRef.current) {
               suppressClickRef.current = false
               return
             }
-            setActiveTab(marketTab.id)
+            setActiveTab(tab.id)
           }}
-          onContextMenu={(e) => e.preventDefault()} // 行情标签无右键菜单
+          onContextMenu={(e) => e.preventDefault()} // 固定标签无右键菜单
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
-              setActiveTab(marketTab.id)
+              setActiveTab(tab.id)
             }
           }}
         >
-          <span className="tab-bar__title">{marketTab.title}</span>
+          <span className="tab-bar__title">{tab.title}</span>
         </div>
-      )}
+      ))}
 
       {/* 可滚动标签区：有界滚轮横滚，隐藏滚动条 */}
       <div className="tab-bar__scroll" ref={scrollRef}>

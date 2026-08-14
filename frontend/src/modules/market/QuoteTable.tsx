@@ -1,15 +1,22 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
 import { ListTable } from '@visactor/vtable'
 import type { MarketSnapshot, ContractInfo } from '@/services/types'
-import { getProductName } from '@/utils/productNames'
-import { getContractStatus, type ContractStatus } from '@/utils/contractStatus'
 import { SCROLLBAR_SIZE, SCROLL_STYLE } from '@/utils/vtableTheme'
 import { useMarketStore } from './store'
+import { PLACEHOLDER, shouldRenderAnchor, type QuoteRecord, type QuoteTableSpec } from './quoteTableCore'
 
-interface MarketTableProps {
+interface QuoteTableProps {
+  /**
+   * 行情表 spec（列定义 + buildRecord + 可选行级样式）。
+   * 必须为模块级稳定常量（如 futuresSpec/optionsSpec），运行时不得替换；
+   * 传入身份会变化的 spec 将导致表格陈旧（columns/buildRecord/rowStyle 被冻结）。
+   */
+  spec: QuoteTableSpec
   contracts: ContractInfo[]
   snapshots: Map<string, MarketSnapshot>
   selectedInstrument?: string | null
+  /** 当前标签是否激活（激活时重报可见区） */
+  isActive?: boolean
   onRowClick?: (instrumentID: string, price: number) => void
   onRowDoubleClick?: (instrumentID: string, price: number) => void
   /** 单选右键菜单回调，传入合约 ID、价格、鼠标事件 */
@@ -28,118 +35,32 @@ interface MarketTableProps {
   onSelectionChange?: (selectedIDs: Set<string>) => void
 }
 
-const PLACEHOLDER = '--'
-
 /** mouseup 距上次 scroll 在此窗口内视为滚动条释放（松手） */
 const SCROLL_RELEASE_WINDOW_MS = 200
 
-const UP_COLOR = '#ef4444'
-const DOWN_COLOR = '#22c55e'
-const FLAT_COLOR = '#e6edf3'
+/** 标底行（合并表头行）合约列样式：红/粗/大字（比默认 12 加大） */
+const UNDERLYING_HEADER_STYLE = { color: '#f87171', fontWeight: 'bold', fontSize: 14 }
 
-/** 根据 record.change 正负返回文字颜色 */
-function priceColor(record: any): string {
-  const change = typeof record?.change === 'number' ? record.change : 0
-  if (change > 0) return UP_COLOR
-  if (change < 0) return DOWN_COLOR
-  return FLAT_COLOR
-}
-
-/** 列级 style 回调：通过 table.records 拿到行数据，按涨跌着色
- * 注意：args.row 是 vtable 物理行号（0=表头），records 是 0 起始数据数组，需 -1 */
-function coloredStyle(args: any) {
-  const record = args.table?.records?.[args.row - 1]
-  return { color: priceColor(record) }
-}
-
-/** 状态列着色：交易中绿色 / 已停牌橙色 / 已到期灰色（row 需 -1，理由同上） */
-function statusStyle(args: any) {
-  const record = args.table?.records?.[args.row - 1]
-  const status = record?.status as ContractStatus | undefined
-  if (status === '交易中') return { color: '#3fb950' }
-  if (status === '已停牌') return { color: '#d29922' }
-  return { color: '#8b949e' }
-}
-
-const columns = [
-  { field: 'instrumentID', title: '合约', width: 130 },
-  { field: 'productName', title: '合约品种', width: 100 },
-  { field: 'exchangeID', title: '交易所', width: 85 },
-  { field: 'volumeMultiple', title: '合约乘数', width: 95 },
-  { field: 'priceTick', title: '最小变动价位', width: 120 },
-  { field: 'expireDate', title: '到期日', width: 115 },
-  { field: 'status', title: '状态', width: 85, style: statusStyle },
-  { field: 'lastPrice', title: '最新价', width: 90, style: coloredStyle },
-  { field: 'change', title: '涨跌', width: 115, style: coloredStyle },
-  { field: 'changePercent', title: '涨跌%', width: 115, style: coloredStyle },
-  { field: 'bidPrice1', title: '买一', width: 120, style: coloredStyle },
-  { field: 'askPrice1', title: '卖一', width: 120, style: coloredStyle },
-  { field: 'volume', title: '成交量', width: 90 },
-  { field: 'openInterest', title: '持仓量', width: 90 },
-  { field: 'favorite', title: '⭐', width: 60 },
-]
-
-const CTP_INVALID_PRICE = 1.7976931348623157e+308
-const isValidPrice = (p: number) => p > 0 && p < CTP_INVALID_PRICE
-
-/** 金色活动锚点是否渲染：仅当锚点合约位于选中选区内（金在蓝内，防双高亮区） */
-export function shouldRenderAnchor(
-  selectedInstrument: string | null | undefined,
-  selectedContracts?: Set<string>,
-): boolean {
-  if (!selectedInstrument) return false
-  if (!selectedContracts || selectedContracts.size === 0) return false
-  return selectedContracts.has(selectedInstrument)
-}
-
-function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, isFavorited: boolean) {
-  const productName = getProductName(contract.productID)
-  const status = getContractStatus(contract)
-  if (!snap) {
+/**
+ * 合约列样式包装：标底行（整行合并后该样式作用于合并单元格）→ 红/粗/大字；
+ * 其余行保持列原样式（optionsSpec 合约列无 style，futuresSpec 若有则透传）。
+ * 不修改 spec.columns（模块级共享常量），仅对 ListTable 传入一份包装副本。
+ */
+function withUnderlyingHeaderStyle(columns: QuoteTableSpec['columns']): QuoteTableSpec['columns'] {
+  return columns.map((col) => {
+    if (col.field !== 'instrumentID') return col
     return {
-      instrumentID: contract.instrumentID,
-      productName,
-      exchangeID: contract.exchangeID || PLACEHOLDER,
-      volumeMultiple: contract.volumeMultiple,
-      priceTick: contract.priceTick,
-      expireDate: contract.expireDate || PLACEHOLDER,
-      status,
-      lastPrice: PLACEHOLDER,
-      change: PLACEHOLDER,
-      changePercent: PLACEHOLDER,
-      bidPrice1: PLACEHOLDER,
-      askPrice1: PLACEHOLDER,
-      volume: PLACEHOLDER,
-      openInterest: PLACEHOLDER,
-      favorite: isFavorited ? '⭐' : '☆',
+      ...col,
+      style: (args: any) => {
+        const record = args.table?.records?.[args.row - 1]
+        if (record?.kind === 'underlying') return UNDERLYING_HEADER_STYLE
+        return col.style?.(args)
+      },
     }
-  }
-  // preSettlementPrice 可能为 0（CTP DBL_MAX 被 sanitize 后），此时 fallback 到昨收
-  const preSettlement = (snap.preSettlementPrice && snap.preSettlementPrice > 0)
-    ? snap.preSettlementPrice
-    : (snap.preClosePrice || snap.lastPrice)
-  const change = snap.lastPrice - preSettlement
-  const changePercent = preSettlement ? (change / preSettlement) * 100 : 0
-  return {
-    instrumentID: snap.instrumentID,
-    productName,
-    exchangeID: contract.exchangeID || PLACEHOLDER,
-    volumeMultiple: contract.volumeMultiple,
-    priceTick: contract.priceTick,
-    expireDate: contract.expireDate || PLACEHOLDER,
-    status,
-    lastPrice: isValidPrice(snap.lastPrice) ? snap.lastPrice : PLACEHOLDER,
-    change: isValidPrice(snap.lastPrice) && isValidPrice(preSettlement) ? change : PLACEHOLDER,
-    changePercent: isValidPrice(snap.lastPrice) && isValidPrice(preSettlement) ? changePercent : PLACEHOLDER,
-    bidPrice1: isValidPrice(snap.bidPrice1) ? snap.bidPrice1 : PLACEHOLDER,
-    askPrice1: isValidPrice(snap.askPrice1) ? snap.askPrice1 : PLACEHOLDER,
-    volume: snap.volume,
-    openInterest: snap.openInterest,
-    favorite: isFavorited ? '⭐' : '☆',
-  }
+  })
 }
 
-export function MarketTable({ contracts, snapshots, selectedInstrument, onRowClick, onRowDoubleClick, onContextMenu, onMultiSelectContextMenu, onVisibleRangeChange, favoritedIds, onFavoriteChange, selectedContracts, onSelectionChange }: MarketTableProps) {
+export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isActive, onRowClick, onRowDoubleClick, onContextMenu, onMultiSelectContextMenu, onVisibleRangeChange, favoritedIds, onFavoriteChange, selectedContracts, onSelectionChange }: QuoteTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
   const onClickRef = useRef(onRowClick)
@@ -151,10 +72,15 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   const favoritedIdsRef = useRef(favoritedIds)
   const selectedContractsRef = useRef(selectedContracts)
   const onSelectionChangeRef = useRef(onSelectionChange)
+  /** 最近一次 isActive：隐藏面板（isActive=false，display:none）挂载/重建时不上报可见区，
+   *  避免覆盖活跃面板的可见范围 → 活跃表失去订阅（Critical #1）。undefined=未指定→按历史行为上报。 */
+  const isActiveRef = useRef(isActive)
+  /** dev 守卫：记录最近一次 spec 引用，检测运行时 spec 身份变化（spec 必须为稳定常量） */
+  const specRef = useRef(spec)
   const lastClickedIndexRef = useRef<number | null>(null)
   const lastClickTimeRef = useRef<number>(0)
   const lastClickRowRef = useRef<number>(-1)
-  const recordsRef = useRef<ReturnType<typeof buildRecord>[]>([])
+  const recordsRef = useRef<QuoteRecord[]>([])
   /** 每行最近一次 buildRecord 所用的 snapshot 引用（按行跟踪，仅对可见行生效） */
   const rowSnapshotRef = useRef<(MarketSnapshot | undefined)[]>([])
   /** 可见区版本号：滚动导致可见范围变化时递增，驱动局部更新 effect 重算（滚入新区域的行立即刷新） */
@@ -162,6 +88,10 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** 最近一次滚动发生的时间戳（松手检测窗口依据） */
   const lastScrollAtRef = useRef(0)
+  /** 已合并的标底行 vtable 物理行号集合（0=表头）：记录上次合并范围，下次全量撤销重合并（重捕获 text） */
+  const mergedRowsRef = useRef<Set<number>>(new Set())
+  /** 合并兜底 rAF 句柄（渲染异步未就绪时重试；卸载/重建时清除在排队帧） */
+  const mergeRafRef = useRef<number | null>(null)
 
   useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
@@ -172,6 +102,16 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   useEffect(() => { favoritedIdsRef.current = favoritedIds }, [favoritedIds])
   useEffect(() => { selectedContractsRef.current = selectedContracts }, [selectedContracts])
   useEffect(() => { onSelectionChangeRef.current = onSelectionChange }, [onSelectionChange])
+  useEffect(() => { isActiveRef.current = isActive }, [isActive])
+
+  // 开发期守卫：spec 必须为模块级稳定常量（futuresSpec/optionsSpec）。运行时替换 spec 会
+  // 导致表格陈旧——columns/buildRecord/rowStyle 冻结在首渲染闭包内。仅 dev 告警，不抛错。
+  useEffect(() => {
+    if (import.meta.env.DEV && specRef.current !== spec) {
+      console.warn('[QuoteTable] spec 身份变化——spec 必须为稳定常量，运行时替换不支持')
+    }
+    specRef.current = spec
+  }, [spec])
 
   // 可见行检测函数（提取为共享），包含预加载
   const notifyVisibleRange = useCallback(() => {
@@ -195,14 +135,61 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     }
   }, [])
 
+  // 挂载/重建后延迟上报可见区。隐藏面板（isActive=false）跳过，避免覆盖活跃面板的可见范围；
+  // 激活时由 isActive 翻转 effect 补报（见组件底部）。
+  const scheduleVisibleRangeReport = useCallback(() => {
+    if (isActiveRef.current === false) return
+    setTimeout(notifyVisibleRange, 0)
+  }, [notifyVisibleRange])
+
+  /**
+   * 合并标底行为整行表头：`mergeCells(0, row, colCount-1, row)`（vtable 行号 0=表头，记录索引 +1）。
+   * 在 setRecords 之后调用（vtable 场景图由 setRecords 同步构建，直接合并即可）。
+   * vtable 的 mergeCells 在合并时捕获 `text: this.getCellValue(startCol, startRow)`；
+   * setRecords 重建数据后（筛选/搜索）旧合并的 text 陈旧——同一物理行仍是标底但合约已变时，
+   * 会残留旧合约文本，且陈旧合并范围破坏行高/可见区计算。故 ALWAYS 先撤销 ALL 旧合并
+   * （含仍为标底的行），再对当前标底行重新 mergeCells，让 vtable 重捕获当前记录文本。
+   * - 合并失败（渲染异步未就绪）的行不入集合，由 rAF 兜底重试（见 contracts effect）。
+   * - 返回是否全部当前标底行均已合并（未完成时调用方调度 rAF 兜底重试）。
+   */
+  const applyRowMerges = useCallback((): boolean => {
+    const table = tableRef.current
+    if (!table || typeof table.mergeCells !== 'function') return false
+    const lastCol = spec.columns.length - 1
+    const underlyingRows = new Set<number>()
+    recordsRef.current.forEach((record, i) => {
+      if (record.kind === 'underlying') underlyingRows.add(i + 1)
+    })
+    // mergeCells 合并时捕获 text；setRecords 重建后旧合并的 text 陈旧（筛选后标底行显示旧合约）。
+    // 因此撤销 ALL 旧合并（含仍为标底的行），再对当前标底行重新合并以重捕获文本。
+    for (const row of mergedRowsRef.current) {
+      try {
+        table.unmergeCells?.(0, row, lastCol, row)
+      } catch {
+        // vtable 尚未就绪，忽略
+      }
+    }
+    const next = new Set<number>()
+    for (const row of underlyingRows) {
+      try {
+        table.mergeCells(0, row, lastCol, row)
+        next.add(row)
+      } catch {
+        // 本轮未就绪，留待下一轮 setRecords/rAF 重试
+      }
+    }
+    mergedRowsRef.current = next
+    return next.size === underlyingRows.size
+  }, [spec])
+
   useEffect(() => {
     if (!containerRef.current) return
 
-    const records = contracts.map((c) => buildRecord(c, snapshots.get(c.instrumentID), favoritedIds?.has(c.instrumentID) ?? false))
+    const records = contracts.map((c) => spec.buildRecord(c, snapshots.get(c.instrumentID), favoritedIds?.has(c.instrumentID) ?? false))
     recordsRef.current = records
 
     const table = new ListTable(containerRef.current, {
-      columns,
+      columns: withUnderlyingHeaderStyle(spec.columns),
       records,
       frozenColCount: 1, // 冻结「合约」列：横向拖动时固定最左侧
       widthMode: 'standard',
@@ -238,10 +225,14 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
         },
         bodyStyle: {
           bgColor: (args: any) => {
-            // 多选高亮
+            // 行级样式（期权表标底行深色底）优先，无则按多选蓝高亮
             const record = args.table?.records?.[args.row - 1]
-            if (record && selectedContractsRef.current?.has(record.instrumentID)) {
-              return 'rgba(59, 130, 246, 0.15)' // 蓝色高亮
+            if (record) {
+              const rowBg = spec.rowStyle?.(record)?.bgColor
+              if (rowBg != null) return rowBg as string
+              if (selectedContractsRef.current?.has(record.instrumentID)) {
+                return 'rgba(59, 130, 246, 0.15)' // 蓝色高亮
+              }
             }
             return '#0d1117'
           },
@@ -268,7 +259,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       if (!record) return
 
       // 收藏列点击
-      if (colIndex === columns.length - 1) {
+      if (colIndex === spec.columns.length - 1) {
         if (onFavoriteChangeRef.current) {
           const isFavorited = favoritedIdsRef.current?.has(record.instrumentID) ?? false
           onFavoriteChangeRef.current(record.instrumentID, !isFavorited)
@@ -321,7 +312,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       }
 
       // 触发回调：双击优先，否则单击
-      const price = record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
+      const price = record.lastPrice == null || record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
       if (isDoubleClick && onDblClickRef.current) {
         onDblClickRef.current(record.instrumentID, price)
       } else if (onClickRef.current) {
@@ -362,7 +353,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
         if (onSelectionChangeRef.current) {
           onSelectionChangeRef.current(new Set([record.instrumentID]))
         }
-        const price = record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
+        const price = record.lastPrice == null || record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
         onContextMenuRef.current?.(record.instrumentID, price, event)
       }
     })
@@ -464,8 +455,8 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
       window.addEventListener('mouseup', handleMouseUp)
     }
 
-    // 初始渲染后触发一次（延迟确保 vtable 就绪）
-    setTimeout(notifyVisibleRange, 0)
+    // 初始渲染后触发一次（延迟确保 vtable 就绪；隐藏面板不参与上报）
+    scheduleVisibleRangeReport()
 
     // 滚动时触发（100ms 防抖）
     table.on('scroll', () => {
@@ -488,6 +479,14 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     tableRef.current = table
 
     return () => {
+      // 清除排队中的合并兜底帧（表已 release，避免对已释放实例补合并）
+      if (mergeRafRef.current != null && typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(mergeRafRef.current)
+        mergeRafRef.current = null
+      }
+      // 清空合并状态：StrictMode 下 effect setup→cleanup→setup 会重建新表实例，
+      // 若残留旧表已合并行，applyRowMerges 会误判「已合并」而跳过 mergeCells → 标底行渲染为未合并。
+      mergedRowsRef.current = new Set()
       window.removeEventListener('keydown', handleKeyDown)
       if (container) {
         container.removeEventListener('mousedown', handleMouseDown)
@@ -504,13 +503,26 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
   // 合约列表或收藏变化 → 全量 setRecords（低频）
   useEffect(() => {
     if (!tableRef.current) return
-    const records = contracts.map((contract) => buildRecord(contract, snapshots.get(contract.instrumentID), favoritedIds?.has(contract.instrumentID) ?? false))
+    const records = contracts.map((contract) => spec.buildRecord(contract, snapshots.get(contract.instrumentID), favoritedIds?.has(contract.instrumentID) ?? false))
     recordsRef.current = records
     // 重置每行 snapshot 跟踪：全量重建后所有行都视为已同步
     rowSnapshotRef.current = contracts.map((c) => snapshots.get(c.instrumentID))
     tableRef.current.setRecords(records)
     lastClickedIndexRef.current = null
-    setTimeout(notifyVisibleRange, 0)
+    // 标底行合并：setRecords 场景图同步构建，直接合并；rAF 兜底重试仅当同步合并未完成时调度
+    // （同步已合并全部标底行则无需再白做一轮 unmerge+remerge）
+    const mergedAll = applyRowMerges()
+    if (mergeRafRef.current != null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(mergeRafRef.current)
+    }
+    if (!mergedAll && typeof requestAnimationFrame === 'function') {
+      mergeRafRef.current = requestAnimationFrame(() => {
+        mergeRafRef.current = null
+        applyRowMerges()
+      })
+    }
+    // 合约重建后延迟补报可见区（隐藏面板不参与上报）
+    scheduleVisibleRangeReport()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contracts, favoritedIds])
 
@@ -527,14 +539,14 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     const endRow = Math.min(recordsRef.current.length - 1, range.rowEnd - 1 + PRELOAD_ROWS) // 向下预加载
 
     const rowIndexes: number[] = []
-    const updatedRecords: ReturnType<typeof buildRecord>[] = []
+    const updatedRecords: QuoteRecord[] = []
     for (let i = startRow; i <= endRow; i++) {
       const rowSnap = rowSnapshotRef.current[i]
       const rowRecord = recordsRef.current[i]
       if (!rowRecord) continue
       const snap = snapshots.get(rowRecord.instrumentID)
       if (rowSnap === snap) continue // 该行快照引用未变
-      const record = buildRecord(contracts[i], snap, favoritedIds?.has(rowRecord.instrumentID) ?? false)
+      const record = spec.buildRecord(contracts[i], snap, favoritedIds?.has(rowRecord.instrumentID) ?? false)
       recordsRef.current[i] = record
       rowSnapshotRef.current[i] = snap
       updatedRecords.push(record)
@@ -553,7 +565,7 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     try {
       const range = tableRef.current.getBodyVisibleCellRange?.()
       if (!range) return
-      const colCount = tableRef.current.colCount ?? columns.length
+      const colCount = tableRef.current.colCount ?? spec.columns.length
       tableRef.current.updateCellContentRange(0, range.rowStart, colCount - 1, range.rowEnd)
     } catch {
       // vtable 尚未就绪
@@ -589,6 +601,13 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
     })
     return () => cancelAnimationFrame(raf)
   }, [selectedInstrument, selectedContracts, contracts])
+
+  // 标签激活（isActive 翻转为 true）时重报可见区：期权表切回期货标签等场景下
+  // 订阅管理器以可见区为准，激活后立即补订阅（依赖空数组保证 notifyVisibleRange 引用稳定）
+  useEffect(() => {
+    if (isActive) notifyVisibleRange()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive])
 
   return <div ref={containerRef} className="market-table-container" />
 }

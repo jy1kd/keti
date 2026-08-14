@@ -28,7 +28,7 @@ function resolveAction(action, ctx) {
             return showAndSend(ctx, index_1.IPC_CHANNELS.MENU_OPEN_FLOATING, action.tab);
         case 'open-market-window':
             if (ctx.windowManager) {
-                ctx.windowManager.openTabWindow('market', 'tab-market', '📊 行情');
+                ctx.windowManager.openTabWindow('market', 'tab-market', '📊 期货');
             }
             return;
         case 'toggle-perf':

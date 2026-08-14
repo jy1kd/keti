@@ -18,6 +18,17 @@ const DRAG_THRESHOLD = 2
 /** 订阅软上限（< 后端 500） */
 const SOFT_LIMIT = 480
 
+/** 可见合约集是否相同（无序比较）：仅可见区真实变化才计入拖动检测 */
+function sameVisibleSet(a: string[] | null, b: string[]): boolean {
+  if (!a) return false
+  if (a.length !== b.length) return false
+  const set = new Set(b)
+  for (const id of a) {
+    if (!set.has(id)) return false
+  }
+  return true
+}
+
 export function useSubscriptionManager() {
   const visibleInstrumentIDs = useMarketStore((s) => s.visibleInstrumentIDs)
   const lockedContracts = useMarketStore((s) => s.lockedContracts)
@@ -33,6 +44,8 @@ export function useSubscriptionManager() {
   const recentChangesRef = useRef<number[]>([])
   /** 是否已完成首次挂载（挂载本身不计入拖动变化，避免把首个可见窗口误判为拖动） */
   const didMountRef = useRef(false)
+  /** 上一次可见合约集（拖动检测去重：锁定/自选等非可见变化不喂入拖动判定） */
+  const prevVisibleRef = useRef<string[] | null>(null)
   /** 最近一次完整 diff 的定时器（拖动停止后执行） */
   const fullDiffTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** 已消费的滚动松手信号序号（判重，避免重复处理） */
@@ -116,15 +129,17 @@ export function useSubscriptionManager() {
    * 静止态直接调用，拖动停止后 500ms 调用。
    * 仍在宽限期内的合约记录 nextCheckIn，到期后再检查一次（保留到期重排链）。
    * 新批次超 SOFT_LIMIT 时「退订先行」串行化（await 退订后再订阅），规避后端 500 上限原子整批拒绝。
+   * 防御性批次上限：待订阅数超过「剩余容量 + 本批即将退订腾出的名额」时，超出的合约
+   * 本批不订阅（留待下次 diff），避免一次性提交 554 等超限批次被后端 500 上限整批拒绝。
    */
   const runFullDiff = useCallback(() => {
     const should = calculateShouldSubscribe()
     const now = Date.now()
 
-    // 1. 需要订阅的缺失合约
-    const toSubscribe: string[] = []
+    // 1. 需要订阅的缺失合约（全量候选；容量上限见 3.5，超出的留待下次 diff 重试）
+    const toSubscribeAll: string[] = []
     for (const id of should) {
-      if (!subscribedRef.current.has(id)) toSubscribe.push(id)
+      if (!subscribedRef.current.has(id)) toSubscribeAll.push(id)
     }
 
     // 2. 宽限期退订候选 + 记录最早到期时间（到期重排）
@@ -145,10 +160,22 @@ export function useSubscriptionManager() {
     for (const c of graceCandidates) {
       if (now - c.lastVisible > GRACE_MS) toUnsubscribe.add(c.id)
     }
-    for (const id of computeLruEvictions(should, toSubscribe.length)) {
+    for (const id of computeLruEvictions(should, toSubscribeAll.length)) {
       toUnsubscribe.add(id)
     }
     const unsubscribeIds = Array.from(toUnsubscribe)
+
+    // 3.5 防御性批次上限：后端 500 上限原子整批拒绝。本批容量 = SOFT_LIMIT - 已订阅 +
+    //     本批即将退订腾出的名额（退订先行会先释放这些名额）；超出的合约本批不订阅，
+    //     留待下次 diff（可见区收敛后重试）。否则 554 个可见合约会整批提交被后端拒绝。
+    const capacity = Math.max(0, SOFT_LIMIT - subscribedRef.current.size + unsubscribeIds.length)
+    const toSubscribe = toSubscribeAll.slice(0, capacity)
+    const dropped = toSubscribeAll.length - toSubscribe.length
+    if (dropped > 0) {
+      console.warn(
+        `[行情订阅上限] 可见区合约超前端软上限：本批 ${toSubscribeAll.length} 个，仅订阅前 ${toSubscribe.length} 个，${dropped} 个留待下次 diff`,
+      )
+    }
 
     // 4. 订阅动作（success 门控 + 快照回填），供串行化/并行共用
     const subscribeNow = (ids: string[]) => {
@@ -220,9 +247,15 @@ export function useSubscriptionManager() {
     }
 
     const now = Date.now()
+    const prevVisible = prevVisibleRef.current
+    prevVisibleRef.current = visibleInstrumentIDs
     if (didMountRef.current) {
-      // 非首次：记录本次可见区变化，用于拖动检测
-      recentChangesRef.current = [...recentChangesRef.current.filter((t) => now - t < DRAG_WINDOW_MS), now]
+      // 仅当可见集真实变化才记录拖动变化：锁定/自选等应订阅集变化（runFullDiff 变化触发本
+      // effect）不参与拖动态判定，否则 T型报价 锁定/解锁合约（可见集不变）会被误判为拖动，
+      // 把该次完整 diff 拖到 500ms 后。
+      if (!sameVisibleSet(prevVisible, visibleInstrumentIDs)) {
+        recentChangesRef.current = [...recentChangesRef.current.filter((t) => now - t < DRAG_WINDOW_MS), now]
+      }
     } else {
       // 首次挂载：不计入拖动变化（避免把首个可见窗口误判为拖动，导致首次订阅被拖到停止后）
       didMountRef.current = true
