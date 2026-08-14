@@ -29,7 +29,7 @@ export interface ElectronAPI {
   onNavigateTab: (callback: (tab: string) => void) => () => void;
 
   // Menu (main → renderer): 顶部菜单打开浮动窗
-  onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'settings' | 'ipc-monitor' | 'tquote' | 'query-orders' | 'query-positions' | 'query-account') => void) => () => void;
+  onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'infinite' | 'settings' | 'ipc-monitor' | 'tquote' | 'query-orders' | 'query-positions' | 'query-account') => void) => () => void;
 
   // Menu (main → renderer): 切换 FPS 监控
   onTogglePerf: (callback: () => void) => () => void;
@@ -80,8 +80,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // Menu (main → renderer): 顶部菜单打开浮动窗
-  onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'settings' | 'ipc-monitor' | 'tquote' | 'query-orders' | 'query-positions' | 'query-account') => void) => {
-    const handler = (_: any, tab: 'order' | 'kline' | 'settings' | 'ipc-monitor' | 'tquote' | 'query-orders' | 'query-positions' | 'query-account') => callback(tab);
+  onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'infinite' | 'settings' | 'ipc-monitor' | 'tquote' | 'query-orders' | 'query-positions' | 'query-account') => void) => {
+    const handler = (_: any, tab: 'order' | 'kline' | 'infinite' | 'settings' | 'ipc-monitor' | 'tquote' | 'query-orders' | 'query-positions' | 'query-account') => callback(tab);
     ipcRenderer.on('menu:open-floating', handler);
     return () => ipcRenderer.removeListener('menu:open-floating', handler);
   },

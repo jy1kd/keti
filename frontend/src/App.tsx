@@ -23,6 +23,7 @@ import {
   openOrdersQueryFloating,
   openPositionsQueryFloating,
   openAccountQueryFloating,
+  openInfiniteFloating,
   openTQuoteFloating,
 } from '@/utils/openFloatingTab'
 import '@/assets/styles/global.css'
@@ -88,7 +89,7 @@ function App() {
     return () => cleanup?.()
   }, [])
 
-  // Electron IPC — 顶部菜单打开浮动窗（报单/K线/查询）
+  // Electron IPC — 顶部菜单打开浮动窗（报单/K线/无限下单/查询/设置等）
   useEffect(() => {
     if (!isElectron()) return
 
@@ -99,6 +100,9 @@ function App() {
           break
         case 'kline':
           openKlineFloating()
+          break
+        case 'infinite':
+          openInfiniteFloating()
           break
         case 'settings':
           openSettingsFloating()
