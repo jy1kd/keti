@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useQueryStore, type OrderEntry } from './store'
 import { OrderFlow } from './OrderFlow'
+import './styles.css'
 
 type OrderFilter = 'all' | 'unfilled' | 'filled'
 

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useQueryStore } from './store'
+import './styles.css'
 
 const CTP_INVALID = 1.7976931348623157e+308
 
