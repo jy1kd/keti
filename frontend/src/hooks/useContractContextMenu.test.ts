@@ -44,15 +44,6 @@ describe('useContractContextMenu', () => {
     })
   })
 
-  it('openQueryPopup 打开查询浮动窗口（统一浮动窗模式）', () => {
-    const { result } = renderHook(() => useContractContextMenu())
-    act(() => {
-      result.current.openQueryPopup('IF2608')
-    })
-
-    expect(mockOpenFloatingTab).toHaveBeenCalledWith({ type: 'query', title: '📋 查询' })
-  })
-
   it('openKlineTab 打开K线浮动窗口', () => {
     const { result } = renderHook(() => useContractContextMenu())
     act(() => {

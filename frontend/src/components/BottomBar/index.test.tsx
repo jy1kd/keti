@@ -10,14 +10,12 @@ const {
   mockOpenFloatingTab,
   mockOpenOrderFloating,
   mockOpenKlineFloating,
-  mockOpenQueryFloating,
   mockOpenSettingsFloating,
   mockOpenIpcMonitorFloating,
 } = vi.hoisted(() => ({
   mockOpenFloatingTab: vi.fn(),
   mockOpenOrderFloating: vi.fn(),
   mockOpenKlineFloating: vi.fn(),
-  mockOpenQueryFloating: vi.fn(),
   mockOpenSettingsFloating: vi.fn(),
   mockOpenIpcMonitorFloating: vi.fn(),
 }))
@@ -27,7 +25,6 @@ vi.mock('@/utils/openFloatingTab', () => ({
   ORDER_FLOATING_SIZE: { w: 620, h: 540 },
   openOrderFloating: mockOpenOrderFloating,
   openKlineFloating: mockOpenKlineFloating,
-  openQueryFloating: mockOpenQueryFloating,
   openSettingsFloating: mockOpenSettingsFloating,
   openIpcMonitorFloating: mockOpenIpcMonitorFloating,
 }))
@@ -75,7 +72,6 @@ describe('BottomBar', () => {
       const cases: Array<[string, string, string]> = [
         ['报单', '📝', '报单'],
         ['K线', '📈', 'K线'],
-        ['📋 查询', '📋', '查询'],
         ['设置', '⚙', '设置'],
         ['FPS 监控', '⚡', 'FPS 监控'],
         ['网络监控', '🔌', '网络监控'],
@@ -99,12 +95,6 @@ describe('BottomBar', () => {
       render(<BottomBar perfVisible={false} onTogglePerf={vi.fn()} />)
       fireEvent.click(screen.getByLabelText('K线'))
       expect(mockOpenKlineFloating).toHaveBeenCalled()
-    })
-
-    it('点击 📋 查询按钮调用 openQueryFloating', () => {
-      render(<BottomBar perfVisible={false} onTogglePerf={vi.fn()} />)
-      fireEvent.click(screen.getByLabelText('📋 查询'))
-      expect(mockOpenQueryFloating).toHaveBeenCalled()
     })
 
     it('点击 ⚙ 设置按钮调用 openSettingsFloating', () => {

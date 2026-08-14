@@ -74,9 +74,6 @@ function App() {
         case 'order':
           openTab({ type: 'order', title: '📝 报单' })
           break
-        case 'query':
-          openTab({ type: 'query', title: '📋 查询' })
-          break
         case 'kline':
           openTab({ type: 'kline', title: '📈 K线' })
           break

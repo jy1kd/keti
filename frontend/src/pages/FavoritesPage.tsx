@@ -22,7 +22,7 @@ export function FavoritesPage() {
   const snapshots = useMarketStore((s) => s.snapshots)
   const selectedInstrument = useMarketStore((s) => s.selectedInstrument)
   const setSelectedInstrument = useMarketStore((s) => s.setSelectedInstrument)
-  const { contextMenu, openOrderPopup, openQueryPopup, openKlineTab, handleContextMenu } = useContractContextMenu()
+  const { contextMenu, openOrderPopup, openKlineTab, handleContextMenu } = useContractContextMenu()
 
   // 自选标签是否激活：隐藏面板（display:none）不参与可见区上报，避免覆盖活跃面板可见范围
   const isActive = useTabStore((s) => s.tabs.some((t) => t.type === 'favorites' && t.id === s.activeTabId))
@@ -101,12 +101,6 @@ export function FavoritesPage() {
             onClick={() => openKlineTab(contextMenu.instrumentID)}
           >
             打开K线
-          </button>
-          <button
-            className="context-menu__item"
-            onClick={() => openQueryPopup(contextMenu.instrumentID)}
-          >
-            📋 查询
           </button>
         </div>
       )}

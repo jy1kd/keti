@@ -20,7 +20,6 @@ const ADD_TAB_ITEMS = [
   { type: 'order' as const, icon: '📝', label: '报单', title: '📝 报单' },
   { type: 'kline' as const, icon: '📈', label: 'K线', title: '📈 K线' },
   { type: 'infinite' as const, icon: '♾️', label: '无限下单', title: '♾️ 无限下单' },
-  { type: 'query' as const, icon: '📋', label: '查询', title: '📋 查询' },
   { type: 'settings' as const, icon: '⚙', label: '设置', title: '⚙ 设置' },
 ]
 

@@ -29,7 +29,6 @@ interface UseContractMenusArgs {
   addToFavorites: (inst: ContractInfo) => Promise<boolean> | boolean
   removeFromFavorites: (instrumentID: string) => Promise<unknown> | void
   openOrderPopup: (instrumentID: string) => void
-  openQueryPopup: (instrumentID: string) => void
   openKlineTab: (instrumentID: string) => void
   openOrderTabs: (instrumentIDs: string[]) => void
   openKlineTabs: (instrumentIDs: string[]) => void
@@ -57,7 +56,6 @@ export function useContractMenus(args: UseContractMenusArgs) {
     addToFavorites,
     removeFromFavorites,
     openOrderPopup,
-    openQueryPopup,
     openKlineTab,
     openOrderTabs,
     openKlineTabs,
@@ -126,7 +124,6 @@ export function useContractMenus(args: UseContractMenusArgs) {
       items={[
         { label: '打开报单', icon: '📝', onClick: () => openOrderPopup(contextMenu.instrumentID) },
         { label: '打开K线', icon: '📈', onClick: () => openKlineTab(contextMenu.instrumentID) },
-        { label: '查询', icon: '📋', onClick: () => openQueryPopup(contextMenu.instrumentID) },
         {
           label: favoritedIds.has(contextMenu.instrumentID) ? '取消收藏' : '收藏',
           icon: favoritedIds.has(contextMenu.instrumentID) ? '★' : '⭐',
