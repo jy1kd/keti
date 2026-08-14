@@ -45,7 +45,7 @@ export function OrderPage({ instrumentID, floating = false, tabId }: OrderPagePr
     if (tabId && code !== instrumentID) {
       updateTab(tabId, {
         props: { instrumentID: code },
-        title: `📝 报单-${code}`,
+        title: `📝 五档下单-${code}`,
       });
     }
   };
@@ -67,7 +67,7 @@ export function OrderPage({ instrumentID, floating = false, tabId }: OrderPagePr
     <div className="order-page">
       {/* ── 标题栏 ── */}
       <div className="order-page__title-bar" data-drag-handle>
-        <span className="order-page__title">📝 报单</span>
+        <span className="order-page__title">📝 五档下单</span>
         {instrumentID && (
           <span className="order-page__subtitle">{instrumentID}</span>
         )}

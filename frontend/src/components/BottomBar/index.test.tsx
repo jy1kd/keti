@@ -55,7 +55,7 @@ describe('BottomBar', () => {
     it('工具按钮含图标 + 中文名', () => {
       render(<BottomBar />)
       const cases: Array<[string, string, string]> = [
-        ['报单', '📝', '报单'],
+        ['五档下单', '📝', '五档下单'],
         ['K线', '📈', 'K线'],
         ['设置', '⚙', '设置'],
         ['网络监控', '🔌', '网络监控'],
@@ -69,9 +69,9 @@ describe('BottomBar', () => {
   })
 
   describe('工具操作', () => {
-    it('点击 📝 报单调用 openOrderFloating（选中合约细节由 helper 测试覆盖）', () => {
+    it('点击 📝 五档下单调用 openOrderFloating（选中合约细节由 helper 测试覆盖）', () => {
       render(<BottomBar />)
-      fireEvent.click(screen.getByLabelText('报单'))
+      fireEvent.click(screen.getByLabelText('五档下单'))
       expect(mockOpenOrderFloating).toHaveBeenCalled()
     })
 

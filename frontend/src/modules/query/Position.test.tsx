@@ -173,7 +173,7 @@ describe('Position', () => {
     const { tabs, activeTabId } = useTabStore.getState()
     const orderTab = tabs.find((t) => t.type === 'order')
     expect(orderTab).toBeDefined()
-    expect(orderTab?.title).toBe('📝 报单-IF2608')
+    expect(orderTab?.title).toBe('📝 五档下单-IF2608')
     expect(orderTab?.props.instrumentID).toBe('IF2608')
     expect(activeTabId).toBe('tab-order-IF2608')
   })

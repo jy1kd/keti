@@ -98,20 +98,20 @@ describe('TrayManager', () => {
     expect(labels).toEqual(['⚙ 设置', '🔌 网络监控']);
   });
 
-  it('行情子菜单完整镜像：期货/期权/自选/K线窗口/T型报价/新窗口', () => {
+  it('行情子菜单完整镜像：期货/期权/自选/K线/T型报价/新窗口', () => {
     const manager = new TrayManager();
     manager.initialize(mainWindow, windowManager);
     const market = getTemplate().find((i) => i.label === '行情')!;
     const labels = market.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📈 K线窗口', '📉 T型报价', '🪟 在新窗口打开']);
+    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']);
   });
 
-  it('交易子菜单包含 报单窗口/无限下单窗口', () => {
+  it('交易子菜单包含 五档下单/无限下单', () => {
     const manager = new TrayManager();
     manager.initialize(mainWindow, windowManager);
     const trade = getTemplate().find((i) => i.label === '交易')!;
     const labels = trade.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📝 报单窗口', '♾️ 无限下单窗口']);
+    expect(labels).toEqual(['📝 五档下单', '♾️ 无限下单']);
   });
 
   it('查询子菜单包含 报单查询/持仓查询/资金查询', () => {
@@ -119,7 +119,7 @@ describe('TrayManager', () => {
     manager.initialize(mainWindow, windowManager);
     const query = getTemplate().find((i) => i.label === '查询')!;
     const labels = query.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📋 报单查询窗口', '📋 持仓查询窗口', '💰 资金查询窗口']);
+    expect(labels).toEqual(['📋 报单查询', '📋 持仓查询', '💰 资金查询']);
   });
 
   it('点击期货发送 menu:market-view all 并显示主窗口', () => {
@@ -144,24 +144,24 @@ describe('TrayManager', () => {
     expect(windowManager.openTabWindow).toHaveBeenCalledWith('market', 'tab-market', '📊 期货');
   });
 
-  it('点击报单窗口发送 menu:open-floating order', () => {
+  it('点击五档下单发送 menu:open-floating order', () => {
     const manager = new TrayManager();
     manager.initialize(mainWindow, windowManager);
-    clickItem('📝 报单窗口');
+    clickItem('📝 五档下单');
     expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'order');
   });
 
-  it('点击K线窗口发送 menu:open-floating kline', () => {
+  it('点击K线发送 menu:open-floating kline', () => {
     const manager = new TrayManager();
     manager.initialize(mainWindow, windowManager);
-    clickItem('📈 K线窗口');
+    clickItem('📈 K线');
     expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'kline');
   });
 
-  it('点击资金查询窗口发送 menu:open-floating query-account', () => {
+  it('点击资金查询发送 menu:open-floating query-account', () => {
     const manager = new TrayManager();
     manager.initialize(mainWindow, windowManager);
-    clickItem('💰 资金查询窗口');
+    clickItem('💰 资金查询');
     expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query-account');
   });
 

@@ -71,7 +71,7 @@ function App() {
           openTab({ type: 'favorites', title: '⭐ 自选' })
           break
         case 'order':
-          openTab({ type: 'order', title: '📝 报单' })
+          openTab({ type: 'order', title: '📝 五档下单' })
           break
         case 'kline':
           openTab({ type: 'kline', title: '📈 K线' })

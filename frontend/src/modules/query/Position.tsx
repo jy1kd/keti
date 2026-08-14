@@ -48,7 +48,7 @@ export function Position({ positions: propPositions, emptyText = '暂无持仓�
       // 打开报单标签页，OrderPage 挂载时读取 store 中的平仓参数
       useTabStore.getState().openTab({
         type: 'order',
-        title: `📝 报单-${instrumentID}`,
+        title: `📝 五档下单-${instrumentID}`,
         props: { instrumentID },
       })
     },

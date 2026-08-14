@@ -55,9 +55,9 @@ export function BottomBar() {
         data-testid="bottom-bar-tools"
         aria-hidden={!toolsExpanded}
       >
-        <button type="button" className="bottom-bar__tool" aria-label="报单" title="报单" onClick={openOrder}>
+        <button type="button" className="bottom-bar__tool" aria-label="五档下单" title="五档下单" onClick={openOrder}>
           <span className="bottom-bar__tool-icon">📝</span>
-          <span className="bottom-bar__tool-label">报单</span>
+          <span className="bottom-bar__tool-label">五档下单</span>
         </button>
         <button type="button" className="bottom-bar__tool" aria-label="K线" title="K线" onClick={openKline}>
           <span className="bottom-bar__tool-icon">📈</span>

@@ -24,7 +24,7 @@ function getAppMenuDef() {
                 { id: 'market-options', label: '📉 期权', action: { type: 'market-view', view: 'options' } },
                 { id: 'market-favorites', label: '⭐ 自选行情', action: { type: 'market-view', view: 'favorites' } },
                 { id: 'market-sep1', type: 'separator' },
-                { id: 'market-kline', label: '📈 K线窗口', action: { type: 'open-floating', tab: 'kline' } },
+                { id: 'market-kline', label: '📈 K线', action: { type: 'open-floating', tab: 'kline' } },
                 { id: 'market-tquote', label: '📉 T型报价', action: { type: 'open-floating', tab: 'tquote' } },
                 { id: 'market-sep2', type: 'separator' },
                 { id: 'market-new-window', label: '🪟 在新窗口打开', action: { type: 'open-market-window' } },
@@ -34,17 +34,17 @@ function getAppMenuDef() {
             id: 'trade',
             label: '交易',
             submenu: [
-                { id: 'trade-order', label: '📝 报单窗口', action: { type: 'open-floating', tab: 'order' } },
-                { id: 'trade-infinite', label: '♾️ 无限下单窗口', action: { type: 'open-floating', tab: 'infinite' } },
+                { id: 'trade-order', label: '📝 五档下单', action: { type: 'open-floating', tab: 'order' } },
+                { id: 'trade-infinite', label: '♾️ 无限下单', action: { type: 'open-floating', tab: 'infinite' } },
             ],
         },
         {
             id: 'query',
             label: '查询',
             submenu: [
-                { id: 'query-orders', label: '📋 报单查询窗口', action: { type: 'open-floating', tab: 'query-orders' } },
-                { id: 'query-positions', label: '📋 持仓查询窗口', action: { type: 'open-floating', tab: 'query-positions' } },
-                { id: 'query-account', label: '💰 资金查询窗口', action: { type: 'open-floating', tab: 'query-account' } },
+                { id: 'query-orders', label: '📋 报单查询', action: { type: 'open-floating', tab: 'query-orders' } },
+                { id: 'query-positions', label: '📋 持仓查询', action: { type: 'open-floating', tab: 'query-positions' } },
+                { id: 'query-account', label: '💰 资金查询', action: { type: 'open-floating', tab: 'query-account' } },
             ],
         },
         {

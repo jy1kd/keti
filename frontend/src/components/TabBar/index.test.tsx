@@ -73,14 +73,14 @@ describe('TabBar', () => {
       useTabStore.setState({
         tabs: [
           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
-          { id: 'tab-order-au2406', type: 'order', title: '📝 报单-au2406', props: { instrumentID: 'au2406' }, closable: true },
+          { id: 'tab-order-au2406', type: 'order', title: '📝 五档下单-au2406', props: { instrumentID: 'au2406' }, closable: true },
           { id: 'tab-settings', type: 'settings', title: '⚙ 设置', props: {}, closable: true },
         ],
         activeTabId: 'tab-market',
       })
       render(<TabBar />)
       expect(screen.getByText('📊 行情')).toBeInTheDocument()
-      expect(screen.getByText('📝 报单-au2406')).toBeInTheDocument()
+      expect(screen.getByText('📝 五档下单-au2406')).toBeInTheDocument()
       expect(screen.getByText('⚙ 设置')).toBeInTheDocument()
     })
   })
@@ -260,7 +260,7 @@ describe('TabBar', () => {
     it('悬停 + 显示选择栏（报单/K线/无限下单/设置）', () => {
       render(<TabBar />)
       hoverOpen()
-      expect(screen.getByText('📝 报单')).toBeInTheDocument()
+      expect(screen.getByText('📝 五档下单')).toBeInTheDocument()
       expect(screen.getByText('📈 K线')).toBeInTheDocument()
       expect(screen.getByText('♾️ 无限下单')).toBeInTheDocument()
       expect(screen.getByText('⚙ 设置')).toBeInTheDocument()
@@ -269,18 +269,18 @@ describe('TabBar', () => {
     it('移出 + 与选择栏后选择栏关闭', () => {
       render(<TabBar />)
       hoverOpen()
-      expect(screen.getByText('📝 报单')).toBeInTheDocument()
+      expect(screen.getByText('📝 五档下单')).toBeInTheDocument()
       hoverClose()
-      expect(screen.queryByText('📝 报单')).toBeNull()
+      expect(screen.queryByText('📝 五档下单')).toBeNull()
     })
 
-    it('点击「📝 报单」以停靠标签打开', () => {
+    it('点击「📝 五档下单」以停靠标签打开', () => {
       const openTab = vi.fn(() => true)
       useTabStore.setState({ ...defaultState, openTab })
       render(<TabBar />)
       hoverOpen()
-      fireEvent.click(screen.getByText('📝 报单'))
-      expect(openTab).toHaveBeenCalledWith({ type: 'order', title: '📝 报单' })
+      fireEvent.click(screen.getByText('📝 五档下单'))
+      expect(openTab).toHaveBeenCalledWith({ type: 'order', title: '📝 五档下单' })
     })
 
     it('点击「⚙ 设置」以停靠标签打开', () => {
@@ -292,16 +292,16 @@ describe('TabBar', () => {
       expect(openTab).toHaveBeenCalledWith({ type: 'settings', title: '⚙ 设置' })
     })
 
-    it('选中合约时点击「📝 报单」带 instrumentID 打开（标题含合约代码）', () => {
+    it('选中合约时点击「📝 五档下单」带 instrumentID 打开（标题含合约代码）', () => {
       const openTab = vi.fn(() => true)
       useTabStore.setState({ ...defaultState, openTab })
       useMarketStore.setState({ selectedInstrument: 'IF2608' })
       render(<TabBar />)
       hoverOpen()
-      fireEvent.click(screen.getByText('📝 报单'))
+      fireEvent.click(screen.getByText('📝 五档下单'))
       expect(openTab).toHaveBeenCalledWith({
         type: 'order',
-        title: '📝 报单-IF2608',
+        title: '📝 五档下单-IF2608',
         props: { instrumentID: 'IF2608' },
       })
     })
@@ -329,26 +329,26 @@ describe('TabBar', () => {
       render(<TabBar />)
       hoverOpen()
       // 鼠标下移进入菜单区（fix 后间隙并入悬停区，不再触发 wrapper mouseleave）
-      fireEvent.mouseOver(screen.getByText('📝 报单'))
-      expect(screen.getByText('📝 报单')).toBeInTheDocument()
-      fireEvent.click(screen.getByText('📝 报单'))
-      expect(openTab).toHaveBeenCalledWith({ type: 'order', title: '📝 报单' })
+      fireEvent.mouseOver(screen.getByText('📝 五档下单'))
+      expect(screen.getByText('📝 五档下单')).toBeInTheDocument()
+      fireEvent.click(screen.getByText('📝 五档下单'))
+      expect(openTab).toHaveBeenCalledWith({ type: 'order', title: '📝 五档下单' })
     })
 
     it('点击选择栏外部关闭', () => {
       render(<TabBar />)
       hoverOpen()
-      expect(screen.getByText('📝 报单')).toBeInTheDocument()
+      expect(screen.getByText('📝 五档下单')).toBeInTheDocument()
       fireEvent.mouseDown(document.body)
-      expect(screen.queryByText('📝 报单')).toBeNull()
+      expect(screen.queryByText('📝 五档下单')).toBeNull()
     })
 
     it('Escape 关闭选择栏', () => {
       render(<TabBar />)
       hoverOpen()
-      expect(screen.getByText('📝 报单')).toBeInTheDocument()
+      expect(screen.getByText('📝 五档下单')).toBeInTheDocument()
       fireEvent.keyDown(window, { key: 'Escape' })
-      expect(screen.queryByText('📝 报单')).toBeNull()
+      expect(screen.queryByText('📝 五档下单')).toBeNull()
     })
   })
 
@@ -693,7 +693,7 @@ describe('TabBar', () => {
           { id: 'tab-4', type: 'settings', title: '标签 4', props: {}, closable: true },
           { id: 'tab-5', type: 'settings', title: '标签 5', props: {}, closable: true },
           { id: 'tab-6', type: 'settings', title: '标签 6', props: {}, closable: true },
-          { id: 'tab-order-au', type: 'order', title: '📝 报单-IF2608', props: {}, closable: true },
+          { id: 'tab-order-au', type: 'order', title: '📝 五档下单-IF2608', props: {}, closable: true },
         ],
         activeTabId: 'tab-market',
       })
@@ -706,10 +706,10 @@ describe('TabBar', () => {
       act(() => { roCallback?.([], null as unknown as ResizeObserver) })
       fireEvent.click(screen.getByLabelText('溢出标签'))
       const menu = screen.getByRole('menu', { name: '隐藏标签' })
-      const item = within(menu).getByRole('menuitem', { name: /报单/ })
+      const item = within(menu).getByRole('menuitem', { name: /五档下单/ })
       // title 已含 emoji，不应再渲染独立 icon span（否则 📝 出现两次）
       expect(item.querySelector('.tab-bar__overflow-icon')).toBeNull()
-      expect(item.textContent).toContain('📝 报单-IF2608')
+      expect(item.textContent).toContain('📝 五档下单-IF2608')
     })
 
     it('隐藏标签在标签栏完全隐藏（visibility:hidden，不露半截）；可见标签自动填充至 ▾ 左侧', () => {
@@ -828,7 +828,7 @@ describe('TabBar', () => {
     const ctxTabs: Tab[] = [
       { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
       { id: 'tab-kline', type: 'kline', title: '📈 K线', props: {}, closable: true },
-      { id: 'tab-order', type: 'order', title: '📝 报单', props: {}, closable: true, pinned: true },
+      { id: 'tab-order', type: 'order', title: '📝 五档下单', props: {}, closable: true, pinned: true },
     ]
 
     function renderWithCtx(tabId: string) {
@@ -852,7 +852,7 @@ describe('TabBar', () => {
 
     it('右键固定标签显示「取消固定」，icon 仍在独立列', () => {
       renderWithCtx('tab-order')
-      fireEvent.contextMenu(screen.getByText('📝 报单'))
+      fireEvent.contextMenu(screen.getByText('📝 五档下单'))
       const pinItem = screen.getByText('取消固定').closest('button')!
       const icon = pinItem.querySelector('.tab-bar__context-icon')
       expect(icon).toHaveTextContent('📌')

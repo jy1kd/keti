@@ -22,18 +22,18 @@ describe('getAppMenuDef', () => {
     expect(def.map((d) => d.label)).toEqual(['行情', '交易', '查询', '设置']);
   });
 
-  it('行情子菜单：期货/期权/自选/K线窗口/T型报价/新窗口', () => {
+  it('行情子菜单：期货/期权/自选/K线/T型报价/新窗口', () => {
     const market = getAppMenuDef().find((d) => d.id === 'market')!;
     const labels = market.submenu!
       .filter((i) => i.type !== 'separator')
       .map((i) => i.label);
-    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📈 K线窗口', '📉 T型报价', '🪟 在新窗口打开']);
+    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']);
   });
 
-  it('行情「📈 K线窗口」action 为 open-floating kline（在首个分隔符后）', () => {
+  it('行情「📈 K线」action 为 open-floating kline（在首个分隔符后）', () => {
     const market = getAppMenuDef().find((d) => d.id === 'market')!;
     const kline = market.submenu!.find((i) => i.id === 'market-kline')!;
-    expect(kline.label).toBe('📈 K线窗口');
+    expect(kline.label).toBe('📈 K线');
     expect(kline.action).toEqual({ type: 'open-floating', tab: 'kline' });
     const sep = market.submenu!.find((i) => i.type === 'separator')!;
     expect(market.submenu!.indexOf(kline)).toBeGreaterThan(market.submenu!.indexOf(sep));
@@ -54,13 +54,13 @@ describe('getAppMenuDef', () => {
     expect(newWindow.action).toEqual({ type: 'open-market-window' });
   });
 
-  it('交易子菜单：报单窗口 / 无限下单窗口', () => {
+  it('交易子菜单：五档下单 / 无限下单', () => {
     const trade = getAppMenuDef().find((d) => d.id === 'trade')!;
     const labels = trade.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📝 报单窗口', '♾️ 无限下单窗口']);
+    expect(labels).toEqual(['📝 五档下单', '♾️ 无限下单']);
   });
 
-  it('交易「无限下单窗口」action 为 open-floating infinite', () => {
+  it('交易「无限下单」action 为 open-floating infinite', () => {
     const trade = getAppMenuDef().find((d) => d.id === 'trade')!;
     const infinite = trade.submenu!.find((i) => i.id === 'trade-infinite')!;
     expect(infinite.action).toEqual({ type: 'open-floating', tab: 'infinite' });
@@ -69,7 +69,7 @@ describe('getAppMenuDef', () => {
   it('查询子菜单：报单查询/持仓查询/资金查询', () => {
     const query = getAppMenuDef().find((d) => d.id === 'query')!;
     const labels = query.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📋 报单查询窗口', '📋 持仓查询窗口', '💰 资金查询窗口']);
+    expect(labels).toEqual(['📋 报单查询', '📋 持仓查询', '💰 资金查询']);
   });
 
   it('设置子菜单：设置/网络监控/退出，app-quit 在设置组', () => {

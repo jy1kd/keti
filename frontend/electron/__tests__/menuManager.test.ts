@@ -78,13 +78,13 @@ describe('MenuManager', () => {
   });
 
   describe('行情', () => {
-    it('包含 期货/期权/自选行情/K线窗口/T型报价/在新窗口打开', () => {
+    it('包含 期货/期权/自选行情/K线/T型报价/在新窗口打开', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
       const labels = getMenu('行情')
         .submenu!.map((i) => i.label)
         .filter(Boolean);
-      expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📈 K线窗口', '📉 T型报价', '🪟 在新窗口打开']);
+      expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']);
     });
 
     it('点击 T型报价 发送 menu:open-floating tquote', () => {
@@ -94,10 +94,10 @@ describe('MenuManager', () => {
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'tquote');
     });
 
-    it('点击K线窗口发送 menu:open-floating kline', () => {
+    it('点击K线发送 menu:open-floating kline', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
-      clickItem('行情', '📈 K线窗口');
+      clickItem('行情', '📈 K线');
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'kline');
     });
 
@@ -131,44 +131,44 @@ describe('MenuManager', () => {
   });
 
   describe('交易', () => {
-    it('包含 报单窗口/无限下单窗口', () => {
+    it('包含 五档下单/无限下单', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
       const labels = getMenu('交易')
         .submenu!.map((i) => i.label)
         .filter(Boolean);
-      expect(labels).toEqual(['📝 报单窗口', '♾️ 无限下单窗口']);
+      expect(labels).toEqual(['📝 五档下单', '♾️ 无限下单']);
     });
 
-    it('点击报单窗口发送 menu:open-floating order', () => {
+    it('点击五档下单发送 menu:open-floating order', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
-      clickItem('交易', '📝 报单窗口');
+      clickItem('交易', '📝 五档下单');
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'order');
     });
 
-    it('点击无限下单窗口发送 menu:open-floating infinite', () => {
+    it('点击无限下单发送 menu:open-floating infinite', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
-      clickItem('交易', '♾️ 无限下单窗口');
+      clickItem('交易', '♾️ 无限下单');
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'infinite');
     });
   });
 
   describe('查询', () => {
-    it('包含 报单查询窗口/持仓查询窗口/资金查询窗口', () => {
+    it('包含 报单查询/持仓查询/资金查询', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
       const labels = getMenu('查询')
         .submenu!.map((i) => i.label)
         .filter(Boolean);
-      expect(labels).toEqual(['📋 报单查询窗口', '📋 持仓查询窗口', '💰 资金查询窗口']);
+      expect(labels).toEqual(['📋 报单查询', '📋 持仓查询', '💰 资金查询']);
     });
 
-    it('点击资金查询窗口发送 menu:open-floating query-account', () => {
+    it('点击资金查询发送 menu:open-floating query-account', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
-      clickItem('查询', '💰 资金查询窗口');
+      clickItem('查询', '💰 资金查询');
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query-account');
     });
   });
@@ -209,7 +209,7 @@ describe('MenuManager', () => {
     const manager = new MenuManager();
     manager.initialize(mainWindow, windowManager);
     mainWindow.isDestroyed = () => true;
-    clickItem('交易', '📝 报单窗口');
+    clickItem('交易', '📝 五档下单');
     expect(webContentsSend).not.toHaveBeenCalled();
   });
 });
