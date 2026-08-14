@@ -17,26 +17,35 @@ interface TemplateItem {
 }
 
 describe('getAppMenuDef', () => {
-  it('返回四组一级菜单：行情/功能/设置/性能监控', () => {
+  it('返回四组一级菜单：行情/交易/查询/设置', () => {
     const def = getAppMenuDef();
-    expect(def.map((d) => d.label)).toEqual(['行情', '功能', '设置', '性能监控']);
+    expect(def.map((d) => d.label)).toEqual(['行情', '交易', '查询', '设置']);
   });
 
-  it('行情子菜单完整镜像：期货/期权/收藏夹/T型报价/分隔符/在新窗口打开', () => {
+  it('行情子菜单：期货/期权/收藏夹/K线/T型报价/新窗口', () => {
     const market = getAppMenuDef().find((d) => d.id === 'market')!;
     const labels = market.submenu!
       .filter((i) => i.type !== 'separator')
       .map((i) => i.label);
-    expect(labels).toEqual(['📊 期货', '📉 期权', '📁 收藏夹', '📉 T型报价', '🪟 在新窗口打开']);
+    expect(labels).toEqual(['📊 期货', '📉 期权', '📁 收藏夹', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']);
   });
 
-  it('行情「📉 T型报价」action 为 open-floating tquote（在分隔符前）', () => {
+  it('行情「📈 K线」action 为 open-floating kline（在首个分隔符后）', () => {
+    const market = getAppMenuDef().find((d) => d.id === 'market')!;
+    const kline = market.submenu!.find((i) => i.id === 'market-kline')!;
+    expect(kline.label).toBe('📈 K线');
+    expect(kline.action).toEqual({ type: 'open-floating', tab: 'kline' });
+    const sep = market.submenu!.find((i) => i.type === 'separator')!;
+    expect(market.submenu!.indexOf(kline)).toBeGreaterThan(market.submenu!.indexOf(sep));
+  });
+
+  it('行情「📉 T型报价」action 为 open-floating tquote（在首个分隔符后）', () => {
     const market = getAppMenuDef().find((d) => d.id === 'market')!;
     const tquote = market.submenu!.find((i) => i.id === 'market-tquote')!;
     expect(tquote.label).toBe('📉 T型报价');
     expect(tquote.action).toEqual({ type: 'open-floating', tab: 'tquote' });
     const sep = market.submenu!.find((i) => i.type === 'separator')!;
-    expect(market.submenu!.indexOf(tquote)).toBeLessThan(market.submenu!.indexOf(sep));
+    expect(market.submenu!.indexOf(tquote)).toBeGreaterThan(market.submenu!.indexOf(sep));
   });
 
   it('行情「在新窗口打开」action 为 open-market-window', () => {
@@ -45,24 +54,36 @@ describe('getAppMenuDef', () => {
     expect(newWindow.action).toEqual({ type: 'open-market-window' });
   });
 
-  it('功能子菜单包含报单/K线/查询/分隔符/退出(app-quit)', () => {
-    const fnMenu = getAppMenuDef().find((d) => d.id === 'function')!;
-    const labels = fnMenu.submenu!
-      .filter((i) => i.type !== 'separator')
-      .map((i) => i.label);
-    expect(labels).toEqual(['📝 报单窗口', '📈 K线窗口', '📋 查询窗口', '📋 报单查询窗口', '📋 持仓查询窗口', '退出']);
-    expect(fnMenu.submenu!.some((i) => i.id === 'app-quit')).toBe(true);
+  it('交易子菜单：五档下单 / 无限下单', () => {
+    const trade = getAppMenuDef().find((d) => d.id === 'trade')!;
+    const labels = trade.submenu!.map((i) => i.label).filter(Boolean);
+    expect(labels).toEqual(['📝 五档下单', '♾️ 无限下单']);
   });
 
-  it('设置子菜单仅 ⚙ 设置', () => {
+  it('交易「无限下单」action 为 open-floating infinite', () => {
+    const trade = getAppMenuDef().find((d) => d.id === 'trade')!;
+    const infinite = trade.submenu!.find((i) => i.id === 'trade-infinite')!;
+    expect(infinite.action).toEqual({ type: 'open-floating', tab: 'infinite' });
+  });
+
+  it('查询子菜单：报单查询/持仓查询/资金查询', () => {
+    const query = getAppMenuDef().find((d) => d.id === 'query')!;
+    const labels = query.submenu!.map((i) => i.label).filter(Boolean);
+    expect(labels).toEqual(['📋 报单查询', '📋 持仓查询', '💰 资金查询']);
+  });
+
+  it('设置子菜单：设置/网络监控/退出，app-quit 在设置组', () => {
     const settings = getAppMenuDef().find((d) => d.id === 'settings')!;
-    expect(settings.submenu!.map((i) => i.label).filter(Boolean)).toEqual(['⚙ 设置']);
+    const labels = settings.submenu!.filter((i) => i.type !== 'separator').map((i) => i.label);
+    expect(labels).toEqual(['⚙ 设置', '🔌 网络监控', '退出']);
+    expect(settings.submenu!.some((i) => i.id === 'app-quit')).toBe(true);
   });
 
-  it('性能监控子菜单包含 FPS 监控 与 网络监控', () => {
-    const perf = getAppMenuDef().find((d) => d.id === 'performance')!;
-    const labels = perf.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['⚡FPS 监控', '🔌 网络监控']);
+  it('菜单不含 FPS 监控 / 性能监控组 / 旧「📋 查询窗口」', () => {
+    const all = JSON.stringify(getAppMenuDef());
+    expect(all).not.toContain('⚡FPS 监控');
+    expect(all).not.toContain('性能监控');
+    expect(all).not.toContain('📋 查询窗口');
   });
 });
 
@@ -71,7 +92,7 @@ describe('buildMenuFromDef', () => {
 
   it('分隔符渲染为 { type: separator }', () => {
     const def: MenuItemDef[] = [
-      { id: 'a', label: 'A', action: { type: 'toggle-perf' } },
+      { id: 'a', label: 'A', action: { type: 'open-floating', tab: 'order' } },
       { id: 's', type: 'separator' },
     ];
     const tpl = buildMenuFromDef(def, ctx) as unknown as TemplateItem[];

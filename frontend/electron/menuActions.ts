@@ -39,11 +39,6 @@ export function resolveAction(action: MenuAction, ctx: MenuContext): void {
         ctx.windowManager.openTabWindow('market', 'tab-market', '📊 期货');
       }
       return;
-    case 'toggle-perf':
-      if (ctx.mainWindow && !ctx.mainWindow.isDestroyed()) {
-        ctx.mainWindow.webContents.send(IPC_CHANNELS.MENU_TOGGLE_PERF);
-      }
-      return;
     case 'quit':
       app.quit();
       return;

@@ -41,14 +41,14 @@ export function AccountBar({ instrumentID }: AccountBarProps) {
   const fetchPositions = useQueryStore((s) => s.fetchPositions)
   const fetchAccount = useQueryStore((s) => s.fetchAccount)
 
-  // 打开即拉取 + 每 10s 串行自刷新：持仓 → 账户（串行 + 延迟节奏，对齐 QueryPanel，
+  // 打开即拉取 + 每 10s 串行自刷新：持仓 → 账户（串行 + 延迟节奏，对齐查询窗口，
   // 避免 CTP 查询限频 ~1 次/秒：两查询间隔 1200ms，周期约 11.2s → 平均 < 0.2 次/秒）
   useEffect(() => {
     let disposed = false
     let timer: ReturnType<typeof setTimeout> | undefined
     const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
     const load = async () => {
-      // 用户暂停查询时挂起本轮，不发起 CTP 查询（对齐 QueryPanel 的 isPaused 语义）
+      // 用户暂停查询时挂起本轮，不发起 CTP 查询（对齐查询窗口的 isPaused 语义）
       if (useQueryStore.getState().isPaused) {
         timer = setTimeout(load, 10_000)
         return

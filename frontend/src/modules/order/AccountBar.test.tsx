@@ -213,7 +213,7 @@ describe('AccountBar', () => {
       await vi.advanceTimersByTimeAsync(10_000)
     })
     expect(refreshPositionsMock).toHaveBeenCalledTimes(0)
-    // 恢复后：下一轮 10s 周期发起持仓拉取（对齐 QueryPanel 的 isPaused 语义）
+    // 恢复后：下一轮 10s 周期发起持仓拉取（对齐查询窗口的 isPaused 语义）
     useQueryStore.setState({ isPaused: false })
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10_000)

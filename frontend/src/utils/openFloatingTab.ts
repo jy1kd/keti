@@ -1,5 +1,5 @@
 import { useTabStore, generateTabId, type TabType } from '@/stores/tabs'
-import { defaultFloatingSize } from '@/stores/floatingWindows'
+import { defaultFloatingSize, FLOATING_CHROME_H, useFloatingWindowStore } from '@/stores/floatingWindows'
 import { useMarketStore } from '@/modules/market/store'
 import { detachTabAt } from './detachDrag'
 
@@ -9,6 +9,8 @@ interface OpenFloatingTabOptions {
   props?: Record<string, unknown>
   /** 浮动窗初始尺寸；缺省用 defaultFloatingSize() */
   size?: { w: number; h: number }
+  /** 浮动窗初始位置（viewport 坐标）；缺省按窗口居中 */
+  position?: { x: number; y: number }
 }
 
 /** 报单浮动窗初始尺寸（对齐原 OrderPopup 弹窗：宽 540 固定、高按内容约 620） */
@@ -24,15 +26,15 @@ export const ORDER_FLOATING_SIZE = { w: 620, h: 540 }
  * 打开前的活跃标签，打开浮动窗不再干扰主窗口内容。
  * 返回 false 表示标签页数量达上限或脱离失败。
  */
-export function openFloatingTab({ type, title, props = {}, size }: OpenFloatingTabOptions): boolean {
+export function openFloatingTab({ type, title, props = {}, size, position }: OpenFloatingTabOptions): boolean {
   const priorActive = useTabStore.getState().activeTabId
   const opened = useTabStore.getState().openTab({ type, title, props })
   if (!opened) return false
 
   const tabId = generateTabId(type, props)
   const { w, h } = size ?? defaultFloatingSize()
-  const x = Math.max(0, Math.round((window.innerWidth - w) / 2))
-  const y = Math.max(0, Math.round((window.innerHeight - h) / 2 - 20))
+  const x = position ? position.x : Math.max(0, Math.round((window.innerWidth - w) / 2))
+  const y = position ? position.y : Math.max(0, Math.round((window.innerHeight - h) / 2 - 20))
   const ok = detachTabAt(tabId, { x, y }, size)
   if (ok && priorActive) useTabStore.getState().setActiveTab(priorActive)
   return ok
@@ -43,7 +45,7 @@ export function openOrderFloating(): boolean {
   const inst = useMarketStore.getState().selectedInstrument
   return openFloatingTab({
     type: 'order',
-    title: inst ? `📝 报单-${inst}` : '📝 报单',
+    title: inst ? `📝 五档下单-${inst}` : '📝 五档下单',
     props: inst ? { instrumentID: inst } : {},
     size: ORDER_FLOATING_SIZE,
   })
@@ -79,11 +81,6 @@ export function openCollectionFloating(collectionId: string, name: string): bool
   })
 }
 
-/** 打开查询浮动窗 */
-export function openQueryFloating(): boolean {
-  return openFloatingTab({ type: 'query', title: '📋 查询' })
-}
-
 /** 打开设置浮动窗 */
 export function openSettingsFloating(): boolean {
   return openFloatingTab({ type: 'settings', title: '⚙ 设置' })
@@ -112,4 +109,56 @@ export function openOrdersQueryFloating(): boolean {
 /** 打开持仓查询浮动窗 */
 export function openPositionsQueryFloating(): boolean {
   return openFloatingTab({ type: 'query-positions', title: '📋 持仓查询' })
+}
+
+/** 资金窗内容纵向 padding：`.account-query { padding: 8px }` 上下各 8px */
+const ACCOUNT_QUERY_PADDING_V = 16
+
+/**
+ * 计算资金窗目标高度：账户卡片网格高度 + 内容 padding + 标题条。
+ * 目标高度小于当前高度才返回（收缩），否则返回 null（避免裁卡/不覆盖用户手动拉高）。
+ */
+export function computeAccountWindowHeight(gridHeight: number, currentH: number): number | null {
+  const fitted = Math.round(gridHeight + ACCOUNT_QUERY_PADDING_V + FLOATING_CHROME_H)
+  return fitted < currentH ? fitted : null
+}
+
+/**
+ * 单次尝试：资金窗已渲染出账户卡片网格时，把窗口高度收缩到刚好容纳（越矮越好），
+ * 底部保持锚定（对齐行情表格底部）。返回是否完成（无需重试）。
+ */
+export function fitAccountWindowToContent(): boolean {
+  const win = useFloatingWindowStore.getState().windows['tab-query-account']
+  if (!win) return false
+  const grid = document.querySelector<HTMLElement>('#floating-overlay .account-query .account-grid')
+  if (!grid || grid.offsetHeight <= 0) return false
+  const newH = computeAccountWindowHeight(grid.offsetHeight, win.h)
+  if (newH == null) return true // 已够矮，不收缩
+  const bottom = win.y + win.h
+  useFloatingWindowStore.getState().resize('tab-query-account', { ...win, y: bottom - newH, h: newH })
+  return true
+}
+
+/** 打开资金查询浮动窗：对齐行情表格（同宽），账户卡片渲染后收缩到刚好容纳 */
+export function openAccountQueryFloating(): boolean {
+  const rect = document.querySelector<HTMLElement>('.market-table-container')?.getBoundingClientRect()
+  if (rect && rect.width > 0 && rect.height > 0) {
+    const opened = openFloatingTab({
+      type: 'query-account',
+      title: '💰 资金查询',
+      size: { w: Math.round(rect.width), h: Math.round(rect.height) },
+      position: { x: Math.round(rect.left), y: Math.round(rect.top) },
+    })
+    // 账户数据异步加载，卡片渲染后收缩窗口（越矮越好）；最多重试约 1s
+    if (opened) {
+      let attempts = 0
+      const tryFit = () => {
+        if (fitAccountWindowToContent()) return
+        if (++attempts < 20) setTimeout(tryFit, 50)
+      }
+      tryFit()
+    }
+    return opened
+  }
+  return openFloatingTab({ type: 'query-account', title: '💰 资金查询' })
 }

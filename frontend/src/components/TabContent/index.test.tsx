@@ -10,9 +10,9 @@ vi.mock('@/modules/market/MarketPanel', () => ({
   MarketPanel: () => <div data-testid="market-panel">行情面板 Mock</div>,
 }))
 
-// Mock QueryPanel 组件（避免依赖复杂子组件）
-vi.mock('@/modules/query/QueryPanel', () => ({
-  QueryPanel: () => <div data-testid="query-panel">查询面板 Mock</div>,
+// Mock AccountQuery 组件（避免依赖复杂子组件）
+vi.mock('@/modules/query/AccountQuery', () => ({
+  AccountQuery: () => <div data-testid="account-query">资金查询 Mock</div>,
 }))
 
 vi.mock('@/modules/query/OrdersQuery', () => ({
@@ -71,7 +71,7 @@ function makeTab(overrides: Partial<Tab> & { type: TabType }): Tab {
 }
 
 const MARKET_TAB = makeTab({ type: 'market', title: '📊 行情', closable: false })
-const ORDER_TAB = makeTab({ type: 'order', title: '📝 报单', props: { instrumentID: 'IF2608' } })
+const ORDER_TAB = makeTab({ type: 'order', title: '📝 五档下单', props: { instrumentID: 'IF2608' } })
 const SETTINGS_TAB = makeTab({ type: 'settings', title: '⚙ 设置' })
 
 /** 获取所有面板（包括隐藏的） */
@@ -176,7 +176,7 @@ describe('TabContent', () => {
       ['settings', '⚙ 设置'],
       ['options', '筛选'],
       ['ipc-monitor', '🔌 IPC 监控'],
-      ['query', '查询面板 Mock'],
+      ['query-account', '资金查询 Mock'],
       ['query-orders', '报单查询'],
       ['query-positions', '持仓查询'],
     ])('应为 %s 类型渲染对应内容', (type, expectedText) => {

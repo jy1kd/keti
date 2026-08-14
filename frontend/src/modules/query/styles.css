@@ -91,14 +91,9 @@
   flex-direction: column;
 }
 
-/* ── Flow components (OrderFlow, TradeFlow, etc.) ──── */
-
 .order-flow,
-.trade-flow,
 .position-table-wrap,
-.account-query,
-.stop-order-list,
-.quote-query {
+.account-query {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -230,7 +225,7 @@
 
 .account-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 12px;
   padding: 12px;
 }

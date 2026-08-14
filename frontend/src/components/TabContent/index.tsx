@@ -4,7 +4,7 @@ import { useTabStore, type Tab } from '@/stores/tabs'
 import { useFloatingWindowStore, FLOATING_CHROME_H } from '@/stores/floatingWindows'
 import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
 import { MarketPanel } from '@/modules/market/MarketPanel'
-import { QueryPanel } from '@/modules/query/QueryPanel'
+import { AccountQuery } from '@/modules/query/AccountQuery'
 import { OrdersQuery } from '@/modules/query/OrdersQuery'
 import { PositionsQuery } from '@/modules/query/PositionsQuery'
 import { OptionsPanel } from '@/modules/options/OptionsPanel'
@@ -39,7 +39,6 @@ function getCollectionId(props: Record<string, unknown>): string {
  * market 类型已集成 MarketPanel；
  * order 类型已集成 OrderPage；
  * kline 类型已集成 KLinePage；
- * query 类型已集成 QueryPanel（全局账户查询）；
  * 其他类型使用占位文本，后续 PR 会逐步替换为实际页面组件。
  */
 function renderTabContent(tab: Tab, floating: boolean): React.ReactNode {
@@ -68,12 +67,12 @@ function renderTabContent(tab: Tab, floating: boolean): React.ReactNode {
       return <CollectionsPage />
     case 'collection':
       return <CollectionPage collectionId={getCollectionId(tab.props)} tabId={tab.id} />
-    case 'query':
-      return <QueryPanel />
     case 'query-orders':
       return <OrdersQuery />
     case 'query-positions':
       return <PositionsQuery />
+    case 'query-account':
+      return <AccountQuery />
     case 'settings':
       return <SettingsPage />
     case 'options':

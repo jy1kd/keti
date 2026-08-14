@@ -69,7 +69,7 @@ describe('OrderPage', () => {
 
   it('should render title bar', () => {
     render(<OrderPage />);
-    expect(screen.getByText('📝 报单')).toBeDefined();
+    expect(screen.getByText('📝 五档下单')).toBeDefined();
   });
 
   it('should display instrument ID in title bar', () => {
@@ -160,7 +160,7 @@ describe('OrderPage', () => {
 
   it('无合约停靠模式渲染完整空界面（参数区 + 盘口 -- + 请选择合约，操作按钮禁用）', () => {
     render(<OrderPage />)
-    expect(screen.getByText('📝 报单')).toBeDefined()
+    expect(screen.getByText('📝 五档下单')).toBeDefined()
     expect(screen.getByTestId('tp-volume')).toBeDefined()
     expect(screen.getByText('--')).toBeDefined()
     expect(screen.getByPlaceholderText('请选择合约')).toBeDefined()

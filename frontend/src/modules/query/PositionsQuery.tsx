@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQueryStore } from './store'
 import { Position } from './Position'
+import './styles.css'
 
 export function PositionsQuery() {
   const positions = useQueryStore((s) => s.positions)

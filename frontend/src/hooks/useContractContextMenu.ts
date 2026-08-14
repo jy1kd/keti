@@ -35,25 +35,17 @@ export function useContractContextMenu() {
   const openOrderPopup = useCallback((instrumentID: string) => {
     openFloatingTab({
       type: 'order',
-      title: `📝 报单-${instrumentID}`,
+      title: `📝 五档下单-${instrumentID}`,
       props: { instrumentID },
       size: ORDER_FLOATING_SIZE,
     })
-  }, [])
-
-  // 打开查询浮动窗口（统一浮动窗模式；传入合约并选中，使查询面板合约/K线子页显示该合约）
-  const openQueryPopup = useCallback((instrumentID: string) => {
-    if (instrumentID) {
-      useMarketStore.getState().setSelectedInstrument(instrumentID)
-    }
-    openFloatingTab({ type: 'query', title: '📋 查询' })
   }, [])
 
   // 打开单个报单标签页
   const openOrderTab = useCallback((instrumentID: string) => {
     openTab({
       type: 'order',
-      title: `📝 报单-${instrumentID}`,
+      title: `📝 五档下单-${instrumentID}`,
       props: { instrumentID },
     })
   }, [openTab])
@@ -72,7 +64,7 @@ export function useContractContextMenu() {
     instrumentIDs.forEach((id) => {
       openTab({
         type: 'order',
-        title: `📝 报单-${id}`,
+        title: `📝 五档下单-${id}`,
         props: { instrumentID: id },
       })
     })
@@ -121,7 +113,6 @@ export function useContractContextMenu() {
     contextMenu,
     multiSelectMenu,
     openOrderPopup,
-    openQueryPopup,
     openOrderTab,
     openKlineTab,
     openOrderTabs,

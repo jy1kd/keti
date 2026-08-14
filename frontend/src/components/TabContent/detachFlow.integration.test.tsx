@@ -10,9 +10,6 @@ import { detachTabAt } from '@/utils/detachDrag'
 vi.mock('@/modules/market/MarketPanel', () => ({
   MarketPanel: () => <div data-testid="market-panel">行情面板 Mock</div>,
 }))
-vi.mock('@/modules/query/QueryPanel', () => ({
-  QueryPanel: () => <div data-testid="query-panel">查询面板 Mock</div>,
-}))
 vi.mock('@/pages/OrderPage', () => ({
   OrderPage: () => <div data-testid="order-page">报单页面 Mock</div>,
 }))

@@ -378,20 +378,6 @@ export async function refreshOrders(): Promise<OrdersResponse> {
 
 // ── PR-16: 查询面板 API ──────────────────────────────────────────────
 
-interface TradesResponse {
-  trades: Array<{
-    tradeID: string
-    orderRef: string
-    instrumentID: string
-    direction: string
-    offsetFlag: string
-    price: number
-    volume: number
-    tradeTime: string
-  }>
-  count: number
-}
-
 interface AccountResponse {
   accountID: string
   balance: number
@@ -405,23 +391,6 @@ interface AccountResponse {
   withdraw: number
   preBalance: number
   tradingDay: string
-}
-
-interface StopOrdersResponse {
-  stopOrders: Array<{
-    stopOrderID: string
-    instrumentID: string
-    direction: string
-    offsetFlag: string
-    limitPrice: number
-    volume: number
-    stopPrice: number
-    status: string
-    orderRef?: string
-    createdAt: string
-    triggeredAt?: string
-  }>
-  count: number
 }
 
 interface ContractsResponse {
@@ -439,18 +408,6 @@ interface ContractsResponse {
   count: number
 }
 
-/** 查询成交流水（缓存） */
-export async function getTrades(): Promise<TradesResponse> {
-  const { data } = await api.get<TradesResponse>('/api/query/trades')
-  return data
-}
-
-/** 刷新成交（触发 CTP 查询） */
-export async function refreshTrades(): Promise<TradesResponse> {
-  const { data } = await api.post<TradesResponse>('/api/query/trades/refresh')
-  return data
-}
-
 /** 查询账户资金（缓存） */
 export async function getAccount(): Promise<AccountResponse> {
   const { data } = await api.get<AccountResponse>('/api/query/account')
@@ -460,12 +417,6 @@ export async function getAccount(): Promise<AccountResponse> {
 /** 刷新账户资金（触发 CTP 查询） */
 export async function refreshAccount(): Promise<AccountResponse> {
   const { data } = await api.post<AccountResponse>('/api/query/account/refresh')
-  return data
-}
-
-/** 查询止损单列表 */
-export async function getStopOrders(): Promise<StopOrdersResponse> {
-  const { data } = await api.get<StopOrdersResponse>('/api/order/stop/list')
   return data
 }
 
@@ -481,12 +432,6 @@ export async function submitStopOrder(params: {
   triggerPriceType?: string  // '1'=市价, '2'=限价（默认限价）
 }): Promise<{ success: boolean; stopOrderID?: string; message?: string }> {
   const { data } = await api.post('/api/order/stop', params)
-  return data
-}
-
-/** 取消止损单 */
-export async function cancelStopOrder(stopOrderID: string): Promise<CancelResponse> {
-  const { data } = await api.post<CancelResponse>('/api/order/stop/cancel', { stopOrderID })
   return data
 }
 

@@ -94,10 +94,10 @@ describe('useFloatingWindowStore', () => {
 
   it('bringToFront 后续调用 z 单调递增', () => {
     const z1 = useFloatingWindowStore.getState().bringToFront('order')
-    const z2 = useFloatingWindowStore.getState().bringToFront('query')
+    const z2 = useFloatingWindowStore.getState().bringToFront('settings')
     expect(z2).toBeGreaterThan(z1)
     expect(useFloatingWindowStore.getState().popupZ['order']).toBe(z1)
-    expect(useFloatingWindowStore.getState().popupZ['query']).toBe(z2)
+    expect(useFloatingWindowStore.getState().popupZ['settings']).toBe(z2)
   })
 
   it('move/resize/focus 不存在的标签：no-op 不抛错且 windows 不变', () => {

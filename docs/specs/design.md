@@ -155,15 +155,12 @@ src/
 │   │   ├── OptionPanel.tsx    # 期权面板
 │   │   ├── TQuoteTable.tsx    # T型报价表格（含波动率）
 │   │   └── store.ts
-│   └── query/            # 查询模块
-│       ├── QueryPanel.tsx
+│   └── query/            # 查询模块（独立查询窗口）
+│       ├── OrdersQuery.tsx    # 报单查询窗口
 │       ├── OrderFlow.tsx      # 报单流水
-│       ├── TradeFlow.tsx      # 成交流水
+│       ├── PositionsQuery.tsx # 持仓查询窗口
 │       ├── Position.tsx       # 持仓查询（支持点击平仓）
-│       ├── AccountQuery.tsx   # 账户资金查询
-│       ├── QuoteQuery.tsx     # 报价查询（五档深度）
-│       ├── ContractQuery.tsx  # 合约查询
-│       ├── StopOrderList.tsx  # 止损单列表
+│       ├── AccountQuery.tsx   # 资金查询窗口（账户资金）
 │       └── store.ts
 ├── services/             # API服务层
 │   ├── api.ts            # REST API封装
@@ -626,9 +623,11 @@ function handleNewData(newRecord) {
 ```
 
 **代码位置**：
-- `src/modules/query/QueryPanel.tsx` - 查询面板（含暂停按钮）
+- `src/modules/query/OrdersQuery.tsx` - 报单查询窗口（含暂停按钮）
+- `src/modules/query/PositionsQuery.tsx` - 持仓查询窗口
+- `src/modules/query/AccountQuery.tsx` - 资金查询窗口
 - `src/modules/query/OrderFlow.tsx` - 报单流水（增量更新）
-- `src/modules/query/TradeFlow.tsx` - 成交流水（增量更新）
+- `src/modules/query/Position.tsx` - 持仓列表（支持点击平仓）
 - `src/modules/query/store.ts` - 查询数据状态管理
 
 #### 数据排序
@@ -1495,7 +1494,7 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 │  (vtable高性能渲染，支持1000+合约)           │  [买入 B] [卖出 S] [撤单 C]   │
 │                                             │                               │
 ├─────────────────────────────────────────────┴───────────────────────────────┤
-│ 查询面板（底部）: [报单流水] [成交流水] [持仓] [资金] [止损单] [报价] [合约]   │
+│ 查询窗口: 报单查询 / 持仓查询 / 资金查询（独立浮动窗）                      │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -1506,7 +1505,7 @@ SIMNOW_TD_FRONT=tcp://180.168.146.187:10130
 | 顶部状态栏 | `ConnectionStatus` | 显示行情/交易连接状态、账户信息、余额 |
 | 行情面板 | `MarketPanel` + `MarketTable` | vtable渲染，支持单击点价、双击填充 |
 | 报单面板 | `OrderPanel` + `OrderForm` | 限价/市价切换，开平切换，快捷键 |
-| 查询面板 | `QueryPanel` | 多Tab切换：报单流水、成交流水、持仓、资金、止损单、报价查询、合约查询 |
+| 查询窗口 | `OrdersQuery`/`PositionsQuery`/`AccountQuery` | 独立浮动窗口：报单查询、持仓查询、资金查询 |
 | 快捷键配置 | `QuickKeys` | 弹窗式配置面板，支持自定义快捷键映射 |
 | 性能监控 | `PerfMonitor` | 默认隐藏，Ctrl+P切换显示FPS和渲染耗时 |
 

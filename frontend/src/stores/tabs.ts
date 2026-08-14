@@ -13,10 +13,10 @@ export type TabType =
   | 'tquote'
   | 'ipc-monitor'
   | 'settings'
-  | 'query' // 查询（全局账户查询）
   | 'infinite'
   | 'query-orders' // 报单查询（独立窗口）
   | 'query-positions' // 持仓查询（独立窗口）
+  | 'query-account' // 资金查询（独立窗口）
 
 /** 所有标签页类型 */
 export const TAB_TYPES: TabType[] = [
@@ -29,10 +29,10 @@ export const TAB_TYPES: TabType[] = [
   'tquote',
   'ipc-monitor',
   'settings',
-  'query',
   'infinite',
   'query-orders',
   'query-positions',
+  'query-account',
 ]
 
 /** 固定标签页类型（始终存在，不可关闭） */

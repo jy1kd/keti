@@ -5,7 +5,7 @@ import { useTabStore } from '@/stores/tabs'
 import { useMarketStore } from '@/modules/market/store'
 import { openFloatingTab } from '@/utils/openFloatingTab'
 
-// Mock 统一浮动窗入口：openOrderPopup/openQueryPopup 现为打开浮动窗口
+// Mock 统一浮动窗入口：openOrderPopup 现为打开浮动窗口
 vi.mock('@/utils/openFloatingTab', () => ({
   openFloatingTab: vi.fn(),
   ORDER_FLOATING_SIZE: { w: 620, h: 540 },
@@ -38,19 +38,10 @@ describe('useContractContextMenu', () => {
 
     expect(mockOpenFloatingTab).toHaveBeenCalledWith({
       type: 'order',
-      title: '📝 报单-IF2608',
+      title: '📝 五档下单-IF2608',
       props: { instrumentID: 'IF2608' },
       size: { w: 620, h: 540 },
     })
-  })
-
-  it('openQueryPopup 打开查询浮动窗口（统一浮动窗模式）', () => {
-    const { result } = renderHook(() => useContractContextMenu())
-    act(() => {
-      result.current.openQueryPopup('IF2608')
-    })
-
-    expect(mockOpenFloatingTab).toHaveBeenCalledWith({ type: 'query', title: '📋 查询' })
   })
 
   it('openKlineTab 打开K线浮动窗口', () => {

@@ -26,7 +26,7 @@ export function MarketPanel() {
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const contracts = useContractsStore((s) => s.contracts)
   const collections = useCollectionsStore((s) => s.collections)
-  const { contextMenu, multiSelectMenu, openOrderPopup, openQueryPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
+  const { contextMenu, multiSelectMenu, openOrderPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   // 收藏选夹面板（⭐ / 右键 / 工具栏 / 搜索弹窗统一入口）
   const [picker, setPicker] = useState<{ instrumentIDs: string[] } | null>(null)
@@ -90,7 +90,6 @@ export function MarketPanel() {
     onOpenFavoritePicker: (instrumentIDs) => setPicker({ instrumentIDs }),
     onRemoveFromAll: (instrumentIDs) => useCollectionsStore.getState().removeFromAllCollections(instrumentIDs),
     openOrderPopup,
-    openQueryPopup,
     openKlineTab,
     openOrderTabs,
     openKlineTabs,

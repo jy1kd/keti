@@ -22,7 +22,7 @@ const DEFAULT_CONFIGS = {
         minHeight: 800,
     },
     order: {
-        title: '报单',
+        title: '五档下单',
         width: 500,
         height: 600,
         minWidth: 400,

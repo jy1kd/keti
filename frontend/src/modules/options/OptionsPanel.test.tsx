@@ -128,7 +128,7 @@ describe('OptionsPanel', () => {
     expect(useMarketStore.getState().selectedContracts.size).toBe(1)
   })
 
-  it('右键列表行（期权行）：打开单选上下文菜单（打开报单/K线/查询）', async () => {
+  it('右键列表行（期权行）：打开单选上下文菜单（打开报单/K线）', async () => {
     render(<OptionsPanel />)
     const { ListTable } = await import('@visactor/vtable')
     const instance = (ListTable as any).mock.results[0].value
@@ -142,7 +142,6 @@ describe('OptionsPanel', () => {
     })
     expect(screen.getByText('打开报单')).toBeInTheDocument()
     expect(screen.getByText('打开K线')).toBeInTheDocument()
-    expect(screen.getByText('查询')).toBeInTheDocument()
   })
 
   it('双击标底行 → openTQuoteFloating(标底ID)（T型报价独立悬浮入口）', async () => {
@@ -185,11 +184,10 @@ describe('OptionsPanel', () => {
     act(() => {
       contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
     })
-    // 仅「打开T型报价」一项（不显示 打开报单/K线/查询）
+    // 仅「打开T型报价」一项（不显示 打开报单/K线）
     expect(screen.getByText('打开T型报价')).toBeInTheDocument()
     expect(screen.queryByText('打开报单')).toBeNull()
     expect(screen.queryByText('打开K线')).toBeNull()
-    expect(screen.queryByText('查询')).toBeNull()
   })
 
   it('右键标底行菜单点击「打开T型报价」→ openTQuoteFloating(标底ID)', async () => {
@@ -397,7 +395,7 @@ describe('OptionsPanel', () => {
     const contextmenuHandler = instance.on.mock.calls.find(
       (call: any[]) => call[0] === 'contextmenu_cell'
     )?.[1]
-    // 先右键期权行（row 2 = FG609-C-1300）→ 打开单选菜单（打开报单/K线/查询）
+    // 先右键期权行（row 2 = FG609-C-1300）→ 打开单选菜单（打开报单/K线）
     act(() => {
       contextmenuHandler({ row: 2, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
     })

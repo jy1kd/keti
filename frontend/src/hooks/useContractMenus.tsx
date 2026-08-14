@@ -32,7 +32,6 @@ interface UseContractMenusArgs {
   /** folder 模式：批量从本夹移除 */
   onRemoveFromFolderBatch?: (instrumentIDs: string[]) => void
   openOrderPopup: (instrumentID: string) => void
-  openQueryPopup: (instrumentID: string) => void
   openKlineTab: (instrumentID: string) => void
   openOrderTabs: (instrumentIDs: string[]) => void
   openKlineTabs: (instrumentIDs: string[]) => void
@@ -56,7 +55,6 @@ export function useContractMenus(args: UseContractMenusArgs) {
     onToggleInFolder,
     onRemoveFromFolderBatch,
     openOrderPopup,
-    openQueryPopup,
     openKlineTab,
     openOrderTabs,
     openKlineTabs,
@@ -90,7 +88,6 @@ export function useContractMenus(args: UseContractMenusArgs) {
       items={[
         { label: '打开报单', icon: '📝', onClick: () => openOrderPopup(contextMenu.instrumentID) },
         { label: '打开K线', icon: '📈', onClick: () => openKlineTab(contextMenu.instrumentID) },
-        { label: '查询', icon: '📋', onClick: () => openQueryPopup(contextMenu.instrumentID) },
         favoriteMode === 'folder'
           ? {
               label: favoritedIds.has(contextMenu.instrumentID) ? '从本夹移除' : '收藏到本夹',

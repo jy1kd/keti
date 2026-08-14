@@ -32,9 +32,10 @@ describe('resolveAction', () => {
   });
 
   it('open-floating: show+focus 主窗并发送 menu:open-floating', () => {
-    resolveAction({ type: 'open-floating', tab: 'query' }, ctx);
+    resolveAction({ type: 'open-floating', tab: 'query-account' }, ctx);
     expect(ctx.mainWindow.show).toHaveBeenCalled();
-    expect(ctx.mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query');
+    expect(ctx.mainWindow.focus).toHaveBeenCalled();
+    expect(ctx.mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query-account');
   });
 
   it('open-floating: 透传 query-orders / query-positions', () => {
@@ -48,13 +49,6 @@ describe('resolveAction', () => {
   it('open-market-window: 调 windowManager.openTabWindow', () => {
     resolveAction({ type: 'open-market-window' }, ctx);
     expect(ctx.windowManager.openTabWindow).toHaveBeenCalledWith('market', 'tab-market', '📊 期货');
-  });
-
-  it('toggle-perf: 发送 menu:toggle-perf 但不 show/focus', () => {
-    resolveAction({ type: 'toggle-perf' }, ctx);
-    expect(ctx.mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_TOGGLE_PERF);
-    expect(ctx.mainWindow.show).not.toHaveBeenCalled();
-    expect(ctx.mainWindow.focus).not.toHaveBeenCalled();
   });
 
   it('quit: 调用 app.quit', () => {
