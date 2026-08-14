@@ -70,6 +70,14 @@ describe('CollectionsPage', () => {
     expect(useCollectionsStore.getState().collections.find((c) => c.id === 'b')).toBeDefined()
   })
 
+  it('删除收藏夹后关闭已打开的该夹标签页（不残留「收藏夹不存在」僵尸页）', () => {
+    useTabStore.getState().openTab({ type: 'collection', title: '📁 农产品', props: { collectionId: 'a' } })
+    render(<CollectionsPage />)
+    fireEvent.click(screen.getAllByText('删除')[0])
+    fireEvent.click(screen.getByTestId('confirm-delete'))
+    expect(useTabStore.getState().tabs.filter((t) => t.type === 'collection' && t.props.collectionId === 'a')).toHaveLength(0)
+  })
+
   it('空态', () => {
     useCollectionsStore.setState({ collections: [] })
     render(<CollectionsPage />)

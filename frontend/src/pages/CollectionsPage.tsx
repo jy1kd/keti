@@ -45,6 +45,10 @@ export function CollectionsPage() {
   const confirmDelete = () => {
     if (!deletingId) return
     deleteCollection(deletingId)
+    // 关闭已打开的该夹标签页，避免残留「收藏夹不存在」僵尸页
+    useTabStore.getState().tabs
+      .filter((t) => t.type === 'collection' && t.props.collectionId === deletingId)
+      .forEach((t) => useTabStore.getState().closeTab(t.id))
     setDeletingId(null)
     toast.success('已删除收藏夹')
   }

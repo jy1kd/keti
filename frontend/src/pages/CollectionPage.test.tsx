@@ -5,10 +5,11 @@ import { useCollectionsStore } from '@/stores/collections'
 import { useContractsStore } from '@/stores/contracts'
 import { useMarketStore } from '@/modules/market/store'
 import { useTabStore } from '@/stores/tabs'
+import { toast } from '@/components/Toast'
 
 vi.mock('@/components/Toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock('@/modules/market/QuoteTable', () => ({
-  QuoteTable: ({ contracts, onFavoriteChange, onContextMenu }: any) => (
+  QuoteTable: ({ contracts, onFavoriteChange, onContextMenu, onMultiSelectContextMenu }: any) => (
     <div data-testid="quote-table">
       {contracts.map((c: any) => (
         <div key={c.instrumentID} data-testid={`row-${c.instrumentID}`}>
@@ -17,6 +18,14 @@ vi.mock('@/modules/market/QuoteTable', () => ({
           <button data-testid={`ctx-${c.instrumentID}`} onClick={() => onContextMenu?.(c.instrumentID, 0, { preventDefault: vi.fn(), clientX: 100, clientY: 200 })}>右键</button>
         </div>
       ))}
+      <button
+        data-testid="multi-ctx"
+        onClick={() =>
+          onMultiSelectContextMenu?.(contracts.map((c: any) => c.instrumentID), { preventDefault: vi.fn(), clientX: 100, clientY: 200 })
+        }
+      >
+        多选右键
+      </button>
     </div>
   ),
 }))
@@ -65,6 +74,15 @@ describe('CollectionPage', () => {
     render(<CollectionPage collectionId="a" tabId="tab-collection-a" />)
     fireEvent.click(screen.getByTestId('ctx-IF2608'))
     expect(screen.getByText('从本夹移除')).toBeDefined() // IF2608 在本夹 → folder 模式单选右键为「从本夹移除」
+  })
+
+  it('批量从本夹移除：仅弹一条 toast（共享 toast 在 useContractMenus，夹页不再重复弹）', () => {
+    render(<CollectionPage collectionId="a" tabId="tab-collection-a" />)
+    fireEvent.click(screen.getByTestId('multi-ctx'))
+    fireEvent.click(screen.getByText(/批量从本夹移除 \(2个\)/))
+    expect(useCollectionsStore.getState().collections.find((c) => c.id === 'a')?.instrumentIDs).toEqual([])
+    expect(toast.success).toHaveBeenCalledTimes(1)
+    expect(toast.success).toHaveBeenCalledWith('已从本夹移除 2 个合约')
   })
 
   it('空夹态', () => {

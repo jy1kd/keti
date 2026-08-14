@@ -92,6 +92,15 @@ describe('useCollectionsStore', () => {
     expect(useCollectionsStore.getState().loaded).toBe(true)
   })
 
+  it('loadCollections：API 拉取失败时保留 userPrefs 元数据并 loaded（防止空数组持久化覆盖真实数据）', async () => {
+    const { getInstrumentsByIds } = await import('@/services/api')
+    useUserPrefsStore.getState().setCollections([{ id: 'a', name: 'A', instrumentIDs: ['au2406'] }])
+    vi.mocked(getInstrumentsByIds).mockRejectedValue(new Error('network down'))
+    await useCollectionsStore.getState().loadCollections()
+    expect(useCollectionsStore.getState().collections).toEqual([{ id: 'a', name: 'A', instrumentIDs: ['au2406'] }])
+    expect(useCollectionsStore.getState().loaded).toBe(true)
+  })
+
   it('纯派生函数', () => {
     const cols = [
       { id: 'a', name: 'A', instrumentIDs: ['au2406', 'rb2406'] },

@@ -76,8 +76,9 @@ export const useCollectionsStore = create<CollectionsStore>((set, get) => ({
       if (changed) persist(next)
       set({ collections: next, loaded: true })
     } catch (err) {
+      // 拉取失败时保留 userPrefs 中的元数据，避免后续任一 mutation 以空数组持久化覆盖真实数据
       console.error('[collections] Failed to load collection contracts:', err)
-      set({ loaded: true })
+      set({ collections, loaded: true })
     }
   },
 

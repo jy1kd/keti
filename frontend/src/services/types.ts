@@ -369,7 +369,6 @@ export interface QuickTradeConfig {
 }
 
 export interface UserPreferences {
-  selectedContracts: string[]
   hotKeys: HotKeyConfig
   quickTradeConfig?: QuickTradeConfig
 }

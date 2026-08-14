@@ -78,8 +78,8 @@ export function CollectionPage({ collectionId }: { collectionId: string; tabId: 
     favoriteMode: 'folder',
     onToggleInFolder: handleToggleFavorite,
     onRemoveFromFolderBatch: (ids) => {
+      // 批量移除 toast 由 useContractMenus 内部统一弹出（避免此处再弹一次形成双 toast）
       for (const id of ids) removeFromCollection(id, collectionId)
-      toast.success(`已从本夹移除 ${ids.length} 个合约`)
     },
     openOrderPopup,
     openQueryPopup,
