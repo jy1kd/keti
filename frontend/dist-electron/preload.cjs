@@ -31,12 +31,6 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
         electron_1.ipcRenderer.on('menu:open-floating', handler);
         return () => electron_1.ipcRenderer.removeListener('menu:open-floating', handler);
     },
-    // Menu (main → renderer): 切换 FPS 监控
-    onTogglePerf: (callback) => {
-        const handler = () => callback();
-        electron_1.ipcRenderer.on('menu:toggle-perf', handler);
-        return () => electron_1.ipcRenderer.removeListener('menu:toggle-perf', handler);
-    },
     // Menu (main → renderer): 行情主页内切换视图（期货/自选/期权）
     onMarketView: (callback) => {
         const handler = (_, view) => callback(view);

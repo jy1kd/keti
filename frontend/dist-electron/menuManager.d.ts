@@ -2,7 +2,7 @@
  * Menu Manager
  *
  * Builds the application menu bar from the shared menu template (menuTemplate.ts):
- * 行情 / 功能 / 设置 / 性能监控 + default View.
+ * 行情 / 交易 / 查询 / 设置 + default View.
  * Click behavior lives in menuActions.ts.
  */
 import type { BrowserWindow } from 'electron';

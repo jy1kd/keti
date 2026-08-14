@@ -30,7 +30,6 @@ exports.IPC_CHANNELS = {
     // Navigation (main → renderer)
     NAVIGATE_TAB: 'navigate:tab',
     MENU_OPEN_FLOATING: 'menu:open-floating',
-    MENU_TOGGLE_PERF: 'menu:toggle-perf',
     MENU_MARKET_VIEW: 'menu:market-view',
     // Data exchange (renderer → main)
     GET_SELECTED_INSTRUMENT: 'data:get-selected-instrument',

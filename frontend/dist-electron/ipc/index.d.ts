@@ -21,7 +21,6 @@ export declare const IPC_CHANNELS: {
     readonly BACKEND_STATUS: "backend:status";
     readonly NAVIGATE_TAB: "navigate:tab";
     readonly MENU_OPEN_FLOATING: "menu:open-floating";
-    readonly MENU_TOGGLE_PERF: "menu:toggle-perf";
     readonly MENU_MARKET_VIEW: "menu:market-view";
     readonly GET_SELECTED_INSTRUMENT: "data:get-selected-instrument";
     readonly SELECTED_INSTRUMENT_RESPONSE: "data:selected-instrument-response";
