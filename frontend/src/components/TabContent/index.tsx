@@ -8,7 +8,8 @@ import { OrdersQuery } from '@/modules/query/OrdersQuery'
 import { PositionsQuery } from '@/modules/query/PositionsQuery'
 import { OptionsPanel } from '@/modules/options/OptionsPanel'
 import { TQuoteView } from '@/modules/options/TQuoteView'
-import { FavoritesPage } from '@/pages/FavoritesPage'
+import { CollectionsPage } from '@/pages/CollectionsPage'
+import { CollectionPage } from '@/pages/CollectionPage'
 import { OrderPage } from '@/pages/OrderPage'
 import { KLinePage } from '@/pages/KLinePage'
 import { SettingsPage } from '@/pages/SettingsPage'
@@ -22,6 +23,13 @@ import './styles.css'
  */
 function getInstrumentID(props: Record<string, unknown>): string | undefined {
   return typeof props.instrumentID === 'string' ? props.instrumentID : undefined
+}
+
+/**
+ * 安全地从 tab.props 中提取 collectionId 字符串（收藏夹标签页用）。
+ */
+function getCollectionId(props: Record<string, unknown>): string {
+  return typeof props.collectionId === 'string' ? props.collectionId : ''
 }
 
 /**
@@ -55,8 +63,10 @@ function renderTabContent(tab: Tab, floating: boolean): React.ReactNode {
           tabId={tab.id}
         />
       )
-    case 'favorites':
-      return <FavoritesPage />
+    case 'collections':
+      return <CollectionsPage />
+    case 'collection':
+      return <CollectionPage collectionId={getCollectionId(tab.props)} tabId={tab.id} />
     case 'query':
       return <QueryPanel />
     case 'query-orders':

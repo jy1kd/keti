@@ -1,4 +1,5 @@
-.favorites-page {
+.collections-page,
+.collection-page {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -6,13 +7,8 @@
   background: var(--bg-primary);
 }
 
-.favorites-page__table {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.favorites-page__empty {
+.collections-page__empty,
+.collection-page__empty {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -21,8 +17,8 @@
   color: var(--text-secondary);
 }
 
-.favorites-page__hint {
-  color: var(--text-secondary);
+.collections-page__hint,
+.collection-page__hint {
   font-size: 13px;
   margin-top: 8px;
 }

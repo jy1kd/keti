@@ -1,0 +1,24 @@
+.collections-page,
+.collection-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.collections-page__empty,
+.collection-page__empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.collections-page__hint,
+.collection-page__hint {
+  font-size: 13px;
+  margin-top: 8px;
+}

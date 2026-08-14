@@ -113,9 +113,7 @@ export function CollectionPicker({ isOpen, instrumentIDs, onClose }: CollectionP
 
   const openManage = () => {
     onClose()
-    // Task 4 将加入 collections 类型，届时移除 cast
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    openTab({ type: 'collections' as any, title: '📁 收藏夹' })
+    openTab({ type: 'collections', title: '📁 收藏夹' })
   }
 
   return (

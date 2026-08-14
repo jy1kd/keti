@@ -68,7 +68,7 @@ function App() {
           openTab({ type: 'market', title: '📊 期货' })
           break
         case 'favorites':
-          openTab({ type: 'favorites', title: '⭐ 自选' })
+          openTab({ type: 'collections', title: '📁 收藏夹' })
           break
         case 'order':
           openTab({ type: 'order', title: '📝 报单' })

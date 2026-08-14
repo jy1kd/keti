@@ -213,15 +213,26 @@ describe('TabContent', () => {
       expect(screen.queryByText(/标的:/)).toBeNull()
     })
 
-    // 审查 🔵-2：自选页标题已删除，改用稳定的 data-testid 断言页面渲染
-    it('应为 favorites 类型渲染自选页', () => {
-      const tab = makeTab({ type: 'favorites' })
+    it('应为 collections 类型渲染收藏夹管理页', () => {
+      const tab = makeTab({ type: 'collections' })
       useTabStore.setState({
         tabs: [tab],
         activeTabId: tab.id,
       })
       render(<TabContent />)
-      expect(screen.getByTestId('favorites-page')).toBeInTheDocument()
+      expect(screen.getByTestId('collections-page')).toBeInTheDocument()
+    })
+
+    it('应为 collection 类型渲染单收藏夹页，并透传 collectionId 与 tabId', () => {
+      const tab = makeTab({ type: 'collection', id: 'tab-collection-coll-x', props: { collectionId: 'coll-x' } })
+      useTabStore.setState({
+        tabs: [tab],
+        activeTabId: tab.id,
+      })
+      render(<TabContent />)
+      expect(screen.getByTestId('collection-page')).toBeInTheDocument()
+      // 页面壳渲染收藏夹 id，证明 collectionId prop 已透传
+      expect(screen.getByText(/收藏夹 coll-x/)).toBeInTheDocument()
     })
   })
 
