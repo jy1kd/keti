@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useSubscriptionManager } from './useSubscriptionManager'
 import { useMarketStore } from '@/modules/market/store'
+import { useCollectionsStore } from '@/stores/collections'
 import { subscribeMarket, unsubscribeMarket, getSnapshots } from '@/services/api'
 
 vi.mock('@/services/api', () => ({
@@ -378,5 +379,34 @@ describe('useSubscriptionManager 快照回填（方案 A）', () => {
 
     expect(getSnapshotsMock).toHaveBeenCalled()
     // 不抛错（测试通过即证明静默）
+  })
+})
+
+describe('useSubscriptionManager 收藏不再自动订阅', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.clearAllMocks()
+    useMarketStore.setState({
+      visibleInstrumentIDs: [],
+      lockedContracts: new Map(),
+      selectedContracts: new Set(),
+      scrollEndSeq: 0,
+      forceResubscribeSeq: 0,
+    })
+  })
+  afterEach(() => { vi.useRealTimers() })
+
+  it('收藏夹合约不自动订阅：shouldSubscribe 仅可见区 ∪ 锁定（自选扁平收藏已删除）', async () => {
+    renderHook(() => useSubscriptionManager())
+
+    // 播种一个收藏夹（旧扁平收藏 favorites 已删除，订阅管理器不再读取收藏）
+    useCollectionsStore.setState({
+      collections: [{ id: 'coll-1', name: '默认收藏夹', instrumentIDs: ['au2508'] }],
+      loaded: true,
+    })
+    await act(async () => { vi.advanceTimersByTime(110) })
+
+    // 收藏夹合约不应被自动订阅（仅当进入可见区/锁定才订阅）
+    expect(vi.mocked(subscribeMarket)).not.toHaveBeenCalled()
   })
 })

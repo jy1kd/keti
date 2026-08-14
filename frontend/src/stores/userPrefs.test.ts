@@ -8,7 +8,6 @@ describe('useUserPrefsStore', () => {
     localStorage.clear()
     // 重置 store 为默认值
     useUserPrefsStore.setState({
-      selectedContracts: [],
       collections: [],
       hotKeys: { ...DEFAULT_HOT_KEYS },
     })
@@ -26,31 +25,11 @@ describe('useUserPrefsStore', () => {
     expect(useUserPrefsStore.getState().hotKeys.buy).toBe('F1')
   })
 
-  it('addSelectedContract 添加自选合约', () => {
-    useUserPrefsStore.getState().addSelectedContract('au2406')
-    expect(useUserPrefsStore.getState().selectedContracts).toEqual(['au2406'])
-  })
-
-  it('addSelectedContract 重复添加不会产生重复项', () => {
-    useUserPrefsStore.getState().addSelectedContract('au2406')
-    useUserPrefsStore.getState().addSelectedContract('au2406')
-    expect(useUserPrefsStore.getState().selectedContracts).toEqual(['au2406'])
-  })
-
-  it('removeSelectedContract 移除自选合约', () => {
-    useUserPrefsStore.getState().addSelectedContract('au2406')
-    useUserPrefsStore.getState().addSelectedContract('rb2406')
-    useUserPrefsStore.getState().removeSelectedContract('au2406')
-    expect(useUserPrefsStore.getState().selectedContracts).toEqual(['rb2406'])
-  })
-
   it('saveToLocalStorage 持久化到 localStorage', () => {
-    useUserPrefsStore.getState().addSelectedContract('au2406')
     useUserPrefsStore.getState().setHotKey('buy', 'F1')
     useUserPrefsStore.getState().saveToLocalStorage()
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-    expect(stored.selectedContracts).toEqual(['au2406'])
     expect(stored.hotKeys.buy).toBe('F1')
   })
 
@@ -58,7 +37,6 @@ describe('useUserPrefsStore', () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        selectedContracts: ['rb2406'],
         hotKeys: { buy: 'F2', sell: 's', cancel: 'c' },
       })
     )
@@ -66,7 +44,6 @@ describe('useUserPrefsStore', () => {
     useUserPrefsStore.getState().loadFromLocalStorage()
 
     const state = useUserPrefsStore.getState()
-    expect(state.selectedContracts).toEqual(['rb2406'])
     expect(state.hotKeys.buy).toBe('F2')
   })
 
@@ -74,7 +51,6 @@ describe('useUserPrefsStore', () => {
     useUserPrefsStore.getState().loadFromLocalStorage()
 
     const state = useUserPrefsStore.getState()
-    expect(state.selectedContracts).toEqual([])
     expect(state.hotKeys).toEqual(DEFAULT_HOT_KEYS)
   })
 })

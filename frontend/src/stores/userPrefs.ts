@@ -42,23 +42,18 @@ export const DEFAULT_QUICK_TRADE_CONFIG: QuickTradeConfig = {
 
 interface UserPrefsStore {
   collections: Collection[]
-  /** 已废弃：保留至 Task 7 与 contracts.ts 收藏 action 一并移除（Task 1 移除会破坏 contracts.test.ts 运行） */
-  selectedContracts: string[]
   hotKeys: HotKeyConfig
   quickTradeConfig: QuickTradeConfig
   setHotKey: (action: string, key: string) => void
   setHotKeys: (hotKeys: HotKeyConfig) => void
   setQuickTradeConfig: (config: Partial<QuickTradeConfig>) => void
   setCollections: (collections: Collection[]) => void
-  addSelectedContract: (instrumentId: string) => void
-  removeSelectedContract: (instrumentId: string) => void
   saveToLocalStorage: () => void
   loadFromLocalStorage: () => void
 }
 
 export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
   collections: [],
-  selectedContracts: [],
   hotKeys: { ...DEFAULT_HOT_KEYS },
   quickTradeConfig: { ...DEFAULT_QUICK_TRADE_CONFIG },
 
@@ -69,19 +64,9 @@ export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
     set((state) => ({ quickTradeConfig: { ...state.quickTradeConfig, ...config } })),
   setCollections: (collections) => set({ collections }),
 
-  addSelectedContract: (instrumentId) =>
-    set((state) => {
-      if (state.selectedContracts.includes(instrumentId)) return state
-      return { selectedContracts: [...state.selectedContracts, instrumentId] }
-    }),
-  removeSelectedContract: (instrumentId) =>
-    set((state) => ({
-      selectedContracts: state.selectedContracts.filter((id) => id !== instrumentId),
-    })),
-
   saveToLocalStorage: () => {
-    const { collections, selectedContracts, hotKeys, quickTradeConfig } = get()
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ collections, selectedContracts, hotKeys, quickTradeConfig }))
+    const { collections, hotKeys, quickTradeConfig } = get()
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ collections, hotKeys, quickTradeConfig }))
   },
 
   loadFromLocalStorage: () => {
@@ -97,7 +82,6 @@ export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
       }
       set({
         collections,
-        selectedContracts: Array.isArray(data.selectedContracts) ? data.selectedContracts : [],
         hotKeys: data.hotKeys ?? { ...DEFAULT_HOT_KEYS },
         quickTradeConfig: data.quickTradeConfig ?? { ...DEFAULT_QUICK_TRADE_CONFIG },
       })

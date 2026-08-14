@@ -7,6 +7,7 @@ import { useFloatingWindowStore } from '@/stores/floatingWindows'
 import { useMarketWs } from '@/hooks/useMarketWs'
 import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
 import { useContractsStore } from '@/stores/contracts'
+import { useCollectionsStore } from '@/stores/collections'
 import { useMarketFilterStore } from '@/stores/marketFilter'
 
 // Mock TabBar 组件
@@ -209,10 +210,10 @@ describe('App Layout — 标签页系统', () => {
   })
 
   describe('共享行情基础设施（上移 App，期货/期权双面板单例）', () => {
-    it('挂载 useMarketWs 与 useSubscriptionManager 各一次，并启动时加载合约/收藏', () => {
+    it('挂载 useMarketWs 与 useSubscriptionManager 各一次，并启动时加载合约/收藏夹', () => {
       vi.clearAllMocks()
       const loadAllSpy = vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
-      const loadFavSpy = vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
+      const loadFavSpy = vi.spyOn(useCollectionsStore.getState(), 'loadCollections').mockResolvedValue(undefined)
 
       render(<App />)
 
@@ -225,7 +226,7 @@ describe('App Layout — 标签页系统', () => {
 
     it('启动时加载持久化筛选（useMarketFilterStore.load）', () => {
       vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
-      vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
+      vi.spyOn(useCollectionsStore.getState(), 'loadCollections').mockResolvedValue(undefined)
       const loadSpy = vi.spyOn(useMarketFilterStore.getState(), 'load').mockImplementation(() => {})
       render(<App />)
       expect(loadSpy).toHaveBeenCalledTimes(1)

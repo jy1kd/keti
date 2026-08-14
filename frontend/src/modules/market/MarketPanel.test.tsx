@@ -136,7 +136,6 @@ describe('MarketPanel', () => {
 
   it('搜索下拉选择合约后：selectedContracts 同步为单选集（锚点守卫通过才能滚动跳转）', async () => {
     vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
-    vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
     useContractsStore.setState({
       contracts: [
         { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 1, productClass: '1' },
@@ -174,7 +173,6 @@ describe('MarketPanel', () => {
   /** 设置混合合约（交易中 + 已停牌），返回 vtable options 以检查过滤结果 */
   function setupMixedContracts() {
     vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
-    vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
     useContractsStore.setState({
       contracts: [
         { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 1, productClass: '1' },
@@ -227,10 +225,9 @@ describe('MarketPanel', () => {
 
   // --- 标签页打开方式测试 (PR-R13) ---
 
-  /** 设置测试合约数据并阻止 loadAllInstruments/loadFavoriteContracts 覆盖 */
+  /** 设置测试合约数据并阻止 loadAllInstruments 覆盖 */
   function setupContracts() {
     vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
-    vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
     useContractsStore.setState({
       contracts: [
         { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260821', isTrading: 1, productClass: '1' },

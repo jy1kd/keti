@@ -49,7 +49,6 @@ describe('OrderQuotePanel', () => {
     useOrderStore.getState().resetOrderForm()
     useContractsStore.setState({
       contracts: [IF2608_CONTRACT],
-      favorites: [],
       isLoaded: true,
     })
   })

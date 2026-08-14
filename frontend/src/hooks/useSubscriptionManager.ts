@@ -1,6 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useMarketStore } from '@/modules/market/store'
-import { useContractsStore } from '@/stores/contracts'
 import { subscribeMarket, unsubscribeMarket, getSnapshots } from '@/services/api'
 
 /**
@@ -32,7 +31,6 @@ function sameVisibleSet(a: string[] | null, b: string[]): boolean {
 export function useSubscriptionManager() {
   const visibleInstrumentIDs = useMarketStore((s) => s.visibleInstrumentIDs)
   const lockedContracts = useMarketStore((s) => s.lockedContracts)
-  const favorites = useContractsStore((s) => s.favorites)
   const scrollEndSeq = useMarketStore((s) => s.scrollEndSeq)
   const forceResubscribeSeq = useMarketStore((s) => s.forceResubscribeSeq)
 
@@ -44,7 +42,7 @@ export function useSubscriptionManager() {
   const recentChangesRef = useRef<number[]>([])
   /** 是否已完成首次挂载（挂载本身不计入拖动变化，避免把首个可见窗口误判为拖动） */
   const didMountRef = useRef(false)
-  /** 上一次可见合约集（拖动检测去重：锁定/自选等非可见变化不喂入拖动判定） */
+  /** 上一次可见合约集（拖动检测去重：锁定等非可见变化不喂入拖动判定） */
   const prevVisibleRef = useRef<string[] | null>(null)
   /** 最近一次完整 diff 的定时器（拖动停止后执行） */
   const fullDiffTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -58,14 +56,13 @@ export function useSubscriptionManager() {
   const calculateShouldSubscribe = useCallback((): Set<string> => {
     const shouldSubscribe = new Set<string>()
     for (const id of visibleInstrumentIDs) shouldSubscribe.add(id)
-    for (const fav of favorites) shouldSubscribe.add(fav.instrumentID)
     for (const id of lockedContracts.keys()) shouldSubscribe.add(id)
     return shouldSubscribe
-  }, [visibleInstrumentIDs, favorites, lockedContracts])
+  }, [visibleInstrumentIDs, lockedContracts])
 
   /**
    * LRU 上限保护（共享）：当 subscribedRef 超过 SOFT_LIMIT 时，返回最久未见且
-   * 已不在 should（可见/自选/锁定）中的合约 ID，按 lastVisible 从旧到新淘汰。
+   * 已不在 should（可见/锁定）中的合约 ID，按 lastVisible 从旧到新淘汰。
    * extra 为「即将加入但尚未写入 subscribedRef」的订阅数（runFullDiff 用）；
    * 拖动路径订阅成功后 extra=0（新合约已写入）。
    * 语义：不减掉刚滑入/可见的合约；淘汰的是早已滑出且最久未见的低优先级合约，
@@ -77,7 +74,7 @@ export function useSubscriptionManager() {
 
     const candidates: { id: string; lastVisible: number }[] = []
     for (const [id, lastVisible] of subscribedRef.current) {
-      if (should.has(id)) continue // 跳过当前应订阅（可见/自选/锁定）
+      if (should.has(id)) continue // 跳过当前应订阅（可见/锁定）
       candidates.push({ id, lastVisible })
     }
     candidates.sort((a, b) => a.lastVisible - b.lastVisible)
@@ -250,7 +247,7 @@ export function useSubscriptionManager() {
     const prevVisible = prevVisibleRef.current
     prevVisibleRef.current = visibleInstrumentIDs
     if (didMountRef.current) {
-      // 仅当可见集真实变化才记录拖动变化：锁定/自选等应订阅集变化（runFullDiff 变化触发本
+      // 仅当可见集真实变化才记录拖动变化：锁定等应订阅集变化（runFullDiff 变化触发本
       // effect）不参与拖动态判定，否则 T型报价 锁定/解锁合约（可见集不变）会被误判为拖动，
       // 把该次完整 diff 拖到 500ms 后。
       if (!sameVisibleSet(prevVisible, visibleInstrumentIDs)) {

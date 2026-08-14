@@ -35,7 +35,6 @@ describe('TradeParams（任务#4）', () => {
     useOrderStore.setState({ volumeStep: 1 })
     useContractsStore.setState({
       contracts: [IF2608_CONTRACT],
-      favorites: [],
       isLoaded: true,
     })
   })
@@ -96,7 +95,6 @@ describe('TradeParams（任务#4）', () => {
   it('期权限价单上限 100 手提示', () => {
     useContractsStore.setState({
       contracts: [{ ...IF2608_CONTRACT, productClass: '2' }],
-      favorites: [],
       isLoaded: true,
     })
     render(<TradeParams instrumentID="IF2608" />)
@@ -253,7 +251,6 @@ describe('TradeParams（任务#4）', () => {
           IF2608_CONTRACT,
           { ...IF2608_CONTRACT, instrumentID: 'IF2609' },
         ],
-        favorites: [],
         isLoaded: true,
       })
       render(<TradeParams instrumentID="IF2608" />)
@@ -269,7 +266,6 @@ describe('TradeParams（任务#4）', () => {
           IF2608_CONTRACT,
           { ...IF2608_CONTRACT, instrumentID: 'IF2609' },
         ],
-        favorites: [],
         isLoaded: true,
       })
       const { rerender } = render(<TradeParams instrumentID="IF2608" />)
@@ -290,7 +286,6 @@ describe('TradeParams（任务#4）', () => {
           IF2608_CONTRACT,
           { ...IF2608_CONTRACT, instrumentID: 'IF2609' },
         ],
-        favorites: [],
         isLoaded: true,
       })
       render(<TradeParams instrumentID="IF2608" onSwitch={onSwitch} />)
