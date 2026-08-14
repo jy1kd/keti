@@ -8,7 +8,7 @@
 import type { MenuItemConstructorOptions } from 'electron';
 import type { MenuContext } from './menuActions';
 export type MarketView = 'all' | 'options' | 'favorites';
-export type FloatingTab = 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor';
+export type FloatingTab = 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor' | 'query-orders' | 'query-positions';
 export type MenuAction = {
     type: 'market-view';
     view: MarketView;
