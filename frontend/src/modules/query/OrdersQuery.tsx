@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useQueryStore, type OrderEntry } from './store'
 import { OrderFlow } from './OrderFlow'
+import { CollectionFilterSelect } from './CollectionFilterSelect'
+import { filterByCollection } from './filter'
+import { useCollectionsStore } from '@/stores/collections'
 import './styles.css'
 
 type OrderFilter = 'all' | 'unfilled' | 'filled'
@@ -25,7 +28,9 @@ export function OrdersQuery() {
   const orders = useQueryStore((s) => s.orders)
   const fetchOrders = useQueryStore((s) => s.fetchOrders)
   const handleCancelAll = useQueryStore((s) => s.handleCancelAll)
+  const collections = useCollectionsStore((s) => s.collections)
   const [filter, setFilter] = useState<OrderFilter>('all')
+  const [collectionId, setCollectionId] = useState('')
 
   // 10s 自刷新：完成后调度下一次，避免重入（对齐查询窗口节奏）
   useEffect(() => {
@@ -59,13 +64,19 @@ export function OrdersQuery() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [onKeyDown])
 
-  const filtered = orders.filter((o) =>
-    filter === 'all' ? true : filter === 'unfilled' ? isUnfilled(o) : isFilled(o)
+  // 状态过滤 → 收藏夹过滤（叠加；收藏夹为空时按收藏夹内合约精确匹配）
+  const filtered = filterByCollection(
+    orders.filter((o) =>
+      filter === 'all' ? true : filter === 'unfilled' ? isUnfilled(o) : isFilled(o)
+    ),
+    collections,
+    collectionId,
   )
 
   return (
     <div className="orders-query">
       <div className="flow-toolbar">
+        <CollectionFilterSelect value={collectionId} onChange={setCollectionId} />
         {FILTERS.map((f) => (
           <button
             key={f.key}
@@ -77,7 +88,10 @@ export function OrdersQuery() {
           </button>
         ))}
       </div>
-      <OrderFlow orders={filtered} emptyText={filter === 'all' ? undefined : '无匹配报单'} />
+      <OrderFlow
+        orders={filtered}
+        emptyText={collectionId ? '该收藏夹无报单' : filter === 'all' ? undefined : '无匹配报单'}
+      />
     </div>
   )
 }

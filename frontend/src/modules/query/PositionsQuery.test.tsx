@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { PositionsQuery } from './PositionsQuery'
 import { useQueryStore } from './store'
 import { useTabStore } from '@/stores/tabs'
+import { useCollectionsStore } from '@/stores/collections'
 
 vi.mock('../../services/api', () => ({
   refreshOrders: vi.fn().mockResolvedValue({ orders: [], count: 0 }),
@@ -27,6 +28,7 @@ const mockPositions = [
 describe('PositionsQuery', () => {
   beforeEach(() => {
     useQueryStore.setState({ positions: [] })
+    useCollectionsStore.setState({ collections: [] })
     useTabStore.setState({
       tabs: [{ id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false }],
       activeTabId: 'tab-market',
@@ -71,5 +73,52 @@ describe('PositionsQuery', () => {
     await screen.findByText('IF2608')
     fireEvent.change(screen.getByPlaceholderText('筛选合约，如 IF'), { target: { value: 'ZZZ' } })
     expect(screen.getByText('无匹配持仓')).toBeInTheDocument()
+  })
+
+  describe('收藏夹过滤', () => {
+    const testCollections = [
+      { id: 'a', name: '农产品', instrumentIDs: ['IF2608'] },
+      { id: 'b', name: '黑色系', instrumentIDs: ['RB2610'] },
+      { id: 'c', name: '能源', instrumentIDs: ['SC2610'] },
+    ]
+
+    it('无收藏夹时不渲染下拉框', async () => {
+      mockRefreshPositions.mockResolvedValue({ positions: mockPositions, count: 3 })
+      render(<PositionsQuery />)
+      await screen.findByText('IF2608')
+      expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    })
+
+    it('选中收藏夹后只显示该夹内合约的持仓', async () => {
+      useCollectionsStore.setState({ collections: testCollections })
+      mockRefreshPositions.mockResolvedValue({ positions: mockPositions, count: 3 })
+      render(<PositionsQuery />)
+      await screen.findByText('IF2608')
+      fireEvent.change(screen.getByRole('combobox'), { target: { value: 'a' } }) // 农产品 IF2608
+      expect(screen.getByText('IF2608')).toBeInTheDocument()
+      expect(screen.queryByText('IF2609')).not.toBeInTheDocument()
+      expect(screen.queryByText('RB2610')).not.toBeInTheDocument()
+    })
+
+    it('收藏夹过滤与搜索叠加', async () => {
+      useCollectionsStore.setState({ collections: testCollections })
+      mockRefreshPositions.mockResolvedValue({ positions: mockPositions, count: 3 })
+      render(<PositionsQuery />)
+      await screen.findByText('IF2608')
+      fireEvent.change(screen.getByRole('combobox'), { target: { value: 'b' } }) // 黑色系 RB2610
+      fireEvent.change(screen.getByPlaceholderText('筛选合约，如 IF'), { target: { value: 'IF' } })
+      // 搜索 IF 命中 IF2608/IF2609，但收藏夹限定 RB2610 → 无匹配（空态文案取收藏夹优先）
+      expect(screen.getByText('该收藏夹无持仓')).toBeInTheDocument()
+      expect(screen.queryByText('RB2610')).not.toBeInTheDocument()
+    })
+
+    it('收藏夹无匹配持仓时显示空态文案', async () => {
+      useCollectionsStore.setState({ collections: testCollections })
+      mockRefreshPositions.mockResolvedValue({ positions: mockPositions, count: 3 })
+      render(<PositionsQuery />)
+      await screen.findByText('IF2608')
+      fireEvent.change(screen.getByRole('combobox'), { target: { value: 'c' } }) // 能源 SC2610 无持仓
+      expect(screen.getByText('该收藏夹无持仓')).toBeInTheDocument()
+    })
   })
 })
