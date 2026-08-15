@@ -274,6 +274,23 @@
   border-color: var(--accent);
 }
 
+/* ── 收藏夹过滤下拉框（报单/持仓查询工具栏共用） ─────── */
+
+.collection-filter-select {
+  max-width: 180px;
+  padding: 3px 4px;
+  font-size: 11px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.collection-filter-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 /* ── PositionsQuery 合约筛选输入框 ─────────────────── */
 
 .position-search {

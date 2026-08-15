@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { OrdersQuery } from './OrdersQuery'
 import { useQueryStore } from './store'
+import { useCollectionsStore } from '@/stores/collections'
 
 vi.mock('../../services/api', () => ({
   refreshOrders: vi.fn(),
@@ -27,6 +28,7 @@ const mockOrders = [
 describe('OrdersQuery', () => {
   beforeEach(() => {
     useQueryStore.setState({ orders: [], newOrderRefs: new Set(), isPaused: false })
+    useCollectionsStore.setState({ collections: [] })
   })
 
   it('renders three filter buttons', () => {
@@ -80,5 +82,78 @@ describe('OrdersQuery', () => {
       fireEvent.keyDown(window, { key: 'c' })
     })
     expect(handleCancelAll).toHaveBeenCalled()
+  })
+
+  describe('收藏夹过滤', () => {
+    const collectionOrders = [
+      { orderRef: '2001', instrumentID: 'IF2608', direction: '0', combOffsetFlag: '0', limitPrice: 4800, volumeTotalOriginal: 1, volumeTraded: 0, orderStatus: '2', statusMsg: '未成交', insertTime: '09:40:00' },
+      { orderRef: '2002', instrumentID: 'IF2609', direction: '1', combOffsetFlag: '0', limitPrice: 4900, volumeTotalOriginal: 1, volumeTraded: 1, orderStatus: '1', statusMsg: '部分成交', insertTime: '09:41:00' },
+      { orderRef: '2003', instrumentID: 'RB2610', direction: '0', combOffsetFlag: '1', limitPrice: 3600, volumeTotalOriginal: 2, volumeTraded: 0, orderStatus: '2', statusMsg: '未成交', insertTime: '09:42:00' },
+    ]
+    const testCollections = [
+      { id: 'a', name: '农产品', instrumentIDs: ['IF2608', 'IF2609'] },
+      { id: 'b', name: '黑色系', instrumentIDs: ['RB2610'] },
+      { id: 'c', name: '能源', instrumentIDs: ['SC2610'] },
+    ]
+
+    it('无收藏夹时不渲染下拉框', async () => {
+      mockRefreshOrders.mockResolvedValue({ orders: collectionOrders, count: 3 })
+      render(<OrdersQuery />)
+      await screen.findByText('2001')
+      expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    })
+
+    it('有收藏夹时渲染下拉框', async () => {
+      useCollectionsStore.setState({ collections: testCollections })
+      mockRefreshOrders.mockResolvedValue({ orders: collectionOrders, count: 3 })
+      render(<OrdersQuery />)
+      await screen.findByText('2001')
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
+      expect(screen.getByText('全部收藏夹')).toBeInTheDocument()
+    })
+
+    it('选中收藏夹后只显示该夹内合约的报单', async () => {
+      useCollectionsStore.setState({ collections: testCollections })
+      mockRefreshOrders.mockResolvedValue({ orders: collectionOrders, count: 3 })
+      render(<OrdersQuery />)
+      await screen.findByText('2001')
+      fireEvent.change(screen.getByRole('combobox'), { target: { value: 'b' } })
+      expect(screen.getByText('2003')).toBeInTheDocument()
+      expect(screen.queryByText('2001')).not.toBeInTheDocument()
+      expect(screen.queryByText('2002')).not.toBeInTheDocument()
+    })
+
+    it('切回「全部收藏夹」恢复全部', async () => {
+      useCollectionsStore.setState({ collections: testCollections })
+      mockRefreshOrders.mockResolvedValue({ orders: collectionOrders, count: 3 })
+      render(<OrdersQuery />)
+      await screen.findByText('2001')
+      fireEvent.change(screen.getByRole('combobox'), { target: { value: 'b' } })
+      expect(screen.queryByText('2001')).not.toBeInTheDocument()
+      fireEvent.change(screen.getByRole('combobox'), { target: { value: '' } })
+      expect(screen.getByText('2001')).toBeInTheDocument()
+      expect(screen.getByText('2002')).toBeInTheDocument()
+    })
+
+    it('收藏夹过滤与状态过滤叠加', async () => {
+      useCollectionsStore.setState({ collections: testCollections })
+      mockRefreshOrders.mockResolvedValue({ orders: collectionOrders, count: 3 })
+      render(<OrdersQuery />)
+      await screen.findByText('2001')
+      // 农产品(IF2608/IF2609) + 已成交 → 仅 2002(部分成交)
+      fireEvent.change(screen.getByRole('combobox'), { target: { value: 'a' } })
+      fireEvent.click(screen.getByText('已成交报单'))
+      expect(screen.getByText('2002')).toBeInTheDocument()
+      expect(screen.queryByText('2001')).not.toBeInTheDocument()
+    })
+
+    it('收藏夹无匹配报单时显示空态文案', async () => {
+      useCollectionsStore.setState({ collections: testCollections })
+      mockRefreshOrders.mockResolvedValue({ orders: collectionOrders, count: 3 })
+      render(<OrdersQuery />)
+      await screen.findByText('2001')
+      fireEvent.change(screen.getByRole('combobox'), { target: { value: 'c' } }) // 能源 SC2610 无报单
+      expect(screen.getByText('该收藏夹无报单')).toBeInTheDocument()
+    })
   })
 })
