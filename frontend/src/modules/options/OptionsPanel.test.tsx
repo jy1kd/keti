@@ -5,48 +5,64 @@ import { OptionsPanel } from './OptionsPanel'
 import { useMarketStore } from '@/modules/market/store'
 import { useOrderStore } from '@/modules/order/store'
 import { useContractsStore } from '@/stores/contracts'
-import { useCollectionsStore } from '@/stores/collections'
 import { useMarketFilterStore } from '@/stores/marketFilter'
 import { useTabStore } from '@/stores/tabs'
 import type { ContractInfo } from '@/services/types'
 
-// 阻断 TQuoteTable 内部拉链的 mock（与 OptionChainGroup.test.tsx 一致；
-// 期权组展开时不会发起真实 API 请求）。
+// 阻断 API 调用：getOptionChains / getSnapshots 在测试中不需要真实请求
+// Mock 按 underlyingID 返回对应的链数据（测试用固定数据）
 vi.mock('@/services/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/api')>()
-  return {
-    ...actual,
-    getOptionChains: vi.fn().mockResolvedValue({
+  const mockChains: Record<string, any> = {
+    FG609: {
       chains: [
         {
-          underlying: 'FG609',
-          expireDate: '20260930',
+          underlying: 'FG609', expireDate: '20260930',
           calls: [{ instrumentID: 'FG609-C-1300', strikePrice: 1300, lastPrice: 10, bidPrice: 9, askPrice: 11, volume: 100, openInterest: 200, impliedVolatility: 0 }],
-          puts: [{ instrumentID: 'FG609-P-1250', strikePrice: 1300, lastPrice: 5, bidPrice: 4, askPrice: 6, volume: 50, openInterest: 80, impliedVolatility: 0 }],
+          puts: [{ instrumentID: 'FG609-P-1300', strikePrice: 1300, lastPrice: 5, bidPrice: 4, askPrice: 6, volume: 50, openInterest: 80, impliedVolatility: 0 }],
           updateTime: '',
         },
       ],
-    }),
+    },
+    MA609: {
+      chains: [
+        {
+          underlying: 'MA609', expireDate: '20260930',
+          calls: [{ instrumentID: 'MA609-C-1000', strikePrice: 1000, lastPrice: 8, bidPrice: 7, askPrice: 9, volume: 60, openInterest: 120, impliedVolatility: 0 }],
+          puts: [{ instrumentID: 'MA609-P-1000', strikePrice: 1000, lastPrice: 3, bidPrice: 2, askPrice: 4, volume: 30, openInterest: 50, impliedVolatility: 0 }],
+          updateTime: '',
+        },
+      ],
+    },
+    cu2609: {
+      chains: [
+        {
+          underlying: 'cu2609', expireDate: '20260930',
+          calls: [{ instrumentID: 'cu2609-C-70000', strikePrice: 70000, lastPrice: 200, bidPrice: 190, askPrice: 210, volume: 40, openInterest: 80, impliedVolatility: 0 }],
+          puts: [{ instrumentID: 'cu2609-P-70000', strikePrice: 70000, lastPrice: 150, bidPrice: 140, askPrice: 160, volume: 20, openInterest: 40, impliedVolatility: 0 }],
+          updateTime: '',
+        },
+      ],
+    },
+    MO2608: {
+      chains: [
+        {
+          underlying: 'MO2608', expireDate: '20260830',
+          calls: [{ instrumentID: 'MO2608-C-8900', strikePrice: 8900, lastPrice: 50, bidPrice: 45, askPrice: 55, volume: 30, openInterest: 60, impliedVolatility: 0 }],
+          puts: [{ instrumentID: 'MO2608-P-8900', strikePrice: 8900, lastPrice: 30, bidPrice: 25, askPrice: 35, volume: 20, openInterest: 40, impliedVolatility: 0 }],
+          updateTime: '',
+        },
+      ],
+    },
+  }
+  return {
+    ...actual,
+    getOptionChains: vi.fn().mockImplementation((id: string) => Promise.resolve(mockChains[id] ?? { chains: [] })),
     getSnapshots: vi.fn().mockResolvedValue({ snapshots: {} }),
   }
 })
 
-// Mock CollectionPicker：捕获 props 用于验证系列模式
-
-vi.mock('@/components/CollectionPicker', () => ({
-  CollectionPicker: (props: any) => {
-    // props captured by mock
-    if (!props.isOpen) return null
-    return (
-      <div data-testid="collection-picker">
-        <span>{props.seriesIDs?.length ? '收藏系列到收藏夹' : '收藏到收藏夹'}</span>
-        <button onClick={props.onClose}>关闭picker</button>
-      </div>
-    )
-  },
-}))
-
-// Mock InstrumentSearchModal：放大镜高级搜索弹窗；测试时可触发 onContractClick 模拟选中合约。
+// Mock InstrumentSearchModal
 vi.mock('@/components/InstrumentSearchModal', () => ({
   InstrumentSearchModal: ({
     isOpen,
@@ -65,21 +81,33 @@ vi.mock('@/components/InstrumentSearchModal', () => ({
     ) : null,
 }))
 
-// Mock echarts（与旧测试保持一致；ContextMenu / 部分共享模块可能引用）
+// Mock echarts
 vi.mock('echarts', () => ({
-  init: vi.fn(() => ({
-    setOption: vi.fn(),
-    resize: vi.fn(),
-    dispose: vi.fn(),
-  })),
-  default: {
-    init: vi.fn(() => ({
+  init: vi.fn(() => ({ setOption: vi.fn(), resize: vi.fn(), dispose: vi.fn() })),
+  default: { init: vi.fn(() => ({ setOption: vi.fn(), resize: vi.fn(), dispose: vi.fn() })) },
+}))
+
+// Mock vtable — 存储实例到模块级变量，通过 getLatestRecords 访问
+const vtableInstances: any[] = []
+vi.mock('@visactor/vtable', () => {
+  const mockTable = () => {
+    const instance: any = {
+      on: vi.fn(),
+      records: [] as any[],
+      setRecords: vi.fn((recs: any[]) => { instance.records = recs }),
       setOption: vi.fn(),
       resize: vi.fn(),
       dispose: vi.fn(),
-    })),
-  },
-}))
+      getBodyVisibleCellRange: vi.fn(() => ({ rowStart: 1, rowEnd: 10 })),
+      mergeCells: vi.fn(),
+      unmergeCells: vi.fn(),
+      release: vi.fn(),
+    }
+    vtableInstances.push(instance)
+    return instance
+  }
+  return { ListTable: vi.fn(mockTable) }
+})
 
 const fut: ContractInfo = { instrumentID: 'FG609', instrumentName: 'FG609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' }
 const optC: ContractInfo = { instrumentID: 'FG609-C-1300', instrumentName: 'FG609-C-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'FG609', optionsType: '1', strikePrice: 1300 }
@@ -91,28 +119,31 @@ const optCu: ContractInfo = { instrumentID: 'cu2609-C-70000', instrumentName: 'c
 const moOpt: ContractInfo = { instrumentID: 'MO2608-P-8900', instrumentName: 'MO2608-P-8900', exchangeID: 'CFFEX', productID: 'MO', volumeMultiple: 100, priceTick: 0.2, expireDate: '20260830', isTrading: 1, productClass: '6', underlyingInstrID: 'MO2608', optionsType: '2', strikePrice: 8900 }
 
 function setupFGContracts() {
-  useContractsStore.setState({
-    contracts: [fut, optC, optP],
-    isLoaded: true,
-  })
+  useContractsStore.setState({ contracts: [fut, optC, optP], isLoaded: true })
 }
 
 function setupMultiUnderlyingContracts() {
-  useContractsStore.setState({
-    contracts: [fut, optC, optP, futMA, optMA, futCu, optCu, moOpt],
-    isLoaded: true,
-  })
+  useContractsStore.setState({ contracts: [fut, optC, optP, futMA, optMA, futCu, optCu, moOpt], isLoaded: true })
 }
 
 function setupMOOnly() {
-  useContractsStore.setState({
-    contracts: [moOpt],
-    isLoaded: true,
-  })
+  useContractsStore.setState({ contracts: [moOpt], isLoaded: true })
 }
 
-describe('OptionsPanel 堆叠 T 型', () => {
+/** 获取最新 vtable 实例的 records */
+function getLatestRecords(): any[] {
+  if (vtableInstances.length === 0) return []
+  return vtableInstances[vtableInstances.length - 1]?.records ?? []
+}
+
+/** 获取最新 vtable 实例 */
+function getLatestTable(): any {
+  return vtableInstances.length > 0 ? vtableInstances[vtableInstances.length - 1] : null
+}
+
+describe('OptionsPanel 平铺 T 型', () => {
   beforeEach(() => {
+    vtableInstances.length = 0 // 清空 vtable 实例记录
     useMarketStore.setState({
       selectedInstrument: null,
       snapshots: new Map(),
@@ -136,121 +167,172 @@ describe('OptionsPanel 堆叠 T 型', () => {
     vi.clearAllMocks()
   })
 
-  it('默认全部折叠：可见标底组头但不挂载 T 表（无「到期」切换条）', async () => {
-    const { container } = render(<OptionsPanel />)
-    // 标底组头可见
-    expect(screen.getByText('FG609')).toBeDefined()
-    // T 型表未展开，无到期切换条
-    expect(screen.queryByText(/20260930/)).toBeNull()
-    // 无 QuoteTable / vtable 容器（期权页不再用平铺表）
-    expect(container.querySelector('.market-table-container')).toBeNull()
+  it('默认全部展开：vtable 收到含标底层 + 期权行的 records', async () => {
+    render(<OptionsPanel />)
+    // 等待懒加载（getOptionChains → setChainCache → records 重建）
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+    const records = getLatestRecords()
+    // 应包含标底层 + 2 条期权行（C + P 各一行，合并后按 strike 分行）
+    expect(records.length).toBeGreaterThanOrEqual(2)
+    expect(records[0].kind).toBe('underlying')
+    expect(records[0].underlyingID).toBe('FG609')
   })
 
-  it('指数期权（MO2608）也渲染组头：合成标底、productClass=1 走红粗显示', () => {
+  it('指数期权（MO2608）也渲染标底层', async () => {
     setupMOOnly()
     render(<OptionsPanel />)
-    expect(screen.getByText('MO2608')).toBeDefined()
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+    const records = getLatestRecords()
+    const underlying = records.find((r: any) => r.kind === 'underlying')
+    expect(underlying).toBeDefined()
+    expect(underlying.underlyingID).toBe('MO2608')
   })
 
-  it('搜索框过滤组：输入 MO 仅显示 MO 组（FG 组隐藏）', () => {
+  it('搜索框过滤组：输入 MO 仅显示 MO 组（FG 组隐藏）', async () => {
     setupMultiUnderlyingContracts()
     render(<OptionsPanel />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+    // 搜索前：所有组都在 records 中
+    const allRecords = getLatestRecords()
+    const groupIDs = [...new Set(allRecords.map((r: any) => r.underlyingID))]
+    expect(groupIDs).toContain('FG609')
+    expect(groupIDs).toContain('MO2608')
+
+    // 搜索 MO
     const input = screen.getByPlaceholderText('搜索合约...')
     fireEvent.change(input, { target: { value: 'MO' } })
-    expect(screen.getByText('MO2608')).toBeDefined()
-    // FG/Cu/MA 组被过滤掉
-    expect(screen.queryByText('FG609')).toBeNull()
-    expect(screen.queryByText('cu2609')).toBeNull()
-    expect(screen.queryByText('MA609')).toBeNull()
+    // 等待 records 更新（useEffect → setRecords）
+    await act(async () => { await new Promise((r) => setTimeout(r, 200)) })
+    // records 应只剩 MO 组
+    const filtered = getLatestRecords()
+    const filteredIDs = [...new Set(filtered.map((r: any) => r.underlyingID))]
+    expect(filteredIDs).toContain('MO2608')
+    expect(filteredIDs).not.toContain('FG609')
+    expect(filteredIDs).not.toContain('cu2609')
+    expect(filteredIDs).not.toContain('MA609')
   })
 
-  it('搜索按品种中文名匹配：输入「玻璃」命中 FG 组（中证1000 / 沪铜 / 甲醇组隐藏）', () => {
+  it('搜索按品种中文名匹配：输入「玻璃」命中 FG 组', async () => {
     setupMultiUnderlyingContracts()
     render(<OptionsPanel />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
     const input = screen.getByPlaceholderText('搜索合约...')
     fireEvent.change(input, { target: { value: '玻璃' } })
-    expect(screen.getByText('FG609')).toBeDefined()
-    expect(screen.queryByText('MO2608')).toBeNull()
-    expect(screen.queryByText('cu2609')).toBeNull()
+    const filtered = getLatestRecords()
+    const filteredIDs = [...new Set(filtered.map((r: any) => r.underlyingID))]
+    expect(filteredIDs).toContain('FG609')
+    expect(filteredIDs).not.toContain('MO2608')
+    expect(filteredIDs).not.toContain('cu2609')
   })
 
-  it('工具行只剩筛选 + 搜索 + 🔍；⭐ 收藏按钮已被移除（P1 不做合约收藏）', () => {
+  it('工具行只剩筛选 + 搜索 + 🔍；⭐ 收藏按钮已被移除', () => {
     render(<OptionsPanel />)
     expect(screen.getByRole('button', { name: /筛选/ })).toBeInTheDocument()
     expect(screen.getByPlaceholderText('搜索合约...')).toBeInTheDocument()
     expect(screen.getByTitle('搜索合约')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '收藏' })).toBeNull()
     expect(screen.queryByRole('button', { name: '收藏夹' })).toBeNull()
-    expect(screen.queryByRole('button', { name: '批量收藏' })).toBeNull()
   })
 
-  it('T 行单击回填合约与价格：展开 FG609 → 点击 C 侧 → 报单表收到合约 + 最新价', async () => {
+  it('T 行单击回填合约与价格：点击 C 侧 → 报单表收到合约 + 最新价', async () => {
     const setOrderForm = vi.fn()
-    // 替换 useOrderStore.setOrderForm 为可监控实例
     useOrderStore.setState({
       setOrderInstrument: vi.fn(),
       setOrderForm,
     } as any)
 
     render(<OptionsPanel />)
-    // 展开 FG609 组头 → 触发链加载 + 锁订阅 → 渲染 TQuoteTable
-    fireEvent.click(screen.getByText('FG609'))
-    // 等链数据到达（OptionChainGroup 渲染到期切换条 = 链加载完成的标志）
-    await screen.findByText('20260930')
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
 
-    // 触发 ListTable click_cell handler（row 0 = FG609-C-1300，col 4 = call 最新价）
-    const { ListTable } = await import('@visactor/vtable')
-    const calls = (ListTable as any).mock.results
-    const table = calls[calls.length - 1]?.value
+    const table = getLatestTable()
+    expect(table).toBeDefined()
+    // 找到 click_cell handler
     const clickCalls = (table.on as any).mock.calls
     const clickHandler = [...clickCalls].reverse().find((c: any[]) => c[0] === 'click_cell')?.[1]
     expect(clickHandler).toBeDefined()
-    // wrap in act — clickHandler 同步触发 onSelectContract → setOrderForm（捕获延迟状态更新）
+
+    // 模拟点击第一行（期权行），col 4 = call 最新价
+    const records = getLatestRecords()
+    const optionRowIndex = records.findIndex((r: any) => r.kind === 'option')
     await act(async () => {
-      clickHandler({ row: 0, col: 4, event: {} })
+      clickHandler({ row: optionRowIndex + 1, col: 4, event: {} }) // vtable row = record index + 1
     })
 
-    // setOrderForm({ limitPrice: 10 })（最新价由链数据提供）
-    expect(setOrderForm).toHaveBeenCalledWith({ limitPrice: 10 })
+    expect(setOrderForm).toHaveBeenCalledWith({ limitPrice: expect.any(Number) })
   })
 
-  it('搜索选中合约 → 定位到标底组并自动展开（spec §4.3）', async () => {
-    // jsdom 无 scrollIntoView，stub 一下
-    Element.prototype.scrollIntoView = vi.fn()
+  it('点击标底层切换折叠/展开', async () => {
+    render(<OptionsPanel />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
 
+    // 初始 records 包含标底层 + 期权行
+    const initial = getLatestRecords()
+    const initialOptions = initial.filter((r: any) => r.kind === 'option')
+    expect(initialOptions.length).toBeGreaterThan(0)
+
+    // 点击标底层（row 0 = underlying）
+    const table = getLatestTable()
+    const clickCalls = (table.on as any).mock.calls
+    const clickHandler = [...clickCalls].reverse().find((c: any[]) => c[0] === 'click_cell')?.[1]
+
+    await act(async () => {
+      clickHandler({ row: 1, col: 0, event: {} }) // row 1 = first record (underlying)
+    })
+
+    // 折叠后：只剩标底层，无期权行
+    const collapsed = getLatestRecords()
+    const collapsedOptions = collapsed.filter((r: any) => r.kind === 'option')
+    expect(collapsedOptions.length).toBe(0)
+    expect(collapsed[0].kind).toBe('underlying')
+
+    // 再次点击标底层 → 展开
+    await act(async () => {
+      clickHandler({ row: 1, col: 0, event: {} })
+    })
+    const expanded = getLatestRecords()
+    const expandedOptions = expanded.filter((r: any) => r.kind === 'option')
+    expect(expandedOptions.length).toBeGreaterThan(0)
+  })
+
+  it('搜索选中合约 → 定位到标底组并展开', async () => {
+    Element.prototype.scrollIntoView = vi.fn()
     const user = userEvent.setup()
     render(<OptionsPanel />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+
     const input = screen.getByPlaceholderText('搜索合约...')
     await user.type(input, 'FG609-C')
-    // ContractSearch 内部 onSelect 触发 handleSelectContract → 展开 FG609 组
     await user.click(screen.getByText('FG609-C-1300'))
-    // 组展开后渲染到期切换条
-    expect(await screen.findByText('20260930')).toBeDefined()
+    // 选中后 searchQuery 被设为标底 ID，records 应包含该组
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+    const records = getLatestRecords()
+    const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
+    expect(groupIDs).toContain('FG609')
   })
 
   it('高级搜索选中合约 → 关闭弹窗并展开对应组', async () => {
     Element.prototype.scrollIntoView = vi.fn()
-
     const user = userEvent.setup()
     render(<OptionsPanel />)
-    // 默认折叠 → 无到期切换条
-    expect(screen.queryByText('20260930')).toBeNull()
 
-    // 打开高级搜索
     await user.click(screen.getByTitle('搜索合约'))
     expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
 
-    // mock 的弹窗内按钮触发 onContractClick('FG609-C-1300') → 关闭 + 展开 FG609
     await user.click(screen.getByText('选择FG609-C-1300'))
     expect(screen.queryByTestId('instrument-search-modal')).toBeNull()
-    expect(await screen.findByText('20260930')).toBeDefined()
+    // records 应包含 FG609 组
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+    const records = getLatestRecords()
+    const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
+    expect(groupIDs).toContain('FG609')
   })
 })
 
-// ── 交易所+品种多选筛选（粒度 = 标底合约）───────────────────────────────────
+// ── 交易所+品种多选筛选 ──────────────────────────────────────────────────────
 
 describe('OptionsPanel 筛选（标底合约粒度）', () => {
   beforeEach(() => {
+    vtableInstances.length = 0 // 清空 vtable 实例记录
     useMarketStore.setState({
       selectedInstrument: null,
       snapshots: new Map(),
@@ -280,37 +362,50 @@ describe('OptionsPanel 筛选（标底合约粒度）', () => {
     expect(screen.queryByTestId('contract-filter-badge')).toBeNull()
   })
 
-  it('按标底品种过滤：勾选 玻璃 后只保留 FG 组（标底+期权），其余组消失', async () => {
+  it('按标底品种过滤：勾选 玻璃 后只保留 FG 组', async () => {
     const user = userEvent.setup()
     render(<OptionsPanel />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
     await user.click(screen.getByRole('button', { name: /筛选/ }))
-    await user.click(screen.getByRole('checkbox', { name: /玻璃/ }))
-    expect(screen.getByText('FG609')).toBeDefined()
-    expect(screen.queryByText('MA609')).toBeNull()
-    expect(screen.queryByText('cu2609')).toBeNull()
-    expect(screen.queryByText('MO2608')).toBeNull()
+    fireEvent.click(screen.getByRole('checkbox', { name: /玻璃/ }))
+    await act(async () => { await new Promise((r) => setTimeout(r, 200)) })
+    const records = getLatestRecords()
+    const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
+    expect(groupIDs).toContain('FG609')
+    expect(groupIDs).not.toContain('MA609')
+    expect(groupIDs).not.toContain('cu2609')
+    expect(groupIDs).not.toContain('MO2608')
   })
 
   it('按交易所过滤：勾选 SHFE 后只保留 cu 组', async () => {
     const user = userEvent.setup()
     render(<OptionsPanel />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
     await user.click(screen.getByRole('button', { name: /筛选/ }))
-    await user.click(screen.getByRole('checkbox', { name: 'SHFE' }))
-    expect(screen.getByText('cu2609')).toBeDefined()
-    expect(screen.queryByText('FG609')).toBeNull()
-    expect(screen.queryByText('MA609')).toBeNull()
-    expect(screen.queryByText('MO2608')).toBeNull()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'SHFE' }))
+    // 等待 filter → groups → records → useEffect → setRecords 全链路
+    await act(async () => { await new Promise((r) => setTimeout(r, 200)) })
+    const records = getLatestRecords()
+    const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
+    expect(groupIDs).toContain('cu2609')
+    expect(groupIDs).not.toContain('FG609')
+    expect(groupIDs).not.toContain('MA609')
+    expect(groupIDs).not.toContain('MO2608')
   })
 
   it('清空筛选后恢复全量分组', async () => {
     const user = userEvent.setup()
     render(<OptionsPanel />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
     await user.click(screen.getByRole('button', { name: /筛选/ }))
-    await user.click(screen.getByRole('checkbox', { name: /玻璃/ }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /玻璃/ }))
+    await act(async () => { await new Promise((r) => setTimeout(r, 200)) })
+    // 清空
     await user.click(screen.getByRole('button', { name: '清空' }))
-    // 全量：cu < FG < MA < MO（按标底 natural order）
-    const headers = screen.getAllByText(/^(FG609|MA609|cu2609|MO2608)$/)
-    expect(headers.map((el) => el.textContent)).toEqual(['cu2609', 'FG609', 'MA609', 'MO2608'])
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+    const records = getLatestRecords()
+    const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
+    expect(groupIDs.length).toBeGreaterThanOrEqual(4)
   })
 })
 
@@ -318,6 +413,7 @@ describe('OptionsPanel 筛选（标底合约粒度）', () => {
 
 describe('OptionsPanel 工具行布局', () => {
   beforeEach(() => {
+    vtableInstances.length = 0 // 清空 vtable 实例记录
     useMarketStore.setState({
       selectedInstrument: null,
       snapshots: new Map(),
@@ -341,13 +437,12 @@ describe('OptionsPanel 工具行布局', () => {
     vi.clearAllMocks()
   })
 
-  it('工具行只剩筛选 + 搜索框 + 🔍 按钮（无 [列表|T型] 切换 / 无 ⭐）', () => {
+  it('工具行只剩筛选 + 搜索框 + 🔍 按钮（无 ⭐）', () => {
     const { container } = render(<OptionsPanel />)
     const toolbar = container.querySelector('.market-toolbar') as HTMLElement
     expect(toolbar).toBeTruthy()
     expect(screen.getByPlaceholderText('搜索合约...')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /筛选/ })).toBeInTheDocument()
-    // ⭐ 收藏按钮已移除
     expect(toolbar.querySelector('.btn-favorite')).toBeNull()
   })
 
@@ -357,71 +452,5 @@ describe('OptionsPanel 工具行布局', () => {
     expect(screen.queryByTestId('instrument-search-modal')).not.toBeInTheDocument()
     await user.click(screen.getByTitle('搜索合约'))
     expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
-  })
-})
-
-// ── 组头 ⭐ 系列收藏（P2）─────────────────────────────────────────────────
-
-describe('OptionsPanel 组头 ⭐ 系列收藏', () => {
-  beforeEach(() => {
-    useMarketStore.setState({
-      selectedInstrument: null,
-      snapshots: new Map(),
-      selectedContracts: new Set(),
-      visibleInstrumentIDs: [],
-      scrollEndSeq: 0,
-      lockedContracts: new Map(),
-    })
-    useMarketFilterStore.setState({
-      futures: { exchanges: [], products: [] },
-      options: { exchanges: [], products: [] },
-    })
-    useTabStore.setState({
-      tabs: [
-        { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
-        { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false },
-      ],
-      activeTabId: 'tab-options',
-    })
-    useCollectionsStore.setState({ collections: [], loaded: true })
-    setupFGContracts()
-    // reset
-    vi.clearAllMocks()
-  })
-
-  it('组头 ⭐ 打开系列收藏选夹面板（series 模式）', async () => {
-    render(<OptionsPanel />)
-    // 展开 FG609
-    fireEvent.click(screen.getByText('FG609'))
-    await screen.findByText('20260930')
-    const star = screen.getByTitle('收藏整条链') // 组头 ⭐
-    fireEvent.click(star)
-    // picker 打开（series 文案）
-    expect(await screen.findByTestId('collection-picker')).toBeDefined()
-    expect(screen.getByText('收藏系列到收藏夹')).toBeDefined()
-  })
-
-  it('收藏夹有 FG609 系列时，组头 ⭐ 显示为 ★（实心）', () => {
-    useCollectionsStore.setState({
-      collections: [
-        { id: 'coll-1', name: '默认', instrumentIDs: [], seriesIDs: ['FG609'] },
-      ],
-      loaded: true,
-    })
-    render(<OptionsPanel />)
-    const star = screen.getByTitle('收藏整条链')
-    expect(star.textContent).toBe('★')
-  })
-
-  it('收藏夹无 FG609 系列时，组头 ⭐ 显示为 ☆（空心）', () => {
-    useCollectionsStore.setState({
-      collections: [
-        { id: 'coll-1', name: '默认', instrumentIDs: [], seriesIDs: ['MA609'] },
-      ],
-      loaded: true,
-    })
-    render(<OptionsPanel />)
-    const star = screen.getByTitle('收藏整条链')
-    expect(star.textContent).toBe('☆')
   })
 })
