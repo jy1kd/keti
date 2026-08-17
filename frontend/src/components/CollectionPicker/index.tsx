@@ -37,7 +37,7 @@ export function CollectionPicker({ isOpen, instrumentIDs = [], seriesIDs, onClos
     if (!isOpen) return
     if (single) {
       const key = isSeries ? 'seriesIDs' : 'instrumentIDs'
-      setChecked(new Set(collections.filter((c) => c[key].includes(targetId)).map((c) => c.id)))
+      setChecked(new Set(collections.filter((c) => (c[key] ?? []).includes(targetId)).map((c) => c.id)))
     } else {
       setChecked(new Set())
     }
@@ -114,7 +114,7 @@ export function CollectionPicker({ isOpen, instrumentIDs = [], seriesIDs, onClos
     }
     if (isSeries) {
       if (single) {
-        const current = collections.filter((c) => c.seriesIDs.includes(targetId)).map((c) => c.id)
+        const current = collections.filter((c) => (c.seriesIDs ?? []).includes(targetId)).map((c) => c.id)
         const toAdd = checkedIds.filter((id) => !current.includes(id))
         const toRemove = current.filter((id) => !checkedIds.includes(id))
         if (toAdd.length > 0) addSeriesToCollections([targetId], toAdd)

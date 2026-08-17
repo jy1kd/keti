@@ -32,10 +32,10 @@ vi.mock('@/services/api', async (importOriginal) => {
 })
 
 // Mock CollectionPicker：捕获 props 用于验证系列模式
-let lastPickerProps: any = null
+
 vi.mock('@/components/CollectionPicker', () => ({
   CollectionPicker: (props: any) => {
-    lastPickerProps = props
+    // props captured by mock
     if (!props.isOpen) return null
     return (
       <div data-testid="collection-picker">
@@ -385,7 +385,7 @@ describe('OptionsPanel 组头 ⭐ 系列收藏', () => {
     })
     useCollectionsStore.setState({ collections: [], loaded: true })
     setupFGContracts()
-    lastPickerProps = null
+    // reset
     vi.clearAllMocks()
   })
 
