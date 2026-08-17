@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import type { ReactNode } from 'react'
 import { ContextMenu } from '@/components/ContextMenu'
 import { toast } from '@/components/Toast'
@@ -41,10 +40,11 @@ interface UseContractMenusArgs {
 }
 
 /**
- * useContractMenus — 合约右键菜单 + 工具栏收藏共享逻辑（picker / folder 双模式）。
+ * useContractMenus — 合约右键菜单共享逻辑（picker / folder 双模式）。
  *
  * - picker（行情页）：收藏项统一弹 CollectionPicker；批量取消收藏 = 从所有夹移除。
  * - folder（夹页）：收藏项直接切本夹 / 批量从本夹移除。
+ * - 工具栏收藏已收敛为「选择收藏夹」下拉（见 MarketPanel/OptionsPanel），不再需要共享按钮逻辑。
  */
 export function useContractMenus(args: UseContractMenusArgs) {
   const {
@@ -64,26 +64,6 @@ export function useContractMenus(args: UseContractMenusArgs) {
     openInfiniteTabs,
     closeMenus,
   } = args
-
-  /** 工具栏收藏按钮：弹选夹面板（picker 模式）；folder 模式不渲染工具栏收藏 */
-  const batchToggleFavorite = useCallback((
-    selectedInstrument: string | null,
-    selectedContracts: Set<string>,
-  ) => {
-    if (favoriteMode !== 'picker') return
-    const ids = selectedContracts.size > 0
-      ? Array.from(selectedContracts)
-      : selectedInstrument ? [selectedInstrument] : []
-    if (ids.length > 0) onOpenFavoritePicker?.(ids)
-  }, [favoriteMode, onOpenFavoritePicker])
-
-  const favoriteButtonLabel = useCallback((
-    selectedInstrument: string | null,
-    selectedContracts: Set<string>,
-  ): string => {
-    if (selectedContracts.size > 1) return '批量收藏'
-    return selectedInstrument && favoritedIds.has(selectedInstrument) ? '收藏夹' : '收藏'
-  }, [favoritedIds])
 
   const singleMenu: ReactNode = contextMenu ? (
     <ContextMenu
@@ -158,5 +138,5 @@ export function useContractMenus(args: UseContractMenusArgs) {
     )
   })() : null
 
-  return { singleMenu, multiMenu, batchToggleFavorite, favoriteButtonLabel }
+  return { singleMenu, multiMenu }
 }
