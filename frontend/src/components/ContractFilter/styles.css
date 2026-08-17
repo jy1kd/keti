@@ -66,9 +66,14 @@
   border: 1px solid var(--border-color, #30363d);
   border-radius: 6px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
-  /* overflow-y: auto：三个 section（交易所/品种/合约）叠加可能超过 max-height，
-     overflow:hidden 会把底部的「合约」section 截断（看不到底部标底）——整体可滚动 */
+  overflow: hidden;
+}
+
+/* 三个 section 在可滚动容器内，footer 在容器外（始终可见） */
+.contract-filter__scroll {
+  flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .contract-filter__section {

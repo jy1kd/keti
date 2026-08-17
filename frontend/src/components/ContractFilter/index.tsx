@@ -16,6 +16,8 @@ interface ContractFilterProps {
   getUnderlying?: (c: ContractInfo) => string
   value: MarketFilter
   onChange: (v: MarketFilter) => void
+  /** 清空筛选时的额外回调（如重置选中合约到列表第一个） */
+  onClear?: () => void
 }
 
 /**
@@ -27,7 +29,7 @@ interface ContractFilterProps {
  * 标底列表受交易所+品种双重约束（选品种 FG → 只列出 FG609/FG610… 等标底）。
  * 已选项即使被交叉过滤掉也「并回」展示列表（保持勾选，可取消）。
  */
-export function ContractFilter({ allContracts, getProduct, productNames, getUnderlying, value, onChange }: ContractFilterProps) {
+export function ContractFilter({ allContracts, getProduct, productNames, getUnderlying, value, onChange, onClear }: ContractFilterProps) {
   const [open, setOpen] = useState(false)
   const [keyword, setKeyword] = useState('')
   const rootRef = useRef<HTMLDivElement>(null)
@@ -113,7 +115,10 @@ export function ContractFilter({ allContracts, getProduct, productNames, getUnde
     onChange({ ...value, [key]: next })
   }
 
-  const clear = () => onChange({ exchanges: [], products: [], underlyings: [] })
+  const clear = () => {
+    onChange({ exchanges: [], products: [], underlyings: [] })
+    onClear?.()
+  }
 
   return (
     <div className="contract-filter" ref={rootRef}>
@@ -134,62 +139,64 @@ export function ContractFilter({ allContracts, getProduct, productNames, getUnde
 
       {open && (
         <div className="contract-filter__panel">
-          <div className="contract-filter__section">
-            <div className="contract-filter__section-title">交易所</div>
-            <div className="contract-filter__list">
-              {displayExchanges.length === 0 ? (
-                <div className="contract-filter__empty">无</div>
-              ) : (
-                displayExchanges.map((ex) => (
-                  <label key={ex} className="contract-filter__item">
-                    <input type="checkbox" checked={value.exchanges.includes(ex)} onChange={() => toggle('exchanges', ex)} />
-                    <span>{ex}</span>
-                  </label>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="contract-filter__section">
-            <div className="contract-filter__section-title">品种</div>
-            <input
-              className="contract-filter__keyword"
-              placeholder="筛选品种..."
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-            />
-            <div className="contract-filter__list">
-              {shownProducts.length === 0 ? (
-                <div className="contract-filter__empty">无</div>
-              ) : (
-                shownProducts.map((p) => (
-                  <label key={p} className="contract-filter__item">
-                    <input type="checkbox" checked={value.products.includes(p)} onChange={() => toggle('products', p)} />
-                    <span className="contract-filter__product-name">{productNames[p] ?? p}</span>
-                    <span className="contract-filter__product-code">{p}</span>
-                  </label>
-                ))
-              )}
-            </div>
-          </div>
-
-          {showUnderlyings && (
+          <div className="contract-filter__scroll">
             <div className="contract-filter__section">
-              <div className="contract-filter__section-title">合约</div>
-              <div className="contract-filter__list contract-filter__list--underlyings">
-                {displayUnderlyings.length === 0 ? (
+              <div className="contract-filter__section-title">交易所</div>
+              <div className="contract-filter__list">
+                {displayExchanges.length === 0 ? (
                   <div className="contract-filter__empty">无</div>
                 ) : (
-                  displayUnderlyings.map((u) => (
-                    <label key={u} className="contract-filter__item">
-                      <input type="checkbox" checked={(value.underlyings ?? []).includes(u)} onChange={() => toggle('underlyings', u)} />
-                      <span>{u}</span>
+                  displayExchanges.map((ex) => (
+                    <label key={ex} className="contract-filter__item">
+                      <input type="checkbox" checked={value.exchanges.includes(ex)} onChange={() => toggle('exchanges', ex)} />
+                      <span>{ex}</span>
                     </label>
                   ))
                 )}
               </div>
             </div>
-          )}
+
+            <div className="contract-filter__section">
+              <div className="contract-filter__section-title">品种</div>
+              <input
+                className="contract-filter__keyword"
+                placeholder="筛选品种..."
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+              />
+              <div className="contract-filter__list">
+                {shownProducts.length === 0 ? (
+                  <div className="contract-filter__empty">无</div>
+                ) : (
+                  shownProducts.map((p) => (
+                    <label key={p} className="contract-filter__item">
+                      <input type="checkbox" checked={value.products.includes(p)} onChange={() => toggle('products', p)} />
+                      <span className="contract-filter__product-name">{productNames[p] ?? p}</span>
+                      <span className="contract-filter__product-code">{p}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {showUnderlyings && (
+              <div className="contract-filter__section">
+                <div className="contract-filter__section-title">合约</div>
+                <div className="contract-filter__list contract-filter__list--underlyings">
+                  {displayUnderlyings.length === 0 ? (
+                    <div className="contract-filter__empty">无</div>
+                  ) : (
+                    displayUnderlyings.map((u) => (
+                      <label key={u} className="contract-filter__item">
+                        <input type="checkbox" checked={(value.underlyings ?? []).includes(u)} onChange={() => toggle('underlyings', u)} />
+                        <span>{u}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="contract-filter__footer">
             <button type="button" className="contract-filter__clear" onClick={clear}>

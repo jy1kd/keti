@@ -85,6 +85,15 @@ describe('ContractFilter', () => {
     expect(defaultProps.onChange).toHaveBeenCalledWith({ exchanges: [], products: [], underlyings: [] })
   })
 
+  it('清空时调用 onClear 回调', async () => {
+    const onClear = vi.fn()
+    const user = userEvent.setup()
+    render(<ContractFilter {...defaultProps} value={{ exchanges: ['SHFE'], products: ['FG'] }} onClear={onClear} />)
+    await user.click(screen.getByRole('button', { name: /筛选/ }))
+    await user.click(screen.getByRole('button', { name: '清空' }))
+    expect(onClear).toHaveBeenCalledTimes(1)
+  })
+
   it('Esc 关闭面板', async () => {
     const user = userEvent.setup()
     render(<ContractFilter {...defaultProps} />)

@@ -177,6 +177,13 @@ export function OptionsPanel() {
     if (!(inst && inst.productClass === '1') && price > 0) setOrderForm({ limitPrice: price })
   }, [contracts, setSelectedInstrument, setOrderInstrument, setOrderForm])
 
+  // ── 清空筛选时重置选中合约到列表第一个标底（避免之前选中的期权合约还「置顶」） ─
+  // 直接清空 selectedInstrument（不设到第一个——选中的是期权合约，清空后不保留）
+  const handleClearFilter = useCallback(() => {
+    setSelectedInstrument(null)
+    setOrderInstrument(null)
+  }, [setSelectedInstrument, setOrderInstrument])
+
   const allContractIds = useMemo(() => new Set(contracts.map((c) => c.instrumentID)), [contracts])
 
   return (
@@ -189,6 +196,7 @@ export function OptionsPanel() {
           getUnderlying={(c) => c.underlyingInstrID ?? ''}
           value={filter}
           onChange={(v) => useMarketFilterStore.getState().setFilter('options', v)}
+          onClear={handleClearFilter}
         />
         <div className="market-toolbar__search">
           <ContractSearch contracts={options} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
