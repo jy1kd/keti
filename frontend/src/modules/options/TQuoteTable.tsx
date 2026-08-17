@@ -6,12 +6,14 @@ import { SCROLL_STYLE } from '@/utils/vtableTheme'
 interface TQuoteRow {
   strikePrice: number
   // Call columns
+  callInstrumentID?: string
   callLastPrice: number | string
   callBidPrice: number | string
   callAskPrice: number | string
   callVolume: number | string
   callOpenInterest: number | string
   // Put columns
+  putInstrumentID?: string
   putLastPrice: number | string
   putBidPrice: number | string
   putAskPrice: number | string
@@ -23,6 +25,10 @@ interface TQuoteTableProps {
   chain: OptionChain
   /** Market snapshots for real-time price data. */
   snapshots?: Map<string, MarketSnapshot>
+  /** 点击 C/P 侧单元格回调；中列（行权价）与缺失侧不回调 */
+  onRowClick?: (instrumentID: string, price: number) => void
+  /** 暴露 vtable 实例（测试用，生产可忽略） */
+  onTableReady?: (table: ListTable) => void
 }
 
 const PLACEHOLDER = '--'
@@ -60,11 +66,13 @@ function buildRecords(
 
     return {
       strikePrice: strike,
+      callInstrumentID: c?.instrumentID,
       callLastPrice: cSnap?.lastPrice ?? valOrDash(c?.lastPrice),
       callBidPrice: cSnap?.bidPrice1 ?? valOrDash(c?.bidPrice),
       callAskPrice: cSnap?.askPrice1 ?? valOrDash(c?.askPrice),
       callVolume: cSnap?.volume ?? valOrDash(c?.volume),
       callOpenInterest: cSnap?.openInterest ?? valOrDash(c?.openInterest),
+      putInstrumentID: p?.instrumentID,
       putLastPrice: pSnap?.lastPrice ?? valOrDash(p?.lastPrice),
       putBidPrice: pSnap?.bidPrice1 ?? valOrDash(p?.bidPrice),
       putAskPrice: pSnap?.askPrice1 ?? valOrDash(p?.askPrice),
@@ -100,9 +108,11 @@ const columns = [
   { field: 'putOpenInterest', title: '持仓', width: 70, headerStyle: { color: PUT_COLOR } },
 ]
 
-export function TQuoteTable({ chain, snapshots }: TQuoteTableProps) {
+export function TQuoteTable({ chain, snapshots, onRowClick, onTableReady }: TQuoteTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
+  /** 当前渲染的 records，供 click_cell 回调按行索引取行数据 */
+  const recordsRef = useRef<TQuoteRow[]>([])
   /** 延迟释放定时器句柄：同一实例至多一个挂起释放定时器，避免快速开合叠加定时器 */
   const releaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -110,9 +120,12 @@ export function TQuoteTable({ chain, snapshots }: TQuoteTableProps) {
   useEffect(() => {
     if (!containerRef.current) return
 
+    const records = buildRecords(chain, snapshots)
+    recordsRef.current = records
+
     const table = new ListTable(containerRef.current, {
       columns,
-      records: buildRecords(chain, snapshots),
+      records,
       defaultRowHeight: 28,
       widthMode: 'adaptive' as const,
       hover: { highlightMode: 'row' as const },
@@ -144,6 +157,26 @@ export function TQuoteTable({ chain, snapshots }: TQuoteTableProps) {
     })
 
     tableRef.current = table
+    onTableReady?.(table)
+
+    // 点击 C/P 侧单元格回传合约 ID 与最新价；中列（行权价 index 5）与缺失侧不回调
+    // vtable click_cell 回传单个事件对象 { col, row, colIndex, rowIndex, ... }，
+    // 兼容两种字段命名（col/row 与 colIndex/rowIndex）。
+    table.on('click_cell', (evt: { col?: number; row?: number; colIndex?: number; rowIndex?: number }) => {
+      if (!onRowClick) return
+      const rowIndex = evt.rowIndex ?? evt.row
+      const colIndex = evt.colIndex ?? evt.col
+      if (rowIndex == null || colIndex == null) return
+      const record = recordsRef.current[rowIndex]
+      if (!record) return
+      if (colIndex >= 0 && colIndex <= 4 && record.callInstrumentID) {
+        const price = typeof record.callLastPrice === 'number' ? record.callLastPrice : 0
+        onRowClick(record.callInstrumentID, price)
+      } else if (colIndex >= 6 && colIndex <= 10 && record.putInstrumentID) {
+        const price = typeof record.putLastPrice === 'number' ? record.putLastPrice : 0
+        onRowClick(record.putInstrumentID, price)
+      }
+    })
 
     // 延迟 release：vtable 内部 ResizeObserver 对容器 100ms 防抖；若 release 先于防抖回调
     // （internalProps 置 null），回调内 resize() 读 null 崩溃。延迟 ~250ms 释放，
@@ -165,7 +198,9 @@ export function TQuoteTable({ chain, snapshots }: TQuoteTableProps) {
 
   // Update records when data changes without rebuilding the table.
   useEffect(() => {
-    tableRef.current?.setRecords(buildRecords(chain, snapshots))
+    const records = buildRecords(chain, snapshots)
+    recordsRef.current = records
+    tableRef.current?.setRecords(records)
   }, [chain, snapshots])
 
   return <div ref={containerRef} style={{ width: '100%', height: '100%', background: '#0d1117' }} />
