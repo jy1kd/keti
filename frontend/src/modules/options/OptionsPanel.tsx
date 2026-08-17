@@ -10,6 +10,7 @@ import { useMarketStore } from '@/modules/market/store'
 import { useOrderStore } from '@/modules/order/store'
 import { useContractsStore } from '@/stores/contracts'
 import { useMarketFilterStore } from '@/stores/marketFilter'
+import { useTabStore } from '@/stores/tabs'
 import { getProductName } from '@/utils/productNames'
 import type { OptionChain } from '@/services/types'
 import { getOptionChains } from '@/services/api'
@@ -39,6 +40,12 @@ export function OptionsPanel() {
   const snapshots = useMarketStore((s) => s.snapshots)
 
   const filter = useMarketFilterStore((s) => s.options)
+
+  // 期权标签是否激活：激活时 OptionsTable 重报可见区，订阅管理器立即补订阅。
+  // 仿照 MarketPanel.tsx:36-37 的 isActive 计算；隐藏面板（display:none）传 isActive=false，
+  // 让 OptionsTable 跳过可见区上报，避免覆盖活跃面板的可见范围（OptionsTable 0 尺寸下
+  // 仍能以「预加载 ±10 行」误报期权合约 ID）。
+  const isActive = useTabStore((s) => s.tabs.some((t) => t.type === 'options' && t.id === s.activeTabId))
 
   const futures = useMemo(() => contracts.filter((c) => c.productClass === '1'), [contracts])
   const options = useMemo(() => contracts.filter((c) => c.productClass === '2' || c.productClass === '6'), [contracts])
@@ -173,6 +180,7 @@ export function OptionsPanel() {
           ))}
           <OptionsTable
             records={records}
+            isActive={isActive}
             onToggleGroup={toggleGroup}
             onRowClick={onSelectContract}
             onVisibleRangeChange={handleVisibleRangeChange}
