@@ -10,6 +10,8 @@ describe('useMarketFilterStore', () => {
     useMarketFilterStore.setState({
       futures: { ...EMPTY_FILTER },
       options: { ...EMPTY_FILTER },
+      futuresCollectionId: '',
+      optionsCollectionId: '',
     })
   })
 
@@ -107,5 +109,59 @@ describe('useMarketFilterStore', () => {
     useMarketFilterStore.getState().load()
     expect(useMarketFilterStore.getState().futures).toEqual(EMPTY_FILTER)
     expect(useMarketFilterStore.getState().options).toEqual({ exchanges: ['CZCE'], products: ['FG'] })
+  })
+
+  // --- 收藏夹过滤（每页独立 id，持久化） ---
+
+  it('setCollectionId 只更新指定页收藏夹 id，另一页保留', () => {
+    useMarketFilterStore.getState().setCollectionId('futures', 'a')
+    const { futuresCollectionId, optionsCollectionId } = useMarketFilterStore.getState()
+    expect(futuresCollectionId).toBe('a')
+    expect(optionsCollectionId).toBe('')
+  })
+
+  it('setCollectionId 期权页与期货页互不干扰', () => {
+    useMarketFilterStore.getState().setCollectionId('futures', 'a')
+    useMarketFilterStore.getState().setCollectionId('options', 'b')
+    const { futuresCollectionId, optionsCollectionId } = useMarketFilterStore.getState()
+    expect(futuresCollectionId).toBe('a')
+    expect(optionsCollectionId).toBe('b')
+  })
+
+  it('收藏夹 id 变更自动持久化到 localStorage', () => {
+    useMarketFilterStore.getState().setCollectionId('futures', 'a')
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+    expect(stored.futuresCollectionId).toBe('a')
+    expect(stored.optionsCollectionId).toBe('')
+  })
+
+  it('load 从 localStorage 恢复两页收藏夹 id', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        futures: { exchanges: [], products: [] },
+        options: { exchanges: [], products: [] },
+        futuresCollectionId: 'a',
+        optionsCollectionId: 'b',
+      }),
+    )
+    useMarketFilterStore.getState().load()
+    expect(useMarketFilterStore.getState().futuresCollectionId).toBe('a')
+    expect(useMarketFilterStore.getState().optionsCollectionId).toBe('b')
+  })
+
+  it('load 收藏夹 id 字段非字符串时回退为空串', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        futures: { exchanges: [], products: [] },
+        options: { exchanges: [], products: [] },
+        futuresCollectionId: 5,
+        optionsCollectionId: null,
+      }),
+    )
+    useMarketFilterStore.getState().load()
+    expect(useMarketFilterStore.getState().futuresCollectionId).toBe('')
+    expect(useMarketFilterStore.getState().optionsCollectionId).toBe('')
   })
 })

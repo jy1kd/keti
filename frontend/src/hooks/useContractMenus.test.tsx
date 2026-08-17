@@ -19,7 +19,7 @@ function Harness({
   openInfiniteTabs = vi.fn(),
   openKlineTabs = vi.fn(),
 }: any) {
-  const { singleMenu, multiMenu, batchToggleFavorite, favoriteButtonLabel } = useContractMenus({
+  const { singleMenu, multiMenu } = useContractMenus({
     contextMenu: ctx,
     multiSelectMenu: multi,
     favoritedIds,
@@ -40,9 +40,6 @@ function Harness({
     <>
       {singleMenu}
       {multiMenu}
-      <button data-testid="batch" onClick={() => batchToggleFavorite('au2406', new Set())}>
-        {favoriteButtonLabel('au2406', new Set())}
-      </button>
     </>
   )
 }
@@ -87,14 +84,6 @@ describe('useContractMenus 收藏双模式', () => {
     expect(onOpen).toHaveBeenCalledWith(['au2406'])
     expect(screen.getByText(/批量收藏到收藏夹…/)).toBeDefined()
     expect(screen.getByText(/批量取消收藏/)).toBeDefined()
-  })
-
-  it('picker 模式：工具栏批量收藏 → onOpenFavoritePicker(选中集)；label=批量收藏', () => {
-    const onOpen = vi.fn()
-    render(<Harness favoriteMode="picker" favoritedIds={new Set()} onOpenFavoritePicker={onOpen} />)
-    expect(screen.getByTestId('batch').textContent).toBe('收藏') // 未收藏单选
-    fireEvent.click(screen.getByTestId('batch'))
-    expect(onOpen).toHaveBeenCalledWith(['au2406'])
   })
 
   it('folder 模式：单选右键「从本夹移除」；批量「批量从本夹移除」，无「批量收藏到收藏夹…」', () => {

@@ -7,6 +7,7 @@ import { useOrderStore } from '@/modules/order/store'
 import { useContractsStore } from '@/stores/contracts'
 import { useMarketFilterStore } from '@/stores/marketFilter'
 import { useTabStore } from '@/stores/tabs'
+import { useCollectionsStore } from '@/stores/collections'
 import type { ContractInfo } from '@/services/types'
 
 // 阻断 API 调用：getOptionChains / getSnapshots 在测试中不需要真实请求
@@ -588,7 +589,10 @@ describe('OptionsPanel 工具行布局', () => {
     useMarketFilterStore.setState({
       futures: { exchanges: [], products: [] },
       options: { exchanges: [], products: [] },
+      futuresCollectionId: '',
+      optionsCollectionId: '',
     })
+    useCollectionsStore.setState({ collections: [], loaded: false })
     useTabStore.setState({
       tabs: [
         { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
@@ -615,5 +619,36 @@ describe('OptionsPanel 工具行布局', () => {
     expect(screen.queryByTestId('instrument-search-modal')).not.toBeInTheDocument()
     await user.click(screen.getByTitle('搜索合约'))
     expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
+  })
+
+  it('有收藏夹时渲染收藏夹过滤下拉；选夹后表格只保留夹内合约', async () => {
+    // 注入收藏夹 FG 组合（含期权 FG609-C-1300）
+    useCollectionsStore.setState({
+      collections: [{ id: 'fg', name: 'FG 组合', instrumentIDs: ['FG609-C-1300'] }],
+      loaded: true,
+    })
+    setupMultiUnderlyingContracts()
+    const user = userEvent.setup()
+    render(<OptionsPanel />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+    const select = screen.getByRole('combobox') as HTMLSelectElement
+    expect(select).toBeInTheDocument()
+    // 切到 FG 组合 → 表格只保留夹内期权（FG609-C-1300）所在标底组
+    await user.selectOptions(select, 'fg')
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+    const records = getLatestRecords()
+    const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
+    expect(groupIDs).toEqual(['FG609'])
+    expect(groupIDs).not.toContain('MA609')
+    expect(groupIDs).not.toContain('cu2609')
+    // 且期权行是收藏夹里的 FG609-C-1300
+    const optionRows = records.filter((r: any) => r.kind === 'option')
+    expect(optionRows.some((r: any) => r.callInstrumentID === 'FG609-C-1300')).toBe(true)
+    // 切回全部 → 恢复多组
+    await user.selectOptions(select, '')
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+    const recordsAll = getLatestRecords()
+    const groupIDsAll = [...new Set(recordsAll.map((r: any) => r.underlyingID))]
+    expect(groupIDsAll.length).toBeGreaterThanOrEqual(4)
   })
 })

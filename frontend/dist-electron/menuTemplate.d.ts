@@ -32,8 +32,9 @@ export interface BuildOptions {
     omitIds?: string[];
 }
 /**
- * 四组原生菜单定义 —— 唯一的菜单真源。
- * 「设置」子菜单末尾的退出（id 'app-quit'）仅顶部菜单保留；托盘 omitIds: ['app-quit'] 剔除并放到一级底部。
+ * 五组原生菜单定义 —— 唯一的菜单真源。
+ * 行情 / 收藏夹 / 交易 / 查询 / 设置.
+ * 「设置」内不再包含退出；托盘 omitIds 仅保留兼容引用（托盘自带一级底部退出）。
  */
 export declare function getAppMenuDef(): MenuItemDef[];
 /** 渲染：MenuItemDef[] + MenuContext → Electron 菜单模板 */

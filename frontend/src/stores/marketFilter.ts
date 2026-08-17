@@ -9,10 +9,16 @@ type Page = 'futures' | 'options'
 interface MarketFilterStore {
   futures: MarketFilter
   options: MarketFilter
+  /** 期货页当前选中收藏夹 id；'' = 全部 */
+  futuresCollectionId: string
+  /** 期权页当前选中收藏夹 id；'' = 全部 */
+  optionsCollectionId: string
   setExchanges: (page: Page, exchanges: string[]) => void
   setProducts: (page: Page, products: string[]) => void
   /** 一次 set 同时写入交易所+品种（单一 localStorage 写），ContractFilter onChange 用 */
   setFilter: (page: Page, filter: MarketFilter) => void
+  /** 设置指定页的收藏夹过滤（持久化），与 setFilter 平行 */
+  setCollectionId: (page: Page, collectionId: string) => void
   reset: (page: Page) => void
   load: () => void
 }
@@ -30,9 +36,16 @@ function isValidFilter(v: unknown): v is MarketFilter {
   )
 }
 
+/** 收藏夹 id 校验：必须是字符串；非字符串视为 ''（不限）。 */
+function isValidCollectionId(v: unknown): string {
+  return typeof v === 'string' ? v : ''
+}
+
 export const useMarketFilterStore = create<MarketFilterStore>((set) => ({
   futures: EMPTY_FILTER,
   options: EMPTY_FILTER,
+  futuresCollectionId: '',
+  optionsCollectionId: '',
   setExchanges: (page, exchanges) =>
     set((s) => {
       const next = { futures: s.futures, options: s.options }
@@ -55,6 +68,12 @@ export const useMarketFilterStore = create<MarketFilterStore>((set) => ({
       }
       return next
     }),
+  setCollectionId: (page, collectionId) =>
+    set(() =>
+      page === 'futures'
+        ? { futuresCollectionId: collectionId }
+        : { optionsCollectionId: collectionId },
+    ),
   reset: (page) =>
     set((s) => {
       const next = { futures: s.futures, options: s.options }
@@ -70,6 +89,8 @@ export const useMarketFilterStore = create<MarketFilterStore>((set) => ({
       set({
         futures: isValidFilter(dataObj.futures) ? dataObj.futures : EMPTY_FILTER,
         options: isValidFilter(dataObj.options) ? dataObj.options : EMPTY_FILTER,
+        futuresCollectionId: isValidCollectionId(dataObj.futuresCollectionId),
+        optionsCollectionId: isValidCollectionId(dataObj.optionsCollectionId),
       })
     } catch {
       /* 忽略损坏数据 */
@@ -79,6 +100,9 @@ export const useMarketFilterStore = create<MarketFilterStore>((set) => ({
 
 // 每次变更持久化（订阅式）
 useMarketFilterStore.subscribe((state) => {
-  const { futures, options } = state
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ futures, options }))
+  const { futures, options, futuresCollectionId, optionsCollectionId } = state
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({ futures, options, futuresCollectionId, optionsCollectionId }),
+  )
 })

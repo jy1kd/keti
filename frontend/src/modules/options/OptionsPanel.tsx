@@ -11,10 +11,13 @@ import {
   resolveUnderlyingInstrumentID,
 } from '@/modules/market/sort'
 import { filterByExchangeAndProduct } from '@/modules/market/filter'
+import { filterByCollection } from '@/modules/query/filter'
+import { CollectionFilterSelect } from '@/modules/query/CollectionFilterSelect'
 import { useMarketStore } from '@/modules/market/store'
 import { useOrderStore } from '@/modules/order/store'
 import { useContractsStore } from '@/stores/contracts'
 import { useMarketFilterStore } from '@/stores/marketFilter'
+import { useCollectionsStore } from '@/stores/collections'
 import { useTabStore } from '@/stores/tabs'
 import { getProductName } from '@/utils/productNames'
 import './styles.css'
@@ -29,6 +32,7 @@ import './styles.css'
  * - 滚动时 onVisibleRangeChange → setVisibleInstrumentIDs → 订阅管理器统一处理
  * - snapshot 增量更新（仿照 QuoteTable 快照路径）→ 价格字段实时填充
  * - 默认全部展开；点击标底层折叠/展开
+ * - 筛选三级：交易所 → 品种 → 标底合约；另有收藏夹过滤下拉（'' = 全部）
  */
 export function OptionsPanel() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -44,6 +48,10 @@ export function OptionsPanel() {
   const snapshots = useMarketStore((s) => s.snapshots)
 
   const filter = useMarketFilterStore((s) => s.options)
+  // 期权页收藏夹过滤（与三个查询浮窗语义一致：下拉选择夹，'' = 全部）
+  const collectionId = useMarketFilterStore((s) => s.optionsCollectionId)
+  const setCollectionId = (id: string) => useMarketFilterStore.getState().setCollectionId('options', id)
+  const collections = useCollectionsStore((s) => s.collections)
 
   // 期权标签是否激活：激活时 OptionsTable 重报可见区，订阅管理器立即补订阅。
   // 仿照 MarketPanel.tsx:36-37 的 isActive 计算；隐藏面板（display:none）传 isActive=false，
@@ -85,18 +93,20 @@ export function OptionsPanel() {
     [options],
   )
 
-  // 数据管道：筛选 → 标底筛选 → 分组
+  // 数据管道：交易所+品种筛选 → 收藏夹过滤 → 标底筛选 → 分组
   const groups = useMemo(() => {
     const filteredOptions = filterByExchangeAndProduct(
       options, filter.exchanges, filter.products,
       (c) => deriveUnderlyingProduct(c.underlyingInstrID ?? ''),
     )
-    const grouped = groupOptionsByUnderlying(filteredOptions, futures)
+    // 收藏夹过滤：按期权合约 instrumentID 匹配（与查询页语义一致；'' = 全部）
+    const collectionFiltered = filterByCollection(filteredOptions, collections, collectionId)
+    const grouped = groupOptionsByUnderlying(collectionFiltered, futures)
     // 第三级筛选：选完交易所+品种后进一步选具体标底（如 FG609）→ 只显示选中标底的 C/P
     const uSet = filter.underlyings?.length ? new Set(filter.underlyings) : null
     if (!uSet) return grouped
     return grouped.filter((g) => uSet.has(g.underlyingID))
-  }, [options, filter, futures])
+  }, [options, filter, futures, collections, collectionId])
 
   // 搜索过滤组
   const visibleGroups = useMemo(() => {
@@ -198,6 +208,7 @@ export function OptionsPanel() {
           onChange={(v) => useMarketFilterStore.getState().setFilter('options', v)}
           onClear={handleClearFilter}
         />
+        <CollectionFilterSelect value={collectionId} onChange={setCollectionId} />
         <div className="market-toolbar__search">
           <ContractSearch contracts={options} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
           <button className="btn-search-advanced" title="搜索合约" onClick={() => setSearchModalOpen(true)}>🔍</button>

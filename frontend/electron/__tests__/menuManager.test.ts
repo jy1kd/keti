@@ -8,7 +8,7 @@ vi.mock('electron', () => ({
   },
 }));
 
-import { app, Menu } from 'electron';
+import { Menu } from 'electron';
 import { MenuManager } from '../menuManager';
 import { IPC_CHANNELS } from '../ipc/index';
 
@@ -60,11 +60,11 @@ describe('MenuManager', () => {
     expect(setApplicationMenu.mock.calls[0][0]).toBe(getTemplate());
   });
 
-  it('should have four top-level menus: 行情/交易/查询/设置（无默认 View）', () => {
+  it('should have five top-level menus: 行情/收藏夹/交易/查询/设置（无默认 View）', () => {
     const manager = new MenuManager();
     manager.initialize(mainWindow, windowManager);
     const labels = getTemplate().map((item) => item.label);
-    expect(labels).toEqual(['行情', '交易', '查询', '设置']);
+    expect(labels).toEqual(['行情', '收藏夹', '交易', '查询', '设置']);
   });
 
   it('should not include default File/Edit/View/Window/Help role menus', () => {
@@ -77,13 +77,13 @@ describe('MenuManager', () => {
   });
 
   describe('行情', () => {
-    it('包含 期货/期权/收藏夹/K线/T型报价/在新窗口打开', () => {
+    it('包含 期货/期权/K线/T型报价/在新窗口打开', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
       const labels = getMenu('行情')
         .submenu!.map((i) => i.label)
         .filter(Boolean);
-      expect(labels).toEqual(['📊 期货', '📉 期权', '📁 收藏夹', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']);
+      expect(labels).toEqual(['📊 期货', '📉 期权', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']);
     });
 
     it('点击 T型报价 发送 menu:open-floating tquote', () => {
@@ -117,7 +117,7 @@ describe('MenuManager', () => {
     it('点击收藏夹发送 menu:open-floating collections', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
-      clickItem('行情', '📁 收藏夹');
+      clickItem('收藏夹', '📁 打开收藏夹');
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'collections');
     });
 
@@ -173,13 +173,13 @@ describe('MenuManager', () => {
   });
 
   describe('设置', () => {
-    it('包含 ⚙ 设置 / 🔌 网络监控 / 退出', () => {
+    it('包含 ⚙ 设置 / 🔌 网络监控（无退出）', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
       const labels = getMenu('设置')
         .submenu!.map((i) => i.label)
         .filter(Boolean);
-      expect(labels).toEqual(['⚙ 设置', '🔌 网络监控', '退出']);
+      expect(labels).toEqual(['⚙ 设置', '🔌 网络监控']);
     });
 
     it('点击 ⚙ 设置 发送 menu:open-floating settings', () => {
@@ -194,13 +194,6 @@ describe('MenuManager', () => {
       manager.initialize(mainWindow, windowManager);
       clickItem('设置', '🔌 网络监控');
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'ipc-monitor');
-    });
-
-    it('点击退出调用 app.quit', () => {
-      const manager = new MenuManager();
-      manager.initialize(mainWindow, windowManager);
-      clickItem('设置', '退出');
-      expect(app.quit).toHaveBeenCalled();
     });
   });
 
