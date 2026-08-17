@@ -5,6 +5,7 @@ import { OptionsPanel } from './OptionsPanel'
 import { useMarketStore } from '@/modules/market/store'
 import { useOrderStore } from '@/modules/order/store'
 import { useContractsStore } from '@/stores/contracts'
+import { useCollectionsStore } from '@/stores/collections'
 import { useMarketFilterStore } from '@/stores/marketFilter'
 import { useTabStore } from '@/stores/tabs'
 import type { ContractInfo } from '@/services/types'
@@ -29,6 +30,21 @@ vi.mock('@/services/api', async (importOriginal) => {
     getSnapshots: vi.fn().mockResolvedValue({ snapshots: {} }),
   }
 })
+
+// Mock CollectionPicker：捕获 props 用于验证系列模式
+let lastPickerProps: any = null
+vi.mock('@/components/CollectionPicker', () => ({
+  CollectionPicker: (props: any) => {
+    lastPickerProps = props
+    if (!props.isOpen) return null
+    return (
+      <div data-testid="collection-picker">
+        <span>{props.seriesIDs?.length ? '收藏系列到收藏夹' : '收藏到收藏夹'}</span>
+        <button onClick={props.onClose}>关闭picker</button>
+      </div>
+    )
+  },
+}))
 
 // Mock InstrumentSearchModal：放大镜高级搜索弹窗；测试时可触发 onContractClick 模拟选中合约。
 vi.mock('@/components/InstrumentSearchModal', () => ({
@@ -341,5 +357,71 @@ describe('OptionsPanel 工具行布局', () => {
     expect(screen.queryByTestId('instrument-search-modal')).not.toBeInTheDocument()
     await user.click(screen.getByTitle('搜索合约'))
     expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
+  })
+})
+
+// ── 组头 ⭐ 系列收藏（P2）─────────────────────────────────────────────────
+
+describe('OptionsPanel 组头 ⭐ 系列收藏', () => {
+  beforeEach(() => {
+    useMarketStore.setState({
+      selectedInstrument: null,
+      snapshots: new Map(),
+      selectedContracts: new Set(),
+      visibleInstrumentIDs: [],
+      scrollEndSeq: 0,
+      lockedContracts: new Map(),
+    })
+    useMarketFilterStore.setState({
+      futures: { exchanges: [], products: [] },
+      options: { exchanges: [], products: [] },
+    })
+    useTabStore.setState({
+      tabs: [
+        { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
+        { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false },
+      ],
+      activeTabId: 'tab-options',
+    })
+    useCollectionsStore.setState({ collections: [], loaded: true })
+    setupFGContracts()
+    lastPickerProps = null
+    vi.clearAllMocks()
+  })
+
+  it('组头 ⭐ 打开系列收藏选夹面板（series 模式）', async () => {
+    render(<OptionsPanel />)
+    // 展开 FG609
+    fireEvent.click(screen.getByText('FG609'))
+    await screen.findByText('20260930')
+    const star = screen.getByTitle('收藏整条链') // 组头 ⭐
+    fireEvent.click(star)
+    // picker 打开（series 文案）
+    expect(await screen.findByTestId('collection-picker')).toBeDefined()
+    expect(screen.getByText('收藏系列到收藏夹')).toBeDefined()
+  })
+
+  it('收藏夹有 FG609 系列时，组头 ⭐ 显示为 ★（实心）', () => {
+    useCollectionsStore.setState({
+      collections: [
+        { id: 'coll-1', name: '默认', instrumentIDs: [], seriesIDs: ['FG609'] },
+      ],
+      loaded: true,
+    })
+    render(<OptionsPanel />)
+    const star = screen.getByTitle('收藏整条链')
+    expect(star.textContent).toBe('★')
+  })
+
+  it('收藏夹无 FG609 系列时，组头 ⭐ 显示为 ☆（空心）', () => {
+    useCollectionsStore.setState({
+      collections: [
+        { id: 'coll-1', name: '默认', instrumentIDs: [], seriesIDs: ['MA609'] },
+      ],
+      loaded: true,
+    })
+    render(<OptionsPanel />)
+    const star = screen.getByTitle('收藏整条链')
+    expect(star.textContent).toBe('☆')
   })
 })

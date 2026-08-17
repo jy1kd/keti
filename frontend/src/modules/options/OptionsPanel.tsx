@@ -10,7 +10,7 @@ import { filterByExchangeAndProduct } from '@/modules/market/filter'
 import { useMarketStore } from '@/modules/market/store'
 import { useOrderStore } from '@/modules/order/store'
 import { useContractsStore } from '@/stores/contracts'
-import { useCollectionsStore } from '@/stores/collections'
+import { useCollectionsStore, unionSerializedIds } from '@/stores/collections'
 import { useMarketFilterStore } from '@/stores/marketFilter'
 import { getProductName } from '@/utils/productNames'
 import './styles.css'
@@ -31,6 +31,8 @@ export function OptionsPanel() {
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   // 收藏选夹面板（高级搜索弹窗唯一入口；P1 工具栏无 ⭐ 按钮）
   const [picker, setPicker] = useState<{ instrumentIDs: string[] } | null>(null)
+  // 组头 ⭐ → 系列收藏选夹面板（P2）
+  const [pickerSeries, setPickerSeries] = useState<string[] | null>(null)
 
   // 标底 ID → 容器 DOM ref（搜索/高级搜索选中合约 → 定位展开对应组 + 滚动到该组）
   const groupRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -134,6 +136,10 @@ export function OptionsPanel() {
     [contracts],
   )
 
+  // 收藏夹系列 ID 并集（组头 ⭐ 填充态）
+  const collections = useCollectionsStore((s) => s.collections)
+  const favoritedSeriesIds = useMemo(() => unionSerializedIds(collections), [collections])
+
   return (
     <section className="options-page">
       {/* 列表工具行：筛选 → 搜索 → 🔍（P1 移除 ⭐ 收藏按钮；P2 加系列收藏） */}
@@ -178,6 +184,8 @@ export function OptionsPanel() {
               <OptionChainGroup
                 group={g}
                 onSelectContract={onSelectContract}
+                isFavorited={favoritedSeriesIds.has(g.underlyingID)}
+                onToggleFavorite={(id) => setPickerSeries([id])}
               />
             </div>
           ))}
@@ -200,6 +208,13 @@ export function OptionsPanel() {
         isOpen={!!picker}
         instrumentIDs={picker?.instrumentIDs ?? []}
         onClose={() => setPicker(null)}
+      />
+
+      {/* 组头 ⭐ → 系列收藏选夹面板（P2） */}
+      <CollectionPicker
+        isOpen={!!pickerSeries}
+        seriesIDs={pickerSeries ?? []}
+        onClose={() => setPickerSeries(null)}
       />
     </section>
   )

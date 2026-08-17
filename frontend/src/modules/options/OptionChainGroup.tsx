@@ -9,11 +9,15 @@ import { openTQuoteFloating } from '@/utils/openFloatingTab'
 interface OptionChainGroupProps {
   group: OptionGroup
   onSelectContract: (instrumentID: string, price: number) => void
+  /** 系列是否被任意收藏夹收藏（P2 系列收藏） */
+  isFavorited?: boolean
+  /** 点击 ⭐ 切换收藏（打开 CollectionPicker series 模式） */
+  onToggleFavorite?: (seriesID: string) => void
 }
 
 const RED_BOLD = { color: '#f87171', fontWeight: 'bold', fontSize: 14 }
 
-export function OptionChainGroup({ group, onSelectContract }: OptionChainGroupProps) {
+export function OptionChainGroup({ group, onSelectContract, isFavorited = false, onToggleFavorite }: OptionChainGroupProps) {
   const [expanded, setExpanded] = useState(false)
   const [chains, setChains] = useState<OptionChain[] | null>(null)
   const [expireDate, setExpireDate] = useState<string | null>(null)
@@ -62,6 +66,15 @@ export function OptionChainGroup({ group, onSelectContract }: OptionChainGroupPr
         >
           ⇗ 新窗
         </button>
+        {onToggleFavorite && (
+          <button
+            className="option-chain-group__star"
+            title="收藏整条链"
+            onClick={(e) => { e.stopPropagation(); onToggleFavorite(group.underlyingID) }}
+          >
+            {isFavorited ? '★' : '☆'}
+          </button>
+        )}
       </div>
       {expanded && activeChain && (
         <>
