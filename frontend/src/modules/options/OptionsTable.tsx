@@ -335,7 +335,9 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
     // 全量重建：每行的 rowSnapshotRef 索引重置，让 snapshot effect 重新填充可见行的最新引用
     rowSnapshotRef.current = records.map(() => ({}))
     tableRef.current.setRecords(records)
-    mergedRowsRef.current = new Set() // 重置后重新合并
+    // 注意：不要在这里重置 mergedRowsRef！applyRowMerges 内部会先「撤销旧合并」再「重新合并」。
+    // 若在此清空 mergedRowsRef，applyRowMerges 的 unmerge 循环遍历空集合，旧 mergeCells 永不撤销，
+    // vtable 残留旧标底文本（如筛选后仍显示 ad2609）。
     const mergedAll = applyRowMerges()
     if (mergeRafRef.current != null) cancelAnimationFrame(mergeRafRef.current)
     if (!mergedAll && typeof requestAnimationFrame === 'function') {

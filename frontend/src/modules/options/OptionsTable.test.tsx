@@ -316,3 +316,53 @@ describe('OptionsTable snapshot 增量更新 + 严格可见订阅', () => {
     expect(instance.updateRecords).not.toHaveBeenCalled()
   })
 })
+
+// ── 标底行合并残留：筛选/结构变化后必须撤销旧合并，否则旧标底文本残留 ───────
+describe('OptionsTable 标底行合并撤销', () => {
+  beforeEach(() => {
+    vtableInstances.length = 0
+    useMarketStore.setState({
+      visibleInstrumentIDs: [],
+      snapshots: new Map(),
+    })
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.useRealTimers()
+  })
+
+  it('records 变化时撤销旧标底行合并（防止筛选后残留旧标底文本，如始终显示 ad2609）', async () => {
+    // 首次渲染：标底 AD2609（模拟未筛选时第一个 alphabetically 标底）
+    const { rerender } = render(
+      <OptionsTable
+        records={[makeUnderlyingRow('AD2609'), makeOptionRow('AD2609', 'AD2609-C-1000', 'AD2609-P-1000')]}
+        onToggleGroup={vi.fn()}
+        isActive={true}
+      />,
+    )
+    await vi.runAllTimersAsync()
+    const instance = vtableInstances[0]
+    // 首次已合并标底行 AD2609
+    expect(instance.mergeCells).toHaveBeenCalled()
+    instance.unmergeCells.mockClear()
+    instance.mergeCells.mockClear()
+
+    // records 变化：筛选到 FG609，标底行内容变了
+    rerender(
+      <OptionsTable
+        records={[makeUnderlyingRow('FG609'), makeOptionRow('FG609', 'FG609-C-1000', 'FG609-P-1000')]}
+        onToggleGroup={vi.fn()}
+        isActive={true}
+      />,
+    )
+    await vi.runAllTimersAsync()
+
+    // 关键断言：必须撤销旧的 AD2609 合并（先 unmerge 再 re-merge 重捕获 FG609 文本）
+    expect(instance.unmergeCells).toHaveBeenCalled()
+    // 且重新合并当前标底 FG609
+    expect(instance.mergeCells).toHaveBeenCalled()
+  })
+})
