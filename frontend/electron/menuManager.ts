@@ -2,7 +2,7 @@
  * Menu Manager
  *
  * Builds the application menu bar from the shared menu template (menuTemplate.ts):
- * 行情 / 交易 / 查询 / 设置 + default View.
+ * 行情 / 交易 / 查询 / 设置.
  * Click behavior lives in menuActions.ts.
  */
 
@@ -16,10 +16,10 @@ import type { WindowManager } from './windowManager';
  */
 export class MenuManager {
   /**
-   * Set the application menu: app menus built from the shared template + default View.
+   * Set the application menu: app menus built from the shared template.
    */
   initialize(mainWindow: BrowserWindow, windowManager: WindowManager): void {
     const appMenu = buildMenuFromDef(getAppMenuDef(), { mainWindow, windowManager });
-    Menu.setApplicationMenu(Menu.buildFromTemplate([...appMenu, { role: 'viewMenu' }]));
+    Menu.setApplicationMenu(Menu.buildFromTemplate(appMenu));
   }
 }
