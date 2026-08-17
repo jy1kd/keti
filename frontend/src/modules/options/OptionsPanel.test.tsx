@@ -461,6 +461,37 @@ describe('OptionsPanel 筛选（标底合约粒度）', () => {
     expect(groupIDs).not.toContain('MO2608')
   })
 
+  it('按标底合约筛选：品种 FG + 标底 FG609 → records 只含 FG609 组', async () => {
+    // 三级筛选：交易所+品种已选，进一步选具体标底 FG609 → 只显示 FG609 的 C/P
+    useMarketFilterStore.setState({
+      options: { exchanges: [], products: ['FG'], underlyings: ['FG609'] },
+    })
+    render(<OptionsPanel />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+    const records = getLatestRecords()
+    const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
+    expect(groupIDs).toContain('FG609')
+    expect(groupIDs).not.toContain('MA609')
+    expect(groupIDs).not.toContain('cu2609')
+    expect(groupIDs).not.toContain('MO2608')
+    // 且 records 里应包含 FG609 的期权行（C/P）
+    expect(records.some((r: any) => r.kind === 'option')).toBe(true)
+  })
+
+  it('按标底合约筛选可多选：FG609 + MA609 同时选中 → 两个标底组都在', async () => {
+    useMarketFilterStore.setState({
+      options: { exchanges: [], products: ['FG', 'MA'], underlyings: ['FG609', 'MA609'] },
+    })
+    render(<OptionsPanel />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+    const records = getLatestRecords()
+    const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
+    expect(groupIDs).toContain('FG609')
+    expect(groupIDs).toContain('MA609')
+    expect(groupIDs).not.toContain('cu2609')
+    expect(groupIDs).not.toContain('MO2608')
+  })
+
   it('按交易所过滤：勾选 SHFE 后只保留 cu 组', async () => {
     const user = userEvent.setup()
     render(<OptionsPanel />)

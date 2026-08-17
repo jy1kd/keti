@@ -73,13 +73,17 @@ export function OptionsPanel() {
     [options],
   )
 
-  // 数据管道：筛选 → 分组
+  // 数据管道：筛选 → 标底筛选 → 分组
   const groups = useMemo(() => {
     const filteredOptions = filterByExchangeAndProduct(
       options, filter.exchanges, filter.products,
       (c) => deriveUnderlyingProduct(c.underlyingInstrID ?? ''),
     )
-    return groupOptionsByUnderlying(filteredOptions, futures)
+    const grouped = groupOptionsByUnderlying(filteredOptions, futures)
+    // 第三级筛选：选完交易所+品种后进一步选具体标底（如 FG609）→ 只显示选中标底的 C/P
+    const uSet = filter.underlyings?.length ? new Set(filter.underlyings) : null
+    if (!uSet) return grouped
+    return grouped.filter((g) => uSet.has(g.underlyingID))
   }, [options, filter, futures])
 
   // 搜索过滤组
@@ -170,6 +174,7 @@ export function OptionsPanel() {
           allContracts={options}
           getProduct={(c) => deriveUnderlyingProduct(c.underlyingInstrID ?? '')}
           productNames={filterProductNames}
+          getUnderlying={(c) => c.underlyingInstrID ?? ''}
           value={filter}
           onChange={(v) => useMarketFilterStore.getState().setFilter('options', v)}
         />

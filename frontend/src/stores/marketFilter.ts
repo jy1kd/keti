@@ -17,13 +17,16 @@ interface MarketFilterStore {
   load: () => void
 }
 
-/** 形状校验：合法筛选态必须为对象且 exchanges/products 均为数组；任一不满足 → 空筛选 */
+/** 形状校验：合法筛选态必须为对象且 exchanges/products 均为数组；任一不满足 → 空筛选。
+ *  underlyings 可选（旧版本数据无此字段），存在时也须为数组。 */
 function isValidFilter(v: unknown): v is MarketFilter {
   return (
     !!v &&
     typeof v === 'object' &&
     Array.isArray((v as MarketFilter).exchanges) &&
-    Array.isArray((v as MarketFilter).products)
+    Array.isArray((v as MarketFilter).products) &&
+    ((v as MarketFilter).underlyings === undefined ||
+      Array.isArray((v as MarketFilter).underlyings))
   )
 }
 
@@ -45,7 +48,11 @@ export const useMarketFilterStore = create<MarketFilterStore>((set) => ({
   setFilter: (page, filter) =>
     set((s) => {
       const next = { futures: s.futures, options: s.options }
-      next[page] = { exchanges: [...filter.exchanges], products: [...filter.products] }
+      next[page] = {
+        exchanges: [...filter.exchanges],
+        products: [...filter.products],
+        underlyings: filter.underlyings ? [...filter.underlyings] : [],
+      }
       return next
     }),
   reset: (page) =>

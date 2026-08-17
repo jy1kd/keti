@@ -3,9 +3,12 @@ import type { ContractInfo } from '@/services/types'
 export interface MarketFilter {
   exchanges: string[]
   products: string[]
+  /** 标底合约筛选（期权页用）：选完交易所+品种后，进一步选具体标底（如 FG609），
+   *  表格只显示选中标底的 C/P。可选字段：旧 localStorage 数据无此字段 → 视为不限。 */
+  underlyings?: string[]
 }
 
-export const EMPTY_FILTER: MarketFilter = { exchanges: [], products: [] }
+export const EMPTY_FILTER: MarketFilter = { exchanges: [], products: [], underlyings: [] }
 
 /** 交易所/品种多选过滤；空集=不限；命中 = exchange ∈ exchanges(或空) 且 product ∈ products(或空) */
 export function filterByExchangeAndProduct(
