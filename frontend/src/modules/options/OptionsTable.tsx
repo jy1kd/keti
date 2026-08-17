@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, useState } from 'react'
 import { ListTable } from '@visactor/vtable'
 import type { OptionChain, OptionQuote, MarketSnapshot } from '@/services/types'
 import { SCROLL_STYLE } from '@/utils/vtableTheme'
@@ -27,6 +27,8 @@ export interface OptionsRecord {
 
 export interface OptionsTableProps {
   records: OptionsRecord[]
+  /** 实时快照（仿照 QuoteTable 通过 updateRecords 增量更新可见区，避免全表 setRecords） */
+  snapshots?: Map<string, MarketSnapshot>
   /** 点击标底层切换折叠 */
   onToggleGroup: (underlyingID: string) => void
   /** 点击 C/P 侧单元格回调；中列（行权价）与缺失侧不回调 */
@@ -93,11 +95,14 @@ function withUnderlyingStyle(columns: ColDef[]): ColDef[] {
   })
 }
 
-/** 从链数据 + snapshot 构建期权行 records（不含标底层） */
-function buildOptionRecords(
-  chain: OptionChain,
-  snapshots?: Map<string, MarketSnapshot>,
-): OptionsRecord[] {
+/**
+ * 从链数据构建期权行 records（不含标底层、不含 snapshot）
+ *
+ * 关键：这里只构建结构（合约 ID + 行权价 + 链静态价），不读 snapshots。
+ * snapshot 数据由 OptionsTable 内部 snapshot effect 通过 updateRecords 增量合并，
+ * 避免每次 snapshot 变化都全表 setRecords 重建（仿照 QuoteTable 快照增量路径）。
+ */
+function buildOptionRecords(chain: OptionChain): OptionsRecord[] {
   const strikeMap = new Map<number, { call?: OptionQuote; put?: OptionQuote }>()
   for (const call of chain.calls) {
     const entry = strikeMap.get(call.strikePrice) ?? {}
@@ -116,33 +121,36 @@ function buildOptionRecords(
     const entry = strikeMap.get(strike)!
     const c = entry.call
     const p = entry.put
-    const cSnap = c ? snapshots?.get(c.instrumentID) : undefined
-    const pSnap = p ? snapshots?.get(p.instrumentID) : undefined
 
     return {
       kind: 'option' as const,
       underlyingID: chain.underlying,
       callInstrumentID: c?.instrumentID,
-      callLastPrice: cSnap?.lastPrice ?? valOrDash(c?.lastPrice),
-      callBidPrice: cSnap?.bidPrice1 ?? valOrDash(c?.bidPrice),
-      callAskPrice: cSnap?.askPrice1 ?? valOrDash(c?.askPrice),
-      callVolume: cSnap?.volume ?? valOrDash(c?.volume),
-      callOpenInterest: cSnap?.openInterest ?? valOrDash(c?.openInterest),
+      callLastPrice: valOrDash(c?.lastPrice),
+      callBidPrice: valOrDash(c?.bidPrice),
+      callAskPrice: valOrDash(c?.askPrice),
+      callVolume: valOrDash(c?.volume),
+      callOpenInterest: valOrDash(c?.openInterest),
       putInstrumentID: p?.instrumentID,
-      putLastPrice: pSnap?.lastPrice ?? valOrDash(p?.lastPrice),
-      putBidPrice: pSnap?.bidPrice1 ?? valOrDash(p?.bidPrice),
-      putAskPrice: pSnap?.askPrice1 ?? valOrDash(p?.askPrice),
-      putVolume: pSnap?.volume ?? valOrDash(p?.volume),
-      putOpenInterest: pSnap?.openInterest ?? valOrDash(p?.openInterest),
+      putLastPrice: valOrDash(p?.lastPrice),
+      putBidPrice: valOrDash(p?.bidPrice),
+      putAskPrice: valOrDash(p?.askPrice),
+      putVolume: valOrDash(p?.volume),
+      putOpenInterest: valOrDash(p?.openInterest),
       strikePrice: strike,
     }
   })
 }
 
-export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleRangeChange, isActive }: OptionsTableProps) {
+export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, onVisibleRangeChange, isActive }: OptionsTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
   const recordsRef = useRef<OptionsRecord[]>([])
+  /** 每行最近一次 updateRecords 用的快照引用对（按行跟踪，仅对可见行生效，仿照 QuoteTable）
+   *  每行存 { c: call snapshot 引用, p: put snapshot 引用 }，比较两侧是否变化 */
+  const rowSnapshotRef = useRef<{ c?: MarketSnapshot; p?: MarketSnapshot }[]>([])
+  /** 可见区版本号：滚动导致可见范围变化时递增，驱动局部更新 effect 重算（滚入新区域的行立即刷新） */
+  const [visibleRangeVersion, setVisibleRangeVersion] = useState(0)
   const onRowClickRef = useRef(onRowClick)
   const onVisibleRangeChangeRef = useRef(onVisibleRangeChange)
   const onToggleGroupRef = useRef(onToggleGroup)
@@ -160,15 +168,16 @@ export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleRang
   useEffect(() => { onToggleGroupRef.current = onToggleGroup }, [onToggleGroup])
   useEffect(() => { isActiveRef.current = isActive }, [isActive])
 
-  /** 上报可见区的期权合约 ID 列表（仿照 QuoteTable → 订阅管理器） */
+  /** 上报可见区的期权合约 ID 列表（仿照 QuoteTable → 订阅管理器）。
+   *  PRELOAD_ROWS = 0：用户明确要求「屏幕上显示的合约才订阅」；期货表的 ±10 预加载对期权表
+   *  太激进——每屏 ~30 行 × 2 边 = 60 合约已经接近上限，再加预加载会无谓消耗订阅名额并挤掉滚动进入视野的合约。 */
   const notifyVisibleRange = useCallback(() => {
     if (!onVisibleRangeChangeRef.current || !tableRef.current) return
     try {
       const range = tableRef.current.getBodyVisibleCellRange()
       if (!range) return
-      const PRELOAD_ROWS = 10
-      const startRow = Math.max(0, range.rowStart - 1 - PRELOAD_ROWS)
-      const endRow = Math.min(recordsRef.current.length - 1, range.rowEnd - 1 + PRELOAD_ROWS)
+      const startRow = Math.max(0, range.rowStart - 1) // vtable row 0 = header
+      const endRow = Math.min(recordsRef.current.length - 1, range.rowEnd - 1)
       const ids: string[] = []
       for (let i = startRow; i <= endRow; i++) {
         const r = recordsRef.current[i]
@@ -286,6 +295,9 @@ export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleRang
     // 滚动 → 防抖上报可见标底
     table.on('scroll', () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+      // 滚动同步：notifyVisibleRange 上报订阅集（100ms 防抖）；
+      // 立即递增 visibleRangeVersion 让 snapshot effect 立刻刷新滚入的新区域
+      setVisibleRangeVersion((v) => v + 1)
       debounceTimerRef.current = setTimeout(notifyVisibleRange, SCROLL_DEBOUNCE_MS)
     })
 
@@ -313,10 +325,13 @@ export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleRang
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // records 变化 → setRecords + 合并标底行 + 上报可见区
+  // records 变化 → 全量 setRecords + 合并标底行 + 重置 rowSnapshot 跟踪 + 上报可见区
+  // 仅在结构变化（链数据/筛选/折叠）时触发；不再因 snapshot 变化而重建（snapshot 走下面的 effect 增量更新）
   useEffect(() => {
     if (!tableRef.current) return
     recordsRef.current = records
+    // 全量重建：每行的 rowSnapshotRef 索引重置，让 snapshot effect 重新填充可见行的最新引用
+    rowSnapshotRef.current = records.map(() => ({}))
     tableRef.current.setRecords(records)
     mergedRowsRef.current = new Set() // 重置后重新合并
     const mergedAll = applyRowMerges()
@@ -328,8 +343,55 @@ export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleRang
       })
     }
     scheduleVisibleRangeReport()
+    // 全量重建后立即递增版本号，强制刷新可见区（之前已滚到的行可能未跟上）
+    setVisibleRangeVersion((v) => v + 1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [records])
+
+  // snapshot 增量更新：仅对当前可见区行按引用对比，找出快照引用变化的行调用 updateRecords。
+  // 仿照 QuoteTable.tsx:548-575 的 snapshot 增量路径；PRELOAD=0 → 仅屏幕上可见的行被更新。
+  useEffect(() => {
+    if (!tableRef.current) return
+    const range = tableRef.current.getBodyVisibleCellRange?.()
+    if (!range) return
+
+    const startRow = Math.max(0, range.rowStart - 1)
+    const endRow = Math.min(recordsRef.current.length - 1, range.rowEnd - 1)
+
+    const rowIndexes: number[] = []
+    const updatedRecords: OptionsRecord[] = []
+    for (let i = startRow; i <= endRow; i++) {
+      const rowRecord = recordsRef.current[i]
+      if (!rowRecord) continue
+      if (rowRecord.kind !== 'option') continue // 标底层无 C/P 快照，跳过
+      const cSnap = rowRecord.callInstrumentID ? snapshots?.get(rowRecord.callInstrumentID) : undefined
+      const pSnap = rowRecord.putInstrumentID ? snapshots?.get(rowRecord.putInstrumentID) : undefined
+      const prevCRef = rowSnapshotRef.current[i]?.c
+      const prevPRef = rowSnapshotRef.current[i]?.p
+      if (cSnap === prevCRef && pSnap === prevPRef) continue // 该行两个快照引用都未变
+      const next = {
+        ...rowRecord,
+        callLastPrice: cSnap?.lastPrice ?? rowRecord.callLastPrice,
+        callBidPrice: cSnap?.bidPrice1 ?? rowRecord.callBidPrice,
+        callAskPrice: cSnap?.askPrice1 ?? rowRecord.callAskPrice,
+        callVolume: cSnap?.volume ?? rowRecord.callVolume,
+        callOpenInterest: cSnap?.openInterest ?? rowRecord.callOpenInterest,
+        putLastPrice: pSnap?.lastPrice ?? rowRecord.putLastPrice,
+        putBidPrice: pSnap?.bidPrice1 ?? rowRecord.putBidPrice,
+        putAskPrice: pSnap?.askPrice1 ?? rowRecord.putAskPrice,
+        putVolume: pSnap?.volume ?? rowRecord.putVolume,
+        putOpenInterest: pSnap?.openInterest ?? rowRecord.putOpenInterest,
+      }
+      recordsRef.current[i] = next
+      rowSnapshotRef.current[i] = { c: cSnap, p: pSnap }
+      updatedRecords.push(next)
+      rowIndexes.push(i)
+    }
+    if (updatedRecords.length > 0) {
+      tableRef.current.updateRecords(updatedRecords, rowIndexes)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshots, visibleRangeVersion])
 
   // 标签激活（isActive 翻转为 true）时重报可见区：切回期权标签时 vtable 容器尺寸变化但
   // 不触发 scroll/resize 事件，必须主动重报一次让订阅管理器对应当前可见区合约。

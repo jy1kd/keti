@@ -108,6 +108,9 @@ export function OptionsPanel() {
   }, [])
 
   // ── 构建平铺 records（仿照期货表：所有数据 upfront） ────────────────────
+  // 不再把 snapshots 烘到 records 里：snapshots 每 100ms 变化，会让 records 反复重建；
+  // 改为 OptionsTable 内部按 updateRecords 增量更新（仿照 QuoteTable 快照增量路径）。
+  // 这样 records 只在结构（链数据/筛选/折叠）变化时重建，setRecords 调用次数大幅下降。
   const records = useMemo(() => {
     const result: OptionsRecord[] = []
     for (const g of visibleGroups) {
@@ -116,12 +119,12 @@ export function OptionsPanel() {
       if (isExpanded) {
         const chains = chainsByUnderlying.get(g.underlyingID)
         if (chains && chains.length > 0) {
-          result.push(...buildOptionRecords(chains[0], snapshots))
+          result.push(...buildOptionRecords(chains[0]))
         }
       }
     }
     return result
-  }, [visibleGroups, collapsedGroups, chainsByUnderlying, snapshots])
+  }, [visibleGroups, collapsedGroups, chainsByUnderlying])
 
   // ── onVisibleRangeChange：报告可见期权合约 ID → 订阅管理器统一处理 ──────
   const handleVisibleRangeChange = useCallback((ids: string[]) => {
@@ -180,6 +183,7 @@ export function OptionsPanel() {
           ))}
           <OptionsTable
             records={records}
+            snapshots={snapshots}
             isActive={isActive}
             onToggleGroup={toggleGroup}
             onRowClick={onSelectContract}
