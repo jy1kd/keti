@@ -159,6 +159,18 @@ describe('App Layout — 标签页系统', () => {
       expect(useFloatingWindowStore.getState().windows['tab-infinite']).toBeDefined()
       delete (window as any).electronAPI
     })
+
+    it('onOpenFloatingTab collections 打开收藏夹管理浮动窗', () => {
+      const onOpenFloatingTab = vi.fn()
+      setElectronAPI({ onOpenFloatingTab })
+      render(<App />)
+      const callback = onOpenFloatingTab.mock.calls[0][0]
+      act(() => {
+        callback('collections')
+      })
+      expect(useFloatingWindowStore.getState().windows['tab-collections']).toBeDefined()
+      delete (window as any).electronAPI
+    })
   })
 
   describe('共享行情基础设施（上移 App，期货/期权双面板单例）', () => {

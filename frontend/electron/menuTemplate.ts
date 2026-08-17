@@ -10,8 +10,8 @@ import type { MenuItemConstructorOptions } from 'electron';
 import { resolveAction } from './menuActions';
 import type { MenuContext } from './menuActions';
 
-export type MarketView = 'all' | 'options' | 'favorites';
-export type FloatingTab = 'order' | 'kline' | 'infinite' | 'settings' | 'ipc-monitor' | 'tquote' | 'query-orders' | 'query-positions' | 'query-account';
+export type MarketView = 'all' | 'options';
+export type FloatingTab = 'order' | 'kline' | 'infinite' | 'settings' | 'ipc-monitor' | 'tquote' | 'query-orders' | 'query-positions' | 'query-account' | 'collections';
 
 export type MenuAction =
   | { type: 'market-view'; view: MarketView }
@@ -44,7 +44,7 @@ export function getAppMenuDef(): MenuItemDef[] {
       submenu: [
         { id: 'market-all', label: '📊 期货', action: { type: 'market-view', view: 'all' } },
         { id: 'market-options', label: '📉 期权', action: { type: 'market-view', view: 'options' } },
-        { id: 'market-favorites', label: '📁 收藏夹', action: { type: 'market-view', view: 'favorites' } },
+        { id: 'market-favorites', label: '📁 收藏夹', action: { type: 'open-floating', tab: 'collections' } },
         { id: 'market-sep1', type: 'separator' },
         { id: 'market-kline', label: '📈 K线', action: { type: 'open-floating', tab: 'kline' } },
         { id: 'market-tquote', label: '📉 T型报价', action: { type: 'open-floating', tab: 'tquote' } },

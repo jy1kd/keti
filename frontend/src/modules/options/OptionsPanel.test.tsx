@@ -128,7 +128,7 @@ describe('OptionsPanel', () => {
     expect(useMarketStore.getState().selectedContracts.size).toBe(1)
   })
 
-  it('右键列表行（期权行）：打开单选上下文菜单（打开报单/K线）', async () => {
+  it('右键列表行（期权行）：打开单选上下文菜单（五档下单/无限下单/K线）', async () => {
     render(<OptionsPanel />)
     const { ListTable } = await import('@visactor/vtable')
     const instance = (ListTable as any).mock.results[0].value
@@ -140,7 +140,8 @@ describe('OptionsPanel', () => {
     act(() => {
       contextmenuHandler({ row: 2, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
     })
-    expect(screen.getByText('打开报单')).toBeInTheDocument()
+    expect(screen.getByText('五档下单')).toBeInTheDocument()
+    expect(screen.getByText('无限下单')).toBeInTheDocument()
     expect(screen.getByText('打开K线')).toBeInTheDocument()
   })
 
@@ -184,9 +185,10 @@ describe('OptionsPanel', () => {
     act(() => {
       contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
     })
-    // 仅「打开T型报价」一项（不显示 打开报单/K线）
+    // 仅「打开T型报价」一项（不显示 五档下单/无限下单/K线）
     expect(screen.getByText('打开T型报价')).toBeInTheDocument()
-    expect(screen.queryByText('打开报单')).toBeNull()
+    expect(screen.queryByText('五档下单')).toBeNull()
+    expect(screen.queryByText('无限下单')).toBeNull()
     expect(screen.queryByText('打开K线')).toBeNull()
   })
 
@@ -395,16 +397,16 @@ describe('OptionsPanel', () => {
     const contextmenuHandler = instance.on.mock.calls.find(
       (call: any[]) => call[0] === 'contextmenu_cell'
     )?.[1]
-    // 先右键期权行（row 2 = FG609-C-1300）→ 打开单选菜单（打开报单/K线）
+    // 先右键期权行（row 2 = FG609-C-1300）→ 打开单选菜单（五档下单/无限下单/K线）
     act(() => {
       contextmenuHandler({ row: 2, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
     })
-    expect(screen.getByText('打开报单')).toBeInTheDocument()
+    expect(screen.getByText('五档下单')).toBeInTheDocument()
     // 再右键标底行（row 1 = FG609）→ 单选菜单应关闭，仅剩「打开T型报价」
     act(() => {
       contextmenuHandler({ row: 1, col: 0, event: { clientX: 150, clientY: 250, preventDefault: vi.fn() } })
     })
-    expect(screen.queryByText('打开报单')).toBeNull()
+    expect(screen.queryByText('五档下单')).toBeNull()
     expect(screen.queryByText('打开K线')).toBeNull()
     expect(screen.getByText('打开T型报价')).toBeInTheDocument()
   })
@@ -424,6 +426,6 @@ describe('OptionsPanel', () => {
       contextmenuHandler({ row: 2, col: 0, event: { clientX: 150, clientY: 250, preventDefault: vi.fn() } })
     })
     expect(screen.queryByText('打开T型报价')).toBeNull()
-    expect(screen.getByText('打开报单')).toBeInTheDocument()
+    expect(screen.getByText('五档下单')).toBeInTheDocument()
   })
 })

@@ -41,6 +41,15 @@ export function useContractContextMenu() {
     })
   }, [])
 
+  // 打开无限下单浮动窗口（与五档下单 openOrderPopup 对称）
+  const openInfinitePopup = useCallback((instrumentID: string) => {
+    openFloatingTab({
+      type: 'infinite',
+      title: `♾️ 无限下单-${instrumentID}`,
+      props: { instrumentID },
+    })
+  }, [])
+
   // 打开单个报单标签页
   const openOrderTab = useCallback((instrumentID: string) => {
     openTab({
@@ -65,6 +74,17 @@ export function useContractContextMenu() {
       openTab({
         type: 'order',
         title: `📝 五档下单-${id}`,
+        props: { instrumentID: id },
+      })
+    })
+  }, [openTab])
+
+  // 批量打开无限下单标签页（停靠，与批量报单 openOrderTabs 一致）
+  const openInfiniteTabs = useCallback((instrumentIDs: string[]) => {
+    instrumentIDs.forEach((id) => {
+      openTab({
+        type: 'infinite',
+        title: `♾️ 无限下单-${id}`,
         props: { instrumentID: id },
       })
     })
@@ -114,8 +134,10 @@ export function useContractContextMenu() {
     multiSelectMenu,
     openOrderPopup,
     openOrderTab,
+    openInfinitePopup,
     openKlineTab,
     openOrderTabs,
+    openInfiniteTabs,
     openKlineTabs,
     handleContextMenu,
     handleMultiSelectContextMenu,

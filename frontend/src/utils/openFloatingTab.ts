@@ -81,6 +81,15 @@ export function openCollectionFloating(collectionId: string, name: string): bool
   })
 }
 
+/** 打开收藏夹管理页悬浮窗（原生菜单「📁 收藏夹」入口，内容同管理页标签） */
+export function openCollectionsFloating(): boolean {
+  return openFloatingTab({
+    type: 'collections',
+    title: '📁 收藏夹',
+    size: { w: 900, h: 600 },
+  })
+}
+
 /** 打开设置浮动窗 */
 export function openSettingsFloating(): boolean {
   return openFloatingTab({ type: 'settings', title: '⚙ 设置' })

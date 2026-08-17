@@ -26,6 +26,7 @@ import {
   openAccountQueryFloating,
   openInfiniteFloating,
   openTQuoteFloating,
+  openCollectionsFloating,
 } from '@/utils/openFloatingTab'
 import '@/assets/styles/global.css'
 
@@ -121,6 +122,9 @@ function App() {
           break
         case 'tquote':
           openTQuoteFloating()
+          break
+        case 'collections':
+          openCollectionsFloating()
           break
       }
     })

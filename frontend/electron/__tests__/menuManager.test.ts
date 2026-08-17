@@ -60,21 +60,20 @@ describe('MenuManager', () => {
     expect(setApplicationMenu.mock.calls[0][0]).toBe(getTemplate());
   });
 
-  it('should have five top-level menus: 行情/交易/查询/设置/View', () => {
+  it('should have four top-level menus: 行情/交易/查询/设置（无默认 View）', () => {
     const manager = new MenuManager();
     manager.initialize(mainWindow, windowManager);
     const labels = getTemplate().map((item) => item.label);
-    expect(labels).toEqual(['行情', '交易', '查询', '设置', undefined]);
-    expect(getTemplate()[4].role).toBe('viewMenu');
+    expect(labels).toEqual(['行情', '交易', '查询', '设置']);
   });
 
-  it('should not include default File/Edit/Window/Help menus', () => {
+  it('should not include default File/Edit/View/Window/Help role menus', () => {
     const manager = new MenuManager();
     manager.initialize(mainWindow, windowManager);
     const roles = getTemplate()
       .map((item) => item.role)
       .filter(Boolean);
-    expect(roles).toEqual(['viewMenu']);
+    expect(roles).toEqual([]);
   });
 
   describe('行情', () => {
@@ -115,11 +114,11 @@ describe('MenuManager', () => {
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'options');
     });
 
-    it('点击收藏夹发送 menu:market-view favorites', () => {
+    it('点击收藏夹发送 menu:open-floating collections', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
       clickItem('行情', '📁 收藏夹');
-      expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'favorites');
+      expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'collections');
     });
 
     it('点击 🪟 在新窗口打开 打开行情独立窗口', () => {
