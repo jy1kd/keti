@@ -16,6 +16,8 @@ import { useContractContextMenu } from '@/hooks/useContractContextMenu'
 import { useContractMenus } from '@/hooks/useContractMenus'
 import { usePointOrder } from '@/hooks/usePointOrder'
 import { CollectionPicker } from '@/components/CollectionPicker'
+import { CollectionFilterSelect } from '@/modules/query/CollectionFilterSelect'
+import { filterByCollection } from '@/modules/query/filter'
 import { useOrderStore } from '@/modules/order/store'
 import { getProductName } from '@/utils/productNames'
 import { isElectron } from '@/services/electron'
@@ -38,6 +40,9 @@ export function MarketPanel() {
 
   // 期货页筛选态（交易所+品种多选，独立于期权页，localStorage 持久化）
   const filter = useMarketFilterStore((s) => s.futures)
+  // 期货页收藏夹过滤（与三个查询浮窗语义一致：下拉选择夹，'' = 全部）
+  const collectionId = useMarketFilterStore((s) => s.futuresCollectionId)
+  const setCollectionId = (id: string) => useMarketFilterStore.getState().setCollectionId('futures', id)
 
   // 期货全量（期货页只展示期货合约）+ 排序（数据管道第一步，设计 §3 决策 3）
   const sortedFutures = useMemo(
@@ -60,11 +65,11 @@ export function MarketPanel() {
     return m
   }, [sortedFutures])
 
-  // 搜索过滤
+  // 搜索过滤 + 收藏夹过滤（数据管道：全部期货 → 筛选（交易所+品种）→ 收藏夹 → 搜索）
   const [searchQuery, setSearchQuery] = useState('')
   const displayContracts = useMemo(() => {
-    // 数据管道：全部期货 → 筛选（交易所+品种）→ 搜索
     let base = filterByExchangeAndProduct(baseContracts, filter.exchanges, filter.products, (c) => c.productID)
+    base = filterByCollection(base, collections, collectionId)
     if (!searchQuery.trim()) return base
     const q = searchQuery.toLowerCase()
     return base.filter((c) => {
@@ -79,10 +84,10 @@ export function MarketPanel() {
         productName.includes(q)
       )
     })
-  }, [baseContracts, filter, searchQuery])
+  }, [baseContracts, filter, searchQuery, collections, collectionId])
 
-  // 右键菜单 JSX 与工具栏收藏共享逻辑（picker 模式：统一弹选夹面板，与期权页一致，见 useContractMenus）
-  const { singleMenu, multiMenu, batchToggleFavorite, favoriteButtonLabel } = useContractMenus({
+  // 右键菜单 JSX（⭐ 列点击 / 搜索弹窗仍走 picker 弹面板，工具栏已改为过滤下拉）
+  const { singleMenu, multiMenu } = useContractMenus({
     contextMenu,
     multiSelectMenu,
     favoritedIds,
@@ -144,11 +149,11 @@ export function MarketPanel() {
 
   return (
     <section className="market-panel">
-      {/* 行情页工具栏：筛选 → 仅交易中 → 收藏 → 搜索（已去除 [全部|自选] 内部视图切换）。
+      {/* 行情页工具栏：筛选 → 收藏夹过滤 → 搜索（与三个查询浮窗语义一致）。
           保留 data-drag-handle：market 为固定标签（closable:false）故 TabContent 中惰性不触发，
           与旧 market-tabs 行为一致；保留以对齐 Phase 2 全局栏合并后的拖拽语义（审查 🔵-1）。 */}
       <div className="market-toolbar" data-drag-handle>
-        {/* 功能靠左：筛选 → 收藏 */}
+        {/* 功能靠左：筛选 → 收藏夹过滤 */}
         <ContractFilter
           allContracts={sortedFutures}
           getProduct={(c) => c.productID}
@@ -156,15 +161,7 @@ export function MarketPanel() {
           value={filter}
           onChange={(v) => useMarketFilterStore.getState().setFilter('futures', v)}
         />
-        <div className="market-toolbar__actions">
-          <button
-            className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
-            disabled={!selectedInstrument && selectedContracts.size === 0}
-            onClick={() => batchToggleFavorite(selectedInstrument, selectedContracts)}
-          >
-            {favoriteButtonLabel(selectedInstrument, selectedContracts)}
-          </button>
-        </div>
+        <CollectionFilterSelect value={collectionId} onChange={setCollectionId} />
         {/* 搜索贴右：搜索框 + 🔍 + 计数（margin-left:auto 吃掉中间空间推到最右） */}
         <div className="market-toolbar__search">
           <ContractSearch contracts={baseContracts} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />

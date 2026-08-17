@@ -442,11 +442,12 @@ describe('MarketPanel', () => {
   })
 
   describe('工具行布局（Task 8：功能靠左、搜索贴右）', () => {
-    it('DOM 顺序：筛选 → 收藏 → 搜索框', () => {
+    it('DOM 顺序：筛选 → 收藏夹过滤 → 搜索框', () => {
+      // 工具栏收藏按钮已收敛为「选择收藏夹」下拉（CollectionFilterSelect），
+      // 与三个查询浮窗语义一致；无收藏夹时不渲染，故此处不直接断言 select 存在。
       const { container } = render(<MarketPanel />)
       const toolbar = container.querySelector('.market-toolbar') as HTMLElement
       const filterBtn = screen.getByRole('button', { name: /筛选/ })
-      const favoriteBtn = toolbar.querySelector('.btn-favorite') as Element
       const searchBox = toolbar.querySelector('.market-toolbar__search') as Element
       const searchInput = toolbar.querySelector('.market-toolbar__search .search-input') as Element
 
@@ -454,11 +455,41 @@ describe('MarketPanel', () => {
         (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
 
       expect(filterBtn).toBeTruthy()
-      expect(favoriteBtn).toBeTruthy()
       expect(searchInput).toBeTruthy()
-      expect(follows(filterBtn, favoriteBtn)).toBe(true)
-      expect(follows(favoriteBtn, searchBox)).toBe(true)
-      expect(follows(favoriteBtn, searchInput)).toBe(true)
+      expect(follows(filterBtn, searchBox)).toBe(true)
+    })
+
+    it('有收藏夹时工具栏渲染收藏夹过滤下拉；选择夹后表格只保留该夹合约', async () => {
+      // 注入两个收藏夹：农产品含 cu2609 + FG609，黑色系含 RB2610
+      useCollectionsStore.setState({
+        collections: [
+          { id: 'a', name: '农产品', instrumentIDs: ['cu2609', 'FG609'] },
+          { id: 'b', name: '黑色系', instrumentIDs: ['RB2610'] },
+        ],
+        loaded: true,
+      })
+      useContractsStore.setState({
+        contracts: [
+          { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
+          { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
+          { instrumentID: 'RB2610', instrumentName: '螺纹2610', exchangeID: 'SHFE', productID: 'RB', volumeMultiple: 10, priceTick: 1, expireDate: '20261015', isTrading: 1, productClass: '1' },
+        ],
+        isLoaded: true,
+      })
+      const user = userEvent.setup()
+      render(<MarketPanel />)
+      const select = screen.getByRole('combobox') as HTMLSelectElement
+      expect(select).toBeInTheDocument()
+      // 切到「黑色系」→ 表格只保留 RB2610
+      await user.selectOptions(select, 'b')
+      const { ListTable } = await import('@visactor/vtable')
+      const instance = (ListTable as any).mock.results[0].value
+      const last = instance.setRecords.mock.calls.at(-1)?.[0] ?? []
+      expect(last.map((r: any) => r.instrumentID)).toEqual(['RB2610'])
+      // 切回「全部」→ 恢复全量（交易所顺序 SHFE→CZCE，同交易所按品种字典序）
+      await user.selectOptions(select, '')
+      const lastAfter = instance.setRecords.mock.calls.at(-1)?.[0] ?? []
+      expect(lastAfter.map((r: any) => r.instrumentID)).toEqual(['cu2609', 'RB2610', 'FG609'])
     })
   })
 })

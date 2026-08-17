@@ -83,11 +83,19 @@ describe('TrayManager', () => {
     expect(manager.getTray()!.setContextMenu).toHaveBeenCalled();
   });
 
-  it('一级菜单结构：行情/交易/查询/设置/分隔符/退出', () => {
+  it('一级菜单结构：行情/收藏夹/交易/查询/设置/分隔符/退出', () => {
     const manager = new TrayManager();
     manager.initialize(mainWindow, windowManager);
     const sig = getTemplate().map((i) => (i.type === 'separator' ? '---' : i.label));
-    expect(sig).toEqual(['行情', '交易', '查询', '设置', '---', '退出']);
+    expect(sig).toEqual(['行情', '收藏夹', '交易', '查询', '设置', '---', '退出']);
+  });
+
+  it('收藏夹一级子菜单包含 打开收藏夹', () => {
+    const manager = new TrayManager();
+    manager.initialize(mainWindow, windowManager);
+    const collections = getTemplate().find((i) => i.label === '收藏夹')!;
+    const labels = collections.submenu!.map((i) => i.label).filter(Boolean);
+    expect(labels).toEqual(['📁 打开收藏夹']);
   });
 
   it('设置子菜单不包含退出（已提到一级底部）', () => {
@@ -98,12 +106,12 @@ describe('TrayManager', () => {
     expect(labels).toEqual(['⚙ 设置', '🔌 网络监控']);
   });
 
-  it('行情子菜单完整镜像：期货/期权/收藏夹/K线/T型报价/新窗口', () => {
+  it('行情子菜单完整镜像：期货/期权/K线/T型报价/新窗口', () => {
     const manager = new TrayManager();
     manager.initialize(mainWindow, windowManager);
     const market = getTemplate().find((i) => i.label === '行情')!;
     const labels = market.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📊 期货', '📉 期权', '📁 收藏夹', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']);
+    expect(labels).toEqual(['📊 期货', '📉 期权', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']);
   });
 
   it('交易子菜单包含 五档下单/无限下单', () => {

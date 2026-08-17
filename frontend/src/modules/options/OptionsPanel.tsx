@@ -19,6 +19,8 @@ import { useContractContextMenu } from '@/hooks/useContractContextMenu'
 import { useContractMenus } from '@/hooks/useContractMenus'
 import { usePointOrder } from '@/hooks/usePointOrder'
 import { CollectionPicker } from '@/components/CollectionPicker'
+import { CollectionFilterSelect } from '@/modules/query/CollectionFilterSelect'
+import { filterByCollection } from '@/modules/query/filter'
 import { getProductName } from '@/utils/productNames'
 import type { ContractInfo } from '@/services/types'
 import './styles.css'
@@ -70,6 +72,9 @@ export function OptionsPanel() {
 
   // 期权页筛选态（交易所+标底品种多选，独立于期货页，localStorage 持久化）
   const filter = useMarketFilterStore((s) => s.options)
+  // 期权页收藏夹过滤（与三个查询浮窗语义一致：下拉选择夹，'' = 全部）
+  const collectionId = useMarketFilterStore((s) => s.optionsCollectionId)
+  const setCollectionId = (id: string) => useMarketFilterStore.getState().setCollectionId('options', id)
 
   // 期货全量 → 期权全量（分组用 futures 匹配标底行真实合约）
   const futures = useMemo(() => contracts.filter((c) => c.productClass === '1'), [contracts])
@@ -93,7 +98,7 @@ export function OptionsPanel() {
     return m
   }, [options])
 
-  // 分组前先过滤期权（交易所 + 标底品种），再按标底分组展平为有序 ContractInfo[]
+  // 分组前先过滤期权（交易所 + 标底品种 + 收藏夹），再按标底分组展平为有序 ContractInfo[]
   // （标底行在前、期权行随后；组内无可见期权时整组消失）。此列表是搜索框的作用域。
   const listRows = useMemo(() => {
     const filteredOptions = filterByExchangeAndProduct(
@@ -102,14 +107,16 @@ export function OptionsPanel() {
       filter.products,
       (c) => deriveUnderlyingProduct(c.underlyingInstrID ?? ''),
     )
-    const groups = groupOptionsByUnderlying(filteredOptions, futures)
+    // 收藏夹过滤：按合约 instrumentID 匹配（标底行 = 标的期货代码、期权行 = 期权代码）
+    const collectionFiltered = filterByCollection(filteredOptions, collections, collectionId)
+    const groups = groupOptionsByUnderlying(collectionFiltered, futures)
     const flat: ContractInfo[] = []
     for (const g of groups) {
       if (g.underlying) flat.push(g.underlying)
       flat.push(...g.options)
     }
     return flat
-  }, [baseOptions, filter, futures])
+  }, [baseOptions, filter, futures, collections, collectionId])
 
   // 搜索过滤：命中 期权/标底 instrumentID + 中文品种名；空查询 = 全量
   const rows = useMemo(() => {
@@ -123,8 +130,8 @@ export function OptionsPanel() {
     })
   }, [listRows, searchQuery])
 
-  // 右键菜单 JSX 与工具栏收藏共享逻辑（picker 模式：统一弹选夹面板，与期货页一致，见 useContractMenus）
-  const { singleMenu, multiMenu, batchToggleFavorite, favoriteButtonLabel } = useContractMenus({
+  // 右键菜单 JSX（⭐ 列点击 / 搜索弹窗仍走 picker 弹面板，工具栏已改为过滤下拉）
+  const { singleMenu, multiMenu } = useContractMenus({
     contextMenu,
     multiSelectMenu,
     favoritedIds,
@@ -211,7 +218,7 @@ export function OptionsPanel() {
 
   return (
     <section className="options-page">
-      {/* 列表工具行：功能靠左（筛选 → 收藏），搜索贴右。
+      {/* 列表工具行：功能靠左（筛选 → 收藏夹过滤），搜索贴右。
           T型报价已独立为悬浮标签页；[全部|自选] 与 [仅交易中] 已去除。 */}
       <div className="market-toolbar">
         <ContractFilter
@@ -221,15 +228,7 @@ export function OptionsPanel() {
           value={filter}
           onChange={(v) => useMarketFilterStore.getState().setFilter('options', v)}
         />
-        <div className="market-toolbar__actions">
-          <button
-            className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
-            disabled={!selectedInstrument && selectedContracts.size === 0}
-            onClick={() => batchToggleFavorite(selectedInstrument, selectedContracts)}
-          >
-            {favoriteButtonLabel(selectedInstrument, selectedContracts)}
-          </button>
-        </div>
+        <CollectionFilterSelect value={collectionId} onChange={setCollectionId} />
         <div className="market-toolbar__search">
           <ContractSearch contracts={listRows} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
           <button
