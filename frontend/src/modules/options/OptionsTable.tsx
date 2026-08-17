@@ -170,7 +170,9 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
 
   /** 上报可见区的期权合约 ID 列表（仿照 QuoteTable → 订阅管理器）。
    *  PRELOAD_ROWS = 0：用户明确要求「屏幕上显示的合约才订阅」；期货表的 ±10 预加载对期权表
-   *  太激进——每屏 ~30 行 × 2 边 = 60 合约已经接近上限，再加预加载会无谓消耗订阅名额并挤掉滚动进入视野的合约。 */
+   *  太激进——每屏 ~30 行 × 2 边 = 60 合约已经接近上限，再加预加载会无谓消耗订阅名额并挤掉滚动进入视野的合约。
+   *  同 QuoteTable：递增 visibleRangeVersion 放在防抖后的上报里（而非 scroll 事件每次触发），
+   *  避免拖动期间每个滚动帧都重算 snapshot effect 导致页面卡顿。 */
   const notifyVisibleRange = useCallback(() => {
     if (!onVisibleRangeChangeRef.current || !tableRef.current) return
     try {
@@ -186,6 +188,8 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
         if (r.putInstrumentID) ids.push(r.putInstrumentID)
       }
       onVisibleRangeChangeRef.current(ids)
+      // 可见区变化 → 递增版本号，驱动 snapshot effect 对滚入的新区域立即重算
+      setVisibleRangeVersion((v) => v + 1)
     } catch { /* vtable 未就绪 */ }
   }, [])
 
@@ -292,12 +296,10 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
       }
     })
 
-    // 滚动 → 防抖上报可见标底
+    // 滚动 → 防抖上报可见标底（上报内递增 visibleRangeVersion；此处不直接递增，
+    // 否则每个滚动帧都触发 snapshot effect 重算，拖动期间页面卡顿）
     table.on('scroll', () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-      // 滚动同步：notifyVisibleRange 上报订阅集（100ms 防抖）；
-      // 立即递增 visibleRangeVersion 让 snapshot effect 立刻刷新滚入的新区域
-      setVisibleRangeVersion((v) => v + 1)
       debounceTimerRef.current = setTimeout(notifyVisibleRange, SCROLL_DEBOUNCE_MS)
     })
 
