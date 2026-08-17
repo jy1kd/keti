@@ -33,6 +33,14 @@ export interface OptionsTableProps {
   onRowClick?: (instrumentID: string, price: number) => void
   /** vtable 可见区期权合约 ID 变化回调（仿照 QuoteTable onVisibleRangeChange → 订阅管理器） */
   onVisibleRangeChange?: (instrumentIDs: string[]) => void
+  /**
+   * 当前期权面板是否激活（与 useTabStore.activeTabId 对齐）。
+   * 仿照 QuoteTable.isActive：隐藏面板（display:none）不挂载也无所谓，但 hidden 挂载时
+   * 必须为 false，否则 vtable 容器 0 尺寸下 notifyVisibleRange 仍以「预加载 ±10 行」上报
+   * 期权合约 ID → 覆盖活跃面板的可见范围 → 订阅管理器订阅错位。
+   * 缺省 = 视为激活（与 QuoteTable 一致）。
+   */
+  isActive?: boolean
 }
 
 const PLACEHOLDER = '--'
@@ -131,7 +139,7 @@ function buildOptionRecords(
   })
 }
 
-export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleRangeChange }: OptionsTableProps) {
+export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleRangeChange, isActive }: OptionsTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
   const recordsRef = useRef<OptionsRecord[]>([])
@@ -142,10 +150,47 @@ export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleRang
   const mergeRafRef = useRef<number | null>(null)
   const releaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** 镜像 QuoteTable.isActiveRef：当前面板激活态，避免回调闭包冻结过期值 */
+  const isActiveRef = useRef(isActive)
+  /** 镜像 QuoteTable.scheduleVisibleRangeReport：仅在激活时调度上报（避免隐藏面板污染订阅管理器） */
+  const scheduleRafRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => { onRowClickRef.current = onRowClick }, [onRowClick])
   useEffect(() => { onVisibleRangeChangeRef.current = onVisibleRangeChange }, [onVisibleRangeChange])
   useEffect(() => { onToggleGroupRef.current = onToggleGroup }, [onToggleGroup])
+  useEffect(() => { isActiveRef.current = isActive }, [isActive])
+
+  /** 上报可见区的期权合约 ID 列表（仿照 QuoteTable → 订阅管理器） */
+  const notifyVisibleRange = useCallback(() => {
+    if (!onVisibleRangeChangeRef.current || !tableRef.current) return
+    try {
+      const range = tableRef.current.getBodyVisibleCellRange()
+      if (!range) return
+      const PRELOAD_ROWS = 10
+      const startRow = Math.max(0, range.rowStart - 1 - PRELOAD_ROWS)
+      const endRow = Math.min(recordsRef.current.length - 1, range.rowEnd - 1 + PRELOAD_ROWS)
+      const ids: string[] = []
+      for (let i = startRow; i <= endRow; i++) {
+        const r = recordsRef.current[i]
+        if (!r) continue
+        if (r.callInstrumentID) ids.push(r.callInstrumentID)
+        if (r.putInstrumentID) ids.push(r.putInstrumentID)
+      }
+      onVisibleRangeChangeRef.current(ids)
+    } catch { /* vtable 未就绪 */ }
+  }, [])
+
+  /** 镜像 QuoteTable.scheduleVisibleRangeReport：仅在激活时调度上报。
+   *  setTimeout 0 而非直接调用：避开 vtable 初始化同步路径内的潜在 read-before-render；
+   *  scheduleRafRef 清旧调度避免多定时器叠加（清理逻辑见初次挂载与 records 变化 effect）。 */
+  const scheduleVisibleRangeReport = useCallback(() => {
+    if (isActiveRef.current === false) return
+    if (scheduleRafRef.current != null) return
+    scheduleRafRef.current = setTimeout(() => {
+      scheduleRafRef.current = null
+      notifyVisibleRange()
+    }, 0)
+  }, [notifyVisibleRange])
 
   /** 合并标底行为整行表头 */
   const applyRowMerges = useCallback((): boolean => {
@@ -169,26 +214,6 @@ export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleRang
     }
     mergedRowsRef.current = next
     return next.size === underlyingRows.size
-  }, [])
-
-  /** 上报可见区的期权合约 ID 列表（仿照 QuoteTable → 订阅管理器） */
-  const notifyVisibleRange = useCallback(() => {
-    if (!onVisibleRangeChangeRef.current || !tableRef.current) return
-    try {
-      const range = tableRef.current.getBodyVisibleCellRange()
-      if (!range) return
-      const PRELOAD_ROWS = 10
-      const startRow = Math.max(0, range.rowStart - 1 - PRELOAD_ROWS)
-      const endRow = Math.min(recordsRef.current.length - 1, range.rowEnd - 1 + PRELOAD_ROWS)
-      const ids: string[] = []
-      for (let i = startRow; i <= endRow; i++) {
-        const r = recordsRef.current[i]
-        if (!r) continue
-        if (r.callInstrumentID) ids.push(r.callInstrumentID)
-        if (r.putInstrumentID) ids.push(r.putInstrumentID)
-      }
-      onVisibleRangeChangeRef.current(ids)
-    } catch { /* vtable 未就绪 */ }
   }, [])
 
   // 初次挂载：创建 vtable
@@ -265,12 +290,16 @@ export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleRang
     })
 
     tableRef.current = table
-    notifyVisibleRange()
+    scheduleVisibleRangeReport()
 
     return () => {
       if (mergeRafRef.current != null) {
         cancelAnimationFrame(mergeRafRef.current)
         mergeRafRef.current = null
+      }
+      if (scheduleRafRef.current != null) {
+        clearTimeout(scheduleRafRef.current)
+        scheduleRafRef.current = null
       }
       mergedRowsRef.current = new Set()
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
@@ -298,9 +327,17 @@ export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleRang
         applyRowMerges()
       })
     }
-    notifyVisibleRange()
+    scheduleVisibleRangeReport()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [records])
+
+  // 标签激活（isActive 翻转为 true）时重报可见区：切回期权标签时 vtable 容器尺寸变化但
+  // 不触发 scroll/resize 事件，必须主动重报一次让订阅管理器对应当前可见区合约。
+  // 与 QuoteTable.tsx:620-626 同型（隐式依赖：scheduleVisibleRangeReport 引用稳定）。
+  useEffect(() => {
+    if (isActive) notifyVisibleRange()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive])
 
   return <div ref={containerRef} className="market-table-container" style={{ width: '100%', height: '100%' }} />
 }
