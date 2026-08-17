@@ -371,6 +371,25 @@ describe('TabContent', () => {
       fireEvent(handle, pointerEvent('pointerdown', { clientX: 10, clientY: 10, button: 2, bubbles: true }))
       expect(detachMock.startDetachDrag).not.toHaveBeenCalled()
     })
+
+    it('命中 [data-no-drag]（搜索下拉等交互区）的深子节点时不调用 startDetachDrag', () => {
+      useTabStore.setState({ tabs: [MARKET_TAB, SETTINGS_TAB], activeTabId: MARKET_TAB.id })
+      render(<TabContent />)
+      const panel = getAllPanels()[1]
+      // 模拟 ContractSearch 结构：data-drag-handle 内嵌 data-no-drag 搜索容器，结果项是深子节点
+      const handle = document.createElement('div')
+      handle.setAttribute('data-drag-handle', '')
+      const search = document.createElement('div')
+      search.setAttribute('data-no-drag', '')
+      const results = document.createElement('div')
+      const item = document.createElement('div')
+      results.appendChild(item)
+      search.appendChild(results)
+      handle.appendChild(search)
+      panel.appendChild(handle)
+      fireEvent(item, pointerEvent('pointerdown', { clientX: 10, clientY: 10, button: 0, bubbles: true }))
+      expect(detachMock.startDetachDrag).not.toHaveBeenCalled()
+    })
   })
 })
 

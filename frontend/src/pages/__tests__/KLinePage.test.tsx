@@ -145,6 +145,13 @@ describe('KLinePage', () => {
     expect(screen.getByDisplayValue('IF2608')).toBeDefined();
   });
 
+  it('搜索控件声明 data-no-drag：可关闭标签页中点击下拉结果不触发拖拽脱离（修复鼠标选择失效）', () => {
+    render(<KLinePage instrumentID="IF2608" tabId="tab-kline-IF2608" />);
+    const search = document.querySelector('.contract-search');
+    expect(search).not.toBeNull();
+    expect(search).toHaveAttribute('data-no-drag');
+  });
+
   it('页内搜索并选择合约时，调用 updateTab 更新所属标签页 props 与 title', () => {
     const updateTabSpy = vi
       .spyOn(useTabStore.getState(), 'updateTab')
