@@ -9,6 +9,7 @@ import { useContractsStore } from '@/stores/contracts'
 import { useMarketFilterStore } from '@/stores/marketFilter'
 import { useTabStore } from '@/stores/tabs'
 import { useFloatingWindowStore } from '@/stores/floatingWindows'
+import { useCollectionsStore } from '@/stores/collections'
 import { openTQuoteFloating } from '@/utils/openFloatingTab'
 import type { ContractInfo } from '@/services/types'
 
@@ -305,11 +306,10 @@ describe('OptionsPanel', () => {
   })
 
   describe('工具行布局与搜索定位（Task 8）', () => {
-    it('工具行始终渲染列表集群（筛选/收藏/搜索框），无 [列表|T型] 切换', () => {
+    it('工具行始终渲染列表集群（筛选/搜索框），无 [列表|T型] 切换', () => {
       render(<OptionsPanel />)
       expect(screen.getByPlaceholderText('搜索合约...')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /筛选/ })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: '收藏' })).toBeInTheDocument()
       // 无模式切换按钮
       expect(screen.queryByRole('button', { name: 'T型报价' })).toBeNull()
       expect(screen.queryByRole('button', { name: '列表' })).toBeNull()
@@ -339,22 +339,46 @@ describe('OptionsPanel', () => {
       expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
     })
 
-    it('DOM 顺序：筛选 → 收藏 → 搜索框（无 [全部|自选] 与 [列表|T型] 切换）', () => {
+    it('DOM 顺序：筛选 → 收藏夹过滤 → 搜索框（无 [全部|自选] 与 [列表|T型] 切换）', () => {
+      // 工具栏收藏按钮已收敛为「选择收藏夹」下拉；无收藏夹时不渲染。
       const { container } = render(<OptionsPanel />)
       const toolbar = container.querySelector('.market-toolbar') as HTMLElement
       expect(toolbar.querySelector('.market-toolbar__mode')).toBeNull()
       expect(toolbar.querySelector('.market-toolbar__tabs')).toBeNull()
       const filterBtn = screen.getByRole('button', { name: /筛选/ })
-      const favoriteBtn = toolbar.querySelector('.btn-favorite') as Element
       const searchInput = toolbar.querySelector('.market-toolbar__search .search-input') as Element
 
       const follows = (a: Element, b: Element) =>
         (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
 
-      expect(favoriteBtn).toBeTruthy()
       expect(searchInput).toBeTruthy()
-      expect(follows(filterBtn, favoriteBtn)).toBe(true)
-      expect(follows(favoriteBtn, searchInput)).toBe(true)
+      expect(follows(filterBtn, searchInput)).toBe(true)
+    })
+
+    it('有收藏夹时工具栏渲染收藏夹过滤下拉；选择夹后表格只保留该夹合约（期权按 instrumentID 匹配）', async () => {
+      // 注入两个收藏夹：FG 组合（标底 + 期权行）、cu 组合
+      useCollectionsStore.setState({
+        collections: [
+          { id: 'fg', name: 'FG 组合', instrumentIDs: ['FG609', 'FG609-C-1300'] },
+          { id: 'cu', name: 'cu 组合', instrumentIDs: ['cu2609'] },
+        ],
+        loaded: true,
+      })
+      setupFilterContracts()
+      const user = userEvent.setup()
+      render(<OptionsPanel />)
+      const select = screen.getByRole('combobox') as HTMLSelectElement
+      expect(select).toBeInTheDocument()
+      // 切到「FG 组合」→ 期权表只保留夹内期权（FG609-C-1300）+ 其标底行
+      await user.selectOptions(select, 'fg')
+      const { ListTable } = await import('@visactor/vtable')
+      const instance = (ListTable as any).mock.results[0].value
+      const last = instance.setRecords.mock.calls.at(-1)?.[0] ?? []
+      expect(last.map((r: any) => r.instrumentID)).toEqual(['FG609', 'FG609-C-1300'])
+      // 切回全部 → 恢复全量
+      await user.selectOptions(select, '')
+      const lastAfter = instance.setRecords.mock.calls.at(-1)?.[0] ?? []
+      expect(lastAfter.length).toBeGreaterThan(3)
     })
   })
 
