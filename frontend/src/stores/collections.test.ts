@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useCollectionsStore, unionFavoritedIds, collectionFavoritedIds } from './collections'
+import { useCollectionsStore, unionFavoritedIds, collectionFavoritedIds, unionSerializedIds } from './collections'
 import { useUserPrefsStore } from './userPrefs'
+import { useContractsStore } from './contracts'
 
 vi.mock('@/services/api', () => ({
   getInstrumentsByIds: vi.fn(),
@@ -35,9 +36,9 @@ describe('useCollectionsStore', () => {
 
   it('createCollection 创建收藏夹并持久化，返回 id', () => {
     const id = useCollectionsStore.getState().createCollection('农产品')
-    expect(useCollectionsStore.getState().collections).toEqual([{ id, name: '农产品', instrumentIDs: [] }])
+    expect(useCollectionsStore.getState().collections).toEqual([{ id, name: '农产品', instrumentIDs: [], seriesIDs: [] }])
     const stored = JSON.parse(localStorage.getItem('simnow-user-prefs') || '{}')
-    expect(stored.collections).toEqual([{ id, name: '农产品', instrumentIDs: [] }])
+    expect(stored.collections).toEqual([{ id, name: '农产品', instrumentIDs: [], seriesIDs: [] }])
   })
 
   it('addToCollections 去重追加；removeFromCollection 移除单个；removeFromAllCollections 全夹移除', () => {
@@ -109,5 +110,56 @@ describe('useCollectionsStore', () => {
     expect(Array.from(unionFavoritedIds(cols)).sort()).toEqual(['au2406', 'rb2406'])
     expect(Array.from(collectionFavoritedIds(cols, 'a')).sort()).toEqual(['au2406', 'rb2406'])
     expect(collectionFavoritedIds(cols, 'zz').size).toBe(0)
+  })
+})
+
+describe('系列收藏', () => {
+  beforeEach(() => {
+    useCollectionsStore.setState({ collections: [], loaded: false })
+    useUserPrefsStore.setState({
+      collections: [],
+      hotKeys: { buy: 'b', sell: 's', cancel: 'c', reverse: '', lock: '', batchCancel: 'Escape', openOrder: '', openKline: '', openSettings: '' },
+      quickTradeConfig: { lock: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, reverse: { close: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, open: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, executionMode: 'serial' }, confirmBeforeExecute: true },
+    })
+    localStorage.clear()
+    vi.clearAllMocks()
+  })
+
+  it('addSeriesToCollections 加入 seriesIDs 并持久化', () => {
+    const { addSeriesToCollections } = useCollectionsStore.getState()
+    const collId = useCollectionsStore.getState().createCollection('期权夹')
+    addSeriesToCollections(['MO2608'], [collId])
+    const c = useCollectionsStore.getState().collections.find((x) => x.id === collId)!
+    expect(c.seriesIDs).toContain('MO2608')
+  })
+
+  it('removeSeriesFromCollection 移除', () => {
+    const { addSeriesToCollections, removeSeriesFromCollection } = useCollectionsStore.getState()
+    const collId = useCollectionsStore.getState().createCollection('期权夹')
+    addSeriesToCollections(['MO2608'], [collId])
+    removeSeriesFromCollection('MO2608', collId)
+    expect(useCollectionsStore.getState().collections.find((x) => x.id === collId)!.seriesIDs).not.toContain('MO2608')
+  })
+
+  it('unionSerializedIds 收集所有 series', () => {
+    useCollectionsStore.setState({
+      collections: [
+        { id: 'a', name: 'x', instrumentIDs: [], seriesIDs: ['MO2608'] },
+        { id: 'b', name: 'y', instrumentIDs: [], seriesIDs: ['IO2608'] },
+      ],
+    })
+    expect(unionSerializedIds(useCollectionsStore.getState().collections)).toEqual(new Set(['MO2608', 'IO2608']))
+  })
+
+  it('loadCollections 校验 series：无对应期权的 series 被剔除', async () => {
+    // contracts 含 MO2608 期权 → MO2608 保留；不存在的 XX9999 剔除
+    useContractsStore.setState({
+      contracts: [{ instrumentID: 'MO2608-P-8900', productClass: '2', underlyingInstrID: 'MO2608' } as any],
+      isLoaded: true,
+    })
+    useUserPrefsStore.getState().setCollections([{ id: 'a', name: 'x', instrumentIDs: [], seriesIDs: ['MO2608', 'XX9999'] }])
+    await useCollectionsStore.getState().loadCollections()
+    const c = useCollectionsStore.getState().collections.find((x) => x.id === 'a')!
+    expect(c.seriesIDs).toEqual(['MO2608'])
   })
 })

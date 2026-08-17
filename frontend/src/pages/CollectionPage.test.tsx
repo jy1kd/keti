@@ -29,10 +29,22 @@ vi.mock('@/modules/market/QuoteTable', () => ({
     </div>
   ),
 }))
+vi.mock('@/modules/options/OptionChainGroup', () => ({
+  OptionChainGroup: ({ group }: any) => (
+    <div data-testid={`series-group-${group.underlyingID}`}>
+      <span>{group.underlyingID}</span>
+    </div>
+  ),
+}))
 
 const futures = [
   { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '2026-08-15', isTrading: 1, productClass: '1' },
   { instrumentID: 'au2406', instrumentName: '黄金', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '2024-06-15', isTrading: 1, productClass: '1' },
+]
+
+const optionContracts = [
+  { instrumentID: 'MO2608-C-4000', instrumentName: 'MO2608看涨4000', exchangeID: 'CFFEX', productID: 'MO', volumeMultiple: 100, priceTick: 0.1, expireDate: '2026-08-15', isTrading: 1, productClass: '2', underlyingInstrID: 'MO2608', optionsType: '2', strikePrice: 4000 },
+  { instrumentID: 'MO2608-P-4000', instrumentName: 'MO2608看跌4000', exchangeID: 'CFFEX', productID: 'MO', volumeMultiple: 100, priceTick: 0.1, expireDate: '2026-08-15', isTrading: 1, productClass: '2', underlyingInstrID: 'MO2608', optionsType: '1', strikePrice: 4000 },
 ]
 
 describe('CollectionPage', () => {
@@ -94,5 +106,34 @@ describe('CollectionPage', () => {
   it('收藏夹不存在态', () => {
     render(<CollectionPage collectionId="missing" tabId="tab-collection-missing" />)
     expect(screen.getByText('收藏夹不存在')).toBeDefined()
+  })
+
+  it('收藏夹含 series 时渲染为 T 型组', () => {
+    useContractsStore.setState({ contracts: [...futures, ...optionContracts], isLoaded: true } as any)
+    useCollectionsStore.setState({
+      collections: [{ id: 'c1', name: '期权夹', instrumentIDs: [], seriesIDs: ['MO2608'] }],
+    })
+    render(<CollectionPage collectionId="c1" tabId="tab-collection-c1" />)
+    expect(screen.getByTestId('series-group-MO2608')).toBeDefined()
+    expect(screen.getByText('MO2608')).toBeDefined()
+  })
+
+  it('收藏夹含 series + instrumentIDs 时同时渲染两个段', () => {
+    useContractsStore.setState({ contracts: [...futures, ...optionContracts], isLoaded: true } as any)
+    useCollectionsStore.setState({
+      collections: [{ id: 'c2', name: '混合夹', instrumentIDs: ['IF2608'], seriesIDs: ['MO2608'] }],
+    })
+    render(<CollectionPage collectionId="c2" tabId="tab-collection-c2" />)
+    expect(screen.getByTestId('series-group-MO2608')).toBeDefined()
+    expect(screen.getByTestId('row-IF2608')).toBeDefined()
+  })
+
+  it('空 seriesIDs 不渲染 series 段', () => {
+    useCollectionsStore.setState({
+      collections: [{ id: 'c3', name: '期货夹', instrumentIDs: ['IF2608'], seriesIDs: [] }],
+    })
+    render(<CollectionPage collectionId="c3" tabId="tab-collection-c3" />)
+    expect(screen.queryByTestId(/^series-group-/)).toBeNull()
+    expect(screen.getByTestId('row-IF2608')).toBeDefined()
   })
 })

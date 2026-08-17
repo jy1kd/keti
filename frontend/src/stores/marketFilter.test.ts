@@ -8,8 +8,8 @@ describe('useMarketFilterStore', () => {
   beforeEach(() => {
     localStorage.clear()
     useMarketFilterStore.setState({
-      futures: { exchanges: [], products: [] },
-      options: { exchanges: [], products: [] },
+      futures: { ...EMPTY_FILTER },
+      options: { ...EMPTY_FILTER },
       futuresCollectionId: '',
       optionsCollectionId: '',
     })
@@ -50,7 +50,7 @@ describe('useMarketFilterStore', () => {
   it('每次变更自动持久化到 localStorage', () => {
     useMarketFilterStore.getState().setExchanges('futures', ['SHFE'])
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-    expect(stored.futures).toEqual({ exchanges: ['SHFE'], products: [] })
+    expect(stored.futures).toEqual({ exchanges: ['SHFE'], products: [], underlyings: [] })
     expect(stored.options).toEqual(EMPTY_FILTER)
   })
 
@@ -87,7 +87,7 @@ describe('useMarketFilterStore', () => {
   it('setFilter 一次更新指定页交易所+品种（单一 localStorage 写）', () => {
     useMarketFilterStore.getState().setFilter('futures', { exchanges: ['SHFE'], products: ['cu'] })
     const { futures, options } = useMarketFilterStore.getState()
-    expect(futures).toEqual({ exchanges: ['SHFE'], products: ['cu'] })
+    expect(futures).toEqual({ exchanges: ['SHFE'], products: ['cu'], underlyings: [] })
     expect(options).toEqual(EMPTY_FILTER)
   })
 

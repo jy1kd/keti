@@ -69,6 +69,13 @@
   overflow: hidden;
 }
 
+/* 三个 section 在可滚动容器内，footer 在容器外（始终可见） */
+.contract-filter__scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
 .contract-filter__section {
   padding: 8px;
   border-bottom: 1px solid var(--border-light, #21262d);

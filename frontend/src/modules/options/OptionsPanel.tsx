@@ -1,94 +1,78 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ContractFilter } from '@/components/ContractFilter'
 import { ContractSearch } from '@/components/ContractSearch'
 import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
-import { ContextMenu } from '@/components/ContextMenu'
-import { QuoteTable } from '@/modules/market/QuoteTable'
-import { optionsSpec } from '@/modules/market/optionsSpec'
-import { deriveUnderlyingProduct, groupOptionsByUnderlying } from '@/modules/market/sort'
+import { OptionsTable, type OptionsRecord, buildOptionRecords } from './OptionsTable'
+import {
+  buildOptionChainsFromContracts,
+  deriveUnderlyingProduct,
+  groupOptionsByUnderlying,
+  resolveUnderlyingInstrumentID,
+} from '@/modules/market/sort'
 import { filterByExchangeAndProduct } from '@/modules/market/filter'
+import { filterByCollection } from '@/modules/query/filter'
+import { CollectionFilterSelect } from '@/modules/query/CollectionFilterSelect'
 import { useMarketStore } from '@/modules/market/store'
 import { useOrderStore } from '@/modules/order/store'
 import { useContractsStore } from '@/stores/contracts'
-import { useCollectionsStore, unionFavoritedIds } from '@/stores/collections'
 import { useMarketFilterStore } from '@/stores/marketFilter'
+import { useCollectionsStore } from '@/stores/collections'
 import { useTabStore } from '@/stores/tabs'
-import { openTQuoteFloating } from '@/utils/openFloatingTab'
-import { useContractContextMenu } from '@/hooks/useContractContextMenu'
-import { useContractMenus } from '@/hooks/useContractMenus'
-import { usePointOrder } from '@/hooks/usePointOrder'
-import { CollectionPicker } from '@/components/CollectionPicker'
-import { CollectionFilterSelect } from '@/modules/query/CollectionFilterSelect'
-import { filterByCollection } from '@/modules/query/filter'
 import { getProductName } from '@/utils/productNames'
-import type { ContractInfo } from '@/services/types'
 import './styles.css'
 
 /**
- * OptionsPanel — 期权标签页（列表视图）
+ * OptionsPanel — 期权标签页（平铺 T 型链表格视图）
  *
- * 期权列表（默认）：按标底分组展平的期权表（标底期货行在前 + 其后期权行），
- * 由 spec 驱动 QuoteTable 渲染，行级交互（选中/多选/右键/收藏/可见区订阅）与期货页一致。
- * T型报价已独立为悬浮标签页（openTQuoteFloating）：
- * - 双击标底行 → 打开 T型报价-<标底> 悬浮窗；
- * - 右键标底行 → 「打开T型报价」上下文菜单（仅此项）；
- * - 期权行双击/右键仍走原 报单弹窗 / 单选右键菜单。
+ * 仿照期货表（MarketPanel + QuoteTable）的架构：contracts 一加载完立即渲染。
+ * - ContractInfo 自带 underlyingInstrID/expireDate/optionsType/strikePrice，
+ *   足以拼出 T 型行结构；不再发 N 次 /api/market/option_chain?underlying
+ * - 单张 vtable 虚标滚动，所有标底+期权铺在同一张表
+ * - 滚动时 onVisibleRangeChange → setVisibleInstrumentIDs → 订阅管理器统一处理
+ * - snapshot 增量更新（仿照 QuoteTable 快照路径）→ 价格字段实时填充
+ * - 默认全部展开；点击标底层折叠/展开
+ * - 筛选三级：交易所 → 品种 → 标底合约；另有收藏夹过滤下拉（'' = 全部）
  */
-interface UnderlyingMenuState {
-  instrumentID: string
-  x: number
-  y: number
-}
-
 export function OptionsPanel() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchModalOpen, setSearchModalOpen] = useState(false)
-  // 标底行右键菜单（仅「打开T型报价」一项）
-  const [underlyingMenu, setUnderlyingMenu] = useState<UnderlyingMenuState | null>(null)
-  // 标底右键菜单容器 ref：外部点击关闭时判断点击是否落在菜单内
-  const underlyingMenuRef = useRef<HTMLDivElement>(null)
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
-  // 点击菜单外部关闭标底右键菜单（ContextMenu 本身仅监听 Escape / 点击项，此处补外部点击关闭）
-  useEffect(() => {
-    if (!underlyingMenu) return
-    const onMouseDown = (e: MouseEvent) => {
-      if (underlyingMenuRef.current && !underlyingMenuRef.current.contains(e.target as Node)) {
-        setUnderlyingMenu(null)
-      }
-    }
-    document.addEventListener('mousedown', onMouseDown)
-    return () => document.removeEventListener('mousedown', onMouseDown)
-  }, [underlyingMenu])
-  const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
+  const groupRefs = useRef<Record<string, HTMLDivElement | null>>({})
+
+  const setSelectedInstrument = useMarketStore((s) => s.setSelectedInstrument)
+  const setVisibleInstrumentIDs = useMarketStore((s) => s.setVisibleInstrumentIDs)
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const contracts = useContractsStore((s) => s.contracts)
-  const collections = useCollectionsStore((s) => s.collections)
-  const { contextMenu, multiSelectMenu, openOrderPopup, openKlineTab, openInfinitePopup, openOrderTabs, openInfiniteTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
-  // 收藏选夹面板（⭐ / 右键 / 工具栏 / 搜索弹窗统一入口）
-  const [picker, setPicker] = useState<{ instrumentIDs: string[] } | null>(null)
-  // 期权标签是否激活：激活翻转为 true 时 QuoteTable 重报可见区，订阅管理器立即补订阅
-  const isActive = useTabStore((s) => s.tabs.some((t) => t.type === 'options' && t.id === s.activeTabId))
+  const snapshots = useMarketStore((s) => s.snapshots)
 
-  // 期权页筛选态（交易所+标底品种多选，独立于期货页，localStorage 持久化）
   const filter = useMarketFilterStore((s) => s.options)
   // 期权页收藏夹过滤（与三个查询浮窗语义一致：下拉选择夹，'' = 全部）
   const collectionId = useMarketFilterStore((s) => s.optionsCollectionId)
   const setCollectionId = (id: string) => useMarketFilterStore.getState().setCollectionId('options', id)
+  const collections = useCollectionsStore((s) => s.collections)
 
-  // 期货全量 → 期权全量（分组用 futures 匹配标底行真实合约）
+  // 期权标签是否激活：激活时 OptionsTable 重报可见区，订阅管理器立即补订阅。
+  // 仿照 MarketPanel.tsx:36-37 的 isActive 计算；隐藏面板（display:none）传 isActive=false，
+  // 让 OptionsTable 跳过可见区上报，避免覆盖活跃面板的可见范围（OptionsTable 0 尺寸下
+  // 仍能以「预加载 ±10 行」误报期权合约 ID）。
+  const isActive = useTabStore((s) => s.tabs.some((t) => t.type === 'options' && t.id === s.activeTabId))
+
   const futures = useMemo(() => contracts.filter((c) => c.productClass === '1'), [contracts])
-  const options = useMemo(() => contracts.filter((c) => c.productClass === '2' || c.productClass === '6'), [contracts])
-  // ⭐ 填充态 = 任一收藏夹内的合约（union）；仅用于 ⭐ 列/收藏按钮状态，不再做内部自选视图
-  const favoritedIds = useMemo(
-    () => unionFavoritedIds(collections),
-    [collections],
+  // 期权合约：规范化 underlyingInstrID——CZCE/GFEX 部分期权 underlyingInstrID 只有品种（'FG'）
+  // 或缺失（''），需从 instrumentID 推断完整标底（FG610）。统一后构链/分组/筛选全部一致，
+  // 避免这些期权归错组或筛选时被误过滤。
+  const options = useMemo(
+    () => contracts
+      .filter((c) => c.productClass === '2' || c.productClass === '6')
+      .map((c) => {
+        const u = resolveUnderlyingInstrumentID(c)
+        return u === (c.underlyingInstrID ?? '') ? c : { ...c, underlyingInstrID: u }
+      }),
+    [contracts],
   )
 
-  // 期权页基础集 = 全部期权（已去除 [全部|自选] 内部视图）
-  const baseOptions = options
-
-  // 筛选面板品种中文名（显示用；可选交易所/品种列表由 ContractFilter 内经 computeFilterOptions 交叉计算，品种=标底品种）
   const filterProductNames = useMemo(() => {
     const m: Record<string, string> = {}
     for (const o of options) {
@@ -98,212 +82,164 @@ export function OptionsPanel() {
     return m
   }, [options])
 
-  // 分组前先过滤期权（交易所 + 标底品种 + 收藏夹），再按标底分组展平为有序 ContractInfo[]
-  // （标底行在前、期权行随后；组内无可见期权时整组消失）。此列表是搜索框的作用域。
-  const listRows = useMemo(() => {
-    const filteredOptions = filterByExchangeAndProduct(
-      baseOptions,
-      filter.exchanges,
-      filter.products,
-      (c) => deriveUnderlyingProduct(c.underlyingInstrID ?? ''),
-    )
-    // 收藏夹过滤：按合约 instrumentID 匹配（标底行 = 标的期货代码、期权行 = 期权代码）
-    const collectionFiltered = filterByCollection(filteredOptions, collections, collectionId)
-    const groups = groupOptionsByUnderlying(collectionFiltered, futures)
-    const flat: ContractInfo[] = []
-    for (const g of groups) {
-      if (g.underlying) flat.push(g.underlying)
-      flat.push(...g.options)
-    }
-    return flat
-  }, [baseOptions, filter, futures, collections, collectionId])
-
-  // 搜索过滤：命中 期权/标底 instrumentID + 中文品种名；空查询 = 全量
-  const rows = useMemo(() => {
-    if (!searchQuery.trim()) return listRows
-    const q = searchQuery.toLowerCase()
-    return listRows.filter((c) => {
-      const instrumentID = c.instrumentID?.toLowerCase() ?? ''
-      const instrumentName = c.instrumentName?.toLowerCase() ?? ''
-      const productName = getProductName(c.productID).toLowerCase()
-      return instrumentID.includes(q) || instrumentName.includes(q) || productName.includes(q)
-    })
-  }, [listRows, searchQuery])
-
-  // 右键菜单 JSX（⭐ 列点击 / 搜索弹窗仍走 picker 弹面板，工具栏已改为过滤下拉）
-  const { singleMenu, multiMenu } = useContractMenus({
-    contextMenu,
-    multiSelectMenu,
-    favoritedIds,
-    favoriteMode: 'picker',
-    onOpenFavoritePicker: (instrumentIDs) => setPicker({ instrumentIDs }),
-    onRemoveFromAll: (instrumentIDs) => useCollectionsStore.getState().removeFromAllCollections(instrumentIDs),
-    openOrderPopup,
-    openKlineTab,
-    openInfinitePopup,
-    openOrderTabs,
-    openInfiniteTabs,
-    openKlineTabs,
-    closeMenus,
-  })
-  // 全系统合约 ID 集合（高级搜索弹窗「已收藏/已订阅」徽标）
-  const allContractIds = useMemo(
-    () => new Set(contracts.map((c) => c.instrumentID)),
-    [contracts],
+  // ── 从合约列表直接构出期权链 Map（仿照期货表：contracts 一加载即可渲染） ───
+  // 不再发 N 次 /api/market/option_chain?underlying：ContractInfo 已有
+  // underlyingInstrID/expireDate/optionsType/strikePrice，足够拼出 T 型行结构。
+  // 价格字段（lastPrice/bidPrice/askPrice/volume/openInterest/IV）置 0，
+  // 由 WS snapshot 通过 OptionsTable 内部 snapshot effect 增量 updateRecords 填充。
+  // contracts 为空时 Map 也是空，vtable 渲染只有表头（无任何行），等待 contracts 加载。
+  const chainsByUnderlying = useMemo(
+    () => buildOptionChainsFromContracts(options),
+    [options],
   )
 
-  const { handleClick, handleDoubleClick } = usePointOrder({
-    onOrder: ({ instrumentID, price }) => {
-      setSelectedInstrument(instrumentID)
-      setOrderInstrument(instrumentID)
-      // 标底行（productClass '1'）无 lastPrice，单击回调 price=0；
-      // 不得用它覆盖报单表已填的 limitPrice（Critical #3）。期权行照常填充快照价。
-      const inst = contracts.find((c) => c.instrumentID === instrumentID)
-      if (!(inst && inst.productClass === '1')) {
-        setOrderForm({ limitPrice: price })
-      }
-    },
-    onFill: ({ instrumentID }) => {
-      setSelectedInstrument(instrumentID)
-      openOrderPopup(instrumentID)
-    },
-  })
+  // 数据管道：交易所+品种筛选 → 收藏夹过滤 → 标底筛选 → 分组
+  const groups = useMemo(() => {
+    const filteredOptions = filterByExchangeAndProduct(
+      options, filter.exchanges, filter.products,
+      (c) => deriveUnderlyingProduct(c.underlyingInstrID ?? ''),
+    )
+    // 收藏夹过滤：按期权合约 instrumentID 匹配（与查询页语义一致；'' = 全部）
+    const collectionFiltered = filterByCollection(filteredOptions, collections, collectionId)
+    const grouped = groupOptionsByUnderlying(collectionFiltered, futures)
+    // 第三级筛选：选完交易所+品种后进一步选具体标底（如 FG609）→ 只显示选中标底的 C/P
+    const uSet = filter.underlyings?.length ? new Set(filter.underlyings) : null
+    if (!uSet) return grouped
+    return grouped.filter((g) => uSet.has(g.underlyingID))
+  }, [options, filter, futures, collections, collectionId])
 
-  // 搜索定位：选中期权合约时定位到其标底分组首行（标底合约），复用 futures 页 handleSelectContract
-  // 语义（selectedInstrument ∈ selectedContracts，锚点守卫通过才能滚动跳转）。
-  const handleSelectContract = (instrumentID: string) => {
+  // 搜索过滤组
+  const visibleGroups = useMemo(() => {
+    if (!searchQuery.trim()) return groups
+    const q = searchQuery.toLowerCase()
+    return groups.filter((g) => {
+      const product = deriveUnderlyingProduct(g.underlyingID)
+      return g.underlyingID.toLowerCase().includes(q) || getProductName(product).toLowerCase().includes(q)
+    })
+  }, [groups, searchQuery])
+
+  // ── 折叠/展开 ──────────────────────────────────────────────────────────
+  const toggleGroup = useCallback((underlyingID: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(underlyingID)) next.delete(underlyingID)
+      else next.add(underlyingID)
+      return next
+    })
+  }, [])
+
+  // ── 构建平铺 records（仿照期货表：所有数据 upfront） ────────────────────
+  // 不再把 snapshots 烘到 records 里：snapshots 每 100ms 变化，会让 records 反复重建；
+  // 改为 OptionsTable 内部按 updateRecords 增量更新（仿照 QuoteTable 快照增量路径）。
+  // 这样 records 只在结构（链数据/筛选/折叠）变化时重建，setRecords 调用次数大幅下降。
+  const records = useMemo(() => {
+    const result: OptionsRecord[] = []
+    for (const g of visibleGroups) {
+      // 防御：underlyingInstrID 缺失的异常期权会归到 '' 组，跳过以免产生空标底行
+      if (!g.underlyingID) continue
+      const isExpanded = !collapsedGroups.has(g.underlyingID)
+      // 标底行：callOpenInterest（第0列）承载标底名。
+      // vtable mergeCells(0,row,lastCol,row) 整行合并后显示 startCol（第0列）的 cellValue，
+      // 若该列无值则整行空白（看起来是「空行」且不显示标底合约）。给第0列赋值标底名，
+      // 合并后显示为红粗大字标题。该字段仅用于显示，不影响订阅/快照逻辑（标底行无 C/P ID）。
+      result.push({ kind: 'underlying', underlyingID: g.underlyingID, callOpenInterest: g.underlyingID })
+      if (isExpanded) {
+        const chains = chainsByUnderlying.get(g.underlyingID)
+        if (chains && chains.length > 0) {
+          result.push(...buildOptionRecords(chains[0]))
+        }
+      }
+    }
+    return result
+  }, [visibleGroups, collapsedGroups, chainsByUnderlying])
+
+  // ── onVisibleRangeChange：报告可见期权合约 ID → 订阅管理器统一处理 ──────
+  const handleVisibleRangeChange = useCallback((ids: string[]) => {
+    setVisibleInstrumentIDs(ids)
+  }, [setVisibleInstrumentIDs])
+
+  // ── 搜索选中合约 → 定位到标底组并展开 ─────────────────────────────────
+  const handleSelectContract = useCallback((instrumentID: string) => {
     const inst = contracts.find((c) => c.instrumentID === instrumentID)
-    let target = instrumentID
-    // 命中期权合约 → 定位到标底；标底不在期货列表（指数期权）时保持选中该期权行
+    let targetGroupID = instrumentID
     if (inst && (inst.productClass === '2' || inst.productClass === '6') && inst.underlyingInstrID) {
       const underlying = contracts.find((c) => c.instrumentID === inst.underlyingInstrID)
-      if (underlying) target = underlying.instrumentID
+      if (underlying) targetGroupID = underlying.instrumentID
     }
-    setSelectedInstrument(target)
-    setOrderInstrument(target)
-    setSelectedContracts(new Set([target]))
-  }
+    setSearchQuery(targetGroupID)
+    setCollapsedGroups((prev) => { const next = new Set(prev); next.delete(targetGroupID); return next })
+    requestAnimationFrame(() => { groupRefs.current[targetGroupID]?.scrollIntoView({ block: 'center', behavior: 'smooth' }) })
+  }, [contracts])
 
-  // 标底行检测：合约 productClass === '1'（标底期货）
-  const isUnderlyingRow = (instrumentID: string) =>
-    contracts.find((c) => c.instrumentID === instrumentID)?.productClass === '1'
+  const handleAdvancedSelect = useCallback((instrumentID: string) => {
+    setSearchModalOpen(false)
+    handleSelectContract(instrumentID)
+  }, [handleSelectContract])
 
-  // 双击标底行 → 打开 T型报价-<标底> 悬浮窗；期权行 → 原 handleDoubleClick（报单弹窗）
-  const handleRowDoubleClick = (instrumentID: string, price: number) => {
-    if (isUnderlyingRow(instrumentID)) {
-      openTQuoteFloating(instrumentID)
-    } else {
-      handleDoubleClick(instrumentID, price)
-    }
-  }
+  // ── T 行单击回填 ───────────────────────────────────────────────────────
+  const onSelectContract = useCallback((instrumentID: string, price: number) => {
+    setSelectedInstrument(instrumentID)
+    setOrderInstrument(instrumentID)
+    const inst = contracts.find((c) => c.instrumentID === instrumentID)
+    // price=0 表示当前无快照也无链静态价（OptionsTable 显示 '--'，点击回传 0）。
+    // 此时只选合约、不回填限价——否则订单表单出现 0 值（点击 bug）。
+    // 快照已到（price>0）时正常回填最新价。
+    if (!(inst && inst.productClass === '1') && price > 0) setOrderForm({ limitPrice: price })
+  }, [contracts, setSelectedInstrument, setOrderInstrument, setOrderForm])
 
-  // 右键标底行 → 「打开T型报价」菜单（仅此项）；期权行 → 原 handleContextMenu（单选菜单）
-  const handleRowContextMenu = (instrumentID: string, price: number, event: MouseEvent) => {
-    // 先关闭任何已打开的单选/多选菜单与标底菜单，避免两个菜单叠加（Critical #2）
-    closeMenus()
-    setUnderlyingMenu(null)
-    if (isUnderlyingRow(instrumentID)) {
-      event.preventDefault()
-      setUnderlyingMenu({ instrumentID, x: event.clientX, y: event.clientY })
-    } else {
-      handleContextMenu(instrumentID, price, event)
-    }
-  }
+  // ── 清空筛选时重置选中合约到列表第一个标底（避免之前选中的期权合约还「置顶」） ─
+  // 直接清空 selectedInstrument（不设到第一个——选中的是期权合约，清空后不保留）
+  const handleClearFilter = useCallback(() => {
+    setSelectedInstrument(null)
+    setOrderInstrument(null)
+  }, [setSelectedInstrument, setOrderInstrument])
 
-  // 多选右键：先关闭标底菜单再走原多选菜单，避免两个菜单叠加（Critical #2）
-  const handleMultiSelectContextMenuWrapped = (instrumentIDs: string[], event: MouseEvent) => {
-    setUnderlyingMenu(null)
-    handleMultiSelectContextMenu(instrumentIDs, event)
-  }
+  const allContractIds = useMemo(() => new Set(contracts.map((c) => c.instrumentID)), [contracts])
 
   return (
     <section className="options-page">
-      {/* 列表工具行：功能靠左（筛选 → 收藏夹过滤），搜索贴右。
-          T型报价已独立为悬浮标签页；[全部|自选] 与 [仅交易中] 已去除。 */}
       <div className="market-toolbar">
         <ContractFilter
           allContracts={options}
           getProduct={(c) => deriveUnderlyingProduct(c.underlyingInstrID ?? '')}
           productNames={filterProductNames}
+          getUnderlying={(c) => c.underlyingInstrID ?? ''}
           value={filter}
           onChange={(v) => useMarketFilterStore.getState().setFilter('options', v)}
+          onClear={handleClearFilter}
         />
         <CollectionFilterSelect value={collectionId} onChange={setCollectionId} />
         <div className="market-toolbar__search">
-          <ContractSearch contracts={listRows} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
-          <button
-            className="btn-search-advanced"
-            title="搜索合约"
-            onClick={() => setSearchModalOpen(true)}
-          >
-            🔍
-          </button>
-          {searchQuery && (
-            <span className="search-count">
-              {rows.length} / {listRows.length}
-            </span>
-          )}
+          <ContractSearch contracts={options} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
+          <button className="btn-search-advanced" title="搜索合约" onClick={() => setSearchModalOpen(true)}>🔍</button>
+          {searchQuery && <span className="search-count">{visibleGroups.length} / {groups.length}</span>}
         </div>
       </div>
 
       <div className="panel-content">
         <ErrorBoundary>
-          <QuoteTable
-            spec={optionsSpec}
-            contracts={rows}
+          {visibleGroups.map((g) => (
+            <div key={g.underlyingID} ref={(el) => { groupRefs.current[g.underlyingID] = el }} data-underlying={g.underlyingID} style={{ display: 'none' }} />
+          ))}
+          <OptionsTable
+            records={records}
             snapshots={snapshots}
-            selectedInstrument={selectedInstrument}
             isActive={isActive}
-            onRowClick={handleClick}
-            onRowDoubleClick={handleRowDoubleClick}
-            onContextMenu={handleRowContextMenu}
-            onMultiSelectContextMenu={handleMultiSelectContextMenuWrapped}
-            onVisibleRangeChange={setVisibleInstrumentIDs}
-            favoritedIds={favoritedIds}
-            onFavoriteChange={(instrumentID) => setPicker({ instrumentIDs: [instrumentID] })}
-            selectedContracts={selectedContracts}
-            onSelectionChange={setSelectedContracts}
+            onToggleGroup={toggleGroup}
+            onRowClick={onSelectContract}
+            onVisibleRangeChange={handleVisibleRangeChange}
           />
         </ErrorBoundary>
       </div>
 
-      {/* 高级搜索弹窗（放大镜入口） */}
       <InstrumentSearchModal
         isOpen={searchModalOpen}
         onClose={() => setSearchModalOpen(false)}
-        onOpenFavoritePicker={(instrumentID) => setPicker({ instrumentIDs: [instrumentID] })}
-        onRemoveFromAllCollections={(ids) => useCollectionsStore.getState().removeFromAllCollections(ids)}
+        onOpenFavoritePicker={() => {}}
+        onRemoveFromAllCollections={() => {}}
         allContractIds={allContractIds}
-        favoritedIds={favoritedIds}
-      />
-
-      {/* 标底行右键菜单：仅「打开T型报价」（ref 用于外部点击关闭判断） */}
-      {underlyingMenu && (
-        <div ref={underlyingMenuRef}>
-          <ContextMenu
-            x={underlyingMenu.x}
-            y={underlyingMenu.y}
-            items={[
-              {
-                label: '打开T型报价',
-                icon: '📉',
-                onClick: () => openTQuoteFloating(underlyingMenu.instrumentID),
-              },
-            ]}
-            onClose={() => setUnderlyingMenu(null)}
-          />
-        </div>
-      )}
-
-      {/* 单选 + 多选右键菜单（共享 useContractMenus，与期货页一致） */}
-      {singleMenu}
-      {multiMenu}
-
-      {/* 收藏选夹面板（⭐ / 右键 / 工具栏 / 搜索弹窗统一汇聚于此） */}
-      <CollectionPicker
-        isOpen={!!picker}
-        instrumentIDs={picker?.instrumentIDs ?? []}
-        onClose={() => setPicker(null)}
+        favoritedIds={new Set()}
+        onContractClick={handleAdvancedSelect}
       />
     </section>
   )

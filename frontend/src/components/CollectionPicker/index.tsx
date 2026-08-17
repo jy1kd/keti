@@ -7,33 +7,42 @@ import './index.css'
 interface CollectionPickerProps {
   isOpen: boolean
   /** 目标合约：1 个 = 单选（对账）；>1 = 批量（只加不删） */
-  instrumentIDs: string[]
+  instrumentIDs?: string[]
+  /** P2 新增：系列模式（与 instrumentIDs 互斥） */
+  seriesIDs?: string[]
   onClose: () => void
 }
 
-export function CollectionPicker({ isOpen, instrumentIDs, onClose }: CollectionPickerProps) {
+export function CollectionPicker({ isOpen, instrumentIDs = [], seriesIDs, onClose }: CollectionPickerProps) {
+  const isSeries = seriesIDs != null
+  const ids = isSeries ? seriesIDs : instrumentIDs
   const collections = useCollectionsStore((s) => s.collections)
-  const { createCollection, addToCollections, removeFromCollection, removeFromAllCollections } = useCollectionsStore()
+  const {
+    createCollection, addToCollections, removeFromCollection, removeFromAllCollections,
+    addSeriesToCollections, removeSeriesFromCollection, removeSeriesFromAllCollections,
+  } = useCollectionsStore()
   const openTab = useTabStore((s) => s.openTab)
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [newName, setNewName] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const single = instrumentIDs.length === 1
-  const targetId = instrumentIDs[0]
+  const single = ids.length === 1
+  const targetId = ids[0]
 
   // 打开时初始化勾选态：单选预勾选所在夹；批量全部不勾。
+  // 系列模式按 seriesIDs 判定，合约模式按 instrumentIDs 判定。
   // 注意：不能依赖 collections——本组件内的 createCollection 会变更 collections，
   // 若将其作为依赖，新建收藏夹后 effect 重跑会把新夹的勾选态重置掉。
   useEffect(() => {
     if (!isOpen) return
     if (single) {
-      setChecked(new Set(collections.filter((c) => c.instrumentIDs.includes(targetId)).map((c) => c.id)))
+      const key = isSeries ? 'seriesIDs' : 'instrumentIDs'
+      setChecked(new Set(collections.filter((c) => (c[key] ?? []).includes(targetId)).map((c) => c.id)))
     } else {
       setChecked(new Set())
     }
     setNewName('')
-  }, [isOpen, single, targetId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, single, targetId, isSeries]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 外部点击 / Esc 关闭
   useEffect(() => {
@@ -79,8 +88,13 @@ export function CollectionPicker({ isOpen, instrumentIDs, onClose }: CollectionP
   }
 
   const handleRemoveAll = () => {
-    removeFromAllCollections(instrumentIDs)
-    toast.success(`已移除 ${instrumentIDs.length} 个合约的全部收藏`)
+    if (isSeries) {
+      removeSeriesFromAllCollections(seriesIDs!)
+      toast.success(`已移除 ${ids.length} 个系列的全部收藏`)
+    } else {
+      removeFromAllCollections(instrumentIDs)
+      toast.success(`已移除 ${instrumentIDs.length} 个合约的全部收藏`)
+    }
     onClose()
   }
 
@@ -89,7 +103,8 @@ export function CollectionPicker({ isOpen, instrumentIDs, onClose }: CollectionP
     if (checkedIds.length === 0) {
       if (single) {
         // 单选未勾选任何夹 = 从所有夹移除
-        removeFromAllCollections([targetId])
+        if (isSeries) removeSeriesFromAllCollections([targetId])
+        else removeFromAllCollections([targetId])
         toast.success(`已移除 ${targetId} 的全部收藏`)
         onClose()
       } else {
@@ -97,16 +112,30 @@ export function CollectionPicker({ isOpen, instrumentIDs, onClose }: CollectionP
       }
       return
     }
-    if (single) {
-      const current = collections.filter((c) => c.instrumentIDs.includes(targetId)).map((c) => c.id)
-      const toAdd = checkedIds.filter((id) => !current.includes(id))
-      const toRemove = current.filter((id) => !checkedIds.includes(id))
-      if (toAdd.length > 0) addToCollections([targetId], toAdd)
-      for (const id of toRemove) removeFromCollection(targetId, id)
-      toast.success(`已收藏到 ${checkedIds.length} 个收藏夹`)
+    if (isSeries) {
+      if (single) {
+        const current = collections.filter((c) => (c.seriesIDs ?? []).includes(targetId)).map((c) => c.id)
+        const toAdd = checkedIds.filter((id) => !current.includes(id))
+        const toRemove = current.filter((id) => !checkedIds.includes(id))
+        if (toAdd.length > 0) addSeriesToCollections([targetId], toAdd)
+        for (const id of toRemove) removeSeriesFromCollection(targetId, id)
+        toast.success(`已收藏到 ${checkedIds.length} 个收藏夹`)
+      } else {
+        addSeriesToCollections(ids, checkedIds)
+        toast.success(`已将 ${ids.length} 个系列收藏到 ${checkedIds.length} 个收藏夹`)
+      }
     } else {
-      addToCollections(instrumentIDs, checkedIds)
-      toast.success(`已将 ${instrumentIDs.length} 个合约收藏到 ${checkedIds.length} 个收藏夹`)
+      if (single) {
+        const current = collections.filter((c) => c.instrumentIDs.includes(targetId)).map((c) => c.id)
+        const toAdd = checkedIds.filter((id) => !current.includes(id))
+        const toRemove = current.filter((id) => !checkedIds.includes(id))
+        if (toAdd.length > 0) addToCollections([targetId], toAdd)
+        for (const id of toRemove) removeFromCollection(targetId, id)
+        toast.success(`已收藏到 ${checkedIds.length} 个收藏夹`)
+      } else {
+        addToCollections(instrumentIDs, checkedIds)
+        toast.success(`已将 ${instrumentIDs.length} 个合约收藏到 ${checkedIds.length} 个收藏夹`)
+      }
     }
     onClose()
   }
@@ -120,7 +149,15 @@ export function CollectionPicker({ isOpen, instrumentIDs, onClose }: CollectionP
     <div className="modal-overlay">
       <div className="modal-content collection-picker" ref={containerRef}>
         <div className="modal-header">
-          <h3>{single ? '收藏到收藏夹' : `收藏 ${instrumentIDs.length} 个合约到收藏夹`}</h3>
+          <h3>
+            {isSeries
+              ? single
+                ? '收藏系列到收藏夹'
+                : `收藏 ${ids.length} 个系列到收藏夹`
+              : single
+                ? '收藏到收藏夹'
+                : `收藏 ${instrumentIDs.length} 个合约到收藏夹`}
+          </h3>
           <button className="modal-close" onClick={onClose}>&times;</button>
         </div>
         <div className="collection-picker__list">
@@ -135,7 +172,9 @@ export function CollectionPicker({ isOpen, instrumentIDs, onClose }: CollectionP
               <label>
                 <input type="checkbox" checked={checked.has(c.id)} onChange={() => toggleOne(c.id)} />
                 <span className="collection-picker__name">{c.name}</span>
-                <span className="collection-picker__count">{c.instrumentIDs.length}</span>
+                <span className="collection-picker__count">
+                  {isSeries ? (c.seriesIDs?.length ?? 0) : c.instrumentIDs.length}
+                </span>
               </label>
             </div>
           ))}

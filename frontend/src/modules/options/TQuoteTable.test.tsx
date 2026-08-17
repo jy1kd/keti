@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { StrictMode } from 'react'
 import { render, cleanup } from '@testing-library/react'
 import { TQuoteTable } from './TQuoteTable'
+import { ListTable } from '@visactor/vtable'
 import type { OptionChain, OptionQuote, MarketSnapshot } from '@/services/types'
 
 function makeQuote(overrides: Partial<OptionQuote> = {}): OptionQuote {
@@ -181,5 +182,118 @@ describe('TQuoteTable', () => {
     // itself did not trigger a new ListTable construction.
     expect((ListTable as any).mock.calls.length).toBe(callsBeforeRerender)
     expect(instance.setRecords).toHaveBeenCalled()
+  })
+})
+
+describe('TQuoteTable onRowClick', () => {
+  const chain: OptionChain = {
+    underlying: 'FG609',
+    expireDate: '20260930',
+    calls: [
+      {
+        instrumentID: 'FG609-C-1300',
+        strikePrice: 1300,
+        lastPrice: 10,
+        bidPrice: 9,
+        askPrice: 11,
+        volume: 100,
+        openInterest: 200,
+        impliedVolatility: 0,
+      },
+    ],
+    puts: [
+      {
+        instrumentID: 'FG609-P-1250',
+        strikePrice: 1300,
+        lastPrice: 5,
+        bidPrice: 4,
+        askPrice: 6,
+        volume: 50,
+        openInterest: 80,
+        impliedVolatility: 0,
+      },
+    ],
+    updateTime: '',
+  }
+
+  // 通过 onTableReady 透传捕获当前渲染的 table 实例（每渲染一次更新一次），
+  // 再从其 on('click_cell') 注册中取 handler。注意全局 mock 的 ListTable 是共享单例，
+  // 不能用 ListTable.mock.results 取「最新」实例。
+  function renderAndCapture(
+    props: { chain: OptionChain; onRowClick?: (id: string, price: number) => void; onTableReady?: (t: any) => void },
+  ) {
+    let captured: any
+    render(<TQuoteTable {...props} onTableReady={(t) => { captured = t; props.onTableReady?.(t) }} />)
+    return captured
+  }
+
+  function getClickHandler(_table: any) {
+    // 全局 mock 的 ListTable 是共享单例，所有渲染共用同一个 table.on 注册表；
+    // 每次渲染都会追加一条新 click_cell 注册，取「最近一次」即当前测试的 handler。
+    const calls = (ListTable as any).mock.results
+    const table = calls[calls.length - 1]?.value
+    const clickCalls = (table.on as any).mock.calls
+    const last = [...clickCalls].reverse().find((c: any[]) => c[0] === 'click_cell')
+    return last?.[1]
+  }
+
+  it('未传 onRowClick 时不报错（回归 TQuoteView）', () => {
+    const { container } = render(<TQuoteTable chain={chain} />)
+    expect(container.firstChild).toBeTruthy()
+  })
+
+  it('onTableReady 透传 vtable 实例给测试', () => {
+    const onTableReady = vi.fn()
+    render(<TQuoteTable chain={chain} onTableReady={onTableReady} />)
+    expect(onTableReady).toHaveBeenCalledTimes(1)
+  })
+
+  it('点击 C 侧最新价列(index 4)回传 call.instrumentID 与最新价', () => {
+    const onRowClick = vi.fn()
+    const table = renderAndCapture({ chain, onRowClick })
+    getClickHandler(table)({ row: 0, col: 4, event: {} })
+    expect(onRowClick).toHaveBeenCalledWith('FG609-C-1300', 10)
+  })
+
+  it('点击 P 侧最新价列(index 6)回传 put.instrumentID 与最新价', () => {
+    const onRowClick = vi.fn()
+    const table = renderAndCapture({ chain, onRowClick })
+    getClickHandler(table)({ row: 0, col: 6, event: {} })
+    expect(onRowClick).toHaveBeenCalledWith('FG609-P-1250', 5)
+  })
+
+  it('点击中列（行权价 index 5）不回调', () => {
+    const onRowClick = vi.fn()
+    const table = renderAndCapture({ chain, onRowClick })
+    getClickHandler(table)({ row: 0, col: 5, event: {} })
+    expect(onRowClick).not.toHaveBeenCalled()
+  })
+
+  it('缺失侧（C 侧无合约）不回调', () => {
+    const onRowClick = vi.fn()
+    const noCallChain: OptionChain = {
+      underlying: 'FG609',
+      expireDate: '20260930',
+      calls: [],
+      puts: [
+        {
+          instrumentID: 'FG609-P-1250',
+          strikePrice: 1300,
+          lastPrice: 5,
+          bidPrice: 4,
+          askPrice: 6,
+          volume: 50,
+          openInterest: 80,
+          impliedVolatility: 0,
+        },
+      ],
+      updateTime: '',
+    }
+    const table = renderAndCapture({ chain: noCallChain, onRowClick })
+    getClickHandler(table)({ row: 0, col: 4, event: {} })
+    expect(onRowClick).not.toHaveBeenCalled()
+    // 但 P 侧仍可回调
+    getClickHandler(table)({ row: 0, col: 6, event: {} })
+    expect(onRowClick).toHaveBeenCalledWith('FG609-P-1250', 5)
   })
 })

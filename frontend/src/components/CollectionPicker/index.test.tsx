@@ -106,4 +106,84 @@ describe('CollectionPicker', () => {
     expect(toast.error).toHaveBeenCalled()
     expect(onClose).not.toHaveBeenCalled()
   })
+
+  // -------- Series mode --------
+
+  it('series 模式：初始勾选按 seriesIDs 判定，单 series 确认走 addSeriesToCollections', () => {
+    const addSeriesToCollections = vi.fn()
+    useCollectionsStore.setState({
+      collections: [{ id: 'a', name: '期权夹', instrumentIDs: [], seriesIDs: [] }],
+      addSeriesToCollections,
+    } as any)
+    render(<CollectionPicker isOpen seriesIDs={['MO2608']} onClose={vi.fn()} />)
+    // 单 series：默认不勾选（不在任何夹）
+    expect((screen.getByRole('checkbox', { name: /期权夹/ }) as HTMLInputElement).checked).toBe(false)
+    fireEvent.click(screen.getByRole('checkbox', { name: /期权夹/ }))
+    fireEvent.click(screen.getByText('确定'))
+    expect(addSeriesToCollections).toHaveBeenCalledWith(['MO2608'], expect.arrayContaining(['a']))
+  })
+
+  it('series 模式：单 series 已在夹中 → 预勾选，取消后移除全部收藏', () => {
+    const removeSeriesFromAllCollections = vi.fn()
+    useCollectionsStore.setState({
+      collections: [{ id: 'a', name: '期权夹', instrumentIDs: [], seriesIDs: ['MO2608'] }],
+      removeSeriesFromAllCollections,
+    } as any)
+    render(<CollectionPicker isOpen seriesIDs={['MO2608']} onClose={vi.fn()} />)
+    expect((screen.getByRole('checkbox', { name: /期权夹/ }) as HTMLInputElement).checked).toBe(true)
+    fireEvent.click(screen.getByRole('checkbox', { name: /期权夹/ })) // 取消勾选
+    fireEvent.click(screen.getByText('确定'))
+    // 单 series 取消全部勾选 → 从所有夹移除
+    expect(removeSeriesFromAllCollections).toHaveBeenCalledWith(['MO2608'])
+  })
+
+  it('series 模式：多 series 批量 → addSeriesToCollections(ids, checkedIds)', () => {
+    const addSeriesToCollections = vi.fn()
+    useCollectionsStore.setState({
+      collections: [
+        { id: 'a', name: '夹A', instrumentIDs: [], seriesIDs: [] },
+        { id: 'b', name: '夹B', instrumentIDs: [], seriesIDs: [] },
+      ],
+      addSeriesToCollections,
+    } as any)
+    render(<CollectionPicker isOpen seriesIDs={['MO2608', 'MO2609']} onClose={vi.fn()} />)
+    // 多 series 不预勾选
+    expect((screen.getByRole('checkbox', { name: /夹A/ }) as HTMLInputElement).checked).toBe(false)
+    fireEvent.click(screen.getByRole('checkbox', { name: /夹A/ }))
+    fireEvent.click(screen.getByText('确定'))
+    expect(addSeriesToCollections).toHaveBeenCalledWith(['MO2608', 'MO2609'], ['a'])
+  })
+
+  it('series 模式：移除全部收藏 → removeSeriesFromAllCollections', () => {
+    const removeSeriesFromAllCollections = vi.fn()
+    const onClose = vi.fn()
+    useCollectionsStore.setState({
+      collections: [{ id: 'a', name: '期权夹', instrumentIDs: [], seriesIDs: ['MO2608'] }],
+      removeSeriesFromAllCollections,
+    } as any)
+    render(<CollectionPicker isOpen seriesIDs={['MO2608']} onClose={onClose} />)
+    fireEvent.click(screen.getByText('移除全部收藏'))
+    expect(removeSeriesFromAllCollections).toHaveBeenCalledWith(['MO2608'])
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('series 模式：头部文案包含「系列」', () => {
+    useCollectionsStore.setState({
+      collections: [{ id: 'a', name: '期权夹', instrumentIDs: [], seriesIDs: [] }],
+    } as any)
+    render(<CollectionPicker isOpen seriesIDs={['MO2608']} onClose={vi.fn()} />)
+    expect(screen.getByText(/系列/)).toBeTruthy()
+  })
+
+  it('series 模式：未勾选任何夹 + 单 series → toast.error', () => {
+    const onClose = vi.fn()
+    useCollectionsStore.setState({
+      collections: [{ id: 'a', name: '期权夹', instrumentIDs: [], seriesIDs: [] }],
+    } as any)
+    render(<CollectionPicker isOpen seriesIDs={['MO2608']} onClose={onClose} />)
+    // 不勾选直接确定（单 series，未勾选 → 移除全部）
+    fireEvent.click(screen.getByText('确定'))
+    expect(toast.success).toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalled()
+  })
 })

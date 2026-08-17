@@ -1,9 +1,11 @@
 import { useMemo, useRef, useState } from 'react'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { QuoteTable } from '@/modules/market/QuoteTable'
+import { OptionChainGroup } from '@/modules/options/OptionChainGroup'
 import { futuresSpec } from '@/modules/market/futuresSpec'
 import { optionsSpec } from '@/modules/market/optionsSpec'
 import { groupOptionsByUnderlying } from '@/modules/market/sort'
+import type { OptionGroup } from '@/modules/market/sort'
 import { useMarketStore } from '@/modules/market/store'
 import { useOrderStore } from '@/modules/order/store'
 import { useContractsStore } from '@/stores/contracts'
@@ -52,6 +54,27 @@ export function CollectionPage({ collectionId }: { collectionId: string; tabId: 
     }
     return flat
   }, [options, allFutures])
+
+  // 系列收藏：将 seriesIDs 构建为 OptionGroup 列表
+  const seriesGroups: OptionGroup[] = useMemo(() => {
+    const sids = collection?.seriesIDs ?? []
+    return sids
+      .map((sid) => {
+        // 从全量合约中找该 series 下的期权（series 期权不逐个列入 instrumentIDs）
+        const opts = contracts.filter((c) => (c.underlyingInstrID ?? '') === sid)
+        const underlying = allFutures.find((f) => f.instrumentID === sid)
+        return { underlyingID: sid, underlying, options: opts }
+      })
+      .filter((g) => g.options.length > 0)
+  }, [collection, contracts, allFutures])
+
+  // 系列段：点击合约 → 与 QuoteTable 行为一致（设标底 + 价格回填）
+  const handleClickLike = (instrumentID: string, price: number) => {
+    setSelectedInstrument(instrumentID)
+    setOrderInstrument(instrumentID)
+    const inst = contracts.find((c) => c.instrumentID === instrumentID)
+    if (!(inst && inst.productClass === '1')) setOrderForm({ limitPrice: price })
+  }
 
   // 「全部」模式两段同时渲染时可见区上报合并（避免后报告的表覆盖前者）
   const rangesRef = useRef<{ futures: string[]; options: string[] }>({ futures: [], options: [] })
@@ -105,7 +128,8 @@ export function CollectionPage({ collectionId }: { collectionId: string; tabId: 
 
   if (!collection) return <div className="collection-page collection-page__empty">收藏夹不存在</div>
 
-  const isEmpty = memberContracts.length === 0
+  const isEmpty = memberContracts.length === 0 && seriesGroups.length === 0
+  const hasSeries = seriesGroups.length > 0
   const showFutures = typeView === 'all' ? futures.length > 0 : typeView === 'futures'
   const showOptions = typeView === 'all' ? options.length > 0 : typeView === 'options'
 
@@ -132,6 +156,18 @@ export function CollectionPage({ collectionId }: { collectionId: string; tabId: 
           </div>
         ) : (
           <ErrorBoundary>
+            {hasSeries && (
+              <>
+                {memberContracts.length > 0 && <div className="collection-page__section-title">系列收藏</div>}
+                {seriesGroups.map((g) => (
+                  <OptionChainGroup
+                    key={g.underlyingID}
+                    group={g}
+                    onSelectContract={handleClickLike}
+                  />
+                ))}
+              </>
+            )}
             {showFutures && (
               <>
                 {typeView === 'all' && <div className="collection-page__section-title">期货</div>}

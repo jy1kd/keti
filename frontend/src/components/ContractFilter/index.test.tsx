@@ -77,12 +77,21 @@ describe('ContractFilter', () => {
     expect(badge).toHaveTextContent('3')
   })
 
-  it('点击「清空」调用 onChange({ exchanges: [], products: [] })', async () => {
+  it('点击「清空」调用 onChange({ exchanges: [], products: [], underlyings: [] })', async () => {
     const user = userEvent.setup()
     render(<ContractFilter {...defaultProps} value={{ exchanges: ['SHFE'], products: ['FG'] }} />)
     await user.click(screen.getByRole('button', { name: /筛选/ }))
     await user.click(screen.getByRole('button', { name: '清空' }))
-    expect(defaultProps.onChange).toHaveBeenCalledWith({ exchanges: [], products: [] })
+    expect(defaultProps.onChange).toHaveBeenCalledWith({ exchanges: [], products: [], underlyings: [] })
+  })
+
+  it('清空时调用 onClear 回调', async () => {
+    const onClear = vi.fn()
+    const user = userEvent.setup()
+    render(<ContractFilter {...defaultProps} value={{ exchanges: ['SHFE'], products: ['FG'] }} onClear={onClear} />)
+    await user.click(screen.getByRole('button', { name: /筛选/ }))
+    await user.click(screen.getByRole('button', { name: '清空' }))
+    expect(onClear).toHaveBeenCalledTimes(1)
   })
 
   it('Esc 关闭面板', async () => {
@@ -151,5 +160,93 @@ describe('ContractFilter', () => {
     // 取消 FG → onChange 移除该品种
     await user.click(screen.getByRole('checkbox', { name: /玻璃/ }))
     expect(defaultProps.onChange).toHaveBeenCalledWith({ exchanges: ['SHFE'], products: [] })
+  })
+})
+
+// ── 标底合约级筛选（传 getUnderlying 时显示的第三级） ─────────────────────
+
+describe('ContractFilter 标底合约级筛选', () => {
+  /** 期权合约：带 underlyingInstrID，标底跨两品种（FG×2、MA×1） */
+  const OPTION_CONTRACTS: ContractInfo[] = [
+    { instrumentID: 'FG609-C-1300', instrumentName: 'FG609-C-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 1, priceTick: 0.1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'FG609', optionsType: '1', strikePrice: 1300 },
+    { instrumentID: 'FG610-C-1300', instrumentName: 'FG610-C-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 1, priceTick: 0.1, expireDate: '20261030', isTrading: 1, productClass: '2', underlyingInstrID: 'FG610', optionsType: '1', strikePrice: 1300 },
+    { instrumentID: 'MA609-C-1500', instrumentName: 'MA609-C-1500', exchangeID: 'CZCE', productID: 'MAC', volumeMultiple: 1, priceTick: 0.1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'MA609', optionsType: '1', strikePrice: 1500 },
+  ]
+  const optProps = {
+    allContracts: OPTION_CONTRACTS,
+    getProduct: (c: ContractInfo) => c.underlyingInstrID!.replace(/\d+$/, ''),
+    productNames: PRODUCT_NAMES,
+    getUnderlying: (c: ContractInfo) => c.underlyingInstrID!,
+    onChange: vi.fn(),
+  }
+
+  beforeEach(() => {
+    optProps.onChange = vi.fn()
+  })
+
+  it('未传 getUnderlying 时不显示「合约」section（期货页不显示）', async () => {
+    const user = userEvent.setup()
+    render(<ContractFilter {...defaultProps} value={{ exchanges: [], products: ['FG'], underlyings: [] }} />)
+    await user.click(screen.getByRole('button', { name: /筛选/ }))
+    expect(screen.queryByText('合约')).toBeNull()
+  })
+
+  it('传 getUnderlying 且已选品种时显示「合约」section，只列出该品种标底', async () => {
+    const user = userEvent.setup()
+    render(
+      <ContractFilter
+        {...optProps}
+        value={{ exchanges: [], products: ['FG'], underlyings: [] }}
+      />,
+    )
+    await user.click(screen.getByRole('button', { name: /筛选/ }))
+    // 合约 section 出现，列出 FG 品种的两个标底
+    expect(screen.getByText('合约')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'FG609' })).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'FG610' })).toBeInTheDocument()
+    // 其他品种（MA609）不在该品种标底列表中
+    expect(screen.queryByRole('checkbox', { name: 'MA609' })).toBeNull()
+  })
+
+  it('未选品种时不显示「合约」section', async () => {
+    const user = userEvent.setup()
+    render(
+      <ContractFilter
+        {...optProps}
+        value={{ exchanges: [], products: [], underlyings: [] }}
+      />,
+    )
+    await user.click(screen.getByRole('button', { name: /筛选/ }))
+    expect(screen.queryByText('合约')).toBeNull()
+  })
+
+  it('勾选标底调用 onChange({ ...value, underlyings })', async () => {
+    const user = userEvent.setup()
+    render(
+      <ContractFilter
+        {...optProps}
+        value={{ exchanges: [], products: ['FG'], underlyings: [] }}
+      />,
+    )
+    await user.click(screen.getByRole('button', { name: /筛选/ }))
+    await user.click(screen.getByRole('checkbox', { name: 'FG609' }))
+    expect(optProps.onChange).toHaveBeenCalledWith({ exchanges: [], products: ['FG'], underlyings: ['FG609'] })
+  })
+
+  it('已选标底即使被交易所/品种交叉过滤掉也并回显示（可取消）', async () => {
+    const user = userEvent.setup()
+    render(
+      <ContractFilter
+        {...optProps}
+        value={{ exchanges: ['CZCE'], products: ['MA'], underlyings: ['FG609'] }}
+      />,
+    )
+    await user.click(screen.getByRole('button', { name: /筛选/ }))
+    // 已选 MA 品种 → 可用标底只有 MA609；FG609 被过滤但仍并回显示勾选
+    expect(screen.getByRole('checkbox', { name: 'FG609' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'MA609' })).toBeInTheDocument()
+    // 取消 FG609 → onChange 移除
+    await user.click(screen.getByRole('checkbox', { name: 'FG609' }))
+    expect(optProps.onChange).toHaveBeenCalledWith({ exchanges: ['CZCE'], products: ['MA'], underlyings: [] })
   })
 })

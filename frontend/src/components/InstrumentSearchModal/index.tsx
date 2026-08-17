@@ -29,9 +29,15 @@ interface Props {
   allContractIds: Set<string>
   /** Favorited IDs (show "移除" button) */
   favoritedIds: Set<string>
+  /**
+   * 选中合约回调：用户点击合约代码单元格时触发（与收藏按钮分离），便于调用方跳转 / 展开定位。
+   * OptionsPanel 用它做 spec §4.3 的「选中合约 → 展开对应标底组」。
+   * 未传则合约代码单元格不响应点击。
+   */
+  onContractClick?: (instrumentID: string) => void
 }
 
-export function InstrumentSearchModal({ isOpen, onClose, onOpenFavoritePicker, onRemoveFromAllCollections, allContractIds, favoritedIds }: Props) {
+export function InstrumentSearchModal({ isOpen, onClose, onOpenFavoritePicker, onRemoveFromAllCollections, allContractIds, favoritedIds, onContractClick }: Props) {
   const [exchanges, setExchanges] = useState<string[]>([])
   const [products, setProducts] = useState<string[]>([])
   const [instruments, setInstruments] = useState<ContractInfo[]>([])
@@ -224,7 +230,19 @@ export function InstrumentSearchModal({ isOpen, onClose, onOpenFavoritePicker, o
               <tbody>
                 {instruments.map((inst) => (
                   <tr key={inst.instrumentID}>
-                    <td>{inst.instrumentID}</td>
+                    <td>
+                      {onContractClick ? (
+                        <button
+                          type="button"
+                          className="modal-table__select-link"
+                          onClick={() => onContractClick(inst.instrumentID)}
+                        >
+                          {inst.instrumentID}
+                        </button>
+                      ) : (
+                        inst.instrumentID
+                      )}
+                    </td>
                     <td>{getProductName(inst.productID)}</td>
                     <td>{inst.expireDate}</td>
                     <td>
