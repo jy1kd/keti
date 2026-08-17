@@ -11,8 +11,9 @@ exports.getAppMenuDef = getAppMenuDef;
 exports.buildMenuFromDef = buildMenuFromDef;
 const menuActions_1 = require('./menuActions.cjs');
 /**
- * 四组原生菜单定义 —— 唯一的菜单真源。
- * 「设置」子菜单末尾的退出（id 'app-quit'）仅顶部菜单保留；托盘 omitIds: ['app-quit'] 剔除并放到一级底部。
+ * 五组原生菜单定义 —— 唯一的菜单真源。
+ * 行情 / 收藏夹 / 交易 / 查询 / 设置.
+ * 「设置」内不再包含退出；托盘 omitIds 仅保留兼容引用（托盘自带一级底部退出）。
  */
 function getAppMenuDef() {
     return [
@@ -22,12 +23,18 @@ function getAppMenuDef() {
             submenu: [
                 { id: 'market-all', label: '📊 期货', action: { type: 'market-view', view: 'all' } },
                 { id: 'market-options', label: '📉 期权', action: { type: 'market-view', view: 'options' } },
-                { id: 'market-favorites', label: '📁 收藏夹', action: { type: 'open-floating', tab: 'collections' } },
                 { id: 'market-sep1', type: 'separator' },
                 { id: 'market-kline', label: '📈 K线', action: { type: 'open-floating', tab: 'kline' } },
                 { id: 'market-tquote', label: '📉 T型报价', action: { type: 'open-floating', tab: 'tquote' } },
                 { id: 'market-sep2', type: 'separator' },
                 { id: 'market-new-window', label: '🪟 在新窗口打开', action: { type: 'open-market-window' } },
+            ],
+        },
+        {
+            id: 'collections',
+            label: '收藏夹',
+            submenu: [
+                { id: 'collections-open', label: '📁 打开收藏夹', action: { type: 'open-floating', tab: 'collections' } },
             ],
         },
         {
@@ -54,8 +61,6 @@ function getAppMenuDef() {
                 { id: 'settings-main', label: '⚙ 设置', action: { type: 'open-floating', tab: 'settings' } },
                 { id: 'settings-sep1', type: 'separator' },
                 { id: 'settings-ipc', label: '🔌 网络监控', action: { type: 'open-floating', tab: 'ipc-monitor' } },
-                { id: 'settings-sep2', type: 'separator' },
-                { id: 'app-quit', label: '退出', action: { type: 'quit' } },
             ],
         },
     ];

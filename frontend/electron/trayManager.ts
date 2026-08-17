@@ -57,14 +57,14 @@ export class TrayManager {
 
     this.tray.setToolTip('SimNow 交易终端');
 
-    // 托盘菜单 = 共享四组定义（剔除「设置」内嵌退出 app-quit）+ 一级底部退出
+    // 托盘菜单 = 共享五组定义 + 一级底部退出（设置内已无 app-quit，托盘自带退出项）
     const def: MenuItemDef[] = [
       ...getAppMenuDef(),
       { id: 'tray-sep', type: 'separator' },
       { id: 'tray-quit', label: '退出', action: { type: 'quit' } },
     ];
     const ctx = { mainWindow, windowManager };
-    this.tray.setContextMenu(Menu.buildFromTemplate(buildMenuFromDef(def, ctx, { omitIds: ['app-quit'] })));
+    this.tray.setContextMenu(Menu.buildFromTemplate(buildMenuFromDef(def, ctx)));
 
     // Handle tray click (show/hide window)
     this.tray.on('click', () => {
