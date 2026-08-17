@@ -115,10 +115,10 @@ declare global {
       onNavigateTab: (callback: (tab: string) => void) => () => void;
 
       // Menu (main → renderer): 顶部菜单打开浮动窗
-      onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'infinite' | 'settings' | 'ipc-monitor' | 'tquote' | 'query-orders' | 'query-positions' | 'query-account') => void) => () => void;
+      onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'infinite' | 'settings' | 'ipc-monitor' | 'tquote' | 'query-orders' | 'query-positions' | 'query-account' | 'collections') => void) => () => void;
 
-      // Menu (main → renderer): 行情主页内切换视图（期货/自选/期权）
-      onMarketView: (callback: (view: 'all' | 'favorites' | 'options') => void) => () => void;
+      // Menu (main → renderer): 行情主页内切换视图（期货/期权）
+      onMarketView: (callback: (view: 'all' | 'options') => void) => () => void;
 
       // Data exchange
       onGetSelectedInstrument: (callback: () => string) => () => void;

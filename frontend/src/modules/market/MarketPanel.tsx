@@ -26,7 +26,7 @@ export function MarketPanel() {
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
   const contracts = useContractsStore((s) => s.contracts)
   const collections = useCollectionsStore((s) => s.collections)
-  const { contextMenu, multiSelectMenu, openOrderPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
+  const { contextMenu, multiSelectMenu, openOrderPopup, openKlineTab, openInfinitePopup, openOrderTabs, openInfiniteTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   // 收藏选夹面板（⭐ / 右键 / 工具栏 / 搜索弹窗统一入口）
   const [picker, setPicker] = useState<{ instrumentIDs: string[] } | null>(null)
@@ -91,7 +91,9 @@ export function MarketPanel() {
     onRemoveFromAll: (instrumentIDs) => useCollectionsStore.getState().removeFromAllCollections(instrumentIDs),
     openOrderPopup,
     openKlineTab,
+    openInfinitePopup,
     openOrderTabs,
+    openInfiniteTabs,
     openKlineTabs,
     closeMenus,
   })
@@ -102,7 +104,7 @@ export function MarketPanel() {
   )
 
   // 顶部菜单「行情」切换（设计 §4.1）：期货/期权为独立固定标签。
-  // options → 激活期权标签；favorites → 打开收藏夹管理页；all → 激活期货标签。
+  // options → 激活期权标签；all → 激活期货标签（收藏夹已改为 open-floating，由 App 统一处理）。
   useEffect(() => {
     if (!isElectron()) return
 
@@ -110,10 +112,6 @@ export function MarketPanel() {
       if (view === 'options') {
         const options = useTabStore.getState().tabs.find((t) => t.type === 'options')
         if (options) useTabStore.getState().setActiveTab(options.id)
-        return
-      }
-      if (view === 'favorites') {
-        useTabStore.getState().openTab({ type: 'collections', title: '📁 收藏夹' })
         return
       }
       const market = useTabStore.getState().tabs.find((t) => t.type === 'market')

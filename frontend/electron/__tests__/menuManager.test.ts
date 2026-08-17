@@ -115,11 +115,11 @@ describe('MenuManager', () => {
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'options');
     });
 
-    it('点击收藏夹发送 menu:market-view favorites', () => {
+    it('点击收藏夹发送 menu:open-floating collections', () => {
       const manager = new MenuManager();
       manager.initialize(mainWindow, windowManager);
       clickItem('行情', '📁 收藏夹');
-      expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'favorites');
+      expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'collections');
     });
 
     it('点击 🪟 在新窗口打开 打开行情独立窗口', () => {

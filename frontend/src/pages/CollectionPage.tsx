@@ -25,7 +25,7 @@ export function CollectionPage({ collectionId }: { collectionId: string; tabId: 
   const contracts = useContractsStore((s) => s.contracts)
   const collections = useCollectionsStore((s) => s.collections)
   const { addToCollections, removeFromCollection } = useCollectionsStore()
-  const { contextMenu, multiSelectMenu, openOrderPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
+  const { contextMenu, multiSelectMenu, openOrderPopup, openKlineTab, openInfinitePopup, openOrderTabs, openInfiniteTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
   const isActive = useTabStore((s) => s.tabs.some((t) => t.id === s.activeTabId && t.type === 'collection' && t.props.collectionId === collectionId))
 
   const collection = collections.find((c) => c.id === collectionId)
@@ -83,7 +83,9 @@ export function CollectionPage({ collectionId }: { collectionId: string; tabId: 
     },
     openOrderPopup,
     openKlineTab,
+    openInfinitePopup,
     openOrderTabs,
+    openInfiniteTabs,
     openKlineTabs,
     closeMenus,
   })

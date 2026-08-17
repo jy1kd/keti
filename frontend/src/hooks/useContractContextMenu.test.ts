@@ -44,6 +44,40 @@ describe('useContractContextMenu', () => {
     })
   })
 
+  it('openInfinitePopup 打开无限下单浮动窗口', () => {
+    const { result } = renderHook(() => useContractContextMenu())
+    act(() => {
+      result.current.openInfinitePopup('IF2608')
+    })
+
+    expect(mockOpenFloatingTab).toHaveBeenCalledWith({
+      type: 'infinite',
+      title: '♾️ 无限下单-IF2608',
+      props: { instrumentID: 'IF2608' },
+    })
+  })
+
+  it('openInfiniteTabs 批量打开无限下单为停靠标签（与批量报单一致，非浮动窗）', () => {
+    const openTabSpy = vi.spyOn(useTabStore.getState(), 'openTab')
+    const { result } = renderHook(() => useContractContextMenu())
+    act(() => {
+      result.current.openInfiniteTabs(['IF2608', 'rb2610'])
+    })
+
+    expect(openTabSpy).toHaveBeenNthCalledWith(1, {
+      type: 'infinite',
+      title: '♾️ 无限下单-IF2608',
+      props: { instrumentID: 'IF2608' },
+    })
+    expect(openTabSpy).toHaveBeenNthCalledWith(2, {
+      type: 'infinite',
+      title: '♾️ 无限下单-rb2610',
+      props: { instrumentID: 'rb2610' },
+    })
+    // 批量无限下单不再走浮动窗
+    expect(mockOpenFloatingTab).not.toHaveBeenCalled()
+  })
+
   it('openKlineTab 打开K线浮动窗口', () => {
     const { result } = renderHook(() => useContractContextMenu())
     act(() => {

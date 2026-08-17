@@ -231,12 +231,13 @@ describe('MarketPanel', () => {
       contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
     })
 
-    // 应该显示上下文菜单
-    expect(screen.getByText('打开报单')).toBeInTheDocument()
+    // 应该显示上下文菜单（拆为 五档下单 / 无限下单）
+    expect(screen.getByText('五档下单')).toBeInTheDocument()
+    expect(screen.getByText('无限下单')).toBeInTheDocument()
     expect(screen.getByText('打开K线')).toBeInTheDocument()
   })
 
-  it('右键菜单点击「打开报单」打开报单浮动窗口', async () => {
+  it('右键菜单点击「五档下单」打开五档下单浮动窗口', async () => {
     setupContracts()
 
     const user = userEvent.setup()
@@ -252,15 +253,42 @@ describe('MarketPanel', () => {
       contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
     })
 
-    // 点击「打开报单」
-    await user.click(screen.getByText('打开报单'))
+    // 点击「五档下单」
+    await user.click(screen.getByText('五档下单'))
 
-    // 应打开报单浮动窗口
+    // 应打开五档下单浮动窗口
     expect(mockOpenFloatingTab).toHaveBeenCalledWith({
       type: 'order',
       title: '📝 五档下单-IF2608',
       props: { instrumentID: 'IF2608' },
       size: { w: 620, h: 540 },
+    })
+  })
+
+  it('右键菜单点击「无限下单」打开无限下单浮动窗口', async () => {
+    setupContracts()
+
+    const user = userEvent.setup()
+    render(<MarketPanel />)
+
+    // 触发右键菜单
+    const { ListTable } = await import('@visactor/vtable')
+    const tableInstance = (ListTable as any).mock.results[0].value
+    const contextmenuHandler = tableInstance.on.mock.calls.find(
+      (call: any[]) => call[0] === 'contextmenu_cell'
+    )?.[1]
+    act(() => {
+      contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
+    })
+
+    // 点击「无限下单」
+    await user.click(screen.getByText('无限下单'))
+
+    // 应打开无限下单浮动窗口
+    expect(mockOpenFloatingTab).toHaveBeenCalledWith({
+      type: 'infinite',
+      title: '♾️ 无限下单-IF2608',
+      props: { instrumentID: 'IF2608' },
     })
   })
 
@@ -394,23 +422,6 @@ describe('MarketPanel', () => {
         callback('options')
       })
       expect(useTabStore.getState().activeTabId).toBe('tab-options')
-      delete (window as any).electronAPI
-    })
-
-    it('view=favorites → 打开收藏夹管理页（collections 标签）', () => {
-      setupTabs('tab-options')
-      const onMarketView = vi.fn()
-      ;(window as any).electronAPI = { onMarketView }
-      render(<MarketPanel />)
-      const callback = onMarketView.mock.calls[0][0]
-
-      act(() => {
-        callback('favorites')
-      })
-      expect(useTabStore.getState().tabs.some((t) => t.type === 'collections')).toBe(true)
-      // 期货页无内部 自选 视图可切
-      expect(screen.queryByRole('button', { name: '自选' })).not.toBeInTheDocument()
-
       delete (window as any).electronAPI
     })
 

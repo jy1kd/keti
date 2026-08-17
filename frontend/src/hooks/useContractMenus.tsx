@@ -33,8 +33,10 @@ interface UseContractMenusArgs {
   onRemoveFromFolderBatch?: (instrumentIDs: string[]) => void
   openOrderPopup: (instrumentID: string) => void
   openKlineTab: (instrumentID: string) => void
+  openInfinitePopup: (instrumentID: string) => void
   openOrderTabs: (instrumentIDs: string[]) => void
   openKlineTabs: (instrumentIDs: string[]) => void
+  openInfiniteTabs: (instrumentIDs: string[]) => void
   closeMenus: () => void
 }
 
@@ -56,8 +58,10 @@ export function useContractMenus(args: UseContractMenusArgs) {
     onRemoveFromFolderBatch,
     openOrderPopup,
     openKlineTab,
+    openInfinitePopup,
     openOrderTabs,
     openKlineTabs,
+    openInfiniteTabs,
     closeMenus,
   } = args
 
@@ -86,7 +90,8 @@ export function useContractMenus(args: UseContractMenusArgs) {
       x={contextMenu.x}
       y={contextMenu.y}
       items={[
-        { label: '打开报单', icon: '📝', onClick: () => openOrderPopup(contextMenu.instrumentID) },
+        { label: '五档下单', icon: '📝', onClick: () => openOrderPopup(contextMenu.instrumentID) },
+        { label: '无限下单', icon: '♾️', onClick: () => openInfinitePopup(contextMenu.instrumentID) },
         { label: '打开K线', icon: '📈', onClick: () => openKlineTab(contextMenu.instrumentID) },
         favoriteMode === 'folder'
           ? {
@@ -141,7 +146,8 @@ export function useContractMenus(args: UseContractMenusArgs) {
         x={multiSelectMenu.x}
         y={multiSelectMenu.y}
         items={[
-          { label: `批量打开报单 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📝', onClick: () => openOrderTabs(multiSelectMenu.instrumentIDs) },
+          { label: `批量五档下单 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📝', onClick: () => openOrderTabs(multiSelectMenu.instrumentIDs) },
+          { label: `批量无限下单 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '♾️', onClick: () => openInfiniteTabs(multiSelectMenu.instrumentIDs) },
           { label: `批量打开K线 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📈', onClick: () => openKlineTabs(multiSelectMenu.instrumentIDs) },
           favoriteItem,
           ...(removeAllItem ? [removeAllItem] : []),
