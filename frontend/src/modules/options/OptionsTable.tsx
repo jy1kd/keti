@@ -31,8 +31,8 @@ export interface OptionsTableProps {
   onToggleGroup: (underlyingID: string) => void
   /** 点击 C/P 侧单元格回调；中列（行权价）与缺失侧不回调 */
   onRowClick?: (instrumentID: string, price: number) => void
-  /** vtable 可见标底 ID 变化回调（懒加载用） */
-  onVisibleGroupsChange?: (ids: string[]) => void
+  /** vtable 可见区期权合约 ID 变化回调（仿照 QuoteTable onVisibleRangeChange → 订阅管理器） */
+  onVisibleRangeChange?: (instrumentIDs: string[]) => void
 }
 
 const PLACEHOLDER = '--'
@@ -131,12 +131,12 @@ function buildOptionRecords(
   })
 }
 
-export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleGroupsChange }: OptionsTableProps) {
+export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleRangeChange }: OptionsTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
   const recordsRef = useRef<OptionsRecord[]>([])
   const onRowClickRef = useRef(onRowClick)
-  const onVisibleGroupsChangeRef = useRef(onVisibleGroupsChange)
+  const onVisibleRangeChangeRef = useRef(onVisibleRangeChange)
   const onToggleGroupRef = useRef(onToggleGroup)
   const mergedRowsRef = useRef<Set<number>>(new Set())
   const mergeRafRef = useRef<number | null>(null)
@@ -144,7 +144,7 @@ export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleGrou
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => { onRowClickRef.current = onRowClick }, [onRowClick])
-  useEffect(() => { onVisibleGroupsChangeRef.current = onVisibleGroupsChange }, [onVisibleGroupsChange])
+  useEffect(() => { onVisibleRangeChangeRef.current = onVisibleRangeChange }, [onVisibleRangeChange])
   useEffect(() => { onToggleGroupRef.current = onToggleGroup }, [onToggleGroup])
 
   /** 合并标底行为整行表头 */
@@ -171,18 +171,23 @@ export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleGrou
     return next.size === underlyingRows.size
   }, [])
 
-  /** 上报可见区的标底 ID 列表 */
-  const notifyVisibleGroups = useCallback(() => {
-    if (!onVisibleGroupsChangeRef.current || !tableRef.current) return
+  /** 上报可见区的期权合约 ID 列表（仿照 QuoteTable → 订阅管理器） */
+  const notifyVisibleRange = useCallback(() => {
+    if (!onVisibleRangeChangeRef.current || !tableRef.current) return
     try {
       const range = tableRef.current.getBodyVisibleCellRange()
       if (!range) return
-      const groupIDs = new Set<string>()
-      for (let i = range.rowStart - 1; i <= range.rowEnd - 1; i++) {
+      const PRELOAD_ROWS = 10
+      const startRow = Math.max(0, range.rowStart - 1 - PRELOAD_ROWS)
+      const endRow = Math.min(recordsRef.current.length - 1, range.rowEnd - 1 + PRELOAD_ROWS)
+      const ids: string[] = []
+      for (let i = startRow; i <= endRow; i++) {
         const r = recordsRef.current[i]
-        if (r) groupIDs.add(r.underlyingID)
+        if (!r) continue
+        if (r.callInstrumentID) ids.push(r.callInstrumentID)
+        if (r.putInstrumentID) ids.push(r.putInstrumentID)
       }
-      onVisibleGroupsChangeRef.current([...groupIDs])
+      onVisibleRangeChangeRef.current(ids)
     } catch { /* vtable 未就绪 */ }
   }, [])
 
@@ -256,11 +261,11 @@ export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleGrou
     // 滚动 → 防抖上报可见标底
     table.on('scroll', () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-      debounceTimerRef.current = setTimeout(notifyVisibleGroups, SCROLL_DEBOUNCE_MS)
+      debounceTimerRef.current = setTimeout(notifyVisibleRange, SCROLL_DEBOUNCE_MS)
     })
 
     tableRef.current = table
-    notifyVisibleGroups()
+    notifyVisibleRange()
 
     return () => {
       if (mergeRafRef.current != null) {
@@ -293,7 +298,7 @@ export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleGrou
         applyRowMerges()
       })
     }
-    notifyVisibleGroups()
+    notifyVisibleRange()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [records])
 
