@@ -86,6 +86,32 @@ export function syntheticUnderlyingContract(underlyingInstrID: string): Contract
 }
 
 /**
+ * 解析期权的完整标底合约 ID。
+ * CTP 返回的期权合约 underlyingInstrID 在部分交易所（CZCE/GFEX）可能不完整：
+ * 有的是完整标底（'FG610'），有的只有品种（'FG'），有的缺失（''）。
+ * 该函数优先用完整的 underlyingInstrID（含数字）；缺失/只有品种时从 instrumentID 推断标底。
+ *
+ * instrumentID 形态：
+ *  - 带分隔符：'FG610-C-1300' / 'p2609-C-9400' / 'lc2610-P-72000' → 取首段
+ *  - 无分隔符：'RM611C2225' / 'cu2609C90000' / 'sc2612C610' → 取「字母+数字」前缀
+ */
+export function resolveUnderlyingInstrumentID(inst: { instrumentID?: string; underlyingInstrID?: string }): string {
+  const u = inst.underlyingInstrID ?? ''
+  // 含数字 = 完整标底（如 FG610、p2609）
+  if (u && /\d/.test(u)) return u
+  const id = inst.instrumentID ?? ''
+  // 带分隔符：FG610-C-1300 → FG610
+  if (id.includes('-')) {
+    const first = id.split('-')[0]
+    if (first && /\d/.test(first)) return first
+  }
+  // 无分隔符：RM611C2225 / cu2609C90000 → 字母+数字 前缀
+  const m = id.match(/^([A-Za-z]+\d+)[CP]/)
+  if (m) return m[1]
+  return u // 兜底（可能为 '' 或品种名）
+}
+
+/**
  * 从全量合约列表构出期权链 Map（underlying → chains[]）。
  *
  * 仿照期货表的「contracts 一加载完就立刻能渲染」——ContractInfo 自带

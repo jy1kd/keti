@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { ContractInfo } from '@/services/types'
-import { sortFutures, deriveUnderlyingProduct, groupOptionsByUnderlying, naturalCompare, syntheticUnderlyingContract } from './sort'
+import { sortFutures, deriveUnderlyingProduct, groupOptionsByUnderlying, naturalCompare, syntheticUnderlyingContract, resolveUnderlyingInstrumentID } from './sort'
 
 const fut = (instrumentID: string, exchangeID: string, productID: string): ContractInfo =>
   ({ instrumentID, instrumentName: instrumentID, exchangeID, productID, volumeMultiple: 1, priceTick: 0.1, expireDate: '', isTrading: 1, productClass: '1' })
@@ -41,6 +41,37 @@ describe('deriveUnderlyingProduct', () => {
   it('去掉标的 ID 尾部数字得到品种', () => {
     expect(deriveUnderlyingProduct('FG609')).toBe('FG')
     expect(deriveUnderlyingProduct('p2609')).toBe('p')
+  })
+})
+
+describe('resolveUnderlyingInstrumentID', () => {
+  it('underlyingInstrID 完整（含数字）时直接使用', () => {
+    expect(resolveUnderlyingInstrumentID({ instrumentID: 'FG610-C-1300', underlyingInstrID: 'FG610' })).toBe('FG610')
+    expect(resolveUnderlyingInstrumentID({ instrumentID: 'cu2609C90000', underlyingInstrID: 'cu2609' })).toBe('cu2609')
+  })
+
+  it('underlyingInstrID 只有品种（无数字）时从 instrumentID 推断完整标底', () => {
+    // CZCE：underlyingInstrID='FG'（品种），instrumentID 'FG611C2225' → FG611
+    expect(resolveUnderlyingInstrumentID({ instrumentID: 'FG611C2225', underlyingInstrID: 'FG' })).toBe('FG611')
+  })
+
+  it('underlyingInstrID 缺失（空串）时从 instrumentID 推断', () => {
+    // CZCE 无分隔符格式：RM611C2225 → RM611
+    expect(resolveUnderlyingInstrumentID({ instrumentID: 'RM611C2225', underlyingInstrID: '' })).toBe('RM611')
+    // SHFE 无分隔符格式：cu2609C90000 → cu2609
+    expect(resolveUnderlyingInstrumentID({ instrumentID: 'cu2609C90000', underlyingInstrID: '' })).toBe('cu2609')
+    // INE 无分隔符格式：sc2612C610 → sc2612
+    expect(resolveUnderlyingInstrumentID({ instrumentID: 'sc2612C610', underlyingInstrID: '' })).toBe('sc2612')
+  })
+
+  it('带分隔符格式（DCE/GFEX）从首段取标底', () => {
+    expect(resolveUnderlyingInstrumentID({ instrumentID: 'p2609-C-9400', underlyingInstrID: '' })).toBe('p2609')
+    expect(resolveUnderlyingInstrumentID({ instrumentID: 'lc2610-P-72000', underlyingInstrID: '' })).toBe('lc2610')
+  })
+
+  it('无法推断时兜底返回 underlyingInstrID', () => {
+    expect(resolveUnderlyingInstrumentID({ instrumentID: 'UNKNOWN', underlyingInstrID: '' })).toBe('')
+    expect(resolveUnderlyingInstrumentID({ instrumentID: 'UNKNOWN', underlyingInstrID: 'FG' })).toBe('FG')
   })
 })
 

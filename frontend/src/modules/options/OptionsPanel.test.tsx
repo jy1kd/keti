@@ -214,6 +214,27 @@ describe('OptionsPanel 平铺 T 型', () => {
     expect(underlyingRows.every((r: any) => r.underlyingID)).toBe(true)
   })
 
+  it('underlyingInstrID 不完整（只有品种/缺失）的期权规范化后归正确标底组', async () => {
+    // CZCE 真实数据形态：部分期权 underlyingInstrID 只有品种（'FG'）或缺失（''），
+    // 需从 instrumentID 推断完整标底（FG610）。两个合约同标底 FG610、同行权价 → 合并成一行 T 型
+    const fut610: ContractInfo = { instrumentID: 'FG610', instrumentName: 'FG610', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20261030', isTrading: 1, productClass: '1' }
+    // 无分隔符 CZCE 格式 + underlyingInstrID 只有品种
+    const optCall: ContractInfo = { instrumentID: 'FG610C2225', instrumentName: 'FG610C2225', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20261030', isTrading: 1, productClass: '2', underlyingInstrID: 'FG', optionsType: '1', strikePrice: 2225 }
+    // 无分隔符 + underlyingInstrID 缺失
+    const optPut: ContractInfo = { instrumentID: 'FG610P2225', instrumentName: 'FG610P2225', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20261030', isTrading: 1, productClass: '2', optionsType: '2', strikePrice: 2225 }
+    useContractsStore.setState({ contracts: [fut, fut610, optCall, optPut], isLoaded: true })
+    render(<OptionsPanel />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+    const records = getLatestRecords()
+    // 两个期权规范化后都应归 FG610 组（不产生 FG / 空 组）
+    const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
+    expect(groupIDs).toEqual(['FG610'])
+    // 期权行合并了 C/P：call 来自 optCall（underlyingInstrID='FG'），put 来自 optPut（缺失）
+    const optionRow = records.find((r: any) => r.kind === 'option')
+    expect(optionRow.callInstrumentID).toBe('FG610C2225')
+    expect(optionRow.putInstrumentID).toBe('FG610P2225')
+  })
+
   it('指数期权（MO2608）也渲染标底层', async () => {
     setupMOOnly()
     render(<OptionsPanel />)
@@ -490,6 +511,33 @@ describe('OptionsPanel 筛选（标底合约粒度）', () => {
     expect(groupIDs).toContain('MA609')
     expect(groupIDs).not.toContain('cu2609')
     expect(groupIDs).not.toContain('MO2608')
+  })
+
+  it('UI 交互：选品种 FG → 合约 section 列双标底 → 勾选 FG609 → 表格只 FG609', async () => {
+    // 构造 FG 品种下两个标底（FG609 / FG610），模拟真实场景「选品种后列出多个标底」
+    const fut2: ContractInfo = { instrumentID: 'FG610', instrumentName: 'FG610', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20261030', isTrading: 1, productClass: '1' }
+    const opt2: ContractInfo = { instrumentID: 'FG610-C-1300', instrumentName: 'FG610-C-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 20, priceTick: 1, expireDate: '20261030', isTrading: 1, productClass: '2', underlyingInstrID: 'FG610', optionsType: '1', strikePrice: 1300 }
+    useContractsStore.setState({ contracts: [fut, optC, optP, fut2, opt2], isLoaded: true })
+
+    const user = userEvent.setup()
+    render(<OptionsPanel />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+    // 打开筛选 → 选品种「玻璃」
+    await user.click(screen.getByRole('button', { name: /筛选/ }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /玻璃/ }))
+    await act(async () => { await new Promise((r) => setTimeout(r, 200)) })
+    // 合约 section 出现，列出 FG 品种的两个标底
+    expect(screen.getByText('合约')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'FG609' })).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'FG610' })).toBeInTheDocument()
+    // 勾选 FG609 标底
+    fireEvent.click(screen.getByRole('checkbox', { name: 'FG609' }))
+    await act(async () => { await new Promise((r) => setTimeout(r, 200)) })
+    // 表格只显示 FG609 组，FG610 被过滤掉
+    const records = getLatestRecords()
+    const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
+    expect(groupIDs).toContain('FG609')
+    expect(groupIDs).not.toContain('FG610')
   })
 
   it('按交易所过滤：勾选 SHFE 后只保留 cu 组', async () => {

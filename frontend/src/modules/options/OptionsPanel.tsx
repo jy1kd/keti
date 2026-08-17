@@ -8,6 +8,7 @@ import {
   buildOptionChainsFromContracts,
   deriveUnderlyingProduct,
   groupOptionsByUnderlying,
+  resolveUnderlyingInstrumentID,
 } from '@/modules/market/sort'
 import { filterByExchangeAndProduct } from '@/modules/market/filter'
 import { useMarketStore } from '@/modules/market/store'
@@ -51,7 +52,18 @@ export function OptionsPanel() {
   const isActive = useTabStore((s) => s.tabs.some((t) => t.type === 'options' && t.id === s.activeTabId))
 
   const futures = useMemo(() => contracts.filter((c) => c.productClass === '1'), [contracts])
-  const options = useMemo(() => contracts.filter((c) => c.productClass === '2' || c.productClass === '6'), [contracts])
+  // 期权合约：规范化 underlyingInstrID——CZCE/GFEX 部分期权 underlyingInstrID 只有品种（'FG'）
+  // 或缺失（''），需从 instrumentID 推断完整标底（FG610）。统一后构链/分组/筛选全部一致，
+  // 避免这些期权归错组或筛选时被误过滤。
+  const options = useMemo(
+    () => contracts
+      .filter((c) => c.productClass === '2' || c.productClass === '6')
+      .map((c) => {
+        const u = resolveUnderlyingInstrumentID(c)
+        return u === (c.underlyingInstrID ?? '') ? c : { ...c, underlyingInstrID: u }
+      }),
+    [contracts],
+  )
 
   const filterProductNames = useMemo(() => {
     const m: Record<string, string> = {}
