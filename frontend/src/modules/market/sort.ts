@@ -1,4 +1,5 @@
 import type { ContractInfo } from '@/services/types'
+import { getProductName } from '@/utils/productNames'
 
 /** 交易所展示顺序 */
 const EXCHANGE_ORDER = ['SHFE', 'DCE', 'CZCE', 'CFFEX', 'INE', 'GFEX']
@@ -61,4 +62,25 @@ export function groupOptionsByUnderlying(
   }
   result.sort((a, b) => naturalCompare(a.underlyingID, b.underlyingID))
   return result
+}
+
+/** 标的不可订阅时（指数期权 MO/IO/HO 的 underlyingInstrID 非期货），
+ * 合成一条仅作组头的标底合约：productClass='1'（走 underlying 红粗渲染分支），
+ * isTrading=0（不可下单/不可订阅）。 */
+export function syntheticUnderlyingContract(underlyingInstrID: string): ContractInfo {
+  const productID = deriveUnderlyingProduct(underlyingInstrID)
+  return {
+    instrumentID: underlyingInstrID,
+    instrumentName: getProductName(productID),
+    exchangeID: '',
+    productID,
+    volumeMultiple: 0,
+    priceTick: 0,
+    expireDate: '',
+    isTrading: 0,
+    productClass: '1',
+    underlyingInstrID: undefined,
+    optionsType: undefined,
+    strikePrice: undefined,
+  }
 }

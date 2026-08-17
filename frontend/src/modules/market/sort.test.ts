@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { ContractInfo } from '@/services/types'
-import { sortFutures, deriveUnderlyingProduct, groupOptionsByUnderlying, naturalCompare } from './sort'
+import { sortFutures, deriveUnderlyingProduct, groupOptionsByUnderlying, naturalCompare, syntheticUnderlyingContract } from './sort'
 
 const fut = (instrumentID: string, exchangeID: string, productID: string): ContractInfo =>
   ({ instrumentID, instrumentName: instrumentID, exchangeID, productID, volumeMultiple: 1, priceTick: 0.1, expireDate: '', isTrading: 1, productClass: '1' })
@@ -88,5 +88,22 @@ describe('groupOptionsByUnderlying', () => {
       'FG609-C-1300',
       'FG609-P-1250',
     ])
+  })
+})
+
+describe('syntheticUnderlyingContract', () => {
+  it('指数期权标底合成：productClass=1、isTrading=0、品种/中文名映射', () => {
+    const c = syntheticUnderlyingContract('MO2608')
+    expect(c.instrumentID).toBe('MO2608')
+    expect(c.productClass).toBe('1')
+    expect(c.isTrading).toBe(0)
+    expect(c.productID).toBe('MO')
+    expect(c.instrumentName).toBe('中证1000期权')
+  })
+  it('真实期货标底同格式但可交易标志由调用方决定（合成恒为不可交易）', () => {
+    const c = syntheticUnderlyingContract('FG609')
+    expect(c.instrumentID).toBe('FG609')
+    expect(c.productClass).toBe('1')
+    expect(c.isTrading).toBe(0)
   })
 })
