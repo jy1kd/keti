@@ -169,7 +169,7 @@ describe('OptionsPanel 平铺 T 型', () => {
 
   it('默认全部展开：vtable 收到含标底层 + 期权行的 records', async () => {
     render(<OptionsPanel />)
-    // 等待懒加载（getOptionChains → setChainCache → records 重建）
+    // 链结构从 contracts 直接构出，无 HTTP；同步渲染（act 内 setRecords 已完成）
     await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
     const records = getLatestRecords()
     // 应包含标底层 + 2 条期权行（C + P 各一行，合并后按 strike 分行）
@@ -325,6 +325,16 @@ describe('OptionsPanel 平铺 T 型', () => {
     const records = getLatestRecords()
     const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
     expect(groupIDs).toContain('FG609')
+  })
+
+  it('期权标签挂载时不应发起 getOptionChains HTTP 请求（直接用 contracts 构链）', async () => {
+    // 现行实现：链结构直接从合约列表构出，零 HTTP。
+    // 如果有人误回退到 getOptionChains 调用，这里会失败。
+    const { getOptionChains } = await import('@/services/api')
+    expect(getOptionChains).not.toHaveBeenCalled()
+    render(<OptionsPanel />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+    expect(getOptionChains).not.toHaveBeenCalled()
   })
 })
 

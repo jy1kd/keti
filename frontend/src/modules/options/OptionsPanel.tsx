@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ContractFilter } from '@/components/ContractFilter'
 import { ContractSearch } from '@/components/ContractSearch'
 import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
 import { OptionsTable, type OptionsRecord, buildOptionRecords } from './OptionsTable'
-import { deriveUnderlyingProduct, groupOptionsByUnderlying } from '@/modules/market/sort'
+import {
+  buildOptionChainsFromContracts,
+  deriveUnderlyingProduct,
+  groupOptionsByUnderlying,
+} from '@/modules/market/sort'
 import { filterByExchangeAndProduct } from '@/modules/market/filter'
 import { useMarketStore } from '@/modules/market/store'
 import { useOrderStore } from '@/modules/order/store'
@@ -12,24 +16,23 @@ import { useContractsStore } from '@/stores/contracts'
 import { useMarketFilterStore } from '@/stores/marketFilter'
 import { useTabStore } from '@/stores/tabs'
 import { getProductName } from '@/utils/productNames'
-import type { OptionChain } from '@/services/types'
-import { getOptionChains } from '@/services/api'
 import './styles.css'
 
 /**
  * OptionsPanel — 期权标签页（平铺 T 型链表格视图）
  *
- * 仿照期货表（MarketPanel + QuoteTable）的架构：
- * - 挂载时加载全部期权链（getOptionChains × N），展平为平铺 records
+ * 仿照期货表（MarketPanel + QuoteTable）的架构：contracts 一加载完立即渲染。
+ * - ContractInfo 自带 underlyingInstrID/expireDate/optionsType/strikePrice，
+ *   足以拼出 T 型行结构；不再发 N 次 /api/market/option_chain?underlying
  * - 单张 vtable 虚标滚动，所有标底+期权铺在同一张表
  * - 滚动时 onVisibleRangeChange → setVisibleInstrumentIDs → 订阅管理器统一处理
+ * - snapshot 增量更新（仿照 QuoteTable 快照路径）→ 价格字段实时填充
  * - 默认全部展开；点击标底层折叠/展开
  */
 export function OptionsPanel() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
-  const [chainsByUnderlying, setChainsByUnderlying] = useState<Map<string, OptionChain[]>>(new Map())
 
   const groupRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
@@ -59,24 +62,16 @@ export function OptionsPanel() {
     return m
   }, [options])
 
-  // ── 挂载时加载全部期权链（仿照期货表：所有数据 upfront） ──────────────────
-  useEffect(() => {
-    const underlyings = [...new Set(options.map((o) => o.underlyingInstrID ?? ''))]
-    if (underlyings.length === 0) return
-    let cancelled = false
-    Promise.allSettled(underlyings.map((id) => getOptionChains(id))).then((results) => {
-      if (cancelled) return
-      const map = new Map<string, OptionChain[]>()
-      results.forEach((r, i) => {
-        if (r.status === 'fulfilled') {
-          const sorted = [...r.value.chains].sort((a, b) => a.expireDate.localeCompare(b.expireDate))
-          if (sorted.length > 0) map.set(underlyings[i], sorted)
-        }
-      })
-      setChainsByUnderlying(map)
-    })
-    return () => { cancelled = true }
-  }, [options])
+  // ── 从合约列表直接构出期权链 Map（仿照期货表：contracts 一加载即可渲染） ───
+  // 不再发 N 次 /api/market/option_chain?underlying：ContractInfo 已有
+  // underlyingInstrID/expireDate/optionsType/strikePrice，足够拼出 T 型行结构。
+  // 价格字段（lastPrice/bidPrice/askPrice/volume/openInterest/IV）置 0，
+  // 由 WS snapshot 通过 OptionsTable 内部 snapshot effect 增量 updateRecords 填充。
+  // contracts 为空时 Map 也是空，vtable 渲染只有表头（无任何行），等待 contracts 加载。
+  const chainsByUnderlying = useMemo(
+    () => buildOptionChainsFromContracts(options),
+    [options],
+  )
 
   // 数据管道：筛选 → 分组
   const groups = useMemo(() => {

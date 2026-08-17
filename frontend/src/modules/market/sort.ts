@@ -1,4 +1,4 @@
-import type { ContractInfo } from '@/services/types'
+import type { ContractInfo, OptionChain, OptionQuote } from '@/services/types'
 import { getProductName } from '@/utils/productNames'
 
 /** 交易所展示顺序 */
@@ -83,4 +83,67 @@ export function syntheticUnderlyingContract(underlyingInstrID: string): Contract
     optionsType: undefined,
     strikePrice: undefined,
   }
+}
+
+/**
+ * 从全量合约列表构出期权链 Map（underlying → chains[]）。
+ *
+ * 仿照期货表的「contracts 一加载完就立刻能渲染」——ContractInfo 自带
+ * underlyingInstrID / expireDate / optionsType / strikePrice 四个字段，
+ * 已足够拼出 T 型行结构，无需再发 N 次 /api/market/option_chain?underlying。
+ * 价格字段（lastPrice/bidPrice/askPrice/volume/openInterest/IV）置 0，
+ * 由快照填充（snapshot effect 增量 updateRecords）。
+ *
+ * 返回的 Map 按到期日升序（与原后端返回后排序结果一致：每个 underlying 内
+ * chains[0] = 最早到期）。
+ */
+export function buildOptionChainsFromContracts(
+  options: ContractInfo[],
+): Map<string, OptionChain[]> {
+  // underlyings → (expireDate → { calls, puts })
+  const grouped = new Map<string, Map<string, { calls: OptionQuote[]; puts: OptionQuote[] }>>()
+
+  for (const c of options) {
+    const u = c.underlyingInstrID ?? ''
+    if (!u) continue
+    const expire = c.expireDate ?? ''
+    let byExpiry = grouped.get(u)
+    if (!byExpiry) {
+      byExpiry = new Map()
+      grouped.set(u, byExpiry)
+    }
+    let bucket = byExpiry.get(expire)
+    if (!bucket) {
+      bucket = { calls: [], puts: [] }
+      byExpiry.set(expire, bucket)
+    }
+    const quote: OptionQuote = {
+      instrumentID: c.instrumentID,
+      strikePrice: c.strikePrice ?? 0,
+      // 价格字段保持 0——OptionQuote 必填字段类型为 number，调用方 valOrDash 兜底为 PLACEHOLDER。
+      // 真实价格由 WS snapshot 增量填充（OptionsTable snapshot effect → updateRecords）。
+      lastPrice: 0,
+      bidPrice: 0,
+      askPrice: 0,
+      volume: 0,
+      openInterest: 0,
+      impliedVolatility: 0,
+    }
+    if (c.optionsType === '1') bucket.calls.push(quote)
+    else if (c.optionsType === '2') bucket.puts.push(quote)
+  }
+
+  const result = new Map<string, OptionChain[]>()
+  for (const [u, byExpiry] of grouped) {
+    const chains: OptionChain[] = []
+    for (const [expire, { calls, puts }] of byExpiry) {
+      // 行权价升序（与原 OptionChain.calls/puts 后端顺序约定一致）
+      calls.sort((a, b) => a.strikePrice - b.strikePrice)
+      puts.sort((a, b) => a.strikePrice - b.strikePrice)
+      chains.push({ underlying: u, expireDate: expire, calls, puts, updateTime: '' })
+    }
+    chains.sort((a, b) => a.expireDate.localeCompare(b.expireDate))
+    result.set(u, chains)
+  }
+  return result
 }
