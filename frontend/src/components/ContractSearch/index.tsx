@@ -96,7 +96,10 @@ export function ContractSearch({
   }, [isOpen, results, activeIndex, query, handleSelect])
 
   return (
-    <div className="contract-search">
+    // data-no-drag：搜索控件（含下拉结果）声明为非拖拽区——
+    // TabContent 对 data-drag-handle 内元素 pointerdown 会 startDetachDrag + preventDefault，
+    // 而 preventDefault 会抑制浏览器兼容 mousedown，导致结果项 onMouseDown 选择失效（K线标题栏即 drag-handle）。
+    <div className="contract-search" data-no-drag>
       <input
         ref={inputRef}
         type="text"
