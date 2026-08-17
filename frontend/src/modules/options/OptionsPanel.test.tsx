@@ -95,6 +95,13 @@ vi.mock('@visactor/vtable', () => {
       on: vi.fn(),
       records: [] as any[],
       setRecords: vi.fn((recs: any[]) => { instance.records = recs }),
+      // 模拟真实 updateRecords：按索引更新内部 records（快照增量路径需要）
+      updateRecords: vi.fn((recs: any[], rowIndexes: number[]) => {
+        for (let k = 0; k < recs.length; k++) {
+          const idx = rowIndexes[k]
+          if (idx >= 0 && idx < instance.records.length) instance.records[idx] = recs[k]
+        }
+      }),
       setOption: vi.fn(),
       resize: vi.fn(),
       dispose: vi.fn(),
@@ -176,6 +183,35 @@ describe('OptionsPanel 平铺 T 型', () => {
     expect(records.length).toBeGreaterThanOrEqual(2)
     expect(records[0].kind).toBe('underlying')
     expect(records[0].underlyingID).toBe('FG609')
+    // 标底行第0列（callOpenInterest）必须承载标底名：vtable mergeCells 整行合并后
+    // 显示 startCol 的值，若该列无值则标底行整行空白（「空行」+「不显示标底合约」的根因）
+    expect(records[0].callOpenInterest).toBe('FG609')
+  })
+
+  it('underlyingInstrID 缺失的异常期权不产生空标底行', async () => {
+    // 构造一个没有 underlyingInstrID 的孤儿期权（数据异常）→ 不应归到 '' 组渲染空标底行
+    const orphanOpt: ContractInfo = {
+      instrumentID: 'X-ORPHAN',
+      instrumentName: 'X-ORPHAN',
+      exchangeID: 'CZCE',
+      productID: 'X',
+      volumeMultiple: 20,
+      priceTick: 1,
+      expireDate: '20260930',
+      isTrading: 1,
+      productClass: '2',
+      optionsType: '1',
+      strikePrice: 1000,
+      // 故意缺失 underlyingInstrID
+    }
+    useContractsStore.setState({ contracts: [fut, optC, optP, orphanOpt], isLoaded: true })
+    render(<OptionsPanel />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+    const records = getLatestRecords()
+    const underlyingRows = records.filter((r: any) => r.kind === 'underlying')
+    expect(underlyingRows.length).toBeGreaterThan(0)
+    // 所有标底行都必须有真实 underlyingID（无 '' 空标底行）
+    expect(underlyingRows.every((r: any) => r.underlyingID)).toBe(true)
   })
 
   it('指数期权（MO2608）也渲染标底层', async () => {
@@ -234,12 +270,26 @@ describe('OptionsPanel 平铺 T 型', () => {
     expect(screen.queryByRole('button', { name: '收藏夹' })).toBeNull()
   })
 
-  it('T 行单击回填合约与价格：点击 C 侧 → 报单表收到合约 + 最新价', async () => {
+  it('T 行单击回填合约与价格：点击 C 侧（有快照）→ 报单表收到合约 + 最新价', async () => {
     const setOrderForm = vi.fn()
     useOrderStore.setState({
       setOrderInstrument: vi.fn(),
       setOrderForm,
     } as any)
+
+    // mock 快照：FG609-C-1300 有真实最新价 → 点击时 price>0，应回填限价
+    useMarketStore.setState({
+      snapshots: new Map([
+        ['FG609-C-1300', {
+          instrumentID: 'FG609-C-1300',
+          lastPrice: 10,
+          bidPrice1: 9,
+          askPrice1: 11,
+          volume: 100,
+          openInterest: 200,
+        } as never as import('@/services/types').MarketSnapshot],
+      ]),
+    })
 
     render(<OptionsPanel />)
     await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
@@ -259,6 +309,30 @@ describe('OptionsPanel 平铺 T 型', () => {
     })
 
     expect(setOrderForm).toHaveBeenCalledWith({ limitPrice: expect.any(Number) })
+  })
+
+  it('T 行单击（无快照，价格显示 --）：只选合约，不回填 0 限价', async () => {
+    const setOrderForm = vi.fn()
+    useOrderStore.setState({
+      setOrderInstrument: vi.fn(),
+      setOrderForm,
+    } as any)
+    // 无快照（contracts 构链价格全 0 → 显示 '--'）→ 点击回传 price=0，应跳过回填限价
+
+    render(<OptionsPanel />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+
+    const table = getLatestTable()
+    const clickCalls = (table.on as any).mock.calls
+    const clickHandler = [...clickCalls].reverse().find((c: any[]) => c[0] === 'click_cell')?.[1]
+    const records = getLatestRecords()
+    const optionRowIndex = records.findIndex((r: any) => r.kind === 'option')
+    await act(async () => {
+      clickHandler({ row: optionRowIndex + 1, col: 4, event: {} })
+    })
+
+    // 价格不可用时不应把 0 塞进订单表单（点击 bug 根因）
+    expect(setOrderForm).not.toHaveBeenCalled()
   })
 
   it('点击标底层切换折叠/展开', async () => {

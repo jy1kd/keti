@@ -109,8 +109,14 @@ export function OptionsPanel() {
   const records = useMemo(() => {
     const result: OptionsRecord[] = []
     for (const g of visibleGroups) {
+      // 防御：underlyingInstrID 缺失的异常期权会归到 '' 组，跳过以免产生空标底行
+      if (!g.underlyingID) continue
       const isExpanded = !collapsedGroups.has(g.underlyingID)
-      result.push({ kind: 'underlying', underlyingID: g.underlyingID })
+      // 标底行：callOpenInterest（第0列）承载标底名。
+      // vtable mergeCells(0,row,lastCol,row) 整行合并后显示 startCol（第0列）的 cellValue，
+      // 若该列无值则整行空白（看起来是「空行」且不显示标底合约）。给第0列赋值标底名，
+      // 合并后显示为红粗大字标题。该字段仅用于显示，不影响订阅/快照逻辑（标底行无 C/P ID）。
+      result.push({ kind: 'underlying', underlyingID: g.underlyingID, callOpenInterest: g.underlyingID })
       if (isExpanded) {
         const chains = chainsByUnderlying.get(g.underlyingID)
         if (chains && chains.length > 0) {
@@ -149,7 +155,10 @@ export function OptionsPanel() {
     setSelectedInstrument(instrumentID)
     setOrderInstrument(instrumentID)
     const inst = contracts.find((c) => c.instrumentID === instrumentID)
-    if (!(inst && inst.productClass === '1')) setOrderForm({ limitPrice: price })
+    // price=0 表示当前无快照也无链静态价（OptionsTable 显示 '--'，点击回传 0）。
+    // 此时只选合约、不回填限价——否则订单表单出现 0 值（点击 bug）。
+    // 快照已到（price>0）时正常回填最新价。
+    if (!(inst && inst.productClass === '1') && price > 0) setOrderForm({ limitPrice: price })
   }, [contracts, setSelectedInstrument, setOrderInstrument, setOrderForm])
 
   const allContractIds = useMemo(() => new Set(contracts.map((c) => c.instrumentID)), [contracts])
