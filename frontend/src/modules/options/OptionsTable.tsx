@@ -27,7 +27,6 @@ export interface OptionsRecord {
 
 export interface OptionsTableProps {
   records: OptionsRecord[]
-  snapshots?: Map<string, MarketSnapshot>
   /** 点击标底层切换折叠 */
   onToggleGroup: (underlyingID: string) => void
   /** 点击 C/P 侧单元格回调；中列（行权价）与缺失侧不回调 */
@@ -132,7 +131,7 @@ function buildOptionRecords(
   })
 }
 
-export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, onVisibleGroupsChange }: OptionsTableProps) {
+export function OptionsTable({ records, onToggleGroup, onRowClick, onVisibleGroupsChange }: OptionsTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
   const recordsRef = useRef<OptionsRecord[]>([])
@@ -297,26 +296,6 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
     notifyVisibleGroups()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [records])
-
-  // snapshots 变化 → 更新可见行的期权数据（不全量重建 records）
-  useEffect(() => {
-    if (!tableRef.current || !snapshots) return
-    const range = tableRef.current.getBodyVisibleCellRange?.()
-    if (!range) return
-    const PRELOAD = 10
-    const startRow = Math.max(0, range.rowStart - 1 - PRELOAD)
-    const endRow = Math.min(recordsRef.current.length - 1, range.rowEnd - 1 + PRELOAD)
-    const updated: OptionsRecord[] = []
-    const indexes: number[] = []
-    for (let i = startRow; i <= endRow; i++) {
-      const r = recordsRef.current[i]
-      if (!r || r.kind !== 'underlying') continue
-      // 期权行的 snapshot 更新已在 records prop 变化时处理
-    }
-    // 期权行快照更新：由 OptionsPanel 传入新 records 驱动（见 records dependency）
-    void updated
-    void indexes
-  }, [snapshots])
 
   return <div ref={containerRef} className="market-table-container" style={{ width: '100%', height: '100%' }} />
 }

@@ -21,9 +21,8 @@ import './styles.css'
  * 单张 vtable 虚拟滚动，所有标底平铺展示：
  * - 标底层（红粗合并行）→ 该标底最早到期 T 型期权行
  * - 默认全部展开；点击标底层折叠/展开
- * - IntersectionObserver / scroll 懒加载：滚入视口才拉链
+ * - scroll 懒加载：滚入视口才拉链
  * - 工具栏：ContractFilter（组粒度）+ ContractSearch + 🔍 高级搜索
- * - 收藏功能暂不实现
  */
 export function OptionsPanel() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -32,10 +31,13 @@ export function OptionsPanel() {
   // 折叠态：集合中的标底 ID 被折叠（默认全部展开 = 空集合）
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
 
-  // 链缓存：标底 ID → 按到期日升序排列的链列表
+  // 链缓存（state 驱动 records 渲染）
   const [chainCache, setChainCache] = useState<Map<string, OptionChain[]>>(new Map())
+  // chainCache ref（供 loadGroups 读取，避免 useCallback 依赖 chainCache state 导致频繁重建）
+  const chainCacheRef = useRef(chainCache)
+  chainCacheRef.current = chainCache
 
-  // 标底 ID → 容器 DOM ref（搜索/高级搜索选中合约 → 定位展开对应组 + 滚动到该组）
+  // 标底 ID → 容器 DOM ref（搜索定位用）
   const groupRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   const setSelectedInstrument = useMarketStore((s) => s.setSelectedInstrument)
@@ -86,36 +88,33 @@ export function OptionsPanel() {
   }, [groups, searchQuery])
 
   // ── 懒加载：滚入视口的标底拉链 ──────────────────────────────────────────
+  // 使用 chainCacheRef 读取缓存状态，避免 useCallback 依赖 chainCache state
+  // （chainCache 变化会导致此回调重建 → handleVisibleGroupsChange 重建 → OptionsTable re-render）
   const loadGroups = useCallback(async (ids: string[]) => {
-    const toLoad = ids.filter((id) => !chainCache.has(id))
+    const toLoad = ids.filter((id) => !chainCacheRef.current.has(id))
     if (toLoad.length === 0) return
     const results = await Promise.allSettled(
       toLoad.map((id) => getOptionChains(id)),
     )
+    // 收集最早到期链的期权合约 ID，用于预拉快照
+    const snapshotIDs: string[] = []
     setChainCache((prev) => {
       const next = new Map(prev)
       results.forEach((r, i) => {
         if (r.status === 'fulfilled') {
           const sorted = [...r.value.chains].sort((a, b) => a.expireDate.localeCompare(b.expireDate))
-          if (sorted.length > 0) next.set(toLoad[i], sorted)
+          if (sorted.length > 0) {
+            next.set(toLoad[i], sorted)
+            const chain = sorted[0]
+            snapshotIDs.push(...chain.calls.map((q) => q.instrumentID), ...chain.puts.map((q) => q.instrumentID))
+          }
         }
       })
       return next
     })
-    // 预拉快照
-    const allIDs: string[] = []
-    results.forEach((r) => {
-      if (r.status === 'fulfilled') {
-        const chains = r.value.chains
-        const sorted = [...chains].sort((a, b) => a.expireDate.localeCompare(b.expireDate))
-        const chain = sorted[0]
-        if (chain) {
-          allIDs.push(...chain.calls.map((q) => q.instrumentID), ...chain.puts.map((q) => q.instrumentID))
-        }
-      }
-    })
-    if (allIDs.length > 0) getSnapshots(allIDs).catch(() => {})
-  }, [chainCache])
+    // 预拉快照（异步，不阻塞 records 更新）
+    if (snapshotIDs.length > 0) getSnapshots(snapshotIDs).catch(() => {})
+  }, []) // 空依赖：通过 chainCacheRef.current 读取缓存
 
   const handleVisibleGroupsChange = useCallback((ids: string[]) => {
     loadGroups(ids)
@@ -151,22 +150,40 @@ export function OptionsPanel() {
     return result
   }, [visibleGroups, collapsedGroups, chainCache, snapshots])
 
-  // ── 订阅锁定：展开的组锁定其链内合约 ───────────────────────────────────
+  // ── 订阅锁定：增量 diff，避免全量 unlock → re-lock 竞态 ──────────────────
+  // 用 ref 跟踪上一次锁定集合，只对差集执行 add/remove
+  const prevLockedRef = useRef<Set<string>>(new Set())
+
   useEffect(() => {
-    const toLock = new Set<string>()
+    // 计算当前应锁定的合约集合
+    const nextLocked = new Set<string>()
     for (const g of visibleGroups) {
       if (collapsedGroups.has(g.underlyingID)) continue
       const chains = chainCache.get(g.underlyingID)
       if (!chains || chains.length === 0) continue
-      const chain = chains[0] // 最早到期
-      for (const q of chain.calls) toLock.add(q.instrumentID)
-      for (const q of chain.puts) toLock.add(q.instrumentID)
+      const chain = chains[0]
+      for (const q of chain.calls) nextLocked.add(q.instrumentID)
+      for (const q of chain.puts) nextLocked.add(q.instrumentID)
     }
-    for (const id of toLock) addLockedContract(id)
+
+    const prev = prevLockedRef.current
+    // 新增锁定：在 next 中但不在 prev 中
+    for (const id of nextLocked) {
+      if (!prev.has(id)) addLockedContract(id)
+    }
+    // 解锁：在 prev 中但不在 next 中
+    for (const id of prev) {
+      if (!nextLocked.has(id)) removeLockedContract(id)
+    }
+    prevLockedRef.current = nextLocked
+  }) // 无依赖：每次渲染后增量 diff，避免全量 unlock → re-lock
+
+  // ── 卸载时解锁全部 ──────────────────────────────────────────────────────
+  useEffect(() => {
     return () => {
-      for (const id of toLock) removeLockedContract(id)
+      for (const id of prevLockedRef.current) removeLockedContract(id)
     }
-  }, [visibleGroups, collapsedGroups, chainCache, addLockedContract, removeLockedContract])
+  }, [removeLockedContract])
 
   // ── 搜索选中合约 → 定位到标底组并展开 ─────────────────────────────────
   const handleSelectContract = useCallback((instrumentID: string) => {
@@ -176,17 +193,14 @@ export function OptionsPanel() {
       const underlying = contracts.find((c) => c.instrumentID === inst.underlyingInstrID)
       if (underlying) targetGroupID = underlying.instrumentID
     }
-    // 确保目标组在搜索过滤后可见
     setSearchQuery(targetGroupID)
-    // 展开目标组
     setCollapsedGroups((prev) => {
       const next = new Set(prev)
       next.delete(targetGroupID)
       return next
     })
     requestAnimationFrame(() => {
-      const wrapper = groupRefs.current[targetGroupID]
-      if (wrapper) wrapper.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      groupRefs.current[targetGroupID]?.scrollIntoView({ block: 'center', behavior: 'smooth' })
     })
   }, [contracts])
 
@@ -244,18 +258,16 @@ export function OptionsPanel() {
 
       <div className="panel-content">
         <ErrorBoundary>
-          {/* 为每个可见标底组提供 ref 容器（搜索定位用），但 vtable 由 OptionsTable 管理 */}
           {visibleGroups.map((g) => (
             <div
               key={g.underlyingID}
               ref={(el) => { groupRefs.current[g.underlyingID] = el }}
               data-underlying={g.underlyingID}
-              style={{ display: 'none' }} // 隐藏占位：ref 定位用，实际表格由 OptionsTable 渲染
+              style={{ display: 'none' }}
             />
           ))}
           <OptionsTable
             records={records}
-            snapshots={snapshots}
             onToggleGroup={toggleGroup}
             onRowClick={onSelectContract}
             onVisibleGroupsChange={handleVisibleGroupsChange}
@@ -266,8 +278,8 @@ export function OptionsPanel() {
       <InstrumentSearchModal
         isOpen={searchModalOpen}
         onClose={() => setSearchModalOpen(false)}
-        onOpenFavoritePicker={() => {}} // 收藏功能暂不实现
-        onRemoveFromAllCollections={() => {}} // 收藏功能暂不实现
+        onOpenFavoritePicker={() => {}}
+        onRemoveFromAllCollections={() => {}}
         allContractIds={allContractIds}
         favoritedIds={new Set()}
         onContractClick={handleAdvancedSelect}
