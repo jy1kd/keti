@@ -13,13 +13,21 @@ vi.mock('electron', () => ({
     focus: vi.fn(),
     isDestroyed: vi.fn().mockReturnValue(false),
     isMaximized: vi.fn().mockReturnValue(false),
+    isFullScreen: vi.fn().mockReturnValue(false),
+    setFullScreen: vi.fn(),
     maximize: vi.fn(),
     unmaximize: vi.fn(),
     getBounds: vi.fn().mockReturnValue({ x: 100, y: 100, width: 800, height: 600 }),
     setBounds: vi.fn(),
     webContents: {
+      on: vi.fn(),
       send: vi.fn(),
       openDevTools: vi.fn(),
+      reload: vi.fn(),
+      reloadIgnoringCache: vi.fn(),
+      toggleDevTools: vi.fn(),
+      getZoomLevel: vi.fn().mockReturnValue(0),
+      setZoomLevel: vi.fn(),
     },
     id: 1,
   })),
@@ -107,6 +115,27 @@ describe('WindowManager', () => {
     manager.createMainWindow();
     const windows = manager.getAllWindows();
     expect(windows.length).toBe(1);
+  });
+
+  it('should keep refresh and DevTools shortcuts without a visible View menu', async () => {
+    const { BrowserWindow } = await import('electron');
+    const { WindowManager } = await import('../windowManager');
+    const manager = new WindowManager(true);
+    const mainWindow = manager.createMainWindow();
+    const beforeInputEvent = (mainWindow.webContents.on as ReturnType<typeof vi.fn>).mock.calls
+      .find(([eventName]) => eventName === 'before-input-event')?.[1];
+    const preventDefault = vi.fn();
+
+    expect(beforeInputEvent).toBeDefined();
+
+    beforeInputEvent({ preventDefault }, { type: 'keyDown', key: 'R', modifiers: ['control'] });
+    expect(preventDefault).toHaveBeenCalled();
+    expect(mainWindow.webContents.reload).toHaveBeenCalled();
+
+    preventDefault.mockClear();
+    beforeInputEvent({ preventDefault }, { type: 'keyDown', key: 'I', modifiers: ['control', 'shift'] });
+    expect(preventDefault).toHaveBeenCalled();
+    expect(mainWindow.webContents.toggleDevTools).toHaveBeenCalled();
   });
 
   it('should return same window when opening order window twice', async () => {

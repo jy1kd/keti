@@ -12,6 +12,52 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.WindowManager = void 0;
 const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
+/**
+ * Keep Chromium's useful View-menu shortcuts without displaying the View menu.
+ */
+function registerNativeShortcuts(window) {
+    window.webContents.on('before-input-event', (event, input) => {
+        if (input.type !== 'keyDown')
+            return;
+        const key = input.key.toLowerCase();
+        const hasControl = input.modifiers.includes('control') || input.modifiers.includes('command');
+        const hasShift = input.modifiers.includes('shift');
+        if (hasControl && key === 'r') {
+            event.preventDefault();
+            if (hasShift) {
+                window.webContents.reloadIgnoringCache();
+            }
+            else {
+                window.webContents.reload();
+            }
+            return;
+        }
+        if (hasControl && hasShift && key === 'i') {
+            event.preventDefault();
+            window.webContents.toggleDevTools();
+            return;
+        }
+        if (hasControl && key === '0') {
+            event.preventDefault();
+            window.webContents.setZoomLevel(0);
+            return;
+        }
+        if (hasControl && (key === '=' || key === '+')) {
+            event.preventDefault();
+            window.webContents.setZoomLevel(window.webContents.getZoomLevel() + 1);
+            return;
+        }
+        if (hasControl && key === '-') {
+            event.preventDefault();
+            window.webContents.setZoomLevel(window.webContents.getZoomLevel() - 1);
+            return;
+        }
+        if (key === 'f11') {
+            event.preventDefault();
+            window.setFullScreen(!window.isFullScreen());
+        }
+    });
+}
 // Default window configurations
 const DEFAULT_CONFIGS = {
     main: {
@@ -73,6 +119,7 @@ class WindowManager {
             },
             show: false,
         });
+        registerNativeShortcuts(mainWindow);
         // Load the app
         if (this.isDev) {
             mainWindow.loadURL('http://localhost:5173');
@@ -123,6 +170,7 @@ class WindowManager {
             },
             show: false,
         });
+        registerNativeShortcuts(orderWindow);
         // Load the order page
         if (this.isDev) {
             orderWindow.loadURL(`http://localhost:5173#/order/${instrumentID || ''}`);
@@ -171,6 +219,7 @@ class WindowManager {
             },
             show: false,
         });
+        registerNativeShortcuts(klineWindow);
         // Load the K-line page
         if (this.isDev) {
             klineWindow.loadURL(`http://localhost:5173#/kline/${instrumentID}`);
@@ -308,6 +357,7 @@ class WindowManager {
             },
             show: false,
         });
+        registerNativeShortcuts(tabWindow);
         // Load the tab page with props in hash
         const propsStr = props ? encodeURIComponent(JSON.stringify(props)) : '';
         const hash = `#/tab/${tabType}/${tabId}${propsStr ? `?props=${propsStr}` : ''}`;
