@@ -12,6 +12,7 @@ describe('useMarketFilterStore', () => {
       options: { ...EMPTY_FILTER },
       futuresCollectionId: '',
       optionsCollectionId: '',
+      optionsTabs: { exchange: '', tabs: [], activeIndex: 0 },
     })
   })
 
@@ -163,5 +164,66 @@ describe('useMarketFilterStore', () => {
     useMarketFilterStore.getState().load()
     expect(useMarketFilterStore.getState().futuresCollectionId).toBe('')
     expect(useMarketFilterStore.getState().optionsCollectionId).toBe('')
+  })
+
+  // --- 期权页筛选 Tab（optionsTabs：交易所→品种 Tab→系列，持久化） ---
+
+  it('optionsTabs 初始为空', () => {
+    expect(useMarketFilterStore.getState().optionsTabs).toEqual({ exchange: '', tabs: [], activeIndex: 0 })
+  })
+
+  it('setOptionsTabs 整体更新 optionsTabs 并持久化到 localStorage', () => {
+    const next = {
+      exchange: 'SHFE',
+      tabs: [{ product: 'cu', series: ['cu2609'] }, { product: 'al', series: [] }],
+      activeIndex: 0,
+    }
+    useMarketFilterStore.getState().setOptionsTabs(next)
+    expect(useMarketFilterStore.getState().optionsTabs).toEqual(next)
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+    expect(stored.optionsTabs).toEqual(next)
+    // 不影响期货页
+    expect(useMarketFilterStore.getState().futures).toEqual(EMPTY_FILTER)
+  })
+
+  it('load 从 localStorage 恢复 optionsTabs', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        futures: { exchanges: [], products: [] },
+        options: { exchanges: [], products: [] },
+        optionsTabs: { exchange: 'CZCE', tabs: [{ product: 'FG', series: ['FG609'] }], activeIndex: 0 },
+      }),
+    )
+    useMarketFilterStore.getState().load()
+    expect(useMarketFilterStore.getState().optionsTabs).toEqual({
+      exchange: 'CZCE',
+      tabs: [{ product: 'FG', series: ['FG609'] }],
+      activeIndex: 0,
+    })
+  })
+
+  it('load 缺失 optionsTabs 字段时补默认（旧数据兼容）', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ futures: { exchanges: [], products: [] } }))
+    useMarketFilterStore.getState().load()
+    expect(useMarketFilterStore.getState().optionsTabs).toEqual({ exchange: '', tabs: [], activeIndex: 0 })
+  })
+
+  it('load 遇损坏的 optionsTabs（形状非法）时回退默认，不抛错', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ optionsTabs: { exchange: 5, tabs: 'x', activeIndex: 'a' } }),
+    )
+    expect(() => useMarketFilterStore.getState().load()).not.toThrow()
+    expect(useMarketFilterStore.getState().optionsTabs).toEqual({ exchange: '', tabs: [], activeIndex: 0 })
+  })
+
+  it('load 遇损坏的 optionsTabs tab 项时整体回退默认', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ optionsTabs: { exchange: 'CZCE', tabs: [{ product: 7, series: 'x' }], activeIndex: 0 } }),
+    )
+    useMarketFilterStore.getState().load()
+    expect(useMarketFilterStore.getState().optionsTabs).toEqual({ exchange: '', tabs: [], activeIndex: 0 })
   })
 })

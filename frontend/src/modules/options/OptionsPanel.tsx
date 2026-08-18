@@ -1,24 +1,23 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { ContractFilter } from '@/components/ContractFilter'
 import { ContractSearch } from '@/components/ContractSearch'
 import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
 import { OptionsTable, type OptionsRecord, buildOptionRecords } from './OptionsTable'
+import { OptionsFilterBar } from './OptionsFilterBar'
 import {
   buildOptionChainsFromContracts,
   deriveUnderlyingProduct,
   groupOptionsByUnderlying,
   resolveUnderlyingInstrumentID,
 } from '@/modules/market/sort'
-import { filterByExchangeAndProduct } from '@/modules/market/filter'
-import { filterByCollection } from '@/modules/query/filter'
-import { CollectionFilterSelect } from '@/modules/query/CollectionFilterSelect'
+import { filterByOptionsTabs } from './optionsTabs'
 import { useMarketStore } from '@/modules/market/store'
 import { useOrderStore } from '@/modules/order/store'
 import { useContractsStore } from '@/stores/contracts'
 import { useMarketFilterStore } from '@/stores/marketFilter'
-import { useCollectionsStore } from '@/stores/collections'
 import { useTabStore } from '@/stores/tabs'
+import { useContractContextMenu } from '@/hooks/useContractContextMenu'
+import { useContractMenus } from '@/hooks/useContractMenus'
 import { getProductName } from '@/utils/productNames'
 import './styles.css'
 
@@ -32,7 +31,9 @@ import './styles.css'
  * - 滚动时 onVisibleRangeChange → setVisibleInstrumentIDs → 订阅管理器统一处理
  * - snapshot 增量更新（仿照 QuoteTable 快照路径）→ 价格字段实时填充
  * - 默认全部展开；点击标底层折叠/展开
- * - 筛选三级：交易所 → 品种 → 标底合约；另有收藏夹过滤下拉（'' = 全部）
+ * - 筛选重构：交易所 → 品种 Tab 条 → 系列（OptionsFilterBar + optionsTabs 纯函数）；
+ *   无 tab = 全量（与旧空筛选语义一致）。期权页已去掉收藏夹功能（无过滤、无右键收藏项）。
+ * - 右键单选菜单与期货表一致（五档下单/无限下单/打开K线/复制合约代码），无收藏项。
  */
 export function OptionsPanel() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -47,11 +48,9 @@ export function OptionsPanel() {
   const contracts = useContractsStore((s) => s.contracts)
   const snapshots = useMarketStore((s) => s.snapshots)
 
-  const filter = useMarketFilterStore((s) => s.options)
-  // 期权页收藏夹过滤（与三个查询浮窗语义一致：下拉选择夹，'' = 全部）
-  const collectionId = useMarketFilterStore((s) => s.optionsCollectionId)
-  const setCollectionId = (id: string) => useMarketFilterStore.getState().setCollectionId('options', id)
-  const collections = useCollectionsStore((s) => s.collections)
+  // 期权页筛选 Tab 态（交易所 → 品种 Tab → 系列），重构后的唯一筛选入口
+  const optionsTabs = useMarketFilterStore((s) => s.optionsTabs)
+  const changeOptionsTabs = (v: typeof optionsTabs) => useMarketFilterStore.getState().setOptionsTabs(v)
 
   // 期权标签是否激活：激活时 OptionsTable 重报可见区，订阅管理器立即补订阅。
   // 仿照 MarketPanel.tsx:36-37 的 isActive 计算；隐藏面板（display:none）传 isActive=false，
@@ -93,20 +92,14 @@ export function OptionsPanel() {
     [options],
   )
 
-  // 数据管道：交易所+品种筛选 → 收藏夹过滤 → 标底筛选 → 分组
+  // 数据管道：筛选 Tab → 分组。无 tab = 全量（与旧空筛选语义一致）。
   const groups = useMemo(() => {
-    const filteredOptions = filterByExchangeAndProduct(
-      options, filter.exchanges, filter.products,
+    const tabFiltered = filterByOptionsTabs(
+      options, optionsTabs,
       (c) => deriveUnderlyingProduct(c.underlyingInstrID ?? ''),
     )
-    // 收藏夹过滤：按期权合约 instrumentID 匹配（与查询页语义一致；'' = 全部）
-    const collectionFiltered = filterByCollection(filteredOptions, collections, collectionId)
-    const grouped = groupOptionsByUnderlying(collectionFiltered, futures)
-    // 第三级筛选：选完交易所+品种后进一步选具体标底（如 FG609）→ 只显示选中标底的 C/P
-    const uSet = filter.underlyings?.length ? new Set(filter.underlyings) : null
-    if (!uSet) return grouped
-    return grouped.filter((g) => uSet.has(g.underlyingID))
-  }, [options, filter, futures, collections, collectionId])
+    return groupOptionsByUnderlying(tabFiltered, futures)
+  }, [options, optionsTabs, futures])
 
   // 搜索过滤组
   const visibleGroups = useMemo(() => {
@@ -187,28 +180,44 @@ export function OptionsPanel() {
     if (!(inst && inst.productClass === '1') && price > 0) setOrderForm({ limitPrice: price })
   }, [contracts, setSelectedInstrument, setOrderInstrument, setOrderForm])
 
-  // ── 清空筛选时重置选中合约到列表第一个标底（避免之前选中的期权合约还「置顶」） ─
+  // ── 清空筛选（OptionsFilterBar「清空」按钮）时重置选中合约 ───────────────
   // 直接清空 selectedInstrument（不设到第一个——选中的是期权合约，清空后不保留）
   const handleClearFilter = useCallback(() => {
     setSelectedInstrument(null)
     setOrderInstrument(null)
   }, [setSelectedInstrument, setOrderInstrument])
 
+  // ── 右键菜单（与期货表一致，无收藏项）：期权表 C/P 侧按列映射到具体合约 ──
+  const { contextMenu, openOrderPopup, openKlineTab, openInfinitePopup, openOrderTabs, openInfiniteTabs, openKlineTabs, handleContextMenu, closeMenus } = useContractContextMenu()
+  const { singleMenu } = useContractMenus({
+    contextMenu,
+    multiSelectMenu: null,
+    favoritedIds: new Set(),
+    favoriteMode: 'picker',
+    showCollections: false, // 期权页已去掉收藏夹功能 → 右键无收藏项
+    openOrderPopup,
+    openKlineTab,
+    openInfinitePopup,
+    openOrderTabs,
+    openInfiniteTabs,
+    openKlineTabs,
+    closeMenus,
+  })
+
   const allContractIds = useMemo(() => new Set(contracts.map((c) => c.instrumentID)), [contracts])
 
   return (
     <section className="options-page">
       <div className="market-toolbar">
-        <ContractFilter
+        {/* 筛选重构：交易所 → 品种 Tab 条 → 系列，位于搜索左侧 */}
+        <OptionsFilterBar
           allContracts={options}
           getProduct={(c) => deriveUnderlyingProduct(c.underlyingInstrID ?? '')}
           productNames={filterProductNames}
-          getUnderlying={(c) => c.underlyingInstrID ?? ''}
-          value={filter}
-          onChange={(v) => useMarketFilterStore.getState().setFilter('options', v)}
+          value={optionsTabs}
+          onChange={changeOptionsTabs}
           onClear={handleClearFilter}
         />
-        <CollectionFilterSelect value={collectionId} onChange={setCollectionId} />
         <div className="market-toolbar__search">
           <ContractSearch contracts={options} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
           <button className="btn-search-advanced" title="搜索合约" onClick={() => setSearchModalOpen(true)}>🔍</button>
@@ -227,10 +236,14 @@ export function OptionsPanel() {
             isActive={isActive}
             onToggleGroup={toggleGroup}
             onRowClick={onSelectContract}
+            onContextMenu={handleContextMenu}
             onVisibleRangeChange={handleVisibleRangeChange}
           />
         </ErrorBoundary>
       </div>
+
+      {/* 单选右键菜单（无收藏项；单合约 → 五档/无限/K线/复制代码） */}
+      {singleMenu}
 
       <InstrumentSearchModal
         isOpen={searchModalOpen}

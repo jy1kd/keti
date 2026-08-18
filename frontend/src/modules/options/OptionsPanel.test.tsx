@@ -163,6 +163,7 @@ describe('OptionsPanel 平铺 T 型', () => {
     useMarketFilterStore.setState({
       futures: { exchanges: [], products: [] },
       options: { exchanges: [], products: [] },
+      optionsTabs: { exchange: '', tabs: [], activeIndex: 0 },
     })
     useTabStore.setState({
       tabs: [
@@ -283,13 +284,41 @@ describe('OptionsPanel 平铺 T 型', () => {
     expect(filteredIDs).not.toContain('cu2609')
   })
 
-  it('工具行只剩筛选 + 搜索 + 🔍；⭐ 收藏按钮已被移除', () => {
+  it('工具行：交易所/品种合并下拉 + 搜索 + 🔍；⭐ 收藏按钮已被移除', () => {
     render(<OptionsPanel />)
-    expect(screen.getByRole('button', { name: /筛选/ })).toBeInTheDocument()
+    expect(screen.getByTestId('options-filter-combo__button')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('搜索合约...')).toBeInTheDocument()
     expect(screen.getByTitle('搜索合约')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '收藏' })).toBeNull()
     expect(screen.queryByRole('button', { name: '收藏夹' })).toBeNull()
+  })
+
+  it('右键期权行 → 单选菜单（五档/无限/K线/复制代码，无收藏项）；标底层不弹', async () => {
+    render(<OptionsPanel />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
+    const table = getLatestTable()
+    const ctxHandler = [...(table.on as any).mock.calls].reverse().find((c: any[]) => c[0] === 'contextmenu_cell')?.[1]
+    expect(ctxHandler).toBeDefined()
+    const records = getLatestRecords()
+    const optionRowIndex = records.findIndex((r: any) => r.kind === 'option')
+    expect(optionRowIndex).toBeGreaterThan(0)
+
+    // 标底层（row 1 = records[0]，整行合并分组表头）右键 → 不弹菜单
+    await act(async () => {
+      ctxHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 100, preventDefault: vi.fn() } })
+    })
+    expect(screen.queryByText('五档下单')).toBeNull()
+
+    // 期权行 C 侧右键 → 弹出单选菜单（与期货表一致，无收藏项）
+    await act(async () => {
+      ctxHandler({ row: optionRowIndex + 1, col: 0, event: { clientX: 100, clientY: 100, preventDefault: vi.fn() } })
+    })
+    expect(screen.getByText('五档下单')).toBeInTheDocument()
+    expect(screen.getByText('无限下单')).toBeInTheDocument()
+    expect(screen.getByText('打开K线')).toBeInTheDocument()
+    expect(screen.getByText('复制合约代码')).toBeInTheDocument()
+    expect(screen.queryByText(/收藏/)).toBeNull()
+    expect(screen.queryByText(/批量/)).toBeNull()
   })
 
   it('T 行单击回填合约与价格：点击 C 侧（有快照）→ 报单表收到合约 + 最新价', async () => {
@@ -434,9 +463,9 @@ describe('OptionsPanel 平铺 T 型', () => {
   })
 })
 
-// ── 交易所+品种多选筛选 ──────────────────────────────────────────────────────
+// ── 筛选重构：交易所 → 品种 Tab 条 → 系列（OptionsFilterBar） ──────────────
 
-describe('OptionsPanel 筛选（标底合约粒度）', () => {
+describe('OptionsPanel 筛选（交易所→品种 Tab→系列）', () => {
   beforeEach(() => {
     vtableInstances.length = 0 // 清空 vtable 实例记录
     useMarketStore.setState({
@@ -450,6 +479,9 @@ describe('OptionsPanel 筛选（标底合约粒度）', () => {
     useMarketFilterStore.setState({
       futures: { exchanges: [], products: [] },
       options: { exchanges: [], products: [] },
+      futuresCollectionId: '',
+      optionsCollectionId: '',
+      optionsTabs: { exchange: '', tabs: [], activeIndex: 0 },
     })
     useTabStore.setState({
       tabs: [
@@ -462,114 +494,106 @@ describe('OptionsPanel 筛选（标底合约粒度）', () => {
     vi.clearAllMocks()
   })
 
-  it('渲染「筛选」按钮，空筛选无徽标', () => {
+  const flush = () => act(async () => { await new Promise((r) => setTimeout(r, 200)) })
+  const groupIDs = () => [...new Set(getLatestRecords().map((r: any) => r.underlyingID))]
+
+  const user = userEvent.setup()
+
+  /** 点开合并下拉并选定交易所（同一面板自动切到品种步骤） */
+  async function pickExchange(exchange: string) {
+    await user.click(screen.getByTestId('options-filter-combo__button'))
+    await user.click(screen.getByRole('button', { name: exchange }))
+  }
+
+  it('初始态：合并下拉为「请选择交易所」、无 tab 条（空筛选 = 全量）', async () => {
     render(<OptionsPanel />)
-    expect(screen.getByRole('button', { name: /筛选/ })).toBeInTheDocument()
+    await flush()
+    expect(screen.getByTestId('options-filter-combo__button')).toHaveTextContent('请选择交易所')
+    expect(screen.queryByTestId('options-filter-tabs')).toBeNull()
     expect(screen.queryByTestId('contract-filter-badge')).toBeNull()
+    // 未筛选 → 全量分组（与旧空筛选语义一致）
+    expect(groupIDs()).toContain('FG609')
+    expect(groupIDs()).toContain('cu2609')
   })
 
-  it('按标底品种过滤：勾选 玻璃 后只保留 FG 组', async () => {
-    const user = userEvent.setup()
+  it('只选交易所不过滤：选 CZCE 但未选品种 → 仍显示全量', async () => {
     render(<OptionsPanel />)
-    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
-    await user.click(screen.getByRole('button', { name: /筛选/ }))
-    fireEvent.click(screen.getByRole('checkbox', { name: /玻璃/ }))
-    await act(async () => { await new Promise((r) => setTimeout(r, 200)) })
-    const records = getLatestRecords()
-    const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
-    expect(groupIDs).toContain('FG609')
-    expect(groupIDs).not.toContain('MA609')
-    expect(groupIDs).not.toContain('cu2609')
-    expect(groupIDs).not.toContain('MO2608')
+    await flush()
+    await pickExchange('CZCE')
+    await flush()
+    // 交易所只是品种选择的前置，本身不过滤表格
+    expect(groupIDs().length).toBeGreaterThanOrEqual(4)
   })
 
-  it('按标底合约筛选：品种 FG + 标底 FG609 → records 只含 FG609 组', async () => {
-    // 三级筛选：交易所+品种已选，进一步选具体标底 FG609 → 只显示 FG609 的 C/P
-    useMarketFilterStore.setState({
-      options: { exchanges: [], products: ['FG'], underlyings: ['FG609'] },
-    })
+  it('UI 交互：选 CZCE → 同一面板自动跳出该所品种 → 勾选 FG → 表格只留 FG 组', async () => {
     render(<OptionsPanel />)
-    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
-    const records = getLatestRecords()
-    const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
-    expect(groupIDs).toContain('FG609')
-    expect(groupIDs).not.toContain('MA609')
-    expect(groupIDs).not.toContain('cu2609')
-    expect(groupIDs).not.toContain('MO2608')
-    // 且 records 里应包含 FG609 的期权行（C/P）
-    expect(records.some((r: any) => r.kind === 'option')).toBe(true)
+    await flush()
+    await pickExchange('CZCE')
+    // 选完交易所自动切到品种步骤：面板只含 CZCE 的 FG/MA，不含 SHFE 的 cu
+    expect(screen.getByText('CZCE 品种')).toBeInTheDocument()
+    expect(screen.getByLabelText('FG')).toBeInTheDocument()
+    expect(screen.getByLabelText('MA')).toBeInTheDocument()
+    expect(screen.queryByLabelText('cu')).toBeNull()
+    await user.click(screen.getByLabelText('FG'))
+    await flush()
+    // 勾选 FG → 弹 FG tab → 表格只留 FG609 组（激活 tab 的品种）
+    expect(screen.getByTestId('options-filter-tabs')).toBeInTheDocument()
+    expect(groupIDs()).toEqual(['FG609'])
   })
 
-  it('按标底合约筛选可多选：FG609 + MA609 同时选中 → 两个标底组都在', async () => {
-    useMarketFilterStore.setState({
-      options: { exchanges: [], products: ['FG', 'MA'], underlyings: ['FG609', 'MA609'] },
-    })
+  it('多 tab 只显示激活 tab；点击其它 tab 切换表格内容', async () => {
     render(<OptionsPanel />)
-    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
-    const records = getLatestRecords()
-    const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
-    expect(groupIDs).toContain('FG609')
-    expect(groupIDs).toContain('MA609')
-    expect(groupIDs).not.toContain('cu2609')
-    expect(groupIDs).not.toContain('MO2608')
+    await flush()
+    await pickExchange('CZCE')
+    await user.click(screen.getByLabelText('FG'))
+    // FG 激活 → 只 FG609
+    expect(groupIDs()).toEqual(['FG609'])
+    // 面板保持开启，直接勾选 MA → 追加 MA tab 并激活（默认激活新 tab）
+    await user.click(screen.getByLabelText('MA'))
+    await flush()
+    expect(groupIDs()).toEqual(['MA609'])
+    // 点回 FG tab → 表格切到 FG609
+    const tabs = screen.getByTestId('options-filter-tabs').querySelectorAll('[role="tab"]')
+    await user.click(tabs[0] as HTMLElement)
+    await flush()
+    expect(groupIDs()).toEqual(['FG609'])
   })
 
-  it('UI 交互：选品种 FG → 合约 section 列双标底 → 勾选 FG609 → 表格只 FG609', async () => {
-    // 构造 FG 品种下两个标底（FG609 / FG610），模拟真实场景「选品种后列出多个标底」
+  it('系列筛选：品种 FG 含 FG609+FG610 → 系列下拉勾选 FG609 → 只显示 FG609', async () => {
+    // 构造 FG 品种下两个标底（FG609 / FG610），验证系列收窄在第三级生效
     const fut2: ContractInfo = { instrumentID: 'FG610', instrumentName: 'FG610', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20261030', isTrading: 1, productClass: '1' }
     const opt2: ContractInfo = { instrumentID: 'FG610-C-1300', instrumentName: 'FG610-C-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 20, priceTick: 1, expireDate: '20261030', isTrading: 1, productClass: '2', underlyingInstrID: 'FG610', optionsType: '1', strikePrice: 1300 }
     useContractsStore.setState({ contracts: [fut, optC, optP, fut2, opt2], isLoaded: true })
 
-    const user = userEvent.setup()
     render(<OptionsPanel />)
-    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
-    // 打开筛选 → 选品种「玻璃」
-    await user.click(screen.getByRole('button', { name: /筛选/ }))
-    fireEvent.click(screen.getByRole('checkbox', { name: /玻璃/ }))
-    await act(async () => { await new Promise((r) => setTimeout(r, 200)) })
-    // 合约 section 出现，列出 FG 品种的两个标底
-    expect(screen.getByText('合约')).toBeInTheDocument()
-    expect(screen.getByRole('checkbox', { name: 'FG609' })).toBeInTheDocument()
-    expect(screen.getByRole('checkbox', { name: 'FG610' })).toBeInTheDocument()
-    // 勾选 FG609 标底
-    fireEvent.click(screen.getByRole('checkbox', { name: 'FG609' }))
-    await act(async () => { await new Promise((r) => setTimeout(r, 200)) })
-    // 表格只显示 FG609 组，FG610 被过滤掉
-    const records = getLatestRecords()
-    const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
-    expect(groupIDs).toContain('FG609')
-    expect(groupIDs).not.toContain('FG610')
+    await flush()
+    await pickExchange('CZCE')
+    await user.click(screen.getByLabelText('FG'))
+    await flush()
+    // FG 两个系列都在（未收窄）
+    expect(groupIDs()).toContain('FG609')
+    expect(groupIDs()).toContain('FG610')
+    // 系列下拉（随激活 tab FG）勾选 FG609
+    await user.click(screen.getByTestId('options-series-dropdown'))
+    await user.click(screen.getByLabelText('FG609'))
+    await flush()
+    expect(groupIDs()).toEqual(['FG609'])
+    expect(groupIDs()).not.toContain('FG610')
   })
 
-  it('按交易所过滤：勾选 SHFE 后只保留 cu 组', async () => {
-    const user = userEvent.setup()
+  it('清空筛选恢复全量分组', async () => {
     render(<OptionsPanel />)
-    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
-    await user.click(screen.getByRole('button', { name: /筛选/ }))
-    fireEvent.click(screen.getByRole('checkbox', { name: 'SHFE' }))
-    // 等待 filter → groups → records → useEffect → setRecords 全链路
-    await act(async () => { await new Promise((r) => setTimeout(r, 200)) })
-    const records = getLatestRecords()
-    const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
-    expect(groupIDs).toContain('cu2609')
-    expect(groupIDs).not.toContain('FG609')
-    expect(groupIDs).not.toContain('MA609')
-    expect(groupIDs).not.toContain('MO2608')
-  })
-
-  it('清空筛选后恢复全量分组', async () => {
-    const user = userEvent.setup()
-    render(<OptionsPanel />)
-    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
-    await user.click(screen.getByRole('button', { name: /筛选/ }))
-    fireEvent.click(screen.getByRole('checkbox', { name: /玻璃/ }))
-    await act(async () => { await new Promise((r) => setTimeout(r, 200)) })
-    // 清空
-    await user.click(screen.getByRole('button', { name: '清空' }))
-    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
-    const records = getLatestRecords()
-    const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
-    expect(groupIDs.length).toBeGreaterThanOrEqual(4)
+    await flush()
+    await pickExchange('CZCE')
+    await user.click(screen.getByLabelText('FG'))
+    await flush()
+    expect(groupIDs()).toEqual(['FG609'])
+    // 清空 → 交易所复位、tab 消失、全量分组
+    await user.click(screen.getByTitle('清空筛选'))
+    await flush()
+    expect(screen.getByTestId('options-filter-combo__button')).toHaveTextContent('请选择交易所')
+    expect(screen.queryByTestId('options-filter-tabs')).toBeNull()
+    expect(groupIDs().length).toBeGreaterThanOrEqual(4)
   })
 })
 
@@ -591,8 +615,8 @@ describe('OptionsPanel 工具行布局', () => {
       options: { exchanges: [], products: [] },
       futuresCollectionId: '',
       optionsCollectionId: '',
+      optionsTabs: { exchange: '', tabs: [], activeIndex: 0 },
     })
-    useCollectionsStore.setState({ collections: [], loaded: false })
     useTabStore.setState({
       tabs: [
         { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
@@ -604,13 +628,15 @@ describe('OptionsPanel 工具行布局', () => {
     vi.clearAllMocks()
   })
 
-  it('工具行只剩筛选 + 搜索框 + 🔍 按钮（无 ⭐）', () => {
+  it('工具行：交易所/品种合并下拉 + 搜索框 + 🔍 按钮（无 ⭐）', () => {
     const { container } = render(<OptionsPanel />)
     const toolbar = container.querySelector('.market-toolbar') as HTMLElement
     expect(toolbar).toBeTruthy()
+    expect(screen.getByTestId('options-filter-combo__button')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('搜索合约...')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /筛选/ })).toBeInTheDocument()
+    expect(screen.getByTitle('搜索合约')).toBeInTheDocument()
     expect(toolbar.querySelector('.btn-favorite')).toBeNull()
+    expect(toolbar.querySelector('.collection-filter-select')).toBeNull()
   })
 
   it('点击 🔍 打开高级搜索弹窗', async () => {
@@ -621,34 +647,17 @@ describe('OptionsPanel 工具行布局', () => {
     expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
   })
 
-  it('有收藏夹时渲染收藏夹过滤下拉；选夹后表格只保留夹内合约', async () => {
-    // 注入收藏夹 FG 组合（含期权 FG609-C-1300）
+  it('收藏夹功能已移除：无收藏夹过滤下拉（即使存在收藏夹）', () => {
+    // 期权页不再渲染 CollectionFilterSelect：注入收藏夹也不出现
     useCollectionsStore.setState({
       collections: [{ id: 'fg', name: 'FG 组合', instrumentIDs: ['FG609-C-1300'] }],
       loaded: true,
     })
     setupMultiUnderlyingContracts()
-    const user = userEvent.setup()
     render(<OptionsPanel />)
-    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
-    const select = screen.getByRole('combobox') as HTMLSelectElement
-    expect(select).toBeInTheDocument()
-    // 切到 FG 组合 → 表格只保留夹内期权（FG609-C-1300）所在标底组
-    await user.selectOptions(select, 'fg')
-    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
-    const records = getLatestRecords()
-    const groupIDs = [...new Set(records.map((r: any) => r.underlyingID))]
-    expect(groupIDs).toEqual(['FG609'])
-    expect(groupIDs).not.toContain('MA609')
-    expect(groupIDs).not.toContain('cu2609')
-    // 且期权行是收藏夹里的 FG609-C-1300
-    const optionRows = records.filter((r: any) => r.kind === 'option')
-    expect(optionRows.some((r: any) => r.callInstrumentID === 'FG609-C-1300')).toBe(true)
-    // 切回全部 → 恢复多组
-    await user.selectOptions(select, '')
-    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
-    const recordsAll = getLatestRecords()
-    const groupIDsAll = [...new Set(recordsAll.map((r: any) => r.underlyingID))]
-    expect(groupIDsAll.length).toBeGreaterThanOrEqual(4)
+    // 工具行无任何收藏夹下拉（<select>）；合并的交易所/品种下拉按钮在；无「全部」Tab 条
+    expect(screen.queryByRole('combobox')).toBeNull()
+    expect(screen.getByTestId('options-filter-combo__button')).toBeInTheDocument()
+    expect(screen.queryByText('FG 组合')).toBeNull()
   })
 })

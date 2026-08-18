@@ -22,6 +22,8 @@ interface UseContractMenusArgs {
   favoritedIds: Set<string>
   /** 收藏交互模式：picker（行情页，弹选夹面板）| folder（夹页，直接切本夹） */
   favoriteMode: 'picker' | 'folder'
+  /** false = 不渲染任何收藏菜单项，且不渲染多选菜单（期权页：无收藏功能且未启多选） */
+  showCollections?: boolean
   /** picker 模式：打开选夹面板 */
   onOpenFavoritePicker?: (instrumentIDs: string[]) => void
   /** picker 模式：批量取消收藏（从所有夹移除） */
@@ -44,6 +46,8 @@ interface UseContractMenusArgs {
  *
  * - picker（行情页）：收藏项统一弹 CollectionPicker；批量取消收藏 = 从所有夹移除。
  * - folder（夹页）：收藏项直接切本夹 / 批量从本夹移除。
+ * - showCollections=false（期权页）：不渲染任何收藏菜单项，多选菜单整体不渲染
+ *   （期权页已去掉收藏夹功能且不启用多选，右键仅 五档/无限/K线/复制代码）。
  * - 工具栏收藏已收敛为「选择收藏夹」下拉（见 MarketPanel/OptionsPanel），不再需要共享按钮逻辑。
  */
 export function useContractMenus(args: UseContractMenusArgs) {
@@ -52,6 +56,7 @@ export function useContractMenus(args: UseContractMenusArgs) {
     multiSelectMenu,
     favoritedIds,
     favoriteMode,
+    showCollections = true,
     onOpenFavoritePicker,
     onRemoveFromAll,
     onToggleInFolder,
@@ -73,24 +78,29 @@ export function useContractMenus(args: UseContractMenusArgs) {
         { label: '五档下单', icon: '📝', onClick: () => openOrderPopup(contextMenu.instrumentID) },
         { label: '无限下单', icon: '♾️', onClick: () => openInfinitePopup(contextMenu.instrumentID) },
         { label: '打开K线', icon: '📈', onClick: () => openKlineTab(contextMenu.instrumentID) },
-        favoriteMode === 'folder'
-          ? {
-              label: favoritedIds.has(contextMenu.instrumentID) ? '从本夹移除' : '收藏到本夹',
-              icon: favoritedIds.has(contextMenu.instrumentID) ? '★' : '⭐',
-              onClick: () => onToggleInFolder?.(contextMenu.instrumentID),
-            }
-          : {
-              label: '收藏到收藏夹…',
-              icon: '⭐',
-              onClick: () => onOpenFavoritePicker?.([contextMenu.instrumentID]),
-            },
+        ...(showCollections
+          ? [
+              favoriteMode === 'folder'
+                ? {
+                    label: favoritedIds.has(contextMenu.instrumentID) ? '从本夹移除' : '收藏到本夹',
+                    icon: favoritedIds.has(contextMenu.instrumentID) ? '★' : '⭐',
+                    onClick: () => onToggleInFolder?.(contextMenu.instrumentID),
+                  }
+                : {
+                    label: '收藏到收藏夹…',
+                    icon: '⭐',
+                    onClick: () => onOpenFavoritePicker?.([contextMenu.instrumentID]),
+                  },
+            ]
+          : []),
         { label: '复制合约代码', icon: '📋', onClick: () => navigator.clipboard.writeText(contextMenu.instrumentID) },
       ]}
       onClose={closeMenus}
     />
   ) : null
 
-  const multiMenu: ReactNode = multiSelectMenu ? (() => {
+  // 期权页（showCollections=false）不渲染多选菜单：无收藏项 + 未启用多选
+  const multiMenu: ReactNode = !showCollections ? null : multiSelectMenu ? (() => {
     const favoritedInSelection = multiSelectMenu.instrumentIDs.filter((id) => favoritedIds.has(id))
     const favoriteItem =
       favoriteMode === 'folder'
