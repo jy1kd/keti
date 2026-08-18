@@ -33,6 +33,12 @@ export interface OptionsTableProps {
   onToggleGroup: (underlyingID: string) => void
   /** 点击 C/P 侧单元格回调；中列（行权价）与缺失侧不回调 */
   onRowClick?: (instrumentID: string, price: number) => void
+  /**
+   * 右键菜单回调（仿照 QuoteTable onContextMenu → 期权页单选菜单）。
+   * 按下标底层（整行合并的分组表头）与中列（行权价）不回调；
+   * call 侧列回调 call 合约、put 侧列回调 put 合约；price 为快照价，占位符回传 0。
+   */
+  onContextMenu?: (instrumentID: string, price: number, event: MouseEvent) => void
   /** vtable 可见区期权合约 ID 变化回调（仿照 QuoteTable onVisibleRangeChange → 订阅管理器） */
   onVisibleRangeChange?: (instrumentIDs: string[]) => void
   /**
@@ -142,7 +148,7 @@ function buildOptionRecords(chain: OptionChain): OptionsRecord[] {
   })
 }
 
-export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, onVisibleRangeChange, isActive }: OptionsTableProps) {
+export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, onContextMenu, onVisibleRangeChange, isActive }: OptionsTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
   const recordsRef = useRef<OptionsRecord[]>([])
@@ -152,6 +158,7 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
   /** 可见区版本号：滚动导致可见范围变化时递增，驱动局部更新 effect 重算（滚入新区域的行立即刷新） */
   const [visibleRangeVersion, setVisibleRangeVersion] = useState(0)
   const onRowClickRef = useRef(onRowClick)
+  const onContextMenuRef = useRef(onContextMenu)
   const onVisibleRangeChangeRef = useRef(onVisibleRangeChange)
   const onToggleGroupRef = useRef(onToggleGroup)
   const mergedRowsRef = useRef<Set<number>>(new Set())
@@ -164,6 +171,7 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
   const scheduleRafRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => { onRowClickRef.current = onRowClick }, [onRowClick])
+  useEffect(() => { onContextMenuRef.current = onContextMenu }, [onContextMenu])
   useEffect(() => { onVisibleRangeChangeRef.current = onVisibleRangeChange }, [onVisibleRangeChange])
   useEffect(() => { onToggleGroupRef.current = onToggleGroup }, [onToggleGroup])
   useEffect(() => { isActiveRef.current = isActive }, [isActive])
@@ -294,6 +302,33 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
         const price = typeof record.putLastPrice === 'number' ? record.putLastPrice : 0
         onRowClickRef.current?.(record.putInstrumentID, price)
       }
+    })
+
+    // 右键菜单：C/P 侧按列映射到具体合约（仿照 QuoteTable contextmenu_cell）。
+    // 标底层（整行合并的分组表头）与中列（行权价）不属于任何 C/P 合约 → 不回调；
+    // 单侧缺失（无合约）也不回调。始终 preventDefault 抑制浏览器原生菜单。
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- vtable event callback 类型无法精确化
+    table.on('contextmenu_cell', (args: any) => {
+      args.event?.preventDefault?.()
+      const rowIndex = (args.row ?? args.rowIndex) - 1
+      const colIndex = args.col ?? args.colIndex
+      if (rowIndex == null || colIndex == null) return
+      const record = recordsRef.current[rowIndex]
+      if (!record || record.kind === 'underlying') return
+
+      let instrumentID: string | undefined
+      let price: number
+      if (colIndex >= 0 && colIndex <= 4) {
+        instrumentID = record.callInstrumentID
+        price = typeof record.callLastPrice === 'number' ? record.callLastPrice : 0
+      } else if (colIndex >= 6 && colIndex <= 10) {
+        instrumentID = record.putInstrumentID
+        price = typeof record.putLastPrice === 'number' ? record.putLastPrice : 0
+      } else {
+        return // 中列（行权价）
+      }
+      if (!instrumentID) return
+      onContextMenuRef.current?.(instrumentID, price, args.event)
     })
 
     // 滚动 → 防抖上报可见标底（上报内递增 visibleRangeVersion；此处不直接递增，

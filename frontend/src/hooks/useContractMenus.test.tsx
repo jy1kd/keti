@@ -96,3 +96,46 @@ describe('useContractMenus 收藏双模式', () => {
     expect(screen.getByText(/批量从本夹移除/)).toBeDefined()
   })
 })
+
+describe('useContractMenus showCollections=false（期权页：无收藏项、不渲染多选菜单）', () => {
+  function HarnessNoCollections({ single }: { single: boolean }) {
+    const { singleMenu, multiMenu } = useContractMenus({
+      contextMenu: single ? ctx : null,
+      multiSelectMenu: single ? null : multi,
+      favoritedIds: new Set(['au2406']),
+      favoriteMode: 'picker',
+      onOpenFavoritePicker: vi.fn(),
+      onRemoveFromAll: vi.fn(),
+      openOrderPopup: vi.fn(),
+      openInfinitePopup: vi.fn(),
+      openKlineTab: vi.fn(),
+      openOrderTabs: vi.fn(),
+      openInfiniteTabs: vi.fn(),
+      openKlineTabs: vi.fn(),
+      closeMenus: vi.fn(),
+      showCollections: false,
+    } as any)
+    return (
+      <>
+        {singleMenu}
+        {multiMenu}
+      </>
+    )
+  }
+
+  it('单选菜单仅 五档下单/无限下单/打开K线/复制合约代码，不含任何收藏项', () => {
+    render(<HarnessNoCollections single />)
+    expect(screen.getByText('五档下单')).toBeDefined()
+    expect(screen.getByText('无限下单')).toBeDefined()
+    expect(screen.getByText('打开K线')).toBeDefined()
+    expect(screen.getByText('复制合约代码')).toBeDefined()
+    expect(screen.queryByText(/收藏/)).toBeNull()
+    expect(screen.queryByText('从本夹移除')).toBeNull()
+    expect(screen.queryByText('收藏到收藏夹…')).toBeNull()
+  })
+
+  it('showCollections=false 时不渲染多选菜单（期权页不启用多选）', () => {
+    render(<HarnessNoCollections single={false} />)
+    expect(screen.queryByText(/批量/)).toBeNull()
+  })
+})

@@ -168,3 +168,239 @@
   flex: 1;
   min-height: 0;
 }
+
+/* ── OptionsFilterBar（筛选重构：品种 Tab 条 + 系列 + 合并的交易所/品种下拉） ─── */
+
+/* 单行：整体随 market-toolbar 高度，左侧 tab 簇、右侧交易所/品种下拉（margin-left:auto 右贴搜索） */
+.options-filter-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 左侧 tab 簇（可横向滚动的容器只放 tab，系列下拉在其外，避免面板被 overflow 裁剪） */
+.options-filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox 隐藏滚动条 */
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.options-filter-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.options-filter-select {
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--text-primary, #e6edf3);
+  background: var(--bg-secondary, #161b22);
+  border: 1px solid var(--border-color, #30363d);
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.options-filter-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 品种 tab 胶囊（英文代码为主） */
+.options-filter-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px 1px 10px;
+  background: var(--bg-secondary, #161b22);
+  border: 1px solid var(--border-color, #30363d);
+  border-radius: 12px;
+  flex-shrink: 0;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.options-filter-tab--active {
+  background: rgba(240, 180, 41, 0.15);
+  border-color: var(--accent, #f0b429);
+}
+
+.options-filter-tab__name {
+  padding: 2px 4px;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  color: var(--text-primary, #e6edf3);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.options-filter-tab__close {
+  padding: 1px 4px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-muted, #8b949e);
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.options-filter-tab__close:hover {
+  color: var(--text-primary, #e6edf3);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* 系列下拉 / 合并的交易所→品种下拉 */
+.options-series-select,
+.options-filter-combo {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.options-filter-combo {
+  margin-left: auto; /* 右贴搜索框 */
+}
+
+.options-filter-clear {
+  padding: 2px 10px;
+  font-size: 12px;
+  color: var(--text-secondary, #8b949e);
+  background: transparent;
+  border: 1px solid var(--border-color, #30363d);
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.options-filter-clear:hover {
+  color: var(--text-primary, #e6edf3);
+  border-color: var(--accent, #f0b429);
+}
+
+/* 下拉面板（弹出框）。系列面板向左展开；合并下拉靠右，面板右对齐展开防溢出 */
+.options-filter-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  min-width: 180px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--bg-secondary, #161b22);
+  border: 1px solid var(--border-color, #30363d);
+  border-radius: 6px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  padding: 4px;
+}
+
+.options-filter-panel--combo {
+  left: auto;
+  right: 0;
+}
+
+.options-filter-panel__title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #8b949e);
+  border-bottom: 1px solid var(--border-color, #30363d);
+  margin-bottom: 4px;
+}
+
+.options-filter-panel__back {
+  padding: 0 4px;
+  font-size: 13px;
+  line-height: 16px;
+  color: var(--text-secondary, #8b949e);
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.options-filter-panel__back:hover {
+  color: var(--text-primary, #e6edf3);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.options-filter-panel__choice {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 5px 8px;
+  font-size: 12px;
+  color: var(--text-primary, #e6edf3);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.options-filter-panel__choice:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.06));
+}
+
+.options-filter-panel__choice--active {
+  color: var(--accent, #f0b429);
+  font-weight: 600;
+}
+
+.options-filter-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--text-primary, #e6edf3);
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 4px;
+}
+
+.options-filter-item:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.06));
+}
+
+.options-filter-item input {
+  accent-color: var(--accent, #f0b429);
+}
+
+.options-filter-item__label {
+  color: var(--text-primary, #e6edf3);
+}
+
+/* 品种展示：英文代码左（正常色），中文名右（灰色透明） */
+.options-filter-product-code {
+  color: var(--text-primary, #e6edf3);
+  font-weight: 500;
+}
+
+.options-filter-product-name {
+  color: var(--text-muted, #8b949e);
+  opacity: 0.75;
+  font-size: 11px;
+}
+
+.options-filter-empty {
+  padding: 8px;
+  font-size: 12px;
+  color: var(--text-muted, #8b949e);
+  text-align: center;
+}
+
+/* 搜索贴紧右侧的交易所/品种下拉（默认 .market-toolbar__search margin-left:auto 会产生空隙） */
+.options-page .market-toolbar__search {
+  margin-left: 0;
+}

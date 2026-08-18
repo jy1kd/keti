@@ -174,7 +174,7 @@ describe('TabContent', () => {
       ['order', '报单页面'],
       ['kline', 'K线页面'],
       ['settings', '⚙ 设置'],
-      ['options', '筛选'],
+      ['options', '请选择交易所'],
       ['ipc-monitor', '🔌 IPC 监控'],
       ['query-account', '资金查询 Mock'],
       ['query-orders', '报单查询'],

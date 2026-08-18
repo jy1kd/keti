@@ -366,3 +366,139 @@ describe('OptionsTable 标底行合并撤销', () => {
     expect(instance.mergeCells).toHaveBeenCalled()
   })
 })
+
+// ── 右键菜单：C/P 侧按列映射到具体合约（与期货表一致，期权页无收藏项） ─────
+describe('OptionsTable contextmenu_cell（右键菜单）', () => {
+  beforeEach(() => {
+    vtableInstances.length = 0
+    useMarketStore.setState({
+      visibleInstrumentIDs: [],
+      snapshots: new Map(),
+    })
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.useRealTimers()
+  })
+
+  async function getContextMenuHandler() {
+    const { ListTable } = await import('@visactor/vtable')
+    const tableInstance = (ListTable as any).mock.results[0].value
+    const handler = tableInstance.on.mock.calls.find(
+      (call: any[]) => call[0] === 'contextmenu_cell',
+    )?.[1]
+    expect(handler).toBeDefined()
+    return handler as (args: any) => void
+  }
+
+  function makeContextEvent(clientX = 100, clientY = 200) {
+    return { clientX, clientY, preventDefault: vi.fn() }
+  }
+
+  it('右键 call 侧列（col 0）→ 回调 call 合约 + 快照价 + 抑制浏览器原生菜单', async () => {
+    const onContextMenu = vi.fn()
+    render(
+      <OptionsTable
+        records={[makeUnderlyingRow('FG609'), makeOptionRow('FG609', 'FG609-C-1000', 'FG609-P-1000')]}
+        onToggleGroup={vi.fn()}
+        isActive={true}
+        onContextMenu={onContextMenu}
+      />,
+    )
+    await vi.runAllTimersAsync()
+    const handler = await getContextMenuHandler()
+    const event = makeContextEvent()
+    // row 2 = records[1]（option 行）；col 0 = call 侧
+    handler({ row: 2, col: 0, event })
+    expect(event.preventDefault).toHaveBeenCalled()
+    expect(onContextMenu).toHaveBeenCalledTimes(1)
+    expect(onContextMenu).toHaveBeenCalledWith('FG609-C-1000', 10, event)
+  })
+
+  it('右键 put 侧列（col 6）→ 回调 put 合约', async () => {
+    const onContextMenu = vi.fn()
+    render(
+      <OptionsTable
+        records={[makeUnderlyingRow('FG609'), makeOptionRow('FG609', 'FG609-C-1000', 'FG609-P-1000')]}
+        onToggleGroup={vi.fn()}
+        isActive={true}
+        onContextMenu={onContextMenu}
+      />,
+    )
+    await vi.runAllTimersAsync()
+    const handler = await getContextMenuHandler()
+    handler({ row: 2, col: 6, event: makeContextEvent() })
+    expect(onContextMenu).toHaveBeenCalledWith('FG609-P-1000', 5, expect.any(Object))
+  })
+
+  it('右键行权价列（col 5）→ 不回调（行权价不属于任何 C/P 合约），但仍抑制原生菜单', async () => {
+    const onContextMenu = vi.fn()
+    render(
+      <OptionsTable
+        records={[makeUnderlyingRow('FG609'), makeOptionRow('FG609', 'FG609-C-1000', 'FG609-P-1000')]}
+        onToggleGroup={vi.fn()}
+        isActive={true}
+        onContextMenu={onContextMenu}
+      />,
+    )
+    await vi.runAllTimersAsync()
+    const handler = await getContextMenuHandler()
+    const event = makeContextEvent()
+    handler({ row: 2, col: 5, event })
+    expect(event.preventDefault).toHaveBeenCalled()
+    expect(onContextMenu).not.toHaveBeenCalled()
+  })
+
+  it('右键标底层（row 1：整行合并的分组表头）→ 不回调', async () => {
+    const onContextMenu = vi.fn()
+    render(
+      <OptionsTable
+        records={[makeUnderlyingRow('FG609'), makeOptionRow('FG609', 'FG609-C-1000', 'FG609-P-1000')]}
+        onToggleGroup={vi.fn()}
+        isActive={true}
+        onContextMenu={onContextMenu}
+      />,
+    )
+    await vi.runAllTimersAsync()
+    const handler = await getContextMenuHandler()
+    handler({ row: 1, col: 0, event: makeContextEvent() })
+    expect(onContextMenu).not.toHaveBeenCalled()
+  })
+
+  it('右键单侧无合约的单元格（callInstrumentID 缺）→ 不回调', async () => {
+    const onContextMenu = vi.fn()
+    const noCallRow = { ...makeOptionRow('FG609', 'FG609-C-1000', 'FG609-P-1000'), callInstrumentID: undefined }
+    render(
+      <OptionsTable
+        records={[makeUnderlyingRow('FG609'), noCallRow]}
+        onToggleGroup={vi.fn()}
+        isActive={true}
+        onContextMenu={onContextMenu}
+      />,
+    )
+    await vi.runAllTimersAsync()
+    const handler = await getContextMenuHandler()
+    handler({ row: 2, col: 0, event: makeContextEvent() })
+    expect(onContextMenu).not.toHaveBeenCalled()
+  })
+
+  it('右键 price 为占位符（--）时回传 0（与期货表语义一致）', async () => {
+    const onContextMenu = vi.fn()
+    const placeholderRow = { ...makeOptionRow('FG609', 'FG609-C-1000', 'FG609-P-1000'), callLastPrice: '--' as const }
+    render(
+      <OptionsTable
+        records={[makeUnderlyingRow('FG609'), placeholderRow]}
+        onToggleGroup={vi.fn()}
+        isActive={true}
+        onContextMenu={onContextMenu}
+      />,
+    )
+    await vi.runAllTimersAsync()
+    const handler = await getContextMenuHandler()
+    handler({ row: 2, col: 0, event: makeContextEvent() })
+    expect(onContextMenu).toHaveBeenCalledWith('FG609-C-1000', 0, expect.any(Object))
+  })
+})
