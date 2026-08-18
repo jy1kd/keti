@@ -9278,20 +9278,6 @@
       "complexity": "moderate"
     },
     {
-      "id": "file:frontend/electron/__tests__/windowManager.test.ts",
-      "type": "file",
-      "name": "windowManager.test.ts",
-      "filePath": "frontend/electron/__tests__/windowManager.test.ts",
-      "summary": "Vitest 单元测试，mock BrowserWindow 与 ipcMain，验证 WindowManager 的窗口创建、单例复用、关闭、窗口状态保存/恢复与广播等功能。",
-      "tags": [
-        "test",
-        "electron",
-        "window",
-        "unit-test"
-      ],
-      "complexity": "moderate"
-    },
-    {
       "id": "config:frontend/electron/tsconfig.json",
       "type": "config",
       "name": "tsconfig.json",
@@ -11076,93 +11062,6 @@
         "io",
         "persistence",
         "cache"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "file:frontend/src/components/FloatingWindow/index.test.tsx",
-      "type": "file",
-      "name": "index.test.tsx",
-      "filePath": "frontend/src/components/FloatingWindow/index.test.tsx",
-      "summary": "FloatingWindow 浮动窗口组件的单元测试，覆盖 chrome 壳渲染、标题条拖拽移动、停靠/关闭按钮、8 方向缩放手柄、position:fixed 回归以及各方向缩放语义。",
-      "tags": [
-        "test",
-        "component",
-        "ui",
-        "floating-window",
-        "regression"
-      ],
-      "complexity": "moderate",
-      "languageNotes": "jsdom 24 缺少 PointerEvent 构造器，使用 MouseEvent 保留 clientX/clientY/button 模拟指针事件。"
-    },
-    {
-      "id": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "type": "file",
-      "name": "index.tsx",
-      "filePath": "frontend/src/components/FloatingWindow/index.tsx",
-      "summary": "浮动窗口 chrome 壳组件，提供标题条拖拽移动、停靠/关闭按钮与 8 方向缩放手柄；FloatingWindows 容器遍历窗口渲染壳，并清理已关闭标签的残留窗口登记。",
-      "tags": [
-        "component",
-        "floating-window",
-        "ui",
-        "drag-resize",
-        "interaction",
-        "tested"
-      ],
-      "complexity": "moderate",
-      "languageNotes": "ResizeHandle 手柄内联 position:fixed，避免被全局 .resize-handle 的 relative 规则覆盖导致 flex 布局把主内容区压成 0 高。"
-    },
-    {
-      "id": "function:frontend/src/components/FloatingWindow/index.tsx:handleStyle",
-      "type": "function",
-      "name": "handleStyle",
-      "filePath": "frontend/src/components/FloatingWindow/index.tsx",
-      "lineRange": [
-        22,
-        39
-      ],
-      "summary": "根据方向与窗口矩形计算每个缩放手柄的 fixed 定位样式，使用穷举 switch 保证 ResizeDirection 类型安全。",
-      "tags": [
-        "utility",
-        "style",
-        "resize",
-        "type-safe"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindow",
-      "type": "function",
-      "name": "FloatingWindow",
-      "filePath": "frontend/src/components/FloatingWindow/index.tsx",
-      "lineRange": [
-        47,
-        156
-      ],
-      "summary": "单个浮动窗口的 chrome 壳组件，处理标题条拖拽移动（含边界钳制）、8 方向缩放（委托 startResizeDrag）、停靠与关闭交互，卸载时清理活跃监听器。",
-      "tags": [
-        "component",
-        "floating-window",
-        "interaction",
-        "drag-resize"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindows",
-      "type": "function",
-      "name": "FloatingWindows",
-      "filePath": "frontend/src/components/FloatingWindow/index.tsx",
-      "lineRange": [
-        159,
-        180
-      ],
-      "summary": "浮动窗口容器，遍历 windows 渲染所有浮动 chrome 壳，并在标签被关闭时把残留窗口登记自动 dock 回标签栏。",
-      "tags": [
-        "component",
-        "container",
-        "cleanup",
-        "floating-window"
       ],
       "complexity": "simple"
     },
@@ -14981,40 +14880,17 @@
     },
     {
       "id": "file:frontend/src/components/InstrumentSearchModal/index.tsx",
-      "kind": "file",
-      "title": "InstrumentSearchModal 组件",
-      "language": "typescript",
-      "fileCategory": "code",
-      "summary": "合约搜索弹窗组件，提供交易所/品种下拉筛选 + 关键词搜索 + 中文品种名搜索能力。支持收藏（打开选夹面板）和移除操作，通过 toast 反馈操作结果。包含 CTP 合约刷新功能，监听 instruments_refreshed WebSocket 事件重置加载状态。",
+      "type": "file",
+      "name": "index.tsx",
+      "filePath": "frontend/src/components/InstrumentSearchModal/index.tsx",
+      "summary": "合约高级搜索弹窗：按交易所/品种/关键词（含中文→品种映射多产品合并搜索）检索合约，CTP 刷新合约、收藏/移除收藏入口、选中合约点击回调；60s 刷新安全超时。",
       "tags": [
-        "react-component",
+        "component",
         "modal",
         "search",
-        "favorites",
-        "ctp-refresh",
-        "chinese-search",
-        "tested"
+        "favorite"
       ],
-      "lineCount": 287,
-      "exports": [
-        "InstrumentSearchModal"
-      ],
-      "imports": [
-        "ContractInfo",
-        "getExchanges",
-        "getProducts",
-        "getInstruments",
-        "searchInstruments",
-        "refreshInstruments",
-        "PRODUCT_NAMES",
-        "getProductName",
-        "toast",
-        "styles"
-      ],
-      "languageNotes": "复杂弹窗组件，含 9 个 useState 状态、5 个 useEffect 副作用、1 个 useCallback。中文搜索通过 PRODUCT_NAMES 映射反查 productID 列表，再并行调用 getInstruments 合并去重。",
-      "complexity": "moderate",
-      "type": "file",
-      "name": "frontend/src/components/InstrumentSearchModal/index.tsx"
+      "complexity": "complex"
     },
     {
       "id": "file:frontend/src/components/InstrumentSearchModal/index.tsx::InstrumentSearchModal",
@@ -15151,86 +15027,59 @@
     },
     {
       "id": "file:frontend/src/modules/options/OptionsPanel.tsx",
-      "kind": "file",
-      "language": "typescript",
-      "title": "OptionsPanel.tsx",
-      "summary": "期权列表面板组件，按标底分组展平期权合约，支持标底行双击打开 T 型报价悬浮窗",
-      "description": "React 组件，实现期权标签页的列表视图。期权合约按标底分组展平：标底期货行在前，后续为期权行（C 前 P 后）。工具栏包含交易所/品种筛选、收藏夹过滤下拉、搜索框。标底行双击调用 openTQuoteFloating 打开独立悬浮标签页，标底行右键仅显示「打开T型报价」菜单。期权行双击/右键走原报单弹窗和单选菜单。集成 useContractMenus 共享右键菜单逻辑。",
+      "type": "file",
+      "name": "OptionsPanel.tsx",
+      "filePath": "frontend/src/modules/options/OptionsPanel.tsx",
+      "summary": "期权标签页（平铺 T 型链表格视图）：contracts 一加载即渲染、从合约列表直接构链（零 getOptionChains 请求）、三级筛选（交易所→品种→标底）+收藏夹过滤、折叠/展开、搜索定位标底组、@@UNDEFINED@@快照增量填价。",
       "tags": [
-        "react-component",
+        "module",
         "options",
         "panel",
-        "trading",
-        "underlying-grouping",
-        "tested"
+        "screen"
       ],
-      "layer": "presentation",
-      "languageNotes": "React hooks，Zustand store 消费，TypeScript 接口 ContractInfo",
-      "complexity": "moderate",
-      "type": "file",
-      "name": "frontend/src/modules/options/OptionsPanel.tsx"
+      "complexity": "complex"
     },
     {
       "id": "file:frontend/src/modules/options/OptionsPanel.test.tsx",
-      "kind": "file",
-      "language": "typescript",
-      "title": "OptionsPanel.test.tsx",
-      "summary": "期权面板组件测试，覆盖分组展平、交互菜单、收藏夹过滤、筛选器和临界缺陷防护",
-      "description": "vitest 测试文件，全面测试 OptionsPanel 组件。覆盖场景：默认列表视图、标底/期权行分组展平顺序、行单击同步选中状态、期权行右键菜单（五档下单/无限下单/K线）、标底行双击打开 T 型报价、标底行右键仅「打开T型报价」菜单、收藏列点击打开 CollectionPicker、可见区上报（激活/隐藏状态）、交易所+品种多选筛选、搜索定位到标底分组、标底行单击不覆盖报单价格（Critical #3）、标底菜单外部点击关闭（Critical #2）、菜单不叠加（Critical #2）。",
+      "type": "file",
+      "name": "OptionsPanel.test.tsx",
+      "filePath": "frontend/src/modules/options/OptionsPanel.test.tsx",
+      "summary": "测试 OptionsPanel 平铺 T 型：默认展开渲染、underlyingInstrID 缺失/不完整规范化归组、指数期权标底、搜索（代码/中文名）过滤、标底粒度筛选、收藏夹过滤、折叠/展开、T 行点击回填（有/无快照）、高级搜索定位、挂载不发 getOptionChains 请求。",
       "tags": [
         "test",
+        "module",
         "options",
-        "panel",
-        "vtable",
-        "regression",
-        "critical-fix"
+        "panel"
       ],
-      "layer": "test",
-      "languageNotes": "vitest + @testing-library/react + userEvent，mock openTQuoteFloating 和 InstrumentSearchModal",
-      "complexity": "moderate",
-      "type": "file",
-      "name": "frontend/src/modules/options/OptionsPanel.test.tsx"
+      "complexity": "high"
     },
     {
       "id": "file:frontend/src/modules/options/TQuoteTable.tsx",
-      "kind": "file",
-      "language": "typescript",
-      "title": "TQuoteTable.tsx",
-      "summary": "T 型报价表格组件，将期权链的 Call/Put 按行权价合并为有序行，使用 vtable 渲染",
-      "description": "React 组件，渲染期权 T 型报价表。buildRecords 函数将 OptionChain 的 calls 和 puts 按 strikePrice 合并为 TQuoteRow 数组，缺失的 Call 或 Put 用占位符 '--' 填充。支持实时快照数据覆盖（snapshots Map）。使用 @visactor/vtable 的 ListTable 渲染，11 列（5 Call + 1 行权价 + 5 Put），自适应宽度。卸载时延迟 250ms 释放 vtable 实例以避让 ResizeObserver 防抖回调。数据变更时通过 setRecords 增量更新而非重建表格。",
-      "tags": [
-        "react-component",
-        "options",
-        "t-quote",
-        "vtable",
-        "realtime",
-        "tested"
-      ],
-      "layer": "presentation",
-      "languageNotes": "React hooks (useRef, useEffect)，vtable ListTable API，Map 数据结构",
-      "complexity": "moderate",
       "type": "file",
-      "name": "frontend/src/modules/options/TQuoteTable.tsx"
+      "name": "TQuoteTable.tsx",
+      "filePath": "frontend/src/modules/options/TQuoteTable.tsx",
+      "summary": "单标底 T 型报价表：纯净 vtable 实现，按行权价合并 calls/puts、快照增量更新、点击 C/P 侧回传合约与最新价（中列/缺失侧不回调）、延迟 250ms 释放 vtable 避让 ResizeObserver 防抖。",
+      "tags": [
+        "module",
+        "options",
+        "table",
+        "vtable"
+      ],
+      "complexity": "medium"
     },
     {
       "id": "file:frontend/src/modules/options/TQuoteTable.test.tsx",
-      "kind": "file",
-      "language": "typescript",
-      "title": "TQuoteTable.test.tsx",
-      "summary": "T 型报价表格测试，验证行权价合并、占位符填充、vtable 生命周期管理和增量更新",
-      "description": "vitest 测试文件，测试 TQuoteTable 组件。覆盖场景：容器渲染、ListTable 配置（11 列、自适应宽度、滚动条样式）、Call/Put 按行权价合并排序、缺失合约占位符 '--'、空链处理、卸载后延迟 250ms 释放 vtable、StrictMode 双挂载时同实例仅一个释放定时器、快照变更时增量更新 records 而不重建表格。",
+      "type": "file",
+      "name": "TQuoteTable.test.tsx",
+      "filePath": "frontend/src/modules/options/TQuoteTable.test.tsx",
+      "summary": "测试 TQuoteTable：容器与 ListTable 创建选项、行权价合并排序、缺失侧占位、点击 C/P 侧回传/中列与缺失侧不回调、延迟释放定时器（避 ResizeObserver 防抖崩溃）、快照增量更新、onTableReady 透传。",
       "tags": [
         "test",
+        "module",
         "options",
-        "t-quote",
-        "vtable",
-        "lifecycle"
+        "table"
       ],
-      "layer": "test",
-      "languageNotes": "vitest + @testing-library/react，fake timers 控制延迟释放",
-      "complexity": "moderate",
-      "type": "file",
-      "name": "frontend/src/modules/options/TQuoteTable.test.tsx"
+      "complexity": "medium"
     },
     {
       "id": "file:frontend/src/modules/options/TQuoteView.tsx",
@@ -16282,41 +16131,6 @@
       "name": "frontend/electron/trayManager.ts"
     },
     {
-      "id": "file:frontend/electron/windowManager.ts",
-      "kind": "file",
-      "title": "windowManager.ts",
-      "filePath": "frontend/electron/windowManager.ts",
-      "language": "typescript",
-      "fileCategory": "code",
-      "summary": "多窗口管理器，负责创建、关闭、切换和持久化多个 BrowserWindow 实例。",
-      "description": "导出 WindowManager 类，内部维护 windows（Map<string, BrowserWindow>）和 windowStates（Map<string, WindowState>）两个映射表。提供 15 个方法：createMainWindow（创建主窗口，支持 dev/prod 模式加载）、openOrderWindow（下单窗口，按合约去重）、openKLineWindow（K线窗口）、openTabWindow（通用标签窗口，支持 props 序列化到 hash）、getWindow/getAllWindows/closeAllWindows（窗口查询与批量关闭）、sendToWindow/broadcast（单播与广播 IPC 消息）、saveWindowState/getWindowState/restoreWindowState（窗口状态持久化）、isTabInWindow/closeTabWindow（标签窗口管理）。预定义 main/order/kline/query 四种窗口的默认尺寸配置。openTabWindow 关闭时通过 IPC 通知主窗口更新标签状态。",
-      "tags": [
-        "electron",
-        "window",
-        "manager",
-        "multi-window",
-        "browser-window",
-        "state-persistence",
-        "ipc",
-        "broadcast",
-        "tab-detach",
-        "tested"
-      ],
-      "languageNotes": "使用 Map 管理多个 BrowserWindow 实例；窗口状态通过 WindowState 接口持久化（坐标、尺寸、最大化状态）；DEFAULT_CONFIGS 使用 Partial<WindowConfig> 支持按类型覆盖默认值。",
-      "languageLesson": "WindowManager 采用工厂模式创建不同类型的窗口（main/order/kline/tab），每种窗口有预定义配置。窗口去重逻辑（检查 existing + isDestroyed）在每个 open 方法中重复，确保同一窗口不会被重复创建。openTabWindow 通过 URL hash 传递 props（JSON 序列化 + encodeURIComponent），实现标签页脱离为主窗口后的参数传递。",
-      "metrics": {
-        "totalLines": 418,
-        "nonEmptyLines": 367,
-        "importCount": 0,
-        "exportCount": 1,
-        "functionCount": 0,
-        "classCount": 1
-      },
-      "complexity": "moderate",
-      "type": "file",
-      "name": "frontend/electron/windowManager.ts"
-    },
-    {
       "id": "file:frontend/electron/__tests__/menuActions.test.ts",
       "kind": "file",
       "title": "menuActions.test.ts",
@@ -16346,37 +16160,6 @@
       "complexity": "moderate",
       "type": "file",
       "name": "frontend/electron/__tests__/menuActions.test.ts"
-    },
-    {
-      "id": "file:frontend/electron/__tests__/menuManager.test.ts",
-      "kind": "file",
-      "title": "menuManager.test.ts",
-      "filePath": "frontend/electron/__tests__/menuManager.test.ts",
-      "language": "typescript",
-      "fileCategory": "code",
-      "summary": "MenuManager 类的单元测试，验证应用菜单栏的结构和点击行为。",
-      "description": "使用 Vitest 框架，mock electron 的 Menu 模块。测试覆盖：initialize 设置应用菜单；五组一级菜单标签正确（行情/收藏夹/交易/查询/设置）；无默认 Electron 菜单 role；行情子菜单完整（期货/期权/K线/T型报价/新窗口）；各点击项发送正确的 IPC 通道和参数；交易/查询/设置子菜单结构和点击行为；收藏夹子菜单；主窗口已销毁时不发送 IPC。",
-      "tags": [
-        "test",
-        "vitest",
-        "electron",
-        "menu-manager",
-        "menu-structure",
-        "click-behavior"
-      ],
-      "languageNotes": "使用辅助函数 getTemplate/getMenu/clickItem 简化菜单结构查询和点击模拟。",
-      "languageLesson": "测试通过 Menu.buildFromTemplate mock 捕获菜单模板，再用 clickItem 模拟点击验证 IPC 发送行为。这种「捕获模板 → 模拟点击」模式避免了直接操作 Electron 原生菜单。",
-      "metrics": {
-        "totalLines": 207,
-        "nonEmptyLines": 182,
-        "importCount": 2,
-        "exportCount": 0,
-        "functionCount": 0,
-        "classCount": 0
-      },
-      "complexity": "moderate",
-      "type": "file",
-      "name": "frontend/electron/__tests__/menuManager.test.ts"
     },
     {
       "id": "file:frontend/electron/__tests__/menuTemplate.test.ts",
@@ -16440,47 +16223,6 @@
       "complexity": "moderate",
       "type": "file",
       "name": "frontend/electron/__tests__/trayManager.test.ts"
-    },
-    {
-      "id": "file:frontend/src/App.tsx",
-      "kind": "file",
-      "label": "App.tsx",
-      "filePath": "frontend/src/App.tsx",
-      "language": "typescript",
-      "fileCategory": "code",
-      "sizeLines": 176,
-      "summary": "应用根组件，负责全局布局编排与基础设施挂载。渲染 GlobalBar（顶栏）、TabContent（标签内容区）、BottomBar（底部状态栏）、FloatingWindows（浮动窗口壳）。在顶层挂载共享 hooks（useSystemWs、useConnectionPoll、useTabContractLocks、useMarketWs、useSubscriptionManager），启动时一次性加载全量合约、收藏夹和持久化筛选。监听 Electron IPC 消息处理菜单导航与浮动窗打开。",
-      "tags": [
-        "react",
-        "component",
-        "root",
-        "layout",
-        "electron",
-        "initialization",
-        "tested"
-      ],
-      "complexity": "moderate",
-      "type": "file",
-      "name": "frontend/src/App.tsx"
-    },
-    {
-      "id": "function:frontend/src/App.tsx::App",
-      "kind": "function",
-      "label": "App",
-      "filePath": "frontend/src/App.tsx",
-      "startLine": 33,
-      "endLine": 173,
-      "summary": "React 函数组件，应用根节点。组合全局 hooks、启动数据加载、Electron IPC 监听，返回完整页面布局。",
-      "tags": [
-        "component",
-        "root",
-        "hooks",
-        "electron-ipc",
-        "startup"
-      ],
-      "complexity": "moderate",
-      "type": "function",
-      "name": "App"
     },
     {
       "id": "file:frontend/src/App.test.tsx",
@@ -17592,221 +17334,6 @@
       "complexity": "moderate",
       "type": "file",
       "name": "frontend/src/utils/openFloatingTab.test.ts"
-    },
-    {
-      "id": "file:frontend/src/utils/openFloatingTab.ts",
-      "kind": "file",
-      "label": "openFloatingTab.ts",
-      "filePath": "frontend/src/utils/openFloatingTab.ts",
-      "language": "typescript",
-      "fileCategory": "code",
-      "layer": "util",
-      "summary": "统一浮动窗口打开入口工具函数集。核心函数 openFloatingTab 接收类型/标题/属性/尺寸/位置，先 openTab 创建标签再 detachTabAt 脱离为浮动窗口，并恢复打开前的活跃标签（防止主窗口被拽走）。提供各业务场景的快捷封装：openOrderFloating（五档下单，优先定位当前选中合约）、openKlineFloating（K线）、openTQuoteFloating（T型报价）、openCollectionFloating/openCollectionsFloating（收藏夹）、openSettingsFloating、openIpcMonitorFloating、openInfiniteFloating（无限下单）、openOrdersQueryFloating/openPositionsQueryFloating。openAccountQueryFloating 特殊处理：对齐行情表格尺寸位置打开，账户卡片渲染后收缩到刚好容纳（fitAccountWindowToContent 底部锚定）。computeAccountWindowHeight 计算资金窗目标高度",
-      "tags": [
-        "util",
-        "floating-window",
-        "openFloatingTab",
-        "tab-detach",
-        "window-management",
-        "tested"
-      ],
-      "exports": [
-        {
-          "name": "ORDER_FLOATING_SIZE",
-          "line": 17,
-          "isDefault": false
-        },
-        {
-          "name": "openFloatingTab",
-          "line": 29,
-          "isDefault": false
-        },
-        {
-          "name": "openOrderFloating",
-          "line": 44,
-          "isDefault": false
-        },
-        {
-          "name": "openKlineFloating",
-          "line": 55,
-          "isDefault": false
-        },
-        {
-          "name": "openTQuoteFloating",
-          "line": 65,
-          "isDefault": false
-        },
-        {
-          "name": "openCollectionFloating",
-          "line": 75,
-          "isDefault": false
-        },
-        {
-          "name": "openCollectionsFloating",
-          "line": 85,
-          "isDefault": false
-        },
-        {
-          "name": "openSettingsFloating",
-          "line": 94,
-          "isDefault": false
-        },
-        {
-          "name": "openIpcMonitorFloating",
-          "line": 99,
-          "isDefault": false
-        },
-        {
-          "name": "openInfiniteFloating",
-          "line": 104,
-          "isDefault": false
-        },
-        {
-          "name": "openOrdersQueryFloating",
-          "line": 114,
-          "isDefault": false
-        },
-        {
-          "name": "openPositionsQueryFloating",
-          "line": 119,
-          "isDefault": false
-        },
-        {
-          "name": "computeAccountWindowHeight",
-          "line": 130,
-          "isDefault": false
-        },
-        {
-          "name": "fitAccountWindowToContent",
-          "line": 139,
-          "isDefault": false
-        },
-        {
-          "name": "openAccountQueryFloating",
-          "line": 152,
-          "isDefault": false
-        }
-      ],
-      "functions": [
-        {
-          "name": "openFloatingTab",
-          "startLine": 29,
-          "endLine": 41,
-          "params": [
-            "{ type, title, props, size, position }"
-          ],
-          "description": "统一浮动窗口打开入口：创建标签→脱离为浮动窗→恢复原活跃标签"
-        },
-        {
-          "name": "openOrderFloating",
-          "startLine": 44,
-          "endLine": 52,
-          "params": [],
-          "description": "打开五档下单浮动窗，优先定位当前选中合约"
-        },
-        {
-          "name": "openKlineFloating",
-          "startLine": 55,
-          "endLine": 62,
-          "params": [],
-          "description": "打开K线浮动窗，有选中合约则直接定位"
-        },
-        {
-          "name": "openTQuoteFloating",
-          "startLine": 65,
-          "endLine": 72,
-          "params": [
-            "underlyingID"
-          ],
-          "description": "打开T型报价悬浮窗，可预选标底"
-        },
-        {
-          "name": "openCollectionFloating",
-          "startLine": 75,
-          "endLine": 82,
-          "params": [
-            "collectionId",
-            "name"
-          ],
-          "description": "打开收藏夹悬浮窗"
-        },
-        {
-          "name": "openCollectionsFloating",
-          "startLine": 85,
-          "endLine": 91,
-          "params": [],
-          "description": "打开收藏夹管理页悬浮窗"
-        },
-        {
-          "name": "openSettingsFloating",
-          "startLine": 94,
-          "endLine": 96,
-          "params": [],
-          "description": "打开设置浮动窗"
-        },
-        {
-          "name": "openIpcMonitorFloating",
-          "startLine": 99,
-          "endLine": 101,
-          "params": [],
-          "description": "打开网络监控浮动窗"
-        },
-        {
-          "name": "openInfiniteFloating",
-          "startLine": 104,
-          "endLine": 111,
-          "params": [],
-          "description": "打开无限下单浮动窗"
-        },
-        {
-          "name": "openOrdersQueryFloating",
-          "startLine": 114,
-          "endLine": 116,
-          "params": [],
-          "description": "打开报单查询浮动窗"
-        },
-        {
-          "name": "openPositionsQueryFloating",
-          "startLine": 119,
-          "endLine": 121,
-          "params": [],
-          "description": "打开持仓查询浮动窗"
-        },
-        {
-          "name": "computeAccountWindowHeight",
-          "startLine": 130,
-          "endLine": 133,
-          "params": [
-            "gridHeight",
-            "currentH"
-          ],
-          "description": "计算资金窗目标高度（网格+padding+chrome），仅在收缩时返回值"
-        },
-        {
-          "name": "fitAccountWindowToContent",
-          "startLine": 139,
-          "endLine": 149,
-          "params": [],
-          "description": "单次尝试收缩资金窗到刚好容纳账户卡片，底部锚定"
-        },
-        {
-          "name": "openAccountQueryFloating",
-          "startLine": 152,
-          "endLine": 173,
-          "params": [],
-          "description": "打开资金查询浮动窗，对齐行情表格尺寸，渲染后自动收缩"
-        }
-      ],
-      "imports": [
-        "@/stores/tabs",
-        "@/stores/floatingWindows",
-        "@/modules/market/store",
-        "./detachDrag"
-      ],
-      "sizeLines": 173,
-      "complexity": "moderate",
-      "type": "file",
-      "name": "frontend/src/utils/openFloatingTab.ts"
     },
     {
       "id": "file:frontend/src/modules/order/QuoteStatsBar.test.tsx",
@@ -20425,6 +19952,986 @@
       ],
       "complexity": "moderate",
       "type": "function"
+    },
+    {
+      "id": "file:frontend/electron/__tests__/menuManager.test.ts",
+      "type": "file",
+      "name": "menuManager.test.ts",
+      "filePath": "frontend/electron/__tests__/menuManager.test.ts",
+      "summary": "测试 MenuManager 应用菜单构建：隐藏 View/原生 role 菜单，行情/交易/查询/设置各菜单项与之点击后发送的 IPC 通道，主窗口销毁时不发送。",
+      "tags": [
+        "test",
+        "electron",
+        "menu"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/electron/__tests__/windowManager.test.ts",
+      "type": "file",
+      "name": "windowManager.test.ts",
+      "filePath": "frontend/electron/__tests__/windowManager.test.ts",
+      "summary": "测试 WindowManager 窗口管理器：类导出与各窗口方法（创建主窗口/报单/K线/查询/标签窗、关闭全部、状态存取）的存在性与基本行为。",
+      "tags": [
+        "test",
+        "electron",
+        "window"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/electron/windowManager.ts",
+      "type": "file",
+      "name": "windowManager.ts",
+      "filePath": "frontend/electron/windowManager.ts",
+      "summary": "Electron 主进程窗口管理器：注册 Chromium 常用原生快捷键（刷新/DevTools/缩放/F11）；管理多 BrowserWindow 实例（主窗口/报单/K线/标签窗口），支持创建、聚焦复用、窗口状态保存恢复、IPC 广播与标签窗口关闭通知。",
+      "tags": [
+        "electron",
+        "window",
+        "manager"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/electron/windowManager.ts:registerNativeShortcuts",
+      "type": "function",
+      "name": "registerNativeShortcuts",
+      "filePath": "frontend/electron/windowManager.ts",
+      "lineRange": [
+        24,
+        32
+      ],
+      "summary": "注入不显示 View 菜单时保留的 Chromium 视图快捷键（Ctrl+R 刷新、Ctrl+Shift+I DevTools、Ctrl+0/=/- 缩放、F11 全屏）。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:frontend/electron/windowManager.ts:WindowManager",
+      "type": "class",
+      "name": "WindowManager",
+      "filePath": "frontend/electron/windowManager.ts",
+      "lineRange": [
+        129,
+        137
+      ],
+      "summary": "管理多 BrowserWindow 实例（主/报单/K线/标签窗），提供创建复用、状态持久化、广播 IPC、标签窗口开闭。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/App.tsx",
+      "type": "file",
+      "name": "App.tsx",
+      "filePath": "frontend/src/App.tsx",
+      "summary": "应用根组件：编排全局布局（GlobalBar/TabContent/BottomBar/FloatingWindows）与共享基础设施（行情 WS 单例、订阅管理器、连接状态轮询），启动加载全量合约/收藏夹/筛选，监听 Electron IPC 菜单导航与浮动窗打开。",
+      "tags": [
+        "app",
+        "layout",
+        "root",
+        "electron"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/App.tsx:App",
+      "type": "function",
+      "name": "App",
+      "filePath": "frontend/src/App.tsx",
+      "lineRange": [
+        33,
+        41
+      ],
+      "summary": "React 函数组件，应用根节点：组合全局 hooks、Startup 一次性数据加载、Electron IPC 监听（导航/浮动窗/取选中合约），返回完整页面布局。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/components/CollectionPicker/index.test.tsx",
+      "type": "file",
+      "name": "index.test.tsx",
+      "filePath": "frontend/src/components/CollectionPicker/index.test.tsx",
+      "summary": "测试 CollectionPicker 选夹面板：单选预勾选所在夹、取消勾选即移除、批量只加不删、全选切换、新建夹并勾选、移除全部收藏、管理收藏夹、series 模式增删与批量、Escape 关闭、未勾选报错。",
+      "tags": [
+        "test",
+        "component",
+        "collection",
+        "favorite"
+      ],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:frontend/src/components/CollectionPicker/index.tsx",
+      "type": "file",
+      "name": "index.tsx",
+      "filePath": "frontend/src/components/CollectionPicker/index.tsx",
+      "summary": "收藏选夹面板（模态）：⭐/右键/搜索弹窗统一入口，支持单选（对账）与批量（只加不删）、P2 系列收藏模式（seriesIDs）、新建/管理收藏夹、从所有夹移除；外部点击/Esc 关闭。",
+      "tags": [
+        "component",
+        "collection",
+        "modal",
+        "favorite"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/components/CollectionPicker/index.tsx:CollectionPicker",
+      "type": "function",
+      "name": "CollectionPicker",
+      "filePath": "frontend/src/components/CollectionPicker/index.tsx",
+      "lineRange": [
+        7,
+        15
+      ],
+      "summary": "选夹模态面板：按集合多选勾选，确定时增删关联到收藏夹，支持 series 系列模式与批量收藏；打开时按目标初始化勾选态。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/components/ContractFilter/index.test.tsx",
+      "type": "file",
+      "name": "index.test.tsx",
+      "filePath": "frontend/src/components/ContractFilter/index.test.tsx",
+      "summary": "测试 ContractFilter：按钮与徽标、展开面板、勾选/取消调用 onChange、清空+onClear、关键词过滤、交易所↔品种交叉联动、已选项并回，以及三级标底合约筛选的显隐与勾选。",
+      "tags": [
+        "test",
+        "component",
+        "filter",
+        "contract"
+      ],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:frontend/src/components/ContractFilter/index.tsx",
+      "type": "file",
+      "name": "index.tsx",
+      "filePath": "frontend/src/components/ContractFilter/index.tsx",
+      "summary": "交易所+品种（+可选标底合约）三级多选筛选面板：交互按钮+下拉面板，computeFilterOptions 交叉联动选项、已选项并回、品种关键词过滤、清空按钮、已选数徽标；点击外部/Esc 关闭。",
+      "tags": [
+        "component",
+        "filter",
+        "contract"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/components/ContractFilter/index.tsx:ContractFilter",
+      "type": "function",
+      "name": "ContractFilter",
+      "filePath": "frontend/src/components/ContractFilter/index.tsx",
+      "lineRange": [
+        7,
+        15
+      ],
+      "summary": "筛选下拉面板：交易所/品种/标底合约 checkbox 多选，交叉联动可用列表并回已选项，onChange 单向数据流。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/components/FloatingWindow/index.test.tsx",
+      "type": "file",
+      "name": "index.test.tsx",
+      "filePath": "frontend/src/components/FloatingWindow/index.test.tsx",
+      "summary": "测试 FloatingWindows：无窗口不渲染、chrome 壳渲染、⇧ 停靠移除登记、× 关闭 closeTab、标题拖拽 move、8 方向缩放手柄 position:fixed 与各方向拖拽行为（se/w/n/e 联动坐标尺寸）。",
+      "tags": [
+        "test",
+        "component",
+        "floating",
+        "window"
+      ],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "type": "file",
+      "name": "index.tsx",
+      "filePath": "frontend/src/components/FloatingWindow/index.tsx",
+      "summary": "浮动窗口 chrome 壳（不含业务内容）：标题条拖拽移动、⇧ 停靠回标签栏、× 关闭，8 方向固定定位缩放手柄（角先于边渲染保证覆盖）；FloatingWindows 容器渲染窗口壳并清理已关闭标签残留登记。",
+      "tags": [
+        "component",
+        "floating",
+        "window",
+        "drag"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindow",
+      "type": "function",
+      "name": "FloatingWindow",
+      "filePath": "frontend/src/components/FloatingWindow/index.tsx",
+      "lineRange": [
+        4,
+        12
+      ],
+      "summary": "单个浮动窗 chrome：标题条指针拖拽移动 + 8 方向缩放，卸载清理活跃监听器。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindows",
+      "type": "function",
+      "name": "FloatingWindows",
+      "filePath": "frontend/src/components/FloatingWindow/index.tsx",
+      "lineRange": [
+        159,
+        167
+      ],
+      "summary": "浮动窗口容器：遍历 windows 渲染壳，清理标签已关闭但残留登记的窗口。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/components/InstrumentSearchModal/index.tsx:hasChinese",
+      "type": "function",
+      "name": "hasChinese",
+      "filePath": "frontend/src/components/InstrumentSearchModal/index.tsx",
+      "lineRange": [
+        9,
+        17
+      ],
+      "summary": "判断字符串是否包含中文字符。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/components/InstrumentSearchModal/index.tsx:findProductIdsByChineseName",
+      "type": "function",
+      "name": "findProductIdsByChineseName",
+      "filePath": "frontend/src/components/InstrumentSearchModal/index.tsx",
+      "lineRange": [
+        14,
+        22
+      ],
+      "summary": "从 PRODUCT_NAMES 按中文关键词查找匹配的 productID 列表。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/components/InstrumentSearchModal/index.tsx:InstrumentSearchModal",
+      "type": "function",
+      "name": "InstrumentSearchModal",
+      "filePath": "frontend/src/components/InstrumentSearchModal/index.tsx",
+      "lineRange": [
+        40,
+        48
+      ],
+      "summary": "合约搜索模态：交易所/品种/关键词三级检索，支持中文映射搜索、CTP 刷新、收藏与移除收藏、刷新超时保护。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/modules/market/filter.ts",
+      "type": "file",
+      "name": "filter.ts",
+      "filePath": "frontend/src/modules/market/filter.ts",
+      "summary": "市场筛选纯函数：filterByExchangeAndProduct 按交易所/品种多选过滤（空集=不限）；computeFilterOptions 交叉联动计算可选交易所/品种列表（只被另一侧约束）。",
+      "tags": [
+        "utility",
+        "filter",
+        "market"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/modules/market/filter.ts:filterByExchangeAndProduct",
+      "type": "function",
+      "name": "filterByExchangeAndProduct",
+      "filePath": "frontend/src/modules/market/filter.ts",
+      "lineRange": [
+        14,
+        22
+      ],
+      "summary": "按交易所/品种集合过滤合约；空集合视为不限，命中=交易所与品种均匹配。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/modules/market/filter.ts:computeFilterOptions",
+      "type": "function",
+      "name": "computeFilterOptions",
+      "filePath": "frontend/src/modules/market/filter.ts",
+      "lineRange": [
+        34,
+        42
+      ],
+      "summary": "计算筛选面板动态选项：可选交易所=有合约满足已选品种，可选品种=有合约满足已选交易所（交叉联动）。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/modules/market/sort.test.ts",
+      "type": "file",
+      "name": "sort.test.ts",
+      "filePath": "frontend/src/modules/market/sort.test.ts",
+      "summary": "测试 sort.ts：naturalCompare 数字比较、sortFutures 排序链且不修改入参、deriveUnderlyingProduct、resolveUnderlyingInstrumentID 各形态推断、groupOptionsByUnderlying 分组排序、syntheticUnderlyingContract 合成。",
+      "tags": [
+        "test",
+        "utility",
+        "sort",
+        "market",
+        "options"
+      ],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:frontend/src/modules/market/sort.ts",
+      "type": "file",
+      "name": "sort.ts",
+      "filePath": "frontend/src/modules/market/sort.ts",
+      "summary": "期货/期权排序与分组纯函数：naturalCompare 数字自然比较；sortFutures 期货排序（交易所固定序→品种→月份）；期权按标底分组组内排序、标底探测合规化与合成；buildOptionChainsFromContracts 从全量合约直接构建期权链 Map（零接口请求）。",
+      "tags": [
+        "utility",
+        "sort",
+        "market",
+        "options"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/modules/market/sort.ts:naturalCompare",
+      "type": "function",
+      "name": "naturalCompare",
+      "filePath": "frontend/src/modules/market/sort.ts",
+      "lineRange": [
+        13,
+        21
+      ],
+      "summary": "数字自然比较（locale numeric），FG609 < FG610 < FG701。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/modules/market/sort.ts:sortFutures",
+      "type": "function",
+      "name": "sortFutures",
+      "filePath": "frontend/src/modules/market/sort.ts",
+      "lineRange": [
+        18,
+        26
+      ],
+      "summary": "期货排序：交易所固定顺序 → 品种字典序 → 合约月份数字升序。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/modules/market/sort.ts:deriveUnderlyingProduct",
+      "type": "function",
+      "name": "deriveUnderlyingProduct",
+      "filePath": "frontend/src/modules/market/sort.ts",
+      "lineRange": [
+        29,
+        37
+      ],
+      "summary": "从标底 ID 去尾数字得品种（FG609 → FG）。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/modules/market/sort.ts:groupOptionsByUnderlying",
+      "type": "function",
+      "name": "groupOptionsByUnderlying",
+      "filePath": "frontend/src/modules/market/sort.ts",
+      "lineRange": [
+        41,
+        49
+      ],
+      "summary": "期权按标底分组：组内按到期日→类型(C前P后)→行权价排序，组间标底自然升序，并附匹配的期货标底。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/modules/market/sort.ts:syntheticUnderlyingContract",
+      "type": "function",
+      "name": "syntheticUnderlyingContract",
+      "filePath": "frontend/src/modules/market/sort.ts",
+      "lineRange": [
+        70,
+        78
+      ],
+      "summary": "标的不可订阅时（指数期权）合成仅作组头的标底合约：productClass=1 且 isTrading=0。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/modules/market/sort.ts:resolveUnderlyingInstrumentID",
+      "type": "function",
+      "name": "resolveUnderlyingInstrumentID",
+      "filePath": "frontend/src/modules/market/sort.ts",
+      "lineRange": [
+        98,
+        106
+      ],
+      "summary": "解析期权完整标底合约 ID：优先完整 underlyingInstrID，缺失/仅品种时从 instrumentID（带/不带分隔符）推断。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/modules/market/sort.ts:buildOptionChainsFromContracts",
+      "type": "function",
+      "name": "buildOptionChainsFromContracts",
+      "filePath": "frontend/src/modules/market/sort.ts",
+      "lineRange": [
+        126,
+        134
+      ],
+      "summary": "从全量期权合约列表构建 underlying→chains Map：按到期日分桶、行权价升序、价格字段置 0 待快照填充。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/modules/options/OptionChainGroup.test.tsx",
+      "type": "file",
+      "name": "OptionChainGroup.test.tsx",
+      "filePath": "frontend/src/modules/options/OptionChainGroup.test.tsx",
+      "summary": "测试 OptionChainGroup：默认折叠、展开渲染到期切换条并默认最早到期、展开锁订阅/折叠解锁、⇗ 新窗调用 openTQuoteFloating、⭐ 收藏按钮。",
+      "tags": [
+        "test",
+        "module",
+        "options",
+        "chain"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/modules/options/OptionChainGroup.tsx",
+      "type": "file",
+      "name": "OptionChainGroup.tsx",
+      "filePath": "frontend/src/modules/options/OptionChainGroup.tsx",
+      "summary": "期权链分组组件：标底层默认折叠、展开拉链 getOptionChains 并缓存、选链锁订阅+预拉快照、过期日切换条、⇗ 新窗打开 T 型报价、⭐ 收藏整条链（series）。",
+      "tags": [
+        "module",
+        "options",
+        "chain",
+        "group"
+      ],
+      "complexity": "medium"
+    },
+    {
+      "id": "function:frontend/src/modules/options/OptionChainGroup.tsx:OptionChainGroup",
+      "type": "function",
+      "name": "OptionChainGroup",
+      "filePath": "frontend/src/modules/options/OptionChainGroup.tsx",
+      "lineRange": [
+        9,
+        17
+      ],
+      "summary": "单个标底期权链分组：折叠/展开头部、过期日切换、选链时对整链锁订阅并预拉快照，支持新窗与整链收藏。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/modules/options/OptionsPanel.tsx:OptionsPanel",
+      "type": "function",
+      "name": "OptionsPanel",
+      "filePath": "frontend/src/modules/options/OptionsPanel.tsx",
+      "lineRange": [
+        26,
+        34
+      ],
+      "summary": "期权页主面板：构链+筛选+分组+折叠状态管理，T 行点击回填报单（无快照不回填 0 价），搜索定位对应标底组。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/modules/options/OptionsTable.test.tsx",
+      "type": "file",
+      "name": "OptionsTable.test.tsx",
+      "filePath": "frontend/src/modules/options/OptionsTable.test.tsx",
+      "summary": "测试 OptionsTable：isActive 可见订阅守卫（false 不报/翻转重报）、快照增量走 updateRecords 而非 setRecords、严格可见订阅 PRELOAD=0、标底行合并撤销。",
+      "tags": [
+        "test",
+        "module",
+        "options",
+        "table"
+      ],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:frontend/src/modules/options/OptionsTable.tsx",
+      "type": "file",
+      "name": "OptionsTable.tsx",
+      "filePath": "frontend/src/modules/options/OptionsTable.tsx",
+      "summary": "期权平铺 T 型表：单张 vtable 虚拟滚动容纳所有标底+期权，标底行整行合并为红粗表头、点击折叠/展开，快照增量 updateRecords（仅可见行按引用对比），isActive 守卫可见订阅（PRELOAD=0 严格按屏订阅）。",
+      "tags": [
+        "module",
+        "options",
+        "table",
+        "vtable",
+        "virtual-scroll"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/modules/options/OptionsTable.tsx:buildOptionRecords",
+      "type": "function",
+      "name": "buildOptionRecords",
+      "filePath": "frontend/src/modules/options/OptionsTable.tsx",
+      "lineRange": [
+        105,
+        113
+      ],
+      "summary": "从期权链构建期权行 records（不含标底层）：按行权价合并 calls/puts、00 价置占位符；只建结构不读快照。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/modules/options/OptionsTable.tsx:OptionsTable",
+      "type": "function",
+      "name": "OptionsTable",
+      "filePath": "frontend/src/modules/options/OptionsTable.tsx",
+      "lineRange": [
+        28,
+        36
+      ],
+      "summary": "期权平铺表组件：管理 vtable 生命周期、行合并、滚动可见区上报、快照增量更新与 isActive 主动重报。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/modules/options/TQuoteTable.tsx:buildRecords",
+      "type": "function",
+      "name": "buildRecords",
+      "filePath": "frontend/src/modules/options/TQuoteTable.tsx",
+      "lineRange": [
+        37,
+        45
+      ],
+      "summary": "将单链 calls/puts 按行权价合并为 T 型行记录，合并快照实时价，缺失侧置 -- 占位。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/modules/options/TQuoteTable.tsx:TQuoteTable",
+      "type": "function",
+      "name": "TQuoteTable",
+      "filePath": "frontend/src/modules/options/TQuoteTable.tsx",
+      "lineRange": [
+        24,
+        32
+      ],
+      "summary": "T 型报价表组件：vtable 实例创建/释放、点击回调分 C(0-4)/P(6-10) 侧、数据变化增量 setRecords。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/pages/CollectionPage.test.tsx",
+      "type": "file",
+      "name": "CollectionPage.test.tsx",
+      "filePath": "frontend/src/pages/CollectionPage.test.tsx",
+      "summary": "测试 CollectionPage：夹内合约（期货段）渲染、[全部|期货|期权] 类型切换、⭐ 本夹直切收藏/移除、右键单个/批量移除（仅一条 toast）、空夹/收藏夹不存在态、series 段渲染与空 series 隐藏。",
+      "tags": [
+        "test",
+        "page",
+        "collection"
+      ],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:frontend/src/pages/CollectionPage.tsx",
+      "type": "file",
+      "name": "CollectionPage.tsx",
+      "filePath": "frontend/src/pages/CollectionPage.tsx",
+      "summary": "单个收藏夹内容页：按 [全部|期货|期权] 分段渲染夹内合约（期货/期权 QuoteTable + 系列 T 型 OptionChainGroup 段），⭐ 本夹直切收藏/移除，右键从本夹移除单个/批量，合并上报可见区防覆盖。",
+      "tags": [
+        "page",
+        "collection",
+        "quote"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/pages/CollectionPage.tsx:CollectionPage",
+      "type": "function",
+      "name": "CollectionPage",
+      "filePath": "frontend/src/pages/CollectionPage.tsx",
+      "lineRange": [
+        19,
+        27
+      ],
+      "summary": "收藏夹详情页：解析夹内合约与系列分组，类型视图切换，期货/期权表+系列链段渲染，收藏直切与右键批量移除。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/pages/CollectionsPage.tsx",
+      "type": "file",
+      "name": "CollectionsPage.tsx",
+      "filePath": "frontend/src/pages/CollectionsPage.tsx",
+      "summary": "收藏夹管理页：列出现有收藏夹（名称/合约数），支持新建、重命名（同步已打开标题）、删除（含确认弹窗并清理已打开的夹标签页），点击打开为悬浮窗。",
+      "tags": [
+        "page",
+        "collection",
+        "manage"
+      ],
+      "complexity": "medium"
+    },
+    {
+      "id": "function:frontend/src/pages/CollectionsPage.tsx:CollectionsPage",
+      "type": "function",
+      "name": "CollectionsPage",
+      "filePath": "frontend/src/pages/CollectionsPage.tsx",
+      "lineRange": [
+        6,
+        14
+      ],
+      "summary": "收藏夹管理页：新建/重命名/删除收藏夹，删除确认并关闭对应已打开的 collection 标签，打开即新窗。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/stores/collections.test.ts",
+      "type": "file",
+      "name": "collections.test.ts",
+      "filePath": "frontend/src/stores/collections.test.ts",
+      "summary": "测试 useCollectionsStore：创建/增删改/删除收藏夹、loadCollections 一次拉取校验与失效清理、全空夹不调 API（防后端空 ids 回退全市场）、拉取失败保留元数据、纯派生函数、系列收藏增删与无对应期权剔除。",
+      "tags": [
+        "test",
+        "store",
+        "collection",
+        "zustand"
+      ],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:frontend/src/stores/collections.ts",
+      "type": "file",
+      "name": "collections.ts",
+      "filePath": "frontend/src/stores/collections.ts",
+      "summary": "收藏夹数据 store（Zustand，数组态）：创建/重命名/删除收藏夹；合约与系列支持单个/批量/全部夹增删；loadCollections 拉取校验并清理失效合约，系列按已加载期权校验；持久化到 userPrefs+localStorage。",
+      "tags": [
+        "store",
+        "collection",
+        "zustand",
+        "persist"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/stores/collections.ts:nextCollectionId",
+      "type": "function",
+      "name": "nextCollectionId",
+      "filePath": "frontend/src/stores/collections.ts",
+      "lineRange": [
+        14,
+        22
+      ],
+      "summary": "生成收藏夹 ID（时间戳36进制+自增计数）。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/stores/collections.ts:unionFavoritedIds",
+      "type": "function",
+      "name": "unionFavoritedIds",
+      "filePath": "frontend/src/stores/collections.ts",
+      "lineRange": [
+        26,
+        34
+      ],
+      "summary": "所有收藏夹合约 ID 并集（行情页 ⭐ 填充态）。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/stores/collections.ts:unionSerializedIds",
+      "type": "function",
+      "name": "unionSerializedIds",
+      "filePath": "frontend/src/stores/collections.ts",
+      "lineRange": [
+        33,
+        41
+      ],
+      "summary": "所有收藏夹系列 ID 并集（期权系列 ⭐ 填充态）。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/stores/collections.ts:collectionFavoritedIds",
+      "type": "function",
+      "name": "collectionFavoritedIds",
+      "filePath": "frontend/src/stores/collections.ts",
+      "lineRange": [
+        40,
+        48
+      ],
+      "summary": "指定收藏夹内合约 ID 集合（夹页 ⭐ 填充态）。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/stores/collections.ts:useCollectionsStore",
+      "type": "function",
+      "name": "useCollectionsStore",
+      "filePath": "frontend/src/stores/collections.ts",
+      "lineRange": [
+        59,
+        67
+      ],
+      "summary": "收藏夹 Zustand store：数组态 CRUD + 合约/系列增删 + 加载幂等校验，变更即持久化。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/stores/marketFilter.test.ts",
+      "type": "file",
+      "name": "marketFilter.test.ts",
+      "filePath": "frontend/src/stores/marketFilter.test.ts",
+      "summary": "测试 useMarketFilterStore：两页筛选隔离、setExchanges/setProducts/setFilter/setCollectionId 仅动指定页、reset 单页、变更自动持久化、load 恢复与损坏数据回退、收藏夹 id 非字符串回退。",
+      "tags": [
+        "test",
+        "store",
+        "filter"
+      ],
+      "complexity": "medium"
+    },
+    {
+      "id": "file:frontend/src/stores/marketFilter.ts",
+      "type": "file",
+      "name": "marketFilter.ts",
+      "filePath": "frontend/src/stores/marketFilter.ts",
+      "summary": "期货/期权页筛选状态 store（Zustand）：两页独立交易所/品种/标底筛选 + 各自收藏夹过滤 id，变更订阅式自动持久化 localStorage，load 形状校验回退默认。",
+      "tags": [
+        "store",
+        "filter",
+        "zustand",
+        "persist"
+      ],
+      "complexity": "medium"
+    },
+    {
+      "id": "function:frontend/src/stores/marketFilter.ts:isValidFilter",
+      "type": "function",
+      "name": "isValidFilter",
+      "filePath": "frontend/src/stores/marketFilter.ts",
+      "lineRange": [
+        28,
+        36
+      ],
+      "summary": "形状校验：筛选态为对象且 exchanges/products 为数组，underlyings 可选数组。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/stores/marketFilter.ts:isValidCollectionId",
+      "type": "function",
+      "name": "isValidCollectionId",
+      "filePath": "frontend/src/stores/marketFilter.ts",
+      "lineRange": [
+        40,
+        48
+      ],
+      "summary": "收藏夹 id 校验：非字符串回退为空串（不限）。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/stores/marketFilter.ts:useMarketFilterStore",
+      "type": "function",
+      "name": "useMarketFilterStore",
+      "filePath": "frontend/src/stores/marketFilter.ts",
+      "lineRange": [
+        44,
+        52
+      ],
+      "summary": "期货/期权两页筛选 store：set 单页交易所/品种/收藏夹 id、reset 单页、load 恢复并持久化。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/utils/openFloatingTab.ts",
+      "type": "file",
+      "name": "openFloatingTab.ts",
+      "filePath": "frontend/src/utils/openFloatingTab.ts",
+      "summary": "统一「标签→浮动窗」打开入口：openFloatingTab 打开标签并立即脱离为浮动窗（成功后恢复原活跃标签）；附各业务浮动窗便捷函数（报单/K线/T型/收藏夹/管理/设置/网络/无限下单/查询/资金），资金窗按内容自动收缩高度。",
+      "tags": [
+        "utility",
+        "floating",
+        "window",
+        "tab"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/utils/openFloatingTab.ts:openFloatingTab",
+      "type": "function",
+      "name": "openFloatingTab",
+      "filePath": "frontend/src/utils/openFloatingTab.ts",
+      "lineRange": [
+        20,
+        28
+      ],
+      "summary": "打开标签并立即脱离为浮动窗，脱离成功后恢复打开前活跃标签，避免干扰主窗口当前页；返回是否成功。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/utils/openFloatingTab.ts:openOrderFloating",
+      "type": "function",
+      "name": "openOrderFloating",
+      "filePath": "frontend/src/utils/openFloatingTab.ts",
+      "lineRange": [
+        44,
+        52
+      ],
+      "summary": "打开报单浮动窗，优先定位当前选中合约。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/utils/openFloatingTab.ts:openKlineFloating",
+      "type": "function",
+      "name": "openKlineFloating",
+      "filePath": "frontend/src/utils/openFloatingTab.ts",
+      "lineRange": [
+        55,
+        63
+      ],
+      "summary": "打开 K 线浮动窗，有选中合约则直接定位。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/utils/openFloatingTab.ts:openTQuoteFloating",
+      "type": "function",
+      "name": "openTQuoteFloating",
+      "filePath": "frontend/src/utils/openFloatingTab.ts",
+      "lineRange": [
+        65,
+        73
+      ],
+      "summary": "打开 T 型报价悬浮窗，传 underlyingID 则预选该标底。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/utils/openFloatingTab.ts:openCollectionFloating",
+      "type": "function",
+      "name": "openCollectionFloating",
+      "filePath": "frontend/src/utils/openFloatingTab.ts",
+      "lineRange": [
+        75,
+        83
+      ],
+      "summary": "打开收藏夹悬浮窗（初始即悬浮，可 ⇧ 停靠回标签栏）。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/utils/openFloatingTab.ts:openCollectionsFloating",
+      "type": "function",
+      "name": "openCollectionsFloating",
+      "filePath": "frontend/src/utils/openFloatingTab.ts",
+      "lineRange": [
+        85,
+        93
+      ],
+      "summary": "打开收藏夹管理页悬浮窗。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/utils/openFloatingTab.ts:openSettingsFloating",
+      "type": "function",
+      "name": "openSettingsFloating",
+      "filePath": "frontend/src/utils/openFloatingTab.ts",
+      "lineRange": [
+        94,
+        102
+      ],
+      "summary": "打开设置浮动窗。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/utils/openFloatingTab.ts:openIpcMonitorFloating",
+      "type": "function",
+      "name": "openIpcMonitorFloating",
+      "filePath": "frontend/src/utils/openFloatingTab.ts",
+      "lineRange": [
+        99,
+        107
+      ],
+      "summary": "打开网络监控浮动窗。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/utils/openFloatingTab.ts:openInfiniteFloating",
+      "type": "function",
+      "name": "openInfiniteFloating",
+      "filePath": "frontend/src/utils/openFloatingTab.ts",
+      "lineRange": [
+        104,
+        112
+      ],
+      "summary": "打开无限下单浮动窗，有选中合约则定位。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/utils/openFloatingTab.ts:openOrdersQueryFloating",
+      "type": "function",
+      "name": "openOrdersQueryFloating",
+      "filePath": "frontend/src/utils/openFloatingTab.ts",
+      "lineRange": [
+        114,
+        122
+      ],
+      "summary": "打开报单查询浮动窗。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/utils/openFloatingTab.ts:openPositionsQueryFloating",
+      "type": "function",
+      "name": "openPositionsQueryFloating",
+      "filePath": "frontend/src/utils/openFloatingTab.ts",
+      "lineRange": [
+        119,
+        127
+      ],
+      "summary": "打开持仓查询浮动窗。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/utils/openFloatingTab.ts:computeAccountWindowHeight",
+      "type": "function",
+      "name": "computeAccountWindowHeight",
+      "filePath": "frontend/src/utils/openFloatingTab.ts",
+      "lineRange": [
+        130,
+        138
+      ],
+      "summary": "计算资金窗目标高度（卡片网格+padding+标题条），仅当更矮时返回。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/utils/openFloatingTab.ts:fitAccountWindowToContent",
+      "type": "function",
+      "name": "fitAccountWindowToContent",
+      "filePath": "frontend/src/utils/openFloatingTab.ts",
+      "lineRange": [
+        139,
+        147
+      ],
+      "summary": "资金窗渲染出账户卡片后收缩高度到刚好容纳，底部保持锚定，返回是否完成。",
+      "tags": [],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/utils/openFloatingTab.ts:openAccountQueryFloating",
+      "type": "function",
+      "name": "openAccountQueryFloating",
+      "filePath": "frontend/src/utils/openFloatingTab.ts",
+      "lineRange": [
+        152,
+        160
+      ],
+      "summary": "打开资金查询浮动窗并对齐行情表格位置/宽度，卡片渲染后收缩，最多重试约 1s。",
+      "tags": [],
+      "complexity": "simple"
     }
   ],
   "edges": [
@@ -27401,95 +27908,11 @@
       "weight": 0.6
     },
     {
-      "source": "file:frontend/src/components/FloatingWindow/index.test.tsx",
-      "target": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "file:frontend/src/components/FloatingWindow/styles.css",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "file:frontend/src/components/ResizeHandle/index.tsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "file:frontend/src/utils/resizeDrag.ts",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "function:frontend/src/components/FloatingWindow/index.tsx:handleStyle",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindow",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindows",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindows",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "file:frontend/src/components/FloatingWindow/index.test.tsx",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "function:frontend/src/utils/resizeDrag.ts:startResizeDrag",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "target": "function:frontend/src/components/ResizeHandle/index.tsx:ResizeHandle",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "file:frontend/repro-detach.cjs",
       "target": "function:frontend/repro-detach.cjs:main",
       "type": "contains",
       "direction": "forward",
       "weight": 1
-    },
-    {
-      "source": "document:docs/superpowers/plans/2026-08-05-popup-blank-and-expired-contracts.md",
-      "target": "file:frontend/src/components/FloatingWindow/index.tsx",
-      "type": "documents",
-      "direction": "forward",
-      "weight": 0.5
     },
     {
       "source": "document:docs/superpowers/plans/2026-08-05-popup-blank-and-expired-contracts.md",
@@ -32261,14 +32684,6 @@
       "description": "Path-based pairing (deterministic)"
     },
     {
-      "source": "file:frontend/electron/windowManager.ts",
-      "target": "file:frontend/electron/__tests__/windowManager.test.ts",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5,
-      "description": "Path-based pairing (deterministic)"
-    },
-    {
       "source": "file:frontend/src/services/electron.ts",
       "target": "file:frontend/src/services/__tests__/electron.test.ts",
       "type": "tested_by",
@@ -32333,14 +32748,6 @@
       "description": "Path-based pairing (deterministic)"
     },
     {
-      "source": "file:frontend/electron/menuManager.ts",
-      "target": "file:frontend/electron/__tests__/menuManager.test.ts",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5,
-      "description": "Path-based pairing (deterministic)"
-    },
-    {
       "source": "file:frontend/electron/menuTemplate.ts",
       "target": "file:frontend/electron/__tests__/menuTemplate.test.ts",
       "type": "tested_by",
@@ -32351,14 +32758,6 @@
     {
       "source": "file:frontend/electron/trayManager.ts",
       "target": "file:frontend/electron/__tests__/trayManager.test.ts",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5,
-      "description": "Path-based pairing (deterministic)"
-    },
-    {
-      "source": "file:frontend/src/App.tsx",
-      "target": "file:frontend/src/App.test.tsx",
       "type": "tested_by",
       "direction": "forward",
       "weight": 0.5,
@@ -32445,14 +32844,6 @@
       "description": "Path-based pairing (deterministic)"
     },
     {
-      "source": "file:frontend/src/utils/openFloatingTab.ts",
-      "target": "file:frontend/src/utils/openFloatingTab.test.ts",
-      "type": "tested_by",
-      "direction": "forward",
-      "weight": 0.5,
-      "description": "Path-based pairing (deterministic)"
-    },
-    {
       "source": "file:frontend/src/modules/order/QuoteStatsBar.tsx",
       "target": "file:frontend/src/modules/order/QuoteStatsBar.test.tsx",
       "type": "tested_by",
@@ -32515,6 +32906,1539 @@
       "direction": "forward",
       "weight": 0.5,
       "description": "Path-based pairing (deterministic)"
+    },
+    {
+      "source": "file:frontend/electron/__tests__/menuManager.test.ts",
+      "target": "file:frontend/electron/menuManager.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/electron/__tests__/menuManager.test.ts",
+      "target": "file:frontend/electron/ipc/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/electron/__tests__/menuManager.test.ts",
+      "target": "file:frontend/electron/menuManager.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/electron/__tests__/windowManager.test.ts",
+      "target": "file:frontend/electron/windowManager.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/electron/windowManager.ts",
+      "target": "function:frontend/electron/windowManager.ts:registerNativeShortcuts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/electron/windowManager.ts",
+      "target": "function:frontend/electron/windowManager.ts:registerNativeShortcuts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/electron/windowManager.ts",
+      "target": "class:frontend/electron/windowManager.ts:WindowManager",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/electron/windowManager.ts",
+      "target": "class:frontend/electron/windowManager.ts:WindowManager",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/components/GlobalBar/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/components/BottomBar/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/components/TabContent/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/components/Toast/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/hooks/useSystemWs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/hooks/useConnectionPoll.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/hooks/useTabContractLocks.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/hooks/useMarketWs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/hooks/useSubscriptionManager.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/modules/market/store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/stores/contracts.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/stores/collections.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/stores/marketFilter.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/services/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/services/electron.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "file:frontend/src/utils/openFloatingTab.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/App.tsx:App",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/App.tsx",
+      "target": "function:frontend/src/App.tsx:App",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/CollectionPicker/index.test.tsx",
+      "target": "file:frontend/src/components/CollectionPicker/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/CollectionPicker/index.test.tsx",
+      "target": "file:frontend/src/stores/collections.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/CollectionPicker/index.test.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/CollectionPicker/index.test.tsx",
+      "target": "file:frontend/src/components/Toast/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/CollectionPicker/index.test.tsx",
+      "target": "file:frontend/src/components/CollectionPicker/index.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/CollectionPicker/index.tsx",
+      "target": "file:frontend/src/stores/collections.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/CollectionPicker/index.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/CollectionPicker/index.tsx",
+      "target": "file:frontend/src/components/Toast/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/CollectionPicker/index.tsx",
+      "target": "function:frontend/src/components/CollectionPicker/index.tsx:CollectionPicker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/CollectionPicker/index.tsx",
+      "target": "function:frontend/src/components/CollectionPicker/index.tsx:CollectionPicker",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/ContractFilter/index.test.tsx",
+      "target": "file:frontend/src/components/ContractFilter/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/ContractFilter/index.test.tsx",
+      "target": "file:frontend/src/modules/market/filter.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/ContractFilter/index.test.tsx",
+      "target": "file:frontend/src/components/ContractFilter/index.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/ContractFilter/index.tsx",
+      "target": "file:frontend/src/modules/market/filter.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/ContractFilter/index.tsx",
+      "target": "function:frontend/src/components/ContractFilter/index.tsx:ContractFilter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/ContractFilter/index.tsx",
+      "target": "function:frontend/src/components/ContractFilter/index.tsx:ContractFilter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.test.tsx",
+      "target": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.test.tsx",
+      "target": "file:frontend/src/stores/floatingWindows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.test.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.test.tsx",
+      "target": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "file:frontend/src/stores/floatingWindows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "file:frontend/src/components/ResizeHandle/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "file:frontend/src/utils/resizeDrag.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindow",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindows",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/FloatingWindow/index.tsx",
+      "target": "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindows",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/InstrumentSearchModal/index.tsx",
+      "target": "file:frontend/src/services/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/InstrumentSearchModal/index.tsx",
+      "target": "file:frontend/src/utils/productNames.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/InstrumentSearchModal/index.tsx",
+      "target": "file:frontend/src/components/Toast/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/InstrumentSearchModal/index.tsx",
+      "target": "function:frontend/src/components/InstrumentSearchModal/index.tsx:hasChinese",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/InstrumentSearchModal/index.tsx",
+      "target": "function:frontend/src/components/InstrumentSearchModal/index.tsx:hasChinese",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/InstrumentSearchModal/index.tsx",
+      "target": "function:frontend/src/components/InstrumentSearchModal/index.tsx:findProductIdsByChineseName",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/InstrumentSearchModal/index.tsx",
+      "target": "function:frontend/src/components/InstrumentSearchModal/index.tsx:findProductIdsByChineseName",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/InstrumentSearchModal/index.tsx",
+      "target": "function:frontend/src/components/InstrumentSearchModal/index.tsx:InstrumentSearchModal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/components/InstrumentSearchModal/index.tsx",
+      "target": "function:frontend/src/components/InstrumentSearchModal/index.tsx:InstrumentSearchModal",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/filter.ts",
+      "target": "function:frontend/src/modules/market/filter.ts:filterByExchangeAndProduct",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/filter.ts",
+      "target": "function:frontend/src/modules/market/filter.ts:filterByExchangeAndProduct",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/filter.ts",
+      "target": "function:frontend/src/modules/market/filter.ts:computeFilterOptions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/filter.ts",
+      "target": "function:frontend/src/modules/market/filter.ts:computeFilterOptions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/sort.test.ts",
+      "target": "file:frontend/src/modules/market/sort.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/sort.test.ts",
+      "target": "file:frontend/src/modules/market/sort.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/sort.ts",
+      "target": "file:frontend/src/utils/productNames.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/sort.ts",
+      "target": "function:frontend/src/modules/market/sort.ts:naturalCompare",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/sort.ts",
+      "target": "function:frontend/src/modules/market/sort.ts:naturalCompare",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/sort.ts",
+      "target": "function:frontend/src/modules/market/sort.ts:sortFutures",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/sort.ts",
+      "target": "function:frontend/src/modules/market/sort.ts:sortFutures",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/sort.ts",
+      "target": "function:frontend/src/modules/market/sort.ts:deriveUnderlyingProduct",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/sort.ts",
+      "target": "function:frontend/src/modules/market/sort.ts:deriveUnderlyingProduct",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/sort.ts",
+      "target": "function:frontend/src/modules/market/sort.ts:groupOptionsByUnderlying",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/sort.ts",
+      "target": "function:frontend/src/modules/market/sort.ts:groupOptionsByUnderlying",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/sort.ts",
+      "target": "function:frontend/src/modules/market/sort.ts:syntheticUnderlyingContract",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/sort.ts",
+      "target": "function:frontend/src/modules/market/sort.ts:syntheticUnderlyingContract",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/sort.ts",
+      "target": "function:frontend/src/modules/market/sort.ts:resolveUnderlyingInstrumentID",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/sort.ts",
+      "target": "function:frontend/src/modules/market/sort.ts:resolveUnderlyingInstrumentID",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/sort.ts",
+      "target": "function:frontend/src/modules/market/sort.ts:buildOptionChainsFromContracts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/market/sort.ts",
+      "target": "function:frontend/src/modules/market/sort.ts:buildOptionChainsFromContracts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionChainGroup.test.tsx",
+      "target": "file:frontend/src/modules/options/OptionChainGroup.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionChainGroup.test.tsx",
+      "target": "file:frontend/src/modules/market/store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionChainGroup.test.tsx",
+      "target": "file:frontend/src/modules/market/sort.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionChainGroup.test.tsx",
+      "target": "file:frontend/src/utils/openFloatingTab.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionChainGroup.test.tsx",
+      "target": "file:frontend/src/modules/options/OptionChainGroup.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionChainGroup.tsx",
+      "target": "file:frontend/src/modules/market/sort.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionChainGroup.tsx",
+      "target": "file:frontend/src/services/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionChainGroup.tsx",
+      "target": "file:frontend/src/modules/options/TQuoteTable.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionChainGroup.tsx",
+      "target": "file:frontend/src/modules/market/store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionChainGroup.tsx",
+      "target": "file:frontend/src/utils/openFloatingTab.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionChainGroup.tsx",
+      "target": "function:frontend/src/modules/options/OptionChainGroup.tsx:OptionChainGroup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionChainGroup.tsx",
+      "target": "function:frontend/src/modules/options/OptionChainGroup.tsx:OptionChainGroup",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.test.tsx",
+      "target": "file:frontend/src/modules/options/OptionsPanel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.test.tsx",
+      "target": "file:frontend/src/modules/market/store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.test.tsx",
+      "target": "file:frontend/src/modules/order/store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.test.tsx",
+      "target": "file:frontend/src/stores/contracts.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.test.tsx",
+      "target": "file:frontend/src/stores/marketFilter.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.test.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.test.tsx",
+      "target": "file:frontend/src/stores/collections.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.test.tsx",
+      "target": "file:frontend/src/modules/options/OptionsPanel.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.tsx",
+      "target": "file:frontend/src/components/ErrorBoundary/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.tsx",
+      "target": "file:frontend/src/components/ContractFilter/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.tsx",
+      "target": "file:frontend/src/components/InstrumentSearchModal/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.tsx",
+      "target": "file:frontend/src/modules/options/OptionsTable.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.tsx",
+      "target": "file:frontend/src/modules/market/sort.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.tsx",
+      "target": "file:frontend/src/modules/market/filter.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.tsx",
+      "target": "file:frontend/src/modules/market/store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.tsx",
+      "target": "file:frontend/src/modules/order/store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.tsx",
+      "target": "file:frontend/src/stores/contracts.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.tsx",
+      "target": "file:frontend/src/stores/marketFilter.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.tsx",
+      "target": "file:frontend/src/stores/collections.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.tsx",
+      "target": "file:frontend/src/utils/productNames.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.tsx",
+      "target": "function:frontend/src/modules/options/OptionsPanel.tsx:OptionsPanel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsPanel.tsx",
+      "target": "function:frontend/src/modules/options/OptionsPanel.tsx:OptionsPanel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsTable.test.tsx",
+      "target": "file:frontend/src/modules/options/OptionsTable.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsTable.test.tsx",
+      "target": "file:frontend/src/modules/market/store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsTable.test.tsx",
+      "target": "file:frontend/src/modules/options/OptionsTable.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsTable.tsx",
+      "target": "file:frontend/src/utils/vtableTheme.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsTable.tsx",
+      "target": "function:frontend/src/modules/options/OptionsTable.tsx:buildOptionRecords",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsTable.tsx",
+      "target": "function:frontend/src/modules/options/OptionsTable.tsx:buildOptionRecords",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsTable.tsx",
+      "target": "function:frontend/src/modules/options/OptionsTable.tsx:OptionsTable",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/OptionsTable.tsx",
+      "target": "function:frontend/src/modules/options/OptionsTable.tsx:OptionsTable",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/TQuoteTable.test.tsx",
+      "target": "file:frontend/src/modules/options/TQuoteTable.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/TQuoteTable.test.tsx",
+      "target": "file:frontend/src/modules/options/TQuoteTable.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/TQuoteTable.tsx",
+      "target": "file:frontend/src/utils/vtableTheme.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/TQuoteTable.tsx",
+      "target": "function:frontend/src/modules/options/TQuoteTable.tsx:buildRecords",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/TQuoteTable.tsx",
+      "target": "function:frontend/src/modules/options/TQuoteTable.tsx:buildRecords",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/TQuoteTable.tsx",
+      "target": "function:frontend/src/modules/options/TQuoteTable.tsx:TQuoteTable",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/modules/options/TQuoteTable.tsx",
+      "target": "function:frontend/src/modules/options/TQuoteTable.tsx:TQuoteTable",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.test.tsx",
+      "target": "file:frontend/src/pages/CollectionPage.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.test.tsx",
+      "target": "file:frontend/src/stores/collections.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.test.tsx",
+      "target": "file:frontend/src/stores/contracts.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.test.tsx",
+      "target": "file:frontend/src/modules/market/store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.test.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.test.tsx",
+      "target": "file:frontend/src/components/Toast/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.test.tsx",
+      "target": "file:frontend/src/pages/CollectionPage.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.tsx",
+      "target": "file:frontend/src/components/ErrorBoundary/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.tsx",
+      "target": "file:frontend/src/modules/options/OptionChainGroup.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.tsx",
+      "target": "file:frontend/src/modules/market/sort.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.tsx",
+      "target": "file:frontend/src/modules/market/store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.tsx",
+      "target": "file:frontend/src/modules/order/store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.tsx",
+      "target": "file:frontend/src/stores/contracts.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.tsx",
+      "target": "file:frontend/src/stores/collections.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.tsx",
+      "target": "file:frontend/src/hooks/useContractContextMenu.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.tsx",
+      "target": "file:frontend/src/hooks/usePointOrder.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.tsx",
+      "target": "file:frontend/src/components/Toast/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.tsx",
+      "target": "function:frontend/src/pages/CollectionPage.tsx:CollectionPage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionPage.tsx",
+      "target": "function:frontend/src/pages/CollectionPage.tsx:CollectionPage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionsPage.tsx",
+      "target": "file:frontend/src/stores/collections.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionsPage.tsx",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionsPage.tsx",
+      "target": "file:frontend/src/utils/openFloatingTab.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionsPage.tsx",
+      "target": "file:frontend/src/components/Toast/index.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionsPage.tsx",
+      "target": "function:frontend/src/pages/CollectionsPage.tsx:CollectionsPage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/pages/CollectionsPage.tsx",
+      "target": "function:frontend/src/pages/CollectionsPage.tsx:CollectionsPage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/collections.test.ts",
+      "target": "file:frontend/src/stores/collections.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/collections.test.ts",
+      "target": "file:frontend/src/stores/contracts.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/collections.test.ts",
+      "target": "file:frontend/src/stores/collections.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/collections.ts",
+      "target": "file:frontend/src/services/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/collections.ts",
+      "target": "file:frontend/src/stores/contracts.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/collections.ts",
+      "target": "function:frontend/src/stores/collections.ts:nextCollectionId",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/collections.ts",
+      "target": "function:frontend/src/stores/collections.ts:nextCollectionId",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/collections.ts",
+      "target": "function:frontend/src/stores/collections.ts:unionFavoritedIds",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/collections.ts",
+      "target": "function:frontend/src/stores/collections.ts:unionFavoritedIds",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/collections.ts",
+      "target": "function:frontend/src/stores/collections.ts:unionSerializedIds",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/collections.ts",
+      "target": "function:frontend/src/stores/collections.ts:unionSerializedIds",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/collections.ts",
+      "target": "function:frontend/src/stores/collections.ts:collectionFavoritedIds",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/collections.ts",
+      "target": "function:frontend/src/stores/collections.ts:collectionFavoritedIds",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/collections.ts",
+      "target": "function:frontend/src/stores/collections.ts:useCollectionsStore",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/collections.ts",
+      "target": "function:frontend/src/stores/collections.ts:useCollectionsStore",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/marketFilter.test.ts",
+      "target": "file:frontend/src/stores/marketFilter.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/marketFilter.test.ts",
+      "target": "file:frontend/src/modules/market/filter.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/marketFilter.test.ts",
+      "target": "file:frontend/src/stores/marketFilter.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/marketFilter.ts",
+      "target": "file:frontend/src/modules/market/filter.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/marketFilter.ts",
+      "target": "function:frontend/src/stores/marketFilter.ts:isValidFilter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/marketFilter.ts",
+      "target": "function:frontend/src/stores/marketFilter.ts:isValidFilter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/marketFilter.ts",
+      "target": "function:frontend/src/stores/marketFilter.ts:isValidCollectionId",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/marketFilter.ts",
+      "target": "function:frontend/src/stores/marketFilter.ts:isValidCollectionId",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/marketFilter.ts",
+      "target": "function:frontend/src/stores/marketFilter.ts:useMarketFilterStore",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/marketFilter.ts",
+      "target": "function:frontend/src/stores/marketFilter.ts:useMarketFilterStore",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "file:frontend/src/stores/tabs.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "file:frontend/src/stores/floatingWindows.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "file:frontend/src/modules/market/store.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "file:frontend/src/utils/detachDrag.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openFloatingTab",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openFloatingTab",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openOrderFloating",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openOrderFloating",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openKlineFloating",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openKlineFloating",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openTQuoteFloating",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openTQuoteFloating",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openCollectionFloating",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openCollectionFloating",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openCollectionsFloating",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openCollectionsFloating",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openSettingsFloating",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openSettingsFloating",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openIpcMonitorFloating",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openIpcMonitorFloating",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openInfiniteFloating",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openInfiniteFloating",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openOrdersQueryFloating",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openOrdersQueryFloating",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openPositionsQueryFloating",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openPositionsQueryFloating",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:computeAccountWindowHeight",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:computeAccountWindowHeight",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:fitAccountWindowToContent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:fitAccountWindowToContent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openAccountQueryFloating",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/openFloatingTab.ts",
+      "target": "function:frontend/src/utils/openFloatingTab.ts:openAccountQueryFloating",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 1
     }
   ],
   "layers": [
@@ -32583,7 +34507,6 @@
         "file:frontend/electron/__tests__/notificationManager.test.ts",
         "file:frontend/electron/__tests__/preload.test.ts",
         "file:frontend/electron/__tests__/shortcuts.test.ts",
-        "file:frontend/electron/__tests__/windowManager.test.ts",
         "file:frontend/src/components/SpreadDisplay/SpreadDisplay.test.tsx",
         "file:frontend/src/pages/KLinePage.style.test.tsx",
         "file:frontend/src/services/__tests__/electron.test.ts",
@@ -32596,7 +34519,6 @@
         "file:server/tests/test_options_models.py",
         "file:server/tests/test_reconnect.py",
         "file:server/tests/test_ws_integration.py",
-        "file:frontend/src/components/FloatingWindow/index.test.tsx",
         "file:server/tests/test_config.py",
         "file:server/tests/test_ctp_startup.py",
         "file:server/tests/test_order_api.py",
@@ -32614,7 +34536,66 @@
         "file:frontend/src/modules/order/QuoteStatsBar.css",
         "file:frontend/src/modules/options/OptionPanel.style.test.tsx",
         "file:server/tests/test_start.py",
-        "file:frontend/src/setupTests.ts"
+        "file:frontend/src/setupTests.ts",
+        "file:frontend/electron/__tests__/menuManager.test.ts",
+        "file:frontend/electron/__tests__/windowManager.test.ts",
+        "file:frontend/src/components/CollectionPicker/index.test.tsx",
+        "file:frontend/src/components/ContractFilter/index.test.tsx",
+        "file:frontend/src/components/FloatingWindow/index.test.tsx",
+        "file:frontend/src/modules/market/sort.test.ts",
+        "file:frontend/src/modules/options/OptionChainGroup.test.tsx",
+        "file:frontend/src/modules/options/OptionsPanel.test.tsx",
+        "file:frontend/src/modules/options/OptionsTable.test.tsx",
+        "file:frontend/src/modules/options/TQuoteTable.test.tsx",
+        "file:frontend/src/pages/CollectionPage.test.tsx",
+        "file:frontend/src/stores/collections.test.ts",
+        "file:frontend/src/stores/marketFilter.test.ts",
+        "function:frontend/src/modules/order/OrderForm.test.tsx:setMockState",
+        "function:frontend/src/modules/order/StopOrderForm.test.tsx:setMockState",
+        "function:frontend/src/modules/market/DepthQuote.test.tsx:makeSnapshot",
+        "class:frontend/src/services/ws.test.ts:MockWebSocket",
+        "function:frontend/src/modules/order/OrderPanel.test.tsx:setMockState",
+        "function:frontend/src/modules/market/indicators.test.ts:makeKLine",
+        "function:examples/ctp_connection_demo.py:get_product_name",
+        "class:examples/ctp_connection_demo.py:MyMdSpi",
+        "function:examples/field_structure_demo.py:inspect_ctp_class",
+        "function:examples/field_structure_demo.py:fields_to_typescript",
+        "function:examples/field_structure_demo.py:fields_to_mock",
+        "function:examples/field_structure_demo.py:run_and_save",
+        "class:examples/realtime_market_demo.py:MarketDataSpi",
+        "function:examples/realtime_market_demo.py:main",
+        "function:frontend/scripts/compile-electron.cjs:processFile",
+        "function:frontend/scripts/compile-electron.cjs:processDirectory",
+        "function:frontend/scripts/generate-icons.cjs:createPlaceholderPNG",
+        "function:scripts/build-backend.py:run_command",
+        "function:scripts/build-backend.py:clean_build",
+        "function:scripts/build-backend.py:build_backend",
+        "function:scripts/build-backend.py:main",
+        "function:frontend/repro-detach.cjs:main",
+        "function:frontend/src/hooks/useReconnect.test.ts:createMockWs",
+        "function:frontend/src/modules/order/MarketDepth.test.tsx:makeSnapshot",
+        "function:frontend/src/modules/order/myOrders.test.ts:order",
+        "file:frontend/electron/__tests__/menuActions.test.ts",
+        "file:frontend/electron/__tests__/menuTemplate.test.ts",
+        "file:frontend/electron/__tests__/trayManager.test.ts",
+        "file:frontend/src/App.test.tsx",
+        "file:frontend/src/components/BottomBar/index.test.tsx",
+        "file:frontend/src/components/TabBar/index.test.tsx",
+        "file:frontend/src/components/TabContent/index.test.tsx",
+        "file:frontend/src/components/TabContent/detachFlow.integration.test.tsx",
+        "file:frontend/src/components/TabContent/detachFlow.repro.test.tsx",
+        "file:frontend/src/hooks/useContractContextMenu.test.ts",
+        "file:frontend/src/hooks/useSubscriptionManager.test.ts",
+        "file:frontend/src/modules/order/OrderQuotePanel.test.tsx",
+        "file:frontend/src/modules/market/MarketPanel.test.tsx",
+        "file:frontend/src/pages/FavoritesPage.test.tsx",
+        "file:frontend/src/pages/__tests__/KLinePage.test.tsx",
+        "file:frontend/src/stores/floatingWindows.test.ts",
+        "file:frontend/src/stores/tabs.test.ts",
+        "file:frontend/src/utils/openFloatingTab.test.ts",
+        "file:frontend/src/modules/order/QuoteStatsBar.test.tsx",
+        "file:frontend/src/modules/order/TradeParams.test.tsx",
+        "file:frontend/src/pages/__tests__/OrderPage.test.tsx"
       ]
     },
     {
@@ -32631,7 +34612,65 @@
         "file:frontend/electron/notificationManager.ts",
         "file:frontend/electron/shortcuts.ts",
         "config:frontend/electron/tsconfig.json",
-        "file:frontend/electron/main.ts"
+        "file:frontend/electron/main.ts",
+        "file:frontend/electron/windowManager.ts",
+        "function:frontend/electron/windowManager.ts:registerNativeShortcuts",
+        "class:frontend/electron/windowManager.ts:WindowManager",
+        "class:frontend/electron/autoUpdater.ts:AutoUpdaterManager",
+        "class:frontend/electron/backendManager.ts:BackendManager",
+        "function:frontend/electron/ipc/app.ts:registerAppInfoHandlers",
+        "function:frontend/electron/ipc/app.ts:registerBackendManagementHandlers",
+        "function:frontend/electron/ipc/app.ts:unregisterAppHandlers",
+        "function:frontend/electron/ipc/window.ts:registerWindowControlHandlers",
+        "function:frontend/electron/ipc/window.ts:registerWindowManagementHandlers",
+        "function:frontend/electron/ipc/window.ts:unregisterWindowHandlers",
+        "class:frontend/electron/ipcMonitor.ts:IPCMonitor",
+        "function:frontend/electron/ipcMonitor.ts:getIPCMonitor",
+        "function:frontend/electron/ipcWrapper.ts:wrapHandler",
+        "function:frontend/electron/ipcWrapper.ts:handleIPC",
+        "function:frontend/electron/ipcWrapper.ts:sendToWindow",
+        "function:frontend/electron/ipcWrapper.ts:broadcast",
+        "function:frontend/electron/ipcWrapper.ts:sendIPCMonitorToWindow",
+        "function:frontend/electron/ipcWrapper.ts:notifyListeners",
+        "class:frontend/electron/notificationManager.ts:NotificationManager",
+        "class:frontend/electron/shortcuts.ts:ShortcutManager",
+        "function:frontend/electron/main.ts:getWindowManager",
+        "function:frontend/electron/main.ts:getTrayManager",
+        "function:frontend/electron/main.ts:getShortcutManager",
+        "function:frontend/electron/main.ts:getNotificationManager",
+        "function:frontend/electron/main.ts:getBackendManager",
+        "function:frontend/electron/main.ts:getAutoUpdaterManager",
+        "function:frontend/electron/main.ts:initializeApp",
+        "file:frontend/electron/ipc/index.ts",
+        "file:frontend/electron/menuTemplate.ts",
+        "file:frontend/electron/menuActions.ts",
+        "file:frontend/electron/menuManager.ts",
+        "file:frontend/electron/trayManager.ts",
+        "file:frontend/electron/preload.ts",
+        "file:interface::frontend/electron/preload.ts::ElectronAPI",
+        "file:api::frontend/electron/preload.ts::contextBridge-expose",
+        "file:ipc-channel::window:minimize",
+        "file:ipc-channel::window:maximize",
+        "file:ipc-channel::window:close",
+        "file:ipc-channel::window:open-order",
+        "file:ipc-channel::window:open-kline",
+        "file:ipc-channel::window:open-tab",
+        "file:ipc-channel::app:version",
+        "file:ipc-channel::app:platform",
+        "file:ipc-channel::app:name",
+        "file:ipc-channel::backend:restart",
+        "file:ipc-channel::backend:status",
+        "file:ipc-channel::navigate:tab",
+        "file:ipc-channel::menu:open-floating",
+        "file:ipc-channel::menu:market-view",
+        "file:ipc-channel::data:get-selected-instrument",
+        "file:ipc-channel::data:selected-instrument-response",
+        "file:ipc-channel::order:update",
+        "file:ipc-channel::notification",
+        "file:ipc-channel::ipc-monitor-messages",
+        "file:ipc-channel::ipc-monitor-message",
+        "file:import::electron::contextBridge",
+        "file:import::electron::ipcRenderer"
       ]
     },
     {
@@ -32659,7 +34698,260 @@
         "file:server/api/__init__.py",
         "file:server/ws/__init__.py",
         "file:server/api/connection.py",
-        "file:server/api/order.py"
+        "file:server/api/order.py",
+        "function:server/api/market.py:get_instruments",
+        "function:server/api/market.py:search_instruments",
+        "function:server/api/market.py:subscribe",
+        "function:server/api/market.py:unsubscribe",
+        "function:server/api/market.py:get_snapshots",
+        "function:server/api/market.py:get_kline",
+        "function:server/api/market.py:refresh_instruments",
+        "function:server/api/market.py:get_depth",
+        "function:server/api/market.py:get_option_underlyings",
+        "function:server/api/market.py:get_options",
+        "function:server/api/market.py:get_option_chain",
+        "function:server/api/market.py:get_volatility",
+        "function:server/api/query.py:get_positions",
+        "function:server/api/query.py:refresh_positions",
+        "function:server/api/query.py:get_account",
+        "function:server/api/query.py:refresh_account",
+        "function:server/api/query.py:get_orders",
+        "function:server/api/query.py:refresh_orders",
+        "function:server/api/query.py:get_trades",
+        "function:server/api/query.py:refresh_trades",
+        "function:server/api/query.py:get_contracts",
+        "class:server/config.py:Config",
+        "function:server/config.py:load_config",
+        "class:server/ctp_wrapper/callback.py:_SpiInfrastructure",
+        "function:server/ctp_wrapper/callback.py:_make_md_spi_class",
+        "function:server/ctp_wrapper/callback.py:_make_td_spi_class",
+        "function:server/ctp_wrapper/callback.py:_td_on_rsp_qry_instrument",
+        "function:server/ctp_wrapper/callback.py:_make_qry_callback",
+        "class:server/ctp_wrapper/md_user_api.py:MdUserApi",
+        "class:server/ctp_wrapper/trader_api.py:TraderApi",
+        "class:server/ctp_wrapper/types.py:Direction",
+        "class:server/ctp_wrapper/types.py:OffsetFlag",
+        "class:server/ctp_wrapper/types.py:OrderPriceType",
+        "class:server/ctp_wrapper/types.py:TimeCondition",
+        "class:server/ctp_wrapper/types.py:VolumeCondition",
+        "class:server/ctp_wrapper/types.py:OrderStatus",
+        "class:server/ctp_wrapper/types.py:PosiDirection",
+        "class:server/ctp_wrapper/types.py:ProductClass",
+        "class:server/ctp_wrapper/types.py:CombHedgeFlag",
+        "class:server/ctp_wrapper/types.py:ContingentCondition",
+        "class:server/ctp_wrapper/types.py:ForceCloseReason",
+        "function:server/main.py:create_app",
+        "class:server/models/contract.py:InstrumentInfo",
+        "class:server/tests/test_callback.py:TestMdSpi",
+        "class:server/tests/test_callback.py:TestTraderSpi",
+        "class:server/tests/test_callback.py:TestCallbackLogging",
+        "class:server/tests/test_callback.py:TestTraderSpiQryInstrument",
+        "class:server/tests/test_callback.py:TestTraderSpiQueryCallbacks",
+        "class:server/tests/test_ctp_bridge.py:_FakeCtpDepthData",
+        "class:server/tests/test_ctp_bridge.py:_BroadcastSpy",
+        "class:server/tests/test_ctp_bridge.py:TestWireMarketDataCallback",
+        "class:server/tests/test_field_mapping.py:_MockDepthMarketData",
+        "class:server/tests/test_field_mapping.py:TestMapDepthMarketData",
+        "class:server/tests/test_field_mapping.py:TestMapDepthMarketDataEdgeCases",
+        "class:server/tests/test_field_mapping.py:_MockInputOrder",
+        "class:server/tests/test_field_mapping.py:_MockOrder",
+        "class:server/tests/test_field_mapping.py:TestMapInputOrder",
+        "class:server/tests/test_field_mapping.py:TestMapOrder",
+        "class:server/tests/test_field_mapping.py:TestMapTrade",
+        "class:server/tests/test_field_mapping.py:TestOrderMappingEdgeCases",
+        "class:server/tests/test_field_mapping.py:TestMapInstrument",
+        "class:server/tests/test_field_mapping.py:_MockPosition",
+        "class:server/tests/test_field_mapping.py:TestMapPosition",
+        "class:server/tests/test_field_mapping.py:TestMapAccount",
+        "class:server/tests/test_md_user_api.py:TestMdUserApiConstruction",
+        "class:server/tests/test_md_user_api.py:TestMdUserApiSubscribe",
+        "class:server/tests/test_md_user_api.py:TestMdUserApiRelease",
+        "class:server/tests/test_options_api.py:TestOptionsListAPI",
+        "class:server/tests/test_options_api.py:TestOptionUnderlyingsAPI",
+        "class:server/tests/test_options_api.py:TestOptionChainAPI",
+        "class:server/tests/test_options_api.py:TestVolatilityAPI",
+        "function:server/tests/test_options_api.py:_make_instrument",
+        "function:server/tests/test_options_api.py:_create_app",
+        "class:server/tests/test_options_integration.py:TestOptionsServiceOnAppState",
+        "class:server/tests/test_options_service.py:TestOptionsServiceFilter",
+        "class:server/tests/test_options_service.py:TestOptionsServiceChainAggregation",
+        "class:server/tests/test_options_service.py:TestBlackScholes",
+        "class:server/tests/test_options_service.py:TestOptionsServiceGetVolatility",
+        "function:server/tests/test_options_service.py:_make_instrument",
+        "class:server/tests/test_query_api.py:TestGetPositions",
+        "class:server/tests/test_query_api.py:TestGetAccount",
+        "class:server/tests/test_query_api.py:TestGetContracts",
+        "class:server/tests/test_query_api.py:TestRefreshPositions",
+        "class:server/tests/test_query_api.py:TestRefreshAccount",
+        "class:server/tests/test_query_api.py:TestRefreshOrders",
+        "class:server/tests/test_query_api.py:TestRefreshTrades",
+        "function:server/tests/test_query_api.py:_make_app",
+        "class:server/tests/test_query_service.py:TestQueryServiceConstruction",
+        "class:server/tests/test_query_service.py:TestOnOrderResult",
+        "class:server/tests/test_query_service.py:TestOnTradeResult",
+        "class:server/tests/test_query_service.py:TestOnPositionResult",
+        "class:server/tests/test_query_service.py:TestOnAccountResult",
+        "class:server/tests/test_query_service.py:TestQueryOrders",
+        "class:server/tests/test_trader_api.py:TestTraderApiConstruction",
+        "class:server/tests/test_trader_api.py:TestInsertOrder",
+        "class:server/tests/test_trader_api.py:TestCancelOrder",
+        "class:server/tests/test_trader_api.py:TestTraderApiRelease",
+        "class:server/tests/test_trader_api.py:TestInsertOrderEnhanced",
+        "class:server/tests/test_trader_api.py:TestCancelOrderEnhanced",
+        "class:server/tests/test_trader_api.py:TestQueryInstruments",
+        "class:server/tests/test_trader_api.py:TestQueryOrders",
+        "class:server/tests/test_trader_api.py:TestQueryTrades",
+        "class:server/tests/test_trader_api.py:TestQueryPositions",
+        "class:server/tests/test_trader_api.py:TestQueryAccount",
+        "function:server/tests/test_trader_api.py:_mock_ctp_module",
+        "class:server/tests/test_types.py:TestDirection",
+        "class:server/tests/test_types.py:TestOffsetFlag",
+        "class:server/tests/test_types.py:TestOrderPriceType",
+        "class:server/tests/test_types.py:TestTimeCondition",
+        "class:server/tests/test_types.py:TestVolumeCondition",
+        "class:server/tests/test_types.py:TestOrderStatus",
+        "class:server/tests/test_types.py:TestPosiDirection",
+        "class:server/tests/test_types.py:TestProductClass",
+        "class:server/tests/test_types.py:TestCombHedgeFlag",
+        "class:server/tests/test_types.py:TestContingentCondition",
+        "class:server/tests/test_types.py:TestForceCloseReason",
+        "class:server/tests/test_ws_handlers.py:FakeWebSocket",
+        "function:server/tests/test_ws_handlers.py:test_handler_registers_connection_in_ws_manager",
+        "function:server/tests/test_ws_handlers.py:test_handler_removes_connection_on_disconnect",
+        "function:server/tests/test_ws_handlers.py:test_handler_accepts_and_registers",
+        "function:server/tests/test_ws_handlers.py:test_handler_works_for_all_endpoints",
+        "function:server/tests/test_ws_handlers.py:test_handler_routes_subscribe_message",
+        "function:server/tests/test_ws_handlers.py:test_handler_routes_unsubscribe_message",
+        "function:server/tests/test_ws_handlers.py:test_handler_routes_ping_message",
+        "function:server/tests/test_ws_handlers.py:test_handler_responds_to_heartbeat_ping",
+        "function:server/tests/test_ws_handlers.py:test_handler_ignores_invalid_json",
+        "function:server/tests/test_ws_handlers.py:test_handler_sends_ack_on_subscribe",
+        "function:server/tests/test_ws_handlers.py:test_handler_sends_error_on_subscribe_failure",
+        "function:server/tests/test_ws_handlers.py:test_handler_calls_on_connect_after_accept",
+        "function:server/tests/test_ws_handlers.py:test_handler_on_connect_failure_does_not_crash",
+        "class:server/tests/test_ws_heartbeat.py:FakeWebSocket",
+        "function:server/tests/test_ws_heartbeat.py:test_heartbeat_removes_dead_connections",
+        "function:server/tests/test_ws_heartbeat.py:test_heartbeat_sends_ping_to_all_endpoints",
+        "function:server/tests/test_ws_heartbeat.py:test_heartbeat_does_nothing_when_empty",
+        "function:server/tests/test_ws_heartbeat.py:test_heartbeat_handles_partial_failure",
+        "function:server/tests/test_ws_heartbeat.py:test_start_heartbeat_creates_background_task",
+        "function:server/tests/test_ws_heartbeat.py:test_stop_heartbeat_cancels_task",
+        "function:server/tests/test_ws_heartbeat.py:test_heartbeat_periodically_removes_dead",
+        "class:server/tests/test_ws_manager.py:TestWebSocketManagerInit",
+        "class:server/tests/test_ws_manager.py:TestWebSocketManagerConnect",
+        "class:server/tests/test_ws_manager.py:TestWebSocketManagerBroadcast",
+        "class:server/tests/test_ws_manager.py:_FakeWebSocket",
+        "function:server/ws/handlers.py:handle_ws",
+        "class:server/ws/manager.py:WebSocketManager",
+        "class:server/models/account.py:AccountInfo",
+        "class:server/models/account.py:PositionInfo",
+        "class:server/models/market.py:MarketSnapshot",
+        "class:server/models/market.py:KLineData",
+        "class:server/models/options.py:OptionQuote",
+        "class:server/models/options.py:OptionChain",
+        "class:server/models/options.py:VolatilityData",
+        "class:server/tests/test_models.py:TestMarketSnapshot",
+        "class:server/tests/test_models.py:TestKLineData",
+        "class:server/tests/test_models.py:TestOrderRequest",
+        "class:server/tests/test_models.py:TestOrderReturn",
+        "class:server/tests/test_models.py:TestAccountInfo",
+        "class:server/tests/test_models.py:TestPositionInfo",
+        "class:server/tests/test_models.py:TestInstrumentInfo",
+        "class:server/tests/test_options_models.py:TestOptionQuote",
+        "class:server/tests/test_options_models.py:TestOptionChain",
+        "class:server/tests/test_options_models.py:TestVolatilityData",
+        "class:server/tests/test_reconnect.py:TestReconnectService",
+        "function:server/tests/test_ws_integration.py:test_on_front_disconnected_broadcasts_to_system",
+        "function:server/tests/test_ws_integration.py:test_on_front_disconnected_with_active_system_ws",
+        "function:server/tests/test_ws_integration.py:test_reconnect_service_integrates_with_disconnect",
+        "function:server/tests/test_ws_integration.py:test_handle_ws_accepts_subscribe_fn",
+        "function:server/utils/ctp_mapping.py:convert_order_request_to_ctp",
+        "function:server/utils/ctp_mapping.py:convert_order_return_from_ctp",
+        "function:server/utils/ctp_mapping.py:convert_position_from_ctp",
+        "function:server/api/connection.py:login",
+        "function:server/api/connection.py:logout",
+        "function:server/api/connection.py:status",
+        "class:server/api/connection.py:LoginRequest",
+        "class:server/api/connection.py:LoginResponse",
+        "class:server/api/connection.py:StatusResponse",
+        "function:server/api/order.py:insert_order",
+        "function:server/api/order.py:cancel_order",
+        "function:server/api/order.py:order_status",
+        "function:server/api/order.py:cancel_all_orders",
+        "function:server/api/order.py:_get_valid_positions",
+        "function:server/api/order.py:_get_protection_price",
+        "function:server/api/order.py:_build_close_order_params",
+        "function:server/api/order.py:_build_open_order_params",
+        "function:server/api/order.py:_execute_reverse_parallel",
+        "function:server/api/order.py:_execute_reverse_serial",
+        "function:server/api/order.py:reverse_position",
+        "function:server/api/order.py:lock_position",
+        "function:server/api/order.py:submit_stop_order",
+        "function:server/api/order.py:cancel_stop_order",
+        "function:server/api/order.py:list_stop_orders",
+        "class:server/api/order.py:InsertOrderRequest",
+        "class:server/api/order.py:CancelOrderRequest",
+        "class:server/api/order.py:ReverseOrderRequest",
+        "class:server/api/order.py:LockOrderRequest",
+        "class:server/api/order.py:SubmitStopOrderRequest",
+        "class:server/api/order.py:CancelStopOrderRequest",
+        "class:server/tests/test_config.py:TestConfigDefaults",
+        "class:server/tests/test_config.py:TestConfigFromEnv",
+        "class:server/tests/test_config.py:TestLoadConfig",
+        "class:server/tests/test_ctp_startup.py:TestConnectCtp",
+        "class:server/tests/test_ctp_startup.py:TestConnectCtpInternal",
+        "class:server/tests/test_ctp_startup.py:TestStartCtpTradingConnection",
+        "class:server/tests/test_ctp_startup.py:TestWireBridge",
+        "class:server/tests/test_ctp_startup.py:_FakeMdApi",
+        "class:server/tests/test_ctp_startup.py:_FakeTraderApi",
+        "function:server/tests/test_order_api.py:_make_app_with_order_manager",
+        "class:server/tests/test_order_api.py:TestOrderInsertApi",
+        "class:server/tests/test_order_api.py:TestOrderInsertCompliance",
+        "class:server/tests/test_order_api.py:TestOrderInsertFokFakValidation",
+        "class:server/tests/test_order_api.py:TestOrderCancelApi",
+        "class:server/tests/test_order_api.py:TestOrderStatusApi",
+        "class:server/tests/test_order_api.py:TestOrderCancelAllApi",
+        "class:server/tests/test_order_api.py:TestOrderReverseApi",
+        "class:server/tests/test_order_api.py:TestOrderLockApi",
+        "class:server/tests/test_order_api.py:TestOrderReverseNewParams",
+        "class:server/tests/test_order_api.py:TestMarketPriceFallback",
+        "function:server/start.py:_load_env_file",
+        "function:server/start.py:_is_commodity_trading_time",
+        "function:server/start.py:select_addresses",
+        "function:server/start.py:main",
+        "function:server/start.py:_parse_uvicorn_kwargs",
+        "class:server/tests/test_start.py:TestSelectAddresses",
+        "file:server/tests/test_market_api.py",
+        "file:server/tests/test_market_service.py",
+        "file:server/tests/test_stop_order_api.py",
+        "class:server/tests/test_market_api.py::TestGetInstruments",
+        "class:server/tests/test_market_api.py::TestSubscribe",
+        "class:server/tests/test_market_api.py::TestUnsubscribe",
+        "class:server/tests/test_market_api.py::TestGetSnapshots",
+        "class:server/tests/test_market_api.py::TestGetKline",
+        "class:server/tests/test_market_api.py::TestGetDepth",
+        "class:server/tests/test_market_api.py::TestInstrumentsRefresh",
+        "class:server/tests/test_market_api.py::TestGetExchanges",
+        "class:server/tests/test_market_api.py::TestGetProducts",
+        "class:server/tests/test_market_api.py::TestSearchInstruments",
+        "class:server/tests/test_market_api.py::TestGetInstrumentsByIds",
+        "class:server/tests/test_market_api.py::TestPreset",
+        "class:server/tests/test_market_service.py::TestMarketServiceInit",
+        "class:server/tests/test_market_service.py::TestInstrumentCache",
+        "class:server/tests/test_market_service.py::TestSubscriptionManagement",
+        "class:server/tests/test_market_service.py::TestCtpHooks",
+        "class:server/tests/test_market_service.py::TestSubscriptionLimit",
+        "class:server/tests/test_market_service.py::TestSnapshotCache",
+        "class:server/tests/test_market_service.py::TestExpiredInstrumentFilter",
+        "class:server/tests/test_market_service.py::TestLoadInstrumentsFromFile",
+        "class:server/tests/test_market_service.py::TestRefreshInstrumentsFromCtp",
+        "class:server/tests/test_market_service.py::TestInstrumentSearch",
+        "class:server/tests/test_market_service.py::TestPresetInstruments",
+        "class:server/tests/test_stop_order_api.py::TestStopOrderSubmitAPI",
+        "class:server/tests/test_stop_order_api.py::TestStopOrderCancelAPI",
+        "class:server/tests/test_stop_order_api.py::TestStopOrderListAPI",
+        "function:server/tests/test_market_api.py::_make_test_app",
+        "function:server/tests/test_market_api.py::_make_app_with_trader"
       ]
     },
     {
@@ -32685,7 +34977,80 @@
         "file:server/services/reconnect.py",
         "file:server/utils/ctp_mapping.py",
         "file:server/services/market_service.py",
-        "file:server/services/stop_order.py"
+        "file:server/services/stop_order.py",
+        "function:server/services/ctp_bridge.py:wire_market_data_callback",
+        "function:server/services/ctp_startup.py:_wire_instrument_query",
+        "function:server/services/ctp_startup.py:_wire_query_callbacks",
+        "function:server/services/ctp_startup.py:connect_ctp",
+        "function:server/services/ctp_startup.py:start_ctp_market_connection",
+        "function:server/services/ctp_startup.py:_connect_ctp",
+        "function:server/services/ctp_startup.py:_wire_bridge",
+        "function:server/services/ctp_startup.py:_attempt_reconnect",
+        "function:server/services/ctp_startup.py:start_ctp_trading_connection",
+        "function:server/services/ctp_startup.py:_attempt_reconnect_td",
+        "function:server/services/ctp_startup.py:connect_trading",
+        "function:server/services/field_mapping.py:map_depth_market_data",
+        "function:server/services/field_mapping.py:map_input_order",
+        "function:server/services/field_mapping.py:map_order",
+        "function:server/services/field_mapping.py:map_trade",
+        "function:server/services/field_mapping.py:map_instrument",
+        "function:server/services/field_mapping.py:map_position",
+        "function:server/services/field_mapping.py:map_account",
+        "function:server/services/kline_service.py:_parse_timestamp",
+        "class:server/services/kline_service.py:KLineService",
+        "class:server/services/options_service.py:OptionsService",
+        "class:server/services/order_manager.py:OrderManager",
+        "class:server/services/query_service.py:QueryService",
+        "class:server/tests/test_kline_service.py:TestParseTimestamp",
+        "class:server/tests/test_kline_service.py:TestKLineServiceInit",
+        "class:server/tests/test_kline_service.py:TestUpdateTick",
+        "class:server/tests/test_kline_service.py:TestTimeWindow",
+        "class:server/tests/test_kline_service.py:TestMultiPeriod",
+        "class:server/tests/test_kline_service.py:TestCountLimit",
+        "class:server/tests/test_kline_service.py:TestMaxBars",
+        "class:server/tests/test_kline_service.py:TestThreadSafety",
+        "class:server/tests/test_order_manager.py:TestOrderManagerConstruction",
+        "class:server/tests/test_order_manager.py:TestOrderManagerInsert",
+        "class:server/tests/test_order_manager.py:TestOrderManagerCancel",
+        "class:server/tests/test_order_manager.py:TestOrderManagerOnErrRtnOrderAction",
+        "class:server/tests/test_order_manager.py:TestOrderManagerOnRtnOrder",
+        "class:server/tests/test_order_manager.py:TestOrderManagerRaceConditions",
+        "class:server/tests/test_order_manager.py:TestOrderManagerSessionFilter",
+        "class:server/tests/test_order_manager.py:TestOrderManagerOnRtnTrade",
+        "class:server/tests/test_order_manager.py:TestOrderManagerCancelAll",
+        "class:server/tests/test_order_manager.py:TestOrderManagerBroadcast",
+        "class:server/tests/test_order_manager.py:TestOrderManagerThreadSafety",
+        "class:server/tests/test_stop_order_integration.py:TestStopOrderIntegration",
+        "function:server/tests/test_stop_order_integration.py:app_with_stop_service",
+        "class:server/models/order.py:OrderRequest",
+        "class:server/models/order.py:OrderReturn",
+        "class:server/services/reconnect.py:ReconnectService",
+        "class:server/services/market_service.py:MarketService",
+        "function:server/services/market_service.py:__init__",
+        "function:server/services/market_service.py:set_ctp_hooks",
+        "function:server/services/market_service.py:_is_expired",
+        "function:server/services/market_service.py:load_instruments_from_file",
+        "function:server/services/market_service.py:get_instruments",
+        "function:server/services/market_service.py:search_instruments",
+        "function:server/services/market_service.py:refresh_preset_instruments",
+        "function:server/services/market_service.py:subscribe",
+        "function:server/services/market_service.py:unsubscribe",
+        "function:server/services/market_service.py:update_snapshot",
+        "function:server/services/market_service.py:refresh_instruments_from_ctp",
+        "function:server/services/market_service.py:on_instruments_result",
+        "function:server/services/market_service.py:_save_instruments_to_file",
+        "class:server/services/stop_order.py:StopOrderStatus",
+        "class:server/services/stop_order.py:StopOrder",
+        "class:server/services/stop_order.py:StopOrderService",
+        "class:server/tests/test_stop_order_service.py:TestStopOrderModel",
+        "class:server/tests/test_stop_order_service.py:TestStopOrderSubmit",
+        "class:server/tests/test_stop_order_service.py:TestStopOrderCancel",
+        "class:server/tests/test_stop_order_service.py:TestStopOrderList",
+        "class:server/tests/test_stop_order_service.py:TestStopOrderTrigger",
+        "class:server/tests/test_stop_order_service.py:TestStopOrderBroadcast",
+        "class:server/tests/test_stop_order_service.py:TestStopOrderPersistence",
+        "class:server/tests/test_stop_order_service.py:TestStopOrderMultipleInstruments",
+        "class:server/tests/test_stop_order_service.py:TestStopOrderGFD"
       ]
     },
     {
@@ -32722,7 +35087,22 @@
         "file:frontend/src/utils/tradingSession.ts",
         "file:frontend/src/hooks/useTabContractLocks.ts",
         "file:frontend/src/modules/infinite/ladderUtils.ts",
-        "file:frontend/src/modules/infinite/store.ts"
+        "file:frontend/src/modules/infinite/store.ts",
+        "file:frontend/src/stores/collections.ts",
+        "function:frontend/src/stores/collections.ts:nextCollectionId",
+        "function:frontend/src/stores/collections.ts:unionFavoritedIds",
+        "function:frontend/src/stores/collections.ts:unionSerializedIds",
+        "function:frontend/src/stores/collections.ts:collectionFavoritedIds",
+        "function:frontend/src/stores/collections.ts:useCollectionsStore",
+        "file:frontend/src/stores/marketFilter.ts",
+        "function:frontend/src/stores/marketFilter.ts:isValidFilter",
+        "function:frontend/src/stores/marketFilter.ts:isValidCollectionId",
+        "function:frontend/src/stores/marketFilter.ts:useMarketFilterStore",
+        "function:frontend/src/stores/connection.ts:transitionState",
+        "function:frontend/src/stores/connection.ts:useConnectionStore",
+        "file:frontend/src/stores/floatingWindows.ts",
+        "file:frontend/src/stores/tabs.ts",
+        "file:frontend/src/stores/contracts.ts"
       ]
     },
     {
@@ -32730,7 +35110,66 @@
       "name": "前端服务层",
       "description": "API 调用、类型定义、工具函数",
       "nodeIds": [
-        "file:frontend/src/services/ws.ts"
+        "file:frontend/src/services/ws.ts",
+        "file:frontend/src/modules/market/filter.ts",
+        "function:frontend/src/modules/market/filter.ts:filterByExchangeAndProduct",
+        "function:frontend/src/modules/market/filter.ts:computeFilterOptions",
+        "file:frontend/src/modules/market/sort.ts",
+        "function:frontend/src/modules/market/sort.ts:naturalCompare",
+        "function:frontend/src/modules/market/sort.ts:sortFutures",
+        "function:frontend/src/modules/market/sort.ts:deriveUnderlyingProduct",
+        "function:frontend/src/modules/market/sort.ts:groupOptionsByUnderlying",
+        "function:frontend/src/modules/market/sort.ts:syntheticUnderlyingContract",
+        "function:frontend/src/modules/market/sort.ts:resolveUnderlyingInstrumentID",
+        "function:frontend/src/modules/market/sort.ts:buildOptionChainsFromContracts",
+        "file:frontend/src/utils/openFloatingTab.ts",
+        "function:frontend/src/utils/openFloatingTab.ts:openFloatingTab",
+        "function:frontend/src/utils/openFloatingTab.ts:openOrderFloating",
+        "function:frontend/src/utils/openFloatingTab.ts:openKlineFloating",
+        "function:frontend/src/utils/openFloatingTab.ts:openTQuoteFloating",
+        "function:frontend/src/utils/openFloatingTab.ts:openCollectionFloating",
+        "function:frontend/src/utils/openFloatingTab.ts:openCollectionsFloating",
+        "function:frontend/src/utils/openFloatingTab.ts:openSettingsFloating",
+        "function:frontend/src/utils/openFloatingTab.ts:openIpcMonitorFloating",
+        "function:frontend/src/utils/openFloatingTab.ts:openInfiniteFloating",
+        "function:frontend/src/utils/openFloatingTab.ts:openOrdersQueryFloating",
+        "function:frontend/src/utils/openFloatingTab.ts:openPositionsQueryFloating",
+        "function:frontend/src/utils/openFloatingTab.ts:computeAccountWindowHeight",
+        "function:frontend/src/utils/openFloatingTab.ts:fitAccountWindowToContent",
+        "function:frontend/src/utils/openFloatingTab.ts:openAccountQueryFloating",
+        "function:frontend/src/utils/flip.ts:getRect",
+        "function:frontend/src/utils/flip.ts:computeFlipDeltas",
+        "function:frontend/src/utils/flip.ts:flipToRect",
+        "function:frontend/src/utils/flip.ts:getTabPanelRect",
+        "function:frontend/src/utils/orderMapping.ts:convertOrderRequest",
+        "function:frontend/src/utils/contractStatus.ts:isExpired",
+        "function:frontend/src/utils/contractStatus.ts:getContractStatus",
+        "function:frontend/src/utils/contractStatus.ts:isContractActive",
+        "function:frontend/src/utils/priceCalc.ts:calcCounterpartyPrice",
+        "function:frontend/src/utils/priceCalc.ts:getProtectionPrice",
+        "function:frontend/src/utils/resizeDrag.ts:computeResizeRect",
+        "function:frontend/src/utils/resizeDrag.ts:startResizeDrag",
+        "function:frontend/src/utils/format.ts:formatPrice",
+        "function:frontend/src/utils/format.ts:formatVolume",
+        "function:frontend/src/utils/format.ts:formatTime",
+        "function:frontend/src/utils/format.ts:formatChange",
+        "function:frontend/src/utils/format.ts:formatPercent",
+        "function:frontend/src/utils/panelStorage.ts:savePanelSizes",
+        "function:frontend/src/utils/panelStorage.ts:loadPanelSizes",
+        "function:frontend/src/utils/productNames.ts:getProductName",
+        "class:frontend/src/services/ws.ts:WSManager",
+        "function:frontend/src/utils/detachDrag.ts:detachTabAt",
+        "function:frontend/src/utils/detachDrag.ts:startDetachDrag",
+        "function:frontend/src/utils/validators.ts:validatePrice",
+        "function:frontend/src/utils/validators.ts:validateVolume",
+        "function:frontend/src/utils/validators.ts:validateInstrumentId",
+        "function:frontend/src/utils/validators.ts:getVolumeLimit",
+        "function:frontend/src/utils/validators.ts:validateVolumeWithLimit",
+        "function:frontend/src/utils/validators.ts:validateArbitrage",
+        "function:frontend/src/utils/tradingSession.ts:isInTradingSession",
+        "function:frontend/src/utils/tradingSession.ts:getTradingSessionStatus",
+        "file:frontend/src/services/electron.ts",
+        "file:frontend/src/services/api.ts"
       ]
     },
     {
@@ -32772,7 +35211,6 @@
         "file:frontend/src/components/TabContent/styles.css",
         "file:frontend/src/components/SpreadDisplay/index.tsx",
         "file:frontend/src/components/Toast/styles.css",
-        "file:frontend/src/components/FloatingWindow/index.tsx",
         "file:frontend/src/modules/market/KLineChart.tsx",
         "file:frontend/src/modules/options/OptionPanel.tsx",
         "file:frontend/src/components/GlobalBar/index.tsx",
@@ -32799,7 +35237,131 @@
         "file:frontend/src/components/TabBar/styles.css",
         "file:frontend/src/modules/infinite/InfiniteLadder.tsx",
         "file:frontend/src/modules/infinite/InfiniteTradeParams.tsx",
-        "file:frontend/src/pages/InfiniteOrderPage.tsx"
+        "file:frontend/src/pages/InfiniteOrderPage.tsx",
+        "file:frontend/src/App.tsx",
+        "function:frontend/src/App.tsx:App",
+        "file:frontend/src/components/CollectionPicker/index.tsx",
+        "function:frontend/src/components/CollectionPicker/index.tsx:CollectionPicker",
+        "file:frontend/src/components/ContractFilter/index.tsx",
+        "function:frontend/src/components/ContractFilter/index.tsx:ContractFilter",
+        "file:frontend/src/components/FloatingWindow/index.tsx",
+        "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindow",
+        "function:frontend/src/components/FloatingWindow/index.tsx:FloatingWindows",
+        "file:frontend/src/components/InstrumentSearchModal/index.tsx",
+        "function:frontend/src/components/InstrumentSearchModal/index.tsx:hasChinese",
+        "function:frontend/src/components/InstrumentSearchModal/index.tsx:findProductIdsByChineseName",
+        "function:frontend/src/components/InstrumentSearchModal/index.tsx:InstrumentSearchModal",
+        "file:frontend/src/modules/options/OptionChainGroup.tsx",
+        "function:frontend/src/modules/options/OptionChainGroup.tsx:OptionChainGroup",
+        "file:frontend/src/modules/options/OptionsPanel.tsx",
+        "function:frontend/src/modules/options/OptionsPanel.tsx:OptionsPanel",
+        "file:frontend/src/modules/options/OptionsTable.tsx",
+        "function:frontend/src/modules/options/OptionsTable.tsx:buildOptionRecords",
+        "function:frontend/src/modules/options/OptionsTable.tsx:OptionsTable",
+        "file:frontend/src/modules/options/TQuoteTable.tsx",
+        "function:frontend/src/modules/options/TQuoteTable.tsx:buildRecords",
+        "function:frontend/src/modules/options/TQuoteTable.tsx:TQuoteTable",
+        "file:frontend/src/pages/CollectionPage.tsx",
+        "function:frontend/src/pages/CollectionPage.tsx:CollectionPage",
+        "file:frontend/src/pages/CollectionsPage.tsx",
+        "function:frontend/src/pages/CollectionsPage.tsx:CollectionsPage",
+        "function:frontend/src/hooks/usePriceStep.ts:usePriceStep",
+        "function:frontend/src/modules/order/OrderQuotePanel.tsx:OrderQuotePanel",
+        "function:frontend/src/modules/order/StopOrderForm.tsx:StopOrderForm",
+        "function:frontend/src/modules/order/store.ts:useOrderStore",
+        "function:frontend/src/components/ContextMenu/index.tsx:ContextMenu",
+        "class:frontend/src/components/ErrorBoundary/index.tsx:ErrorBoundary",
+        "function:frontend/src/components/QuickKeys/index.tsx:QuickKeys",
+        "function:frontend/src/hooks/useMarketWs.ts:snapshotToKline",
+        "function:frontend/src/hooks/useMarketWs.ts:resetGlobalWs",
+        "function:frontend/src/hooks/useMarketWs.ts:useMarketWs",
+        "function:frontend/src/hooks/usePointOrder.ts:usePointOrder",
+        "function:frontend/src/hooks/useReconnect.ts:useReconnect",
+        "function:frontend/src/modules/market/DepthQuote.tsx:DepthQuote",
+        "function:frontend/src/modules/market/store.ts:useMarketStore",
+        "function:frontend/src/modules/market/useContractSearch.ts:useContractSearch",
+        "function:frontend/src/components/BatchCancel/index.tsx:BatchCancel",
+        "function:frontend/src/components/QuickActions/index.tsx:QuickActions",
+        "function:frontend/src/components/SettingsPanel/HotKeyTab.tsx:HotKeyTab",
+        "function:frontend/src/components/SettingsPanel/QuickTradeTab.tsx:QuickTradeTab",
+        "function:frontend/src/components/SettingsPanel/index.tsx:SettingsPanel",
+        "function:frontend/src/components/Toast/index.tsx:ToastContainer",
+        "function:frontend/src/components/Toast/index.tsx:ToastEntry",
+        "function:frontend/src/hooks/useHotKeys.ts:useHotKeys",
+        "function:frontend/src/modules/order/OrderPanel.tsx:OrderPanel",
+        "function:frontend/src/components/ConnectionStatus/index.tsx:ConnectionStatus",
+        "function:frontend/src/components/ConnectionStatus/index.tsx:buildTooltip",
+        "function:frontend/src/components/ResizeHandle/index.tsx:ResizeHandle",
+        "function:frontend/src/pages/IPCMonitorPage.tsx:matchesFilter",
+        "function:frontend/src/pages/IPCMonitorPage.tsx:setupWebSocketInterceptor",
+        "function:frontend/src/pages/IPCMonitorPage.tsx:setupFetchInterceptor",
+        "function:frontend/src/pages/IPCMonitorPage.tsx:IPCMonitorPage",
+        "function:frontend/src/modules/market/indicators.ts:calcVolumeMA",
+        "function:frontend/src/modules/market/indicators.ts:calcBoll",
+        "function:frontend/src/modules/market/indicators.ts:calcKDJ",
+        "function:frontend/src/modules/market/indicators.ts:calcRSI",
+        "function:frontend/src/components/SpreadDisplay/index.tsx:SpreadDisplay",
+        "function:frontend/src/components/Toast/index.tsx:toast",
+        "function:frontend/src/pages/SettingsPage.tsx:SettingsPage",
+        "function:frontend/src/hooks/useSystemWs.ts:useSystemWs",
+        "function:frontend/src/modules/market/KLineChart.tsx:calcMA",
+        "function:frontend/src/modules/market/KLineChart.tsx:calcEMA",
+        "function:frontend/src/modules/market/KLineChart.tsx:buildOption",
+        "function:frontend/src/modules/market/KLineChart.tsx:KLineChart",
+        "function:frontend/src/modules/options/OptionPanel.tsx:OptionPanel",
+        "function:frontend/src/components/GlobalBar/index.tsx:GlobalBar",
+        "function:frontend/src/components/TabBar/overflow.ts:computeTabOverflow",
+        "function:frontend/src/components/ConfirmDialog/index.tsx:ConfirmDialog",
+        "function:frontend/src/modules/order/FooterBar.tsx:FooterBar",
+        "function:frontend/src/modules/order/MarketDepth.tsx:resolveDepth",
+        "function:frontend/src/modules/order/MarketDepth.tsx:MarketDepth",
+        "function:frontend/src/modules/order/MarketDepth.tsx:DepthSummaryRow",
+        "function:frontend/src/modules/order/MarketDepth.tsx:DepthLadder",
+        "function:frontend/src/modules/order/MarketDepth.tsx:DepthRow",
+        "function:frontend/src/modules/order/MarketDepth.tsx:QuickTradeBar",
+        "function:frontend/src/modules/order/OrderForm.tsx:OrderForm",
+        "function:frontend/src/modules/order/OrderTradeBody.tsx:OrderTradeBody",
+        "function:frontend/src/modules/order/QtyPreset.tsx:QtyPreset",
+        "function:frontend/src/pages/KLinePage.tsx:KLinePage",
+        "function:frontend/src/modules/order/QuoteStatsBar.tsx:QuoteStatsBar",
+        "function:frontend/src/modules/order/TradeParams.tsx:TradeParams",
+        "function:frontend/src/modules/order/layoutStore.ts:useOrderLayoutStore",
+        "function:frontend/src/modules/market/MarketTable.tsx:shouldRenderAnchor",
+        "function:frontend/src/modules/market/MarketTable.tsx:buildRecord",
+        "function:frontend/src/modules/market/MarketTable.tsx:MarketTable",
+        "function:frontend/src/hooks/useConnectionPoll.ts:useConnectionPoll",
+        "function:frontend/src/hooks/useTabContractLocks.ts:useTabContractLocks",
+        "function:frontend/src/modules/infinite/InfiniteLadder.tsx:InfiniteLadder",
+        "function:frontend/src/modules/infinite/InfiniteTradeParams.tsx:InfiniteTradeParams",
+        "function:frontend/src/modules/infinite/ladderUtils.ts:isValidPrice",
+        "function:frontend/src/modules/infinite/ladderUtils.ts:tickDecimals",
+        "function:frontend/src/modules/infinite/ladderUtils.ts:formatTickPrice",
+        "function:frontend/src/modules/infinite/ladderUtils.ts:roundToTick",
+        "function:frontend/src/modules/infinite/ladderUtils.ts:buildPriceAxis",
+        "function:frontend/src/modules/infinite/ladderUtils.ts:buildDepthMaps",
+        "function:frontend/src/modules/infinite/store.ts:useInfiniteOrderStore",
+        "function:frontend/src/modules/order/myOrders.ts:aggregateMyOrders",
+        "function:frontend/src/pages/InfiniteOrderPage.tsx:InfiniteOrderPage",
+        "file:frontend/src/components/BottomBar/index.tsx",
+        "function:frontend/src/components/BottomBar/index.tsx::BottomBar",
+        "file:frontend/src/components/TabBar/index.tsx",
+        "function:frontend/src/components/TabBar/index.tsx::TabBar",
+        "file:frontend/src/components/TabContent/index.tsx",
+        "function:frontend/src/components/TabContent/index.tsx::TabContent",
+        "function:frontend/src/components/TabContent/index.tsx::renderTabContent",
+        "function:frontend/src/components/TabContent/index.tsx::getInstrumentID",
+        "function:frontend/src/components/TabContent/index.tsx::getCollectionId",
+        "file:frontend/src/hooks/useContractContextMenu.ts",
+        "function:frontend/src/hooks/useContractContextMenu.ts::useContractContextMenu",
+        "file:frontend/src/hooks/useSubscriptionManager.ts",
+        "module::useSubscriptionManager",
+        "module::OrderQuotePanel",
+        "module::SubscriptionStrategy",
+        "file:constant::GRACE_MS",
+        "file:constant::SOFT_LIMIT",
+        "file:constant::DRAG_WINDOW_MS",
+        "file:constant::DRAG_THRESHOLD",
+        "file:frontend/src/pages/OrderPage.tsx"
       ]
     },
     {
@@ -33065,8 +35627,123 @@
         "document:CLAUDE.md",
         "document:README.md",
         "document:snapshots/role-a/dev-record-a.md",
-        "file:doc:design.md",
-        "file:doc:dev.md"
+        "file:frontend/src/components/ContractSearch/index.tsx",
+        "file:frontend/src/components/ContractSearch/index.tsx::ContractSearch",
+        "file:frontend/src/components/InstrumentSearchModal/index.test.tsx",
+        "file:frontend/src/components/InstrumentSearchModal/index.tsx::InstrumentSearchModal",
+        "file:frontend/src/components/InstrumentSearchModal/index.tsx::hasChinese",
+        "file:frontend/src/components/InstrumentSearchModal/index.tsx::findProductIdsByChineseName",
+        "file:frontend/src/modules/market/MarketPanel.tsx",
+        "file:frontend/src/modules/market/dragSelectAnchor.test.tsx",
+        "file:frontend/src/modules/options/TQuoteView.tsx",
+        "file:frontend/src/modules/options/TQuoteView.test.tsx",
+        "file:frontend/src/modules/options/TQuoteView.style.test.tsx",
+        "file:frontend/src/services/types.ts",
+        "file:frontend/src/stores/contracts.test.ts",
+        "file:frontend/src/stores/userPrefs.test.ts",
+        "file:frontend/src/stores/userPrefs.ts",
+        "file:frontend/src/modules/order/AccountBar.tsx",
+        "file:frontend/src/modules/order/AccountBar.test.tsx",
+        "file:frontend/src/modules/query/AccountQuery.tsx",
+        "file:frontend/src/modules/query/AccountQuery.test.tsx",
+        "file:frontend/src/modules/query/OrderFlow.tsx",
+        "file:frontend/src/modules/query/OrderFlow.test.tsx",
+        "file:frontend/src/modules/query/Position.tsx",
+        "file:frontend/src/modules/query/Position.test.tsx",
+        "file:frontend/src/modules/query/store.ts",
+        "file:frontend/src/modules/query/store.test.ts",
+        "document:docs/specs/design.md",
+        "document:docs/specs/dev.md",
+        "concept:system-architecture",
+        "concept:ctp-api",
+        "concept:frontend-modules",
+        "concept:backend-modules",
+        "concept:data-flow",
+        "concept:websocket-protocol",
+        "concept:stop-order-service",
+        "concept:state-management",
+        "concept:error-handling",
+        "concept:performance-optimization",
+        "concept:role-division",
+        "concept:api-design",
+        "concept:ui-layout",
+        "concept:ctp-field-mapping",
+        "concept:testing-strategy",
+        "concept:environment-setup",
+        "module:market",
+        "module:order",
+        "module:query",
+        "module:options",
+        "module:ctp-wrapper",
+        "module:services",
+        "module:api-routes",
+        "file:component:MarketTable",
+        "file:component:OrderForm",
+        "file:component:KLineChart",
+        "file:component:DepthQuote",
+        "file:store:connection",
+        "file:store:market",
+        "file:store:order",
+        "file:store:query",
+        "file:api:connection",
+        "file:api:market",
+        "file:api:order",
+        "file:api:query",
+        "file:ws:market",
+        "file:ws:order",
+        "file:ws:position",
+        "file:ws:stop",
+        "file:ws:system",
+        "file:model:MarketSnapshot",
+        "file:model:OrderRequest",
+        "file:model:StopOrder",
+        "file:model:PositionRecord",
+        "concept:hotkey-management",
+        "concept:point-order",
+        "concept:price-step",
+        "concept:reconnect-mechanism",
+        "concept:memory-optimization",
+        "concept:dev-standards",
+        "file:frontend/src/pages/FavoritesPage.css",
+        "file:frontend/src/components/BottomBar/styles.css",
+        "file:css-class::bottom-bar",
+        "file:frontend/src/modules/market/MarketPanel.style.test.tsx",
+        "function:readCssBlock",
+        "file:frontend/src/modules/market/styles.css",
+        "file:css-section::market-panel",
+        "file:css-section::market-toolbar",
+        "file:css-class::kline-chart",
+        "file:css-class::context-menu",
+        "file:css-class::collection-filter-select",
+        "file:frontend/src/modules/options/styles.css",
+        "file:css-section::options-toolbar",
+        "file:frontend/src/modules/query/styles.css",
+        "file:css-section::query-panel",
+        "file:css-section::order-flow-table",
+        "file:css-section::account-grid",
+        "file:server/tests/test_connection_api.py",
+        "function:server/tests/test_connection_api.py::_make_app",
+        "function:server/tests/test_connection_api.py::app",
+        "class:server/tests/test_connection_api.py::TestLogin",
+        "class:server/tests/test_connection_api.py::TestLogout",
+        "class:server/tests/test_connection_api.py::TestStatus",
+        "file:method::server/tests/test_connection_api.py::TestLogin::test_login_returns_success",
+        "file:method::server/tests/test_connection_api.py::TestLogin::test_login_missing_fields_returns_422",
+        "file:method::server/tests/test_connection_api.py::TestLogin::test_login_empty_broker_id_422",
+        "file:method::server/tests/test_connection_api.py::TestLogin::test_login_already_connected_same_user",
+        "file:method::server/tests/test_connection_api.py::TestLogin::test_login_already_connected_different_user",
+        "file:method::server/tests/test_connection_api.py::TestLogin::test_login_rejects_when_thread_running",
+        "file:method::server/tests/test_connection_api.py::TestLogin::test_login_allows_when_thread_dead",
+        "file:method::server/tests/test_connection_api.py::TestLogin::test_login_returns_failure_on_wrong_password",
+        "file:method::server/tests/test_connection_api.py::TestLogin::test_login_disconnected_trader_api_allows_retry",
+        "file:method::server/tests/test_connection_api.py::TestLogout::test_logout_clears_trader_api",
+        "file:method::server/tests/test_connection_api.py::TestLogout::test_logout_clears_thread",
+        "file:method::server/tests/test_connection_api.py::TestLogout::test_logout_without_login",
+        "file:method::server/tests/test_connection_api.py::TestLogout::test_logout_handles_release_error",
+        "file:method::server/tests/test_connection_api.py::TestStatus::test_status_returns_fields",
+        "file:method::server/tests/test_connection_api.py::TestStatus::test_status_initial_state",
+        "file:method::server/tests/test_connection_api.py::TestStatus::test_status_with_ctp_connected",
+        "file:method::server/tests/test_connection_api.py::TestStatus::test_status_with_ctp_disconnected"
       ]
     },
     {

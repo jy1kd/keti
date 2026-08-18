@@ -4,19 +4,19 @@ import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ContractFilter } from '@/components/ContractFilter'
 import { QuoteTable } from './QuoteTable'
+import { CollectionFilterTabs } from './CollectionFilterTabs'
 import { futuresSpec } from './futuresSpec'
 import { sortFutures } from './sort'
 import { filterByExchangeAndProduct } from './filter'
 import { useMarketStore } from './store'
 import { useMarketFilterStore } from '@/stores/marketFilter'
 import { useContractsStore } from '@/stores/contracts'
-import { useCollectionsStore, unionFavoritedIds } from '@/stores/collections'
+import { useCollectionsStore, unionFavoritedIds, collectionFavoritedIds } from '@/stores/collections'
 import { useTabStore } from '@/stores/tabs'
 import { useContractContextMenu } from '@/hooks/useContractContextMenu'
 import { useContractMenus } from '@/hooks/useContractMenus'
 import { usePointOrder } from '@/hooks/usePointOrder'
 import { CollectionPicker } from '@/components/CollectionPicker'
-import { CollectionFilterSelect } from '@/modules/query/CollectionFilterSelect'
 import { filterByCollection } from '@/modules/query/filter'
 import { useOrderStore } from '@/modules/order/store'
 import { getProductName } from '@/utils/productNames'
@@ -40,7 +40,7 @@ export function MarketPanel() {
 
   // 期货页筛选态（交易所+品种多选，独立于期权页，localStorage 持久化）
   const filter = useMarketFilterStore((s) => s.futures)
-  // 期货页收藏夹过滤（与三个查询浮窗语义一致：下拉选择夹，'' = 全部）
+  // 期货页收藏夹过滤（与三个查询浮窗语义一致：Tab 条选夹，'' = 全部）
   const collectionId = useMarketFilterStore((s) => s.futuresCollectionId)
   const setCollectionId = (id: string) => useMarketFilterStore.getState().setCollectionId('futures', id)
 
@@ -49,11 +49,21 @@ export function MarketPanel() {
     () => sortFutures(contracts.filter((c) => c.productClass === '1')),
     [contracts],
   )
-  // ⭐ 填充态 = 任一收藏夹内的合约（union）；仅用于 ⭐ 列/收藏按钮状态，不再做内部自选视图
+  // ⭐ 本夹视角：选中某收藏夹 Tab 时仅本夹内亮（folder 语义），「全部」下任一夹即亮（union）
+  const favoriteMode: 'picker' | 'folder' = collectionId ? 'folder' : 'picker'
   const favoritedIds = useMemo(
-    () => unionFavoritedIds(collections),
-    [collections],
+    () => (favoriteMode === 'folder'
+      ? collectionFavoritedIds(collections, collectionId)
+      : unionFavoritedIds(collections)),
+    [collections, collectionId, favoriteMode],
   )
+
+  // 收藏夹删除了当前选中的夹 → 自动回退「全部」，避免 stale 选中使表格空转
+  useEffect(() => {
+    if (collectionId && !collections.some((c) => c.id === collectionId)) {
+      useMarketFilterStore.getState().setCollectionId('futures', '')
+    }
+  }, [collectionId, collections])
 
   // 期货页基础集 = 全部期货（已去除 [全部|自选] 内部视图）
   const baseContracts = sortedFutures
@@ -86,14 +96,26 @@ export function MarketPanel() {
     })
   }, [baseContracts, filter, searchQuery, collections, collectionId])
 
-  // 右键菜单 JSX（⭐ 列点击 / 搜索弹窗仍走 picker 弹面板，工具栏已改为过滤下拉）
+  // 右键菜单 JSX（⭐ 列点击 / 搜索弹窗仍走 picker 弹面板，工具栏已改为 Tab 条）
   const { singleMenu, multiMenu } = useContractMenus({
     contextMenu,
     multiSelectMenu,
     favoritedIds,
-    favoriteMode: 'picker',
+    favoriteMode,
     onOpenFavoritePicker: (instrumentIDs) => setPicker({ instrumentIDs }),
     onRemoveFromAll: (instrumentIDs) => useCollectionsStore.getState().removeFromAllCollections(instrumentIDs),
+    onToggleInFolder: (instrumentID) => {
+      if (favoriteMode !== 'folder') return
+      if (favoritedIds.has(instrumentID)) {
+        useCollectionsStore.getState().removeFromCollection(instrumentID, collectionId)
+      } else {
+        useCollectionsStore.getState().addToCollections([instrumentID], [collectionId])
+      }
+    },
+    onRemoveFromFolderBatch: (instrumentIDs) => {
+      if (favoriteMode !== 'folder') return
+      for (const id of instrumentIDs) useCollectionsStore.getState().removeFromCollection(id, collectionId)
+    },
     openOrderPopup,
     openKlineTab,
     openInfinitePopup,
@@ -161,7 +183,8 @@ export function MarketPanel() {
           value={filter}
           onChange={(v) => useMarketFilterStore.getState().setFilter('futures', v)}
         />
-        <CollectionFilterSelect value={collectionId} onChange={setCollectionId} />
+        {/* 收藏夹过滤 Tab 条（全部 + 各收藏夹），与筛选同行；夹多/窄屏时横向滚动 */}
+        <CollectionFilterTabs value={collectionId} onChange={setCollectionId} />
         {/* 搜索贴右：搜索框 + 🔍 + 计数（margin-left:auto 吃掉中间空间推到最右） */}
         <div className="market-toolbar__search">
           <ContractSearch contracts={baseContracts} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
@@ -194,7 +217,20 @@ export function MarketPanel() {
             onMultiSelectContextMenu={handleMultiSelectContextMenu}
             onVisibleRangeChange={setVisibleInstrumentIDs}
             favoritedIds={favoritedIds}
-            onFavoriteChange={(instrumentID) => setPicker({ instrumentIDs: [instrumentID] })}
+            onFavoriteChange={(instrumentID, isFavorited) => {
+              // 本夹视角：选中收藏夹 Tab 时 ⭐ 列直接切换本夹收藏态（folder 语义）；
+              // 「全部」下维持弹选夹面板（picker 语义）。
+              // QuoteTable 传入的是「期望状态」：true=收藏，false=移除。
+              if (favoriteMode === 'folder') {
+                if (isFavorited) {
+                  useCollectionsStore.getState().addToCollections([instrumentID], [collectionId])
+                } else {
+                  useCollectionsStore.getState().removeFromCollection(instrumentID, collectionId)
+                }
+                return
+              }
+              setPicker({ instrumentIDs: [instrumentID] })
+            }}
             selectedContracts={selectedContracts}
             onSelectionChange={setSelectedContracts}
           />
