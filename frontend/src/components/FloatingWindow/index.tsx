@@ -42,7 +42,7 @@ function handleStyle(rect: { x: number; y: number; w: number; h: number }, dir: 
  * FloatingWindow — 浮动窗口 chrome 壳（不含业务内容）
  *
  * 业务内容由 TabContent 以 position:fixed 位移盖在壳上；壳只画标题条
- * （拖拽移动 / ⇩ 停靠 / × 关闭）与 8 个方向缩放手柄。
+ * （拖拽移动 / ⇧ 停靠 / × 关闭）与 8 个方向缩放手柄。
  */
 function FloatingWindow({ tabId }: FloatingWindowProps) {
   const tab = useTabStore((s) => s.tabs.find((t) => t.id === tabId))
@@ -127,7 +127,7 @@ function FloatingWindow({ tabId }: FloatingWindowProps) {
             title="停靠到标签栏"
             onClick={() => dock(tabId)}
           >
-            ⇩
+            ⇧
           </button>
           <button
             type="button"

@@ -19,7 +19,7 @@ export const ORDER_FLOATING_SIZE = { w: 620, h: 540 }
 /**
  * openFloatingTab — 打开标签页并立即脱离为浮动窗口（统一「弹窗」入口）
  *
- * 浮动窗口机制天然支持 标签页 ↔ 浮动窗口 双向转换（⇩ 停靠回标签栏 / 拖拽脱离），
+ * 浮动窗口机制天然支持 标签页 ↔ 浮动窗口 双向转换（⇧ 停靠回标签栏 / 拖拽脱离），
  * 所有右上角入口统一走此函数：标签不进标签栏、以浮动窗形态弹出。
  * openTab 会把新标签设为活跃；detachTabAt 对活跃标签脱离后又会把活跃切回 market，
  * 会拽走主窗口当前页（如从期权页双击标底 → 主窗口跳到期货页）。故脱离成功后恢复
@@ -71,7 +71,7 @@ export function openTQuoteFloating(underlyingID?: string): boolean {
   })
 }
 
-/** 打开收藏夹悬浮窗：初始即为悬浮窗口（可 ⇩ 停靠回标签栏） */
+/** 打开收藏夹悬浮窗：初始即为悬浮窗口（可 ⇧ 停靠回标签栏） */
 export function openCollectionFloating(collectionId: string, name: string): boolean {
   return openFloatingTab({
     type: 'collection',

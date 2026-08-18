@@ -21,7 +21,7 @@ export function CollectionsPage() {
     toast.success(`已新建收藏夹「${name}」`)
   }
 
-  // 打开收藏夹 → 初始即为悬浮窗口（openFloatingTab 打开后立即脱离；可 ⇩ 停靠回标签栏）
+  // 打开收藏夹 → 初始即为悬浮窗口（openFloatingTab 打开后立即脱离；可 ⇧ 停靠回标签栏）
   const openCollection = (id: string, name: string) => {
     openCollectionFloating(id, name)
   }

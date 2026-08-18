@@ -49,7 +49,7 @@ describe('FloatingWindows', () => {
     expect(screen.getByLabelText('关闭标签')).toBeInTheDocument()
   })
 
-  it('点击 ⇩ 停靠按钮应移除窗口登记', () => {
+  it('点击 ⇧ 停靠按钮应移除窗口登记', () => {
     useFloatingWindowStore.getState().detach('tab-settings', { x: 10, y: 20, w: 400, h: 300 })
     render(<FloatingWindows />)
     fireEvent.click(screen.getByLabelText('停靠到标签栏'))
