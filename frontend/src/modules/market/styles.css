@@ -524,18 +524,17 @@
   background: var(--bg-hover, #2d333b);
 }
 
-/* ── 收藏夹过滤 Tab 条（期货页工具栏与行情表之间，替换下拉） ────────
-   收藏夹数量可变：整条单行，横滚（wheel 横转 scrollLeft）+ 夹名省略号截断。 */
+/* ── 收藏夹过滤 Tab 条（期货页工具栏内联于筛选与搜索之间） ──────────
+   收藏夹数量可变：整条纵向紧凑，横向滚动（wheel 横转 scrollLeft）+ 夹名省略号截断。
+   作为工具栏 flex 子项：自然宽；夹多/窄屏时收缩并内部横滚（min-width:0 + overflow 生效前提）。 */
 .collection-tabs {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
   overflow-x: auto;
   scrollbar-width: none;   /* Firefox 隐藏滚动条 */
-  flex-shrink: 0;
-  background: var(--bg-primary, #0d1117);
-  border-bottom: 1px solid var(--border-color, #21262d);
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .collection-tabs::-webkit-scrollbar {

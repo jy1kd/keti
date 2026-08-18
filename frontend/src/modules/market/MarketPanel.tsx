@@ -183,7 +183,8 @@ export function MarketPanel() {
           value={filter}
           onChange={(v) => useMarketFilterStore.getState().setFilter('futures', v)}
         />
-        {/* 收藏夹过滤已由工具栏下拉升级为下方 Tab 条（CollectionFilterTabs） */}
+        {/* 收藏夹过滤 Tab 条（全部 + 各收藏夹），与筛选同行；夹多/窄屏时横向滚动 */}
+        <CollectionFilterTabs value={collectionId} onChange={setCollectionId} />
         {/* 搜索贴右：搜索框 + 🔍 + 计数（margin-left:auto 吃掉中间空间推到最右） */}
         <div className="market-toolbar__search">
           <ContractSearch contracts={baseContracts} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
@@ -201,9 +202,6 @@ export function MarketPanel() {
           )}
         </div>
       </div>
-
-      {/* 收藏夹过滤 Tab 条（全部 + 各收藏夹；选中夹即时过滤行情表） */}
-      <CollectionFilterTabs value={collectionId} onChange={setCollectionId} />
 
       <div className="panel-content">
         <ErrorBoundary>

@@ -444,7 +444,7 @@ describe('MarketPanel', () => {
   })
 
   describe('工具行布局（Task 8：功能靠左、搜索贴右）', () => {
-    it('DOM 顺序：筛选 → 搜索框（收藏夹过滤已改为工具栏下方的 Tab 条，不在工具栏 DOM 内）', () => {
+    it('DOM 顺序：筛选 → 搜索框（收藏夹 Tab 条内联于工具栏，不单独占一行）', () => {
       const { container } = render(<MarketPanel />)
       const toolbar = container.querySelector('.market-toolbar') as HTMLElement
       const filterBtn = screen.getByRole('button', { name: /筛选/ })
@@ -477,10 +477,13 @@ describe('MarketPanel', () => {
         isLoaded: true,
       })
       const user = userEvent.setup()
-      render(<MarketPanel />)
-      // 工具栏收藏夹过滤已从下拉升级为 Tab 条（替换 CollectionFilterSelect）
+      const { container } = render(<MarketPanel />)
+      // 工具栏收藏夹过滤已从下拉升级为 Tab 条（替换 CollectionFilterSelect），与筛选同行
       expect(screen.queryByRole('combobox')).toBeNull()
       expect(screen.getByTestId('collection-tabs')).toBeInTheDocument()
+      // Tab 条内联在工具栏内（不单独占一行）
+      const toolbar = container.querySelector('.market-toolbar') as HTMLElement
+      expect(toolbar.contains(screen.getByTestId('collection-tabs'))).toBe(true)
       // 切到「黑色系」→ 表格只保留 RB2610
       await user.click(screen.getByRole('tab', { name: /黑色系/ }))
       const { ListTable } = await import('@visactor/vtable')

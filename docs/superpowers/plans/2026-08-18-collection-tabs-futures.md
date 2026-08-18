@@ -9,11 +9,13 @@
 1. **用 Tab 条替换期货页工具栏下拉**（查询页/期权页下拉不动）
 2. **⭐ 列「本夹视角」**：选中某收藏夹 Tab 时，⭐ 仅反映本夹内、点 ⭐ 直接切本夹；「全部」Tab 下维持现状（弹选夹面板）
 3. **单行横滚 + 省略截断**：夹多/窄屏时横滚，夹名截断
+4. **放置：内联于筛选那一行**（工具栏内，筛选按钮与搜索框之间），不单独占一行（用户 2026-08-18 调整）
 
 ## 目标交互
 
 ```
-[ 全部 | 📁 自选(12) | 📁 黑色金属(8) | 📁 贵金属(5)  … ]   ← 工具栏与行情表之间
+[ 筛选 | 全部 | 📁 自选(12) | 📁 黑色金属(8) …  ... ]   [ 搜索🔍 ]
+   └──────── 同一工具栏行（收藏夹条自然宽，夹多时内部横滚） ────────┘
 ```
 
 - 首 Tab「全部」= 不限收藏夹（value=''）
@@ -42,8 +44,8 @@
 | 文件 | 动作 |
 |---|---|
 | `frontend/src/modules/market/CollectionFilterTabs.tsx` | **新增**（页面无关，props: value/onChange，读 useCollectionsStore） |
-| `frontend/src/modules/market/styles.css` | 新增 tab 条样式 |
-| `frontend/src/modules/market/MarketPanel.tsx` | 移除工具栏下拉 → 插入 Tab 条；stale-id 回退 effect；⭐/右键按当前夹切换 picker↔folder |
+| `frontend/src/modules/market/styles.css` | 新增 tab 条样式（工具栏内联：自然宽 + 收缩横滚 / pill / active / 角标） |
+| `frontend/src/modules/market/MarketPanel.tsx` | 工具栏内移除下拉 → 插入 Tab 条（筛选与搜索之间）；stale-id 回退 effect；⭐/右键按当前夹切换 picker↔folder |
 | `frontend/src/modules/market/CollectionFilterTabs.test.tsx` | **新增**：渲染/角标/点击/0 夹隐藏/active/stale 回退 |
 | `frontend/src/modules/market/MarketPanel.test.tsx` | 更新：tab 条集成、⭐ 本夹视角交互 |
 
