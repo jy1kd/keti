@@ -1,52 +1,28 @@
 import { create } from 'zustand'
-import type { HotKeyConfig, QuickTradeConfig } from '@/services/types'
+import type { HotKeyConfig, OrderTriggerConfig } from '@/services/types'
 import type { Collection } from './collections'
 
 const STORAGE_KEY = 'simnow-user-prefs'
 
 export const DEFAULT_HOT_KEYS: HotKeyConfig = {
-  // 交易快捷键
-  buy: 'b',
-  sell: 's',
-  cancel: 'c',
-  reverse: '',
-  lock: '',
-  batchCancel: 'Escape',
-  // 导航快捷键
-  openOrder: '',
-  openKline: '',
+  openOrder: 'o',
+  openKline: 'k',
   openSettings: ',',
+  batchCancel: 'Escape',
 }
 
-export const DEFAULT_QUICK_TRADE_CONFIG: QuickTradeConfig = {
-  lock: {
-    priceMode: 'counterparty',
-    offsetTicks: 1,
-    timeCondition: 'gfd',
-  },
-  reverse: {
-    close: {
-      priceMode: 'counterparty',
-      offsetTicks: 1,
-      timeCondition: 'gfd',
-    },
-    open: {
-      priceMode: 'counterparty',
-      offsetTicks: 1,
-      timeCondition: 'gfd',
-    },
-    executionMode: 'serial',
-  },
-  confirmBeforeExecute: true,
+export const DEFAULT_ORDER_TRIGGER: OrderTriggerConfig = {
+  triggerMode: 'single',
+  confirmBeforeOrder: true,
 }
 
 interface UserPrefsStore {
   collections: Collection[]
   hotKeys: HotKeyConfig
-  quickTradeConfig: QuickTradeConfig
+  orderTrigger: OrderTriggerConfig
   setHotKey: (action: string, key: string) => void
   setHotKeys: (hotKeys: HotKeyConfig) => void
-  setQuickTradeConfig: (config: Partial<QuickTradeConfig>) => void
+  setOrderTrigger: (config: OrderTriggerConfig) => void
   setCollections: (collections: Collection[]) => void
   saveToLocalStorage: () => void
   loadFromLocalStorage: () => void
@@ -55,18 +31,17 @@ interface UserPrefsStore {
 export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
   collections: [],
   hotKeys: { ...DEFAULT_HOT_KEYS },
-  quickTradeConfig: { ...DEFAULT_QUICK_TRADE_CONFIG },
+  orderTrigger: { ...DEFAULT_ORDER_TRIGGER },
 
   setHotKey: (action, key) =>
     set((state) => ({ hotKeys: { ...state.hotKeys, [action]: key } })),
   setHotKeys: (hotKeys) => set({ hotKeys: { ...hotKeys } }),
-  setQuickTradeConfig: (config) =>
-    set((state) => ({ quickTradeConfig: { ...state.quickTradeConfig, ...config } })),
+  setOrderTrigger: (config) => set({ orderTrigger: { ...config } }),
   setCollections: (collections) => set({ collections }),
 
   saveToLocalStorage: () => {
-    const { collections, hotKeys, quickTradeConfig } = get()
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ collections, hotKeys, quickTradeConfig }))
+    const { collections, hotKeys, orderTrigger } = get()
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ collections, hotKeys, orderTrigger }))
   },
 
   loadFromLocalStorage: () => {
@@ -83,7 +58,7 @@ export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
       set({
         collections,
         hotKeys: data.hotKeys ?? { ...DEFAULT_HOT_KEYS },
-        quickTradeConfig: data.quickTradeConfig ?? { ...DEFAULT_QUICK_TRADE_CONFIG },
+        orderTrigger: data.orderTrigger ?? { ...DEFAULT_ORDER_TRIGGER },
       })
     } catch {
       // localStorage 数据损坏时忽略
