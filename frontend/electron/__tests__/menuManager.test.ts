@@ -64,7 +64,7 @@ describe('MenuManager', () => {
     const manager = new MenuManager();
     manager.initialize(mainWindow, windowManager);
     const labels = getTemplate().map((item) => item.label);
-    expect(labels).toEqual(['行情', '收藏夹', '交易', '查询', '设置']);
+    expect(labels).toEqual(['行情', '交易', '查询', '设置']);
   });
 
   it('should not include native role menus', () => {
@@ -112,13 +112,6 @@ describe('MenuManager', () => {
       manager.initialize(mainWindow, windowManager);
       clickItem('行情', '📉 期权');
       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'options');
-    });
-
-    it('点击收藏夹发送 menu:open-floating collections', () => {
-      const manager = new MenuManager();
-      manager.initialize(mainWindow, windowManager);
-      clickItem('收藏夹', '📁 打开收藏夹');
-      expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'collections');
     });
 
     it('点击 🪟 在新窗口打开 打开行情独立窗口', () => {

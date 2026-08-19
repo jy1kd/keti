@@ -17,9 +17,9 @@ interface TemplateItem {
 }
 
 describe('getAppMenuDef', () => {
-  it('返回五组一级菜单：行情/收藏夹/交易/查询/设置', () => {
+  it('返回四组一级菜单：行情/交易/查询/设置', () => {
     const def = getAppMenuDef();
-    expect(def.map((d) => d.label)).toEqual(['行情', '收藏夹', '交易', '查询', '设置']);
+    expect(def.map((d) => d.label)).toEqual(['行情', '交易', '查询', '设置']);
   });
 
   it('行情子菜单：期货/期权/K线/T型报价/新窗口', () => {
@@ -28,14 +28,6 @@ describe('getAppMenuDef', () => {
       .filter((i) => i.type !== 'separator')
       .map((i) => i.label);
     expect(labels).toEqual(['📊 期货', '📉 期权', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']);
-  });
-
-  it('收藏夹一级子菜单：打开收藏夹（open-floating collections）', () => {
-    const collections = getAppMenuDef().find((d) => d.id === 'collections')!;
-    const labels = collections.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📁 打开收藏夹']);
-    const open = collections.submenu!.find((i) => i.id === 'collections-open')!;
-    expect(open.action).toEqual({ type: 'open-floating', tab: 'collections' });
   });
 
   it('行情「📈 K线」action 为 open-floating kline（在首个分隔符后）', () => {

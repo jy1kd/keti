@@ -82,6 +82,10 @@ export function CollectionPicker({ isOpen, instrumentIDs = [], seriesIDs, onClos
     const name = newName.trim()
     if (!name) return
     const id = createCollection(name)
+    if (id === null) {
+      toast.error('收藏夹名称已存在')
+      return
+    }
     setChecked((prev) => new Set(prev).add(id))
     setNewName('')
     toast.success(`已新建收藏夹「${name}」`)

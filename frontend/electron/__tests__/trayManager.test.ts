@@ -83,19 +83,11 @@ describe('TrayManager', () => {
     expect(manager.getTray()!.setContextMenu).toHaveBeenCalled();
   });
 
-  it('一级菜单结构：行情/收藏夹/交易/查询/设置/分隔符/退出', () => {
+  it('一级菜单结构：行情/交易/查询/设置/分隔符/退出', () => {
     const manager = new TrayManager();
     manager.initialize(mainWindow, windowManager);
     const sig = getTemplate().map((i) => (i.type === 'separator' ? '---' : i.label));
-    expect(sig).toEqual(['行情', '收藏夹', '交易', '查询', '设置', '---', '退出']);
-  });
-
-  it('收藏夹一级子菜单包含 打开收藏夹', () => {
-    const manager = new TrayManager();
-    manager.initialize(mainWindow, windowManager);
-    const collections = getTemplate().find((i) => i.label === '收藏夹')!;
-    const labels = collections.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📁 打开收藏夹']);
+    expect(sig).toEqual(['行情', '交易', '查询', '设置', '---', '退出']);
   });
 
   it('设置子菜单不包含退出（已提到一级底部）', () => {

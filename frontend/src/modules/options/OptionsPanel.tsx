@@ -18,6 +18,7 @@ import { useMarketFilterStore } from '@/stores/marketFilter'
 import { useTabStore } from '@/stores/tabs'
 import { useContractContextMenu } from '@/hooks/useContractContextMenu'
 import { useContractMenus } from '@/hooks/useContractMenus'
+import { usePointOrder } from '@/hooks/usePointOrder'
 import { getProductName } from '@/utils/productNames'
 import './styles.css'
 
@@ -186,16 +187,22 @@ export function OptionsPanel() {
     handleSelectContract(instrumentID)
   }, [handleSelectContract])
 
-  // ── T 行单击回填 ───────────────────────────────────────────────────────
-  const onSelectContract = useCallback((instrumentID: string, price: number) => {
-    setSelectedInstrument(instrumentID)
-    setOrderInstrument(instrumentID)
-    const inst = contracts.find((c) => c.instrumentID === instrumentID)
-    // price=0 表示当前无快照也无链静态价（OptionsTable 显示 '--'，点击回传 0）。
-    // 此时只选合约、不回填限价——否则订单表单出现 0 值（点击 bug）。
-    // 快照已到（price>0）时正常回填最新价。
-    if (!(inst && inst.productClass === '1') && price > 0) setOrderForm({ limitPrice: price })
-  }, [contracts, setSelectedInstrument, setOrderInstrument, setOrderForm])
+  // ── T 行单击/双击（与期货表格一致：单击选中+填价，双击打开五档下单悬浮窗） ──
+  const { handleClick, handleDoubleClick } = usePointOrder({
+    onOrder: ({ instrumentID, price }) => {
+      setSelectedInstrument(instrumentID)
+      setOrderInstrument(instrumentID)
+      const inst = contracts.find((c) => c.instrumentID === instrumentID)
+      // price=0 表示当前无快照也无链静态价（OptionsTable 显示 '--'，点击回传 0）。
+      // 此时只选合约、不回填限价——否则订单表单出现 0 值（点击 bug）。
+      // 快照已到（price>0）时正常回填最新价。
+      if (!(inst && inst.productClass === '1') && price > 0) setOrderForm({ limitPrice: price })
+    },
+    onFill: ({ instrumentID }) => {
+      setSelectedInstrument(instrumentID)
+      openOrderPopup(instrumentID)
+    },
+  })
 
   // ── 清空筛选（OptionsFilterBar「清空」按钮）时重置选中合约 ───────────────
   // 直接清空 selectedInstrument（不设到第一个——选中的是期权合约，清空后不保留）
@@ -253,7 +260,8 @@ export function OptionsPanel() {
               snapshots={snapshots}
               isActive={isActive}
               onToggleGroup={toggleGroup}
-              onRowClick={onSelectContract}
+              onRowClick={handleClick}
+              onRowDoubleClick={handleDoubleClick}
               onContextMenu={handleContextMenu}
               onVisibleRangeChange={handleVisibleRangeChange}
             />
