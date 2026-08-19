@@ -8,6 +8,8 @@ import { useConnectionPoll } from '@/hooks/useConnectionPoll'
 import { useTabContractLocks } from '@/hooks/useTabContractLocks'
 import { useMarketWs } from '@/hooks/useMarketWs'
 import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
+import { useHotKeys } from '@/hooks/useHotKeys'
+import { useUserPrefsStore } from '@/stores/userPrefs'
 import { useMarketStore } from '@/modules/market/store'
 import { useContractsStore } from '@/stores/contracts'
 import { useCollectionsStore } from '@/stores/collections'
@@ -49,6 +51,16 @@ function App() {
   // subscribedRef 组件私有，若双份挂载会双份 diff 冲突，故必须单例）
   useMarketWs(API_BASE.replace('http', 'ws'))
   useSubscriptionManager()
+
+  // 全局导航快捷键：打开报单/K线/设置浮动窗（快捷键配置在设置页）
+  const hotKeys = useUserPrefsStore((s) => s.hotKeys)
+  useHotKeys({
+    enabled: true,
+    hotKeys,
+    onOpenOrder: () => openOrderFloating(),
+    onOpenKline: () => openKlineFloating(),
+    onOpenSettings: () => openSettingsFloating(),
+  })
 
   // 启动时加载全量合约 + 收藏夹（原先在 MarketPanel，现上移共享）+ 持久化筛选。
   // StrictMode 开发双挂载会重复执行 effect：用 useRef 守卫保证只加载一次。

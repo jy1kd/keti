@@ -285,14 +285,7 @@ interface OrderResult {
 interface ReverseResponse {
   success: boolean
   orders: OrderResult[]
-  /** 后端错误分支返回 { success: false, message }；与 LockResponse 错误形态对齐 */
-  message?: string
-}
-
-interface LockResponse {
-  success: boolean
-  orders: OrderResult[]
-  /** 后端错误分支返回 { success: false, message }；与 ReverseResponse 错误形态对齐 */
+  /** 后端错误分支返回 { success: false, message } */
   message?: string
 }
 
@@ -338,17 +331,6 @@ export async function reversePosition(params: {
   executionMode?: string
 }): Promise<ReverseResponse> {
   const { data } = await api.post<ReverseResponse>('/api/order/reverse', params)
-  return data
-}
-
-/** 一键锁仓 — 反手锁仓或双开锁仓 */
-export async function lockPosition(params: {
-  instrumentID: string
-  priceType?: string
-  limitPrice?: number
-  timeCondition?: string
-}): Promise<LockResponse> {
-  const { data } = await api.post<LockResponse>('/api/order/lock', params)
   return data
 }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { api, API_BASE, getInstruments, subscribeMarket, getSnapshots, getKlineData, submitOrder, cancelOrder, refreshInstruments, cancelAllOrders, reversePosition, lockPosition, getPositions, getOrders, getOptionChains, getVolatility } from './api'
+import { api, API_BASE, getInstruments, subscribeMarket, getSnapshots, getKlineData, submitOrder, cancelOrder, refreshInstruments, cancelAllOrders, reversePosition, getPositions, getOrders, getOptionChains, getVolatility } from './api'
 
 describe('api (Axios 实例)', () => {
   it('API_BASE 有值', () => {
@@ -284,50 +284,6 @@ describe('reversePosition', () => {
     vi.spyOn(api, 'post').mockRejectedValue(error)
 
     await expect(reversePosition({ instrumentID: 'IF2608' })).rejects.toThrow()
-  })
-})
-
-describe('lockPosition', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks()
-  })
-
-  it('calls POST /api/order/lock with instrumentID', async () => {
-    const mockData = { success: true, message: 'Position locked' }
-    vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
-
-    const result = await lockPosition({ instrumentID: 'IF2608' })
-
-    expect(api.post).toHaveBeenCalledWith('/api/order/lock', { instrumentID: 'IF2608' })
-    expect(result).toEqual(mockData)
-  })
-
-  it('passes price type and limit price to lock endpoint', async () => {
-    const mockData = { success: true, message: '' }
-    vi.spyOn(api, 'post').mockResolvedValue({ data: mockData })
-
-    await lockPosition({
-      instrumentID: 'IF2608',
-      priceType: '2',
-      limitPrice: 4800,
-      timeCondition: '3',
-    })
-
-    expect(api.post).toHaveBeenCalledWith('/api/order/lock', {
-      instrumentID: 'IF2608',
-      priceType: '2',
-      limitPrice: 4800,
-      timeCondition: '3',
-    })
-  })
-
-  it('handles 501 not implemented gracefully', async () => {
-    const error = Object.assign(new Error('Request failed with status code 501'), {
-      response: { status: 501, data: { detail: 'Not implemented' } },
-    })
-    vi.spyOn(api, 'post').mockRejectedValue(error)
-
-    await expect(lockPosition({ instrumentID: 'IF2608' })).rejects.toThrow()
   })
 })
 

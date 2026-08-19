@@ -33,7 +33,7 @@ function formatMoney(n: number): string {
  * 打开即触发 fetchPositions + fetchAccount，每 10s 串行自刷新（遵守 CTP ~1 次/秒查询限频）。
  * 持仓按当前合约 instrumentID 过滤，posiDirection '2'/'3' 求和：多|空(净)；持盈盈红亏绿。
  * 账户号点击展开资金明细下拉（可用资金 / 持仓盈亏 / 动态权益）。
- * （2026-08-07 用户要求移除「锁仓」按钮；锁仓能力保留在报单面板 QuickActions 一键锁仓。）
+ * （2026-08-07 用户要求移除「锁仓」按钮；一键锁仓功能已下线（2026-08-19）。）
  */
 export function AccountBar({ instrumentID }: AccountBarProps) {
   const positions = useQueryStore((s) => s.positions)
