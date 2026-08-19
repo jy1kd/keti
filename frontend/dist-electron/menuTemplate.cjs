@@ -11,8 +11,8 @@ exports.getAppMenuDef = getAppMenuDef;
 exports.buildMenuFromDef = buildMenuFromDef;
 const menuActions_1 = require('./menuActions.cjs');
 /**
- * 五组原生菜单定义 —— 唯一的菜单真源。
- * 行情 / 收藏夹 / 交易 / 查询 / 设置.
+ * 四组原生菜单定义 —— 唯一的菜单真源。
+ * 行情 / 交易 / 查询 / 设置.
  * 「设置」内不再包含退出；托盘 omitIds 仅保留兼容引用（托盘自带一级底部退出）。
  */
 function getAppMenuDef() {
@@ -28,13 +28,6 @@ function getAppMenuDef() {
                 { id: 'market-tquote', label: '📉 T型报价', action: { type: 'open-floating', tab: 'tquote' } },
                 { id: 'market-sep2', type: 'separator' },
                 { id: 'market-new-window', label: '🪟 在新窗口打开', action: { type: 'open-market-window' } },
-            ],
-        },
-        {
-            id: 'collections',
-            label: '收藏夹',
-            submenu: [
-                { id: 'collections-open', label: '📁 打开收藏夹', action: { type: 'open-floating', tab: 'collections' } },
             ],
         },
         {

@@ -32,8 +32,8 @@ export interface BuildOptions {
     omitIds?: string[];
 }
 /**
- * 五组原生菜单定义 —— 唯一的菜单真源。
- * 行情 / 收藏夹 / 交易 / 查询 / 设置.
+ * 四组原生菜单定义 —— 唯一的菜单真源。
+ * 行情 / 交易 / 查询 / 设置.
  * 「设置」内不再包含退出；托盘 omitIds 仅保留兼容引用（托盘自带一级底部退出）。
  */
 export declare function getAppMenuDef(): MenuItemDef[];
