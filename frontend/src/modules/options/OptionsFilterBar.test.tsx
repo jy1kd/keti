@@ -146,15 +146,20 @@ describe('OptionsFilterBar 合并的交易所→品种下拉 → Tab → 系列'
     fireEvent.click(screen.getByLabelText('FG'))
     // FG 有两个系列，系列下拉随激活 tab 出现
     expect(screen.getByTestId('options-series-select')).toBeInTheDocument()
-    // 未选 → 按钮显示「FG 系列·多选」
-    expect(screen.getByTestId('options-series-dropdown')).toHaveTextContent('FG 系列·多选')
+    // 默认全选 → 按钮显示「FG 系列·全部」
+    expect(screen.getByTestId('options-series-dropdown')).toHaveTextContent('FG 系列·全部')
     fireEvent.click(screen.getByTestId('options-series-dropdown'))
+    expect(screen.getByTestId('options-series-all')).toHaveAttribute('data-selection-state', 'all')
     fireEvent.click(screen.getByLabelText('FG609'))
+    expect(screen.getByTestId('options-series-all')).toHaveAttribute('data-selection-state', 'partial')
+    expect(screen.getByTestId('options-series-all').querySelector('input')).toHaveAttribute('aria-checked', 'mixed')
     // 选中 1 个 → 按钮显示「FG 系列·已选1」
     expect(screen.getByTestId('options-series-dropdown')).toHaveTextContent('FG 系列·已选1')
-    // 「全部」清空系列
+    fireEvent.click(screen.getByLabelText('FG610'))
+    expect(screen.getByTestId('options-series-all')).toHaveAttribute('data-selection-state', 'none')
+    // 「全部」从全不选恢复为全选
     fireEvent.click(screen.getByTestId('options-series-all'))
-    expect(screen.getByTestId('options-series-dropdown')).toHaveTextContent('FG 系列·多选')
+    expect(screen.getByTestId('options-series-dropdown')).toHaveTextContent('FG 系列·全部')
   })
 
   it('系列选项较多时，保持纵向清单并支持鼠标滚轮继续查看后面的系列', () => {

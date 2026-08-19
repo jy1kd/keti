@@ -440,6 +440,34 @@
   accent-color: var(--accent, #f0b429);
 }
 
+/* 系列「全部」复选框三态：全选、部分选（indeterminate）、全不选。 */
+.options-filter-item--all {
+  border-bottom: 1px solid var(--border-color, #30363d);
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+
+.options-filter-item--all-all {
+  color: #f0b429;
+}
+
+.options-filter-item--all-partial {
+  color: #f6c453;
+  background: rgba(240, 180, 41, 0.08);
+}
+
+.options-filter-item--all-none {
+  color: var(--text-muted, #8b949e);
+}
+
+.options-filter-item--selected .options-filter-item__label {
+  color: var(--text-primary, #e6edf3);
+}
+
+.options-filter-item--unselected .options-filter-item__label {
+  color: var(--text-primary, #e6edf3);
+}
+
 .options-filter-item__label {
   color: var(--text-primary, #e6edf3);
 }

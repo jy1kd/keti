@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { MarketFilter } from '@/modules/market/filter'
 import { EMPTY_FILTER } from '@/modules/market/filter'
-import type { OptionsTabsState } from '@/modules/options/optionsTabs'
+import type { OptionsSeriesMode, OptionsTabsState } from '@/modules/options/optionsTabs'
 import { EMPTY_OPTIONS_TABS } from '@/modules/options/optionsTabs'
 
 const STORAGE_KEY = 'simnow-market-filter'
@@ -64,7 +64,9 @@ function isValidOptionsTabs(v: unknown): v is OptionsTabsState {
         typeof t === 'object' &&
         typeof (t as Record<string, unknown>).product === 'string' &&
         Array.isArray((t as Record<string, unknown>).series) &&
-        ((t as Record<string, unknown>).series as unknown[]).every((s) => typeof s === 'string'),
+        ((t as Record<string, unknown>).series as unknown[]).every((s) => typeof s === 'string') &&
+        ((t as Record<string, unknown>).seriesMode === undefined ||
+          ['all', 'selected', 'none'].includes(t.seriesMode as string)),
     ) &&
     typeof o.activeIndex === 'number'
   )
@@ -108,7 +110,9 @@ export const useMarketFilterStore = create<MarketFilterStore>((set) => ({
     set(() => ({
       optionsTabs: {
         exchange: state.exchange,
-        tabs: state.tabs.map((t) => ({ product: t.product, series: [...t.series] })),
+        tabs: state.tabs.map((t) => t.seriesMode
+          ? { product: t.product, series: [...t.series], seriesMode: t.seriesMode }
+          : { product: t.product, series: [...t.series] }),
         activeIndex: state.activeIndex,
       },
     })),
@@ -132,7 +136,9 @@ export const useMarketFilterStore = create<MarketFilterStore>((set) => ({
         optionsTabs: isValidOptionsTabs(dataObj.optionsTabs)
           ? {
               exchange: dataObj.optionsTabs.exchange,
-              tabs: dataObj.optionsTabs.tabs.map((t) => ({ product: t.product, series: [...t.series] })),
+              tabs: dataObj.optionsTabs.tabs.map((t) => t.seriesMode
+                ? { product: t.product, series: [...t.series], seriesMode: (t.seriesMode as OptionsSeriesMode) }
+                : { product: t.product, series: [...t.series] }),
               activeIndex: dataObj.optionsTabs.activeIndex,
             }
           : { ...EMPTY_OPTIONS_TABS },

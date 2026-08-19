@@ -6,7 +6,8 @@ import {
   clearOptionsTabs,
   removeOptionsTab,
   setActiveOptionsTab,
-  setOptionsTabSeries,
+  setOptionsTabSelection,
+  type OptionsSeriesMode,
   type OptionsTabsState,
 } from './optionsTabs'
 import './styles.css'
@@ -48,6 +49,7 @@ export function OptionsFilterBar({ allContracts, getProduct, productNames, value
   const rootRef = useRef<HTMLDivElement>(null)
   const tabsRef = useRef<HTMLDivElement>(null)
   const seriesPanelRef = useRef<HTMLDivElement>(null)
+  const allSeriesCheckboxRef = useRef<HTMLInputElement>(null)
 
   // 鼠标滚轮在横向筛选栏中左右移动，行为与期货收藏夹 Tab 条一致。
   useEffect(() => {
@@ -77,7 +79,9 @@ export function OptionsFilterBar({ allContracts, getProduct, productNames, value
   const active = activeOptionsTab(value)
   // 激活 tab 的下标（activeIndex 越界时按 activeOptionsTab 兜底后的实际 tab 定位）
   const activeIndex = active ? value.tabs.findIndex((t) => t.product === active.product) : -1
-  const activeSeries = activeIndex >= 0 ? value.tabs[activeIndex].series : []
+  const activeTab = activeIndex >= 0 ? value.tabs[activeIndex] : undefined
+  const activeSeries = activeTab?.series ?? []
+  const activeSeriesMode: OptionsSeriesMode = activeTab?.seriesMode ?? (activeSeries.length === 0 ? 'all' : 'selected')
   const selectedProductCount = value.tabs.length
 
   // 可选交易所（全量含期权合约的交易所）
@@ -110,6 +114,14 @@ export function OptionsFilterBar({ allContracts, getProduct, productNames, value
     return [...set]
     // eslint-disable-next-line react-hooks/exhaustive-deps -- getProduct 为纯映射函数
   }, [allContracts, active])
+
+  const allSeriesState = activeSeriesMode === 'all' ? 'all' : activeSeriesMode === 'none' ? 'none' : 'partial'
+
+  useEffect(() => {
+    if (allSeriesCheckboxRef.current) {
+      allSeriesCheckboxRef.current.indeterminate = allSeriesState === 'partial'
+    }
+  }, [allSeriesState])
 
   // 点击外部关闭下拉面板
   useEffect(() => {
@@ -154,16 +166,16 @@ export function OptionsFilterBar({ allContracts, getProduct, productNames, value
 
   const toggleSeries = (series: string) => {
     if (activeIndex < 0) return
-    const current = activeSeries
+    const current = activeSeriesMode === 'all' ? seriesOfProduct : activeSeries
     const next = current.includes(series)
       ? current.filter((s) => s !== series)
       : [...current, series]
-    onChange(setOptionsTabSeries(value, activeIndex, next))
+    onChange(setOptionsTabSelection(value, activeIndex, next.length === 0 ? 'none' : 'selected', next))
   }
 
   const selectAllSeries = () => {
     if (activeIndex < 0) return
-    onChange(setOptionsTabSeries(value, activeIndex, []))
+    onChange(setOptionsTabSelection(value, activeIndex, activeSeriesMode === 'all' ? 'none' : 'all'))
   }
 
   const clear = () => {
@@ -213,17 +225,23 @@ export function OptionsFilterBar({ allContracts, getProduct, productNames, value
             onClick={() => setSeriesOpen((v) => !v)}
             title="筛选系列合约"
           >
-            {active.product} 系列{activeSeries.length > 0 ? `·已选${activeSeries.length}` : '·多选'} ▾
+            {active.product} 系列{activeSeriesMode === 'all' ? '·全部' : activeSeriesMode === 'none' ? '·未选' : `·已选${activeSeries.length}`} ▾
           </button>
           {seriesOpen && (
             <div ref={seriesPanelRef} className="options-filter-panel options-filter-panel--series">
-              <label className="options-filter-item" data-testid="options-series-all">
-                <input type="checkbox" checked={activeSeries.length === 0} onChange={selectAllSeries} />
+              <label className={`options-filter-item options-filter-item--all options-filter-item--all-${allSeriesState}`} data-testid="options-series-all" data-selection-state={allSeriesState}>
+                <input
+                  ref={allSeriesCheckboxRef}
+                  type="checkbox"
+                  checked={allSeriesState === 'all'}
+                  aria-checked={allSeriesState === 'partial' ? 'mixed' : allSeriesState === 'all'}
+                  onChange={selectAllSeries}
+                />
                 <span className="options-filter-item__label">全部</span>
               </label>
               {seriesOfProduct.map((s) => (
-                <label key={s} className="options-filter-item">
-                  <input type="checkbox" checked={activeSeries.includes(s)} aria-label={s} onChange={() => toggleSeries(s)} />
+                <label key={s} className={`options-filter-item${activeSeries.includes(s) ? ' options-filter-item--selected' : ' options-filter-item--unselected'}`}>
+                  <input type="checkbox" checked={activeSeriesMode === 'all' || activeSeries.includes(s)} aria-label={s} onChange={() => toggleSeries(s)} />
                   <span className="options-filter-item__label">{s}</span>
                 </label>
               ))}

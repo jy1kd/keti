@@ -1,9 +1,13 @@
 import type { ContractInfo } from '@/services/types'
 
-/** 期权页筛选 Tab 的系列（= 该品种下的具体标底合约，如 FG609/FG610），空数组 = 全部系列 */
+export type OptionsSeriesMode = 'all' | 'selected' | 'none'
+
+/** 期权页筛选 Tab 的系列（= 该品种下的具体标底合约，如 FG609/FG610）。 */
 export interface OptionsTab {
   product: string
   series: string[]
+  /** 旧持久化数据没有该字段时，series=[] 兼容为 all，非空兼容为 selected。 */
+  seriesMode?: OptionsSeriesMode
 }
 
 /**
@@ -27,7 +31,7 @@ export function addOptionsTab(state: OptionsTabsState, product: string): Options
   if (existing >= 0) return { ...state, activeIndex: existing }
   return {
     ...state,
-    tabs: [...state.tabs, { product, series: [] }],
+    tabs: [...state.tabs, { product, series: [], seriesMode: 'all' }],
     activeIndex: state.tabs.length,
   }
 }
@@ -56,7 +60,13 @@ export function setActiveOptionsTab(state: OptionsTabsState, index: number): Opt
 /** 更新指定 tab 的系列多选（只动该 tab，不影响其它 tab 与激活态） */
 export function setOptionsTabSeries(state: OptionsTabsState, index: number, series: string[]): OptionsTabsState {
   if (index < 0 || index >= state.tabs.length) return state
-  const tabs = state.tabs.map((t, i) => (i === index ? { ...t, series: [...series] } : t))
+  const tabs = state.tabs.map((t, i) => (i === index ? { ...t, series: [...series], seriesMode: (series.length === 0 ? 'all' : 'selected') as OptionsSeriesMode } : t))
+  return { ...state, tabs }
+}
+
+export function setOptionsTabSelection(state: OptionsTabsState, index: number, mode: OptionsSeriesMode, series: string[] = []): OptionsTabsState {
+  if (index < 0 || index >= state.tabs.length) return state
+  const tabs = state.tabs.map((t, i) => (i === index ? { ...t, series: mode === 'selected' ? [...series] : [], seriesMode: mode } : t))
   return { ...state, tabs }
 }
 
@@ -84,7 +94,9 @@ export function filterByOptionsTabs(
 ): ContractInfo[] {
   const active = activeOptionsTab(state)
   if (!active) return contracts
-  const seriesSet = active.series.length ? new Set(active.series) : null
+  const mode = active.seriesMode ?? (active.series.length === 0 ? 'all' : 'selected')
+  if (mode === 'none') return []
+  const seriesSet = mode === 'selected' ? new Set(active.series) : null
   return contracts.filter((c) => {
     if (getProduct(c) !== active.product) return false
     if (seriesSet && !seriesSet.has(c.underlyingInstrID ?? '')) return false
