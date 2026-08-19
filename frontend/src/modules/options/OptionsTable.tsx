@@ -35,6 +35,8 @@ export interface OptionsTableProps {
   onToggleGroup: (underlyingID: string) => void
   /** 点击 C/P 侧单元格回调；中列（行权价）与缺失侧不回调 */
   onRowClick?: (instrumentID: string, price: number) => void
+  /** 双击 C/P 侧单元格回调（与期货表格一致，300ms 同行判定） */
+  onRowDoubleClick?: (instrumentID: string, price: number) => void
   /**
    * 右键菜单回调（仿照 QuoteTable onContextMenu → 期权页单选菜单）。
    * 按下标底层（整行合并的分组表头）与中列（行权价）不回调；
@@ -158,7 +160,7 @@ function buildOptionRecords(chain: OptionChain): OptionsRecord[] {
   })
 }
 
-export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, onContextMenu, onVisibleRangeChange, isActive }: OptionsTableProps) {
+export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, onRowDoubleClick, onContextMenu, onVisibleRangeChange, isActive }: OptionsTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
   const recordsRef = useRef<OptionsRecord[]>([])
@@ -168,6 +170,9 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
   /** 可见区版本号：滚动导致可见范围变化时递增，驱动局部更新 effect 重算（滚入新区域的行立即刷新） */
   const [visibleRangeVersion, setVisibleRangeVersion] = useState(0)
   const onRowClickRef = useRef(onRowClick)
+  const onRowDoubleClickRef = useRef(onRowDoubleClick)
+  const lastClickTimeRef = useRef(0)
+  const lastClickRowRef = useRef<number | null>(null)
   const onContextMenuRef = useRef(onContextMenu)
   const onVisibleRangeChangeRef = useRef(onVisibleRangeChange)
   const onToggleGroupRef = useRef(onToggleGroup)
@@ -183,6 +188,7 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
   const scheduleRafRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => { onRowClickRef.current = onRowClick }, [onRowClick])
+  useEffect(() => { onRowDoubleClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
   useEffect(() => { onContextMenuRef.current = onContextMenu }, [onContextMenu])
   useEffect(() => { onVisibleRangeChangeRef.current = onVisibleRangeChange }, [onVisibleRangeChange])
   useEffect(() => { onToggleGroupRef.current = onToggleGroup }, [onToggleGroup])
@@ -368,13 +374,28 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
         return
       }
 
-      // 期权行 C/P 侧回调
+      // 期权行 C/P 侧回调（含双击检测，与期货表格一致：300ms 同行判定）
+      let instrumentID: string | undefined
+      let price: number
       if (colIndex >= 0 && colIndex <= 4 && record.callInstrumentID) {
-        const price = typeof record.callLastPrice === 'number' ? record.callLastPrice : 0
-        onRowClickRef.current?.(record.callInstrumentID, price)
+        instrumentID = record.callInstrumentID
+        price = typeof record.callLastPrice === 'number' ? record.callLastPrice : 0
       } else if (colIndex >= 6 && colIndex <= 10 && record.putInstrumentID) {
-        const price = typeof record.putLastPrice === 'number' ? record.putLastPrice : 0
-        onRowClickRef.current?.(record.putInstrumentID, price)
+        instrumentID = record.putInstrumentID
+        price = typeof record.putLastPrice === 'number' ? record.putLastPrice : 0
+      } else {
+        return
+      }
+      const now = Date.now()
+      const isDoubleClick =
+        lastClickRowRef.current === rowIndex &&
+        now - lastClickTimeRef.current < 300
+      lastClickTimeRef.current = now
+      lastClickRowRef.current = rowIndex
+      if (isDoubleClick) {
+        onRowDoubleClickRef.current?.(instrumentID, price)
+      } else {
+        onRowClickRef.current?.(instrumentID, price)
       }
     })
 

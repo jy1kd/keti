@@ -45,8 +45,8 @@ interface CollectionsStore {
   collections: Collection[]
   loaded: boolean
   loadCollections: () => Promise<void>
-  createCollection: (name: string) => string
-  renameCollection: (id: string, name: string) => void
+  createCollection: (name: string) => string | null
+  renameCollection: (id: string, name: string) => boolean
   deleteCollection: (id: string) => void
   addToCollections: (instrumentIDs: string[], collectionIds: string[]) => void
   removeFromCollection: (instrumentID: string, collectionId: string) => void
@@ -110,6 +110,7 @@ export const useCollectionsStore = create<CollectionsStore>((set, get) => ({
   },
 
   createCollection: (name) => {
+    if (get().collections.some((c) => c.name === name)) return null
     const id = nextCollectionId()
     const collections = [...get().collections, { id, name, instrumentIDs: [], seriesIDs: [] }]
     persist(collections)
@@ -118,9 +119,11 @@ export const useCollectionsStore = create<CollectionsStore>((set, get) => ({
   },
 
   renameCollection: (id, name) => {
+    if (get().collections.some((c) => c.id !== id && c.name === name)) return false
     const collections = get().collections.map((c) => (c.id === id ? { ...c, name } : c))
     persist(collections)
     set({ collections })
+    return true
   },
 
   deleteCollection: (id) => {

@@ -42,8 +42,8 @@ describe('useCollectionsStore', () => {
 
   it('addToCollections 去重追加；removeFromCollection 移除单个；removeFromAllCollections 全夹移除', () => {
     const store = useCollectionsStore.getState()
-    const a = store.createCollection('A')
-    const b = store.createCollection('B')
+    const a = store.createCollection('A')!
+    const b = store.createCollection('B')!
     store.addToCollections(['au2406', 'rb2406'], [a, b])
     store.addToCollections(['au2406'], [a]) // 重复
     expect(useCollectionsStore.getState().collections.find((c) => c.id === a)?.instrumentIDs).toEqual(['au2406', 'rb2406'])
@@ -56,7 +56,7 @@ describe('useCollectionsStore', () => {
 
   it('renameCollection / deleteCollection', () => {
     const store = useCollectionsStore.getState()
-    const id = store.createCollection('旧名')
+    const id = store.createCollection('旧名')!
     store.renameCollection(id, '新名')
     expect(useCollectionsStore.getState().collections[0].name).toBe('新名')
     store.deleteCollection(id)
@@ -125,7 +125,7 @@ describe('系列收藏', () => {
 
   it('addSeriesToCollections 加入 seriesIDs 并持久化', () => {
     const { addSeriesToCollections } = useCollectionsStore.getState()
-    const collId = useCollectionsStore.getState().createCollection('期权夹')
+    const collId = useCollectionsStore.getState().createCollection('期权夹')!
     addSeriesToCollections(['MO2608'], [collId])
     const c = useCollectionsStore.getState().collections.find((x) => x.id === collId)!
     expect(c.seriesIDs).toContain('MO2608')
@@ -133,7 +133,7 @@ describe('系列收藏', () => {
 
   it('removeSeriesFromCollection 移除', () => {
     const { addSeriesToCollections, removeSeriesFromCollection } = useCollectionsStore.getState()
-    const collId = useCollectionsStore.getState().createCollection('期权夹')
+    const collId = useCollectionsStore.getState().createCollection('期权夹')!
     addSeriesToCollections(['MO2608'], [collId])
     removeSeriesFromCollection('MO2608', collId)
     expect(useCollectionsStore.getState().collections.find((x) => x.id === collId)!.seriesIDs).not.toContain('MO2608')

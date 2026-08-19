@@ -16,7 +16,11 @@ export function CollectionsPage() {
   const handleCreate = () => {
     const name = newName.trim()
     if (!name) return
-    createCollection(name)
+    const id = createCollection(name)
+    if (id === null) {
+      toast.error('收藏夹名称已存在')
+      return
+    }
     setNewName('')
     toast.success(`已新建收藏夹「${name}」`)
   }
@@ -34,7 +38,10 @@ export function CollectionsPage() {
   const commitRename = (id: string) => {
     const name = renameValue.trim()
     if (!name) return
-    renameCollection(id, name)
+    if (!renameCollection(id, name)) {
+      toast.error('收藏夹名称已存在')
+      return
+    }
     // 同步已打开的该夹标签标题
     useTabStore.getState().tabs
       .filter((t) => t.type === 'collection' && t.props.collectionId === id)
