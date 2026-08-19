@@ -5,6 +5,8 @@ import { aggregateMyOrders } from '@/modules/order/myOrders'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useInfiniteOrderStore, type InfiniteOrderIntent } from './store'
 import { buildPriceAxis, buildDepthMaps, isValidPrice, roundToTick, formatTickPrice } from './ladderUtils'
+import { useOrderTrigger } from '@/hooks/useOrderTrigger'
+import { useDoubleClick } from '@/hooks/useDoubleClick'
 import './InfiniteLadder.css'
 
 const ROW_HEIGHT = 24
@@ -27,6 +29,11 @@ export function InfiniteLadder({ snapshot, priceTick, instrumentID }: InfiniteLa
 
   const [intent, setIntent] = useState<InfiniteOrderIntent | null>(null)
   const [banner, setBanner] = useState<string | null>(null)
+
+  // ── 盘口下单触发设置（Task 10）：读取用户偏好，决定单击/双击 + 二次确认 ──
+  const { triggerMode, confirmBeforeOrder } = useOrderTrigger()
+  const [preview, setPreview] = useState<{ direction: 'buy' | 'sell'; price: number } | null>(null)
+  const { register } = useDoubleClick(300)
 
   const axis = useMemo(
     () => buildPriceAxis(snapshot?.lowerLimitPrice ?? 0, snapshot?.upperLimitPrice ?? 0, priceTick),
@@ -106,6 +113,36 @@ export function InfiniteLadder({ snapshot, priceTick, instrumentID }: InfiniteLa
     setIntent({ direction, price, volume, combOffsetFlag, timeCondition })
   }
 
+  // 直接下单（免确认路径，不走确认框）
+  const submitIntent = async (direction: 'buy' | 'sell', price: number) => {
+    const ok = await submitOrder({ direction, price, volume, combOffsetFlag, timeCondition })
+    if (ok) {
+      useQueryStore.getState().fetchOrders()
+    } else {
+      setBanner(useInfiniteOrderStore.getState().lastSubmitError ?? '报单失败')
+      setTimeout(() => setBanner(null), 4000)
+    }
+  }
+
+  // 梯级单元格点击 → 按触发设置执行（双击模式：单击预览/双击下单；免确认直接下单）
+  const executeCell = (direction: 'buy' | 'sell', price: number) => {
+    if (triggerMode === 'single') {
+      if (confirmBeforeOrder) openIntent(direction, price)
+      else submitIntent(direction, price)
+      return
+    }
+    // double 模式
+    setPreview({ direction, price })
+    register(
+      () => {}, // single click in double mode → preview only (no order)
+      () => {
+        setPreview(null)
+        if (confirmBeforeOrder) openIntent(direction, price)
+        else submitIntent(direction, price)
+      },
+    )()
+  }
+
   const cancelMyOrders = async (refs: string[]) => {
     for (const ref of refs) await handleCancelOrder(ref)
     useQueryStore.getState().fetchOrders()
@@ -145,11 +182,12 @@ export function InfiniteLadder({ snapshot, priceTick, instrumentID }: InfiniteLa
               const bidVol = depth.bidVol.get(price) ?? 0
               const askVol = depth.askVol.get(price) ?? 0
               const isLast = idx === lastIndex
+              const isPreview = preview !== null && preview.price === price
               return (
                 <div
                   key={price}
                   data-testid={`ladder-row-${idx}`}
-                  className={`infinite-row${isLast ? ' infinite-row--last' : ''}`}
+                  className={`infinite-row${isLast ? ' infinite-row--last' : ''}${isPreview ? ' infinite-row--preview' : ''}`}
                   style={{ height: ROW_HEIGHT }}
                 >
                   <span className="infinite-row__cancel">
@@ -176,7 +214,7 @@ export function InfiniteLadder({ snapshot, priceTick, instrumentID }: InfiniteLa
                     data-testid={`bid-cell-${idx}`}
                     className="infinite-row__bid"
                     style={{ '--vol-pct': `${maxVol > 0 ? Math.round((bidVol / maxVol) * 100) : 0}%` } as React.CSSProperties}
-                    onClick={() => openIntent('buy', price)}
+                    onClick={() => executeCell('buy', price)}
                   >
                     {bidVol > 0 ? bidVol : ''}
                   </span>
@@ -185,7 +223,7 @@ export function InfiniteLadder({ snapshot, priceTick, instrumentID }: InfiniteLa
                     data-testid={`ask-cell-${idx}`}
                     className="infinite-row__ask"
                     style={{ '--vol-pct': `${maxVol > 0 ? Math.round((askVol / maxVol) * 100) : 0}%` } as React.CSSProperties}
-                    onClick={() => openIntent('sell', price)}
+                    onClick={() => executeCell('sell', price)}
                   >
                     {askVol > 0 ? askVol : ''}
                   </span>

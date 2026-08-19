@@ -13,8 +13,7 @@ vi.mock('./store', () => ({
 // Mock API modules used by child components
 vi.mock('../../services/api', () => ({
   cancelAllOrders: vi.fn().mockResolvedValue({ success: true, cancelled: 0, failed: 0, errors: [] }),
-  reversePosition: vi.fn().mockResolvedValue({ success: true, message: '' }),
-  lockPosition: vi.fn().mockResolvedValue({ success: true, message: '' }),
+  refreshOrders: vi.fn().mockResolvedValue({ orders: [], count: 0 }),
   getOrders: vi.fn().mockResolvedValue({ orders: [], count: 0 }),
   getPositions: vi.fn().mockResolvedValue({ positions: [], count: 0 }),
   cancelOrder: vi.fn().mockResolvedValue(true),
@@ -75,29 +74,11 @@ describe('OrderPanel', () => {
     expect(screen.getByText('止损价')).toBeInTheDocument()
   })
 
-  it('triggers setOrderForm(direction=buy) on B key press', () => {
-    render(<OrderPanel />)
-
-    fireEvent.keyDown(window, { key: 'b' })
-
-    expect(mockState.setOrderForm).toHaveBeenCalledWith({ direction: 'buy' })
-  })
-
-  it('triggers setOrderForm(direction=sell) on S key press', () => {
-    render(<OrderPanel />)
-
-    fireEvent.keyDown(window, { key: 's' })
-
-    expect(mockState.setOrderForm).toHaveBeenCalledWith({ direction: 'sell' })
-  })
-
   // ── PR-15: QuickActions integration ─────────────────────────────────
 
   it('renders QuickActions buttons', () => {
     render(<OrderPanel />)
 
-    expect(screen.getByText('一键反向')).toBeInTheDocument()
-    expect(screen.getByText('一键锁仓')).toBeInTheDocument()
     expect(screen.getByText('批量撤单')).toBeInTheDocument()
   })
 

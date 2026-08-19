@@ -23,22 +23,6 @@
   cursor: not-allowed;
 }
 
-.qa-reverse {
-  background: #8e44ad;
-}
-
-.qa-reverse:hover:not(:disabled) {
-  background: #9b59b6;
-}
-
-.qa-lock {
-  background: #c0392b;
-}
-
-.qa-lock:hover:not(:disabled) {
-  background: #e74c3c;
-}
-
 .qa-batch {
   background: #e67e22;
 }

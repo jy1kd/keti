@@ -21,6 +21,7 @@ import { filterByCollection } from '@/modules/query/filter'
 import { useOrderStore } from '@/modules/order/store'
 import { getProductName } from '@/utils/productNames'
 import { isElectron } from '@/services/electron'
+import { openCollectionsFloating } from '@/utils/openFloatingTab'
 import './styles.css'
 
 export function MarketPanel() {
@@ -185,8 +186,19 @@ export function MarketPanel() {
         />
         {/* 收藏夹过滤 Tab 条（全部 + 各收藏夹），与筛选同行；夹多/窄屏时横向滚动 */}
         <CollectionFilterTabs value={collectionId} onChange={setCollectionId} />
-        {/* 搜索贴右：搜索框 + 🔍 + 计数（margin-left:auto 吃掉中间空间推到最右） */}
+        {/* 搜索贴右：收藏夹管理入口（搜索框左侧）+ 搜索框 + 🔍 + 计数（margin-left:auto 吃掉中间空间推到最右） */}
         <div className="market-toolbar__search">
+          <button
+            type="button"
+            className="btn-collections-manage"
+            title="收藏夹管理"
+            data-testid="btn-collections-manage"
+            onClick={() => openCollectionsFloating()}
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+              <path d="M2 5a2 2 0 0 1 2-2h4.6l2 2H20a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" />
+            </svg>
+          </button>
           <ContractSearch contracts={baseContracts} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
           <button
             className="btn-search-advanced"

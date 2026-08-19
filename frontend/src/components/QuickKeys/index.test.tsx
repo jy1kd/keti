@@ -4,15 +4,10 @@ import { QuickKeys } from './index'
 import type { HotKeyConfig } from '../../services/types'
 
 const defaultHotKeys: HotKeyConfig = {
-  buy: 'b',
-  sell: 's',
-  cancel: 'c',
-  reverse: '',
-  lock: '',
+  openOrder: 'o',
+  openKline: 'k',
+  openSettings: ',',
   batchCancel: 'Escape',
-  openOrder: '',
-  openKline: '',
-  openSettings: '',
 }
 
 describe('QuickKeys', () => {
@@ -34,13 +29,15 @@ describe('QuickKeys', () => {
       />
     )
 
-    expect(screen.getByText(/买入/)).toBeDefined()
-    expect(screen.getByText(/卖出/)).toBeDefined()
-    expect(screen.getByText(/撤单/)).toBeDefined()
+    expect(screen.getByText(/打开报单/)).toBeDefined()
+    expect(screen.getByText(/打开K线/)).toBeDefined()
+    expect(screen.getByText(/打开设置/)).toBeDefined()
+    expect(screen.getByText(/批量撤单/)).toBeDefined()
     // Should show current key values
-    expect(screen.getByDisplayValue('b')).toBeDefined()
-    expect(screen.getByDisplayValue('s')).toBeDefined()
-    expect(screen.getByDisplayValue('c')).toBeDefined()
+    expect(screen.getByDisplayValue('o')).toBeDefined()
+    expect(screen.getByDisplayValue('k')).toBeDefined()
+    expect(screen.getByDisplayValue(',')).toBeDefined()
+    expect(screen.getByDisplayValue('Escape')).toBeDefined()
   })
 
   it('shows "recording" state when input focused', () => {
@@ -99,7 +96,7 @@ describe('QuickKeys', () => {
     fireEvent.keyDown(buyInput, { key: 'Meta' })
 
     // Value should not change for modifier keys
-    expect((buyInput as HTMLInputElement).value).toBe('b')
+    expect((buyInput as HTMLInputElement).value).toBe('o')
   })
 
   it('calls onSave with updated hotkeys', () => {
@@ -121,15 +118,10 @@ describe('QuickKeys', () => {
     fireEvent.click(saveBtn)
 
     expect(onSave).toHaveBeenCalledWith({
-      buy: 'x',
-      sell: 's',
-      cancel: 'c',
-      reverse: '',
-      lock: '',
+      openOrder: 'x',
+      openKline: 'k',
+      openSettings: ',',
       batchCancel: 'Escape',
-      openOrder: '',
-      openKline: '',
-      openSettings: '',
     })
   })
 
@@ -169,7 +161,7 @@ describe('QuickKeys', () => {
     fireEvent.click(resetBtn)
 
     // UI should revert to defaults
-    expect((inputs[0]! as HTMLInputElement).value).toBe('b')
+    expect((inputs[0]! as HTMLInputElement).value).toBe('o')
     // onSave should NOT be called (user must manually save)
     expect(onSave).not.toHaveBeenCalled()
   })

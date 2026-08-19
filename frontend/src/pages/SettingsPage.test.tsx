@@ -1,87 +1,63 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { SettingsPage } from './SettingsPage'
-import { useUserPrefsStore } from '@/stores/userPrefs'
+import { useUserPrefsStore, DEFAULT_HOT_KEYS, DEFAULT_ORDER_TRIGGER } from '@/stores/userPrefs'
 
-// Mock SettingsPanel components
 vi.mock('@/components/SettingsPanel/HotKeyTab', () => ({
   HotKeyTab: ({ hotKeys, onSave }: any) => (
     <div data-testid="hotkey-tab">
       <span>HotKey Tab</span>
-      <button onClick={() => onSave({ ...hotKeys, buy: 'x' })}>Save HotKeys</button>
+      <button onClick={() => onSave({ ...hotKeys, openOrder: 'x' })}>Save HotKeys</button>
     </div>
   ),
 }))
 
-vi.mock('@/components/SettingsPanel/QuickTradeTab', () => ({
-  QuickTradeTab: ({ config, onSave }: any) => (
-    <div data-testid="quicktrade-tab">
-      <span>QuickTrade Tab</span>
-      <button onClick={() => onSave({ ...config })}>Save QuickTrade</button>
+vi.mock('@/components/SettingsPanel/OrderTriggerTab', () => ({
+  OrderTriggerTab: ({ config, onSave }: any) => (
+    <div data-testid="ordertrigger-tab">
+      <span>OrderTrigger Tab</span>
+      <button onClick={() => onSave({ ...config })}>Save OrderTrigger</button>
     </div>
   ),
 }))
 
-// Mock Toast
 vi.mock('@/components/Toast', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
+  toast: { success: vi.fn(), error: vi.fn() },
 }))
 
 describe('SettingsPage', () => {
   beforeEach(() => {
     useUserPrefsStore.setState({
-      hotKeys: { buy: 'b', sell: 's', cancel: 'c', reverse: '', lock: '', batchCancel: 'Escape', openOrder: '', openKline: '', openSettings: '' },
-      quickTradeConfig: {
-        lock: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' },
-        reverse: {
-          close: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' },
-          open: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' },
-          executionMode: 'serial',
-        },
-        confirmBeforeExecute: true,
-      },
+      hotKeys: { ...DEFAULT_HOT_KEYS },
+      orderTrigger: { ...DEFAULT_ORDER_TRIGGER },
     })
     vi.clearAllMocks()
   })
 
-  it('renders settings page title', () => {
-    render(<SettingsPage />)
-    expect(screen.getByText('⚙ 设置')).toBeInTheDocument()
-  })
-
-  it('renders tab buttons', () => {
+  it('renders two tabs：快捷键 / 下单触发', () => {
     render(<SettingsPage />)
     expect(screen.getByText('快捷键')).toBeInTheDocument()
-    expect(screen.getByText('快捷交易')).toBeInTheDocument()
+    expect(screen.getByText('下单触发')).toBeInTheDocument()
+    expect(screen.queryByText('快捷交易')).not.toBeInTheDocument()
   })
 
-  it('shows QuickTrade tab by default', () => {
+  it('shows HotKey tab by default', () => {
     render(<SettingsPage />)
-    expect(screen.getByTestId('quicktrade-tab')).toBeInTheDocument()
-    expect(screen.queryByTestId('hotkey-tab')).not.toBeInTheDocument()
-  })
-
-  it('switches to HotKey tab when clicked', () => {
-    render(<SettingsPage />)
-    fireEvent.click(screen.getByText('快捷键'))
     expect(screen.getByTestId('hotkey-tab')).toBeInTheDocument()
-    expect(screen.queryByTestId('quicktrade-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('ordertrigger-tab')).not.toBeInTheDocument()
   })
 
-  it('switches back to QuickTrade tab when clicked', () => {
+  it('switches to 下单触发 tab', () => {
     render(<SettingsPage />)
-    fireEvent.click(screen.getByText('快捷键'))
-    fireEvent.click(screen.getByText('快捷交易'))
-    expect(screen.getByTestId('quicktrade-tab')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('下单触发'))
+    expect(screen.getByTestId('ordertrigger-tab')).toBeInTheDocument()
     expect(screen.queryByTestId('hotkey-tab')).not.toBeInTheDocument()
   })
 
   it('active tab has active class', () => {
     render(<SettingsPage />)
-    expect(screen.getByText('快捷交易')).toHaveClass('active')
-    expect(screen.getByText('快捷键')).not.toHaveClass('active')
+    expect(screen.getByText('快捷键')).toHaveClass('active')
+    fireEvent.click(screen.getByText('下单触发'))
+    expect(screen.getByText('下单触发')).toHaveClass('active')
   })
 })

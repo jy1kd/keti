@@ -10,17 +10,12 @@ interface HotKeyTabProps {
 const MODIFIER_KEYS = new Set(['Control', 'Shift', 'Alt', 'Meta', 'Tab', 'Escape'])
 
 const LABELS: Record<string, string> = {
-  // 交易快捷键
-  buy: '买入',
-  sell: '卖出',
-  cancel: '撤单',
-  reverse: '一键反向',
-  lock: '一键锁仓',
-  batchCancel: '批量撤单',
   // 导航快捷键
   openOrder: '打开报单',
   openKline: '打开K线',
   openSettings: '打开设置',
+  // 操作快捷键
+  batchCancel: '批量撤单',
 }
 
 export function HotKeyTab({ hotKeys, onSave }: HotKeyTabProps) {
@@ -83,7 +78,9 @@ export function HotKeyTab({ hotKeys, onSave }: HotKeyTabProps) {
       {editing && <div className="settings-hint">按下新快捷键...（按 Esc 清除）</div>}
 
       <div className="settings-list">
-        {Object.entries(LABELS).map(([action, label]) => (
+        {Object.entries(LABELS).map(([rawAction, label]) => {
+          const action = rawAction as keyof HotKeyConfig
+          return (
           <div key={action} className="settings-row">
             <label className="settings-label">{label}</label>
             <div className="settings-hotkey-input-group">
@@ -108,7 +105,8 @@ export function HotKeyTab({ hotKeys, onSave }: HotKeyTabProps) {
               )}
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
 
       <div className="settings-actions">

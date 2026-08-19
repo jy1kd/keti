@@ -342,6 +342,32 @@
   color: var(--text-primary);
 }
 
+/* 收藏夹管理入口（搜索框左侧）：图标按钮，hover 高亮对齐 .btn-search-advanced */
+.btn-collections-manage {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn-collections-manage:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+
+.btn-collections-manage svg {
+  fill: currentColor;
+  display: block;
+}
+
 /* 全部/自选 segmented */
 .market-toolbar__tabs {
   display: flex;

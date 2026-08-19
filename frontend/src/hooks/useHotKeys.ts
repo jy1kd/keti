@@ -3,31 +3,21 @@ import type { HotKeyConfig } from '../services/types'
 import { DEFAULT_HOT_KEYS } from '../stores/userPrefs'
 
 interface UseHotKeysOptions {
-  onBuy?: () => void
-  onSell?: () => void
-  onCancelAll?: () => void
-  onReverse?: () => void
-  onLock?: () => void
-  onBatchCancel?: () => void
   onOpenOrder?: () => void
   onOpenKline?: () => void
   onOpenSettings?: () => void
+  onBatchCancel?: () => void
   enabled: boolean
   hotKeys?: HotKeyConfig
 }
 
-type ActionKey = 'buy' | 'sell' | 'cancel' | 'reverse' | 'lock' | 'batchCancel' | 'openOrder' | 'openKline' | 'openSettings'
+type ActionKey = 'openOrder' | 'openKline' | 'openSettings' | 'batchCancel'
 
 export function useHotKeys({
-  onBuy,
-  onSell,
-  onCancelAll,
-  onReverse,
-  onLock,
-  onBatchCancel,
   onOpenOrder,
   onOpenKline,
   onOpenSettings,
+  onBatchCancel,
   enabled,
   hotKeys,
 }: UseHotKeysOptions) {
@@ -44,6 +34,9 @@ export function useHotKeys({
       if (key) {
         map[key.toLowerCase()] = action as ActionKey
         map[key.toUpperCase()] = action as ActionKey
+        // Also register the raw key so mixed-case keys (e.g. 'Escape',
+        // whose KeyboardEvent.key is 'Escape', not 'escape'/'ESCAPE') match.
+        map[key] = action as ActionKey
       }
     }
     return map
@@ -65,18 +58,13 @@ export function useHotKeys({
 
       e.preventDefault()
 
-      if (action === 'buy') onBuy?.()
-      if (action === 'sell') onSell?.()
-      if (action === 'cancel') onCancelAll?.()
-      if (action === 'reverse') onReverse?.()
-      if (action === 'lock') onLock?.()
-      if (action === 'batchCancel') onBatchCancel?.()
       if (action === 'openOrder') onOpenOrder?.()
       if (action === 'openKline') onOpenKline?.()
       if (action === 'openSettings') onOpenSettings?.()
+      if (action === 'batchCancel') onBatchCancel?.()
     }
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [enabled, keyToAction, onBuy, onSell, onCancelAll, onReverse, onLock, onBatchCancel, onOpenOrder, onOpenKline, onOpenSettings])
+  }, [enabled, keyToAction, onOpenOrder, onOpenKline, onOpenSettings, onBatchCancel])
 }

@@ -173,7 +173,7 @@ describe('TabContent', () => {
       ['market', '行情面板'],
       ['order', '报单页面'],
       ['kline', 'K线页面'],
-      ['settings', '⚙ 设置'],
+      ['settings', '快捷键'],
       ['options', '请选择交易所'],
       ['ipc-monitor', '🔌 IPC 监控'],
       ['query-account', '资金查询 Mock'],

@@ -214,6 +214,13 @@
   opacity: 0.9;
 }
 
+/* 双击预览样式（Task 9）：金色边框 + 半透明背景 */
+.depth-row--preview .depth-row__buy,
+.depth-row--preview .depth-row__sell {
+  box-shadow: inset 0 0 0 2px #f0b90b;
+  background: rgba(240, 185, 11, 0.12);
+}
+
 /* 失败回滚顶部红条：提示报单失败原因 */
 .market-depth__banner {
   position: absolute;
