@@ -331,18 +331,14 @@ export interface ApiResponse<T = unknown> {
 // --- 用户偏好 ---
 
 export interface HotKeyConfig {
-  // 交易快捷键
-  buy: string
-  sell: string
-  cancel: string
-  reverse: string
-  lock: string
-  batchCancel: string
-  // 导航快捷键
+  /** 打开报单（浮动窗） */
   openOrder: string
+  /** 打开K线（浮动窗） */
   openKline: string
+  /** 打开设置（浮动窗） */
   openSettings: string
-  [action: string]: string
+  /** 批量撤单 */
+  batchCancel: string
 }
 
 /** 快捷交易配置 */
@@ -366,6 +362,14 @@ export interface QuickTradeConfig {
     executionMode: 'serial' | 'parallel'
   }
   confirmBeforeExecute: boolean
+}
+
+/** 盘口下单触发设置（五档/无限下单共用） */
+export interface OrderTriggerConfig {
+  /** 触发方式：single=单击触发；double=单击预览、双击触发 */
+  triggerMode: 'single' | 'double'
+  /** 是否二次确认：true=触发后弹确认框；false=触发后直接下单 */
+  confirmBeforeOrder: boolean
 }
 
 export interface UserPreferences {
