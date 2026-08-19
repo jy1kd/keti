@@ -169,6 +169,17 @@
   min-height: 0;
 }
 
+/* VTable 是 canvas，无法给被插入/移除的行做 CSS height transition；
+   对表格容器做一个极短的淡入上移，让折叠/展开不再瞬间跳变。 */
+.options-chain-table--group-toggle {
+  animation: options-group-toggle 180ms ease-out;
+}
+
+@keyframes options-group-toggle {
+  0% { opacity: 0.72; transform: translateY(3px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
 /* ── OptionsFilterBar（筛选重构：品种 Tab 条 + 系列 + 合并的交易所/品种下拉） ─── */
 
 /* 单行：整体随 market-toolbar 高度，左侧 tab 簇、右侧交易所/品种下拉（margin-left:auto 右贴搜索） */

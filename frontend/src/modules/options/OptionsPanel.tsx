@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ContractSearch } from '@/components/ContractSearch'
 import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
@@ -39,6 +39,8 @@ export function OptionsPanel() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  const [groupToggleAnimating, setGroupToggleAnimating] = useState(false)
+  const groupToggleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const groupRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
@@ -113,12 +115,22 @@ export function OptionsPanel() {
 
   // ── 折叠/展开 ──────────────────────────────────────────────────────────
   const toggleGroup = useCallback((underlyingID: string) => {
+    setGroupToggleAnimating(true)
+    if (groupToggleTimerRef.current) clearTimeout(groupToggleTimerRef.current)
+    groupToggleTimerRef.current = setTimeout(() => {
+      groupToggleTimerRef.current = null
+      setGroupToggleAnimating(false)
+    }, 180)
     setCollapsedGroups((prev) => {
       const next = new Set(prev)
       if (next.has(underlyingID)) next.delete(underlyingID)
       else next.add(underlyingID)
       return next
     })
+  }, [])
+
+  useEffect(() => () => {
+    if (groupToggleTimerRef.current) clearTimeout(groupToggleTimerRef.current)
   }, [])
 
   // ── 构建平铺 records（仿照期货表：所有数据 upfront） ────────────────────
@@ -235,15 +247,17 @@ export function OptionsPanel() {
           {visibleGroups.map((g) => (
             <div key={g.underlyingID} ref={(el) => { groupRefs.current[g.underlyingID] = el }} data-underlying={g.underlyingID} style={{ display: 'none' }} />
           ))}
-          <OptionsTable
-            records={records}
-            snapshots={snapshots}
-            isActive={isActive}
-            onToggleGroup={toggleGroup}
-            onRowClick={onSelectContract}
-            onContextMenu={handleContextMenu}
-            onVisibleRangeChange={handleVisibleRangeChange}
-          />
+          <div className={groupToggleAnimating ? 'options-chain-table options-chain-table--group-toggle' : 'options-chain-table'}>
+            <OptionsTable
+              records={records}
+              snapshots={snapshots}
+              isActive={isActive}
+              onToggleGroup={toggleGroup}
+              onRowClick={onSelectContract}
+              onContextMenu={handleContextMenu}
+              onVisibleRangeChange={handleVisibleRangeChange}
+            />
+          </div>
         </ErrorBoundary>
       </div>
 
