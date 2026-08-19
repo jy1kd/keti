@@ -1,0 +1,95 @@
+# Review package: d6610cc..HEAD
+
+## Commits
+3cfb332 fix(options): 修复评审反馈（StrictMode 合并状态残留 + 合并测试补强）
+
+## Files changed
+ frontend/src/modules/market/QuoteTable.test.tsx | 30 ++++++++++++++++++++++---
+ frontend/src/modules/market/QuoteTable.tsx      |  3 +++
+ 2 files changed, 30 insertions(+), 3 deletions(-)
+
+## Diff
+diff --git a/frontend/src/modules/market/QuoteTable.test.tsx b/frontend/src/modules/market/QuoteTable.test.tsx
+index c0ec183..5021018 100644
+--- a/frontend/src/modules/market/QuoteTable.test.tsx
++++ b/frontend/src/modules/market/QuoteTable.test.tsx
+@@ -822,24 +822,48 @@ describe('QuoteTable', () => {
+   // --- 期权标底行 → 合并整行表头（Task 1） ---
+ 
+   describe('标底行合并为整行表头', () => {
+     const fut: ContractInfo = { instrumentID: 'FG609', instrumentName: 'FG609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' }
+     const opt: ContractInfo = { instrumentID: 'FG609-C-1300', instrumentName: 'FG609-C-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'FG609', optionsType: '1', strikePrice: 1300 }
+ 
+     it('标底行渲染后调用 mergeCells 整行合并，期权行不合并', async () => {
+       render(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} />)
+       const { ListTable } = await import('@visactor/vtable')
+       const instance = (ListTable as any).mock.results[0].value
+-      // 标底行 records index 0 → vtable 物理行 1（0=表头），整行合并
+-      expect(instance.mergeCells).toHaveBeenCalledWith(0, 1, optionsSpec.columns.length - 1, 1)
++      // 标底行 records index 0 → vtable 物理行 1（0=表头），整行合并到最后一列。
++      // 硬编码期望列：optionsSpec 共 14 列 → 末列索引 13（不依赖实现同款表达式，防恒真断言）
++      expect(instance.mergeCells).toHaveBeenCalledWith(0, 1, 13, 1)
+       // 期权行（物理行 2）不合并
+-      expect(instance.mergeCells).not.toHaveBeenCalledWith(0, 2, optionsSpec.columns.length - 1, 2)
++      expect(instance.mergeCells).not.toHaveBeenCalledWith(0, 2, 13, 2)
++    })
++
++    it('合约列样式包装不修改共享 spec.columns（模块级常量无 style 泄漏）', async () => {
++      render(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} />)
++      const instrumentCol = optionsSpec.columns.find((c) => c.field === 'instrumentID')
++      // 包装发生在 ListTable 入参副本上，spec.columns 本身必须保持原样（instrumentID 列无 style）
++      expect(instrumentCol?.style).toBeUndefined()
++    })
++
++    it('重建数据行号漂移：撤销旧标底行合并，合并新标底行', async () => {
++      const { rerender } = render(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} />)
++      const { ListTable } = await import('@visactor/vtable')
++      const instance = (ListTable as any).mock.results[0].value
++      // 首轮：标底行（fut）在 records index 0 → vtable 物理行 1，已合并
++      expect(instance.mergeCells).toHaveBeenCalledWith(0, 1, 13, 1)
++      instance.mergeCells.mockClear()
++      instance.unmergeCells.mockClear()
++
++      // 重建：物理行 1 变为期权行（opt），标底漂移到物理行 2（fut）
++      // → 旧合并必须撤销（unmergeCells），新标底行必须合并（mergeCells）
++      rerender(<QuoteTable spec={optionsSpec} contracts={[opt, fut]} snapshots={new Map()} />)
++      expect(instance.unmergeCells).toHaveBeenCalledWith(0, 1, 13, 1)
++      expect(instance.mergeCells).toHaveBeenCalledWith(0, 2, 13, 2)
+     })
+ 
+     it('合约列样式：标底行返回红/粗/大字，期权行保持原样式', async () => {
+       render(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} />)
+       const { ListTable } = await import('@visactor/vtable')
+       const options = (ListTable as any).mock.calls[0][1]
+       const instrumentCol = options.columns.find((c: { field: string }) => c.field === 'instrumentID')
+       expect(typeof instrumentCol.style).toBe('function')
+       const records = [
+         optionsSpec.buildRecord(fut, undefined, false),
+diff --git a/frontend/src/modules/market/QuoteTable.tsx b/frontend/src/modules/market/QuoteTable.tsx
+index a7bf74c..d0e7e32 100644
+--- a/frontend/src/modules/market/QuoteTable.tsx
++++ b/frontend/src/modules/market/QuoteTable.tsx
+@@ -478,20 +478,23 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
+     window.addEventListener('keyup', handleScrollEnd)
+ 
+     tableRef.current = table
+ 
+     return () => {
+       // 清除排队中的合并兜底帧（表已 release，避免对已释放实例补合并）
+       if (mergeRafRef.current != null && typeof cancelAnimationFrame === 'function') {
+         cancelAnimationFrame(mergeRafRef.current)
+         mergeRafRef.current = null
+       }
++      // 清空合并状态：StrictMode 下 effect setup→cleanup→setup 会重建新表实例，
++      // 若残留旧表已合并行，applyRowMerges 会误判「已合并」而跳过 mergeCells → 标底行渲染为未合并。
++      mergedRowsRef.current = new Set()
+       window.removeEventListener('keydown', handleKeyDown)
+       if (container) {
+         container.removeEventListener('mousedown', handleMouseDown)
+       }
+       window.removeEventListener('mousemove', handleMouseMove)
+       window.removeEventListener('mouseup', handleMouseUp)
+       window.removeEventListener('mouseup', handleScrollEnd)
+       window.removeEventListener('keyup', handleScrollEnd)
+       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+       table.release()

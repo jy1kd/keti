@@ -1,0 +1,1442 @@
+# Review package: 4068eae..HEAD
+
+## Commits
+60f961b refactor(market): 期货页移除行情/T型期权切换，IPC market-view 路由到独立标签
+430a0ea feat(options): 期权面板=按标底分组列表(默认)+T型报价二级视图
+
+## Files changed
+ frontend/src/App.test.tsx                          |   2 +-
+ frontend/src/App.tsx                               |   2 +-
+ frontend/src/components/TabContent/index.test.tsx  |   2 +-
+ frontend/src/components/TabContent/index.tsx       |   3 +-
+ frontend/src/modules/market/MarketPanel.test.tsx   |  51 +++--
+ frontend/src/modules/market/MarketPanel.tsx        | 244 +++++++++------------
+ frontend/src/modules/market/optionsSpec.test.ts    |  27 +++
+ frontend/src/modules/market/optionsSpec.ts         |  60 +++++
+ frontend/src/modules/options/OptionsPanel.test.tsx | 146 ++++++++++++
+ frontend/src/modules/options/OptionsPanel.tsx      | 205 +++++++++++++++++
+ ...el.style.test.tsx => TQuoteView.style.test.tsx} |   2 +-
+ .../{OptionPanel.test.tsx => TQuoteView.test.tsx}  |  32 +--
+ .../options/{OptionPanel.tsx => TQuoteView.tsx}    |   2 +-
+ frontend/src/modules/options/styles.css            |  18 +-
+ 14 files changed, 616 insertions(+), 180 deletions(-)
+
+## Diff
+diff --git a/frontend/src/App.test.tsx b/frontend/src/App.test.tsx
+index a7e8d5d..ebe4566 100644
+--- a/frontend/src/App.test.tsx
++++ b/frontend/src/App.test.tsx
+@@ -41,21 +41,21 @@ describe('App Layout — 标签页系统', () => {
+       return ++rafId
+     })
+     vi.stubGlobal('cancelAnimationFrame', (id: number) => {
+       rafCallbacks = rafCallbacks.filter((_, i) => i + 1 !== id)
+     })
+     vi.stubGlobal('performance', { now: () => 0 })
+ 
+     useConnectionStore.setState({ mdConnected: false, tdConnected: false })
+     useTabStore.setState({
+       tabs: [
+-        { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
++        { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
+       ],
+       activeTabId: 'tab-market',
+     })
+     useFloatingWindowStore.setState({ windows: {} })
+   })
+ 
+   afterEach(() => {
+     vi.unstubAllGlobals()
+   })
+ 
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index 9874c96..fcefbc5 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -48,21 +48,21 @@ function App() {
+     useContractsStore.getState().loadFavoriteContracts()
+   }, [])
+ 
+   // Electron IPC — 监听托盘菜单导航消息
+   useEffect(() => {
+     if (!isElectron()) return
+ 
+     const cleanup = window.electronAPI?.onNavigateTab?.((tab: string) => {
+       switch (tab) {
+         case 'market':
+-          openTab({ type: 'market', title: '📊 行情' })
++          openTab({ type: 'market', title: '📊 期货' })
+           break
+         case 'favorites':
+           openTab({ type: 'favorites', title: '⭐ 自选' })
+           break
+         case 'order':
+           openTab({ type: 'order', title: '📝 报单' })
+           break
+         case 'query':
+           openTab({ type: 'query', title: '📋 查询' })
+           break
+diff --git a/frontend/src/components/TabContent/index.test.tsx b/frontend/src/components/TabContent/index.test.tsx
+index 6b6dc6d..eb9a644 100644
+--- a/frontend/src/components/TabContent/index.test.tsx
++++ b/frontend/src/components/TabContent/index.test.tsx
+@@ -147,21 +147,21 @@ describe('TabContent', () => {
+   })
+ 
+   // --- 标签类型渲染 ---
+ 
+   describe('标签类型渲染', () => {
+     it.each<[TabType, string]>([
+       ['market', '行情面板'],
+       ['order', '报单页面'],
+       ['kline', 'K线页面'],
+       ['settings', '⚙ 设置'],
+-      ['options', '期权标签页'],
++      ['options', '列表'],
+       ['ipc-monitor', '🔌 IPC 监控'],
+       ['query', '查询面板 Mock'],
+     ])('应为 %s 类型渲染对应内容', (type, expectedText) => {
+       const tab = makeTab({ type })
+       useTabStore.setState({
+         tabs: [tab],
+         activeTabId: tab.id,
+       })
+       render(<TabContent />)
+       expect(screen.getByText(new RegExp(expectedText))).toBeInTheDocument()
+diff --git a/frontend/src/components/TabContent/index.tsx b/frontend/src/components/TabContent/index.tsx
+index d0cb06a..b614b90 100644
+--- a/frontend/src/components/TabContent/index.tsx
++++ b/frontend/src/components/TabContent/index.tsx
+@@ -1,16 +1,17 @@
+ import { createPortal } from 'react-dom'
+ import { useTabStore, type Tab } from '@/stores/tabs'
+ import { useFloatingWindowStore, FLOATING_CHROME_H } from '@/stores/floatingWindows'
+ import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
+ import { MarketPanel } from '@/modules/market/MarketPanel'
+ import { QueryPanel } from '@/modules/query/QueryPanel'
++import { OptionsPanel } from '@/modules/options/OptionsPanel'
+ import { FavoritesPage } from '@/pages/FavoritesPage'
+ import { OrderPage } from '@/pages/OrderPage'
+ import { KLinePage } from '@/pages/KLinePage'
+ import { SettingsPage } from '@/pages/SettingsPage'
+ import { IPCMonitorPage } from '@/pages/IPCMonitorPage'
+ import './styles.css'
+ 
+ /**
+  * 安全地从 tab.props 中提取 instrumentID 字符串。
+  * 使用运行时类型守卫，避免 `as string` 断言掩藏非字符串值传入的 bug。
+@@ -42,21 +43,21 @@ function renderTabContent(tab: Tab, floating: boolean): React.ReactNode {
+       )
+     case 'kline':
+       return <KLinePage instrumentID={getInstrumentID(tab.props)} tabId={tab.id} />
+     case 'favorites':
+       return <FavoritesPage />
+     case 'query':
+       return <QueryPanel />
+     case 'settings':
+       return <SettingsPage />
+     case 'options':
+-      return <div className="tab-placeholder">📉 期权标签页</div>
++      return <OptionsPanel />
+     case 'ipc-monitor':
+       return <IPCMonitorPage />
+     default:
+       return <div className="tab-placeholder">未知标签</div>
+   }
+ }
+ 
+ /**
+  * TabContent — 标签内容容器
+  *
+diff --git a/frontend/src/modules/market/MarketPanel.test.tsx b/frontend/src/modules/market/MarketPanel.test.tsx
+index d77eb64..af13966 100644
+--- a/frontend/src/modules/market/MarketPanel.test.tsx
++++ b/frontend/src/modules/market/MarketPanel.test.tsx
+@@ -1,16 +1,17 @@
+ import { describe, it, expect, vi, beforeEach } from 'vitest'
+ import { act, render, screen } from '@testing-library/react'
+ import userEvent from '@testing-library/user-event'
+ import { MarketPanel } from './MarketPanel'
+ import { useMarketStore } from './store'
+ import { useContractsStore } from '@/stores/contracts'
++import { useTabStore } from '@/stores/tabs'
+ import { openFloatingTab } from '@/utils/openFloatingTab'
+ import type { MarketSnapshot } from '@/services/types'
+ 
+ // Mock 统一浮动窗入口（双击/右键「打开报单」现为打开浮动窗口）
+ vi.mock('@/utils/openFloatingTab', () => ({
+   openFloatingTab: vi.fn(),
+   ORDER_FLOATING_SIZE: { w: 620, h: 540 },
+ }))
+ 
+ const mockOpenFloatingTab = vi.mocked(openFloatingTab)
+@@ -47,25 +48,20 @@ vi.mock('@/hooks/usePointOrder', () => ({
+ // Mock InstrumentSearchModal
+ vi.mock('@/components/InstrumentSearchModal', () => ({
+   InstrumentSearchModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void; onSubscribe: (inst: unknown) => void; subscribedIds: Set<string> }) =>
+     isOpen ? (
+       <div data-testid="instrument-search-modal">
+         <button onClick={onClose}>关闭</button>
+       </div>
+     ) : null,
+ }))
+ 
+-// Mock OptionPanel（T型期权模式切换测试）
+-vi.mock('@/modules/options/OptionPanel', () => ({
+-  OptionPanel: () => <div data-testid="option-panel">OptionPanel Mock</div>,
+-}))
+-
+ // Mock echarts
+ vi.mock('echarts', () => ({
+   init: vi.fn(() => ({
+     setOption: vi.fn(),
+     resize: vi.fn(),
+     dispose: vi.fn(),
+   })),
+   default: {
+     init: vi.fn(() => ({
+       setOption: vi.fn(),
+@@ -100,26 +96,25 @@ describe('MarketPanel', () => {
+     useMarketStore.setState({
+       selectedInstrument: null,
+       snapshots: new Map(),
+       scrollEndSeq: 0,
+     })
+     useContractsStore.setState({ contracts: [], favorites: [], isLoaded: false })
+     capturedPointOrderOpts = null
+     vi.clearAllMocks()
+   })
+ 
+-  it('删除冗余「行情面板」标题（合并为单条工具栏）', () => {
++  it('删除冗余「行情面板」标题；无 行情/T型期权 模式切换按钮（期货/期权为独立固定标签）', () => {
+     render(<MarketPanel />)
+     expect(screen.queryByText('行情面板')).not.toBeInTheDocument()
+-    // 行情/期权模式切换保留在工具栏内
+-    expect(screen.getByText('行情')).toBeInTheDocument()
+-    expect(screen.getByText('T型期权')).toBeInTheDocument()
++    expect(screen.queryByRole('button', { name: '行情' })).toBeNull()
++    expect(screen.queryByRole('button', { name: 'T型期权' })).toBeNull()
+   })
+ 
+   it('renders with market-panel class', () => {
+     const { container } = render(<MarketPanel />)
+     expect(container.firstChild).toHaveClass('market-panel')
+   })
+ 
+   it('renders 全部 and 自选 tabs', () => {
+     render(<MarketPanel />)
+     expect(screen.getByText('全部')).toBeInTheDocument()
+@@ -217,30 +212,20 @@ describe('MarketPanel', () => {
+   })
+ 
+   it('点击 高级 按钮打开搜索弹窗', async () => {
+     const user = userEvent.setup()
+     render(<MarketPanel />)
+     expect(screen.queryByTestId('instrument-search-modal')).not.toBeInTheDocument()
+     await user.click(screen.getByTitle('搜索合约'))
+     expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
+   })
+ 
+-  it('点击 T型期权 切换到期权模式，行情工具栏保留模式切换', async () => {
+-    const user = userEvent.setup()
+-    render(<MarketPanel />)
+-    expect(screen.queryByTestId('option-panel')).not.toBeInTheDocument()
+-    await user.click(screen.getByText('T型期权'))
+-    expect(screen.getByTestId('option-panel')).toBeInTheDocument()
+-    expect(screen.getByText('行情')).toBeInTheDocument()
+-    expect(screen.getByText('T型期权')).toBeInTheDocument()
+-  })
+-
+   // --- 标签页打开方式测试 (PR-R13) ---
+ 
+   /** 设置测试合约数据并阻止 loadAllInstruments/loadFavoriteContracts 覆盖 */
+   function setupContracts() {
+     vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
+     vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
+     useContractsStore.setState({
+       contracts: [
+         { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260821', isTrading: 1, productClass: '1' },
+       ],
+@@ -344,36 +329,58 @@ describe('MarketPanel', () => {
+     await user.click(screen.getByText('打开K线'))
+ 
+     expect(mockOpenFloatingTab).toHaveBeenCalledWith({
+       type: 'kline',
+       title: '📈 K线-IF2608',
+       props: { instrumentID: 'IF2608' },
+     })
+   })
+ 
+   describe('顶部菜单行情切换（onMarketView）', () => {
+-    it('在行情主页内切换 全部/自选/T型期权，不新建标签页', () => {
++    /** 期货/期权双固定标签（Task 2 默认态） */
++    function setupTabs(activeTabId: string) {
++      useTabStore.setState({
++        tabs: [
++          { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
++          { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false },
++        ],
++        activeTabId,
++      })
++    }
++
++    it('view=options → 激活期权标签（tab-options），不切期货页内部视图', () => {
++      setupTabs('tab-market')
+       const onMarketView = vi.fn()
+       ;(window as any).electronAPI = { onMarketView }
+       render(<MarketPanel />)
+       const callback = onMarketView.mock.calls[0][0]
+ 
+       act(() => {
+         callback('options')
+       })
+-      expect(screen.getByTestId('option-panel')).toBeInTheDocument()
++      expect(useTabStore.getState().activeTabId).toBe('tab-options')
++      delete (window as any).electronAPI
++    })
++
++    it('view=favorites/all → 激活期货标签并切内部 自选/全部', () => {
++      setupTabs('tab-options')
++      const onMarketView = vi.fn()
++      ;(window as any).electronAPI = { onMarketView }
++      render(<MarketPanel />)
++      const callback = onMarketView.mock.calls[0][0]
+ 
+       act(() => {
+         callback('favorites')
+       })
+-      expect(screen.queryByTestId('option-panel')).toBeNull()
++      expect(useTabStore.getState().activeTabId).toBe('tab-market')
+       expect(screen.getByRole('button', { name: '自选' }).classList.contains('active')).toBe(true)
+ 
+       act(() => {
+         callback('all')
+       })
++      expect(useTabStore.getState().activeTabId).toBe('tab-market')
+       expect(screen.getByRole('button', { name: '全部' }).classList.contains('active')).toBe(true)
+ 
+       delete (window as any).electronAPI
+     })
+   })
+ })
+diff --git a/frontend/src/modules/market/MarketPanel.tsx b/frontend/src/modules/market/MarketPanel.tsx
+index a945831..dd655d8 100644
+--- a/frontend/src/modules/market/MarketPanel.tsx
++++ b/frontend/src/modules/market/MarketPanel.tsx
+@@ -1,16 +1,15 @@
+ import { useEffect, useMemo, useState } from 'react'
+ import { ContractSearch } from '@/components/ContractSearch'
+ import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
+ import { ContextMenu } from '@/components/ContextMenu'
+ import { ErrorBoundary } from '@/components/ErrorBoundary'
+-import { OptionPanel } from '@/modules/options/OptionPanel'
+ import { QuoteTable } from './QuoteTable'
+ import { futuresSpec } from './futuresSpec'
+ import { useMarketStore } from './store'
+ import { useContractsStore } from '@/stores/contracts'
+ import { useTabStore } from '@/stores/tabs'
+ import { useContractContextMenu } from '@/hooks/useContractContextMenu'
+ import { usePointOrder } from '@/hooks/usePointOrder'
+ import { useOrderStore } from '@/modules/order/store'
+ import { getProductName } from '@/utils/productNames'
+ import { isContractActive } from '@/utils/contractStatus'
+@@ -18,21 +17,20 @@ import { isElectron } from '@/services/electron'
+ import { toast } from '@/components/Toast'
+ import './styles.css'
+ 
+ export function MarketPanel() {
+   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
+   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
+   const { contracts, favorites, addToFavorites, removeFromFavorites } = useContractsStore()
+   const { contextMenu, multiSelectMenu, openOrderPopup, openQueryPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
+   const [searchModalOpen, setSearchModalOpen] = useState(false)
+   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
+-  const [viewMode, setViewMode] = useState<'market' | 'options'>('market')
+   // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
+   const [filterActive, setFilterActive] = useState(false)
+ 
+   // Display contracts based on active tab
+   const baseContracts = activeTab === 'all' ? contracts : favorites
+ 
+   // 搜索过滤
+   const [searchQuery, setSearchQuery] = useState('')
+   const displayContracts = useMemo(() => {
+     // 过滤开关：默认仅显示交易中合约
+@@ -57,32 +55,32 @@ export function MarketPanel() {
+   const favoritedIds = useMemo(
+     () => new Set(favorites.map(c => c.instrumentID)),
+     [favorites]
+   )
+   // All contract IDs in the system
+   const allContractIds = useMemo(
+     () => new Set(contracts.map(c => c.instrumentID)),
+     [contracts]
+   )
+ 
+-  // 顶部菜单「行情」切换：直接在行情主页内切 全部/自选/T型期权，不新建标签页
++  // 顶部菜单「行情」切换（设计 §4.1）：期货/期权为独立固定标签。
++  // options → 激活期权标签；all/favorites → 激活期货标签并切内部全部/自选。
+   useEffect(() => {
+     if (!isElectron()) return
+ 
+     const cleanup = window.electronAPI?.onMarketView?.((view) => {
+       if (view === 'options') {
+-        setViewMode('options')
+-      } else {
+-        setViewMode('market')
+-        setActiveTab(view === 'favorites' ? 'favorites' : 'all')
++        const options = useTabStore.getState().tabs.find((t) => t.type === 'options')
++        if (options) useTabStore.getState().setActiveTab(options.id)
++        return
+       }
+-      // 切回行情主页（行情为固定标签，直接激活即可）
++      setActiveTab(view === 'favorites' ? 'favorites' : 'all')
+       const market = useTabStore.getState().tabs.find((t) => t.type === 'market')
+       if (market) useTabStore.getState().setActiveTab(market.id)
+     })
+ 
+     return () => cleanup?.()
+   }, [])
+ 
+   const { handleClick, handleDoubleClick } = usePointOrder({
+     onOrder: ({ instrumentID, price }) => {
+       setSelectedInstrument(instrumentID)
+@@ -103,162 +101,138 @@ export function MarketPanel() {
+     // selectedInstrument ∈ selectedContracts，否则 selectRow+scroll 被跳过 → 搜索选择后表格不跳转
+     setSelectedContracts(new Set([instrumentID]))
+   }
+ 
+   return (
+     <section className="market-panel">
+       {/* 行情页工具栏：合并 market-tabs（模式切换）+ panel-header（搜索/全部自选/操作）为单行。
+           保留 data-drag-handle：market 为固定标签（closable:false）故 TabContent 中惰性不触发，
+           与旧 market-tabs 行为一致；保留以对齐 Phase 2 全局栏合并后的拖拽语义（审查 🔵-1）。 */}
+       <div className="market-toolbar" data-drag-handle>
+-        {/* 左：行情/期权模式切换 */}
+-        <div className="market-toolbar__mode">
++        {/* 搜索 + 全部/自选 + 操作（期货页专属工具栏；期权页为独立标签，见 OptionsPanel） */}
++        <div className="market-toolbar__search">
++          <ContractSearch contracts={baseContracts} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
+           <button
+-            className={`market-mode-btn${viewMode === 'market' ? ' active' : ''}`}
+-            onClick={() => setViewMode('market')}
++            className="btn-search-advanced"
++            title="搜索合约"
++            onClick={() => setSearchModalOpen(true)}
+           >
+-            行情
++            🔍
++          </button>
++          {searchQuery && (
++            <span className="search-count">
++              {displayContracts.length} / {baseContracts.length}
++            </span>
++          )}
++        </div>
++        <div className="market-toolbar__tabs">
++          <button
++            className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
++            onClick={() => setActiveTab('all')}
++          >
++            全部
+           </button>
+           <button
+-            className={`market-mode-btn${viewMode === 'options' ? ' active' : ''}`}
+-            onClick={() => setViewMode('options')}
++            className={`btn-tab${activeTab === 'favorites' ? ' active' : ''}`}
++            onClick={() => setActiveTab('favorites')}
+           >
+-            T型期权
++            自选
+           </button>
+         </div>
+-
+-        {/* 中/右：搜索 + 全部/自选 + 操作（仅行情模式展示，期权模式只有模式切换） */}
+-        {viewMode === 'market' && (
+-          <>
+-            <div className="market-toolbar__search">
+-              <ContractSearch contracts={baseContracts} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
+-              <button
+-                className="btn-search-advanced"
+-                title="搜索合约"
+-                onClick={() => setSearchModalOpen(true)}
+-              >
+-                🔍
+-              </button>
+-              {searchQuery && (
+-                <span className="search-count">
+-                  {displayContracts.length} / {baseContracts.length}
+-                </span>
+-              )}
+-            </div>
+-            <div className="market-toolbar__tabs">
+-              <button
+-                className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
+-                onClick={() => setActiveTab('all')}
+-              >
+-                全部
+-              </button>
+-              <button
+-                className={`btn-tab${activeTab === 'favorites' ? ' active' : ''}`}
+-                onClick={() => setActiveTab('favorites')}
+-              >
+-                自选
+-              </button>
+-            </div>
+-            <div className="market-toolbar__actions">
+-              <button
+-                className={`btn-filter-status${filterActive ? ' active' : ''}`}
+-                onClick={() => setFilterActive((v) => !v)}
+-                title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
+-              >
+-                {filterActive ? '仅交易中' : '显示全部'}
+-              </button>
+-              <button
+-                className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
+-                disabled={!selectedInstrument && selectedContracts.size === 0}
+-                onClick={async () => {
+-                  // 如果有多选，批量收藏/取消收藏
+-                  if (selectedContracts.size > 1) {
+-                    const allFavorited = Array.from(selectedContracts).every(id => favoritedIds.has(id))
+-                    if (allFavorited) {
+-                      // 全部已收藏，批量取消
+-                      for (const id of selectedContracts) {
+-                        await removeFromFavorites(id)
+-                      }
+-                      toast.success(`已移除 ${selectedContracts.size} 个合约`)
+-                    } else {
+-                      // 批量收藏
+-                      let count = 0
+-                      for (const id of selectedContracts) {
+-                        const inst = contracts.find(c => c.instrumentID === id)
+-                        if (inst) {
+-                          const success = await addToFavorites(inst)
+-                          if (success) count++
+-                        }
+-                      }
+-                      toast.success(`已收藏 ${count} 个合约`)
+-                    }
+-                    return
++        <div className="market-toolbar__actions">
++          <button
++            className={`btn-filter-status${filterActive ? ' active' : ''}`}
++            onClick={() => setFilterActive((v) => !v)}
++            title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
++          >
++            {filterActive ? '仅交易中' : '显示全部'}
++          </button>
++          <button
++            className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
++            disabled={!selectedInstrument && selectedContracts.size === 0}
++            onClick={async () => {
++              // 如果有多选，批量收藏/取消收藏
++              if (selectedContracts.size > 1) {
++                const allFavorited = Array.from(selectedContracts).every(id => favoritedIds.has(id))
++                if (allFavorited) {
++                  // 全部已收藏，批量取消
++                  for (const id of selectedContracts) {
++                    await removeFromFavorites(id)
+                   }
+-
+-                  // 单个合约收藏/取消收藏
+-                  if (!selectedInstrument) return
+-                  if (favoritedIds.has(selectedInstrument)) {
+-                    await removeFromFavorites(selectedInstrument)
+-                    toast.success(`已移除 ${selectedInstrument}`)
+-                  } else {
+-                    const inst = contracts.find(c => c.instrumentID === selectedInstrument)
++                  toast.success(`已移除 ${selectedContracts.size} 个合约`)
++                } else {
++                  // 批量收藏
++                  let count = 0
++                  for (const id of selectedContracts) {
++                    const inst = contracts.find(c => c.instrumentID === id)
+                     if (inst) {
+-                      await addToFavorites(inst)
+-                      toast.success(`已收藏 ${inst.instrumentID}`)
++                      const success = await addToFavorites(inst)
++                      if (success) count++
+                     }
+                   }
+-                }}
+-              >
+-                {selectedContracts.size > 1
+-                  ? (Array.from(selectedContracts).every(id => favoritedIds.has(id)) ? '批量移除' : '批量收藏')
+-                  : (selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏')
++                  toast.success(`已收藏 ${count} 个合约`)
+                 }
+-              </button>
+-            </div>
+-          </>
+-        )}
+-      </div>
++                return
++              }
+ 
+-      {viewMode === 'options' ? (
+-        <OptionPanel />
+-      ) : (
+-        <div className="panel-content">
+-          <ErrorBoundary>
+-            <QuoteTable
+-              spec={futuresSpec}
+-              contracts={displayContracts}
+-              snapshots={snapshots}
+-              selectedInstrument={selectedInstrument}
+-              onRowClick={handleClick}
+-              onRowDoubleClick={handleDoubleClick}
+-              onContextMenu={handleContextMenu}
+-              onMultiSelectContextMenu={handleMultiSelectContextMenu}
+-              onVisibleRangeChange={setVisibleInstrumentIDs}
+-              favoritedIds={favoritedIds}
+-              onFavoriteChange={(instrumentID, isFavorited) => {
+-                if (isFavorited) {
+-                  const inst = contracts.find(c => c.instrumentID === instrumentID)
+-                  if (inst) {
+-                    addToFavorites(inst)
+-                    toast.success(`已收藏 ${instrumentID}`)
+-                  }
+-                } else {
+-                  removeFromFavorites(instrumentID)
+-                  toast.success(`已移除 ${instrumentID}`)
++              // 单个合约收藏/取消收藏
++              if (!selectedInstrument) return
++              if (favoritedIds.has(selectedInstrument)) {
++                await removeFromFavorites(selectedInstrument)
++                toast.success(`已移除 ${selectedInstrument}`)
++              } else {
++                const inst = contracts.find(c => c.instrumentID === selectedInstrument)
++                if (inst) {
++                  await addToFavorites(inst)
++                  toast.success(`已收藏 ${inst.instrumentID}`)
+                 }
+-              }}
+-              selectedContracts={selectedContracts}
+-              onSelectionChange={setSelectedContracts}
+-            />
+-          </ErrorBoundary>
++              }
++            }}
++          >
++            {selectedContracts.size > 1
++              ? (Array.from(selectedContracts).every(id => favoritedIds.has(id)) ? '批量移除' : '批量收藏')
++              : (selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏')
++            }
++          </button>
+         </div>
+-      )}
++      </div>
++
++      <div className="panel-content">
++        <ErrorBoundary>
++          <QuoteTable
++            spec={futuresSpec}
++            contracts={displayContracts}
++            snapshots={snapshots}
++            selectedInstrument={selectedInstrument}
++            onRowClick={handleClick}
++            onRowDoubleClick={handleDoubleClick}
++            onContextMenu={handleContextMenu}
++            onMultiSelectContextMenu={handleMultiSelectContextMenu}
++            onVisibleRangeChange={setVisibleInstrumentIDs}
++            favoritedIds={favoritedIds}
++            onFavoriteChange={(instrumentID, isFavorited) => {
++              if (isFavorited) {
++                const inst = contracts.find(c => c.instrumentID === instrumentID)
++                if (inst) {
++                  addToFavorites(inst)
++                  toast.success(`已收藏 ${instrumentID}`)
++                }
++              } else {
++                removeFromFavorites(instrumentID)
++                toast.success(`已移除 ${instrumentID}`)
++              }
++            }}
++            selectedContracts={selectedContracts}
++            onSelectionChange={setSelectedContracts}
++          />
++        </ErrorBoundary>
++      </div>
+ 
+       <InstrumentSearchModal
+         isOpen={searchModalOpen}
+         onClose={() => setSearchModalOpen(false)}
+         onAddToFavorite={addToFavorites}
+         onRemoveFromFavorite={removeFromFavorites}
+         allContractIds={allContractIds}
+         favoritedIds={favoritedIds}
+       />
+ 
+diff --git a/frontend/src/modules/market/optionsSpec.test.ts b/frontend/src/modules/market/optionsSpec.test.ts
+new file mode 100644
+index 0000000..25f92f7
+--- /dev/null
++++ b/frontend/src/modules/market/optionsSpec.test.ts
+@@ -0,0 +1,27 @@
++import { describe, it, expect } from 'vitest'
++import type { ContractInfo } from '@/services/types'
++import { optionsSpec } from './optionsSpec'
++
++const fut: ContractInfo = { instrumentID: 'FG609', instrumentName: 'FG609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' }
++const opt: ContractInfo = { instrumentID: 'FG609-C-1300', instrumentName: 'FG609-C-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'FG609', optionsType: '1', strikePrice: 1300 }
++
++describe('optionsSpec', () => {
++  it('列定义含 类型/行权价', () => {
++    expect(optionsSpec.columns.map((c) => c.field)).toEqual(
++      expect.arrayContaining(['contractType', 'strikePrice']),
++    )
++  })
++
++  it('标底行 kind=underlying 且类型列为「标」', () => {
++    const r = optionsSpec.buildRecord(fut, undefined, false)
++    expect(r.kind).toBe('underlying')
++    expect(r.contractType).toBe('标')
++  })
++
++  it('期权行 kind=option 且类型列 C/P、行权价填充', () => {
++    const r = optionsSpec.buildRecord(opt, undefined, false)
++    expect(r.kind).toBe('option')
++    expect(r.contractType).toBe('C')
++    expect(r.strikePrice).toBe(1300)
++  })
++})
+diff --git a/frontend/src/modules/market/optionsSpec.ts b/frontend/src/modules/market/optionsSpec.ts
+new file mode 100644
+index 0000000..02df64f
+--- /dev/null
++++ b/frontend/src/modules/market/optionsSpec.ts
+@@ -0,0 +1,60 @@
++import type { MarketSnapshot, ContractInfo } from '@/services/types'
++import { getContractStatus } from '@/utils/contractStatus'
++import { PLACEHOLDER, isValidPrice, coloredStyle, statusStyle, type QuoteTableSpec, type QuoteRecord, type QuoteRowKind } from './quoteTableCore'
++
++const columns = [
++  { field: 'instrumentID', title: '合约', width: 150 },
++  { field: 'contractType', title: '类型', width: 50, style: statusStyle },
++  { field: 'strikePrice', title: '行权价', width: 90 },
++  { field: 'expireDate', title: '到期日', width: 115 },
++  { field: 'exchangeID', title: '交易所', width: 85 },
++  { field: 'status', title: '状态', width: 85, style: statusStyle },
++  { field: 'lastPrice', title: '最新价', width: 90, style: coloredStyle },
++  { field: 'change', title: '涨跌', width: 115, style: coloredStyle },
++  { field: 'changePercent', title: '涨跌%', width: 115, style: coloredStyle },
++  { field: 'bidPrice1', title: '买一', width: 120, style: coloredStyle },
++  { field: 'askPrice1', title: '卖一', width: 120, style: coloredStyle },
++  { field: 'volume', title: '成交量', width: 90 },
++  { field: 'openInterest', title: '持仓量', width: 90 },
++  { field: 'favorite', title: '⭐', width: 60 },
++]
++
++function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, isFavorited: boolean): QuoteRecord {
++  const kind: QuoteRowKind = contract.productClass === '1' ? 'underlying' : 'option'
++  const status = getContractStatus(contract)
++  const contractType = kind === 'underlying' ? '标' : (contract.optionsType === '1' ? 'C' : 'P')
++  const base = {
++    instrumentID: contract.instrumentID,
++    kind,
++    contractType,
++    strikePrice: kind === 'option' ? contract.strikePrice : PLACEHOLDER,
++    expireDate: contract.expireDate || PLACEHOLDER,
++    exchangeID: contract.exchangeID || PLACEHOLDER,
++    status,
++    favorite: isFavorited ? '⭐' : '☆',
++  }
++  if (!snap) {
++    return { ...base, lastPrice: PLACEHOLDER, change: PLACEHOLDER, changePercent: PLACEHOLDER, bidPrice1: PLACEHOLDER, askPrice1: PLACEHOLDER, volume: PLACEHOLDER, openInterest: PLACEHOLDER }
++  }
++  const preSettlement = (snap.preSettlementPrice && snap.preSettlementPrice > 0) ? snap.preSettlementPrice : (snap.preClosePrice || snap.lastPrice)
++  const change = snap.lastPrice - preSettlement
++  const changePercent = preSettlement ? (change / preSettlement) * 100 : 0
++  return {
++    ...base,
++    lastPrice: isValidPrice(snap.lastPrice) ? snap.lastPrice : PLACEHOLDER,
++    change: isValidPrice(snap.lastPrice) && isValidPrice(preSettlement) ? change : PLACEHOLDER,
++    changePercent: isValidPrice(snap.lastPrice) && isValidPrice(preSettlement) ? changePercent : PLACEHOLDER,
++    bidPrice1: isValidPrice(snap.bidPrice1) ? snap.bidPrice1 : PLACEHOLDER,
++    askPrice1: isValidPrice(snap.askPrice1) ? snap.askPrice1 : PLACEHOLDER,
++    volume: snap.volume,
++    openInterest: snap.openInterest,
++  }
++}
++
++/** 标底行：深色底 + 上分隔线 */
++function rowStyle(record: QuoteRecord): Record<string, unknown> | undefined {
++  if (record.kind === 'underlying') return { bgColor: '#1a2230' }
++  return undefined
++}
++
++export const optionsSpec: QuoteTableSpec = { columns, buildRecord, rowStyle }
+diff --git a/frontend/src/modules/options/OptionsPanel.test.tsx b/frontend/src/modules/options/OptionsPanel.test.tsx
+new file mode 100644
+index 0000000..5a4efe0
+--- /dev/null
++++ b/frontend/src/modules/options/OptionsPanel.test.tsx
+@@ -0,0 +1,146 @@
++import { describe, it, expect, vi, beforeEach } from 'vitest'
++import { act, render, screen } from '@testing-library/react'
++import userEvent from '@testing-library/user-event'
++import { OptionsPanel } from './OptionsPanel'
++import { optionsSpec } from '@/modules/market/optionsSpec'
++import { useMarketStore } from '@/modules/market/store'
++import { useContractsStore } from '@/stores/contracts'
++import type { ContractInfo } from '@/services/types'
++
++// Mock TQuoteView（T型报价二级视图依赖链沉重，仅测切换渲染）
++vi.mock('./TQuoteView', () => ({
++  TQuoteView: () => <div data-testid="tquote-view">TQuoteView Mock</div>,
++}))
++
++// Mock echarts（ContextMenu 无关，但部分共享模块可能引用）
++vi.mock('echarts', () => ({
++  init: vi.fn(() => ({
++    setOption: vi.fn(),
++    resize: vi.fn(),
++    dispose: vi.fn(),
++  })),
++  default: {
++    init: vi.fn(() => ({
++      setOption: vi.fn(),
++      resize: vi.fn(),
++      dispose: vi.fn(),
++    })),
++  },
++}))
++
++const fut: ContractInfo = { instrumentID: 'FG609', instrumentName: 'FG609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' }
++const optC: ContractInfo = { instrumentID: 'FG609-C-1300', instrumentName: 'FG609-C-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'FG609', optionsType: '1', strikePrice: 1300 }
++const optP: ContractInfo = { instrumentID: 'FG609-P-1300', instrumentName: 'FG609-P-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'FG609', optionsType: '2', strikePrice: 1300 }
++
++function setupContracts() {
++  useContractsStore.setState({
++    contracts: [fut, optC, optP],
++    favorites: [],
++    isLoaded: true,
++  })
++}
++
++describe('OptionsPanel', () => {
++  beforeEach(() => {
++    useMarketStore.setState({
++      selectedInstrument: null,
++      snapshots: new Map(),
++      selectedContracts: new Set(),
++      visibleInstrumentIDs: [],
++      scrollEndSeq: 0,
++    })
++    setupContracts()
++    vi.clearAllMocks()
++  })
++
++  it('默认视图为 列表（列表按钮 active，列表表格渲染，T型报价不渲染）', () => {
++    const { container } = render(<OptionsPanel />)
++    expect(screen.getByRole('button', { name: '列表' }).classList.contains('active')).toBe(true)
++    expect(screen.getByRole('button', { name: 'T型报价' }).classList.contains('active')).toBe(false)
++    expect(container.querySelector('.market-table-container')).toBeTruthy()
++    expect(screen.queryByTestId('tquote-view')).toBeNull()
++  })
++
++  it('点击 T型报价 切换二级视图，再切回 列表', async () => {
++    const user = userEvent.setup()
++    const { container } = render(<OptionsPanel />)
++    await user.click(screen.getByRole('button', { name: 'T型报价' }))
++    expect(screen.getByTestId('tquote-view')).toBeInTheDocument()
++    expect(container.querySelector('.market-table-container')).toBeNull()
++    expect(screen.getByRole('button', { name: 'T型报价' }).classList.contains('active')).toBe(true)
++
++    await user.click(screen.getByRole('button', { name: '列表' }))
++    expect(container.querySelector('.market-table-container')).toBeTruthy()
++    expect(screen.queryByTestId('tquote-view')).toBeNull()
++    expect(screen.getByRole('button', { name: '列表' }).classList.contains('active')).toBe(true)
++  })
++
++  it('分组展平：标底行在前（kind=underlying、类型「标」），期权行随后（C 前 P 后、行权价填充）', async () => {
++    render(<OptionsPanel />)
++    const { ListTable } = await import('@visactor/vtable')
++    const options = (ListTable as any).mock.calls[0][1]
++    const ids = options.records.map((r: any) => r.instrumentID)
++    expect(ids).toEqual(['FG609', 'FG609-C-1300', 'FG609-P-1300'])
++    expect(options.records[0].kind).toBe('underlying')
++    expect(options.records[0].contractType).toBe('标')
++    expect(options.records[1].kind).toBe('option')
++    expect(options.records[1].contractType).toBe('C')
++    expect(options.records[1].strikePrice).toBe(1300)
++    expect(options.records[2].contractType).toBe('P')
++  })
++
++  it('行单击：同步 selectedInstrument + selectedContracts（单选集），供金色锚点守卫通过', async () => {
++    render(<OptionsPanel />)
++    const { ListTable } = await import('@visactor/vtable')
++    const instance = (ListTable as any).mock.results[0].value
++    const clickHandler = instance.on.mock.calls.find((call: any[]) => call[0] === 'click_cell')?.[1]
++    expect(clickHandler).toBeDefined()
++    act(() => {
++      clickHandler({ row: 1, col: 1, event: {} })
++    })
++    expect(useMarketStore.getState().selectedInstrument).toBe('FG609')
++    expect(useMarketStore.getState().selectedContracts.has('FG609')).toBe(true)
++    expect(useMarketStore.getState().selectedContracts.size).toBe(1)
++  })
++
++  it('右键列表行：打开单选上下文菜单（打开报单/K线/查询）', async () => {
++    render(<OptionsPanel />)
++    const { ListTable } = await import('@visactor/vtable')
++    const instance = (ListTable as any).mock.results[0].value
++    const contextmenuHandler = instance.on.mock.calls.find(
++      (call: any[]) => call[0] === 'contextmenu_cell'
++    )?.[1]
++    expect(contextmenuHandler).toBeDefined()
++    act(() => {
++      contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
++    })
++    expect(screen.getByText('打开报单')).toBeInTheDocument()
++    expect(screen.getByText('打开K线')).toBeInTheDocument()
++    expect(screen.getByText('查询')).toBeInTheDocument()
++  })
++
++  it('收藏列点击：未收藏 → addToFavorites(inst)', async () => {
++    const addSpy = vi.spyOn(useContractsStore.getState(), 'addToFavorites').mockResolvedValue(true)
++    render(<OptionsPanel />)
++    const { ListTable } = await import('@visactor/vtable')
++    const instance = (ListTable as any).mock.results[0].value
++    const clickHandler = instance.on.mock.calls.find((call: any[]) => call[0] === 'click_cell')?.[1]
++    const favoriteCol = optionsSpec.columns.length - 1
++    act(() => {
++      clickHandler({ row: 1, col: favoriteCol, event: {} })
++    })
++    expect(addSpy).toHaveBeenCalledWith(fut)
++  })
++
++  it('可见区上报：挂载后经 onVisibleRangeChange 上报可见合约（驱动共享订阅管理器）', async () => {
++    render(<OptionsPanel />)
++    // QuoteTable 挂载后 setTimeout(notifyVisibleRange, 0) 触发一次上报
++    await act(async () => {
++      await new Promise((r) => setTimeout(r, 10))
++    })
++    const visible = useMarketStore.getState().visibleInstrumentIDs
++    expect(visible).toContain('FG609')
++    expect(visible).toContain('FG609-C-1300')
++    expect(visible).toContain('FG609-P-1300')
++  })
++})
+diff --git a/frontend/src/modules/options/OptionsPanel.tsx b/frontend/src/modules/options/OptionsPanel.tsx
+new file mode 100644
+index 0000000..a93aef4
+--- /dev/null
++++ b/frontend/src/modules/options/OptionsPanel.tsx
+@@ -0,0 +1,205 @@
++import { useMemo, useState } from 'react'
++import { ContextMenu } from '@/components/ContextMenu'
++import { ErrorBoundary } from '@/components/ErrorBoundary'
++import { QuoteTable } from '@/modules/market/QuoteTable'
++import { optionsSpec } from '@/modules/market/optionsSpec'
++import { groupOptionsByUnderlying } from '@/modules/market/sort'
++import { useMarketStore } from '@/modules/market/store'
++import { useOrderStore } from '@/modules/order/store'
++import { useContractsStore } from '@/stores/contracts'
++import { useTabStore } from '@/stores/tabs'
++import { useContractContextMenu } from '@/hooks/useContractContextMenu'
++import { usePointOrder } from '@/hooks/usePointOrder'
++import { toast } from '@/components/Toast'
++import { TQuoteView } from './TQuoteView'
++import type { ContractInfo } from '@/services/types'
++import './styles.css'
++
++/**
++ * OptionsPanel — 期权标签页（二级视图 shell）
++ *
++ * [列表 | T型报价] 切换：
++ * - 列表（默认）：按标底分组展平的期权表（标底期货行在前 + 其后期权行），
++ *   由 spec 驱动 QuoteTable 渲染，行级交互（选中/多选/右键/收藏/可见区订阅）与期货页一致；
++ * - T型报价：迁入原 OptionPanel 内容（TQuoteView 原样保留）。
++ */
++export function OptionsPanel() {
++  const [view, setView] = useState<'list' | 'tquote'>('list')
++  const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
++  const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
++  const { contracts, favorites, addToFavorites, removeFromFavorites } = useContractsStore()
++  const { contextMenu, multiSelectMenu, openOrderPopup, openQueryPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
++  // 期权标签是否激活：激活翻转为 true 时 QuoteTable 重报可见区，订阅管理器立即补订阅
++  const isActive = useTabStore((s) => s.tabs.some((t) => t.type === 'options' && t.id === s.activeTabId))
++
++  // 期货全量 → 期权全量 → 分组展平为有序 ContractInfo[]（标底行在前、期权行随后）
++  const rows = useMemo(() => {
++    const futures = contracts.filter((c) => c.productClass === '1')
++    const options = contracts.filter((c) => c.productClass === '2' || c.productClass === '6')
++    const groups = groupOptionsByUnderlying(options, futures)
++    const flat: ContractInfo[] = []
++    for (const g of groups) {
++      if (g.underlying) flat.push(g.underlying)
++      flat.push(...g.options)
++    }
++    return flat
++  }, [contracts])
++
++  // 用户收藏 ID 集合（用于 ⭐ 列与右键菜单收藏态）
++  const favoritedIds = useMemo(
++    () => new Set(favorites.map((c) => c.instrumentID)),
++    [favorites],
++  )
++
++  const { handleClick, handleDoubleClick } = usePointOrder({
++    onOrder: ({ instrumentID, price }) => {
++      setSelectedInstrument(instrumentID)
++      setOrderInstrument(instrumentID)
++      setOrderForm({ limitPrice: price })
++    },
++    onFill: ({ instrumentID }) => {
++      setSelectedInstrument(instrumentID)
++      openOrderPopup(instrumentID)
++    },
++  })
++
++  return (
++    <section className="options-page">
++      {/* 二级视图切换工具栏（Task 7/8 在此叠加 全部/自选、筛选、仅交易中、收藏、搜索框） */}
++      <div className="market-toolbar">
++        <div className="market-toolbar__mode">
++          <button
++            className={`market-mode-btn${view === 'list' ? ' active' : ''}`}
++            onClick={() => setView('list')}
++          >
++            列表
++          </button>
++          <button
++            className={`market-mode-btn${view === 'tquote' ? ' active' : ''}`}
++            onClick={() => setView('tquote')}
++          >
++            T型报价
++          </button>
++        </div>
++      </div>
++
++      {view === 'tquote' ? (
++        <TQuoteView />
++      ) : (
++        <div className="panel-content">
++          <ErrorBoundary>
++            <QuoteTable
++              spec={optionsSpec}
++              contracts={rows}
++              snapshots={snapshots}
++              selectedInstrument={selectedInstrument}
++              isActive={isActive}
++              onRowClick={handleClick}
++              onRowDoubleClick={handleDoubleClick}
++              onContextMenu={handleContextMenu}
++              onMultiSelectContextMenu={handleMultiSelectContextMenu}
++              onVisibleRangeChange={setVisibleInstrumentIDs}
++              favoritedIds={favoritedIds}
++              onFavoriteChange={(instrumentID, isFavorited) => {
++                if (isFavorited) {
++                  const inst = contracts.find((c) => c.instrumentID === instrumentID)
++                  if (inst) {
++                    addToFavorites(inst)
++                    toast.success(`已收藏 ${instrumentID}`)
++                  }
++                } else {
++                  removeFromFavorites(instrumentID)
++                  toast.success(`已移除 ${instrumentID}`)
++                }
++              }}
++              selectedContracts={selectedContracts}
++              onSelectionChange={setSelectedContracts}
++            />
++          </ErrorBoundary>
++        </div>
++      )}
++
++      {/* 单选右键菜单 */}
++      {contextMenu && (
++        <ContextMenu
++          x={contextMenu.x}
++          y={contextMenu.y}
++          items={[
++            { label: '打开报单', icon: '📝', onClick: () => openOrderPopup(contextMenu.instrumentID) },
++            { label: '打开K线', icon: '📈', onClick: () => openKlineTab(contextMenu.instrumentID) },
++            { label: '查询', icon: '📋', onClick: () => openQueryPopup(contextMenu.instrumentID) },
++            {
++              label: favoritedIds.has(contextMenu.instrumentID) ? '取消收藏' : '收藏',
++              icon: favoritedIds.has(contextMenu.instrumentID) ? '★' : '⭐',
++              onClick: () => {
++                if (favoritedIds.has(contextMenu.instrumentID)) {
++                  removeFromFavorites(contextMenu.instrumentID)
++                  toast.success(`已移除 ${contextMenu.instrumentID}`)
++                } else {
++                  const inst = contracts.find((c) => c.instrumentID === contextMenu.instrumentID)
++                  if (inst) {
++                    addToFavorites(inst)
++                    toast.success(`已收藏 ${contextMenu.instrumentID}`)
++                  }
++                }
++              },
++            },
++            { label: '复制合约代码', icon: '📋', onClick: () => navigator.clipboard.writeText(contextMenu.instrumentID) },
++          ]}
++          onClose={closeMenus}
++        />
++      )}
++
++      {/* 多选右键菜单 */}
++      {multiSelectMenu && (() => {
++        // 计算已收藏和未收藏的数量
++        const unfavoritedIds = multiSelectMenu.instrumentIDs.filter((id) => !favoritedIds.has(id))
++        const favoritedIdsInSelection = multiSelectMenu.instrumentIDs.filter((id) => favoritedIds.has(id))
++
++        return (
++          <ContextMenu
++            x={multiSelectMenu.x}
++            y={multiSelectMenu.y}
++            items={[
++              { label: `批量打开报单 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📝', onClick: () => openOrderTabs(multiSelectMenu.instrumentIDs) },
++              { label: `批量打开K线 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📈', onClick: () => openKlineTabs(multiSelectMenu.instrumentIDs) },
++              {
++                label: `批量收藏 (${unfavoritedIds.length}个)`,
++                icon: '⭐',
++                disabled: unfavoritedIds.length === 0,
++                onClick: async () => {
++                  let count = 0
++                  for (const id of unfavoritedIds) {
++                    const inst = contracts.find((c) => c.instrumentID === id)
++                    if (inst) {
++                      const success = await addToFavorites(inst)
++                      if (success) count++
++                    }
++                  }
++                  toast.success(`已收藏 ${count} 个合约`)
++                },
++              },
++              {
++                label: `批量取消收藏 (${favoritedIdsInSelection.length}个)`,
++                icon: '★',
++                disabled: favoritedIdsInSelection.length === 0,
++                onClick: async () => {
++                  for (const id of favoritedIdsInSelection) {
++                    await removeFromFavorites(id)
++                  }
++                  toast.success(`已移除 ${favoritedIdsInSelection.length} 个合约`)
++                },
++              },
++              {
++                label: `复制合约代码 (${multiSelectMenu.instrumentIDs.length}个)`,
++                icon: '📋',
++                onClick: () => navigator.clipboard.writeText(multiSelectMenu.instrumentIDs.join(',')),
++              },
++            ]}
++            onClose={closeMenus}
++          />
++        )
++      })()}
++    </section>
++  )
++}
+diff --git a/frontend/src/modules/options/OptionPanel.style.test.tsx b/frontend/src/modules/options/TQuoteView.style.test.tsx
+similarity index 96%
+rename from frontend/src/modules/options/OptionPanel.style.test.tsx
+rename to frontend/src/modules/options/TQuoteView.style.test.tsx
+index e6a2573..6081f12 100644
+--- a/frontend/src/modules/options/OptionPanel.style.test.tsx
++++ b/frontend/src/modules/options/TQuoteView.style.test.tsx
+@@ -4,21 +4,21 @@ import { resolve } from 'node:path'
+ 
+ function readCssBlock(selector: string): string {
+   const css = readFileSync(resolve(__dirname, 'styles.css'), 'utf-8')
+   const escaped = selector.replace(/\./g, '\\.')
+   const re = new RegExp(`${escaped}\\s*\\{([^}]*)\\}`)
+   const match = css.match(re)
+   if (!match) throw new Error(`CSS block not found: ${selector}`)
+   return match[1]
+ }
+ 
+-describe('OptionPanel 自动填充', () => {
++describe('TQuoteView 自动填充', () => {
+   it('.options-chain-table 以 flex:1 撑满可用高度（父级 .options-content 为 flex 列容器）', () => {
+     const block = readCssBlock('.options-chain-table')
+     expect(block).toMatch(/width:\s*100%/)
+     expect(block).toMatch(/flex:\s*1/)
+     expect(block).toMatch(/min-height:\s*0/)
+   })
+ 
+   it('.options-content 为 flex 列容器，供子表 flex 填充', () => {
+     const block = readCssBlock('.options-content')
+     expect(block).toMatch(/display:\s*flex/)
+diff --git a/frontend/src/modules/options/OptionPanel.test.tsx b/frontend/src/modules/options/TQuoteView.test.tsx
+similarity index 93%
+rename from frontend/src/modules/options/OptionPanel.test.tsx
+rename to frontend/src/modules/options/TQuoteView.test.tsx
+index 248aba0..ab756c1 100644
+--- a/frontend/src/modules/options/OptionPanel.test.tsx
++++ b/frontend/src/modules/options/TQuoteView.test.tsx
+@@ -1,13 +1,13 @@
+ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+ import { render, screen, act } from '@testing-library/react'
+-import { OptionPanel } from './OptionPanel'
++import { TQuoteView } from './TQuoteView'
+ import { useMarketStore } from '@/modules/market/store'
+ import type { MarketSnapshot } from '@/services/types'
+ 
+ // Mock the options store
+ const mockFetchOptionChains = vi.fn().mockResolvedValue(undefined)
+ const mockFetchVolatility = vi.fn().mockResolvedValue(undefined)
+ const mockSetSelectedUnderlying = vi.fn()
+ const mockSetSelectedExpireDate = vi.fn()
+ const mockAvailableUnderlyings = vi.fn(() => ['IF2608', 'IF2609'])
+ const mockAvailableExpirations = vi.fn(() => ['20260815', '20260915'])
+@@ -57,114 +57,114 @@ vi.mock('@/services/api', () => ({
+   getOptionUnderlyings: (...args: any[]) => mockGetOptionUnderlyings(...args),
+ }))
+ 
+ // Mock TQuoteTable (renders simple div)
+ vi.mock('./TQuoteTable', () => ({
+   TQuoteTable: ({ chain }: { chain: any }) => (
+     <div data-testid="tquote-table">{chain.underlying}-{chain.expireDate}</div>
+   ),
+ }))
+ 
+-describe('OptionPanel', () => {
++describe('TQuoteView', () => {
+   beforeEach(() => {
+     vi.clearAllMocks()
+     storeState = {
+       optionChains: [],
+       volatility: new Map(),
+       selectedUnderlying: null,
+       selectedExpireDate: null,
+       loading: false,
+       error: null,
+     }
+   })
+ 
+   it('renders the options panel container', () => {
+-    const { container } = render(<OptionPanel />)
++    const { container } = render(<TQuoteView />)
+     expect(container.firstChild).toBeTruthy()
+   })
+ 
+   it('does not auto-fetch option chains on mount', () => {
+-    render(<OptionPanel />)
++    render(<TQuoteView />)
+     expect(mockFetchOptionChains).not.toHaveBeenCalled()
+   })
+ 
+   it('shows placeholder text when no underlying selected', () => {
+-    render(<OptionPanel />)
++    render(<TQuoteView />)
+     expect(screen.getByText(/请先选择标的合约/)).toBeTruthy()
+   })
+ 
+   it('shows placeholder text when underlying selected but no expiry', () => {
+     storeState.selectedUnderlying = 'IF2608'
+-    render(<OptionPanel />)
++    render(<TQuoteView />)
+     // There are two elements with this text: the <option> in dropdown and the <div> placeholder
+     const elements = screen.getAllByText(/请选择到期日/)
+     expect(elements.length).toBeGreaterThanOrEqual(1)
+   })
+ 
+   it('shows loading text when loading=true', () => {
+     storeState.loading = true
+-    render(<OptionPanel />)
++    render(<TQuoteView />)
+     // There are two elements with this text: the <option> in dropdown and the <div> content
+     const elements = screen.getAllByText(/加载中/)
+     expect(elements.length).toBeGreaterThanOrEqual(1)
+   })
+ 
+   it('shows error message when error is set', () => {
+     storeState.error = 'Failed to load'
+-    render(<OptionPanel />)
++    render(<TQuoteView />)
+     expect(screen.getByText(/Failed to load/)).toBeTruthy()
+   })
+ 
+   it('renders TQuoteTable when chain data is available', () => {
+     storeState.optionChains = [
+       {
+         underlying: 'IF2608',
+         expireDate: '20260815',
+         calls: [],
+         puts: [],
+       },
+     ]
+     storeState.selectedUnderlying = 'IF2608'
+     storeState.selectedExpireDate = '20260815'
+-    render(<OptionPanel />)
++    render(<TQuoteView />)
+     expect(screen.getByTestId('tquote-table')).toBeTruthy()
+     expect(screen.getByTestId('tquote-table').textContent).toBe('IF2608-20260815')
+   })
+ 
+   it('shows underlying selector label', () => {
+-    render(<OptionPanel />)
++    render(<TQuoteView />)
+     const labels = screen.getAllByText(/标的/)
+     expect(labels.length).toBeGreaterThan(0)
+   })
+ 
+   it('shows no match message when selection has no matching chain', () => {
+     storeState.selectedUnderlying = 'IF2609'
+     storeState.selectedExpireDate = '20261215'
+-    render(<OptionPanel />)
++    render(<TQuoteView />)
+     expect(screen.getByText(/无匹配/)).toBeTruthy()
+   })
+ 
+   it('renders single table when both underlying and expiry selected', () => {
+     storeState.optionChains = [
+       { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [] },
+       { underlying: 'IF2608', expireDate: '20260915', calls: [], puts: [] },
+     ]
+     storeState.selectedUnderlying = 'IF2608'
+     storeState.selectedExpireDate = '20260815'
+-    render(<OptionPanel />)
++    render(<TQuoteView />)
+     const tables = screen.getAllByTestId('tquote-table')
+     expect(tables).toHaveLength(1)
+     expect(tables[0].textContent).toBe('IF2608-20260815')
+   })
+ })
+ 
+-describe('OptionPanel - volatility real-time refresh', () => {
++describe('TQuoteView - volatility real-time refresh', () => {
+   beforeEach(() => {
+     vi.clearAllMocks()
+     vi.useFakeTimers()
+     storeState = {
+       optionChains: [
+         { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [] },
+       ],
+       volatility: new Map(),
+       selectedUnderlying: 'IF2608',
+       selectedExpireDate: '20260815',
+@@ -172,21 +172,21 @@ describe('OptionPanel - volatility real-time refresh', () => {
+       error: null,
+     }
+     useMarketStore.setState({ snapshots: new Map() })
+   })
+ 
+   afterEach(() => {
+     vi.useRealTimers()
+   })
+ 
+   it('refetches volatility when underlying snapshot changes', () => {
+-    render(<OptionPanel />)
++    render(<TQuoteView />)
+     // Mount: subscribe effect fetchVolatility ×1
+     expect(mockFetchVolatility).toHaveBeenCalledTimes(1)
+ 
+     // Simulate underlying snapshot update via real zustand store
+     act(() => {
+       useMarketStore.setState({
+         snapshots: new Map([
+           ['IF2608', { instrumentID: 'IF2608', lastPrice: 4800 } as MarketSnapshot],
+         ]),
+       })
+@@ -195,21 +195,21 @@ describe('OptionPanel - volatility real-time refresh', () => {
+     // Advance timers to trigger debounce
+     act(() => {
+       vi.advanceTimersByTime(1000)
+     })
+ 
+     expect(mockFetchVolatility).toHaveBeenCalledTimes(2)
+     expect(mockFetchVolatility).toHaveBeenLastCalledWith('IF2608')
+   })
+ 
+   it('debounces rapid snapshot updates (only fetches once)', () => {
+-    render(<OptionPanel />)
++    render(<TQuoteView />)
+     expect(mockFetchVolatility).toHaveBeenCalledTimes(1)
+ 
+     // Simulate rapid snapshot updates
+     act(() => {
+       useMarketStore.setState({
+         snapshots: new Map([
+           ['IF2608', { instrumentID: 'IF2608', lastPrice: 4800 } as MarketSnapshot],
+         ]),
+       })
+     })
+@@ -233,21 +233,21 @@ describe('OptionPanel - volatility real-time refresh', () => {
+       vi.advanceTimersByTime(1000)
+     })
+ 
+     // Should only have fetched once more (debounced), not 3 times
+     expect(mockFetchVolatility).toHaveBeenCalledTimes(2)
+   })
+ 
+   it('does not refresh when no underlying is selected', () => {
+     storeState.selectedUnderlying = null
+     storeState.optionChains = []
+-    render(<OptionPanel />)
++    render(<TQuoteView />)
+     // No subscribe effect (no chain)
+     expect(mockFetchVolatility).not.toHaveBeenCalled()
+ 
+     act(() => {
+       useMarketStore.setState({
+         snapshots: new Map([
+           ['IF2608', { instrumentID: 'IF2608', lastPrice: 4800 } as MarketSnapshot],
+         ]),
+       })
+     })
+diff --git a/frontend/src/modules/options/OptionPanel.tsx b/frontend/src/modules/options/TQuoteView.tsx
+similarity index 99%
+rename from frontend/src/modules/options/OptionPanel.tsx
+rename to frontend/src/modules/options/TQuoteView.tsx
+index bee0b6a..9d208fa 100644
+--- a/frontend/src/modules/options/OptionPanel.tsx
++++ b/frontend/src/modules/options/TQuoteView.tsx
+@@ -12,21 +12,21 @@ const REFRESH_DEBOUNCE_MS = 800
+ function formatExpireDate(raw: string): string {
+   if (raw.length === 8) return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
+   return raw
+ }
+ 
+ /** Max retry attempts for loading underlyings. */
+ const MAX_RETRIES = 3
+ /** Delay between retries (ms). */
+ const RETRY_DELAY_MS = 1500
+ 
+-export function OptionPanel() {
++export function TQuoteView() {
+   const optionChains = useOptionsStore((s) => s.optionChains)
+   const volatility = useOptionsStore((s) => s.volatility)
+   const selectedUnderlying = useOptionsStore((s) => s.selectedUnderlying)
+   const selectedExpireDate = useOptionsStore((s) => s.selectedExpireDate)
+   const loading = useOptionsStore((s) => s.loading)
+   const error = useOptionsStore((s) => s.error)
+   const fetchOptionChains = useOptionsStore((s) => s.fetchOptionChains)
+   const fetchVolatility = useOptionsStore((s) => s.fetchVolatility)
+   const setSelectedUnderlying = useOptionsStore((s) => s.setSelectedUnderlying)
+   const setSelectedExpireDate = useOptionsStore((s) => s.setSelectedExpireDate)
+diff --git a/frontend/src/modules/options/styles.css b/frontend/src/modules/options/styles.css
+index b2a3d3b..7faf8a9 100644
+--- a/frontend/src/modules/options/styles.css
++++ b/frontend/src/modules/options/styles.css
+@@ -1,11 +1,27 @@
+-/* ── OptionPanel 样式 ─────────────────────────────────────────────────── */
++/* ── OptionsPanel 外层页容器（二级切换 shell，同 market-panel 布局语义） ── */
++
++.options-page {
++  display: flex;
++  flex-direction: column;
++  height: 100%;
++  overflow: hidden;
++  background: var(--bg-primary);
++}
++
++.options-page .panel-content {
++  flex: 1;
++  min-height: 0;
++  overflow: hidden;
++}
++
++/* ── TQuoteView（原 OptionPanel）样式 ─────────────────────────────────── */
+ 
+ .options-panel {
+   display: flex;
+   flex-direction: column;
+   flex: 1 1 0;
+   min-height: 0;
+   padding: 8px;
+ }
+ 
+ .options-toolbar {

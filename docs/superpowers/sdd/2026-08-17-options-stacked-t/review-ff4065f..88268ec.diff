@@ -1,0 +1,107 @@
+# Review package: ff4065f..88268ec
+
+## Commits
+88268ec feat(options): 合成标底合约工具（指数期权组头）
+
+## Files changed
+ frontend/src/modules/market/sort.test.ts | 19 ++++++++++++++++++-
+ frontend/src/modules/market/sort.ts      | 22 ++++++++++++++++++++++
+ 2 files changed, 40 insertions(+), 1 deletion(-)
+
+## Diff
+diff --git a/frontend/src/modules/market/sort.test.ts b/frontend/src/modules/market/sort.test.ts
+index 720daf7..9c218ac 100644
+--- a/frontend/src/modules/market/sort.test.ts
++++ b/frontend/src/modules/market/sort.test.ts
+@@ -1,13 +1,13 @@
+ import { describe, it, expect } from 'vitest'
+ import type { ContractInfo } from '@/services/types'
+-import { sortFutures, deriveUnderlyingProduct, groupOptionsByUnderlying, naturalCompare } from './sort'
++import { sortFutures, deriveUnderlyingProduct, groupOptionsByUnderlying, naturalCompare, syntheticUnderlyingContract } from './sort'
+ 
+ const fut = (instrumentID: string, exchangeID: string, productID: string): ContractInfo =>
+   ({ instrumentID, instrumentName: instrumentID, exchangeID, productID, volumeMultiple: 1, priceTick: 0.1, expireDate: '', isTrading: 1, productClass: '1' })
+ 
+ const opt = (instrumentID: string, exchangeID: string, productID: string, underlyingInstrID: string, optionsType: string, strikePrice: number, expireDate = '20260930'): ContractInfo =>
+   ({ instrumentID, instrumentName: instrumentID, exchangeID, productID, volumeMultiple: 1, priceTick: 0.1, expireDate, isTrading: 1, productClass: '2', underlyingInstrID, optionsType, strikePrice })
+ 
+ describe('naturalCompare', () => {
+   it('数字段按数值比较而非字符串', () => {
+     expect(['FG701', 'FG609', 'FG610'].sort(naturalCompare)).toEqual(['FG609', 'FG610', 'FG701'])
+@@ -83,10 +83,27 @@ describe('groupOptionsByUnderlying', () => {
+       opt('FG609-C-1200', 'CZCE', 'FGC', 'FG609', '1', 1200, '20260630'),
+     ]
+     const groups = groupOptionsByUnderlying(options, futures)
+     expect(groups[0].options.map((o) => o.instrumentID)).toEqual([
+       'FG609-C-1200',
+       'FG609-C-1300',
+       'FG609-P-1250',
+     ])
+   })
+ })
++
++describe('syntheticUnderlyingContract', () => {
++  it('指数期权标底合成：productClass=1、isTrading=0、品种/中文名映射', () => {
++    const c = syntheticUnderlyingContract('MO2608')
++    expect(c.instrumentID).toBe('MO2608')
++    expect(c.productClass).toBe('1')
++    expect(c.isTrading).toBe(0)
++    expect(c.productID).toBe('MO')
++    expect(c.instrumentName).toBe('中证1000期权')
++  })
++  it('真实期货标底同格式但可交易标志由调用方决定（合成恒为不可交易）', () => {
++    const c = syntheticUnderlyingContract('FG609')
++    expect(c.instrumentID).toBe('FG609')
++    expect(c.productClass).toBe('1')
++    expect(c.isTrading).toBe(0)
++  })
++})
+diff --git a/frontend/src/modules/market/sort.ts b/frontend/src/modules/market/sort.ts
+index b59e745..f2c8c98 100644
+--- a/frontend/src/modules/market/sort.ts
++++ b/frontend/src/modules/market/sort.ts
+@@ -1,11 +1,12 @@
+ import type { ContractInfo } from '@/services/types'
++import { getProductName } from '@/utils/productNames'
+ 
+ /** 交易所展示顺序 */
+ const EXCHANGE_ORDER = ['SHFE', 'DCE', 'CZCE', 'CFFEX', 'INE', 'GFEX']
+ 
+ function exchangeRank(exchangeID: string): number {
+   const i = EXCHANGE_ORDER.indexOf(exchangeID)
+   return i === -1 ? EXCHANGE_ORDER.length : i
+ }
+ 
+ /** 数字自然比较：FG609 < FG610 < FG701（按数字段数值比较，非字符串序） */
+@@ -55,10 +56,31 @@ export function groupOptionsByUnderlying(
+       if (d !== 0) return d
+       const t = (a.optionsType || '').localeCompare(b.optionsType || '')
+       if (t !== 0) return t
+       return (a.strikePrice ?? 0) - (b.strikePrice ?? 0)
+     })
+     result.push({ underlyingID: u, underlying: futMap.get(u), options: opts })
+   }
+   result.sort((a, b) => naturalCompare(a.underlyingID, b.underlyingID))
+   return result
+ }
++
++/** 标的不可订阅时（指数期权 MO/IO/HO 的 underlyingInstrID 非期货），
++ * 合成一条仅作组头的标底合约：productClass='1'（走 underlying 红粗渲染分支），
++ * isTrading=0（不可下单/不可订阅）。 */
++export function syntheticUnderlyingContract(underlyingInstrID: string): ContractInfo {
++  const productID = deriveUnderlyingProduct(underlyingInstrID)
++  return {
++    instrumentID: underlyingInstrID,
++    instrumentName: getProductName(productID),
++    exchangeID: '',
++    productID,
++    volumeMultiple: 0,
++    priceTick: 0,
++    expireDate: '',
++    isTrading: 0,
++    productClass: '1',
++    underlyingInstrID: undefined,
++    optionsType: undefined,
++    strikePrice: undefined,
++  }
++}

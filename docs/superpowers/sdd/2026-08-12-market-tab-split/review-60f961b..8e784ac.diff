@@ -1,0 +1,1343 @@
+# Review package: 60f961b..HEAD
+
+## Commits
+8e784ac feat(market): 交易所+品种多选筛选（两页独立+持久化）
+
+## Files changed
+ frontend/src/App.test.tsx                          |  10 ++
+ frontend/src/App.tsx                               |   4 +-
+ .../src/components/ContractFilter/index.test.tsx   | 114 ++++++++++++++
+ frontend/src/components/ContractFilter/index.tsx   | 131 ++++++++++++++++
+ frontend/src/components/ContractFilter/styles.css  | 170 +++++++++++++++++++++
+ frontend/src/modules/market/MarketPanel.test.tsx   |  98 ++++++++++++
+ frontend/src/modules/market/MarketPanel.tsx        |  51 ++++++-
+ frontend/src/modules/market/filter.test.ts         |  31 ++++
+ frontend/src/modules/market/filter.ts              |  24 +++
+ frontend/src/modules/options/OptionsPanel.test.tsx |  70 +++++++++
+ frontend/src/modules/options/OptionsPanel.tsx      |  53 ++++++-
+ frontend/src/stores/marketFilter.test.ts           |  84 ++++++++++
+ frontend/src/stores/marketFilter.ts                |  57 +++++++
+ 13 files changed, 887 insertions(+), 10 deletions(-)
+
+## Diff
+diff --git a/frontend/src/App.test.tsx b/frontend/src/App.test.tsx
+index ebe4566..f6ecd26 100644
+--- a/frontend/src/App.test.tsx
++++ b/frontend/src/App.test.tsx
+@@ -1,19 +1,20 @@
+ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+ import { render, screen, fireEvent, act } from '@testing-library/react'
+ import App from './App'
+ import { useConnectionStore } from '@/stores/connection'
+ import { useTabStore } from '@/stores/tabs'
+ import { useFloatingWindowStore } from '@/stores/floatingWindows'
+ import { useMarketWs } from '@/hooks/useMarketWs'
+ import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
+ import { useContractsStore } from '@/stores/contracts'
++import { useMarketFilterStore } from '@/stores/marketFilter'
+ 
+ // Mock TabBar 组件
+ vi.mock('@/components/TabBar', () => ({
+   TabBar: ({ onAddTab }: { onAddTab?: () => void }) => (
+     <div data-testid="tab-bar">
+       <span>TabBar Mock</span>
+       <button onClick={onAddTab}>+</button>
+     </div>
+   ),
+ }))
+@@ -177,12 +178,21 @@ describe('App Layout — 标签页系统', () => {
+       const loadFavSpy = vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
+ 
+       render(<App />)
+ 
+       expect(useMarketWs).toHaveBeenCalledTimes(1)
+       expect(useMarketWs).toHaveBeenCalledWith('ws://localhost:8000')
+       expect(useSubscriptionManager).toHaveBeenCalledTimes(1)
+       expect(loadAllSpy).toHaveBeenCalledTimes(1)
+       expect(loadFavSpy).toHaveBeenCalledTimes(1)
+     })
++
++    it('启动时加载持久化筛选（useMarketFilterStore.load）', () => {
++      vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
++      vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
++      const loadSpy = vi.spyOn(useMarketFilterStore.getState(), 'load').mockImplementation(() => {})
++      render(<App />)
++      expect(loadSpy).toHaveBeenCalledTimes(1)
++      loadSpy.mockRestore()
++    })
+   })
+ })
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index fcefbc5..425f901 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -3,20 +3,21 @@ import { GlobalBar } from '@/components/GlobalBar'
+ import { BottomBar } from '@/components/BottomBar'
+ import { TabContent } from '@/components/TabContent'
+ import { ToastContainer } from '@/components/Toast'
+ import { useSystemWs } from '@/hooks/useSystemWs'
+ import { useConnectionPoll } from '@/hooks/useConnectionPoll'
+ import { useTabContractLocks } from '@/hooks/useTabContractLocks'
+ import { useMarketWs } from '@/hooks/useMarketWs'
+ import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
+ import { useMarketStore } from '@/modules/market/store'
+ import { useContractsStore } from '@/stores/contracts'
++import { useMarketFilterStore } from '@/stores/marketFilter'
+ import { FloatingWindows } from '@/components/FloatingWindow'
+ import { useTabStore } from '@/stores/tabs'
+ import { API_BASE } from '@/services/api'
+ import { isElectron } from '@/services/electron'
+ import {
+   openOrderFloating,
+   openKlineFloating,
+   openQueryFloating,
+   openSettingsFloating,
+   openIpcMonitorFloating,
+@@ -35,24 +36,25 @@ function App() {
+ 
+   // 打开标签的合约锁定订阅（K线/报单标签的合约永不退订，保证数据流）
+   useTabContractLocks()
+ 
+   // 共享行情基础设施：行情 WS 单例 + 订阅管理器，挂载在 App 全局，
+   // 期货/期权双面板共享同一份订阅生命周期与 WS 单例（useSubscriptionManager 的
+   // subscribedRef 组件私有，若双份挂载会双份 diff 冲突，故必须单例）
+   useMarketWs(API_BASE.replace('http', 'ws'))
+   useSubscriptionManager()
+ 
+-  // 启动时加载全量合约 + 收藏合约（原先在 MarketPanel，现上移共享）
++  // 启动时加载全量合约 + 收藏合约（原先在 MarketPanel，现上移共享）+ 持久化筛选
+   useEffect(() => {
+     useContractsStore.getState().loadAllInstruments()
+     useContractsStore.getState().loadFavoriteContracts()
++    useMarketFilterStore.getState().load()
+   }, [])
+ 
+   // Electron IPC — 监听托盘菜单导航消息
+   useEffect(() => {
+     if (!isElectron()) return
+ 
+     const cleanup = window.electronAPI?.onNavigateTab?.((tab: string) => {
+       switch (tab) {
+         case 'market':
+           openTab({ type: 'market', title: '📊 期货' })
+diff --git a/frontend/src/components/ContractFilter/index.test.tsx b/frontend/src/components/ContractFilter/index.test.tsx
+new file mode 100644
+index 0000000..3a4ef7a
+--- /dev/null
++++ b/frontend/src/components/ContractFilter/index.test.tsx
+@@ -0,0 +1,114 @@
++import { describe, it, expect, vi, beforeEach } from 'vitest'
++import { render, screen, fireEvent } from '@testing-library/react'
++import userEvent from '@testing-library/user-event'
++import { ContractFilter } from './index'
++import type { MarketFilter } from '@/modules/market/filter'
++
++const PRODUCT_NAMES = { FG: '玻璃', cu: '沪铜', MA: '甲醇' }
++
++const defaultProps = {
++  exchanges: ['CZCE', 'SHFE'],
++  products: ['FG', 'cu', 'MA'],
++  productNames: PRODUCT_NAMES,
++  value: { exchanges: [], products: [] } as MarketFilter,
++  onChange: vi.fn(),
++}
++
++describe('ContractFilter', () => {
++  beforeEach(() => {
++    defaultProps.value = { exchanges: [], products: [] }
++    defaultProps.onChange = vi.fn()
++  })
++
++  it('渲染「筛选」按钮，空筛选无徽标', () => {
++    render(<ContractFilter {...defaultProps} />)
++    expect(screen.getByRole('button', { name: /筛选/ })).toBeInTheDocument()
++    expect(screen.queryByTestId('contract-filter-badge')).toBeNull()
++  })
++
++  it('点击按钮展开面板：含交易所与品种两组 checkbox', async () => {
++    const user = userEvent.setup()
++    render(<ContractFilter {...defaultProps} />)
++    await user.click(screen.getByRole('button', { name: /筛选/ }))
++    expect(screen.getByText('交易所')).toBeInTheDocument()
++    expect(screen.getByText('品种')).toBeInTheDocument()
++    expect(screen.getByRole('checkbox', { name: 'CZCE' })).toBeInTheDocument()
++    expect(screen.getByRole('checkbox', { name: 'SHFE' })).toBeInTheDocument()
++    // 品种项：中文名 + 代码
++    expect(screen.getByRole('checkbox', { name: /玻璃/ })).toBeInTheDocument()
++    expect(screen.getByText('cu')).toBeInTheDocument()
++  })
++
++  it('勾选交易所调用 onChange({ ...value, exchanges })', async () => {
++    const user = userEvent.setup()
++    render(<ContractFilter {...defaultProps} />)
++    await user.click(screen.getByRole('button', { name: /筛选/ }))
++    await user.click(screen.getByRole('checkbox', { name: 'SHFE' }))
++    expect(defaultProps.onChange).toHaveBeenCalledWith({ exchanges: ['SHFE'], products: [] })
++  })
++
++  it('再次勾选同一交易所取消选择', async () => {
++    const user = userEvent.setup()
++    render(<ContractFilter {...defaultProps} value={{ exchanges: ['SHFE'], products: [] }} />)
++    await user.click(screen.getByRole('button', { name: /筛选/ }))
++    await user.click(screen.getByRole('checkbox', { name: 'SHFE' }))
++    expect(defaultProps.onChange).toHaveBeenCalledWith({ exchanges: [], products: [] })
++  })
++
++  it('勾选品种调用 onChange({ ...value, products })', async () => {
++    const user = userEvent.setup()
++    render(<ContractFilter {...defaultProps} />)
++    await user.click(screen.getByRole('button', { name: /筛选/ }))
++    await user.click(screen.getByRole('checkbox', { name: /玻璃/ }))
++    expect(defaultProps.onChange).toHaveBeenCalledWith({ exchanges: [], products: ['FG'] })
++  })
++
++  it('有已选时按钮显示数量徽标（交易所+品种合计）', () => {
++    render(<ContractFilter {...defaultProps} value={{ exchanges: ['SHFE'], products: ['FG', 'cu'] }} />)
++    const badge = screen.getByTestId('contract-filter-badge')
++    expect(badge).toHaveTextContent('3')
++  })
++
++  it('点击「清空」调用 onChange({ exchanges: [], products: [] })', async () => {
++    const user = userEvent.setup()
++    render(<ContractFilter {...defaultProps} value={{ exchanges: ['SHFE'], products: ['FG'] }} />)
++    await user.click(screen.getByRole('button', { name: /筛选/ }))
++    await user.click(screen.getByRole('button', { name: '清空' }))
++    expect(defaultProps.onChange).toHaveBeenCalledWith({ exchanges: [], products: [] })
++  })
++
++  it('Esc 关闭面板', async () => {
++    const user = userEvent.setup()
++    render(<ContractFilter {...defaultProps} />)
++    await user.click(screen.getByRole('button', { name: /筛选/ }))
++    expect(screen.getByText('交易所')).toBeInTheDocument()
++    fireEvent.keyDown(document, { key: 'Escape' })
++    expect(screen.queryByText('交易所')).toBeNull()
++  })
++
++  it('点击外部关闭面板', async () => {
++    const user = userEvent.setup()
++    render(
++      <div>
++        <div data-testid="outside" />
++        <ContractFilter {...defaultProps} />
++      </div>,
++    )
++    await user.click(screen.getByRole('button', { name: /筛选/ }))
++    expect(screen.getByText('交易所')).toBeInTheDocument()
++    fireEvent.mouseDown(screen.getByTestId('outside'))
++    expect(screen.queryByText('交易所')).toBeNull()
++  })
++
++  it('品种关键词过滤展示列表（不影响已选值）', async () => {
++    const user = userEvent.setup()
++    render(<ContractFilter {...defaultProps} />)
++    await user.click(screen.getByRole('button', { name: /筛选/ }))
++    const keywordInput = screen.getByPlaceholderText('筛选品种...')
++    await user.type(keywordInput, '玻璃')
++    // 仅显示 FG，其余品种 checkbox 隐藏
++    expect(screen.getByRole('checkbox', { name: /玻璃/ })).toBeInTheDocument()
++    expect(screen.queryByText('cu')).toBeNull()
++    expect(screen.queryByText('MA')).toBeNull()
++  })
++})
+diff --git a/frontend/src/components/ContractFilter/index.tsx b/frontend/src/components/ContractFilter/index.tsx
+new file mode 100644
+index 0000000..01a57d0
+--- /dev/null
++++ b/frontend/src/components/ContractFilter/index.tsx
+@@ -0,0 +1,131 @@
++import { useMemo, useRef, useState, useEffect } from 'react'
++import type { MarketFilter } from '@/modules/market/filter'
++import './styles.css'
++
++interface ContractFilterProps {
++  /** 可选交易所 ID 列表（空=无选项） */
++  exchanges: string[]
++  /** 可选品种（productID）列表 */
++  products: string[]
++  /** productID → 品种中文名 */
++  productNames: Record<string, string>
++  value: MarketFilter
++  onChange: (v: MarketFilter) => void
++}
++
++/**
++ * ContractFilter — 交易所 + 品种多选筛选面板。
++ * 「筛选」按钮 + 点击展开下拉：交易所 checkbox 列表、品种 checkbox 列表
++ * （中文名 + 内嵌关键词过滤输入）、「清空」按钮；点击外部/Esc 关闭；
++ * 按钮显示已选数徽标（交易所+品种合计）。
++ */
++export function ContractFilter({ exchanges, products, productNames, value, onChange }: ContractFilterProps) {
++  const [open, setOpen] = useState(false)
++  const [keyword, setKeyword] = useState('')
++  const rootRef = useRef<HTMLDivElement>(null)
++
++  const activeCount = value.exchanges.length + value.products.length
++
++  // 点击外部 / Esc 关闭
++  useEffect(() => {
++    if (!open) return
++    const onMouseDown = (e: MouseEvent) => {
++      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
++    }
++    const onKeyDown = (e: KeyboardEvent) => {
++      if (e.key === 'Escape') setOpen(false)
++    }
++    document.addEventListener('mousedown', onMouseDown)
++    document.addEventListener('keydown', onKeyDown)
++    return () => {
++      document.removeEventListener('mousedown', onMouseDown)
++      document.removeEventListener('keydown', onKeyDown)
++    }
++  }, [open])
++
++  // 品种关键词过滤（仅过滤展示列表，不影响已选值）
++  const shownProducts = useMemo(() => {
++    if (!keyword.trim()) return products
++    const q = keyword.toLowerCase()
++    return products.filter((p) => {
++      const name = productNames[p] ?? p
++      return p.toLowerCase().includes(q) || name.toLowerCase().includes(q)
++    })
++  }, [keyword, products, productNames])
++
++  const toggle = (key: 'exchanges' | 'products', item: string) => {
++    const list = value[key]
++    const next = list.includes(item) ? list.filter((x) => x !== item) : [...list, item]
++    onChange({ ...value, [key]: next })
++  }
++
++  const clear = () => onChange({ exchanges: [], products: [] })
++
++  return (
++    <div className="contract-filter" ref={rootRef}>
++      <button
++        type="button"
++        className={`btn-contract-filter${activeCount ? ' has-filter' : ''}`}
++        onClick={() => setOpen((v) => !v)}
++        title="交易所/品种多选筛选"
++      >
++        <span className="contract-filter__label">筛选</span>
++        {activeCount > 0 && (
++          <span className="contract-filter__badge" data-testid="contract-filter-badge">
++            {activeCount}
++          </span>
++        )}
++        <span className="contract-filter__arrow">🔽</span>
++      </button>
++
++      {open && (
++        <div className="contract-filter__panel">
++          <div className="contract-filter__section">
++            <div className="contract-filter__section-title">交易所</div>
++            <div className="contract-filter__list">
++              {exchanges.length === 0 ? (
++                <div className="contract-filter__empty">无</div>
++              ) : (
++                exchanges.map((ex) => (
++                  <label key={ex} className="contract-filter__item">
++                    <input type="checkbox" checked={value.exchanges.includes(ex)} onChange={() => toggle('exchanges', ex)} />
++                    <span>{ex}</span>
++                  </label>
++                ))
++              )}
++            </div>
++          </div>
++
++          <div className="contract-filter__section">
++            <div className="contract-filter__section-title">品种</div>
++            <input
++              className="contract-filter__keyword"
++              placeholder="筛选品种..."
++              value={keyword}
++              onChange={(e) => setKeyword(e.target.value)}
++            />
++            <div className="contract-filter__list">
++              {shownProducts.length === 0 ? (
++                <div className="contract-filter__empty">无</div>
++              ) : (
++                shownProducts.map((p) => (
++                  <label key={p} className="contract-filter__item">
++                    <input type="checkbox" checked={value.products.includes(p)} onChange={() => toggle('products', p)} />
++                    <span className="contract-filter__product-name">{productNames[p] ?? p}</span>
++                    <span className="contract-filter__product-code">{p}</span>
++                  </label>
++                ))
++              )}
++            </div>
++          </div>
++
++          <div className="contract-filter__footer">
++            <button type="button" className="contract-filter__clear" onClick={clear}>
++              清空
++            </button>
++          </div>
++        </div>
++      )}
++    </div>
++  )
++}
+diff --git a/frontend/src/components/ContractFilter/styles.css b/frontend/src/components/ContractFilter/styles.css
+new file mode 100644
+index 0000000..1610100
+--- /dev/null
++++ b/frontend/src/components/ContractFilter/styles.css
+@@ -0,0 +1,170 @@
++.contract-filter {
++  position: relative;
++  flex-shrink: 0;
++}
++
++/* 「筛选」按钮 */
++.btn-contract-filter {
++  display: inline-flex;
++  align-items: center;
++  gap: 5px;
++  padding: 4px 12px;
++  background: transparent;
++  border: 1px solid var(--border-color, #30363d);
++  border-radius: 4px;
++  color: var(--text-secondary, #8b949e);
++  font-size: 13px;
++  cursor: pointer;
++  white-space: nowrap;
++  transition: background 0.15s, color 0.15s, border-color 0.15s;
++}
++
++.btn-contract-filter:hover {
++  background: var(--bg-hover, #1c2333);
++  color: var(--text-primary, #e6edf3);
++}
++
++.btn-contract-filter.has-filter {
++  border-color: var(--accent-color, #4a9eff);
++  color: var(--accent-color, #4a9eff);
++}
++
++.contract-filter__label {
++  line-height: 1;
++}
++
++.contract-filter__badge {
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  min-width: 16px;
++  height: 16px;
++  padding: 0 4px;
++  border-radius: 8px;
++  background: var(--accent-color, #4a9eff);
++  color: #fff;
++  font-size: 11px;
++  line-height: 1;
++}
++
++.contract-filter__arrow {
++  font-size: 10px;
++  opacity: 0.7;
++}
++
++/* 下拉面板 */
++.contract-filter__panel {
++  position: absolute;
++  top: calc(100% + 4px);
++  left: 0;
++  z-index: 100;
++  width: 240px;
++  max-height: 420px;
++  display: flex;
++  flex-direction: column;
++  background: var(--bg-panel, #1c2333);
++  border: 1px solid var(--border-color, #30363d);
++  border-radius: 6px;
++  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
++  overflow: hidden;
++}
++
++.contract-filter__section {
++  padding: 8px;
++  border-bottom: 1px solid var(--border-light, #21262d);
++  display: flex;
++  flex-direction: column;
++  gap: 6px;
++}
++
++.contract-filter__section-title {
++  font-size: 11px;
++  font-weight: 600;
++  color: var(--text-muted, #484f58);
++}
++
++.contract-filter__keyword {
++  padding: 3px 8px;
++  border: 1px solid var(--border-color, #30363d);
++  border-radius: 4px;
++  background: var(--bg-input, #0d1117);
++  color: var(--text-primary, #e6edf3);
++  font-size: 12px;
++  outline: none;
++}
++
++.contract-filter__keyword:focus {
++  border-color: var(--accent-color, #4a9eff);
++}
++
++.contract-filter__keyword::placeholder {
++  color: var(--text-muted, #484f58);
++}
++
++.contract-filter__list {
++  max-height: 160px;
++  overflow-y: auto;
++  display: flex;
++  flex-direction: column;
++  gap: 1px;
++}
++
++.contract-filter__item {
++  display: flex;
++  align-items: center;
++  gap: 6px;
++  padding: 3px 6px;
++  border-radius: 3px;
++  font-size: 12px;
++  color: var(--text-primary, #e6edf3);
++  cursor: pointer;
++}
++
++.contract-filter__item:hover {
++  background: var(--bg-hover, #2d333b);
++}
++
++.contract-filter__item input[type='checkbox'] {
++  accent-color: var(--accent-color, #4a9eff);
++  cursor: pointer;
++}
++
++.contract-filter__product-name {
++  color: var(--text-primary, #e6edf3);
++}
++
++.contract-filter__product-code {
++  margin-left: auto;
++  color: var(--text-muted, #484f58);
++  font-family: var(--font-mono, 'JetBrains Mono', Consolas, monospace);
++  font-size: 11px;
++}
++
++.contract-filter__empty {
++  padding: 4px 6px;
++  font-size: 12px;
++  color: var(--text-muted, #484f58);
++}
++
++.contract-filter__footer {
++  padding: 8px;
++  display: flex;
++  justify-content: flex-end;
++}
++
++.contract-filter__clear {
++  padding: 3px 12px;
++  border: 1px solid var(--border-color, #30363d);
++  border-radius: 4px;
++  background: transparent;
++  color: var(--text-secondary, #8b949e);
++  font-size: 12px;
++  cursor: pointer;
++  transition: background 0.15s, color 0.15s, border-color 0.15s;
++}
++
++.contract-filter__clear:hover {
++  background: var(--bg-hover, #1c2333);
++  color: var(--text-primary, #e6edf3);
++  border-color: var(--accent-color, #4a9eff);
++}
+diff --git a/frontend/src/modules/market/MarketPanel.test.tsx b/frontend/src/modules/market/MarketPanel.test.tsx
+index af13966..903a55f 100644
+--- a/frontend/src/modules/market/MarketPanel.test.tsx
++++ b/frontend/src/modules/market/MarketPanel.test.tsx
+@@ -1,16 +1,17 @@
+ import { describe, it, expect, vi, beforeEach } from 'vitest'
+ import { act, render, screen } from '@testing-library/react'
+ import userEvent from '@testing-library/user-event'
+ import { MarketPanel } from './MarketPanel'
+ import { useMarketStore } from './store'
+ import { useContractsStore } from '@/stores/contracts'
++import { useMarketFilterStore } from '@/stores/marketFilter'
+ import { useTabStore } from '@/stores/tabs'
+ import { openFloatingTab } from '@/utils/openFloatingTab'
+ import type { MarketSnapshot } from '@/services/types'
+ 
+ // Mock 统一浮动窗入口（双击/右键「打开报单」现为打开浮动窗口）
+ vi.mock('@/utils/openFloatingTab', () => ({
+   openFloatingTab: vi.fn(),
+   ORDER_FLOATING_SIZE: { w: 620, h: 540 },
+ }))
+ 
+@@ -92,20 +93,24 @@ function makeSnapshot(overrides?: Partial<MarketSnapshot>): MarketSnapshot {
+ }
+ 
+ describe('MarketPanel', () => {
+   beforeEach(() => {
+     useMarketStore.setState({
+       selectedInstrument: null,
+       snapshots: new Map(),
+       scrollEndSeq: 0,
+     })
+     useContractsStore.setState({ contracts: [], favorites: [], isLoaded: false })
++    useMarketFilterStore.setState({
++      futures: { exchanges: [], products: [] },
++      options: { exchanges: [], products: [] },
++    })
+     capturedPointOrderOpts = null
+     vi.clearAllMocks()
+   })
+ 
+   it('删除冗余「行情面板」标题；无 行情/T型期权 模式切换按钮（期货/期权为独立固定标签）', () => {
+     render(<MarketPanel />)
+     expect(screen.queryByText('行情面板')).not.toBeInTheDocument()
+     expect(screen.queryByRole('button', { name: '行情' })).toBeNull()
+     expect(screen.queryByRole('button', { name: 'T型期权' })).toBeNull()
+   })
+@@ -328,20 +333,113 @@ describe('MarketPanel', () => {
+     // 点击「打开K线」
+     await user.click(screen.getByText('打开K线'))
+ 
+     expect(mockOpenFloatingTab).toHaveBeenCalledWith({
+       type: 'kline',
+       title: '📈 K线-IF2608',
+       props: { instrumentID: 'IF2608' },
+     })
+   })
+ 
++  describe('交易所+品种多选筛选（Task 7）', () => {
++    /** 三合约跨两交易所/两品种，用于筛选断言 */
++    function setupFilterContracts() {
++      useContractsStore.setState({
++        contracts: [
++          { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
++          { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
++          { instrumentID: 'MA609', instrumentName: '甲醇609', exchangeID: 'CZCE', productID: 'MA', volumeMultiple: 10, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
++        ],
++        favorites: [],
++        isLoaded: true,
++      })
++    }
++
++    /** 读取最近一次 setRecords 的合约 ID 序列 */
++    function latestRecordIDs(instance: any): string[] {
++      const last = instance.setRecords.mock.calls.at(-1)?.[0] ?? []
++      return last.map((r: any) => r.instrumentID)
++    }
++
++    it('渲染「筛选」按钮，空筛选无徽标', () => {
++      render(<MarketPanel />)
++      expect(screen.getByRole('button', { name: /筛选/ })).toBeInTheDocument()
++      expect(screen.queryByTestId('contract-filter-badge')).toBeNull()
++    })
++
++    it('期货页只展示期货合约：期权合约不进入期货表', async () => {
++      useContractsStore.setState({
++        contracts: [
++          { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
++          { instrumentID: 'FG609-C-1300', instrumentName: 'FG609-C-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'FG609' },
++        ],
++        favorites: [],
++        isLoaded: true,
++      })
++      render(<MarketPanel />)
++      const { ListTable } = await import('@visactor/vtable')
++      const options = (ListTable as any).mock.calls[0][1]
++      const ids = options.records.map((r: any) => r.instrumentID)
++      expect(ids).toEqual(['FG609'])
++    })
++
++    it('按交易所过滤：勾选 SHFE 后表格只剩 cu2609', async () => {
++      setupFilterContracts()
++      const user = userEvent.setup()
++      render(<MarketPanel />)
++      await user.click(screen.getByRole('button', { name: /筛选/ }))
++      await user.click(screen.getByRole('checkbox', { name: 'SHFE' }))
++      const { ListTable } = await import('@visactor/vtable')
++      const instance = (ListTable as any).mock.results[0].value
++      expect(latestRecordIDs(instance)).toEqual(['cu2609'])
++    })
++
++    it('按品种过滤（勾选 玻璃）→ 徽标显示 1 + 表格只剩 FG609；清空恢复全部', async () => {
++      setupFilterContracts()
++      const user = userEvent.setup()
++      render(<MarketPanel />)
++      await user.click(screen.getByRole('button', { name: /筛选/ }))
++      await user.click(screen.getByRole('checkbox', { name: /玻璃/ }))
++      expect(screen.getByTestId('contract-filter-badge')).toHaveTextContent('1')
++      const { ListTable } = await import('@visactor/vtable')
++      const instance = (ListTable as any).mock.results[0].value
++      expect(latestRecordIDs(instance)).toEqual(['FG609'])
++
++      await user.click(screen.getByRole('button', { name: '清空' }))
++      expect(latestRecordIDs(instance)).toEqual(['cu2609', 'FG609', 'MA609'])
++    })
++
++    it('筛选在 自选 视图同样生效', async () => {
++      useContractsStore.setState({
++        contracts: [
++          { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
++          { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
++        ],
++        favorites: [
++          { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
++          { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
++        ],
++        isLoaded: true,
++      })
++      const user = userEvent.setup()
++      render(<MarketPanel />)
++      // 切到自选：仅 cu2609 + FG609
++      await user.click(screen.getByRole('button', { name: '自选' }))
++      // 勾选交易所 SHFE → 自选里只剩 cu2609
++      await user.click(screen.getByRole('button', { name: /筛选/ }))
++      await user.click(screen.getByRole('checkbox', { name: 'SHFE' }))
++      const { ListTable } = await import('@visactor/vtable')
++      const instance = (ListTable as any).mock.results[0].value
++      expect(latestRecordIDs(instance)).toEqual(['cu2609'])
++    })
++  })
++
+   describe('顶部菜单行情切换（onMarketView）', () => {
+     /** 期货/期权双固定标签（Task 2 默认态） */
+     function setupTabs(activeTabId: string) {
+       useTabStore.setState({
+         tabs: [
+           { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
+           { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false },
+         ],
+         activeTabId,
+       })
+diff --git a/frontend/src/modules/market/MarketPanel.tsx b/frontend/src/modules/market/MarketPanel.tsx
+index dd655d8..1ee6e90 100644
+--- a/frontend/src/modules/market/MarketPanel.tsx
++++ b/frontend/src/modules/market/MarketPanel.tsx
+@@ -1,18 +1,22 @@
+ import { useEffect, useMemo, useState } from 'react'
+ import { ContractSearch } from '@/components/ContractSearch'
+ import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
+ import { ContextMenu } from '@/components/ContextMenu'
+ import { ErrorBoundary } from '@/components/ErrorBoundary'
++import { ContractFilter } from '@/components/ContractFilter'
+ import { QuoteTable } from './QuoteTable'
+ import { futuresSpec } from './futuresSpec'
++import { sortFutures } from './sort'
++import { filterByExchangeAndProduct } from './filter'
+ import { useMarketStore } from './store'
++import { useMarketFilterStore } from '@/stores/marketFilter'
+ import { useContractsStore } from '@/stores/contracts'
+ import { useTabStore } from '@/stores/tabs'
+ import { useContractContextMenu } from '@/hooks/useContractContextMenu'
+ import { usePointOrder } from '@/hooks/usePointOrder'
+ import { useOrderStore } from '@/modules/order/store'
+ import { getProductName } from '@/utils/productNames'
+ import { isContractActive } from '@/utils/contractStatus'
+ import { isElectron } from '@/services/electron'
+ import { toast } from '@/components/Toast'
+ import './styles.css'
+@@ -20,43 +24,74 @@ import './styles.css'
+ export function MarketPanel() {
+   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
+   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
+   const { contracts, favorites, addToFavorites, removeFromFavorites } = useContractsStore()
+   const { contextMenu, multiSelectMenu, openOrderPopup, openQueryPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
+   const [searchModalOpen, setSearchModalOpen] = useState(false)
+   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
+   // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
+   const [filterActive, setFilterActive] = useState(false)
+ 
++  // 期货页筛选态（交易所+品种多选，独立于期权页，localStorage 持久化）
++  const filter = useMarketFilterStore((s) => s.futures)
++
++  // 期货全量（期货页只展示期货合约）+ 排序（数据管道第一步，设计 §3 决策 3）
++  const sortedFutures = useMemo(
++    () => sortFutures(contracts.filter((c) => c.productClass === '1')),
++    [contracts],
++  )
++  // 自选视图同样只展示期货合约
++  const favoriteFutures = useMemo(
++    () => favorites.filter((c) => c.productClass === '1'),
++    [favorites],
++  )
++
+   // Display contracts based on active tab
+-  const baseContracts = activeTab === 'all' ? contracts : favorites
++  const baseContracts = activeTab === 'all' ? sortedFutures : favoriteFutures
++
++  // 筛选面板可用选项：交易所 = 期货合约去重；品种 = productID 去重（保持排序后顺序）
++  const filterExchanges = useMemo(
++    () => Array.from(new Set(sortedFutures.map((c) => c.exchangeID))),
++    [sortedFutures],
++  )
++  const filterProducts = useMemo(
++    () => Array.from(new Set(sortedFutures.map((c) => c.productID))),
++    [sortedFutures],
++  )
++  const filterProductNames = useMemo(() => {
++    const m: Record<string, string> = {}
++    for (const p of filterProducts) m[p] = getProductName(p)
++    return m
++  }, [filterProducts])
+ 
+   // 搜索过滤
+   const [searchQuery, setSearchQuery] = useState('')
+   const displayContracts = useMemo(() => {
++    // 数据管道：全部/自选 → 筛选（交易所+品种）→ 仅交易中 → 搜索
++    let base = filterByExchangeAndProduct(baseContracts, filter.exchanges, filter.products, (c) => c.productID)
+     // 过滤开关：默认仅显示交易中合约
+-    let base = filterActive ? baseContracts.filter(isContractActive) : baseContracts
++    base = filterActive ? base.filter(isContractActive) : base
+     if (!searchQuery.trim()) return base
+     const q = searchQuery.toLowerCase()
+     return base.filter((c) => {
+       const instrumentID = c.instrumentID?.toLowerCase() ?? ''
+       const instrumentName = c.instrumentName?.toLowerCase() ?? ''
+       const productID = c.productID?.toLowerCase() ?? ''
+       const productName = getProductName(c.productID).toLowerCase()
+       return (
+         instrumentID.includes(q) ||
+         instrumentName.includes(q) ||
+         productID.includes(q) ||
+         productName.includes(q)
+       )
+     })
+-  }, [baseContracts, searchQuery, filterActive])
++  }, [baseContracts, filter, searchQuery, filterActive])
+ 
+   // User-favorited IDs (for modal "已订阅" badge and button state)
+   const favoritedIds = useMemo(
+     () => new Set(favorites.map(c => c.instrumentID)),
+     [favorites]
+   )
+   // All contract IDs in the system
+   const allContractIds = useMemo(
+     () => new Set(contracts.map(c => c.instrumentID)),
+     [contracts]
+@@ -132,20 +167,30 @@ export function MarketPanel() {
+             全部
+           </button>
+           <button
+             className={`btn-tab${activeTab === 'favorites' ? ' active' : ''}`}
+             onClick={() => setActiveTab('favorites')}
+           >
+             自选
+           </button>
+         </div>
+         <div className="market-toolbar__actions">
++          <ContractFilter
++            exchanges={filterExchanges}
++            products={filterProducts}
++            productNames={filterProductNames}
++            value={filter}
++            onChange={(v) => {
++              useMarketFilterStore.getState().setExchanges('futures', v.exchanges)
++              useMarketFilterStore.getState().setProducts('futures', v.products)
++            }}
++          />
+           <button
+             className={`btn-filter-status${filterActive ? ' active' : ''}`}
+             onClick={() => setFilterActive((v) => !v)}
+             title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
+           >
+             {filterActive ? '仅交易中' : '显示全部'}
+           </button>
+           <button
+             className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
+             disabled={!selectedInstrument && selectedContracts.size === 0}
+diff --git a/frontend/src/modules/market/filter.test.ts b/frontend/src/modules/market/filter.test.ts
+new file mode 100644
+index 0000000..d90449e
+--- /dev/null
++++ b/frontend/src/modules/market/filter.test.ts
+@@ -0,0 +1,31 @@
++import { describe, it, expect } from 'vitest'
++import type { ContractInfo } from '@/services/types'
++import { filterByExchangeAndProduct } from './filter'
++import { deriveUnderlyingProduct } from './sort'
++
++const c = (instrumentID: string, exchangeID: string, productID: string, underlyingInstrID?: string): ContractInfo =>
++  ({ instrumentID, instrumentName: instrumentID, exchangeID, productID, volumeMultiple: 1, priceTick: 0.1, expireDate: '', isTrading: 1, productClass: '1', underlyingInstrID })
++
++describe('filterByExchangeAndProduct', () => {
++  const list = [c('FG609', 'CZCE', 'FG'), c('cu2609', 'SHFE', 'cu'), c('MA609', 'CZCE', 'MA')]
++
++  it('空集 = 不限', () => {
++    expect(filterByExchangeAndProduct(list, [], [], (x) => x.productID).length).toBe(3)
++  })
++
++  it('多交易所命中', () => {
++    const r = filterByExchangeAndProduct(list, ['SHFE'], [], (x) => x.productID)
++    expect(r.map((x) => x.instrumentID)).toEqual(['cu2609'])
++  })
++
++  it('交易所与品种叠加（AND）', () => {
++    const r = filterByExchangeAndProduct(list, ['CZCE'], ['FG'], (x) => x.productID)
++    expect(r.map((x) => x.instrumentID)).toEqual(['FG609'])
++  })
++
++  it('期权按标底品种过滤', () => {
++    const opts = [c('FG609-C-1300', 'CZCE', 'FGC', 'FG609'), c('MA609-C-1000', 'CZCE', 'MAC', 'MA609')]
++    const r = filterByExchangeAndProduct(opts, [], ['FG'], (x) => deriveUnderlyingProduct(x.underlyingInstrID ?? ''))
++    expect(r.map((x) => x.instrumentID)).toEqual(['FG609-C-1300'])
++  })
++})
+diff --git a/frontend/src/modules/market/filter.ts b/frontend/src/modules/market/filter.ts
+new file mode 100644
+index 0000000..ce0c376
+--- /dev/null
++++ b/frontend/src/modules/market/filter.ts
+@@ -0,0 +1,24 @@
++import type { ContractInfo } from '@/services/types'
++
++export interface MarketFilter {
++  exchanges: string[]
++  products: string[]
++}
++
++export const EMPTY_FILTER: MarketFilter = { exchanges: [], products: [] }
++
++/** 交易所/品种多选过滤；空集=不限；命中 = exchange ∈ exchanges(或空) 且 product ∈ products(或空) */
++export function filterByExchangeAndProduct(
++  contracts: ContractInfo[],
++  exchanges: string[],
++  products: string[],
++  getProduct: (c: ContractInfo) => string,
++): ContractInfo[] {
++  const exSet = exchanges.length ? new Set(exchanges) : null
++  const prodSet = products.length ? new Set(products) : null
++  return contracts.filter((c) => {
++    if (exSet && !exSet.has(c.exchangeID)) return false
++    if (prodSet && !prodSet.has(getProduct(c))) return false
++    return true
++  })
++}
+diff --git a/frontend/src/modules/options/OptionsPanel.test.tsx b/frontend/src/modules/options/OptionsPanel.test.tsx
+index 5a4efe0..96b6ac0 100644
+--- a/frontend/src/modules/options/OptionsPanel.test.tsx
++++ b/frontend/src/modules/options/OptionsPanel.test.tsx
+@@ -1,17 +1,18 @@
+ import { describe, it, expect, vi, beforeEach } from 'vitest'
+ import { act, render, screen } from '@testing-library/react'
+ import userEvent from '@testing-library/user-event'
+ import { OptionsPanel } from './OptionsPanel'
+ import { optionsSpec } from '@/modules/market/optionsSpec'
+ import { useMarketStore } from '@/modules/market/store'
+ import { useContractsStore } from '@/stores/contracts'
++import { useMarketFilterStore } from '@/stores/marketFilter'
+ import type { ContractInfo } from '@/services/types'
+ 
+ // Mock TQuoteView（T型报价二级视图依赖链沉重，仅测切换渲染）
+ vi.mock('./TQuoteView', () => ({
+   TQuoteView: () => <div data-testid="tquote-view">TQuoteView Mock</div>,
+ }))
+ 
+ // Mock echarts（ContextMenu 无关，但部分共享模块可能引用）
+ vi.mock('echarts', () => ({
+   init: vi.fn(() => ({
+@@ -24,38 +25,54 @@ vi.mock('echarts', () => ({
+       setOption: vi.fn(),
+       resize: vi.fn(),
+       dispose: vi.fn(),
+     })),
+   },
+ }))
+ 
+ const fut: ContractInfo = { instrumentID: 'FG609', instrumentName: 'FG609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' }
+ const optC: ContractInfo = { instrumentID: 'FG609-C-1300', instrumentName: 'FG609-C-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'FG609', optionsType: '1', strikePrice: 1300 }
+ const optP: ContractInfo = { instrumentID: 'FG609-P-1300', instrumentName: 'FG609-P-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'FG609', optionsType: '2', strikePrice: 1300 }
++const futMA: ContractInfo = { instrumentID: 'MA609', instrumentName: 'MA609', exchangeID: 'CZCE', productID: 'MA', volumeMultiple: 10, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' }
++const optMA: ContractInfo = { instrumentID: 'MA609-C-1000', instrumentName: 'MA609-C-1000', exchangeID: 'CZCE', productID: 'MAC', volumeMultiple: 10, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'MA609', optionsType: '1', strikePrice: 1000 }
++const futCu: ContractInfo = { instrumentID: 'cu2609', instrumentName: 'cu2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' }
++const optCu: ContractInfo = { instrumentID: 'cu2609-C-70000', instrumentName: 'cu2609-C-70000', exchangeID: 'SHFE', productID: 'cu_c', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'cu2609', optionsType: '1', strikePrice: 70000 }
+ 
+ function setupContracts() {
+   useContractsStore.setState({
+     contracts: [fut, optC, optP],
+     favorites: [],
+     isLoaded: true,
+   })
+ }
+ 
++function setupFilterContracts() {
++  useContractsStore.setState({
++    contracts: [fut, optC, optP, futMA, optMA, futCu, optCu],
++    favorites: [],
++    isLoaded: true,
++  })
++}
++
+ describe('OptionsPanel', () => {
+   beforeEach(() => {
+     useMarketStore.setState({
+       selectedInstrument: null,
+       snapshots: new Map(),
+       selectedContracts: new Set(),
+       visibleInstrumentIDs: [],
+       scrollEndSeq: 0,
+     })
++    useMarketFilterStore.setState({
++      futures: { exchanges: [], products: [] },
++      options: { exchanges: [], products: [] },
++    })
+     setupContracts()
+     vi.clearAllMocks()
+   })
+ 
+   it('默认视图为 列表（列表按钮 active，列表表格渲染，T型报价不渲染）', () => {
+     const { container } = render(<OptionsPanel />)
+     expect(screen.getByRole('button', { name: '列表' }).classList.contains('active')).toBe(true)
+     expect(screen.getByRole('button', { name: 'T型报价' }).classList.contains('active')).toBe(false)
+     expect(container.querySelector('.market-table-container')).toBeTruthy()
+     expect(screen.queryByTestId('tquote-view')).toBeNull()
+@@ -136,11 +153,64 @@ describe('OptionsPanel', () => {
+     render(<OptionsPanel />)
+     // QuoteTable 挂载后 setTimeout(notifyVisibleRange, 0) 触发一次上报
+     await act(async () => {
+       await new Promise((r) => setTimeout(r, 10))
+     })
+     const visible = useMarketStore.getState().visibleInstrumentIDs
+     expect(visible).toContain('FG609')
+     expect(visible).toContain('FG609-C-1300')
+     expect(visible).toContain('FG609-P-1300')
+   })
++
++  // --- 交易所+品种多选筛选（Task 7） ---
++
++  /** 读取最近一次 setRecords 的合约 ID 序列 */
++  function latestRecordIDs(instance: any): string[] {
++    const last = instance.setRecords.mock.calls.at(-1)?.[0] ?? []
++    return last.map((r: any) => r.instrumentID)
++  }
++
++  it('渲染「筛选」按钮，空筛选无徽标', () => {
++    render(<OptionsPanel />)
++    expect(screen.getByRole('button', { name: /筛选/ })).toBeInTheDocument()
++    expect(screen.queryByTestId('contract-filter-badge')).toBeNull()
++  })
++
++  it('按标底品种过滤：勾选 玻璃 后只保留 FG 组（标底行+期权行），其余组消失', async () => {
++    setupFilterContracts()
++    const user = userEvent.setup()
++    render(<OptionsPanel />)
++    await user.click(screen.getByRole('button', { name: /筛选/ }))
++    await user.click(screen.getByRole('checkbox', { name: /玻璃/ }))
++    const { ListTable } = await import('@visactor/vtable')
++    const instance = (ListTable as any).mock.results[0].value
++    expect(latestRecordIDs(instance)).toEqual(['FG609', 'FG609-C-1300', 'FG609-P-1300'])
++  })
++
++  it('按交易所过滤：勾选 SHFE 后只保留 cu 组（标底行+期权行）', async () => {
++    setupFilterContracts()
++    const user = userEvent.setup()
++    render(<OptionsPanel />)
++    await user.click(screen.getByRole('button', { name: /筛选/ }))
++    await user.click(screen.getByRole('checkbox', { name: 'SHFE' }))
++    const { ListTable } = await import('@visactor/vtable')
++    const instance = (ListTable as any).mock.results[0].value
++    expect(latestRecordIDs(instance)).toEqual(['cu2609', 'cu2609-C-70000'])
++  })
++
++  it('清空筛选后恢复全量分组', async () => {
++    setupFilterContracts()
++    const user = userEvent.setup()
++    render(<OptionsPanel />)
++    await user.click(screen.getByRole('button', { name: /筛选/ }))
++    await user.click(screen.getByRole('checkbox', { name: /玻璃/ }))
++    await user.click(screen.getByRole('button', { name: '清空' }))
++    const { ListTable } = await import('@visactor/vtable')
++    const instance = (ListTable as any).mock.results[0].value
++    // 全量：cu < FG < MA 按标底自然序
++    expect(latestRecordIDs(instance)).toEqual([
++      'cu2609', 'cu2609-C-70000',
++      'FG609', 'FG609-C-1300', 'FG609-P-1300',
++      'MA609', 'MA609-C-1000',
++    ])
++  })
+ })
+diff --git a/frontend/src/modules/options/OptionsPanel.tsx b/frontend/src/modules/options/OptionsPanel.tsx
+index a93aef4..545d985 100644
+--- a/frontend/src/modules/options/OptionsPanel.tsx
++++ b/frontend/src/modules/options/OptionsPanel.tsx
+@@ -1,22 +1,26 @@
+ import { useMemo, useState } from 'react'
+ import { ContextMenu } from '@/components/ContextMenu'
+ import { ErrorBoundary } from '@/components/ErrorBoundary'
++import { ContractFilter } from '@/components/ContractFilter'
+ import { QuoteTable } from '@/modules/market/QuoteTable'
+ import { optionsSpec } from '@/modules/market/optionsSpec'
+-import { groupOptionsByUnderlying } from '@/modules/market/sort'
++import { deriveUnderlyingProduct, groupOptionsByUnderlying } from '@/modules/market/sort'
++import { filterByExchangeAndProduct } from '@/modules/market/filter'
+ import { useMarketStore } from '@/modules/market/store'
+ import { useOrderStore } from '@/modules/order/store'
+ import { useContractsStore } from '@/stores/contracts'
++import { useMarketFilterStore } from '@/stores/marketFilter'
+ import { useTabStore } from '@/stores/tabs'
+ import { useContractContextMenu } from '@/hooks/useContractContextMenu'
+ import { usePointOrder } from '@/hooks/usePointOrder'
++import { getProductName } from '@/utils/productNames'
+ import { toast } from '@/components/Toast'
+ import { TQuoteView } from './TQuoteView'
+ import type { ContractInfo } from '@/services/types'
+ import './styles.css'
+ 
+ /**
+  * OptionsPanel — 期权标签页（二级视图 shell）
+  *
+  * [列表 | T型报价] 切换：
+  * - 列表（默认）：按标底分组展平的期权表（标底期货行在前 + 其后期权行），
+@@ -25,32 +29,59 @@ import './styles.css'
+  */
+ export function OptionsPanel() {
+   const [view, setView] = useState<'list' | 'tquote'>('list')
+   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
+   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
+   const { contracts, favorites, addToFavorites, removeFromFavorites } = useContractsStore()
+   const { contextMenu, multiSelectMenu, openOrderPopup, openQueryPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
+   // 期权标签是否激活：激活翻转为 true 时 QuoteTable 重报可见区，订阅管理器立即补订阅
+   const isActive = useTabStore((s) => s.tabs.some((t) => t.type === 'options' && t.id === s.activeTabId))
+ 
+-  // 期货全量 → 期权全量 → 分组展平为有序 ContractInfo[]（标底行在前、期权行随后）
++  // 期权页筛选态（交易所+标底品种多选，独立于期货页，localStorage 持久化）
++  const filter = useMarketFilterStore((s) => s.options)
++
++  // 期货全量 → 期权全量（分组用 futures 匹配标底行真实合约）
++  const futures = useMemo(() => contracts.filter((c) => c.productClass === '1'), [contracts])
++  const options = useMemo(() => contracts.filter((c) => c.productClass === '2' || c.productClass === '6'), [contracts])
++
++  // 筛选面板可用选项：交易所 = 期权合约去重；品种 = 标底品种（underlyingInstrID 去尾数字）去重
++  const filterExchanges = useMemo(
++    () => Array.from(new Set(options.map((c) => c.exchangeID))),
++    [options],
++  )
++  const filterProducts = useMemo(
++    () => Array.from(new Set(options.map((c) => deriveUnderlyingProduct(c.underlyingInstrID ?? '')))),
++    [options],
++  )
++  const filterProductNames = useMemo(() => {
++    const m: Record<string, string> = {}
++    for (const p of filterProducts) m[p] = getProductName(p)
++    return m
++  }, [filterProducts])
++
++  // 分组前先过滤期权（交易所 + 标底品种），再按标底分组展平为有序 ContractInfo[]
++  // （标底行在前、期权行随后；组内无可见期权时整组消失）
+   const rows = useMemo(() => {
+-    const futures = contracts.filter((c) => c.productClass === '1')
+-    const options = contracts.filter((c) => c.productClass === '2' || c.productClass === '6')
+-    const groups = groupOptionsByUnderlying(options, futures)
++    const filteredOptions = filterByExchangeAndProduct(
++      options,
++      filter.exchanges,
++      filter.products,
++      (c) => deriveUnderlyingProduct(c.underlyingInstrID ?? ''),
++    )
++    const groups = groupOptionsByUnderlying(filteredOptions, futures)
+     const flat: ContractInfo[] = []
+     for (const g of groups) {
+       if (g.underlying) flat.push(g.underlying)
+       flat.push(...g.options)
+     }
+     return flat
+-  }, [contracts])
++  }, [options, futures, filter])
+ 
+   // 用户收藏 ID 集合（用于 ⭐ 列与右键菜单收藏态）
+   const favoritedIds = useMemo(
+     () => new Set(favorites.map((c) => c.instrumentID)),
+     [favorites],
+   )
+ 
+   const { handleClick, handleDoubleClick } = usePointOrder({
+     onOrder: ({ instrumentID, price }) => {
+       setSelectedInstrument(instrumentID)
+@@ -74,20 +105,30 @@ export function OptionsPanel() {
+           >
+             列表
+           </button>
+           <button
+             className={`market-mode-btn${view === 'tquote' ? ' active' : ''}`}
+             onClick={() => setView('tquote')}
+           >
+             T型报价
+           </button>
+         </div>
++        <ContractFilter
++          exchanges={filterExchanges}
++          products={filterProducts}
++          productNames={filterProductNames}
++          value={filter}
++          onChange={(v) => {
++            useMarketFilterStore.getState().setExchanges('options', v.exchanges)
++            useMarketFilterStore.getState().setProducts('options', v.products)
++          }}
++        />
+       </div>
+ 
+       {view === 'tquote' ? (
+         <TQuoteView />
+       ) : (
+         <div className="panel-content">
+           <ErrorBoundary>
+             <QuoteTable
+               spec={optionsSpec}
+               contracts={rows}
+diff --git a/frontend/src/stores/marketFilter.test.ts b/frontend/src/stores/marketFilter.test.ts
+new file mode 100644
+index 0000000..a268449
+--- /dev/null
++++ b/frontend/src/stores/marketFilter.test.ts
+@@ -0,0 +1,84 @@
++import { describe, it, expect, beforeEach } from 'vitest'
++import { useMarketFilterStore } from './marketFilter'
++import { EMPTY_FILTER } from '@/modules/market/filter'
++
++const STORAGE_KEY = 'simnow-market-filter'
++
++describe('useMarketFilterStore', () => {
++  beforeEach(() => {
++    localStorage.clear()
++    useMarketFilterStore.setState({
++      futures: { exchanges: [], products: [] },
++      options: { exchanges: [], products: [] },
++    })
++  })
++
++  it('初始状态：期货/期权两页均为空筛选（=不限）', () => {
++    const { futures, options } = useMarketFilterStore.getState()
++    expect(futures).toEqual(EMPTY_FILTER)
++    expect(options).toEqual(EMPTY_FILTER)
++  })
++
++  it('setExchanges 只更新指定页交易所，不影响另一页', () => {
++    useMarketFilterStore.getState().setExchanges('futures', ['SHFE'])
++    const { futures, options } = useMarketFilterStore.getState()
++    expect(futures.exchanges).toEqual(['SHFE'])
++    expect(futures.products).toEqual([])
++    expect(options).toEqual(EMPTY_FILTER)
++  })
++
++  it('setProducts 更新指定页品种', () => {
++    useMarketFilterStore.getState().setProducts('options', ['FG'])
++    const { futures, options } = useMarketFilterStore.getState()
++    expect(options.products).toEqual(['FG'])
++    expect(options.exchanges).toEqual([])
++    expect(futures).toEqual(EMPTY_FILTER)
++  })
++
++  it('reset 清空指定页筛选，另一页保留', () => {
++    useMarketFilterStore.getState().setExchanges('futures', ['SHFE'])
++    useMarketFilterStore.getState().setProducts('futures', ['cu'])
++    useMarketFilterStore.getState().setExchanges('options', ['CZCE'])
++    useMarketFilterStore.getState().reset('futures')
++    const { futures, options } = useMarketFilterStore.getState()
++    expect(futures).toEqual(EMPTY_FILTER)
++    expect(options.exchanges).toEqual(['CZCE'])
++  })
++
++  it('每次变更自动持久化到 localStorage', () => {
++    useMarketFilterStore.getState().setExchanges('futures', ['SHFE'])
++    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
++    expect(stored.futures).toEqual({ exchanges: ['SHFE'], products: [] })
++    expect(stored.options).toEqual(EMPTY_FILTER)
++  })
++
++  it('load 从 localStorage 恢复两页筛选态', () => {
++    localStorage.setItem(
++      STORAGE_KEY,
++      JSON.stringify({
++        futures: { exchanges: ['SHFE'], products: ['cu'] },
++        options: { exchanges: ['CZCE'], products: ['FG'] },
++      }),
++    )
++    useMarketFilterStore.getState().load()
++    const { futures, options } = useMarketFilterStore.getState()
++    expect(futures).toEqual({ exchanges: ['SHFE'], products: ['cu'] })
++    expect(options).toEqual({ exchanges: ['CZCE'], products: ['FG'] })
++  })
++
++  it('load 遇损坏数据时忽略并保持默认', () => {
++    localStorage.setItem(STORAGE_KEY, '{not json')
++    expect(() => useMarketFilterStore.getState().load()).not.toThrow()
++    expect(useMarketFilterStore.getState().futures).toEqual(EMPTY_FILTER)
++  })
++
++  it('load 缺失某页时补默认值', () => {
++    localStorage.setItem(
++      STORAGE_KEY,
++      JSON.stringify({ futures: { exchanges: ['SHFE'], products: [] } }),
++    )
++    useMarketFilterStore.getState().load()
++    expect(useMarketFilterStore.getState().futures.exchanges).toEqual(['SHFE'])
++    expect(useMarketFilterStore.getState().options).toEqual(EMPTY_FILTER)
++  })
++})
+diff --git a/frontend/src/stores/marketFilter.ts b/frontend/src/stores/marketFilter.ts
+new file mode 100644
+index 0000000..16fbb52
+--- /dev/null
++++ b/frontend/src/stores/marketFilter.ts
+@@ -0,0 +1,57 @@
++import { create } from 'zustand'
++import type { MarketFilter } from '@/modules/market/filter'
++
++const STORAGE_KEY = 'simnow-market-filter'
++
++type Page = 'futures' | 'options'
++
++interface MarketFilterStore {
++  futures: MarketFilter
++  options: MarketFilter
++  setExchanges: (page: Page, exchanges: string[]) => void
++  setProducts: (page: Page, products: string[]) => void
++  reset: (page: Page) => void
++  load: () => void
++}
++
++export const useMarketFilterStore = create<MarketFilterStore>((set) => ({
++  futures: { exchanges: [], products: [] },
++  options: { exchanges: [], products: [] },
++  setExchanges: (page, exchanges) =>
++    set((s) => {
++      const next = { futures: s.futures, options: s.options }
++      next[page] = { ...s[page], exchanges }
++      return next
++    }),
++  setProducts: (page, products) =>
++    set((s) => {
++      const next = { futures: s.futures, options: s.options }
++      next[page] = { ...s[page], products }
++      return next
++    }),
++  reset: (page) =>
++    set((s) => {
++      const next = { futures: s.futures, options: s.options }
++      next[page] = { exchanges: [], products: [] }
++      return next
++    }),
++  load: () => {
++    try {
++      const raw = localStorage.getItem(STORAGE_KEY)
++      if (!raw) return
++      const data = JSON.parse(raw)
++      set({
++        futures: data.futures ?? { exchanges: [], products: [] },
++        options: data.options ?? { exchanges: [], products: [] },
++      })
++    } catch {
++      /* 忽略损坏数据 */
++    }
++  },
++}))
++
++// 每次变更持久化（订阅式）
++useMarketFilterStore.subscribe((state) => {
++  const { futures, options } = state
++  localStorage.setItem(STORAGE_KEY, JSON.stringify({ futures, options }))
++})

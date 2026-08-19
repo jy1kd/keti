@@ -1,0 +1,1533 @@
+# Review package: 2f74460..HEAD
+
+## Commits
+34b074f refactor(market): MarketTable 泛化为 spec 驱动 QuoteTable，抽出期货 spec
+
+## Files changed
+ frontend/src/modules/market/MarketPanel.tsx        |   6 +-
+ .../{MarketTable.test.tsx => QuoteTable.test.tsx}  | 153 ++++++++++++++-------
+ .../market/{MarketTable.tsx => QuoteTable.tsx}     | 152 ++++----------------
+ .../src/modules/market/dragSelectAnchor.test.tsx   |   8 +-
+ frontend/src/modules/market/futuresSpec.test.ts    |  20 +++
+ frontend/src/modules/market/futuresSpec.ts         |  73 ++++++++++
+ frontend/src/modules/market/quoteTableCore.ts      |  66 +++++++++
+ frontend/src/pages/FavoritesPage.test.tsx          |   6 +-
+ frontend/src/pages/FavoritesPage.tsx               |   6 +-
+ 9 files changed, 308 insertions(+), 182 deletions(-)
+
+## Diff
+diff --git a/frontend/src/modules/market/MarketPanel.tsx b/frontend/src/modules/market/MarketPanel.tsx
+index 6b35294..a945831 100644
+--- a/frontend/src/modules/market/MarketPanel.tsx
++++ b/frontend/src/modules/market/MarketPanel.tsx
+@@ -1,17 +1,18 @@
+ import { useEffect, useMemo, useState } from 'react'
+ import { ContractSearch } from '@/components/ContractSearch'
+ import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
+ import { ContextMenu } from '@/components/ContextMenu'
+ import { ErrorBoundary } from '@/components/ErrorBoundary'
+ import { OptionPanel } from '@/modules/options/OptionPanel'
+-import { MarketTable } from './MarketTable'
++import { QuoteTable } from './QuoteTable'
++import { futuresSpec } from './futuresSpec'
+ import { useMarketStore } from './store'
+ import { useContractsStore } from '@/stores/contracts'
+ import { useTabStore } from '@/stores/tabs'
+ import { useContractContextMenu } from '@/hooks/useContractContextMenu'
+ import { usePointOrder } from '@/hooks/usePointOrder'
+ import { useOrderStore } from '@/modules/order/store'
+ import { getProductName } from '@/utils/productNames'
+ import { isContractActive } from '@/utils/contractStatus'
+ import { isElectron } from '@/services/electron'
+ import { toast } from '@/components/Toast'
+@@ -215,21 +216,22 @@ export function MarketPanel() {
+             </div>
+           </>
+         )}
+       </div>
+ 
+       {viewMode === 'options' ? (
+         <OptionPanel />
+       ) : (
+         <div className="panel-content">
+           <ErrorBoundary>
+-            <MarketTable
++            <QuoteTable
++              spec={futuresSpec}
+               contracts={displayContracts}
+               snapshots={snapshots}
+               selectedInstrument={selectedInstrument}
+               onRowClick={handleClick}
+               onRowDoubleClick={handleDoubleClick}
+               onContextMenu={handleContextMenu}
+               onMultiSelectContextMenu={handleMultiSelectContextMenu}
+               onVisibleRangeChange={setVisibleInstrumentIDs}
+               favoritedIds={favoritedIds}
+               onFavoriteChange={(instrumentID, isFavorited) => {
+diff --git a/frontend/src/modules/market/MarketTable.test.tsx b/frontend/src/modules/market/QuoteTable.test.tsx
+similarity index 82%
+rename from frontend/src/modules/market/MarketTable.test.tsx
+rename to frontend/src/modules/market/QuoteTable.test.tsx
+index b52b39d..e32dee3 100644
+--- a/frontend/src/modules/market/MarketTable.test.tsx
++++ b/frontend/src/modules/market/QuoteTable.test.tsx
+@@ -1,242 +1,244 @@
+ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+ import { render, act } from '@testing-library/react'
+-import { MarketTable, shouldRenderAnchor } from './MarketTable'
++import { QuoteTable } from './QuoteTable'
++import { shouldRenderAnchor } from './quoteTableCore'
++import { futuresSpec } from './futuresSpec'
+ import { useMarketStore } from './store'
+ import type { MarketSnapshot, ContractInfo } from '@/services/types'
+ 
+-describe('MarketTable', () => {
++describe('QuoteTable', () => {
+   const mockContracts: ContractInfo[] = [
+     { instrumentID: 'au2508', instrumentName: '黄金2508', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '20250815', isTrading: 1, productClass: "1" },
+     { instrumentID: 'ag2508', instrumentName: '白银2508', exchangeID: 'SHFE', productID: 'ag', volumeMultiple: 15, priceTick: 1, expireDate: '20250815', isTrading: 1, productClass: "1" },
+   ]
+ 
+   const mockSnapshots = new Map<string, MarketSnapshot>([
+     ['au2508', { instrumentID: 'au2508', lastPrice: 480.5, bidPrice1: 480.4, askPrice1: 480.6, volume: 1000, openInterest: 5000 } as MarketSnapshot],
+     ['ag2508', { instrumentID: 'ag2508', lastPrice: 6500, bidPrice1: 6499, askPrice1: 6501, volume: 2000, openInterest: 8000 } as MarketSnapshot],
+   ])
+ 
+   beforeEach(() => {
+     vi.useFakeTimers()
+     vi.clearAllMocks()
+   })
+ 
+   afterEach(() => {
+     vi.useRealTimers()
+   })
+ 
+   it('renders a container div', () => {
+-    const { container } = render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    const { container } = render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
+     expect(container.firstChild).toBeTruthy()
+   })
+ 
+   it('creates ListTable with correct options', async () => {
+     const { ListTable } = await import('@visactor/vtable')
+-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
+     expect(ListTable).toHaveBeenCalledTimes(1)
+     const options = (ListTable as any).mock.calls[0][1]
+     expect(options.columns).toBeDefined()
+     expect(options.columns.length).toBeGreaterThan(0)
+   })
+ 
+   it('冻结合约列为最左列（frozenColCount=1）', async () => {
+-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     expect(options.frozenColCount).toBe(1)
+   })
+ 
+   it('passes records from contracts to vtable', async () => {
+-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     expect(options.records).toHaveLength(2)
+   })
+ 
+   it('shows placeholder for contracts without snapshots', async () => {
+-    render(<MarketTable contracts={mockContracts} snapshots={new Map()} />)
++    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={new Map()} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     expect(options.records).toHaveLength(2)
+     expect(options.records[0].lastPrice).toBe('--')
+   })
+ 
+   it('releases vtable instance on unmount', async () => {
+-    const { unmount } = render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    const { unmount } = render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
+     unmount()
+     expect(true).toBe(true)
+   })
+ 
+   it('涨跌幅以 preSettlementPrice 为基准（非 preClosePrice）', async () => {
+     const snapshots = new Map<string, MarketSnapshot>([
+       ['au2508', {
+         instrumentID: 'au2508',
+         lastPrice: 490.0,
+         preSettlementPrice: 480.0,  // 基准：结算价
+         preClosePrice: 485.0,       // 非基准：收盘价
+         bidPrice1: 489.0,
+         askPrice1: 491.0,
+         volume: 1000,
+         openInterest: 5000,
+       } as MarketSnapshot],
+     ])
+ 
+-    render(<MarketTable contracts={mockContracts} snapshots={snapshots} />)
++    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={snapshots} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     const record = options.records[0]
+ 
+     // 涨跌 = 490 - 480 = 10（用 preSettlementPrice）
+     // 不是 490 - 485 = 5（用 preClosePrice）
+     expect(record.change).toBe(10)
+     expect(record.changePercent).toBeCloseTo((10 / 480) * 100)
+   })
+ 
+   // --- 状态列 tests ---
+ 
+   it('状态列为到期日右侧的列', async () => {
+-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     const titles = options.columns.map((c: { title: string }) => c.title)
+     const expireIdx = titles.indexOf('到期日')
+     expect(expireIdx).toBeGreaterThanOrEqual(0)
+     expect(titles[expireIdx + 1]).toBe('状态')
+   })
+ 
+   it('已停牌合约（isTrading=0）状态为 已停牌', async () => {
+     const contracts: ContractInfo[] = [
+       { instrumentID: 'au9999', instrumentName: '测试', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 0, productClass: "1" },
+     ]
+-    render(<MarketTable contracts={contracts} snapshots={new Map()} />)
++    render(<QuoteTable spec={futuresSpec} contracts={contracts} snapshots={new Map()} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     expect(options.records[0].status).toBe('已停牌')
+   })
+ 
+   it('已到期合约（isTrading=1 但已过到期日）状态为 已到期', async () => {
+     const contracts: ContractInfo[] = [
+       { instrumentID: 'au2501', instrumentName: '测试', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '20240101', isTrading: 1, productClass: "1" },
+     ]
+-    render(<MarketTable contracts={contracts} snapshots={new Map()} />)
++    render(<QuoteTable spec={futuresSpec} contracts={contracts} snapshots={new Map()} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     expect(options.records[0].status).toBe('已到期')
+   })
+ 
+   it('交易中合约（isTrading=1 且未到期）状态为 交易中', async () => {
+     const contracts: ContractInfo[] = [
+       { instrumentID: 'au2612', instrumentName: '测试', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 1, productClass: "1" },
+     ]
+-    render(<MarketTable contracts={contracts} snapshots={new Map()} />)
++    render(<QuoteTable spec={futuresSpec} contracts={contracts} snapshots={new Map()} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     expect(options.records[0].status).toBe('交易中')
+   })
+ 
+   it('状态列着色：vtable row=1（首条数据行）正确读取 records[0]，最后一行不落入灰色兜底', async () => {
+     const contracts: ContractInfo[] = [
+       { instrumentID: 'au2612', instrumentName: '测试A', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 1, productClass: "1" },
+       { instrumentID: 'au2613', instrumentName: '测试B', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 1, productClass: "1" },
+     ]
+-    render(<MarketTable contracts={contracts} snapshots={new Map()} />)
++    render(<QuoteTable spec={futuresSpec} contracts={contracts} snapshots={new Map()} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     // 状态列 style 函数应存在
+     const statusCol = options.columns.find((c: { title: string }) => c.title === '状态')
+     expect(typeof statusCol.style).toBe('function')
+ 
+     const records = options.records
+     // 模拟 vtable style 回调：args.row 是物理行号（0=表头，首条数据为 1）
+     const styleArg = (row: number) => ({ table: { records }, row, col: 4 })
+     // 首条数据行（row=1）→ records[0] 交易中 → 绿色
+     expect(statusCol.style(styleArg(1))).toEqual({ color: '#3fb950' })
+     // 最后一条数据行（row=2）→ records[1] 交易中 → 绿色（不应是灰色兜底 #8b949e）
+     expect(statusCol.style(styleArg(2))).toEqual({ color: '#3fb950' })
+   })
+ 
+   it('状态列着色：已停牌行显示橙色', async () => {
+     const contracts: ContractInfo[] = [
+       { instrumentID: 'au2612', instrumentName: '测试A', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 1, productClass: "1" },
+       { instrumentID: 'au2613', instrumentName: '测试B', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '99991231', isTrading: 0, productClass: "1" },
+     ]
+-    render(<MarketTable contracts={contracts} snapshots={new Map()} />)
++    render(<QuoteTable spec={futuresSpec} contracts={contracts} snapshots={new Map()} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     const statusCol = options.columns.find((c: { title: string }) => c.title === '状态')
+     const records = options.records
+     // 第二条数据（row=2）→ records[1] 已停牌 → 橙色
+     expect(statusCol.style({ table: { records }, row: 2, col: 4 })).toEqual({ color: '#d29922' })
+   })
+ 
+   it('columns 包含合约乘数与最小变动价位，且采用固定列宽 standard（默认列宽放大）', async () => {
+     const { ListTable } = await import('@visactor/vtable')
+-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
+     const options = (ListTable as any).mock.calls[0][1]
+     expect(options.widthMode).toBe('standard')
+     const titles = options.columns.map((c: { title: string }) => c.title)
+     expect(titles).toContain('合约乘数')
+     expect(titles).toContain('最小变动价位')
+     // 默认列宽放大：固定总宽明显大于原 1400，宽屏下横向留白更少
+     const totalWidth = options.columns.reduce((sum: number, c: { width?: number }) => sum + (c.width ?? 0), 0)
+     expect(totalWidth).toBeGreaterThan(1500)
+     for (const col of options.columns) {
+       expect(typeof col.width).toBe('number')
+       expect(col.width as number).toBeGreaterThan(0)
+     }
+   })
+ 
+   it('保留每列拖拽缩放能力（columnResizeMode=all，列可单独放大/缩小）', async () => {
+-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     expect(options.columnResizeMode).toBe('all')
+   })
+ 
+   it('buildRecord 从 contract 填充合约乘数与最小变动价位（有快照）', async () => {
+     const { ListTable } = await import('@visactor/vtable')
+-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
+     const options = (ListTable as any).mock.calls[0][1]
+     const record = options.records[0] // au2508
+     expect(record.volumeMultiple).toBe(1000)
+     expect(record.priceTick).toBe(0.02)
+   })
+ 
+   it('无快照时合约乘数/最小变动价位仍从 contract 显示（静态列）', async () => {
+     const { ListTable } = await import('@visactor/vtable')
+-    render(<MarketTable contracts={mockContracts} snapshots={new Map()} />)
++    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={new Map()} />)
+     const options = (ListTable as any).mock.calls[0][1]
+     const record = options.records[0]
+     expect(record.volumeMultiple).toBe(1000)
+     expect(record.priceTick).toBe(0.02)
+     expect(record.lastPrice).toBe('--')
+   })
+ 
+   it('横向滚动条为低调细灰样式（6px + 灰色滑块 + hover 表格时浮现）', async () => {
+     const { ListTable } = await import('@visactor/vtable')
+-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
+     const options = (ListTable as any).mock.calls[0][1]
+     const ss = options.theme.scrollStyle
+     expect(ss).toBeDefined()
+     expect(ss.visible).toBe('focus') // 常显 → hover 表格时浮现
+     expect(ss.width).toBe(6) // 6px 细条
+     expect(ss.scrollSliderColor).toBe('rgba(139,148,158,0.45)') // 灰色滑块，低调不抢行情数据
+     expect(ss.barToSide).toBe(true) // 进度条钉在视口底部，行数少时不跑到上边去
+   })
+ 
+   // --- 滚动条区域不触发多选（拖拽进度条不应误选行） ---
+ 
+   describe('滚动条区域不触发多选', () => {
+     it('拖拽底部横向进度条（底部 6px 内）不误选合约行', async () => {
+       const onSelectionChange = vi.fn()
+       const { container } = render(
+-        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={onSelectionChange} />
++        <QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={onSelectionChange} />
+       )
+       const { ListTable } = await import('@visactor/vtable')
+       const instance = (ListTable as any).mock.results[0].value
+       // 模拟：getCellAt 把滚动条区域判为「末行」（横向进度条覆盖/邻近最后一行）
+       instance.getCellAt = vi.fn().mockReturnValue({ row: 1, col: 0 })
+       Object.defineProperty(instance, 'tableNoFrameWidth', { value: 800, configurable: true })
+       Object.defineProperty(instance, 'tableNoFrameHeight', { value: 600, configurable: true })
+       const tableEl = container.firstChild as HTMLElement
+ 
+       await act(async () => {
+@@ -250,21 +252,21 @@ describe('MarketTable', () => {
+       expect(onSelectionChange).not.toHaveBeenCalled()
+       // 清理共享 mock，避免影响后续用例
+       delete instance.getCellAt
+       delete instance.tableNoFrameWidth
+       delete instance.tableNoFrameHeight
+     })
+ 
+     it('拖拽右侧纵向滚动条（右侧 6px 内）不误选合约行', async () => {
+       const onSelectionChange = vi.fn()
+       const { container } = render(
+-        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={onSelectionChange} />
++        <QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={onSelectionChange} />
+       )
+       const { ListTable } = await import('@visactor/vtable')
+       const instance = (ListTable as any).mock.results[0].value
+       instance.getCellAt = vi.fn().mockReturnValue({ row: 1, col: 0 })
+       Object.defineProperty(instance, 'tableNoFrameWidth', { value: 800, configurable: true })
+       Object.defineProperty(instance, 'tableNoFrameHeight', { value: 600, configurable: true })
+       const tableEl = container.firstChild as HTMLElement
+ 
+       await act(async () => {
+         // x=795 落在右侧滚动条带（800-6=794 右侧）；无修复时 getCellAt 按 y 判行 → 误触发多选
+@@ -279,21 +281,21 @@ describe('MarketTable', () => {
+       delete instance.tableNoFrameHeight
+     })
+   })
+ 
+   // --- 滚动后拖选定位：getCellAt 需携带滚动偏移（否则滚动后选中错行/选不中） ---
+ 
+   describe('滚动后拖选定位（getCellAt 携带滚动偏移）', () => {
+     it('已滚动时 mousedown，getCellAt 应收到 y+scrollTop（内容坐标而非视口坐标）', async () => {
+       const onSelectionChange = vi.fn()
+       const { container } = render(
+-        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={onSelectionChange} />
++        <QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={onSelectionChange} />
+       )
+       const { ListTable } = await import('@visactor/vtable')
+       const instance = (ListTable as any).mock.results[0].value
+       // 排除滚动条守卫：表格宽高足够大，x/y 不在边缘 6px 内
+       Object.defineProperty(instance, 'tableNoFrameWidth', { value: 1200, configurable: true })
+       Object.defineProperty(instance, 'tableNoFrameHeight', { value: 1000, configurable: true })
+       // 模拟已向下滚动 500px（1000+ 合约列表常先滚动再拖选）
+       Object.defineProperty(instance, 'scrollTop', { value: 500, configurable: true })
+       Object.defineProperty(instance, 'scrollLeft', { value: 0, configurable: true })
+       const getCellAt = vi.fn().mockReturnValue({ row: 1, col: 0 })
+@@ -312,138 +314,138 @@ describe('MarketTable', () => {
+       delete instance.scrollTop
+       delete instance.scrollLeft
+     })
+   })
+ 
+   // --- onVisibleRangeChange tests ---
+ 
+   it('接受 onVisibleRangeChange 回调', () => {
+     const onVisibleRangeChange = vi.fn()
+     render(
+-      <MarketTable
++      <QuoteTable spec={futuresSpec}
+         contracts={mockContracts}
+         snapshots={mockSnapshots}
+         onVisibleRangeChange={onVisibleRangeChange}
+       />
+     )
+     // 组件渲染成功，回调已传入
+     expect(onVisibleRangeChange).not.toHaveBeenCalled()
+   })
+ 
+   it('初始渲染后调用 onVisibleRangeChange', async () => {
+     const onVisibleRangeChange = vi.fn()
+     render(
+-      <MarketTable
++      <QuoteTable spec={futuresSpec}
+         contracts={mockContracts}
+         snapshots={mockSnapshots}
+         onVisibleRangeChange={onVisibleRangeChange}
+       />
+     )
+ 
+     // 等待初始可见行检测（notifyVisibleRange 触发 setVisibleRangeVersion，需 act 包裹）
+     await act(async () => { await vi.advanceTimersByTimeAsync(100) })
+ 
+     // 应该调用回调，传入可见合约 ID 列表
+     expect(onVisibleRangeChange).toHaveBeenCalled()
+     const calledWith = onVisibleRangeChange.mock.calls[0][0]
+     expect(Array.isArray(calledWith)).toBe(true)
+     // mock 返回 rowStart:1, rowEnd:30，所有合约都可见
+     expect(calledWith).toEqual(expect.arrayContaining(['au2508', 'ag2508']))
+   })
+ 
+   it('contracts 变化时更新可见行', async () => {
+     const onVisibleRangeChange = vi.fn()
+     const { rerender } = render(
+-      <MarketTable
++      <QuoteTable spec={futuresSpec}
+         contracts={mockContracts}
+         snapshots={mockSnapshots}
+         onVisibleRangeChange={onVisibleRangeChange}
+       />
+     )
+ 
+     await act(async () => { await vi.advanceTimersByTimeAsync(100) })
+     onVisibleRangeChange.mockClear()
+ 
+     // 添加新合约
+     const newContracts = [
+       ...mockContracts,
+       { instrumentID: 'cu2508', instrumentName: '铜2508', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20250815', isTrading: 1, productClass: "1" },
+     ]
+ 
+     rerender(
+-      <MarketTable
++      <QuoteTable spec={futuresSpec}
+         contracts={newContracts}
+         snapshots={mockSnapshots}
+         onVisibleRangeChange={onVisibleRangeChange}
+       />
+     )
+ 
+     await act(async () => { await vi.advanceTimersByTimeAsync(100) })
+ 
+     // 回调应该被调用
+     expect(onVisibleRangeChange).toHaveBeenCalled()
+   })
+ 
+   it('滚动条释放（mouseup 距上次 scroll <200ms）触发 markScrollEnd', async () => {
+     const { ListTable } = await import('@visactor/vtable')
+-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
+     const instance = (ListTable as any).mock.results[0].value
+ 
+     // 模拟一次滚动（记录 lastScrollAtRef）
+     const scrollHandler = instance.on.mock.calls.find(([name]: [string]) => name === 'scroll')?.[1]
+     expect(scrollHandler).toBeDefined()
+     scrollHandler({ scrollTop: 500 })
+ 
+     // 松手 → markScrollEnd（handleScrollEnd 同步调用 notifyVisibleRange → setVisibleRangeVersion，需 act 包裹）
+     await act(async () => {
+       window.dispatchEvent(new Event('mouseup'))
+     })
+     expect(useMarketStore.getState().scrollEndSeq).toBeGreaterThan(0)
+   })
+ 
+   it('键盘滚动停止（keyup 距上次 scroll <200ms）触发 markScrollEnd', async () => {
+     useMarketStore.setState({ scrollEndSeq: 0 }) // 清掉前序用例（mouseup 测试）的残留计数
+     const { ListTable } = await import('@visactor/vtable')
+-    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    render(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />)
+     const instance = (ListTable as any).mock.results[0].value
+ 
+     // 模拟一次滚动（记录 lastScrollAtRef）
+     const scrollHandler = instance.on.mock.calls.find(([name]: [string]) => name === 'scroll')?.[1]
+     expect(scrollHandler).toBeDefined()
+     scrollHandler({ scrollTop: 300 })
+ 
+     // 键盘滚动无 mouseup：keyup 也应触发 markScrollEnd → 订阅立即 diff（不等 500ms 拖停）
+     await act(async () => {
+       window.dispatchEvent(new KeyboardEvent('keyup'))
+     })
+     expect(useMarketStore.getState().scrollEndSeq).toBeGreaterThan(0)
+   })
+ 
+   // --- onContextMenu tests ---
+ 
+   it('接受 onContextMenu 回调', () => {
+     const onContextMenu = vi.fn()
+     render(
+-      <MarketTable
++      <QuoteTable spec={futuresSpec}
+         contracts={mockContracts}
+         snapshots={mockSnapshots}
+         onContextMenu={onContextMenu}
+       />
+     )
+     // 组件渲染成功，回调已传入
+     expect(onContextMenu).not.toHaveBeenCalled()
+   })
+ 
+   it('右键点击时调用 onContextMenu 并传入合约信息', async () => {
+     const onContextMenu = vi.fn()
+     render(
+-      <MarketTable
++      <QuoteTable spec={futuresSpec}
+         contracts={mockContracts}
+         snapshots={mockSnapshots}
+         onContextMenu={onContextMenu}
+       />
+     )
+ 
+     // 获取 vtable 实例并触发 contextmenu_cell 事件
+     const { ListTable } = await import('@visactor/vtable')
+     const tableInstance = (ListTable as any).mock.results[0].value
+     const contextmenuHandler = tableInstance.on.mock.calls.find(
+@@ -456,21 +458,21 @@ describe('MarketTable', () => {
+     contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200 } })
+ 
+     expect(onContextMenu).toHaveBeenCalledTimes(1)
+     expect(onContextMenu).toHaveBeenCalledWith('au2508', 480.5, expect.any(Object))
+   })
+ 
+   it('右键落在多选集合外时，先把该合约置为单选选中（同步蓝区）', async () => {
+     const onContextMenu = vi.fn()
+     const onSelectionChange = vi.fn()
+     render(
+-      <MarketTable
++      <QuoteTable spec={futuresSpec}
+         contracts={mockContracts}
+         snapshots={mockSnapshots}
+         selectedContracts={new Set(['ag2508'])} // 集合不包含 au2508
+         onSelectionChange={onSelectionChange}
+         onContextMenu={onContextMenu}
+       />
+     )
+     const { ListTable } = await import('@visactor/vtable')
+     const tableInstance = (ListTable as any).mock.results[0].value
+     const contextmenuHandler = tableInstance.on.mock.calls.find(
+@@ -480,21 +482,21 @@ describe('MarketTable', () => {
+     contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200 } }) // row1 → au2508
+ 
+     expect(onSelectionChange).toHaveBeenCalledWith(new Set(['au2508']))
+     expect(onContextMenu).toHaveBeenCalledWith('au2508', 480.5, expect.any(Object))
+   })
+ 
+   it('右键命中多选集合内时保持集合不变，显示多选菜单', async () => {
+     const onMultiSelectContextMenu = vi.fn()
+     const onSelectionChange = vi.fn()
+     render(
+-      <MarketTable
++      <QuoteTable spec={futuresSpec}
+         contracts={mockContracts}
+         snapshots={mockSnapshots}
+         selectedContracts={new Set(['au2508', 'ag2508'])}
+         onSelectionChange={onSelectionChange}
+         onMultiSelectContextMenu={onMultiSelectContextMenu}
+       />
+     )
+     const { ListTable } = await import('@visactor/vtable')
+     const tableInstance = (ListTable as any).mock.results[0].value
+     const contextmenuHandler = tableInstance.on.mock.calls.find(
+@@ -503,104 +505,104 @@ describe('MarketTable', () => {
+ 
+     contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200 } }) // au2508 在集合内
+ 
+     expect(onSelectionChange).not.toHaveBeenCalled()
+     expect(onMultiSelectContextMenu).toHaveBeenCalledWith(['au2508', 'ag2508'], expect.any(Object))
+   })
+ 
+   it('右键点击无行情的合约时 price 为 0', async () => {
+     const onContextMenu = vi.fn()
+     render(
+-      <MarketTable
++      <QuoteTable spec={futuresSpec}
+         contracts={mockContracts}
+         snapshots={new Map()}
+         onContextMenu={onContextMenu}
+       />
+     )
+ 
+     const { ListTable } = await import('@visactor/vtable')
+     const tableInstance = (ListTable as any).mock.results[0].value
+     const contextmenuHandler = tableInstance.on.mock.calls.find(
+       (call: any[]) => call[0] === 'contextmenu_cell'
+     )?.[1]
+ 
+     contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200 } })
+ 
+     expect(onContextMenu).toHaveBeenCalledWith('au2508', 0, expect.any(Object))
+   })
+ 
+   // --- 局部更新 tests ---
+ 
+-  describe('MarketTable 局部更新', () => {
++  describe('QuoteTable 局部更新', () => {
+     it('snapshots 变化时调用 updateRecords 而非 setRecords', async () => {
+       const { ListTable } = await import('@visactor/vtable')
+       const { rerender } = render(
+-        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} />
++        <QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />
+       )
+ 
+       // 初始渲染调用了 setRecords
+       const instance = (ListTable as any).mock.results[0].value
+       expect(instance.setRecords).toHaveBeenCalled()
+       instance.setRecords.mockClear()
+ 
+       // 新的快照（au2508 价格变化，自 diff 检测到该行变化）
+       const newSnapshots = new Map(mockSnapshots)
+       newSnapshots.set('au2508', { ...newSnapshots.get('au2508')!, lastPrice: 490 } as any)
+-      rerender(<MarketTable contracts={mockContracts} snapshots={newSnapshots} />)
++      rerender(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={newSnapshots} />)
+ 
+       expect(instance.updateRecords).toHaveBeenCalled()
+       expect(instance.setRecords).not.toHaveBeenCalled()
+       // 只更新 1 行，且索引为 0-based 记录索引 [0]（au2508 在 contracts 中 index 0）
+       const updateCalls = instance.updateRecords.mock.calls as [any[], number[]][]
+       expect(updateCalls[0][1]).toEqual([0])
+     })
+ 
+     it('更新第二个合约时索引为 1（0-based 记录索引）', async () => {
+       const { ListTable } = await import('@visactor/vtable')
+       const { rerender } = render(
+-        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} />
++        <QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />
+       )
+       const instance = (ListTable as any).mock.results[0].value
+       instance.updateRecords.mockClear()
+ 
+       // 新的快照（ag2508 价格变化，ag2508 在 contracts 中 index 1）
+       const newSnapshots = new Map(mockSnapshots)
+       newSnapshots.set('ag2508', { ...newSnapshots.get('ag2508')!, lastPrice: 6600 } as any)
+-      rerender(<MarketTable contracts={mockContracts} snapshots={newSnapshots} />)
++      rerender(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={newSnapshots} />)
+ 
+       expect(instance.updateRecords).toHaveBeenCalled()
+       const updateCalls = instance.updateRecords.mock.calls as [any[], number[]][]
+       expect(updateCalls[0][1]).toEqual([1])
+     })
+ 
+     it('多次 tick 后行索引映射保持（局部更新仍更新正确行）', async () => {
+       const { ListTable } = await import('@visactor/vtable')
+       const { rerender } = render(
+-        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} />
++        <QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} />
+       )
+       const instance = (ListTable as any).mock.results[0].value
+       instance.updateRecords.mockClear()
+ 
+       // 第 1 次 tick：au2508 价格变化 → 0-based 行索引 [0]
+       const snapshots1 = new Map(mockSnapshots)
+       snapshots1.set('au2508', { ...snapshots1.get('au2508')!, lastPrice: 490 } as any)
+-      rerender(<MarketTable contracts={mockContracts} snapshots={snapshots1} />)
++      rerender(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={snapshots1} />)
+ 
+       const calls1 = instance.updateRecords.mock.calls as [any[], number[]][]
+       expect(calls1.length).toBeGreaterThan(0)
+       expect(calls1[0][1]).toEqual([0])
+       instance.updateRecords.mockClear()
+ 
+       // 第 2 次 tick：ag2508 价格变化 → 0-based 行索引 [1]（映射未因上次局部更新而错位）
+       const snapshots2 = new Map(snapshots1)
+       snapshots2.set('ag2508', { ...snapshots2.get('ag2508')!, lastPrice: 6600 } as any)
+-      rerender(<MarketTable contracts={mockContracts} snapshots={snapshots2} />)
++      rerender(<QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={snapshots2} />)
+ 
+       const calls2 = instance.updateRecords.mock.calls as [any[], number[]][]
+       expect(calls2.length).toBeGreaterThan(0)
+       expect(calls2[0][1]).toEqual([1])
+     })
+ 
+     it('只更新可见行：屏幕外合约的快照变化不触发 updateRecords', async () => {
+       const { ListTable } = await import('@visactor/vtable')
+       const manyContracts: ContractInfo[] = Array.from({ length: 50 }, (_, i) => ({
+         instrumentID: `C${i}`,
+@@ -617,58 +619,58 @@ describe('MarketTable', () => {
+         manyContracts.map((c) => [c.instrumentID, {
+           instrumentID: c.instrumentID,
+           lastPrice: 4000,
+           bidPrice1: 3999,
+           askPrice1: 4001,
+           volume: 1,
+           openInterest: 1,
+         } as MarketSnapshot])
+       )
+ 
+-      const { rerender } = render(<MarketTable contracts={manyContracts} snapshots={baseSnapshots} />)
++      const { rerender } = render(<QuoteTable spec={futuresSpec} contracts={manyContracts} snapshots={baseSnapshots} />)
+       const instance = (ListTable as any).mock.results[0].value
+       instance.updateRecords.mockClear()
+       instance.setRecords.mockClear()
+ 
+       // 模拟可见范围只有中间几行（含预加载 → 可见区间窄）
+       const originalRange = instance.getBodyVisibleCellRange
+       instance.getBodyVisibleCellRange = vi.fn().mockReturnValue({ rowStart: 25, rowEnd: 25, colStart: 0, colEnd: 10 })
+ 
+       // 只改屏幕外的合约 C0（index 0）→ 不应触发 updateRecords
+       const snap1 = new Map(baseSnapshots)
+       snap1.set('C0', { ...snap1.get('C0')!, lastPrice: 3999 } as any)
+-      rerender(<MarketTable contracts={manyContracts} snapshots={snap1} />)
++      rerender(<QuoteTable spec={futuresSpec} contracts={manyContracts} snapshots={snap1} />)
+       expect(instance.updateRecords).not.toHaveBeenCalled()
+ 
+       // 改可见区合约 C25（index 25）→ 应触发 updateRecords 且索引为 25
+       const snap2 = new Map(snap1)
+       snap2.set('C25', { ...snap2.get('C25')!, lastPrice: 4001 } as any)
+-      rerender(<MarketTable contracts={manyContracts} snapshots={snap2} />)
++      rerender(<QuoteTable spec={futuresSpec} contracts={manyContracts} snapshots={snap2} />)
+       expect(instance.updateRecords).toHaveBeenCalled()
+       const rows = instance.updateRecords.mock.calls.flatMap((c: [any[], number[]]) => c[1])
+       expect(rows).toContain(25)
+ 
+       // 恢复原始 mock，避免影响同文件其他用例
+       instance.getBodyVisibleCellRange = originalRange
+     })
+ 
+     it('selectedContracts 变化时仅重绘可见单元格（updateCellContentRange），不再全量 setRecords', async () => {
+       const { ListTable } = await import('@visactor/vtable')
+       const { rerender } = render(
+-        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={() => {}} />
++        <QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set()} onSelectionChange={() => {}} />
+       )
+       const instance = (ListTable as any).mock.results[0].value
+       instance.updateCellContentRange.mockClear()
+       instance.setRecords.mockClear()
+ 
+       rerender(
+-        <MarketTable contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set(['au2508'])} onSelectionChange={() => {}} />
++        <QuoteTable spec={futuresSpec} contracts={mockContracts} snapshots={mockSnapshots} selectedContracts={new Set(['au2508'])} onSelectionChange={() => {}} />
+       )
+ 
+       // 只重绘可见区单元格（bgColor 回调重新求值），避免 1000+ 行全量重建
+       expect(instance.updateCellContentRange).toHaveBeenCalled()
+       expect(instance.setRecords).not.toHaveBeenCalled()
+     })
+   })
+ 
+   describe('shouldRenderAnchor（金色活动锚点守卫）', () => {
+     it('锚点在选区内返回 true（单选重合 / 多选锚点在集合内）', () => {
+@@ -695,43 +697,96 @@ describe('MarketTable', () => {
+       }
+       const raf = vi.spyOn(window, 'requestAnimationFrame')
+         .mockImplementation((cb: FrameRequestCallback) => { cb(0); return 0 })
+       const cancel = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {})
+       return () => { raf.mockRestore(); cancel.mockRestore() }
+     }
+ 
+     it('锚点在选区内：渲染金色 selectRow', async () => {
+       const restore = stubRaf()
+       render(
+-        <MarketTable
++        <QuoteTable spec={futuresSpec}
+           contracts={mockContracts}
+           snapshots={mockSnapshots}
+           selectedInstrument="au2508"
+           selectedContracts={new Set(['au2508'])}
+         />
+       )
+       const { ListTable } = await import('@visactor/vtable')
+       const instance = (ListTable as any).mock.results[0].value
+       // au2508 在 contracts 中 index 0 → vtableRow 1
+       expect(instance.selectRow).toHaveBeenCalledWith(1)
+       expect(instance.clearSelected).not.toHaveBeenCalled()
+       restore()
+     })
+ 
+     it('锚点不在选区内：清除金色（clearSelected），不渲染独立高亮', async () => {
+       const restore = stubRaf()
+       render(
+-        <MarketTable
++        <QuoteTable spec={futuresSpec}
+           contracts={mockContracts}
+           snapshots={mockSnapshots}
+           selectedInstrument="au2508"
+           selectedContracts={new Set(['ag2508'])}
+         />
+       )
+       const { ListTable } = await import('@visactor/vtable')
+       const instance = (ListTable as any).mock.results[0].value
+       expect(instance.selectRow).not.toHaveBeenCalled()
+       expect(instance.clearSelected).toHaveBeenCalled()
+       restore()
+     })
+   })
++
++  // --- spec 驱动新增行为 tests ---
++
++  it('bodyStyle.bgColor：spec.rowStyle 行级底色优先于多选蓝高亮', async () => {
++    const spec = {
++      columns: futuresSpec.columns,
++      buildRecord: futuresSpec.buildRecord,
++      // 标底行深色底（Task 6 期权表语义），此处用 kind 区分
++      rowStyle: (r: { kind: string }) => (r.kind === 'underlying' ? { bgColor: '#161b22' } : undefined),
++    }
++    render(
++      <QuoteTable spec={spec as any}
++        contracts={mockContracts}
++        snapshots={mockSnapshots}
++        selectedContracts={new Set(['au2508'])}
++      />
++    )
++    const { ListTable } = await import('@visactor/vtable')
++    const options = (ListTable as any).mock.calls[0][1]
++    const bgColor = options.theme.bodyStyle.bgColor
++    expect(typeof bgColor).toBe('function')
++    // 行级样式优先：au2508 虽在选中蓝区，但 spec.rowStyle 命中标底行 → 深色底
++    expect(bgColor({ table: { records: [{ instrumentID: 'au2508', kind: 'underlying' }] }, row: 1 })).toBe('#161b22')
++    // 无 rowStyle 且被选中 → 蓝高亮
++    expect(bgColor({ table: { records: [{ instrumentID: 'au2508', kind: 'normal' }] }, row: 1 })).toBe('rgba(59, 130, 246, 0.15)')
++    // 无 rowStyle 且未选中 → 默认底
++    expect(bgColor({ table: { records: [{ instrumentID: 'ag2508', kind: 'normal' }] }, row: 1 })).toBe('#0d1117')
++  })
++
++  it('isActive 翻转为 true 时重报可见区（notifyVisibleRange）', async () => {
++    const onVisibleRangeChange = vi.fn()
++    const { rerender } = render(
++      <QuoteTable spec={futuresSpec}
++        contracts={mockContracts}
++        snapshots={mockSnapshots}
++        isActive={false}
++        onVisibleRangeChange={onVisibleRangeChange}
++      />
++    )
++    // 初始渲染的 setTimeout(notifyVisibleRange,0) 在 fake timers 下需推进才会触发 → 清掉
++    await act(async () => { await vi.advanceTimersByTimeAsync(100) })
++    onVisibleRangeChange.mockClear()
++
++    rerender(
++      <QuoteTable spec={futuresSpec}
++        contracts={mockContracts}
++        snapshots={mockSnapshots}
++        isActive={true}
++        onVisibleRangeChange={onVisibleRangeChange}
++      />
++    )
++    expect(onVisibleRangeChange).toHaveBeenCalled()
++  })
+ })
+diff --git a/frontend/src/modules/market/MarketTable.tsx b/frontend/src/modules/market/QuoteTable.tsx
+similarity index 77%
+rename from frontend/src/modules/market/MarketTable.tsx
+rename to frontend/src/modules/market/QuoteTable.tsx
+index be5c501..ee8dfea 100644
+--- a/frontend/src/modules/market/MarketTable.tsx
++++ b/frontend/src/modules/market/QuoteTable.tsx
+@@ -1,167 +1,62 @@
+ import { useRef, useEffect, useCallback, useState } from 'react'
+ import { ListTable } from '@visactor/vtable'
+ import type { MarketSnapshot, ContractInfo } from '@/services/types'
+-import { getProductName } from '@/utils/productNames'
+-import { getContractStatus, type ContractStatus } from '@/utils/contractStatus'
+ import { SCROLLBAR_SIZE, SCROLL_STYLE } from '@/utils/vtableTheme'
+ import { useMarketStore } from './store'
++import { PLACEHOLDER, shouldRenderAnchor, type QuoteRecord, type QuoteTableSpec } from './quoteTableCore'
+ 
+-interface MarketTableProps {
++interface QuoteTableProps {
++  /** spec 驱动：列定义 + buildRecord（期货 futuresSpec / 期权 optionsSpec 复用） */
++  spec: QuoteTableSpec
+   contracts: ContractInfo[]
+   snapshots: Map<string, MarketSnapshot>
+   selectedInstrument?: string | null
++  /** 当前标签是否激活（激活时重报可见区） */
++  isActive?: boolean
+   onRowClick?: (instrumentID: string, price: number) => void
+   onRowDoubleClick?: (instrumentID: string, price: number) => void
+   /** 单选右键菜单回调，传入合约 ID、价格、鼠标事件 */
+   onContextMenu?: (instrumentID: string, price: number, event: MouseEvent) => void
+   /** 多选右键菜单回调，传入选中的合约 ID 列表和鼠标事件 */
+   onMultiSelectContextMenu?: (instrumentIDs: string[], event: MouseEvent) => void
+   /** 可见行变化回调，传入当前可见的合约 ID 列表 */
+   onVisibleRangeChange?: (visibleInstrumentIDs: string[]) => void
+   /** 收藏的合约 ID 集合 */
+   favoritedIds?: Set<string>
+   /** 收藏状态变化回调 */
+   onFavoriteChange?: (instrumentID: string, isFavorited: boolean) => void
+   /** 多选的合约 ID 集合 */
+   selectedContracts?: Set<string>
+   /** 多选变化回调 */
+   onSelectionChange?: (selectedIDs: Set<string>) => void
+ }
+ 
+-const PLACEHOLDER = '--'
+-
+ /** mouseup 距上次 scroll 在此窗口内视为滚动条释放（松手） */
+ const SCROLL_RELEASE_WINDOW_MS = 200
+ 
+-const UP_COLOR = '#ef4444'
+-const DOWN_COLOR = '#22c55e'
+-const FLAT_COLOR = '#e6edf3'
+-
+-/** 根据 record.change 正负返回文字颜色 */
+-function priceColor(record: any): string {
+-  const change = typeof record?.change === 'number' ? record.change : 0
+-  if (change > 0) return UP_COLOR
+-  if (change < 0) return DOWN_COLOR
+-  return FLAT_COLOR
+-}
+-
+-/** 列级 style 回调：通过 table.records 拿到行数据，按涨跌着色
+- * 注意：args.row 是 vtable 物理行号（0=表头），records 是 0 起始数据数组，需 -1 */
+-function coloredStyle(args: any) {
+-  const record = args.table?.records?.[args.row - 1]
+-  return { color: priceColor(record) }
+-}
+-
+-/** 状态列着色：交易中绿色 / 已停牌橙色 / 已到期灰色（row 需 -1，理由同上） */
+-function statusStyle(args: any) {
+-  const record = args.table?.records?.[args.row - 1]
+-  const status = record?.status as ContractStatus | undefined
+-  if (status === '交易中') return { color: '#3fb950' }
+-  if (status === '已停牌') return { color: '#d29922' }
+-  return { color: '#8b949e' }
+-}
+-
+-const columns = [
+-  { field: 'instrumentID', title: '合约', width: 130 },
+-  { field: 'productName', title: '合约品种', width: 100 },
+-  { field: 'exchangeID', title: '交易所', width: 85 },
+-  { field: 'volumeMultiple', title: '合约乘数', width: 95 },
+-  { field: 'priceTick', title: '最小变动价位', width: 120 },
+-  { field: 'expireDate', title: '到期日', width: 115 },
+-  { field: 'status', title: '状态', width: 85, style: statusStyle },
+-  { field: 'lastPrice', title: '最新价', width: 90, style: coloredStyle },
+-  { field: 'change', title: '涨跌', width: 115, style: coloredStyle },
+-  { field: 'changePercent', title: '涨跌%', width: 115, style: coloredStyle },
+-  { field: 'bidPrice1', title: '买一', width: 120, style: coloredStyle },
+-  { field: 'askPrice1', title: '卖一', width: 120, style: coloredStyle },
+-  { field: 'volume', title: '成交量', width: 90 },
+-  { field: 'openInterest', title: '持仓量', width: 90 },
+-  { field: 'favorite', title: '⭐', width: 60 },
+-]
+-
+-const CTP_INVALID_PRICE = 1.7976931348623157e+308
+-const isValidPrice = (p: number) => p > 0 && p < CTP_INVALID_PRICE
+-
+-/** 金色活动锚点是否渲染：仅当锚点合约位于选中选区内（金在蓝内，防双高亮区） */
+-export function shouldRenderAnchor(
+-  selectedInstrument: string | null | undefined,
+-  selectedContracts?: Set<string>,
+-): boolean {
+-  if (!selectedInstrument) return false
+-  if (!selectedContracts || selectedContracts.size === 0) return false
+-  return selectedContracts.has(selectedInstrument)
+-}
+-
+-function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, isFavorited: boolean) {
+-  const productName = getProductName(contract.productID)
+-  const status = getContractStatus(contract)
+-  if (!snap) {
+-    return {
+-      instrumentID: contract.instrumentID,
+-      productName,
+-      exchangeID: contract.exchangeID || PLACEHOLDER,
+-      volumeMultiple: contract.volumeMultiple,
+-      priceTick: contract.priceTick,
+-      expireDate: contract.expireDate || PLACEHOLDER,
+-      status,
+-      lastPrice: PLACEHOLDER,
+-      change: PLACEHOLDER,
+-      changePercent: PLACEHOLDER,
+-      bidPrice1: PLACEHOLDER,
+-      askPrice1: PLACEHOLDER,
+-      volume: PLACEHOLDER,
+-      openInterest: PLACEHOLDER,
+-      favorite: isFavorited ? '⭐' : '☆',
+-    }
+-  }
+-  // preSettlementPrice 可能为 0（CTP DBL_MAX 被 sanitize 后），此时 fallback 到昨收
+-  const preSettlement = (snap.preSettlementPrice && snap.preSettlementPrice > 0)
+-    ? snap.preSettlementPrice
+-    : (snap.preClosePrice || snap.lastPrice)
+-  const change = snap.lastPrice - preSettlement
+-  const changePercent = preSettlement ? (change / preSettlement) * 100 : 0
+-  return {
+-    instrumentID: snap.instrumentID,
+-    productName,
+-    exchangeID: contract.exchangeID || PLACEHOLDER,
+-    volumeMultiple: contract.volumeMultiple,
+-    priceTick: contract.priceTick,
+-    expireDate: contract.expireDate || PLACEHOLDER,
+-    status,
+-    lastPrice: isValidPrice(snap.lastPrice) ? snap.lastPrice : PLACEHOLDER,
+-    change: isValidPrice(snap.lastPrice) && isValidPrice(preSettlement) ? change : PLACEHOLDER,
+-    changePercent: isValidPrice(snap.lastPrice) && isValidPrice(preSettlement) ? changePercent : PLACEHOLDER,
+-    bidPrice1: isValidPrice(snap.bidPrice1) ? snap.bidPrice1 : PLACEHOLDER,
+-    askPrice1: isValidPrice(snap.askPrice1) ? snap.askPrice1 : PLACEHOLDER,
+-    volume: snap.volume,
+-    openInterest: snap.openInterest,
+-    favorite: isFavorited ? '⭐' : '☆',
+-  }
+-}
+-
+-export function MarketTable({ contracts, snapshots, selectedInstrument, onRowClick, onRowDoubleClick, onContextMenu, onMultiSelectContextMenu, onVisibleRangeChange, favoritedIds, onFavoriteChange, selectedContracts, onSelectionChange }: MarketTableProps) {
++export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isActive, onRowClick, onRowDoubleClick, onContextMenu, onMultiSelectContextMenu, onVisibleRangeChange, favoritedIds, onFavoriteChange, selectedContracts, onSelectionChange }: QuoteTableProps) {
+   const containerRef = useRef<HTMLDivElement>(null)
+   const tableRef = useRef<ListTable | null>(null)
+   const onClickRef = useRef(onRowClick)
+   const onDblClickRef = useRef(onRowDoubleClick)
+   const onContextMenuRef = useRef(onContextMenu)
+   const onMultiSelectContextMenuRef = useRef(onMultiSelectContextMenu)
+   const onVisibleRangeChangeRef = useRef(onVisibleRangeChange)
+   const onFavoriteChangeRef = useRef(onFavoriteChange)
+   const favoritedIdsRef = useRef(favoritedIds)
+   const selectedContractsRef = useRef(selectedContracts)
+   const onSelectionChangeRef = useRef(onSelectionChange)
+   const lastClickedIndexRef = useRef<number | null>(null)
+   const lastClickTimeRef = useRef<number>(0)
+   const lastClickRowRef = useRef<number>(-1)
+-  const recordsRef = useRef<ReturnType<typeof buildRecord>[]>([])
++  const recordsRef = useRef<QuoteRecord[]>([])
+   /** 每行最近一次 buildRecord 所用的 snapshot 引用（按行跟踪，仅对可见行生效） */
+   const rowSnapshotRef = useRef<(MarketSnapshot | undefined)[]>([])
+   /** 可见区版本号：滚动导致可见范围变化时递增，驱动局部更新 effect 重算（滚入新区域的行立即刷新） */
+   const [visibleRangeVersion, setVisibleRangeVersion] = useState(0)
+   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+   /** 最近一次滚动发生的时间戳（松手检测窗口依据） */
+   const lastScrollAtRef = useRef(0)
+ 
+   useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
+   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
+@@ -191,25 +86,25 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
+       // 可见区变化 → 递增版本号，驱动局部更新 effect 对滚入的新行立即重算
+       setVisibleRangeVersion((v) => v + 1)
+     } catch {
+       // vtable 尚未就绪
+     }
+   }, [])
+ 
+   useEffect(() => {
+     if (!containerRef.current) return
+ 
+-    const records = contracts.map((c) => buildRecord(c, snapshots.get(c.instrumentID), favoritedIds?.has(c.instrumentID) ?? false))
++    const records = contracts.map((c) => spec.buildRecord(c, snapshots.get(c.instrumentID), favoritedIds?.has(c.instrumentID) ?? false))
+     recordsRef.current = records
+ 
+     const table = new ListTable(containerRef.current, {
+-      columns,
++      columns: spec.columns,
+       records,
+       frozenColCount: 1, // 冻结「合约」列：横向拖动时固定最左侧
+       widthMode: 'standard',
+       columnResizeMode: 'all', // 保留每列拖拽缩放：可单独放大/缩小任意列宽
+       select: {
+         // 禁用 vtable 原生拖选扩展：拖选批量选中由下方 window 监听实现（蓝区），
+         // 金色活动锚点由 shouldRenderAnchor 守卫 + selectRow/clearSelected 唯一控制。
+         // 若不关掉，二次拖选时原生金色矩形会与 RAF selectRow 竞态，定格滞留无法清除。
+         disableDragSelect: true,
+       },
+@@ -231,24 +126,28 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
+         headerStyle: {
+           fontSize: 11,
+           fontFamily: "'JetBrains Mono', Consolas, Monaco, monospace",
+           fontWeight: '600',
+           color: '#8b949e',
+           bgColor: '#161b22',
+           borderColor: '#30363d',
+         },
+         bodyStyle: {
+           bgColor: (args: any) => {
+-            // 多选高亮
++            // 行级样式（期权表标底行深色底）优先，无则按多选蓝高亮
+             const record = args.table?.records?.[args.row - 1]
+-            if (record && selectedContractsRef.current?.has(record.instrumentID)) {
+-              return 'rgba(59, 130, 246, 0.15)' // 蓝色高亮
++            if (record) {
++              const rowBg = spec.rowStyle?.(record)?.bgColor
++              if (rowBg != null) return rowBg as string
++              if (selectedContractsRef.current?.has(record.instrumentID)) {
++                return 'rgba(59, 130, 246, 0.15)' // 蓝色高亮
++              }
+             }
+             return '#0d1117'
+           },
+           borderColor: '#21262d',
+         },
+         selectionStyle: {
+           cellBorderColor: '#f0b429',
+           cellBorderLineWidth: 1,
+           cellBgColor: 'rgba(240, 180, 41, 0.08)',
+           inlineRowBgColor: 'rgba(240, 180, 41, 0.12)',
+@@ -261,21 +160,21 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
+       },
+     })
+ 
+     table.on('click_cell', (args: any) => {
+       const rowIndex = args.row - 1 // vtable row 0 = header, row 1 = first data row
+       const colIndex = args.col
+       const record = recordsRef.current[rowIndex]
+       if (!record) return
+ 
+       // 收藏列点击
+-      if (colIndex === columns.length - 1) {
++      if (colIndex === spec.columns.length - 1) {
+         if (onFavoriteChangeRef.current) {
+           const isFavorited = favoritedIdsRef.current?.has(record.instrumentID) ?? false
+           onFavoriteChangeRef.current(record.instrumentID, !isFavorited)
+         }
+         return
+       }
+ 
+       // 双击检测：同一行 300ms 内连续点击视为双击
+       const now = Date.now()
+       const isDoubleClick =
+@@ -497,21 +396,21 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
+       window.removeEventListener('mouseup', handleScrollEnd)
+       window.removeEventListener('keyup', handleScrollEnd)
+       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+       table.release()
+     }
+   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+ 
+   // 合约列表或收藏变化 → 全量 setRecords（低频）
+   useEffect(() => {
+     if (!tableRef.current) return
+-    const records = contracts.map((contract) => buildRecord(contract, snapshots.get(contract.instrumentID), favoritedIds?.has(contract.instrumentID) ?? false))
++    const records = contracts.map((contract) => spec.buildRecord(contract, snapshots.get(contract.instrumentID), favoritedIds?.has(contract.instrumentID) ?? false))
+     recordsRef.current = records
+     // 重置每行 snapshot 跟踪：全量重建后所有行都视为已同步
+     rowSnapshotRef.current = contracts.map((c) => snapshots.get(c.instrumentID))
+     tableRef.current.setRecords(records)
+     lastClickedIndexRef.current = null
+     setTimeout(notifyVisibleRange, 0)
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [contracts, favoritedIds])
+ 
+   // snapshots 变化 或 可见区变化 → 仅对可见行局部 updateRecords。
+@@ -520,47 +419,47 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
+   useEffect(() => {
+     if (!tableRef.current) return
+     const range = tableRef.current.getBodyVisibleCellRange?.()
+     if (!range) return
+ 
+     const PRELOAD_ROWS = 10
+     const startRow = Math.max(0, range.rowStart - 1 - PRELOAD_ROWS) // vtable row 0 = header，向上预加载
+     const endRow = Math.min(recordsRef.current.length - 1, range.rowEnd - 1 + PRELOAD_ROWS) // 向下预加载
+ 
+     const rowIndexes: number[] = []
+-    const updatedRecords: ReturnType<typeof buildRecord>[] = []
++    const updatedRecords: QuoteRecord[] = []
+     for (let i = startRow; i <= endRow; i++) {
+       const rowSnap = rowSnapshotRef.current[i]
+       const rowRecord = recordsRef.current[i]
+       if (!rowRecord) continue
+       const snap = snapshots.get(rowRecord.instrumentID)
+       if (rowSnap === snap) continue // 该行快照引用未变
+-      const record = buildRecord(contracts[i], snap, favoritedIds?.has(rowRecord.instrumentID) ?? false)
++      const record = spec.buildRecord(contracts[i], snap, favoritedIds?.has(rowRecord.instrumentID) ?? false)
+       recordsRef.current[i] = record
+       rowSnapshotRef.current[i] = snap
+       updatedRecords.push(record)
+       rowIndexes.push(i) // updateRecords 第二参数是 0-based 记录索引（表头偏移由 vtable 内部处理）
+     }
+     if (updatedRecords.length > 0) {
+       tableRef.current.updateRecords(updatedRecords, rowIndexes)
+     }
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [snapshots, visibleRangeVersion, contracts, favoritedIds])
+ 
+   // selectedContracts 变化时更新行高亮：仅重绘可见区单元格（bodyStyle.bgColor 回调重新求值），
+   // 避免全量 setRecords 重建 1000+ 行。滚入新区域由 vtable 滚动重绘按当前 selectedContractsRef 求值。
+   useEffect(() => {
+     if (!tableRef.current) return
+     try {
+       const range = tableRef.current.getBodyVisibleCellRange?.()
+       if (!range) return
+-      const colCount = tableRef.current.colCount ?? columns.length
++      const colCount = tableRef.current.colCount ?? spec.columns.length
+       tableRef.current.updateCellContentRange(0, range.rowStart, colCount - 1, range.rowEnd)
+     } catch {
+       // vtable 尚未就绪
+     }
+   }, [selectedContracts])
+ 
+   // 高亮选中合约行（rAF 等 vtable setRecords 渲染完成）；金色活动锚点仅在选区内渲染
+   useEffect(() => {
+     if (!tableRef.current) return
+     if (!shouldRenderAnchor(selectedInstrument, selectedContracts)) {
+@@ -583,12 +482,19 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
+         if (range && (vtableRow < range.rowStart || vtableRow > range.rowEnd)) {
+           tableRef.current?.scrollToCell({ row: vtableRow, col: 0 })
+         }
+       } catch {
+         // vtable 尚未就绪
+       }
+     })
+     return () => cancelAnimationFrame(raf)
+   }, [selectedInstrument, selectedContracts, contracts])
+ 
++  // 标签激活（isActive 翻转为 true）时重报可见区：期权表切回期货标签等场景下
++  // 订阅管理器以可见区为准，激活后立即补订阅（依赖空数组保证 notifyVisibleRange 引用稳定）
++  useEffect(() => {
++    if (isActive) notifyVisibleRange()
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [isActive])
++
+   return <div ref={containerRef} className="market-table-container" />
+ }
+diff --git a/frontend/src/modules/market/dragSelectAnchor.test.tsx b/frontend/src/modules/market/dragSelectAnchor.test.tsx
+index 76e23b6..16eef8d 100644
+--- a/frontend/src/modules/market/dragSelectAnchor.test.tsx
++++ b/frontend/src/modules/market/dragSelectAnchor.test.tsx
+@@ -1,13 +1,14 @@
+ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+ import { render, act } from '@testing-library/react'
+-import { MarketTable } from './MarketTable'
++import { QuoteTable } from './QuoteTable'
++import { futuresSpec } from './futuresSpec'
+ import { useMarketStore } from './store'
+ import type { ContractInfo } from '@/services/types'
+ 
+ /**
+  * 回归：已批量选中后再拖选，金色高亮不得滞留。
+  *
+  * 根因：拖选时把金色锚点同步到起始行（`handleMouseDown` 调 setSelectedInstrument），
+  * 拖选把金色"钉"在起始行上；且锚点落在蓝区内 → shouldRenderAnchor 恒 true →
+  * clearSelected 永不触发 → 无法消除。
+  *
+@@ -28,21 +29,22 @@ describe('二次拖选金色高亮不滞留', () => {
+     expireDate: '99991231',
+     isTrading: 1,
+     productClass: '1',
+   }))
+ 
+   /** 包裹组件：selectedInstrument/selectedContracts 跟随 store，模拟真实状态流 */
+   function Wrapper() {
+     const selectedInstrument = useMarketStore((s) => s.selectedInstrument)
+     const selectedContracts = useMarketStore((s) => s.selectedContracts)
+     return (
+-      <MarketTable
++      <QuoteTable
++        spec={futuresSpec}
+         contracts={contracts}
+         snapshots={new Map()}
+         selectedInstrument={selectedInstrument}
+         selectedContracts={selectedContracts}
+         onSelectionChange={(ids) => useMarketStore.getState().setSelectedContracts(ids)}
+         onRowClick={(id) => useMarketStore.getState().setSelectedInstrument(id)}
+       />
+     )
+   }
+ 
+@@ -69,21 +71,21 @@ describe('二次拖选金色高亮不滞留', () => {
+   })
+ 
+   afterEach(() => {
+     act(() => {
+       useMarketStore.setState({ selectedInstrument: null, selectedContracts: new Set() })
+     })
+     vi.useRealTimers()
+   })
+ 
+   it('关闭 vtable 原生拖选扩展（select.disableDragSelect=true，双保险）', async () => {
+-    render(<MarketTable contracts={contracts} snapshots={new Map()} />)
++    render(<QuoteTable spec={futuresSpec} contracts={contracts} snapshots={new Map()} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     expect(options.select?.disableDragSelect).toBe(true)
+   })
+ 
+   it('已选中区域内二次拖选：拖选开始清空锚点，蓝区更新，金色被清除', async () => {
+     const restore = stubRaf()
+     const { ListTable } = await import('@visactor/vtable')
+     const { container } = render(<Wrapper />)
+     const instance = (ListTable as any).mock.results[0].value
+diff --git a/frontend/src/modules/market/futuresSpec.test.ts b/frontend/src/modules/market/futuresSpec.test.ts
+new file mode 100644
+index 0000000..03e6b80
+--- /dev/null
++++ b/frontend/src/modules/market/futuresSpec.test.ts
+@@ -0,0 +1,20 @@
++import { describe, it, expect } from 'vitest'
++import type { ContractInfo } from '@/services/types'
++import { futuresSpec } from './futuresSpec'
++
++const fut: ContractInfo = { instrumentID: 'FG609', instrumentName: 'FG609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' }
++
++describe('futuresSpec', () => {
++  it('列定义含合约/品种/交易所/最新价等', () => {
++    expect(futuresSpec.columns.map((c) => c.field)).toEqual(
++      expect.arrayContaining(['instrumentID', 'productName', 'exchangeID', 'lastPrice', 'change']),
++    )
++  })
++
++  it('无快照时 buildRecord 产出 kind=normal 与占位行情', () => {
++    const r = futuresSpec.buildRecord(fut, undefined, false)
++    expect(r.kind).toBe('normal')
++    expect(r.instrumentID).toBe('FG609')
++    expect(r.lastPrice).toBe('--')
++  })
++})
+diff --git a/frontend/src/modules/market/futuresSpec.ts b/frontend/src/modules/market/futuresSpec.ts
+new file mode 100644
+index 0000000..ee13ed9
+--- /dev/null
++++ b/frontend/src/modules/market/futuresSpec.ts
+@@ -0,0 +1,73 @@
++import type { MarketSnapshot, ContractInfo } from '@/services/types'
++import { getProductName } from '@/utils/productNames'
++import { getContractStatus } from '@/utils/contractStatus'
++import { PLACEHOLDER, isValidPrice, coloredStyle, statusStyle, type QuoteTableSpec, type QuoteRecord } from './quoteTableCore'
++
++const columns = [
++  { field: 'instrumentID', title: '合约', width: 130 },
++  { field: 'productName', title: '合约品种', width: 100 },
++  { field: 'exchangeID', title: '交易所', width: 85 },
++  { field: 'volumeMultiple', title: '合约乘数', width: 95 },
++  { field: 'priceTick', title: '最小变动价位', width: 120 },
++  { field: 'expireDate', title: '到期日', width: 115 },
++  { field: 'status', title: '状态', width: 85, style: statusStyle },
++  { field: 'lastPrice', title: '最新价', width: 90, style: coloredStyle },
++  { field: 'change', title: '涨跌', width: 115, style: coloredStyle },
++  { field: 'changePercent', title: '涨跌%', width: 115, style: coloredStyle },
++  { field: 'bidPrice1', title: '买一', width: 120, style: coloredStyle },
++  { field: 'askPrice1', title: '卖一', width: 120, style: coloredStyle },
++  { field: 'volume', title: '成交量', width: 90 },
++  { field: 'openInterest', title: '持仓量', width: 90 },
++  { field: 'favorite', title: '⭐', width: 60 },
++]
++
++function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, isFavorited: boolean): QuoteRecord {
++  const productName = getProductName(contract.productID)
++  const status = getContractStatus(contract)
++  if (!snap) {
++    return {
++      kind: 'normal',
++      instrumentID: contract.instrumentID,
++      productName,
++      exchangeID: contract.exchangeID || PLACEHOLDER,
++      volumeMultiple: contract.volumeMultiple,
++      priceTick: contract.priceTick,
++      expireDate: contract.expireDate || PLACEHOLDER,
++      status,
++      lastPrice: PLACEHOLDER,
++      change: PLACEHOLDER,
++      changePercent: PLACEHOLDER,
++      bidPrice1: PLACEHOLDER,
++      askPrice1: PLACEHOLDER,
++      volume: PLACEHOLDER,
++      openInterest: PLACEHOLDER,
++      favorite: isFavorited ? '⭐' : '☆',
++    }
++  }
++  // preSettlementPrice 可能为 0（CTP DBL_MAX 被 sanitize 后），此时 fallback 到昨收
++  const preSettlement = (snap.preSettlementPrice && snap.preSettlementPrice > 0)
++    ? snap.preSettlementPrice
++    : (snap.preClosePrice || snap.lastPrice)
++  const change = snap.lastPrice - preSettlement
++  const changePercent = preSettlement ? (change / preSettlement) * 100 : 0
++  return {
++    kind: 'normal',
++    instrumentID: snap.instrumentID,
++    productName,
++    exchangeID: contract.exchangeID || PLACEHOLDER,
++    volumeMultiple: contract.volumeMultiple,
++    priceTick: contract.priceTick,
++    expireDate: contract.expireDate || PLACEHOLDER,
++    status,
++    lastPrice: isValidPrice(snap.lastPrice) ? snap.lastPrice : PLACEHOLDER,
++    change: isValidPrice(snap.lastPrice) && isValidPrice(preSettlement) ? change : PLACEHOLDER,
++    changePercent: isValidPrice(snap.lastPrice) && isValidPrice(preSettlement) ? changePercent : PLACEHOLDER,
++    bidPrice1: isValidPrice(snap.bidPrice1) ? snap.bidPrice1 : PLACEHOLDER,
++    askPrice1: isValidPrice(snap.askPrice1) ? snap.askPrice1 : PLACEHOLDER,
++    volume: snap.volume,
++    openInterest: snap.openInterest,
++    favorite: isFavorited ? '⭐' : '☆',
++  }
++}
++
++export const futuresSpec: QuoteTableSpec = { columns, buildRecord }
+diff --git a/frontend/src/modules/market/quoteTableCore.ts b/frontend/src/modules/market/quoteTableCore.ts
+new file mode 100644
+index 0000000..7229c97
+--- /dev/null
++++ b/frontend/src/modules/market/quoteTableCore.ts
+@@ -0,0 +1,66 @@
++import type { MarketSnapshot, ContractInfo } from '@/services/types'
++import type { ContractStatus } from '@/utils/contractStatus'
++
++/** 行类型：普通行情行 / 期权标底行 / 期权行（Task 6 期权表用） */
++export type QuoteRowKind = 'normal' | 'underlying' | 'option'
++
++export interface QuoteRecord {
++  instrumentID: string
++  kind: QuoteRowKind
++  [field: string]: unknown
++}
++
++export interface ColumnDef {
++  field: string
++  title: string
++  width: number
++  style?: (args: any) => any
++}
++
++export interface QuoteTableSpec {
++  columns: ColumnDef[]
++  buildRecord: (contract: ContractInfo, snap: MarketSnapshot | undefined, isFavorited: boolean) => QuoteRecord
++  /** 可选：按记录返回行级样式覆盖（期权表标底行深色底用） */
++  rowStyle?: (record: QuoteRecord) => Record<string, unknown> | undefined
++}
++
++export const PLACEHOLDER = '--'
++export const CTP_INVALID_PRICE = 1.7976931348623157e+308
++export const isValidPrice = (p: number) => p > 0 && p < CTP_INVALID_PRICE
++export const UP_COLOR = '#ef4444'
++export const DOWN_COLOR = '#22c55e'
++export const FLAT_COLOR = '#e6edf3'
++
++/** 根据 record.change 正负返回文字颜色 */
++export function priceColor(record: any): string {
++  const change = typeof record?.change === 'number' ? record.change : 0
++  if (change > 0) return UP_COLOR
++  if (change < 0) return DOWN_COLOR
++  return FLAT_COLOR
++}
++
++/** 列级 style 回调：通过 table.records 拿到行数据，按涨跌着色
++ * 注意：args.row 是 vtable 物理行号（0=表头），records 是 0 起始数据数组，需 -1 */
++export function coloredStyle(args: any) {
++  const record = args.table?.records?.[args.row - 1]
++  return { color: priceColor(record) }
++}
++
++/** 状态列着色：交易中绿色 / 已停牌橙色 / 已到期灰色（row 需 -1，理由同上） */
++export function statusStyle(args: any) {
++  const record = args.table?.records?.[args.row - 1]
++  const status = record?.status as ContractStatus | undefined
++  if (status === '交易中') return { color: '#3fb950' }
++  if (status === '已停牌') return { color: '#d29922' }
++  return { color: '#8b949e' }
++}
++
++/** 金色活动锚点是否渲染：仅当锚点合约位于选中选区内（金在蓝内，防双高亮区） */
++export function shouldRenderAnchor(
++  selectedInstrument: string | null | undefined,
++  selectedContracts?: Set<string>,
++): boolean {
++  if (!selectedInstrument) return false
++  if (!selectedContracts || selectedContracts.size === 0) return false
++  return selectedContracts.has(selectedInstrument)
++}
+diff --git a/frontend/src/pages/FavoritesPage.test.tsx b/frontend/src/pages/FavoritesPage.test.tsx
+index 7139ec0..cdd806a 100644
+--- a/frontend/src/pages/FavoritesPage.test.tsx
++++ b/frontend/src/pages/FavoritesPage.test.tsx
+@@ -7,23 +7,23 @@ import { useTabStore } from '@/stores/tabs'
+ import { openFloatingTab } from '@/utils/openFloatingTab'
+ 
+ // Mock 统一浮动窗入口（自选双击/右键「打开报单」现为打开浮动窗口）
+ vi.mock('@/utils/openFloatingTab', () => ({
+   openFloatingTab: vi.fn(),
+   ORDER_FLOATING_SIZE: { w: 620, h: 540 },
+ }))
+ 
+ const mockOpenFloatingTab = vi.mocked(openFloatingTab)
+ 
+-// Mock MarketTable to simplify testing
+-vi.mock('@/modules/market/MarketTable', () => ({
+-  MarketTable: ({ contracts, onFavoriteChange, onRowDoubleClick, onContextMenu }: any) => (
++// Mock QuoteTable to simplify testing
++vi.mock('@/modules/market/QuoteTable', () => ({
++  QuoteTable: ({ contracts, onFavoriteChange, onRowDoubleClick, onContextMenu }: any) => (
+     <div data-testid="market-table">
+       <span data-testid="contract-count">{contracts.length}</span>
+       {contracts.map((c: any) => (
+         <div key={c.instrumentID} data-testid={`contract-${c.instrumentID}`}>
+           <span>{c.instrumentID}</span>
+           <button
+             data-testid={`unfav-${c.instrumentID}`}
+             onClick={() => onFavoriteChange?.(c.instrumentID, false)}
+           >
+             取消收藏
+diff --git a/frontend/src/pages/FavoritesPage.tsx b/frontend/src/pages/FavoritesPage.tsx
+index e429751..c1ee9a9 100644
+--- a/frontend/src/pages/FavoritesPage.tsx
++++ b/frontend/src/pages/FavoritesPage.tsx
+@@ -1,12 +1,13 @@
+ import { useMemo } from 'react'
+-import { MarketTable } from '@/modules/market/MarketTable'
++import { QuoteTable } from '@/modules/market/QuoteTable'
++import { futuresSpec } from '@/modules/market/futuresSpec'
+ import { useMarketStore } from '@/modules/market/store'
+ import { useContractsStore } from '@/stores/contracts'
+ import { useContractContextMenu } from '@/hooks/useContractContextMenu'
+ import { toast } from '@/components/Toast'
+ import './FavoritesPage.css'
+ 
+ /**
+  * FavoritesPage — 自选标签页
+  *
+  * 只显示收藏的合约，全部订阅（数量少，通常 < 50）。
+@@ -58,21 +59,22 @@ export function FavoritesPage() {
+           <p>暂无自选合约</p>
+           <p className="favorites-page__hint">在行情表格中点击 ☆ 收藏合约</p>
+         </div>
+       </div>
+     )
+   }
+ 
+   return (
+     <div className="favorites-page" data-testid="favorites-page">
+       <div className="favorites-page__table">
+-        <MarketTable
++        <QuoteTable
++          spec={futuresSpec}
+           contracts={favorites}
+           snapshots={snapshots}
+           selectedInstrument={selectedInstrument}
+           onRowClick={handleRowClick}
+           onRowDoubleClick={handleRowDoubleClick}
+           onContextMenu={handleContextMenu}
+           favoritedIds={favoritedIds}
+           onFavoriteChange={handleFavoriteChange}
+         />
+       </div>

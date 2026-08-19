@@ -1,0 +1,114 @@
+# Review package: e70b000..HEAD
+
+## Commits
+d0e650b fix(task-5): review反馈 — useEffect cleanup 防止卸载后setState
+
+## Files changed
+ .../src/components/InstrumentSearchModal/index.tsx | 35 ++++++++++++++--------
+ 1 file changed, 22 insertions(+), 13 deletions(-)
+
+## Diff
+diff --git a/frontend/src/components/InstrumentSearchModal/index.tsx b/frontend/src/components/InstrumentSearchModal/index.tsx
+index c4b169b..aad6da4 100644
+--- a/frontend/src/components/InstrumentSearchModal/index.tsx
++++ b/frontend/src/components/InstrumentSearchModal/index.tsx
+@@ -16,55 +16,64 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, subscribed
+   const [instruments, setInstruments] = useState<ContractInfo[]>([])
+   const [selectedExchange, setSelectedExchange] = useState('')
+   const [selectedProduct, setSelectedProduct] = useState('')
+   const [keyword, setKeyword] = useState('')
+   const [loading, setLoading] = useState(false)
+   const [error, setError] = useState('')
+ 
+   // Load exchanges on open
+   useEffect(() => {
+     if (!isOpen) return
++    let ignore = false
+     getExchanges()
+-      .then((res) => setExchanges(res.exchanges))
+-      .catch(() => setError('加载交易所列表失败'))
++      .then((res) => { if (!ignore) setExchanges(res.exchanges) })
++      .catch(() => { if (!ignore) setError('加载交易所列表失败') })
++    return () => { ignore = true }
+   }, [isOpen])
+ 
+   // Load products when exchange changes
+   useEffect(() => {
+     if (!selectedExchange) {
+       setProducts([])
+       setSelectedProduct('')
+       setInstruments([])
+       return
+     }
++    let ignore = false
+     getProducts(selectedExchange)
+       .then((res) => {
+-        setProducts(res.products)
+-        setSelectedProduct('')
+-        setInstruments([])
++        if (!ignore) {
++          setProducts(res.products)
++          setSelectedProduct('')
++          setInstruments([])
++        }
+       })
+-      .catch(() => setError('加载品种列表失败'))
++      .catch(() => { if (!ignore) setError('加载品种列表失败') })
++    return () => { ignore = true }
+   }, [selectedExchange])
+ 
+-  // Load instruments when product changes
+-  const loadInstruments = useCallback(() => {
++  // Load instruments (shared by product change, button click, Enter key)
++  const loadInstruments = useCallback((onCleanup?: () => boolean) => {
+     if (!selectedExchange || !selectedProduct) return
+     setLoading(true)
+     setError('')
+     searchInstruments(selectedExchange, selectedProduct, keyword || undefined)
+-      .then((res) => setInstruments(res.instruments))
+-      .catch(() => setError('加载合约列表失败'))
+-      .finally(() => setLoading(false))
++      .then((res) => { if (!onCleanup?.()) setInstruments(res.instruments) })
++      .catch(() => { if (!onCleanup?.()) setError('加载合约列表失败') })
++      .finally(() => { if (!onCleanup?.()) setLoading(false) })
+   }, [selectedExchange, selectedProduct, keyword])
+ 
++  // Load instruments when product changes (with cleanup)
+   useEffect(() => {
+-    loadInstruments()
++    let ignore = false
++    loadInstruments(() => ignore)
++    return () => { ignore = true }
+   }, [selectedExchange, selectedProduct]) // eslint-disable-line react-hooks/exhaustive-deps
+ 
+   // Search on Enter key
+   const handleKeywordKeyDown = (e: React.KeyboardEvent) => {
+     if (e.key === 'Enter') {
+       loadInstruments()
+     }
+   }
+ 
+   const handleSubscribe = async (inst: ContractInfo) => {
+@@ -114,21 +123,21 @@ export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, subscribed
+ 
+           <input
+             type="text"
+             placeholder="搜索关键词..."
+             value={keyword}
+             onChange={(e) => setKeyword(e.target.value)}
+             onKeyDown={handleKeywordKeyDown}
+             disabled={!selectedProduct}
+           />
+ 
+-          <button onClick={loadInstruments} disabled={!selectedProduct || loading}>
++          <button onClick={() => loadInstruments()} disabled={!selectedProduct || loading}>
+             搜索
+           </button>
+         </div>
+ 
+         {error && <div className="modal-error">{error}</div>}
+ 
+         <div className="modal-table-container">
+           {loading ? (
+             <div className="modal-loading">加载中...</div>
+           ) : instruments.length === 0 ? (

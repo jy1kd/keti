@@ -1,0 +1,2146 @@
+# Review package: f9ca4440cf0ae3b9f75dc1a8e68dc0ed1f2f2168..HEAD
+
+## Commits
+88bf97b fix(task-final): review反馈 — 修复重复订阅+instruments_refreshed处理
+6389e13 refactor(task-15): market store 清理 — 移除 fetchInstruments/refreshInstruments/isRefreshing
+db592a3 fix(task-7): review反馈 — 更新 MarketPanel 测试匹配新行为
+e275f87 feat(task-15): MarketPanel 集成 — 搜索合约按钮 + 退订按钮 + 启动流程改造
+c370914 feat(task-15): contracts store 改造 — 预设+用户订阅合并 + localStorage 持久化
+d0e650b fix(task-5): review反馈 — useEffect cleanup 防止卸载后setState
+e70b000 feat(task-14): InstrumentSearchModal 组件 — 交易所+品种二级筛选
+b987f92 feat(task-14): 新增合约搜索/预设/退订 API 函数
+51a426b fix(task-3): review反馈 — 修复测试污染preset文件+API测试验证不足
+a211f1a feat(task-3): 预设合约 — 自动检测主力合约 + preset API 端点
+4b91f00 feat(task-12): 新增 /exchanges, /products, /search 端点 + /instruments?ids= 支持
+28debab feat(task-12): MarketService 新增 get_exchanges/get_products/search_instruments/get_instruments_by_ids
+
+## Files changed
+ .../src/components/InstrumentSearchModal/index.css | 142 ++++++++++++++++
+ .../src/components/InstrumentSearchModal/index.tsx | 181 +++++++++++++++++++++
+ frontend/src/hooks/useMarketWs.test.ts             |  21 ++-
+ frontend/src/hooks/useMarketWs.ts                  |  16 +-
+ frontend/src/modules/market/MarketPanel.test.tsx   |  54 +++---
+ frontend/src/modules/market/MarketPanel.tsx        |  77 ++++++---
+ frontend/src/modules/market/store.test.ts          |  87 +---------
+ frontend/src/modules/market/store.ts               |  29 +---
+ frontend/src/modules/market/styles.css             |  25 +++
+ frontend/src/services/api.ts                       |  74 +++++++++
+ frontend/src/stores/contracts.test.ts              | 111 ++++++++++++-
+ frontend/src/stores/contracts.ts                   |  71 ++++++++
+ server/api/market.py                               |  58 ++++++-
+ server/data/preset_instruments.json                |   4 +
+ server/services/market_service.py                  |  89 ++++++++++
+ server/tests/test_market_api.py                    | 162 ++++++++++++++++++
+ server/tests/test_market_service.py                | 146 +++++++++++++++++
+ 17 files changed, 1172 insertions(+), 175 deletions(-)
+
+## Diff
+diff --git a/frontend/src/components/InstrumentSearchModal/index.css b/frontend/src/components/InstrumentSearchModal/index.css
+new file mode 100644
+index 0000000..71e2c3f
+--- /dev/null
++++ b/frontend/src/components/InstrumentSearchModal/index.css
+@@ -0,0 +1,142 @@
++.modal-overlay {
++  position: fixed;
++  inset: 0;
++  background: rgba(0, 0, 0, 0.5);
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  z-index: 1000;
++}
++
++.modal-content {
++  background: var(--bg-primary, #1e1e1e);
++  border: 1px solid var(--border-color, #333);
++  border-radius: 8px;
++  width: 700px;
++  max-height: 80vh;
++  display: flex;
++  flex-direction: column;
++}
++
++.modal-header {
++  display: flex;
++  justify-content: space-between;
++  align-items: center;
++  padding: 12px 16px;
++  border-bottom: 1px solid var(--border-color, #333);
++}
++
++.modal-header h3 {
++  margin: 0;
++  font-size: 16px;
++}
++
++.modal-close {
++  background: none;
++  border: none;
++  font-size: 20px;
++  cursor: pointer;
++  color: var(--text-secondary, #999);
++}
++
++.modal-filters {
++  display: flex;
++  gap: 8px;
++  padding: 12px 16px;
++  border-bottom: 1px solid var(--border-color, #333);
++}
++
++.modal-filters select,
++.modal-filters input {
++  padding: 6px 10px;
++  background: var(--bg-secondary, #2a2a2a);
++  border: 1px solid var(--border-color, #444);
++  border-radius: 4px;
++  color: var(--text-primary, #fff);
++  font-size: 13px;
++}
++
++.modal-filters select { min-width: 100px; }
++.modal-filters input { flex: 1; min-width: 120px; }
++
++.modal-filters button {
++  padding: 6px 16px;
++  background: var(--accent-color, #4a9eff);
++  border: none;
++  border-radius: 4px;
++  color: #fff;
++  cursor: pointer;
++  font-size: 13px;
++}
++
++.modal-filters button:disabled {
++  opacity: 0.5;
++  cursor: not-allowed;
++}
++
++.modal-error {
++  padding: 8px 16px;
++  background: #ff444422;
++  color: #ff4444;
++  font-size: 13px;
++}
++
++.modal-table-container {
++  flex: 1;
++  overflow-y: auto;
++  min-height: 200px;
++}
++
++.modal-loading,
++.modal-empty {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  height: 200px;
++  color: var(--text-secondary, #999);
++}
++
++.modal-table {
++  width: 100%;
++  border-collapse: collapse;
++  font-size: 13px;
++}
++
++.modal-table th,
++.modal-table td {
++  padding: 8px 12px;
++  text-align: left;
++  border-bottom: 1px solid var(--border-color, #333);
++}
++
++.modal-table th {
++  position: sticky;
++  top: 0;
++  background: var(--bg-secondary, #2a2a2a);
++}
++
++.modal-table tr:hover {
++  background: var(--bg-hover, #2a2a2a);
++}
++
++.btn-subscribe {
++  padding: 4px 12px;
++  background: var(--accent-color, #4a9eff);
++  border: none;
++  border-radius: 4px;
++  color: #fff;
++  cursor: pointer;
++  font-size: 12px;
++}
++
++.subscribed-badge {
++  color: var(--text-secondary, #999);
++  font-size: 12px;
++}
++
++.modal-footer {
++  padding: 8px 16px;
++  border-top: 1px solid var(--border-color, #333);
++  font-size: 12px;
++  color: var(--text-secondary, #999);
++}
+diff --git a/frontend/src/components/InstrumentSearchModal/index.tsx b/frontend/src/components/InstrumentSearchModal/index.tsx
+new file mode 100644
+index 0000000..937ea71
+--- /dev/null
++++ b/frontend/src/components/InstrumentSearchModal/index.tsx
+@@ -0,0 +1,181 @@
++import { useState, useEffect, useCallback } from 'react'
++import type { ContractInfo } from '@/services/types'
++import { getExchanges, getProducts, searchInstruments } from '@/services/api'
++import './index.css'
++
++interface Props {
++  isOpen: boolean
++  onClose: () => void
++  onSubscribe: (instrument: ContractInfo) => void
++  subscribedIds: Set<string>
++}
++
++export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, subscribedIds }: Props) {
++  const [exchanges, setExchanges] = useState<string[]>([])
++  const [products, setProducts] = useState<string[]>([])
++  const [instruments, setInstruments] = useState<ContractInfo[]>([])
++  const [selectedExchange, setSelectedExchange] = useState('')
++  const [selectedProduct, setSelectedProduct] = useState('')
++  const [keyword, setKeyword] = useState('')
++  const [loading, setLoading] = useState(false)
++  const [error, setError] = useState('')
++
++  // Load exchanges on open
++  useEffect(() => {
++    if (!isOpen) return
++    let ignore = false
++    getExchanges()
++      .then((res) => { if (!ignore) setExchanges(res.exchanges) })
++      .catch(() => { if (!ignore) setError('加载交易所列表失败') })
++    return () => { ignore = true }
++  }, [isOpen])
++
++  // Load products when exchange changes
++  useEffect(() => {
++    if (!selectedExchange) {
++      setProducts([])
++      setSelectedProduct('')
++      setInstruments([])
++      return
++    }
++    let ignore = false
++    getProducts(selectedExchange)
++      .then((res) => {
++        if (!ignore) {
++          setProducts(res.products)
++          setSelectedProduct('')
++          setInstruments([])
++        }
++      })
++      .catch(() => { if (!ignore) setError('加载品种列表失败') })
++    return () => { ignore = true }
++  }, [selectedExchange])
++
++  // Load instruments (shared by product change, button click, Enter key)
++  const loadInstruments = useCallback((onCleanup?: () => boolean) => {
++    if (!selectedExchange || !selectedProduct) return
++    setLoading(true)
++    setError('')
++    searchInstruments(selectedExchange, selectedProduct, keyword || undefined)
++      .then((res) => { if (!onCleanup?.()) setInstruments(res.instruments) })
++      .catch(() => { if (!onCleanup?.()) setError('加载合约列表失败') })
++      .finally(() => { if (!onCleanup?.()) setLoading(false) })
++  }, [selectedExchange, selectedProduct, keyword])
++
++  // Load instruments when product changes (with cleanup)
++  useEffect(() => {
++    let ignore = false
++    loadInstruments(() => ignore)
++    return () => { ignore = true }
++  }, [selectedExchange, selectedProduct]) // eslint-disable-line react-hooks/exhaustive-deps
++
++  // Search on Enter key
++  const handleKeywordKeyDown = (e: React.KeyboardEvent) => {
++    if (e.key === 'Enter') {
++      loadInstruments()
++    }
++  }
++
++  const handleSubscribe = (inst: ContractInfo) => {
++    onSubscribe(inst)
++  }
++
++  if (!isOpen) return null
++
++  return (
++    <div className="modal-overlay" onClick={onClose}>
++      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
++        <div className="modal-header">
++          <h3>合约搜索</h3>
++          <button className="modal-close" onClick={onClose}>&times;</button>
++        </div>
++
++        <div className="modal-filters">
++          <select
++            value={selectedExchange}
++            onChange={(e) => setSelectedExchange(e.target.value)}
++          >
++            <option value="">选择交易所</option>
++            {exchanges.map((ex) => (
++              <option key={ex} value={ex}>{ex}</option>
++            ))}
++          </select>
++
++          <select
++            value={selectedProduct}
++            onChange={(e) => setSelectedProduct(e.target.value)}
++            disabled={!selectedExchange}
++          >
++            <option value="">选择品种</option>
++            {products.map((p) => (
++              <option key={p} value={p}>{p}</option>
++            ))}
++          </select>
++
++          <input
++            type="text"
++            placeholder="搜索关键词..."
++            value={keyword}
++            onChange={(e) => setKeyword(e.target.value)}
++            onKeyDown={handleKeywordKeyDown}
++            disabled={!selectedProduct}
++          />
++
++          <button onClick={() => loadInstruments()} disabled={!selectedProduct || loading}>
++            搜索
++          </button>
++        </div>
++
++        {error && <div className="modal-error">{error}</div>}
++
++        <div className="modal-table-container">
++          {loading ? (
++            <div className="modal-loading">加载中...</div>
++          ) : instruments.length === 0 ? (
++            <div className="modal-empty">
++              {selectedProduct ? '无匹配合约' : '请选择交易所和品种'}
++            </div>
++          ) : (
++            <table className="modal-table">
++              <thead>
++                <tr>
++                  <th>合约</th>
++                  <th>名称</th>
++                  <th>到期日</th>
++                  <th>状态</th>
++                  <th>操作</th>
++                </tr>
++              </thead>
++              <tbody>
++                {instruments.map((inst) => (
++                  <tr key={inst.instrumentID}>
++                    <td>{inst.instrumentID}</td>
++                    <td>{inst.instrumentName}</td>
++                    <td>{inst.expireDate}</td>
++                    <td>{inst.isTrading ? '交易中' : '已停牌'}</td>
++                    <td>
++                      {subscribedIds.has(inst.instrumentID) ? (
++                        <span className="subscribed-badge">已订阅</span>
++                      ) : (
++                        <button
++                          className="btn-subscribe"
++                          onClick={() => handleSubscribe(inst)}
++                        >
++                          订阅
++                        </button>
++                      )}
++                    </td>
++                  </tr>
++                ))}
++              </tbody>
++            </table>
++          )}
++        </div>
++
++        <div className="modal-footer">
++          <span>共 {instruments.length} 个合约</span>
++        </div>
++      </div>
++    </div>
++  )
++}
+diff --git a/frontend/src/hooks/useMarketWs.test.ts b/frontend/src/hooks/useMarketWs.test.ts
+index 131da0f..c84545d 100644
+--- a/frontend/src/hooks/useMarketWs.test.ts
++++ b/frontend/src/hooks/useMarketWs.test.ts
+@@ -11,46 +11,55 @@ const mockDisconnectAll = vi.fn()
+ 
+ vi.mock('@/services/ws', () => ({
+   WSManager: vi.fn().mockImplementation(() => ({
+     connect: mockConnect,
+     disconnect: mockDisconnect,
+     disconnectAll: mockDisconnectAll,
+     isConnected: vi.fn().mockReturnValue(false),
+   })),
+ }))
+ 
+-// Mock API to prevent real network calls from fetchInstruments
++// Mock API to prevent real network calls
+ vi.mock('@/services/api', () => ({
+-  getInstruments: vi.fn().mockResolvedValue({ instruments: [], count: 0 }),
+   subscribeMarket: vi.fn(),
+   getSnapshots: vi.fn(),
+-  refreshInstruments: vi.fn(),
++}))
++
++// Mock contracts store
++const mockLoadSubscribedContracts = vi.fn().mockResolvedValue(undefined)
++vi.mock('@/stores/contracts', () => ({
++  useContractsStore: {
++    getState: vi.fn(() => ({
++      loadSubscribedContracts: mockLoadSubscribedContracts,
++    })),
++  },
+ }))
+ 
+ // Mock toast
+ const mockToastSuccess = vi.fn()
+ vi.mock('@/components/Toast', () => ({
+   toast: {
+     success: (...args: unknown[]) => mockToastSuccess(...args),
+     error: vi.fn(),
+     _clearAll: vi.fn(),
+   },
+   ToastContainer: () => null,
+ }))
+ 
+ describe('useMarketWs', () => {
+   beforeEach(() => {
+     vi.useFakeTimers()
+     useMarketStore.setState({ snapshots: new Map() })
+     mockConnect.mockClear()
+     mockDisconnect.mockClear()
+     mockDisconnectAll.mockClear()
++    mockLoadSubscribedContracts.mockClear()
+   })
+ 
+   afterEach(() => {
+     vi.useRealTimers()
+   })
+ 
+   it('连接 ws/market 端点', () => {
+     renderHook(() => useMarketWs('ws://localhost:8000'))
+     expect(mockConnect).toHaveBeenCalledWith('market', expect.any(Function))
+   })
+@@ -199,33 +208,31 @@ describe('useMarketWs - instruments_refreshed', () => {
+     // fetchInstruments() 是异步的，toast 在 .then() 中调用，需要刷新微任务队列
+     await act(async () => {
+       await Promise.resolve()
+     })
+ 
+     expect(mockToastSuccess).toHaveBeenCalledWith('已更新 17348 个合约')
+     vi.useRealTimers()
+   })
+ 
+   it('收到 instruments_refreshed 消息后重新加载合约列表', async () => {
+-    const { getInstruments } = await import('@/services/api')
+-
+     vi.useFakeTimers()
+     renderHook(() => useMarketWs('ws://localhost:8000'))
+ 
+     const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
+ 
+     act(() => {
+       onMessage({ type: 'instruments_refreshed', data: { count: 5 } })
+     })
+ 
+-    // 合约刷新后应调用 getInstruments 重新加载
+-    expect(getInstruments).toHaveBeenCalled()
++    // 合约刷新后应调用 loadSubscribedContracts 重新加载（而非 getInstruments）
++    expect(mockLoadSubscribedContracts).toHaveBeenCalled()
+     vi.useRealTimers()
+   })
+ 
+   it('不响应非 instruments_refreshed 类型的 WS 消息', () => {
+     vi.useFakeTimers()
+     renderHook(() => useMarketWs('ws://localhost:8000'))
+ 
+     const onMessage = mockConnect.mock.calls[0][1] as (msg: { type: string; data: unknown }) => void
+ 
+     act(() => {
+diff --git a/frontend/src/hooks/useMarketWs.ts b/frontend/src/hooks/useMarketWs.ts
+index 0f1b138..82e2e86 100644
+--- a/frontend/src/hooks/useMarketWs.ts
++++ b/frontend/src/hooks/useMarketWs.ts
+@@ -1,14 +1,15 @@
+ import { useEffect, useRef } from 'react'
+ import { WSManager } from '@/services/ws'
+ import { useMarketStore } from '@/modules/market/store'
+ import { useConnectionStore } from '@/stores/connection'
++import { useContractsStore } from '@/stores/contracts'
+ import { useReconnect } from './useReconnect'
+ import { toast } from '@/components/Toast'
+ import type { MarketSnapshot, KLineData, WSMessage } from '@/services/types'
+ 
+ /** 周期字符串 → 毫秒 */
+ export const PERIOD_MS: Record<string, number> = {
+   '1m': 60_000,
+   '5m': 300_000,
+   '15m': 900_000,
+   '30m': 1_800_000,
+@@ -45,46 +46,49 @@ function snapshotToKline(snap: MarketSnapshot, periodMs: number): KLineData {
+  * 连接 ws/market 端点，收到 market_data 消息时更新行情 store。
+  * 内置断线重连（指数退避，最多 5 次）。
+  *
+  * @param wsBaseUrl WebSocket 基础地址
+  * @param period K 线周期（如 '1m', '5m', '1h'），影响实时 K 线的时间对齐
+  */
+ export function useMarketWs(wsBaseUrl: string, period = '5m') {
+   const wsRef = useRef<WSManager | null>(null)
+   const updateSnapshot = useMarketStore((s) => s.updateSnapshot)
+   const appendKline = useMarketStore((s) => s.appendKline)
+-  const fetchInstruments = useMarketStore((s) => s.fetchInstruments)
+   const setMdConnected = useConnectionStore((s) => s.setMdConnected)
+ 
+   // 创建 WSManager 实例（仅创建一次）
+   if (!wsRef.current) {
+     wsRef.current = new WSManager(wsBaseUrl)
+   }
+ 
+   const ws = wsRef.current
+   const periodMs = PERIOD_MS[period] ?? PERIOD_MS['5m']
+ 
+   // 消息处理回调
+   const handleMessage = (message: WSMessage) => {
+     if (message.type === 'market_data') {
+       const snap = message.data as MarketSnapshot
+       updateSnapshot(snap)
+       appendKline(snap.instrumentID, snapshotToKline(snap, periodMs))
+       // 收到行情数据说明 MD 已连接
+       setMdConnected(true)
+     } else if (message.type === 'instruments_refreshed') {
+       const data = message.data as { count: number }
+-      fetchInstruments().then(() => {
+-        if (data.count > 0) {
+-          toast.success(`已更新 ${data.count} 个合约`)
+-        }
+-      })
++      useContractsStore.getState().loadSubscribedContracts()
++        .then(() => {
++          if (data.count > 0) {
++            toast.success(`已更新 ${data.count} 个合约`)
++          }
++        })
++        .catch((err) => {
++          console.warn('[useMarketWs] refresh instruments failed:', err)
++        })
+     }
+   }
+ 
+   // 使用 useReconnect 管理连接和重连
+   const { reconnectCount, isReconnecting } = useReconnect(ws, 'market', handleMessage)
+ 
+   // 组件卸载时断开所有连接
+   useEffect(() => {
+     return () => {
+       ws.disconnectAll()
+diff --git a/frontend/src/modules/market/MarketPanel.test.tsx b/frontend/src/modules/market/MarketPanel.test.tsx
+index 4456c69..ff164e8 100644
+--- a/frontend/src/modules/market/MarketPanel.test.tsx
++++ b/frontend/src/modules/market/MarketPanel.test.tsx
+@@ -1,57 +1,69 @@
+ import { describe, it, expect, vi, beforeEach } from 'vitest'
+ import { render, screen } from '@testing-library/react'
++import userEvent from '@testing-library/user-event'
+ import { MarketPanel } from './MarketPanel'
+ import { useMarketStore } from './store'
++import { useContractsStore } from '@/stores/contracts'
+ import type { MarketSnapshot } from '@/services/types'
+ 
+ // Mock ResizeObserver (not available in jsdom)
+ globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
+   observe: vi.fn(),
+   unobserve: vi.fn(),
+   disconnect: vi.fn(),
+ }))
+ 
+ // Mock react-resizable-panels
+ vi.mock('react-resizable-panels', () => ({
+   Group: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+     <div className={className}>{children}</div>
+   ),
+   Panel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+   Separator: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+ }))
+ 
+ // Mock api module
+-const mockRefreshInstruments = vi.fn().mockResolvedValue({ status: 'started' })
++const mockSubscribeMarket = vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] })
+ vi.mock('@/services/api', () => ({
+   getInstruments: vi.fn().mockResolvedValue({ instruments: [], count: 0 }),
+-  subscribeMarket: vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] }),
++  subscribeMarket: (...args: unknown[]) => mockSubscribeMarket(...args),
+   getSnapshots: vi.fn().mockResolvedValue({ snapshots: {} }),
+   getKlineData: vi.fn().mockResolvedValue({ instrumentID: '', period: '', bars: [] }),
+-  refreshInstruments: (...args: unknown[]) => mockRefreshInstruments(...args),
+   API_BASE: 'http://localhost:8000',
+ }))
+ 
+ // Mock useMarketWs
+ const mockUseMarketWs = vi.fn()
+ vi.mock('@/hooks/useMarketWs', () => ({
+   useMarketWs: (...args: unknown[]) => mockUseMarketWs(...args),
++  PERIOD_MS: { '5m': 300000 },
+ }))
+ 
+ // Mock usePointOrder to avoid side effects
+ vi.mock('@/hooks/usePointOrder', () => ({
+   usePointOrder: () => ({
+     handleClick: vi.fn(),
+     handleDoubleClick: vi.fn(),
+   }),
+ }))
+ 
++// Mock InstrumentSearchModal
++vi.mock('@/components/InstrumentSearchModal', () => ({
++  InstrumentSearchModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void; onSubscribe: (inst: unknown) => void; subscribedIds: Set<string> }) =>
++    isOpen ? (
++      <div data-testid="instrument-search-modal">
++        <button onClick={onClose}>关闭</button>
++      </div>
++    ) : null,
++}))
++
+ // Mock echarts
+ vi.mock('echarts', () => ({
+   init: vi.fn(() => ({
+     setOption: vi.fn(),
+     resize: vi.fn(),
+     dispose: vi.fn(),
+   })),
+   default: {
+     init: vi.fn(() => ({
+       setOption: vi.fn(),
+@@ -80,37 +92,39 @@ function makeSnapshot(overrides?: Partial<MarketSnapshot>): MarketSnapshot {
+     ...overrides,
+   } as MarketSnapshot
+ }
+ 
+ describe('MarketPanel', () => {
+   beforeEach(() => {
+     useMarketStore.setState({
+       selectedInstrument: null,
+       snapshots: new Map(),
+     })
++    useContractsStore.setState({ contracts: [] })
++    vi.clearAllMocks()
+   })
+ 
+   it('renders panel title', () => {
+     render(<MarketPanel />)
+     expect(screen.getByText('行情面板')).toBeInTheDocument()
+   })
+ 
+   it('renders with market-panel class', () => {
+     const { container } = render(<MarketPanel />)
+     expect(container.firstChild).toHaveClass('market-panel')
+   })
+ 
+-  it('启动时调用 fetchInstruments 获取合约列表', () => {
+-    const fetchSpy = vi.spyOn(useMarketStore.getState(), 'fetchInstruments')
++  it('启动时调用 loadSubscribedContracts 加载订阅合约', () => {
++    const loadSpy = vi.spyOn(useContractsStore.getState(), 'loadSubscribedContracts').mockResolvedValue(undefined)
+     render(<MarketPanel />)
+-    expect(fetchSpy).toHaveBeenCalled()
+-    fetchSpy.mockRestore()
++    expect(loadSpy).toHaveBeenCalled()
++    loadSpy.mockRestore()
+   })
+ 
+   it('启动时调用 useMarketWs 连接 WebSocket 行情推送', () => {
+     render(<MarketPanel />)
+     expect(mockUseMarketWs).toHaveBeenCalledWith('ws://localhost:8000', '5m')
+   })
+ 
+   it('renders DepthQuote for selected instrument', () => {
+     useMarketStore.setState({
+       selectedInstrument: 'IF2608',
+@@ -132,35 +146,35 @@ describe('MarketPanel', () => {
+     expect(screen.getByText('价差')).toBeInTheDocument()
+     expect(screen.getByText('2')).toBeInTheDocument() // 4696 - 4694
+   })
+ 
+   it('renders resize handle for main/side panel split', () => {
+     render(<MarketPanel />)
+     const handles = document.querySelectorAll('.resize-handle')
+     expect(handles.length).toBeGreaterThanOrEqual(1)
+   })
+ 
+-  it('renders refresh contracts button', () => {
++  it('renders 搜索合约 and 退订 buttons', () => {
+     render(<MarketPanel />)
+-    expect(screen.getByText('刷新合约')).toBeInTheDocument()
++    expect(screen.getByText('搜索合约')).toBeInTheDocument()
++    expect(screen.getByText('退订')).toBeInTheDocument()
+   })
+ 
+-  it('refresh button calls refreshInstruments on click', () => {
++  it('点击 搜索合约 按钮打开搜索弹窗', async () => {
++    const user = userEvent.setup()
+     render(<MarketPanel />)
+-    const btn = screen.getByText('刷新合约')
+-    btn.click()
+-    expect(mockRefreshInstruments).toHaveBeenCalled()
++    expect(screen.queryByTestId('instrument-search-modal')).not.toBeInTheDocument()
++    await user.click(screen.getByText('搜索合约'))
++    expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
+   })
+ 
+-  it('refresh button shows loading text when refreshing', () => {
+-    useMarketStore.setState({ isRefreshing: true })
++  it('退订 button is disabled when no instrument is selected', () => {
+     render(<MarketPanel />)
+-    expect(screen.getByText('刷新中...')).toBeInTheDocument()
++    expect(screen.getByText('退订')).toBeDisabled()
+   })
+ 
+-  it('refresh button is disabled while refreshing', () => {
+-    useMarketStore.setState({ isRefreshing: true })
++  it('退订 button is enabled when an instrument is selected', () => {
++    useMarketStore.setState({ selectedInstrument: 'IF2608' })
+     render(<MarketPanel />)
+-    const btn = screen.getByText('刷新中...')
+-    expect(btn).toBeDisabled()
++    expect(screen.getByText('退订')).toBeEnabled()
+   })
+ })
+diff --git a/frontend/src/modules/market/MarketPanel.tsx b/frontend/src/modules/market/MarketPanel.tsx
+index 1ffa0cb..3de454e 100644
+--- a/frontend/src/modules/market/MarketPanel.tsx
++++ b/frontend/src/modules/market/MarketPanel.tsx
+@@ -1,118 +1,142 @@
+-import { useCallback, useEffect, useRef, useState } from 'react'
++import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+ import { Group, Panel, Separator } from 'react-resizable-panels'
+ import { ResizeHandle } from '@/components/ResizeHandle'
+ import { ContractSearch } from '@/components/ContractSearch'
++import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
+ import { MarketTable } from './MarketTable'
+ import { DepthQuote } from './DepthQuote'
+ import { SpreadDisplay } from '@/components/SpreadDisplay'
+ import { KLineChart } from './KLineChart'
+ import { useMarketStore } from './store'
+ import { useContractsStore } from '@/stores/contracts'
+ import { usePointOrder } from '@/hooks/usePointOrder'
+ import { useOrderStore } from '@/modules/order/store'
+ import { useMarketWs, PERIOD_MS } from '@/hooks/useMarketWs'
+-import { API_BASE, getKlineData } from '@/services/api'
++import { API_BASE, getKlineData, subscribeMarket } from '@/services/api'
+ import { savePanelSizes, loadPanelSizes } from '@/utils/panelStorage'
+ import './styles.css'
+ 
+ const savedMarketTop = loadPanelSizes('market-top-layout')
+ const savedMarket = loadPanelSizes('market-layout')
+ 
+ export function MarketPanel() {
+-  const { snapshots, selectedInstrument, setSelectedInstrument, fetchInstruments, subscribeInstruments, klineData, setKlineData, refreshInstruments, isRefreshing } = useMarketStore()
++  const { snapshots, selectedInstrument, setSelectedInstrument, klineData, setKlineData } = useMarketStore()
+   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
+-  const { contracts, addContract } = useContractsStore()
+-  const fetchedRef = useRef(false)
++  const { contracts, addContractInfo, removeContractById } = useContractsStore()
+   const [period, setPeriod] = useState('5m')
++  const [searchModalOpen, setSearchModalOpen] = useState(false)
++  const loadedRef = useRef(false)
++
++  // Subscribed instrument IDs set (for modal to show "已订阅")
++  const subscribedIds = useMemo(
++    () => new Set(contracts.map((c) => c.instrumentID)),
++    [contracts]
++  )
+ 
+   const onMarketTopLayout = useCallback((layout: Record<string, number>) => {
+     savePanelSizes('market-top-layout', { table: layout['market-table'], side: layout['market-side'] })
+   }, [])
+ 
+   const onMarketLayout = useCallback((layout: Record<string, number>) => {
+     savePanelSizes('market-layout', { top: layout['market-top'], kline: layout['market-kline'] })
+   }, [])
+ 
+-  // WebSocket 行情推送（period 影响实时 K 线的时间对齐）
++  // WebSocket 行情推送
+   useMarketWs(API_BASE.replace('http', 'ws'), period)
+ 
++  // 启动时加载预设合约 + 用户订阅
+   useEffect(() => {
+-    if (!fetchedRef.current) {
+-      fetchedRef.current = true
+-      // 获取合约列表后，订阅所有合约的行情
+-      fetchInstruments().then(() => {
+-        const allContracts = useContractsStore.getState().contracts
+-        if (allContracts.length > 0) {
+-          subscribeInstruments(allContracts.map(c => c.instrumentID))
++    if (!loadedRef.current) {
++      loadedRef.current = true
++      useContractsStore.getState().loadSubscribedContracts().then(() => {
++        const loaded = useContractsStore.getState().contracts
++        if (loaded.length > 0) {
++          subscribeMarket(loaded.map((c) => c.instrumentID)).catch(() => {})
+         }
+       })
+     }
+-  }, [fetchInstruments, subscribeInstruments])
++  }, [])
+ 
+   const { handleClick, handleDoubleClick } = usePointOrder({
+     onOrder: ({ instrumentID, price }) => {
+       setSelectedInstrument(instrumentID)
+       setOrderInstrument(instrumentID)
+       setOrderForm({ limitPrice: price })
+     },
+     onFill: ({ instrumentID, price }) => {
+       setSelectedInstrument(instrumentID)
+       setOrderInstrument(instrumentID)
+       setOrderForm({ limitPrice: price })
+     },
+   })
+ 
+   const handleSelectContract = (instrumentID: string) => {
+-    addContract(instrumentID)
+     setSelectedInstrument(instrumentID)
+     setOrderInstrument(instrumentID)
+   }
+ 
+-  // 获取K线数据（时间戳按周期对齐，与实时数据保持一致）
++  const handleUnsubscribe = async () => {
++    if (!selectedInstrument) return
++    await removeContractById(selectedInstrument)
++    setSelectedInstrument(null)
++  }
++
++  const handleSubscribeFromModal = (inst: import('@/services/types').ContractInfo) => {
++    addContractInfo(inst)
++    // Subscribe to CTP market data
++    subscribeMarket([inst.instrumentID]).catch(() => {})
++  }
++
++  // 获取K线数据
+   useEffect(() => {
+     if (!selectedInstrument) return
+     getKlineData(selectedInstrument, period, 200)
+       .then((res) => {
+         if (res.bars?.length) {
+           const periodMs = PERIOD_MS[period] ?? PERIOD_MS['5m']
+           const aligned = res.bars.map((bar) => {
+-            // 只用时分秒，去掉日期部分，与实时数据保持一致
+             const d = new Date(bar.timestamp)
+             const timeMs = ((d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds()) * 1000) + d.getMilliseconds()
+             return { ...bar, timestamp: Math.floor(timeMs / periodMs) * periodMs }
+           })
+           setKlineData(selectedInstrument, aligned)
+         }
+       })
+-      .catch(() => { /* 静默失败，K线区域显示暂无数据 */ })
++      .catch(() => { /* 静默失败 */ })
+   }, [selectedInstrument, period, setKlineData])
+ 
+   const selectedSnapshot = selectedInstrument ? snapshots.get(selectedInstrument) ?? null : null
+   const selectedKline = selectedInstrument ? klineData.get(selectedInstrument) ?? [] : []
+ 
+   return (
+     <section className="market-panel">
+       <div className="panel-header">
+         <h2>行情面板</h2>
+         <div className="panel-header__actions">
+           <ContractSearch contracts={contracts} onSelect={handleSelectContract} />
+           <button
+-            className="btn-refresh-instruments"
+-            disabled={isRefreshing}
+-            onClick={() => refreshInstruments()}
++            className="btn-search-instruments"
++            onClick={() => setSearchModalOpen(true)}
++          >
++            搜索合约
++          </button>
++          <button
++            className="btn-unsubscribe"
++            disabled={!selectedInstrument}
++            onClick={handleUnsubscribe}
+           >
+-            {isRefreshing ? '刷新中...' : '刷新合约'}
++            退订
+           </button>
+         </div>
+       </div>
+-      {/* 布局：上半部 [行情表格 | 五档行情]，下半部 [K线图 全宽] */}
++
+       <Group orientation="vertical" className="panel-content" id="market-layout" onLayoutChange={onMarketLayout}>
+         <Panel id="market-top" defaultSize={savedMarket?.top ?? 50} minSize={20}>
+           <Group orientation="horizontal" className="market-panel__top" id="market-top-layout" onLayoutChange={onMarketTopLayout}>
+             <Panel id="market-table" defaultSize={savedMarketTop?.table ?? 75} minSize={30}>
+               <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                 <MarketTable
+                   contracts={contracts}
+                   snapshots={snapshots}
+                   selectedInstrument={selectedInstrument}
+                   onRowClick={handleClick}
+@@ -159,13 +183,20 @@ export function MarketPanel() {
+                 klineData={selectedKline}
+                 period={period}
+                 onPeriodChange={setPeriod}
+               />
+             ) : (
+               <div className="market-panel__kline-placeholder">选择合约查看K线图</div>
+             )}
+           </div>
+         </Panel>
+       </Group>
++
++      <InstrumentSearchModal
++        isOpen={searchModalOpen}
++        onClose={() => setSearchModalOpen(false)}
++        onSubscribe={handleSubscribeFromModal}
++        subscribedIds={subscribedIds}
++      />
+     </section>
+   )
+ }
+diff --git a/frontend/src/modules/market/store.test.ts b/frontend/src/modules/market/store.test.ts
+index 3017348..5452f93 100644
+--- a/frontend/src/modules/market/store.test.ts
++++ b/frontend/src/modules/market/store.test.ts
+@@ -1,32 +1,28 @@
+ import { describe, it, expect, vi, beforeEach } from 'vitest'
+ import { useMarketStore } from './store'
+-import { useContractsStore } from '@/stores/contracts'
+ import type { MarketSnapshot, KLineData } from '@/services/types'
+ 
+ // Mock api module
+ vi.mock('@/services/api', () => ({
+-  getInstruments: vi.fn(),
+   subscribeMarket: vi.fn(),
+   getSnapshots: vi.fn(),
+-  refreshInstruments: vi.fn(),
+ }))
+ 
+-import { getInstruments, subscribeMarket, getSnapshots, refreshInstruments } from '@/services/api'
++import { subscribeMarket, getSnapshots } from '@/services/api'
+ 
+ describe('MarketStore', () => {
+   beforeEach(() => {
+     useMarketStore.setState({
+       selectedInstrument: null,
+       snapshots: new Map(),
+     })
+-    vi.mocked(getInstruments).mockReset()
+     vi.mocked(subscribeMarket).mockReset()
+     vi.mocked(getSnapshots).mockReset()
+   })
+ 
+   it('has null selectedInstrument by default', () => {
+     expect(useMarketStore.getState().selectedInstrument).toBeNull()
+   })
+ 
+   it('sets selected instrument', () => {
+     useMarketStore.getState().setSelectedInstrument('au2508')
+@@ -110,64 +106,26 @@ describe('MarketStore', () => {
+     useMarketStore.getState().batchUpdate([
+       { instrumentID: 'au2508', lastPrice: 481.0 } as MarketSnapshot,
+       { instrumentID: 'ag2508', lastPrice: 6500 } as MarketSnapshot,
+     ])
+ 
+     expect(useMarketStore.getState().snapshots.size).toBe(2)
+     expect(useMarketStore.getState().snapshots.get('au2508')?.lastPrice).toBe(481.0)
+   })
+ })
+ 
+-describe('MarketStore - fetchInstruments', () => {
+-  beforeEach(() => {
+-    useMarketStore.setState({
+-      selectedInstrument: null,
+-      snapshots: new Map(),
+-    })
+-    useContractsStore.setState({ contracts: [] })
+-    vi.mocked(getInstruments).mockReset()
+-    vi.mocked(subscribeMarket).mockReset()
+-    vi.mocked(getSnapshots).mockReset()
+-  })
+-
+-  it('fetchInstruments 调用 API 获取合约列表并同步到 contracts store', async () => {
+-    const mockInstruments = [
+-      { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260821', isTrading: true },
+-      { instrumentID: 'IF2609', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260919', isTrading: true },
+-    ]
+-    vi.mocked(getInstruments).mockResolvedValue({
+-      instruments: mockInstruments,
+-      count: 2,
+-    })
+-
+-    await useMarketStore.getState().fetchInstruments()
+-    expect(getInstruments).toHaveBeenCalled()
+-    // 验证同步到 contracts store
+-    expect(useContractsStore.getState().contracts).toEqual(mockInstruments)
+-  })
+-
+-  it('fetchInstruments 失败时不影响现有状态', async () => {
+-    vi.mocked(getInstruments).mockRejectedValue(new Error('network error'))
+-
+-    await useMarketStore.getState().fetchInstruments()
+-    // snapshots 不受影响
+-    expect(useMarketStore.getState().snapshots.size).toBe(0)
+-  })
+-})
+-
+ describe('MarketStore - subscribeInstruments', () => {
+   beforeEach(() => {
+     useMarketStore.setState({
+       selectedInstrument: null,
+       snapshots: new Map(),
+     })
+-    vi.mocked(getInstruments).mockReset()
+     vi.mocked(subscribeMarket).mockReset()
+     vi.mocked(getSnapshots).mockReset()
+   })
+ 
+   it('subscribeInstruments 调用 API 订阅行情', async () => {
+     vi.mocked(subscribeMarket).mockResolvedValue({
+       success: true,
+       added: ['IF2608'],
+       alreadySubscribed: [],
+     })
+@@ -247,53 +205,10 @@ describe('MarketStore - klineData', () => {
+   })
+ 
+   it('appendKline creates new array if no existing data', () => {
+     const candle: KLineData = { timestamp: 1000, open: 100, high: 105, low: 98, close: 103, volume: 500, openInterest: 1000 }
+     useMarketStore.getState().appendKline('IF2608', candle)
+     expect(useMarketStore.getState().klineData.get('IF2608')?.length).toBe(1)
+     expect(useMarketStore.getState().klineData.get('IF2608')?.[0]).toEqual(candle)
+   })
+ })
+ 
+-describe('MarketStore - refreshInstruments', () => {
+-  beforeEach(() => {
+-    useMarketStore.setState({
+-      isRefreshing: false,
+-    })
+-    vi.mocked(refreshInstruments).mockReset()
+-  })
+-
+-  it('isRefreshing defaults to false', () => {
+-    expect(useMarketStore.getState().isRefreshing).toBe(false)
+-  })
+-
+-  it('refreshInstruments sets isRefreshing=true while calling API', async () => {
+-    vi.mocked(refreshInstruments).mockResolvedValue({ status: 'started' })
+-
+-    const promise = useMarketStore.getState().refreshInstruments()
+-
+-    // 同步检查：API 调用期间 isRefreshing 应为 true
+-    expect(useMarketStore.getState().isRefreshing).toBe(true)
+-
+-    await promise
+-
+-    // 完成后应恢复为 false
+-    expect(useMarketStore.getState().isRefreshing).toBe(false)
+-  })
+-
+-  it('refreshInstruments calls the API and returns status', async () => {
+-    vi.mocked(refreshInstruments).mockResolvedValue({ status: 'started' })
+-
+-    const result = await useMarketStore.getState().refreshInstruments()
+-
+-    expect(refreshInstruments).toHaveBeenCalled()
+-    expect(result).toEqual({ status: 'started' })
+-  })
+-
+-  it('refreshInstruments resets isRefreshing even if API fails', async () => {
+-    vi.mocked(refreshInstruments).mockRejectedValue(new Error('network error'))
+-
+-    await useMarketStore.getState().refreshInstruments()
+-
+-    expect(useMarketStore.getState().isRefreshing).toBe(false)
+-  })
+-})
+diff --git a/frontend/src/modules/market/store.ts b/frontend/src/modules/market/store.ts
+index 7bad397..449f2ec 100644
+--- a/frontend/src/modules/market/store.ts
++++ b/frontend/src/modules/market/store.ts
+@@ -1,25 +1,21 @@
+ import { create } from 'zustand'
+ import type { MarketSnapshot, KLineData } from '@/services/types'
+-import { getInstruments, subscribeMarket, refreshInstruments as refreshApi } from '@/services/api'
+-import { useContractsStore } from '@/stores/contracts'
++import { subscribeMarket } from '@/services/api'
+ 
+ interface MarketStore {
+   selectedInstrument: string | null
+   setSelectedInstrument: (instrument: string | null) => void
+   snapshots: Map<string, MarketSnapshot>
+   updateSnapshot: (snapshot: MarketSnapshot) => void
+   batchUpdate: (snapshots: MarketSnapshot[]) => void
+-  fetchInstruments: () => Promise<void>
+   subscribeInstruments: (instruments: string[]) => Promise<void>
+-  isRefreshing: boolean
+-  refreshInstruments: () => Promise<{ status: string }>
+   klineData: Map<string, KLineData[]>
+   setKlineData: (instrument: string, data: KLineData[]) => void
+   appendKline: (instrument: string, candle: KLineData) => void
+ }
+ 
+ export const useMarketStore = create<MarketStore>((set) => ({
+   selectedInstrument: null,
+   setSelectedInstrument: (instrument) => set({ selectedInstrument: instrument }),
+   snapshots: new Map(),
+   updateSnapshot: (snapshot) =>
+@@ -29,52 +25,29 @@ export const useMarketStore = create<MarketStore>((set) => ({
+       return { snapshots: next }
+     }),
+   batchUpdate: (updates) =>
+     set((state) => {
+       const next = new Map(state.snapshots)
+       for (const snap of updates) {
+         next.set(snap.instrumentID, snap)
+       }
+       return { snapshots: next }
+     }),
+-  fetchInstruments: async () => {
+-    try {
+-      const data = await getInstruments()
+-      if (data?.instruments) {
+-        useContractsStore.getState().setContracts(data.instruments)
+-      }
+-    } catch (error) {
+-      console.warn('[MarketStore] fetchInstruments failed:', error)
+-    }
+-  },
+   subscribeInstruments: async (instruments: string[]) => {
+     try {
+       await subscribeMarket(instruments)
+       // 不立即 getSnapshots —— CTP 回调尚未推送数据，缓存为空。
+       // 数据将通过 WebSocket market_data 消息自然填充。
+     } catch (error) {
+       console.warn('[MarketStore] subscribeInstruments failed:', error)
+     }
+   },
+-  isRefreshing: false,
+-  refreshInstruments: async () => {
+-    set({ isRefreshing: true })
+-    try {
+-      const result = await refreshApi()
+-      return result
+-    } catch (error) {
+-      console.warn('[MarketStore] refreshInstruments failed:', error)
+-      return { status: 'error' }
+-    } finally {
+-      set({ isRefreshing: false })
+-    }
+-  },
+   klineData: new Map(),
+   setKlineData: (instrument, data) =>
+     set((state) => {
+       const next = new Map(state.klineData)
+       // 按时间戳排序，确保蜡烛顺序正确
+       const sorted = [...data].sort((a, b) => a.timestamp - b.timestamp)
+       next.set(instrument, sorted)
+       return { klineData: next }
+     }),
+   appendKline: (instrument, candle) =>
+diff --git a/frontend/src/modules/market/styles.css b/frontend/src/modules/market/styles.css
+index ce9018a..43e0c51 100644
+--- a/frontend/src/modules/market/styles.css
++++ b/frontend/src/modules/market/styles.css
+@@ -141,10 +141,35 @@
+ }
+ 
+ .btn-refresh-instruments:hover:not(:disabled) {
+   background: var(--bg-hover, #3a3a3a);
+ }
+ 
+ .btn-refresh-instruments:disabled {
+   opacity: 0.5;
+   cursor: not-allowed;
+ }
++
++.btn-search-instruments {
++  padding: 4px 12px;
++  background: var(--accent-color, #4a9eff);
++  border: none;
++  border-radius: 4px;
++  color: #fff;
++  cursor: pointer;
++  font-size: 13px;
++}
++
++.btn-unsubscribe {
++  padding: 4px 12px;
++  background: var(--bg-secondary, #2a2a2a);
++  border: 1px solid var(--border-color, #444);
++  border-radius: 4px;
++  color: var(--text-primary, #fff);
++  cursor: pointer;
++  font-size: 13px;
++}
++
++.btn-unsubscribe:disabled {
++  opacity: 0.5;
++  cursor: not-allowed;
++}
+diff --git a/frontend/src/services/api.ts b/frontend/src/services/api.ts
+index 30cf6fc..b5fc204 100644
+--- a/frontend/src/services/api.ts
++++ b/frontend/src/services/api.ts
+@@ -131,10 +131,84 @@ export async function cancelOrder(orderRef: string): Promise<CancelResponse> {
+ 
+ interface RefreshResponse {
+   status: string
+ }
+ 
+ /** 触发后端从 CTP 刷新全量合约列表 */
+ export async function refreshInstruments(): Promise<RefreshResponse> {
+   const { data } = await api.post<RefreshResponse>('/api/market/instruments/refresh')
+   return data
+ }
++
++// ── 合约搜索 API ────────────────────────────────────────────────────
++
++interface ExchangesResponse {
++  exchanges: string[]
++}
++
++interface ProductsResponse {
++  products: string[]
++}
++
++interface PresetResponse {
++  instruments: string[]
++  updatedAt: string | null
++}
++
++/** 获取交易所列表 */
++export async function getExchanges(): Promise<ExchangesResponse> {
++  const { data } = await api.get<ExchangesResponse>('/api/market/instruments/exchanges')
++  return data
++}
++
++/** 获取指定交易所下的品种列表 */
++export async function getProducts(exchange: string): Promise<ProductsResponse> {
++  const { data } = await api.get<ProductsResponse>('/api/market/instruments/products', {
++    params: { exchange },
++  })
++  return data
++}
++
++/** 按交易所+品种搜索合约 */
++export async function searchInstruments(
++  exchange: string,
++  product: string,
++  keyword?: string
++): Promise<InstrumentsResponse> {
++  const params: Record<string, string> = { exchange, product }
++  if (keyword) params.keyword = keyword
++  const { data } = await api.get<InstrumentsResponse>('/api/market/instruments/search', { params })
++  return data
++}
++
++/** 获取预设合约列表 */
++export async function getPresetInstruments(): Promise<PresetResponse> {
++  const { data } = await api.get<PresetResponse>('/api/market/preset')
++  return data
++}
++
++/** 按 ID 列表批量获取合约详情 */
++export async function getInstrumentsByIds(ids: string[]): Promise<InstrumentsResponse> {
++  const { data } = await api.get<InstrumentsResponse>('/api/market/instruments', {
++    params: { ids: ids.join(',') },
++  })
++  return data
++}
++
++/** 刷新预设合约（自动检测主力合约） */
++export async function refreshPresetInstruments(): Promise<{ success: boolean; instruments: string[] }> {
++  const { data } = await api.post<{ success: boolean; instruments: string[] }>('/api/market/preset/refresh')
++  return data
++}
++
++// ── 退订 API ────────────────────────────────────────────────────────
++
++interface UnsubscribeResponse {
++  success: boolean
++  removed: number
++}
++
++/** 退订行情 */
++export async function unsubscribeMarket(instruments: string[]): Promise<UnsubscribeResponse> {
++  const { data } = await api.post<UnsubscribeResponse>('/api/market/unsubscribe', { instruments })
++  return data
++}
+diff --git a/frontend/src/stores/contracts.test.ts b/frontend/src/stores/contracts.test.ts
+index 78745e0..2cc97da 100644
+--- a/frontend/src/stores/contracts.test.ts
++++ b/frontend/src/stores/contracts.test.ts
+@@ -1,16 +1,51 @@
+-import { describe, it, expect, beforeEach } from 'vitest'
++import { describe, it, expect, beforeEach, vi } from 'vitest'
+ import { useContractsStore } from './contracts'
++import { useUserPrefsStore } from './userPrefs'
++import type { ContractInfo } from '@/services/types'
++
++// Mock API modules
++vi.mock('@/services/api', () => ({
++  getPresetInstruments: vi.fn(),
++  getInstrumentsByIds: vi.fn(),
++  subscribeMarket: vi.fn(),
++  unsubscribeMarket: vi.fn(),
++}))
++
++const mockContract: ContractInfo = {
++  instrumentID: 'au2406',
++  instrumentName: '黄金2406',
++  exchangeID: 'SHFE',
++  productID: 'au',
++  volumeMultiple: 1000,
++  priceTick: 0.02,
++  expireDate: '2024-06-15',
++  isTrading: true,
++}
++
++const mockContract2: ContractInfo = {
++  instrumentID: 'rb2406',
++  instrumentName: '螺纹钢2406',
++  exchangeID: 'SHFE',
++  productID: 'rb',
++  volumeMultiple: 10,
++  priceTick: 1,
++  expireDate: '2024-06-15',
++  isTrading: true,
++}
+ 
+ describe('useContractsStore', () => {
+   beforeEach(() => {
+     useContractsStore.setState({ contracts: [], selectedContracts: [] })
++    useUserPrefsStore.setState({ selectedContracts: [], hotKeys: { buy: 'b', sell: 's', cancel: 'c' } })
++    localStorage.clear()
++    vi.clearAllMocks()
+   })
+ 
+   it('初始状态：合约列表和自选合约均为空', () => {
+     const state = useContractsStore.getState()
+     expect(state.contracts).toEqual([])
+     expect(state.selectedContracts).toEqual([])
+   })
+ 
+   it('addContract 添加合约到自选列表', () => {
+     useContractsStore.getState().addContract('au2406')
+@@ -41,11 +76,85 @@ describe('useContractsStore', () => {
+     expect(useContractsStore.getState().selectedContracts).toEqual([])
+   })
+ 
+   it('setContracts 批量设置合约列表', () => {
+     const contracts = [
+       { instrumentID: 'au2406', instrumentName: '黄金2406', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '2024-06-15', isTrading: true },
+     ]
+     useContractsStore.getState().setContracts(contracts)
+     expect(useContractsStore.getState().contracts).toEqual(contracts)
+   })
++
++  // --- addContractInfo tests ---
++
++  it('addContractInfo 添加完整合约信息到列表', () => {
++    useContractsStore.getState().addContractInfo(mockContract)
++    expect(useContractsStore.getState().contracts).toEqual([mockContract])
++  })
++
++  it('addContractInfo 重复添加不产生重复', () => {
++    useContractsStore.getState().addContractInfo(mockContract)
++    useContractsStore.getState().addContractInfo(mockContract)
++    expect(useContractsStore.getState().contracts).toHaveLength(1)
++  })
++
++  it('addContractInfo 同时持久化到 userPrefs', () => {
++    useContractsStore.getState().addContractInfo(mockContract)
++    expect(useUserPrefsStore.getState().selectedContracts).toContain('au2406')
++  })
++
++  // --- removeContractById tests ---
++
++  it('removeContractById 从列表移除合约', async () => {
++    useContractsStore.setState({ contracts: [mockContract, mockContract2] })
++    await useContractsStore.getState().removeContractById('au2406')
++    expect(useContractsStore.getState().contracts).toEqual([mockContract2])
++  })
++
++  it('removeContractById 同步移除 userPrefs 中的记录', async () => {
++    useContractsStore.setState({ contracts: [mockContract] })
++    useUserPrefsStore.getState().addSelectedContract('au2406')
++    await useContractsStore.getState().removeContractById('au2406')
++    expect(useUserPrefsStore.getState().selectedContracts).not.toContain('au2406')
++  })
++
++  // --- loadSubscribedContracts tests ---
++
++  it('loadSubscribedContracts 合并预设和用户自选合约', async () => {
++    const { getPresetInstruments, getInstrumentsByIds } = await import('@/services/api')
++    vi.mocked(getPresetInstruments).mockResolvedValue({ instruments: ['IF2406'], updatedAt: null })
++    vi.mocked(getInstrumentsByIds).mockResolvedValue({ instruments: [mockContract, mockContract2], count: 2 })
++
++    useUserPrefsStore.getState().addSelectedContract('au2406')
++    useUserPrefsStore.getState().saveToLocalStorage()
++
++    await useContractsStore.getState().loadSubscribedContracts()
++
++    expect(getInstrumentsByIds).toHaveBeenCalledWith(
++      expect.arrayContaining(['IF2406', 'au2406'])
++    )
++    expect(useContractsStore.getState().contracts).toEqual([mockContract, mockContract2])
++  })
++
++  it('loadSubscribedContracts 预设失败时仍加载用户自选', async () => {
++    const { getPresetInstruments, getInstrumentsByIds } = await import('@/services/api')
++    vi.mocked(getPresetInstruments).mockRejectedValue(new Error('network error'))
++    vi.mocked(getInstrumentsByIds).mockResolvedValue({ instruments: [mockContract], count: 1 })
++
++    useUserPrefsStore.getState().addSelectedContract('au2406')
++    useUserPrefsStore.getState().saveToLocalStorage()
++
++    await useContractsStore.getState().loadSubscribedContracts()
++
++    expect(getInstrumentsByIds).toHaveBeenCalledWith(['au2406'])
++    expect(useContractsStore.getState().contracts).toEqual([mockContract])
++  })
++
++  it('loadSubscribedContracts 无合约时不调用API', async () => {
++    const { getInstrumentsByIds } = await import('@/services/api')
++    vi.mocked(getInstrumentsByIds).mockResolvedValue({ instruments: [], count: 0 })
++
++    await useContractsStore.getState().loadSubscribedContracts()
++
++    expect(getInstrumentsByIds).not.toHaveBeenCalled()
++  })
+ })
+diff --git a/frontend/src/stores/contracts.ts b/frontend/src/stores/contracts.ts
+index 2965941..7303baf 100644
+--- a/frontend/src/stores/contracts.ts
++++ b/frontend/src/stores/contracts.ts
+@@ -1,25 +1,96 @@
+ import { create } from 'zustand'
+ import type { ContractInfo } from '@/services/types'
++import { useUserPrefsStore } from './userPrefs'
++import {
++  getPresetInstruments,
++  getInstrumentsByIds,
++  unsubscribeMarket,
++} from '@/services/api'
+ 
+ interface ContractsStore {
+   contracts: ContractInfo[]
+   selectedContracts: string[]
+   setContracts: (contracts: ContractInfo[]) => void
+   addContract: (instrumentId: string) => void
+   removeContract: (instrumentId: string) => void
++  /** Add a contract with full info (from search modal) */
++  addContractInfo: (contract: ContractInfo) => void
++  /** Remove by instrumentID and unsubscribe from CTP */
++  removeContractById: (instrumentId: string) => Promise<void>
++  /** Load preset + user subscriptions from localStorage and subscribe */
++  loadSubscribedContracts: () => Promise<void>
+ }
+ 
+ export const useContractsStore = create<ContractsStore>((set) => ({
+   contracts: [],
+   selectedContracts: [],
++
+   setContracts: (contracts) => set({ contracts }),
++
+   addContract: (instrumentId) =>
+     set((state) => {
+       if (state.selectedContracts.includes(instrumentId)) return state
+       return { selectedContracts: [...state.selectedContracts, instrumentId] }
+     }),
++
+   removeContract: (instrumentId) =>
+     set((state) => ({
+       selectedContracts: state.selectedContracts.filter((id) => id !== instrumentId),
+     })),
++
++  addContractInfo: (contract) => {
++    set((state) => {
++      if (state.contracts.some((c) => c.instrumentID === contract.instrumentID)) return state
++      return { contracts: [...state.contracts, contract] }
++    })
++    // Persist to userPrefs
++    const prefs = useUserPrefsStore.getState()
++    prefs.addSelectedContract(contract.instrumentID)
++    prefs.saveToLocalStorage()
++  },
++
++  removeContractById: async (instrumentId) => {
++    try {
++      await unsubscribeMarket([instrumentId])
++    } catch {
++      // Silent fail — still remove from local state
++    }
++    set((state) => ({
++      contracts: state.contracts.filter((c) => c.instrumentID !== instrumentId),
++    }))
++    const prefs = useUserPrefsStore.getState()
++    prefs.removeSelectedContract(instrumentId)
++    prefs.saveToLocalStorage()
++  },
++
++  loadSubscribedContracts: async () => {
++    // 1. Load user prefs from localStorage
++    const prefs = useUserPrefsStore.getState()
++    prefs.loadFromLocalStorage()
++    const userSelected = prefs.selectedContracts
++
++    // 2. Get preset instruments
++    let presetIds: string[] = []
++    try {
++      const preset = await getPresetInstruments()
++      presetIds = preset.instruments
++    } catch {
++      // Preset load failed — continue with user selections only
++    }
++
++    // 3. Merge and deduplicate
++    const allIds = [...new Set([...presetIds, ...userSelected])]
++
++    if (allIds.length === 0) return
++
++    // 4. Get contract details
++    try {
++      const result = await getInstrumentsByIds(allIds)
++      if (result.instruments?.length) {
++        set({ contracts: result.instruments })
++      }
++    } catch {
++      console.warn('[ContractsStore] Failed to load contract details')
++    }
++  },
+ }))
+diff --git a/server/api/market.py b/server/api/market.py
+index 07826ad..bd76926 100644
+--- a/server/api/market.py
++++ b/server/api/market.py
+@@ -26,30 +26,80 @@ class UnsubscribeRequest(BaseModel):
+ # ── Helpers ─────────────────────────────────────────────────────────────
+ 
+ def _get_service(request: Request):
+     """Dependency: get MarketService from app state."""
+     return request.app.state.market_service
+ 
+ 
+ # ── Instruments ─────────────────────────────────────────────────────────
+ 
+ @router.get("/instruments")
+-async def get_instruments(request: Request, keyword: str = ""):
+-    """Query contract list, optionally filtered by keyword (fuzzy search).
++async def get_instruments(request: Request, keyword: str = "", ids: str = ""):
++    """Query contract list.
+ 
+-    Searches across instrumentID, instrumentName, exchangeID, productID.
++    Supports two modes:
++    - ids: comma-separated instrument IDs (batch lookup)
++    - keyword: fuzzy search across instrumentID, instrumentName, exchangeID, productID
+     """
+     svc = _get_service(request)
+-    instruments = svc.get_instruments(keyword=keyword)
++    if ids:
++        id_list = [i.strip() for i in ids.split(",") if i.strip()]
++        instruments = svc.get_instruments_by_ids(id_list)
++    else:
++        instruments = svc.get_instruments(keyword=keyword)
+     return {"instruments": instruments, "count": len(instruments)}
+ 
+ 
++@router.get("/instruments/exchanges")
++async def get_exchanges(request: Request):
++    """Return deduplicated list of exchange IDs."""
++    svc = _get_service(request)
++    return {"exchanges": svc.get_exchanges()}
++
++
++@router.get("/instruments/products")
++async def get_products(request: Request, exchange: str = Query(..., min_length=1)):
++    """Return product IDs for a given exchange."""
++    svc = _get_service(request)
++    return {"products": svc.get_products(exchange)}
++
++
++@router.get("/instruments/search")
++async def search_instruments(
++    request: Request,
++    exchange: str = Query(..., min_length=1),
++    product: str = Query(..., min_length=1),
++    keyword: str = Query(""),
++):
++    """Search instruments by exchange + product, with optional keyword filter."""
++    svc = _get_service(request)
++    instruments = svc.search_instruments(exchange, product, keyword=keyword or None)
++    return {"instruments": instruments, "count": len(instruments)}
++
++
++# ── Preset instruments ─────────────────────────────────────────────────
++
++@router.get("/preset")
++async def get_preset(request: Request):
++    """Return preset instrument list."""
++    svc = _get_service(request)
++    return svc.get_preset_instruments()
++
++
++@router.post("/preset/refresh")
++async def refresh_preset(request: Request):
++    """Auto-detect front-month contracts and update preset list."""
++    svc = _get_service(request)
++    result = svc.refresh_preset_instruments()
++    return result
++
++
+ # ── Subscribe ───────────────────────────────────────────────────────────
+ @router.post("/subscribe")
+ async def subscribe(body: SubscribeRequest, request: Request):
+     """Subscribe to market data for a list of instrument IDs.
+ 
+     Returns: { success, added, alreadySubscribed, message? }
+     """
+     svc = _get_service(request)
+     return svc.subscribe(body.instruments)
+ 
+diff --git a/server/data/preset_instruments.json b/server/data/preset_instruments.json
+new file mode 100644
+index 0000000..a75586e
+--- /dev/null
++++ b/server/data/preset_instruments.json
+@@ -0,0 +1,4 @@
++{
++  "instruments": [],
++  "updatedAt": null
++}
+diff --git a/server/services/market_service.py b/server/services/market_service.py
+index d7c3a57..1685fc0 100644
+--- a/server/services/market_service.py
++++ b/server/services/market_service.py
+@@ -1,19 +1,22 @@
+ """Market data service — instrument cache, snapshot cache, subscription management.
+ 
+ Sits between API routes and CTP MdUserApi. Designed for testability:
+ all CTP-dependent operations accept the MdUserApi as an optional dependency.
+ """
+ 
+ import json
+ import logging
+ import threading
++from collections import defaultdict
++from datetime import datetime
++from pathlib import Path
+ from typing import Any, Callable, Dict, List, Optional, Set
+ 
+ logger = logging.getLogger(__name__)
+ 
+ 
+ class MarketService:
+     """Core market data service.
+ 
+     Manages:
+     - Instrument list cache (loaded from CTP or file)
+@@ -96,20 +99,106 @@ class MarketService:
+             searchable = " ".join(
+                 str(inst.get(k, "")) for k in (
+                     "instrumentID", "instrumentName",
+                     "exchangeID", "productID",
+                 )
+             ).lower()
+             if kw in searchable:
+                 results.append(inst)
+         return results
+ 
++    def get_exchanges(self) -> List[str]:
++        """Return deduplicated list of exchange IDs."""
++        return sorted({inst.get("exchangeID", "") for inst in self._instruments if inst.get("exchangeID")})
++
++    def get_products(self, exchange: str) -> List[str]:
++        """Return product IDs for a given exchange."""
++        return sorted({
++            inst.get("productID", "")
++            for inst in self._instruments
++            if inst.get("exchangeID") == exchange and inst.get("productID")
++        })
++
++    def search_instruments(
++        self, exchange: str, product: str, keyword: str = None
++    ) -> List[dict]:
++        """Filter instruments by exchange + product, with optional keyword."""
++        results = [
++            inst for inst in self._instruments
++            if inst.get("exchangeID") == exchange and inst.get("productID") == product
++        ]
++        if keyword:
++            kw = keyword.lower()
++            results = [
++                inst for inst in results
++                if kw in str(inst.get("instrumentID", "")).lower()
++                or kw in str(inst.get("instrumentName", "")).lower()
++            ]
++        return results
++
++    def get_instruments_by_ids(self, ids: List[str]) -> List[dict]:
++        """Return instruments matching the given IDs."""
++        if not ids:
++            return []
++        id_set = set(ids)
++        return [inst for inst in self._instruments if inst.get("instrumentID") in id_set]
++
++    # ── Preset instruments ─────────────────────────────────────────────
++
++    def get_preset_instruments(self) -> dict:
++        """Read preset instruments from config file."""
++        file_path = str(Path(__file__).parent.parent / "data" / "preset_instruments.json")
++        try:
++            with open(file_path, "r", encoding="utf-8") as f:
++                data = json.load(f)
++            return {"instruments": data.get("instruments", []), "updatedAt": data.get("updatedAt")}
++        except (FileNotFoundError, json.JSONDecodeError, OSError):
++            return {"instruments": [], "updatedAt": None}
++
++    def refresh_preset_instruments(self, file_path: str = "") -> dict:
++        """Auto-detect front-month contracts per product and save preset list.
++
++        Logic: group by productID, filter isTrading==1, pick nearest expireDate.
++        """
++        if not file_path:
++            file_path = str(Path(__file__).parent.parent / "data" / "preset_instruments.json")
++
++        # Group trading instruments by productID
++        by_product: Dict[str, List[dict]] = defaultdict(list)
++        for inst in self._instruments:
++            if inst.get("isTrading") == 1 and inst.get("productID"):
++                by_product[inst["productID"]].append(inst)
++
++        # Pick front-month (nearest expireDate) per product
++        today = datetime.now().strftime("%Y%m%d")
++        preset: List[str] = []
++        for product, instruments in by_product.items():
++            # Filter to future or current expiries
++            valid = [i for i in instruments if i.get("expireDate", "99999999") >= today]
++            if not valid:
++                valid = instruments  # fallback: use all if none are future
++            valid.sort(key=lambda i: i.get("expireDate", "99999999"))
++            preset.append(valid[0]["instrumentID"])
++
++        preset.sort()
++
++        # Save to file
++        data = {"instruments": preset, "updatedAt": datetime.now().isoformat()}
++        try:
++            with open(file_path, "w", encoding="utf-8") as f:
++                json.dump(data, f, ensure_ascii=False, indent=2)
++        except OSError as exc:
++            logger.warning("Failed to save preset to %s: %s", file_path, exc)
++            return {"success": False, "message": str(exc)}
++
++        return {"success": True, "instruments": preset}
++
+     # ── Subscription management ───────────────────────────────────────
+ 
+     @property
+     def subscription_count(self) -> int:
+         return len(self._subscriptions)
+ 
+     def get_subscriptions(self) -> List[str]:
+         """Return current subscription list."""
+         return sorted(self._subscriptions)
+ 
+diff --git a/server/tests/test_market_api.py b/server/tests/test_market_api.py
+index c1dacb6..3137678 100644
+--- a/server/tests/test_market_api.py
++++ b/server/tests/test_market_api.py
+@@ -1,52 +1,59 @@
+ """Integration tests for api/market.py — market data REST API."""
+ 
++import tempfile
++import os
++from unittest.mock import patch
++
+ import pytest
+ from httpx import AsyncClient, ASGITransport
+ from fastapi import FastAPI
+ 
+ from api.market import router as market_router
+ from services.market_service import MarketService
+ 
+ 
+ # ── Test fixtures ───────────────────────────────────────────────────────
+ 
+ SAMPLE_INSTRUMENTS = [
+     {
+         "instrumentID": "IF2608",
+         "instrumentName": "沪深300指数期货2608",
+         "exchangeID": "CFFEX",
+         "productID": "IF",
+         "productClass": "1",
+         "volumeMultiple": 300,
+         "priceTick": 0.2,
+         "expireDate": "20260821",
++        "isTrading": 1,
+     },
+     {
+         "instrumentID": "IF2609",
+         "instrumentName": "沪深300指数期货2609",
+         "exchangeID": "CFFEX",
+         "productID": "IF",
+         "productClass": "1",
+         "volumeMultiple": 300,
+         "priceTick": 0.2,
+         "expireDate": "20260918",
++        "isTrading": 1,
+     },
+     {
+         "instrumentID": "au2608",
+         "instrumentName": "黄金2608",
+         "exchangeID": "SHFE",
+         "productID": "au",
+         "productClass": "1",
+         "volumeMultiple": 1000,
+         "priceTick": 0.02,
+         "expireDate": "20260815",
++        "isTrading": 1,
+     },
+ ]
+ 
+ 
+ def _make_test_app() -> FastAPI:
+     """Build a test FastAPI app with market router and MarketService state."""
+     app = FastAPI()
+     app.include_router(market_router, prefix="/api/market")
+     market_service = MarketService()
+     market_service.load_instruments(SAMPLE_INSTRUMENTS)
+@@ -429,10 +436,165 @@ class TestInstrumentsRefresh:
+                 return -1
+ 
+         app = _make_app_with_trader(MockTraderApi())
+         transport = ASGITransport(app=app)
+         async with AsyncClient(transport=transport, base_url="http://test") as client:
+             resp = await client.post("/api/market/instruments/refresh")
+         assert resp.status_code == 200
+         data = resp.json()
+         assert data["success"] is False
+         assert "query failed" in data["message"].lower()
++
++
++# ── Instrument search endpoints ──────────────────────────────────────
++
++class TestGetExchanges:
++    """GET /api/market/instruments/exchanges"""
++
++    @pytest.mark.asyncio
++    async def test_returns_exchanges(self, app):
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.get("/api/market/instruments/exchanges")
++        assert resp.status_code == 200
++        data = resp.json()
++        assert set(data["exchanges"]) == {"CFFEX", "SHFE"}
++
++
++class TestGetProducts:
++    """GET /api/market/instruments/products"""
++
++    @pytest.mark.asyncio
++    async def test_returns_products_for_exchange(self, app):
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.get("/api/market/instruments/products", params={"exchange": "CFFEX"})
++        assert resp.status_code == 200
++        data = resp.json()
++        assert "IF" in data["products"]
++
++    @pytest.mark.asyncio
++    async def test_missing_exchange_returns_422(self, app):
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.get("/api/market/instruments/products")
++        assert resp.status_code == 422
++
++
++class TestSearchInstruments:
++    """GET /api/market/instruments/search"""
++
++    @pytest.mark.asyncio
++    async def test_search_by_exchange_and_product(self, app):
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.get("/api/market/instruments/search", params={"exchange": "CFFEX", "product": "IF"})
++        assert resp.status_code == 200
++        data = resp.json()
++        assert data["count"] == 2
++
++    @pytest.mark.asyncio
++    async def test_search_with_keyword(self, app):
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.get("/api/market/instruments/search", params={"exchange": "CFFEX", "product": "IF", "keyword": "2608"})
++        assert resp.status_code == 200
++        data = resp.json()
++        assert data["count"] == 1
++        assert data["instruments"][0]["instrumentID"] == "IF2608"
++
++    @pytest.mark.asyncio
++    async def test_missing_params_returns_422(self, app):
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.get("/api/market/instruments/search")
++        assert resp.status_code == 422
++
++
++class TestGetInstrumentsByIds:
++    """GET /api/market/instruments?ids=X,Y,Z"""
++
++    @pytest.mark.asyncio
++    async def test_returns_matching_instruments(self, app):
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.get("/api/market/instruments", params={"ids": "IF2608,au2608"})
++        assert resp.status_code == 200
++        data = resp.json()
++        assert data["count"] == 2
++        ids = {inst["instrumentID"] for inst in data["instruments"]}
++        assert ids == {"IF2608", "au2608"}
++
++    @pytest.mark.asyncio
++    async def test_ids_empty_string_returns_all(self, app):
++        """Without ids param, returns all instruments (existing behavior)."""
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.get("/api/market/instruments")
++        assert resp.status_code == 200
++        data = resp.json()
++        assert data["count"] == 3
++
++
++# ── Preset endpoints ─────────────────────────────────────────────────
++
++class TestPreset:
++    """GET /api/market/preset and POST /api/market/preset/refresh"""
++
++    @pytest.fixture(autouse=True)
++    def _isolate_preset_file(self):
++        """Redirect preset_instruments.json writes to a temp directory."""
++        from pathlib import Path as RealPath
++
++        tmp_dir = tempfile.mkdtemp()
++        tmp_data = os.path.join(tmp_dir, "server", "data")
++        os.makedirs(tmp_data, exist_ok=True)
++
++        _PathType = type(RealPath("."))
++
++        class _FakePath(_PathType):
++            """Path subclass that redirects preset_instruments.json to temp dir."""
++
++            def __new__(cls, *args, **kwargs):
++                return _PathType.__new__(cls, *args, **kwargs)
++
++            def __init__(self, *args, **kwargs):
++                pass  # skip Path.__init__ signature check
++
++            @property
++            def parent(self):
++                return self  # no-op; all .parent chains return self
++
++            def __truediv__(self, key):
++                if key == "preset_instruments.json":
++                    return RealPath(tmp_data) / key
++                return super().__truediv__(key)
++
++        def _make_path(*args, **kwargs):
++            return _FakePath(*args, **kwargs)
++
++        p = patch("services.market_service.Path", side_effect=_make_path)
++        p.start()
++        yield
++        p.stop()
++
++    @pytest.mark.asyncio
++    async def test_get_preset_returns_empty_initially(self, app):
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.get("/api/market/preset")
++        assert resp.status_code == 200
++        data = resp.json()
++        assert "instruments" in data
++
++    @pytest.mark.asyncio
++    async def test_refresh_preset(self, app):
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.post("/api/market/preset/refresh")
++        assert resp.status_code == 200
++        data = resp.json()
++        assert data["success"] is True
++        assert isinstance(data["instruments"], list)
++        assert len(data["instruments"]) == 2
++        # IF2608 (front-month for IF, nearest expireDate) and au2608 (only au)
++        assert set(data["instruments"]) == {"IF2608", "au2608"}
+diff --git a/server/tests/test_market_service.py b/server/tests/test_market_service.py
+index 67832d4..169f3b6 100644
+--- a/server/tests/test_market_service.py
++++ b/server/tests/test_market_service.py
+@@ -674,10 +674,156 @@ class TestRefreshInstrumentsFromCtp:
+         try:
+             svc.on_instruments_result(
+                 [MockInstrument()], is_last=True, file_path=tmp_path,
+             )
+             result = svc.get_instruments()
+             assert len(result) == 1
+             assert result[0]["instrumentID"] == "IF2608"
+             assert result[0]["volumeMultiple"] == 300
+         finally:
+             os.unlink(tmp_path)
++
++
++# ── Instrument search (筛选) ─────────────────────────────────────────
++
++class TestInstrumentSearch:
++    """get_exchanges, get_products, search_instruments, get_instruments_by_ids."""
++
++    SAMPLE = [
++        {"instrumentID": "IF2608", "instrumentName": "沪深300", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260821", "isTrading": 1},
++        {"instrumentID": "IF2609", "instrumentName": "沪深300", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260918", "isTrading": 1},
++        {"instrumentID": "IC2608", "instrumentName": "中证500", "exchangeID": "CFFEX", "productID": "IC", "expireDate": "20260821", "isTrading": 1},
++        {"instrumentID": "au2608", "instrumentName": "黄金", "exchangeID": "SHFE", "productID": "au", "expireDate": "20260815", "isTrading": 1},
++        {"instrumentID": "cu2608", "instrumentName": "铜", "exchangeID": "SHFE", "productID": "cu", "expireDate": "20260815", "isTrading": 0},
++    ]
++
++    def test_get_exchanges_returns_unique_list(self):
++        svc = MarketService()
++        svc.load_instruments(self.SAMPLE)
++        result = svc.get_exchanges()
++        assert set(result) == {"CFFEX", "SHFE"}
++
++    def test_get_exchanges_empty_when_no_data(self):
++        svc = MarketService()
++        assert svc.get_exchanges() == []
++
++    def test_get_products_returns_filtered_list(self):
++        svc = MarketService()
++        svc.load_instruments(self.SAMPLE)
++        result = svc.get_products("CFFEX")
++        assert set(result) == {"IF", "IC"}
++
++    def test_get_products_empty_exchange(self):
++        svc = MarketService()
++        svc.load_instruments(self.SAMPLE)
++        assert svc.get_products("ZZZZZ") == []
++
++    def test_search_instruments_by_exchange_and_product(self):
++        svc = MarketService()
++        svc.load_instruments(self.SAMPLE)
++        result = svc.search_instruments("CFFEX", "IF")
++        assert len(result) == 2
++        ids = {r["instrumentID"] for r in result}
++        assert ids == {"IF2608", "IF2609"}
++
++    def test_search_instruments_with_keyword(self):
++        svc = MarketService()
++        svc.load_instruments(self.SAMPLE)
++        result = svc.search_instruments("CFFEX", "IF", keyword="2608")
++        assert len(result) == 1
++        assert result[0]["instrumentID"] == "IF2608"
++
++    def test_search_instruments_no_match(self):
++        svc = MarketService()
++        svc.load_instruments(self.SAMPLE)
++        result = svc.search_instruments("SHFE", "IF")
++        assert result == []
++
++    def test_search_instruments_returns_all_fields(self):
++        svc = MarketService()
++        svc.load_instruments(self.SAMPLE)
++        result = svc.search_instruments("CFFEX", "IF")
++        inst = result[0]
++        assert "instrumentID" in inst
++        assert "expireDate" in inst
++        assert "isTrading" in inst
++
++    def test_get_instruments_by_ids(self):
++        svc = MarketService()
++        svc.load_instruments(self.SAMPLE)
++        result = svc.get_instruments_by_ids(["IF2608", "au2608"])
++        assert len(result) == 2
++        ids = {r["instrumentID"] for r in result}
++        assert ids == {"IF2608", "au2608"}
++
++    def test_get_instruments_by_ids_partial_match(self):
++        svc = MarketService()
++        svc.load_instruments(self.SAMPLE)
++        result = svc.get_instruments_by_ids(["IF2608", "ZZZZZ"])
++        assert len(result) == 1
++        assert result[0]["instrumentID"] == "IF2608"
++
++    def test_get_instruments_by_ids_empty(self):
++        svc = MarketService()
++        svc.load_instruments(self.SAMPLE)
++        assert svc.get_instruments_by_ids([]) == []
++
++
++# ── Preset instruments ───────────────────────────────────────────────
++
++class TestPresetInstruments:
++    """get_preset_instruments and refresh_preset_instruments."""
++
++    def test_get_preset_returns_empty_initially(self):
++        svc = MarketService()
++        result = svc.get_preset_instruments()
++        assert result["instruments"] == []
++
++    def test_refresh_preset_detects_front_month(self):
++        svc = MarketService()
++        svc.load_instruments([
++            {"instrumentID": "IF2608", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260821", "isTrading": 1},
++            {"instrumentID": "IF2609", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260918", "isTrading": 1},
++            {"instrumentID": "au2608", "exchangeID": "SHFE", "productID": "au", "expireDate": "20260815", "isTrading": 1},
++        ])
++        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
++            tmp_path = f.name
++        try:
++            result = svc.refresh_preset_instruments(file_path=tmp_path)
++            assert result["success"] is True
++            # IF2608 expires sooner, au2608 is the only au
++            assert set(result["instruments"]) == {"IF2608", "au2608"}
++        finally:
++            os.unlink(tmp_path)
++
++    def test_refresh_preset_skips_non_trading(self):
++        svc = MarketService()
++        svc.load_instruments([
++            {"instrumentID": "IF2608", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260821", "isTrading": 0},
++            {"instrumentID": "IF2609", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260918", "isTrading": 1},
++        ])
++        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
++            tmp_path = f.name
++        try:
++            result = svc.refresh_preset_instruments(file_path=tmp_path)
++            assert "IF2608" not in result["instruments"]
++            assert "IF2609" in result["instruments"]
++        finally:
++            os.unlink(tmp_path)
++
++    def test_refresh_preset_saves_to_file(self):
++        import tempfile, os
++        svc = MarketService()
++        svc.load_instruments([
++            {"instrumentID": "IF2608", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260821", "isTrading": 1},
++        ])
++        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
++            tmp_path = f.name
++        try:
++            result = svc.refresh_preset_instruments(file_path=tmp_path)
++            assert result["success"] is True
++            import json
++            with open(tmp_path, "r") as f:
++                saved = json.load(f)
++            assert "IF2608" in saved["instruments"]
++        finally:
++            os.unlink(tmp_path)

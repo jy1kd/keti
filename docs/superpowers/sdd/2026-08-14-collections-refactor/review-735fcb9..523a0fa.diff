@@ -1,0 +1,976 @@
+# Review package: 735fcb9..523a0fa
+
+## Commits
+523a0fa feat(collections): 标签系统改造（collections/collection 类型 + 页面壳 + TabContent + 删 FavoritesPage）
+
+## Files changed
+ frontend/src/App.tsx                               |   2 +-
+ frontend/src/components/CollectionPicker/index.tsx |   4 +-
+ frontend/src/components/TabContent/index.test.tsx  |  19 ++-
+ frontend/src/components/TabContent/index.tsx       |  16 +-
+ .../{FavoritesPage.css => CollectionPage.css}      |  16 +-
+ frontend/src/pages/CollectionPage.tsx              |  13 ++
+ frontend/src/pages/CollectionsPage.css             |  24 +++
+ frontend/src/pages/CollectionsPage.tsx             |  13 ++
+ frontend/src/pages/FavoritesPage.test.tsx          | 189 ---------------------
+ frontend/src/pages/FavoritesPage.tsx               | 115 -------------
+ frontend/src/stores/tabs.test.ts                   |  55 ++++--
+ frontend/src/stores/tabs.ts                        |  22 ++-
+ 12 files changed, 140 insertions(+), 348 deletions(-)
+
+## Diff
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index 1a72196..33c6225 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -61,21 +61,21 @@ function App() {
+   // Electron IPC — 监听托盘菜单导航消息
+   useEffect(() => {
+     if (!isElectron()) return
+ 
+     const cleanup = window.electronAPI?.onNavigateTab?.((tab: string) => {
+       switch (tab) {
+         case 'market':
+           openTab({ type: 'market', title: '📊 期货' })
+           break
+         case 'favorites':
+-          openTab({ type: 'favorites', title: '⭐ 自选' })
++          openTab({ type: 'collections', title: '📁 收藏夹' })
+           break
+         case 'order':
+           openTab({ type: 'order', title: '📝 报单' })
+           break
+         case 'query':
+           openTab({ type: 'query', title: '📋 查询' })
+           break
+         case 'kline':
+           openTab({ type: 'kline', title: '📈 K线' })
+           break
+diff --git a/frontend/src/components/CollectionPicker/index.tsx b/frontend/src/components/CollectionPicker/index.tsx
+index 6e3b50e..919b0b0 100644
+--- a/frontend/src/components/CollectionPicker/index.tsx
++++ b/frontend/src/components/CollectionPicker/index.tsx
+@@ -106,23 +106,21 @@ export function CollectionPicker({ isOpen, instrumentIDs, onClose }: CollectionP
+       toast.success(`已收藏到 ${checkedIds.length} 个收藏夹`)
+     } else {
+       addToCollections(instrumentIDs, checkedIds)
+       toast.success(`已将 ${instrumentIDs.length} 个合约收藏到 ${checkedIds.length} 个收藏夹`)
+     }
+     onClose()
+   }
+ 
+   const openManage = () => {
+     onClose()
+-    // Task 4 将加入 collections 类型，届时移除 cast
+-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+-    openTab({ type: 'collections' as any, title: '📁 收藏夹' })
++    openTab({ type: 'collections', title: '📁 收藏夹' })
+   }
+ 
+   return (
+     <div className="modal-overlay">
+       <div className="modal-content collection-picker" ref={containerRef}>
+         <div className="modal-header">
+           <h3>{single ? '收藏到收藏夹' : `收藏 ${instrumentIDs.length} 个合约到收藏夹`}</h3>
+           <button className="modal-close" onClick={onClose}>&times;</button>
+         </div>
+         <div className="collection-picker__list">
+diff --git a/frontend/src/components/TabContent/index.test.tsx b/frontend/src/components/TabContent/index.test.tsx
+index 6915254..6eac0a3 100644
+--- a/frontend/src/components/TabContent/index.test.tsx
++++ b/frontend/src/components/TabContent/index.test.tsx
+@@ -206,29 +206,40 @@ describe('TabContent', () => {
+       const tab = makeTab({ type: 'tquote', id: 'tab-tquote' })
+       useTabStore.setState({
+         tabs: [tab],
+         activeTabId: tab.id,
+       })
+       render(<TabContent />)
+       expect(screen.getByTestId('tquote-view')).toBeInTheDocument()
+       expect(screen.queryByText(/标的:/)).toBeNull()
+     })
+ 
+-    // 审查 🔵-2：自选页标题已删除，改用稳定的 data-testid 断言页面渲染
+-    it('应为 favorites 类型渲染自选页', () => {
+-      const tab = makeTab({ type: 'favorites' })
++    it('应为 collections 类型渲染收藏夹管理页', () => {
++      const tab = makeTab({ type: 'collections' })
+       useTabStore.setState({
+         tabs: [tab],
+         activeTabId: tab.id,
+       })
+       render(<TabContent />)
+-      expect(screen.getByTestId('favorites-page')).toBeInTheDocument()
++      expect(screen.getByTestId('collections-page')).toBeInTheDocument()
++    })
++
++    it('应为 collection 类型渲染单收藏夹页，并透传 collectionId 与 tabId', () => {
++      const tab = makeTab({ type: 'collection', id: 'tab-collection-coll-x', props: { collectionId: 'coll-x' } })
++      useTabStore.setState({
++        tabs: [tab],
++        activeTabId: tab.id,
++      })
++      render(<TabContent />)
++      expect(screen.getByTestId('collection-page')).toBeInTheDocument()
++      // 页面壳渲染收藏夹 id，证明 collectionId prop 已透传
++      expect(screen.getByText(/收藏夹 coll-x/)).toBeInTheDocument()
+     })
+   })
+ 
+   // --- 状态保持 ---
+ 
+   describe('状态保持', () => {
+     it('切换标签后切回，面板应保持', () => {
+       useTabStore.setState({
+         tabs: [MARKET_TAB, SETTINGS_TAB],
+         activeTabId: MARKET_TAB.id,
+diff --git a/frontend/src/components/TabContent/index.tsx b/frontend/src/components/TabContent/index.tsx
+index e67013b..c5110dc 100644
+--- a/frontend/src/components/TabContent/index.tsx
++++ b/frontend/src/components/TabContent/index.tsx
+@@ -1,36 +1,44 @@
+ import { createPortal } from 'react-dom'
+ import { useTabStore, type Tab } from '@/stores/tabs'
+ import { useFloatingWindowStore, FLOATING_CHROME_H } from '@/stores/floatingWindows'
+ import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
+ import { MarketPanel } from '@/modules/market/MarketPanel'
+ import { QueryPanel } from '@/modules/query/QueryPanel'
+ import { OrdersQuery } from '@/modules/query/OrdersQuery'
+ import { PositionsQuery } from '@/modules/query/PositionsQuery'
+ import { OptionsPanel } from '@/modules/options/OptionsPanel'
+ import { TQuoteView } from '@/modules/options/TQuoteView'
+-import { FavoritesPage } from '@/pages/FavoritesPage'
++import { CollectionsPage } from '@/pages/CollectionsPage'
++import { CollectionPage } from '@/pages/CollectionPage'
+ import { OrderPage } from '@/pages/OrderPage'
+ import { KLinePage } from '@/pages/KLinePage'
+ import { SettingsPage } from '@/pages/SettingsPage'
+ import { IPCMonitorPage } from '@/pages/IPCMonitorPage'
+ import { InfiniteOrderPage } from '@/pages/InfiniteOrderPage'
+ import './styles.css'
+ 
+ /**
+  * 安全地从 tab.props 中提取 instrumentID 字符串。
+  * 使用运行时类型守卫，避免 `as string` 断言掩藏非字符串值传入的 bug。
+  */
+ function getInstrumentID(props: Record<string, unknown>): string | undefined {
+   return typeof props.instrumentID === 'string' ? props.instrumentID : undefined
+ }
+ 
++/**
++ * 安全地从 tab.props 中提取 collectionId 字符串（收藏夹标签页用）。
++ */
++function getCollectionId(props: Record<string, unknown>): string {
++  return typeof props.collectionId === 'string' ? props.collectionId : ''
++}
++
+ /**
+  * 为每个标签类型生成面板内容。
+  *
+  * market 类型已集成 MarketPanel；
+  * order 类型已集成 OrderPage；
+  * kline 类型已集成 KLinePage；
+  * query 类型已集成 QueryPanel（全局账户查询）；
+  * 其他类型使用占位文本，后续 PR 会逐步替换为实际页面组件。
+  */
+ function renderTabContent(tab: Tab, floating: boolean): React.ReactNode {
+@@ -48,22 +56,24 @@ function renderTabContent(tab: Tab, floating: boolean): React.ReactNode {
+     case 'kline':
+       return <KLinePage instrumentID={getInstrumentID(tab.props)} tabId={tab.id} />
+     case 'infinite':
+       return (
+         <InfiniteOrderPage
+           instrumentID={getInstrumentID(tab.props)}
+           floating={floating}
+           tabId={tab.id}
+         />
+       )
+-    case 'favorites':
+-      return <FavoritesPage />
++    case 'collections':
++      return <CollectionsPage />
++    case 'collection':
++      return <CollectionPage collectionId={getCollectionId(tab.props)} tabId={tab.id} />
+     case 'query':
+       return <QueryPanel />
+     case 'query-orders':
+       return <OrdersQuery />
+     case 'query-positions':
+       return <PositionsQuery />
+     case 'settings':
+       return <SettingsPage />
+     case 'options':
+       return <OptionsPanel />
+diff --git a/frontend/src/pages/FavoritesPage.css b/frontend/src/pages/CollectionPage.css
+similarity index 62%
+rename from frontend/src/pages/FavoritesPage.css
+rename to frontend/src/pages/CollectionPage.css
+index fed2a52..adf4b86 100644
+--- a/frontend/src/pages/FavoritesPage.css
++++ b/frontend/src/pages/CollectionPage.css
+@@ -1,28 +1,24 @@
+-.favorites-page {
++.collections-page,
++.collection-page {
+   display: flex;
+   flex-direction: column;
+   height: 100%;
+   overflow: hidden;
+   background: var(--bg-primary);
+ }
+ 
+-.favorites-page__table {
+-  flex: 1;
+-  min-height: 0;
+-  overflow: hidden;
+-}
+-
+-.favorites-page__empty {
++.collections-page__empty,
++.collection-page__empty {
+   flex: 1;
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   justify-content: center;
+   color: var(--text-secondary);
+ }
+ 
+-.favorites-page__hint {
+-  color: var(--text-secondary);
++.collections-page__hint,
++.collection-page__hint {
+   font-size: 13px;
+   margin-top: 8px;
+ }
+diff --git a/frontend/src/pages/CollectionPage.tsx b/frontend/src/pages/CollectionPage.tsx
+new file mode 100644
+index 0000000..bcf36f8
+--- /dev/null
++++ b/frontend/src/pages/CollectionPage.tsx
+@@ -0,0 +1,13 @@
++import './CollectionPage.css'
++
++/** 单收藏夹页（壳：Task 6 完整实现） */
++export function CollectionPage({ collectionId }: { collectionId: string; tabId: string }) {
++  return (
++    <section className="collection-page" data-testid="collection-page">
++      <div className="collection-page__empty">
++        <p>收藏夹 {collectionId}</p>
++        <p className="collection-page__hint">夹页实现中…</p>
++      </div>
++    </section>
++  )
++}
+diff --git a/frontend/src/pages/CollectionsPage.css b/frontend/src/pages/CollectionsPage.css
+new file mode 100644
+index 0000000..adf4b86
+--- /dev/null
++++ b/frontend/src/pages/CollectionsPage.css
+@@ -0,0 +1,24 @@
++.collections-page,
++.collection-page {
++  display: flex;
++  flex-direction: column;
++  height: 100%;
++  overflow: hidden;
++  background: var(--bg-primary);
++}
++
++.collections-page__empty,
++.collection-page__empty {
++  flex: 1;
++  display: flex;
++  flex-direction: column;
++  align-items: center;
++  justify-content: center;
++  color: var(--text-secondary);
++}
++
++.collections-page__hint,
++.collection-page__hint {
++  font-size: 13px;
++  margin-top: 8px;
++}
+diff --git a/frontend/src/pages/CollectionsPage.tsx b/frontend/src/pages/CollectionsPage.tsx
+new file mode 100644
+index 0000000..0c3e8f5
+--- /dev/null
++++ b/frontend/src/pages/CollectionsPage.tsx
+@@ -0,0 +1,13 @@
++import './CollectionsPage.css'
++
++/** 收藏夹管理页（壳：Task 5 完整实现） */
++export function CollectionsPage() {
++  return (
++    <section className="collections-page" data-testid="collections-page">
++      <div className="collections-page__empty">
++        <p>收藏夹</p>
++        <p className="collections-page__hint">管理页实现中…</p>
++      </div>
++    </section>
++  )
++}
+diff --git a/frontend/src/pages/FavoritesPage.test.tsx b/frontend/src/pages/FavoritesPage.test.tsx
+deleted file mode 100644
+index cdd806a..0000000
+--- a/frontend/src/pages/FavoritesPage.test.tsx
++++ /dev/null
+@@ -1,189 +0,0 @@
+-import { describe, it, expect, vi, beforeEach } from 'vitest'
+-import { render, screen, fireEvent } from '@testing-library/react'
+-import { FavoritesPage } from './FavoritesPage'
+-import { useContractsStore } from '@/stores/contracts'
+-import { useMarketStore } from '@/modules/market/store'
+-import { useTabStore } from '@/stores/tabs'
+-import { openFloatingTab } from '@/utils/openFloatingTab'
+-
+-// Mock 统一浮动窗入口（自选双击/右键「打开报单」现为打开浮动窗口）
+-vi.mock('@/utils/openFloatingTab', () => ({
+-  openFloatingTab: vi.fn(),
+-  ORDER_FLOATING_SIZE: { w: 620, h: 540 },
+-}))
+-
+-const mockOpenFloatingTab = vi.mocked(openFloatingTab)
+-
+-// Mock QuoteTable to simplify testing
+-vi.mock('@/modules/market/QuoteTable', () => ({
+-  QuoteTable: ({ contracts, onFavoriteChange, onRowDoubleClick, onContextMenu }: any) => (
+-    <div data-testid="market-table">
+-      <span data-testid="contract-count">{contracts.length}</span>
+-      {contracts.map((c: any) => (
+-        <div key={c.instrumentID} data-testid={`contract-${c.instrumentID}`}>
+-          <span>{c.instrumentID}</span>
+-          <button
+-            data-testid={`unfav-${c.instrumentID}`}
+-            onClick={() => onFavoriteChange?.(c.instrumentID, false)}
+-          >
+-            取消收藏
+-          </button>
+-          <button
+-            data-testid={`fav-${c.instrumentID}`}
+-            onClick={() => onFavoriteChange?.(c.instrumentID, true)}
+-          >
+-            收藏
+-          </button>
+-          <button
+-            data-testid={`dbl-${c.instrumentID}`}
+-            onClick={() => onRowDoubleClick?.(c.instrumentID, 0)}
+-          >
+-            双击
+-          </button>
+-          <button
+-            data-testid={`ctx-${c.instrumentID}`}
+-            onClick={() => onContextMenu?.(c.instrumentID, 0, { preventDefault: vi.fn(), clientX: 100, clientY: 200 })}
+-          >
+-            右键
+-          </button>
+-        </div>
+-      ))}
+-    </div>
+-  ),
+-}))
+-
+-describe('FavoritesPage', () => {
+-  const mockFavorites = [
+-    {
+-      instrumentID: 'IF2608',
+-      instrumentName: '沪深300',
+-      exchangeID: 'CFFEX',
+-      productID: 'IF',
+-      volumeMultiple: 300,
+-      priceTick: 0.2,
+-      expireDate: '2026-08-15',
+-      isTrading: 1,
+-      productClass: '1',
+-    },
+-    {
+-      instrumentID: 'IC2608',
+-      instrumentName: '中证500',
+-      exchangeID: 'CFFEX',
+-      productID: 'IC',
+-      volumeMultiple: 200,
+-      priceTick: 0.2,
+-      expireDate: '2026-08-15',
+-      isTrading: 1,
+-      productClass: '1',
+-    },
+-  ]
+-
+-  beforeEach(() => {
+-    vi.clearAllMocks()
+-    useContractsStore.setState({
+-      contracts: [],
+-      favorites: mockFavorites,
+-      isLoaded: true,
+-    })
+-    useMarketStore.setState({
+-      snapshots: new Map(),
+-      selectedInstrument: null,
+-    })
+-    // 重置标签页 store（保留固定行情标签）
+-    useTabStore.setState({
+-      tabs: [{ id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false }],
+-      activeTabId: 'tab-market',
+-    })
+-  })
+-
+-  it('移除标题栏「⭐ 自选合约」与计数角标（计数收敛到全局栏 ⭐ 快捷入口），表格顶到全局栏下', () => {
+-    render(<FavoritesPage />)
+-    // 无 header：无标题、无计数角标
+-    expect(screen.queryByText(/自选合约/)).toBeNull()
+-    expect(document.querySelector('.favorites-page__header')).toBeNull()
+-    // 表格直接渲染
+-    expect(screen.getByTestId('market-table')).toBeDefined()
+-  })
+-
+-  it('should pass favorites to MarketTable', () => {
+-    render(<FavoritesPage />)
+-    expect(screen.getByTestId('contract-count').textContent).toBe('2')
+-  })
+-
+-  it('should show empty state when no favorites', () => {
+-    useContractsStore.setState({ favorites: [] })
+-    render(<FavoritesPage />)
+-    expect(screen.getByText(/暂无自选合约/)).toBeDefined()
+-  })
+-
+-  it('should call removeFromFavorites when unfavorite', () => {
+-    const removeFromFavorites = vi.fn()
+-    useContractsStore.setState({ removeFromFavorites } as any)
+-    render(<FavoritesPage />)
+-    fireEvent.click(screen.getByTestId('unfav-IF2608'))
+-    expect(removeFromFavorites).toHaveBeenCalledWith('IF2608')
+-  })
+-
+-  it('should call addToFavorites when favoriting', () => {
+-    const addToFavorites = vi.fn().mockResolvedValue(true)
+-    const allContracts = [
+-      { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '2026-08-15', isTrading: 1, productClass: '1' },
+-    ]
+-    useContractsStore.setState({ addToFavorites, contracts: allContracts } as any)
+-    render(<FavoritesPage />)
+-    fireEvent.click(screen.getByTestId('fav-IF2608'))
+-    expect(addToFavorites).toHaveBeenCalledWith(allContracts[0])
+-  })
+-
+-  it('should render with empty snapshots', () => {
+-    render(<FavoritesPage />)
+-    // Should not crash, table still renders
+-    expect(screen.getByTestId('market-table')).toBeDefined()
+-  })
+-
+-  // --- 标签页打开方式测试 (PR-R13) ---
+-
+-  it('自选合约双击打开报单浮动窗口', () => {
+-    render(<FavoritesPage />)
+-    fireEvent.click(screen.getByTestId('dbl-IF2608'))
+-
+-    expect(mockOpenFloatingTab).toHaveBeenCalledWith({
+-      type: 'order',
+-      title: '📝 报单-IF2608',
+-      props: { instrumentID: 'IF2608' },
+-      size: { w: 620, h: 540 },
+-    })
+-  })
+-
+-  it('自选合约右键显示上下文菜单', () => {
+-    render(<FavoritesPage />)
+-    fireEvent.click(screen.getByTestId('ctx-IF2608'))
+-    expect(screen.getByText('打开报单')).toBeDefined()
+-    expect(screen.getByText('打开K线')).toBeDefined()
+-  })
+-
+-  it('右键菜单点击「打开报单」打开报单浮动窗口', () => {
+-    render(<FavoritesPage />)
+-    fireEvent.click(screen.getByTestId('ctx-IF2608'))
+-    fireEvent.click(screen.getByText('打开报单'))
+-
+-    expect(mockOpenFloatingTab).toHaveBeenCalledWith({
+-      type: 'order',
+-      title: '📝 报单-IF2608',
+-      props: { instrumentID: 'IF2608' },
+-      size: { w: 620, h: 540 },
+-    })
+-  })
+-
+-  it('右键菜单点击「打开K线」打开K线浮动窗口', () => {
+-    render(<FavoritesPage />)
+-    fireEvent.click(screen.getByTestId('ctx-IF2608'))
+-    fireEvent.click(screen.getByText('打开K线'))
+-
+-    expect(mockOpenFloatingTab).toHaveBeenCalledWith({
+-      type: 'kline',
+-      title: '📈 K线-IF2608',
+-      props: { instrumentID: 'IF2608' },
+-    })
+-  })
+-})
+diff --git a/frontend/src/pages/FavoritesPage.tsx b/frontend/src/pages/FavoritesPage.tsx
+deleted file mode 100644
+index 237f5f0..0000000
+--- a/frontend/src/pages/FavoritesPage.tsx
++++ /dev/null
+@@ -1,115 +0,0 @@
+-import { useMemo } from 'react'
+-import { QuoteTable } from '@/modules/market/QuoteTable'
+-import { futuresSpec } from '@/modules/market/futuresSpec'
+-import { useMarketStore } from '@/modules/market/store'
+-import { useContractsStore } from '@/stores/contracts'
+-import { useTabStore } from '@/stores/tabs'
+-import { useContractContextMenu } from '@/hooks/useContractContextMenu'
+-import { toast } from '@/components/Toast'
+-import './FavoritesPage.css'
+-
+-/**
+- * FavoritesPage — 自选标签页
+- *
+- * 只显示收藏的合约，全部订阅（数量少，通常 < 50）。
+- * 支持取消收藏操作。
+- */
+-export function FavoritesPage() {
+-  const favorites = useContractsStore((s) => s.favorites)
+-  const contracts = useContractsStore((s) => s.contracts)
+-  const addToFavorites = useContractsStore((s) => s.addToFavorites)
+-  const removeFromFavorites = useContractsStore((s) => s.removeFromFavorites)
+-  const snapshots = useMarketStore((s) => s.snapshots)
+-  const selectedInstrument = useMarketStore((s) => s.selectedInstrument)
+-  const setSelectedInstrument = useMarketStore((s) => s.setSelectedInstrument)
+-  const { contextMenu, openOrderPopup, openQueryPopup, openKlineTab, handleContextMenu } = useContractContextMenu()
+-
+-  // 自选标签是否激活：隐藏面板（display:none）不参与可见区上报，避免覆盖活跃面板可见范围
+-  const isActive = useTabStore((s) => s.tabs.some((t) => t.type === 'favorites' && t.id === s.activeTabId))
+-
+-  const favoritedIds = useMemo(
+-    () => new Set(favorites.map((c) => c.instrumentID)),
+-    [favorites],
+-  )
+-
+-  const handleFavoriteChange = (instrumentID: string, isFavorited: boolean) => {
+-    if (isFavorited) {
+-      // 从全量合约中查找并收藏（防御性处理，FavoritesPage 中通常不会触发）
+-      const inst = contracts.find((c) => c.instrumentID === instrumentID)
+-      if (inst) {
+-        addToFavorites(inst)
+-        toast.success(`已收藏 ${instrumentID}`)
+-      }
+-    } else {
+-      removeFromFavorites(instrumentID)
+-      toast.success(`已取消收藏 ${instrumentID}`)
+-    }
+-  }
+-
+-  const handleRowClick = (instrumentID: string) => {
+-    setSelectedInstrument(instrumentID)
+-  }
+-
+-  // 双击打开悬浮报单弹窗
+-  const handleRowDoubleClick = (instrumentID: string) => {
+-    setSelectedInstrument(instrumentID)
+-    openOrderPopup(instrumentID)
+-  }
+-
+-  if (favorites.length === 0) {
+-    return (
+-      <div className="favorites-page" data-testid="favorites-page">
+-        <div className="favorites-page__empty">
+-          <p>暂无自选合约</p>
+-          <p className="favorites-page__hint">在行情表格中点击 ☆ 收藏合约</p>
+-        </div>
+-      </div>
+-    )
+-  }
+-
+-  return (
+-    <div className="favorites-page" data-testid="favorites-page">
+-      <div className="favorites-page__table">
+-        <QuoteTable
+-          spec={futuresSpec}
+-          contracts={favorites}
+-          snapshots={snapshots}
+-          selectedInstrument={selectedInstrument}
+-          isActive={isActive}
+-          onRowClick={handleRowClick}
+-          onRowDoubleClick={handleRowDoubleClick}
+-          onContextMenu={handleContextMenu}
+-          favoritedIds={favoritedIds}
+-          onFavoriteChange={handleFavoriteChange}
+-        />
+-      </div>
+-
+-      {/* 右键菜单 */}
+-      {contextMenu && (
+-        <div
+-          className="context-menu"
+-          style={{ position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 1000 }}
+-        >
+-          <button
+-            className="context-menu__item"
+-            onClick={() => openOrderPopup(contextMenu.instrumentID)}
+-          >
+-            打开报单
+-          </button>
+-          <button
+-            className="context-menu__item"
+-            onClick={() => openKlineTab(contextMenu.instrumentID)}
+-          >
+-            打开K线
+-          </button>
+-          <button
+-            className="context-menu__item"
+-            onClick={() => openQueryPopup(contextMenu.instrumentID)}
+-          >
+-            📋 查询
+-          </button>
+-        </div>
+-      )}
+-    </div>
+-  )
+-}
+diff --git a/frontend/src/stores/tabs.test.ts b/frontend/src/stores/tabs.test.ts
+index 4a54bd2..22f6fde 100644
+--- a/frontend/src/stores/tabs.test.ts
++++ b/frontend/src/stores/tabs.test.ts
+@@ -37,39 +37,49 @@ describe('useTabStore', () => {
+       expect(activeTabId).toBe('tab-market')
+     })
+   })
+ 
+   // --- TabType 定义 ---
+ 
+   describe('TabType', () => {
+     it('应定义所有标签页类型', () => {
+       expect(TAB_TYPES).toEqual([
+         'market',
+-        'favorites',
++        'collections',
++        'collection',
+         'order',
+         'kline',
+         'options',
+         'tquote',
+         'ipc-monitor',
+         'settings',
+         'query',
+         'infinite',
+         'query-orders',
+         'query-positions',
+       ])
+     })
+ 
+     it('PINNED_TAB_TYPE 应为 market', () => {
+       expect(PINNED_TAB_TYPE).toBe('market')
+     })
+   })
+ 
++  // --- generateTabId ---
++
++  describe('generateTabId', () => {
++    it('generateTabId 支持 collectionId 后缀', async () => {
++      const { generateTabId } = await import('./tabs')
++      expect(generateTabId('collection', { collectionId: 'coll-x' })).toBe('tab-collection-coll-x')
++    })
++  })
++
+   // --- openTab ---
+ 
+   describe('openTab', () => {
+     it('应打开新标签页并设为活跃，返回 true', () => {
+       const { openTab } = useTabStore.getState()
+       const result = openTab({ type: 'order', title: '📝 报单-au2406', props: { instrumentID: 'au2406' } })
+ 
+       expect(result).toBe(true)
+       const state = useTabStore.getState()
+       expect(state.tabs).toHaveLength(2)
+@@ -95,29 +105,29 @@ describe('useTabStore', () => {
+       openTab({ type: 'order', title: '📝 报单-au2406', props: { instrumentID: 'au2406' } })
+       openTab({ type: 'order', title: '📝 报单-rb2406', props: { instrumentID: 'rb2406' } })
+ 
+       const state = useTabStore.getState()
+       expect(state.tabs).toHaveLength(3) // market + au2406 + rb2406
+       expect(state.activeTabId).toBe('tab-order-rb2406')
+     })
+ 
+     it('打开标签页时默认 closable 为 true', () => {
+       const { openTab } = useTabStore.getState()
+-      openTab({ type: 'favorites', title: '⭐ 自选' })
++      openTab({ type: 'collections', title: '📁 收藏夹' })
+ 
+       const state = useTabStore.getState()
+       expect(state.tabs[1].closable).toBe(true)
+     })
+ 
+     it('打开标签页时可自定义 closable', () => {
+       const { openTab } = useTabStore.getState()
+-      openTab({ type: 'favorites', title: '⭐ 自选', closable: false })
++      openTab({ type: 'collections', title: '📁 收藏夹', closable: false })
+ 
+       const state = useTabStore.getState()
+       expect(state.tabs[1].closable).toBe(false)
+     })
+ 
+     it('标签页数量限制：最多 15 个，超限返回 false', () => {
+       const { openTab } = useTabStore.getState()
+ 
+       // 打开 14 个额外标签页（加上 market = 15）
+       for (let i = 0; i < 14; i++) {
+@@ -127,66 +137,81 @@ describe('useTabStore', () => {
+ 
+       expect(useTabStore.getState().tabs).toHaveLength(15)
+ 
+       // 第 16 个应该返回 false
+       const overflowResult = openTab({ type: 'order', title: '📝 报单-合约99', props: { instrumentID: 'contract99' } })
+       expect(overflowResult).toBe(false)
+       expect(useTabStore.getState().tabs).toHaveLength(15)
+       // 活跃标签页不变
+       expect(useTabStore.getState().activeTabId).not.toBe('tab-order-contract99')
+     })
++
++    it('openTab 按 type+collectionId 去重（激活已有）', () => {
++      const { openTab } = useTabStore.getState()
++      openTab({ type: 'collection', title: '📁 A', props: { collectionId: 'coll-x' } })
++      const result = openTab({ type: 'collection', title: '📁 A', props: { collectionId: 'coll-x' } })
++      expect(result).toBe(true)
++      expect(useTabStore.getState().tabs.filter((t) => t.type === 'collection')).toHaveLength(1)
++    })
++
++    it('可同时打开多个不同 collectionId 的夹标签', () => {
++      const { openTab } = useTabStore.getState()
++      openTab({ type: 'collection', title: '📁 A', props: { collectionId: 'a' } })
++      openTab({ type: 'collection', title: '📁 B', props: { collectionId: 'b' } })
++      expect(useTabStore.getState().tabs.filter((t) => t.type === 'collection')).toHaveLength(2)
++    })
+   })
+ 
+   // --- closeTab ---
+ 
+   describe('closeTab', () => {
+     it('应关闭指定标签页', () => {
+       const { openTab, closeTab } = useTabStore.getState()
+-      openTab({ type: 'favorites', title: '⭐ 自选' })
++      openTab({ type: 'collections', title: '📁 收藏夹' })
+ 
+       expect(useTabStore.getState().tabs).toHaveLength(2)
+ 
+       const favTabId = useTabStore.getState().tabs[1].id
+       closeTab(favTabId)
+ 
+       const state = useTabStore.getState()
+       expect(state.tabs).toHaveLength(1)
+       expect(state.tabs.find((t) => t.id === favTabId)).toBeUndefined()
+     })
+ 
+     it('关闭活跃标签页时应激活相邻标签页', () => {
+       const { openTab, closeTab } = useTabStore.getState()
+-      openTab({ type: 'favorites', title: '⭐ 自选' })
++      openTab({ type: 'collections', title: '📁 收藏夹' })
+       openTab({ type: 'settings', title: '⚙ 设置' })
+ 
+-      // 当前：market, favorites, settings (active)
++      // 当前：market, collections, settings (active)
+       expect(useTabStore.getState().activeTabId).toBe('tab-settings')
+ 
+       const settingsTabId = useTabStore.getState().tabs[2].id
+       closeTab(settingsTabId)
+ 
+-      // 关闭 settings 后，应激活 favorites（前一个）
+-      expect(useTabStore.getState().activeTabId).toBe('tab-favorites')
++      // 关闭 settings 后，应激活 collections（前一个）
++      expect(useTabStore.getState().activeTabId).toBe('tab-collections')
+     })
+ 
+     it('关闭中间活跃标签页时应激活后一个标签页', () => {
+       const { openTab, closeTab, setActiveTab } = useTabStore.getState()
+-      openTab({ type: 'favorites', title: '⭐ 自选' })
++      openTab({ type: 'collections', title: '📁 收藏夹' })
+       openTab({ type: 'settings', title: '⚙ 设置' })
+ 
+       const favTabId = useTabStore.getState().tabs[1].id
+       setActiveTab(favTabId)
+ 
+-      // 当前：market, favorites (active), settings
++      // 当前：market, collections (active), settings
+       closeTab(favTabId)
+ 
+-      // 关闭中间的 favorites，应激活 settings（后一个）
++      // 关闭中间的 collections，应激活 settings（后一个）
+       expect(useTabStore.getState().activeTabId).toBe('tab-settings')
+     })
+ 
+     it('不应关闭固定标签（market）', () => {
+       const { closeTab } = useTabStore.getState()
+       closeTab('tab-market')
+ 
+       const state = useTabStore.getState()
+       expect(state.tabs).toHaveLength(1)
+       expect(state.tabs[0].type).toBe('market')
+@@ -275,21 +300,21 @@ describe('useTabStore', () => {
+       updateTab('non-existent-tab', { props: { instrumentID: 'rb2610' } })
+       expect(useTabStore.getState().tabs).toHaveLength(1)
+     })
+   })
+ 
+   // --- setActiveTab ---
+ 
+   describe('setActiveTab', () => {
+     it('应设置指定标签页为活跃', () => {
+       const { openTab, setActiveTab } = useTabStore.getState()
+-      openTab({ type: 'favorites', title: '⭐ 自选' })
++      openTab({ type: 'collections', title: '📁 收藏夹' })
+ 
+       const favTabId = useTabStore.getState().tabs[1].id
+       setActiveTab(favTabId)
+ 
+       expect(useTabStore.getState().activeTabId).toBe(favTabId)
+     })
+ 
+     it('设置不存在的标签页为活跃应无操作', () => {
+       const { setActiveTab } = useTabStore.getState()
+       setActiveTab('non-existent-tab')
+@@ -312,25 +337,25 @@ describe('useTabStore', () => {
+     })
+ 
+     it('不存在时应返回 undefined', () => {
+       const { getTabByType } = useTabStore.getState()
+       const tab = getTabByType('order', { instrumentID: 'non-existent' })
+       expect(tab).toBeUndefined()
+     })
+ 
+     it('不传 props 时应返回同类型的第一个标签页', () => {
+       const { openTab, getTabByType } = useTabStore.getState()
+-      openTab({ type: 'favorites', title: '⭐ 自选' })
++      openTab({ type: 'collections', title: '📁 收藏夹' })
+ 
+-      const tab = getTabByType('favorites')
++      const tab = getTabByType('collections')
+       expect(tab).toBeDefined()
+-      expect(tab?.type).toBe('favorites')
++      expect(tab?.type).toBe('collections')
+     })
+   })
+ })
+ 
+ describe('closeOthers / closeAll / togglePin', () => {
+   function seed() {
+     useTabStore.setState({
+       tabs: [
+         { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+         { id: 'tab-order', type: 'order', title: '📝 报单', props: {}, closable: true, pinned: true },
+diff --git a/frontend/src/stores/tabs.ts b/frontend/src/stores/tabs.ts
+index ebd1551..c1f88d5 100644
+--- a/frontend/src/stores/tabs.ts
++++ b/frontend/src/stores/tabs.ts
+@@ -1,33 +1,35 @@
+ import { create } from 'zustand'
+ 
+ // --- 类型定义 ---
+ 
+ /** 标签页类型 */
+ export type TabType =
+   | 'market'
+-  | 'favorites'
++  | 'collections' // 收藏夹管理页
++  | 'collection' // 单个收藏夹页
+   | 'order'
+   | 'kline'
+   | 'options'
+   | 'tquote'
+   | 'ipc-monitor'
+   | 'settings'
+   | 'query' // 查询（全局账户查询）
+   | 'infinite'
+   | 'query-orders' // 报单查询（独立窗口）
+   | 'query-positions' // 持仓查询（独立窗口）
+ 
+ /** 所有标签页类型 */
+ export const TAB_TYPES: TabType[] = [
+   'market',
+-  'favorites',
++  'collections',
++  'collection',
+   'order',
+   'kline',
+   'options',
+   'tquote',
+   'ipc-monitor',
+   'settings',
+   'query',
+   'infinite',
+   'query-orders',
+   'query-positions',
+@@ -54,21 +56,21 @@ export interface Tab {
+ 
+ const DEFAULT_TABS: Tab[] = [
+   { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
+   { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false },
+ ]
+ 
+ interface TabStore {
+   tabs: Tab[]
+   activeTabId: string
+ 
+-  /** 打开标签页；相同 type+instrumentID 去重，超上限拒绝。返回 true 表示成功打开/激活 */
++  /** 打开标签页；相同 type+instrumentID/collectionId 去重，超上限拒绝。返回 true 表示成功打开/激活 */
+   openTab: (options: { type: TabType; title: string; props?: Record<string, unknown>; closable?: boolean }) => boolean
+ 
+   /** 关闭标签页；固定标签不可关闭 */
+   closeTab: (tabId: string) => void
+ 
+   /** 关闭除指定标签外的所有可关闭非固定标签；activeTabId 保持 */
+   closeOthers: (tabId: string) => void
+   /** 关闭所有可关闭非固定标签；activeTabId 指向剩余第一个 */
+   closeAll: () => void
+   /** 切换固定状态；closable:false 标签（行情/初始页）拒绝 */
+@@ -82,43 +84,47 @@ interface TabStore {
+   setActiveTab: (tabId: string) => void
+ 
+   /** 按 type + props 查找已打开的标签页 */
+   getTabByType: (type: TabType, props?: Record<string, unknown>) => Tab | undefined
+ }
+ 
+ // --- 辅助函数 ---
+ 
+ /** 生成标签页 ID */
+ export function generateTabId(type: TabType, props?: Record<string, unknown>): string {
+-  const suffix = props?.instrumentID ? `-${props.instrumentID}` : ''
+-  return `tab-${type}${suffix}`
++  const suffix = props?.collectionId ?? props?.instrumentID
++  const suffixStr = typeof suffix === 'string' ? `-${suffix}` : ''
++  return `tab-${type}${suffixStr}`
+ }
+ 
+ // --- Store ---
+ 
+ export const useTabStore = create<TabStore>((set, get) => ({
+   tabs: DEFAULT_TABS,
+   activeTabId: DEFAULT_TABS[0].id,
+ 
+   openTab: ({ type, title, props = {}, closable = true }) => {
+     const tabId = generateTabId(type, props)
+     let result = false
+ 
+     set((state) => {
+-      // 去重：优先按 id（type+instrumentID）匹配；K线页内切换合约后 tab id 保持稳定，
+-      // 再按 type+instrumentID 内容匹配。命中时同步 props/title，自愈陈旧内容。
++      // 去重：优先按 id（type+instrumentID/collectionId）匹配；K线页内切换合约后 tab id 保持稳定，
++      // 再按 type+instrumentID 或 type+collectionId 内容匹配。命中时同步 props/title，自愈陈旧内容。
+       const existing = state.tabs.find(
+         (t) =>
+           t.id === tabId ||
+           (typeof props.instrumentID === 'string' &&
+             t.type === type &&
+-            t.props.instrumentID === props.instrumentID),
++            t.props.instrumentID === props.instrumentID) ||
++          (typeof props.collectionId === 'string' &&
++            t.type === type &&
++            t.props.collectionId === props.collectionId),
+       )
+       if (existing) {
+         result = true
+         return {
+           tabs: state.tabs.map((t) => (t.id === existing.id ? { ...t, props, title } : t)),
+           activeTabId: existing.id,
+         }
+       }
+ 
+       // 数量限制

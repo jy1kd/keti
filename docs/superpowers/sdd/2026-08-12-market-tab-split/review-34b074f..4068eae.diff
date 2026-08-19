@@ -1,0 +1,120 @@
+# Review package: 34b074f..HEAD
+
+## Commits
+4068eae fix(market): QuoteTable spec 稳定性契约（JSDoc + dev 守卫），删测试多余强转
+
+## Files changed
+ frontend/src/modules/market/QuoteTable.test.tsx |  2 +-
+ frontend/src/modules/market/QuoteTable.tsx      | 17 ++++++++++++++++-
+ 2 files changed, 17 insertions(+), 2 deletions(-)
+
+## Diff
+diff --git a/frontend/src/modules/market/QuoteTable.test.tsx b/frontend/src/modules/market/QuoteTable.test.tsx
+index e32dee3..bc3369e 100644
+--- a/frontend/src/modules/market/QuoteTable.test.tsx
++++ b/frontend/src/modules/market/QuoteTable.test.tsx
+@@ -740,21 +740,21 @@ describe('QuoteTable', () => {
+   // --- spec 驱动新增行为 tests ---
+ 
+   it('bodyStyle.bgColor：spec.rowStyle 行级底色优先于多选蓝高亮', async () => {
+     const spec = {
+       columns: futuresSpec.columns,
+       buildRecord: futuresSpec.buildRecord,
+       // 标底行深色底（Task 6 期权表语义），此处用 kind 区分
+       rowStyle: (r: { kind: string }) => (r.kind === 'underlying' ? { bgColor: '#161b22' } : undefined),
+     }
+     render(
+-      <QuoteTable spec={spec as any}
++      <QuoteTable spec={spec}
+         contracts={mockContracts}
+         snapshots={mockSnapshots}
+         selectedContracts={new Set(['au2508'])}
+       />
+     )
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     const bgColor = options.theme.bodyStyle.bgColor
+     expect(typeof bgColor).toBe('function')
+     // 行级样式优先：au2508 虽在选中蓝区，但 spec.rowStyle 命中标底行 → 深色底
+diff --git a/frontend/src/modules/market/QuoteTable.tsx b/frontend/src/modules/market/QuoteTable.tsx
+index ee8dfea..b4e6722 100644
+--- a/frontend/src/modules/market/QuoteTable.tsx
++++ b/frontend/src/modules/market/QuoteTable.tsx
+@@ -1,19 +1,23 @@
+ import { useRef, useEffect, useCallback, useState } from 'react'
+ import { ListTable } from '@visactor/vtable'
+ import type { MarketSnapshot, ContractInfo } from '@/services/types'
+ import { SCROLLBAR_SIZE, SCROLL_STYLE } from '@/utils/vtableTheme'
+ import { useMarketStore } from './store'
+ import { PLACEHOLDER, shouldRenderAnchor, type QuoteRecord, type QuoteTableSpec } from './quoteTableCore'
+ 
+ interface QuoteTableProps {
+-  /** spec 驱动：列定义 + buildRecord（期货 futuresSpec / 期权 optionsSpec 复用） */
++  /**
++   * 行情表 spec（列定义 + buildRecord + 可选行级样式）。
++   * 必须为模块级稳定常量（如 futuresSpec/optionsSpec），运行时不得替换；
++   * 传入身份会变化的 spec 将导致表格陈旧（columns/buildRecord/rowStyle 被冻结）。
++   */
+   spec: QuoteTableSpec
+   contracts: ContractInfo[]
+   snapshots: Map<string, MarketSnapshot>
+   selectedInstrument?: string | null
+   /** 当前标签是否激活（激活时重报可见区） */
+   isActive?: boolean
+   onRowClick?: (instrumentID: string, price: number) => void
+   onRowDoubleClick?: (instrumentID: string, price: number) => void
+   /** 单选右键菜单回调，传入合约 ID、价格、鼠标事件 */
+   onContextMenu?: (instrumentID: string, price: number, event: MouseEvent) => void
+@@ -39,20 +43,22 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
+   const tableRef = useRef<ListTable | null>(null)
+   const onClickRef = useRef(onRowClick)
+   const onDblClickRef = useRef(onRowDoubleClick)
+   const onContextMenuRef = useRef(onContextMenu)
+   const onMultiSelectContextMenuRef = useRef(onMultiSelectContextMenu)
+   const onVisibleRangeChangeRef = useRef(onVisibleRangeChange)
+   const onFavoriteChangeRef = useRef(onFavoriteChange)
+   const favoritedIdsRef = useRef(favoritedIds)
+   const selectedContractsRef = useRef(selectedContracts)
+   const onSelectionChangeRef = useRef(onSelectionChange)
++  /** dev 守卫：记录最近一次 spec 引用，检测运行时 spec 身份变化（spec 必须为稳定常量） */
++  const specRef = useRef(spec)
+   const lastClickedIndexRef = useRef<number | null>(null)
+   const lastClickTimeRef = useRef<number>(0)
+   const lastClickRowRef = useRef<number>(-1)
+   const recordsRef = useRef<QuoteRecord[]>([])
+   /** 每行最近一次 buildRecord 所用的 snapshot 引用（按行跟踪，仅对可见行生效） */
+   const rowSnapshotRef = useRef<(MarketSnapshot | undefined)[]>([])
+   /** 可见区版本号：滚动导致可见范围变化时递增，驱动局部更新 effect 重算（滚入新区域的行立即刷新） */
+   const [visibleRangeVersion, setVisibleRangeVersion] = useState(0)
+   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+   /** 最近一次滚动发生的时间戳（松手检测窗口依据） */
+@@ -61,20 +67,29 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
+   useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
+   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
+   useEffect(() => { onContextMenuRef.current = onContextMenu }, [onContextMenu])
+   useEffect(() => { onMultiSelectContextMenuRef.current = onMultiSelectContextMenu }, [onMultiSelectContextMenu])
+   useEffect(() => { onVisibleRangeChangeRef.current = onVisibleRangeChange }, [onVisibleRangeChange])
+   useEffect(() => { onFavoriteChangeRef.current = onFavoriteChange }, [onFavoriteChange])
+   useEffect(() => { favoritedIdsRef.current = favoritedIds }, [favoritedIds])
+   useEffect(() => { selectedContractsRef.current = selectedContracts }, [selectedContracts])
+   useEffect(() => { onSelectionChangeRef.current = onSelectionChange }, [onSelectionChange])
+ 
++  // 开发期守卫：spec 必须为模块级稳定常量（futuresSpec/optionsSpec）。运行时替换 spec 会
++  // 导致表格陈旧——columns/buildRecord/rowStyle 冻结在首渲染闭包内。仅 dev 告警，不抛错。
++  useEffect(() => {
++    if (import.meta.env.DEV && specRef.current !== spec) {
++      console.warn('[QuoteTable] spec 身份变化——spec 必须为稳定常量，运行时替换不支持')
++    }
++    specRef.current = spec
++  }, [spec])
++
+   // 可见行检测函数（提取为共享），包含预加载
+   const notifyVisibleRange = useCallback(() => {
+     if (!onVisibleRangeChangeRef.current || !tableRef.current) return
+     try {
+       const range = tableRef.current.getBodyVisibleCellRange()
+       if (!range) return
+       const PRELOAD_ROWS = 10
+       const startRow = Math.max(0, range.rowStart - 1 - PRELOAD_ROWS) // vtable row 0 = header，向上预加载
+       const endRow = Math.min(recordsRef.current.length - 1, range.rowEnd - 1 + PRELOAD_ROWS) // 向下预加载
+       const visibleIDs: string[] = []

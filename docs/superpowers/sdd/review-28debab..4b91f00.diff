@@ -1,0 +1,185 @@
+# Review package: 28debab..HEAD
+
+## Commits
+4b91f00 feat(task-12): 新增 /exchanges, /products, /search 端点 + /instruments?ids= 支持
+
+## Files changed
+ server/api/market.py            | 41 +++++++++++++++++--
+ server/tests/test_market_api.py | 90 +++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 127 insertions(+), 4 deletions(-)
+
+## Diff
+diff --git a/server/api/market.py b/server/api/market.py
+index 07826ad..47dec5a 100644
+--- a/server/api/market.py
++++ b/server/api/market.py
+@@ -26,27 +26,60 @@ class UnsubscribeRequest(BaseModel):
+ # ── Helpers ─────────────────────────────────────────────────────────────
+ 
+ def _get_service(request: Request):
+     """Dependency: get MarketService from app state."""
+     return request.app.state.market_service
+ 
+ 
+ # ── Instruments ─────────────────────────────────────────────────────────
+ 
+ @router.get("/instruments")
+-async def get_instruments(request: Request, keyword: str = ""):
+-    """Query contract list, optionally filtered by keyword (fuzzy search).
++async def get_instruments(request: Request, keyword: str = "", ids: str = ""):
++    """Query contract list.
+ 
+-    Searches across instrumentID, instrumentName, exchangeID, productID.
++    Supports two modes:
++    - ids: comma-separated instrument IDs (batch lookup)
++    - keyword: fuzzy search across instrumentID, instrumentName, exchangeID, productID
+     """
+     svc = _get_service(request)
+-    instruments = svc.get_instruments(keyword=keyword)
++    if ids:
++        id_list = [i.strip() for i in ids.split(",") if i.strip()]
++        instruments = svc.get_instruments_by_ids(id_list)
++    else:
++        instruments = svc.get_instruments(keyword=keyword)
++    return {"instruments": instruments, "count": len(instruments)}
++
++
++@router.get("/instruments/exchanges")
++async def get_exchanges(request: Request):
++    """Return deduplicated list of exchange IDs."""
++    svc = _get_service(request)
++    return {"exchanges": svc.get_exchanges()}
++
++
++@router.get("/instruments/products")
++async def get_products(request: Request, exchange: str = Query(..., min_length=1)):
++    """Return product IDs for a given exchange."""
++    svc = _get_service(request)
++    return {"products": svc.get_products(exchange)}
++
++
++@router.get("/instruments/search")
++async def search_instruments(
++    request: Request,
++    exchange: str = Query(..., min_length=1),
++    product: str = Query(..., min_length=1),
++    keyword: str = Query(""),
++):
++    """Search instruments by exchange + product, with optional keyword filter."""
++    svc = _get_service(request)
++    instruments = svc.search_instruments(exchange, product, keyword=keyword or None)
+     return {"instruments": instruments, "count": len(instruments)}
+ 
+ 
+ # ── Subscribe ───────────────────────────────────────────────────────────
+ @router.post("/subscribe")
+ async def subscribe(body: SubscribeRequest, request: Request):
+     """Subscribe to market data for a list of instrument IDs.
+ 
+     Returns: { success, added, alreadySubscribed, message? }
+     """
+diff --git a/server/tests/test_market_api.py b/server/tests/test_market_api.py
+index c1dacb6..c463afb 100644
+--- a/server/tests/test_market_api.py
++++ b/server/tests/test_market_api.py
+@@ -429,10 +429,100 @@ class TestInstrumentsRefresh:
+                 return -1
+ 
+         app = _make_app_with_trader(MockTraderApi())
+         transport = ASGITransport(app=app)
+         async with AsyncClient(transport=transport, base_url="http://test") as client:
+             resp = await client.post("/api/market/instruments/refresh")
+         assert resp.status_code == 200
+         data = resp.json()
+         assert data["success"] is False
+         assert "query failed" in data["message"].lower()
++
++
++# ── Instrument search endpoints ──────────────────────────────────────
++
++class TestGetExchanges:
++    """GET /api/market/instruments/exchanges"""
++
++    @pytest.mark.asyncio
++    async def test_returns_exchanges(self, app):
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.get("/api/market/instruments/exchanges")
++        assert resp.status_code == 200
++        data = resp.json()
++        assert set(data["exchanges"]) == {"CFFEX", "SHFE"}
++
++
++class TestGetProducts:
++    """GET /api/market/instruments/products"""
++
++    @pytest.mark.asyncio
++    async def test_returns_products_for_exchange(self, app):
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.get("/api/market/instruments/products", params={"exchange": "CFFEX"})
++        assert resp.status_code == 200
++        data = resp.json()
++        assert "IF" in data["products"]
++
++    @pytest.mark.asyncio
++    async def test_missing_exchange_returns_422(self, app):
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.get("/api/market/instruments/products")
++        assert resp.status_code == 422
++
++
++class TestSearchInstruments:
++    """GET /api/market/instruments/search"""
++
++    @pytest.mark.asyncio
++    async def test_search_by_exchange_and_product(self, app):
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.get("/api/market/instruments/search", params={"exchange": "CFFEX", "product": "IF"})
++        assert resp.status_code == 200
++        data = resp.json()
++        assert data["count"] == 2
++
++    @pytest.mark.asyncio
++    async def test_search_with_keyword(self, app):
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.get("/api/market/instruments/search", params={"exchange": "CFFEX", "product": "IF", "keyword": "2608"})
++        assert resp.status_code == 200
++        data = resp.json()
++        assert data["count"] == 1
++        assert data["instruments"][0]["instrumentID"] == "IF2608"
++
++    @pytest.mark.asyncio
++    async def test_missing_params_returns_422(self, app):
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.get("/api/market/instruments/search")
++        assert resp.status_code == 422
++
++
++class TestGetInstrumentsByIds:
++    """GET /api/market/instruments?ids=X,Y,Z"""
++
++    @pytest.mark.asyncio
++    async def test_returns_matching_instruments(self, app):
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.get("/api/market/instruments", params={"ids": "IF2608,au2608"})
++        assert resp.status_code == 200
++        data = resp.json()
++        assert data["count"] == 2
++        ids = {inst["instrumentID"] for inst in data["instruments"]}
++        assert ids == {"IF2608", "au2608"}
++
++    @pytest.mark.asyncio
++    async def test_ids_empty_string_returns_all(self, app):
++        """Without ids param, returns all instruments (existing behavior)."""
++        transport = ASGITransport(app=app)
++        async with AsyncClient(transport=transport, base_url="http://test") as client:
++            resp = await client.get("/api/market/instruments")
++        assert resp.status_code == 200
++        data = resp.json()
++        assert data["count"] == 3

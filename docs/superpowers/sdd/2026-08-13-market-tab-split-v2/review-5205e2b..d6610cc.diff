@@ -1,0 +1,430 @@
+# Review package: 5205e2b..HEAD
+
+## Commits
+d6610cc feat(options): 期权列表标底行改为合并表头行（标红加粗大字，不显行情）
+
+## Files changed
+ frontend/src/modules/market/QuoteTable.test.tsx | 46 +++++++++++++
+ frontend/src/modules/market/QuoteTable.tsx      | 89 ++++++++++++++++++++++++-
+ frontend/src/modules/market/optionsSpec.test.ts | 11 +++
+ frontend/src/modules/market/optionsSpec.ts      |  8 ++-
+ frontend/src/setupTests.ts                      |  2 +
+ 5 files changed, 151 insertions(+), 5 deletions(-)
+
+## Diff
+diff --git a/frontend/src/modules/market/QuoteTable.test.tsx b/frontend/src/modules/market/QuoteTable.test.tsx
+index 47b92d7..c0ec183 100644
+--- a/frontend/src/modules/market/QuoteTable.test.tsx
++++ b/frontend/src/modules/market/QuoteTable.test.tsx
+@@ -1,15 +1,16 @@
+ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+ import { render, act } from '@testing-library/react'
+ import { QuoteTable } from './QuoteTable'
+ import { shouldRenderAnchor } from './quoteTableCore'
+ import { futuresSpec } from './futuresSpec'
++import { optionsSpec } from './optionsSpec'
+ import { useMarketStore } from './store'
+ import type { MarketSnapshot, ContractInfo } from '@/services/types'
+ 
+ describe('QuoteTable', () => {
+   const mockContracts: ContractInfo[] = [
+     { instrumentID: 'au2508', instrumentName: '黄金2508', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '20250815', isTrading: 1, productClass: "1" },
+     { instrumentID: 'ag2508', instrumentName: '白银2508', exchangeID: 'SHFE', productID: 'ag', volumeMultiple: 15, priceTick: 1, expireDate: '20250815', isTrading: 1, productClass: "1" },
+   ]
+ 
+   const mockSnapshots = new Map<string, MarketSnapshot>([
+@@ -810,11 +811,56 @@ describe('QuoteTable', () => {
+       <QuoteTable spec={futuresSpec}
+         contracts={mockContracts}
+         snapshots={mockSnapshots}
+         isActive={true}
+         onVisibleRangeChange={onVisibleRangeChange}
+       />
+     )
+     expect(onVisibleRangeChange).toHaveBeenCalled()
+     expect(onVisibleRangeChange.mock.calls[0][0]).toEqual(expect.arrayContaining(['au2508', 'ag2508']))
+   })
++
++  // --- 期权标底行 → 合并整行表头（Task 1） ---
++
++  describe('标底行合并为整行表头', () => {
++    const fut: ContractInfo = { instrumentID: 'FG609', instrumentName: 'FG609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' }
++    const opt: ContractInfo = { instrumentID: 'FG609-C-1300', instrumentName: 'FG609-C-1300', exchangeID: 'CZCE', productID: 'FGC', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '2', underlyingInstrID: 'FG609', optionsType: '1', strikePrice: 1300 }
++
++    it('标底行渲染后调用 mergeCells 整行合并，期权行不合并', async () => {
++      render(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} />)
++      const { ListTable } = await import('@visactor/vtable')
++      const instance = (ListTable as any).mock.results[0].value
++      // 标底行 records index 0 → vtable 物理行 1（0=表头），整行合并
++      expect(instance.mergeCells).toHaveBeenCalledWith(0, 1, optionsSpec.columns.length - 1, 1)
++      // 期权行（物理行 2）不合并
++      expect(instance.mergeCells).not.toHaveBeenCalledWith(0, 2, optionsSpec.columns.length - 1, 2)
++    })
++
++    it('合约列样式：标底行返回红/粗/大字，期权行保持原样式', async () => {
++      render(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} />)
++      const { ListTable } = await import('@visactor/vtable')
++      const options = (ListTable as any).mock.calls[0][1]
++      const instrumentCol = options.columns.find((c: { field: string }) => c.field === 'instrumentID')
++      expect(typeof instrumentCol.style).toBe('function')
++      const records = [
++        optionsSpec.buildRecord(fut, undefined, false),
++        optionsSpec.buildRecord(opt, undefined, false),
++      ]
++      // 标底行（row=1 → records[0]）
++      expect(instrumentCol.style({ table: { records }, row: 1, col: 0 })).toEqual({ color: '#f87171', fontWeight: 'bold', fontSize: 14 })
++      // 期权行（row=2 → records[1]）无叠加样式
++      expect(instrumentCol.style({ table: { records }, row: 2, col: 0 })).toBeUndefined()
++    })
++
++    it('单击合并后的标底行仍解析为 underlying 行并触发 onSelectionChange', async () => {
++      const onSelectionChange = vi.fn()
++      render(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} onSelectionChange={onSelectionChange} />)
++      const { ListTable } = await import('@visactor/vtable')
++      const instance = (ListTable as any).mock.results[0].value
++      const clickHandler = instance.on.mock.calls.find((call: any[]) => call[0] === 'click_cell')?.[1]
++      expect(clickHandler).toBeDefined()
++      // vtable 合并单元格的 row 指向被合并首行（标底行）；col 落在中间列（非收藏列）
++      clickHandler({ row: 1, col: 5, event: {} })
++      expect(onSelectionChange).toHaveBeenCalledWith(new Set(['FG609']))
++    })
++  })
+ })
+diff --git a/frontend/src/modules/market/QuoteTable.tsx b/frontend/src/modules/market/QuoteTable.tsx
+index b7094cf..a7bf74c 100644
+--- a/frontend/src/modules/market/QuoteTable.tsx
++++ b/frontend/src/modules/market/QuoteTable.tsx
+@@ -31,20 +31,42 @@ interface QuoteTableProps {
+   onFavoriteChange?: (instrumentID: string, isFavorited: boolean) => void
+   /** 多选的合约 ID 集合 */
+   selectedContracts?: Set<string>
+   /** 多选变化回调 */
+   onSelectionChange?: (selectedIDs: Set<string>) => void
+ }
+ 
+ /** mouseup 距上次 scroll 在此窗口内视为滚动条释放（松手） */
+ const SCROLL_RELEASE_WINDOW_MS = 200
+ 
++/** 标底行（合并表头行）合约列样式：红/粗/大字（比默认 12 加大） */
++const UNDERLYING_HEADER_STYLE = { color: '#f87171', fontWeight: 'bold', fontSize: 14 }
++
++/**
++ * 合约列样式包装：标底行（整行合并后该样式作用于合并单元格）→ 红/粗/大字；
++ * 其余行保持列原样式（optionsSpec 合约列无 style，futuresSpec 若有则透传）。
++ * 不修改 spec.columns（模块级共享常量），仅对 ListTable 传入一份包装副本。
++ */
++function withUnderlyingHeaderStyle(columns: QuoteTableSpec['columns']): QuoteTableSpec['columns'] {
++  return columns.map((col) => {
++    if (col.field !== 'instrumentID') return col
++    return {
++      ...col,
++      style: (args: any) => {
++        const record = args.table?.records?.[args.row - 1]
++        if (record?.kind === 'underlying') return UNDERLYING_HEADER_STYLE
++        return col.style?.(args)
++      },
++    }
++  })
++}
++
+ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isActive, onRowClick, onRowDoubleClick, onContextMenu, onMultiSelectContextMenu, onVisibleRangeChange, favoritedIds, onFavoriteChange, selectedContracts, onSelectionChange }: QuoteTableProps) {
+   const containerRef = useRef<HTMLDivElement>(null)
+   const tableRef = useRef<ListTable | null>(null)
+   const onClickRef = useRef(onRowClick)
+   const onDblClickRef = useRef(onRowDoubleClick)
+   const onContextMenuRef = useRef(onContextMenu)
+   const onMultiSelectContextMenuRef = useRef(onMultiSelectContextMenu)
+   const onVisibleRangeChangeRef = useRef(onVisibleRangeChange)
+   const onFavoriteChangeRef = useRef(onFavoriteChange)
+   const favoritedIdsRef = useRef(favoritedIds)
+@@ -59,20 +81,24 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
+   const lastClickTimeRef = useRef<number>(0)
+   const lastClickRowRef = useRef<number>(-1)
+   const recordsRef = useRef<QuoteRecord[]>([])
+   /** 每行最近一次 buildRecord 所用的 snapshot 引用（按行跟踪，仅对可见行生效） */
+   const rowSnapshotRef = useRef<(MarketSnapshot | undefined)[]>([])
+   /** 可见区版本号：滚动导致可见范围变化时递增，驱动局部更新 effect 重算（滚入新区域的行立即刷新） */
+   const [visibleRangeVersion, setVisibleRangeVersion] = useState(0)
+   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+   /** 最近一次滚动发生的时间戳（松手检测窗口依据） */
+   const lastScrollAtRef = useRef(0)
++  /** 已合并的标底行 vtable 物理行号集合（0=表头）：跟踪合并状态 → 撤销漂移行 + 跳过重复合并 */
++  const mergedRowsRef = useRef<Set<number>>(new Set())
++  /** 合并兜底 rAF 句柄（渲染异步未就绪时重试；卸载/重建时清除在排队帧） */
++  const mergeRafRef = useRef<number | null>(null)
+ 
+   useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
+   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
+   useEffect(() => { onContextMenuRef.current = onContextMenu }, [onContextMenu])
+   useEffect(() => { onMultiSelectContextMenuRef.current = onMultiSelectContextMenu }, [onMultiSelectContextMenu])
+   useEffect(() => { onVisibleRangeChangeRef.current = onVisibleRangeChange }, [onVisibleRangeChange])
+   useEffect(() => { onFavoriteChangeRef.current = onFavoriteChange }, [onFavoriteChange])
+   useEffect(() => { favoritedIdsRef.current = favoritedIds }, [favoritedIds])
+   useEffect(() => { selectedContractsRef.current = selectedContracts }, [selectedContracts])
+   useEffect(() => { onSelectionChangeRef.current = onSelectionChange }, [onSelectionChange])
+@@ -109,28 +135,69 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
+     }
+   }, [])
+ 
+   // 挂载/重建后延迟上报可见区。隐藏面板（isActive=false）跳过，避免覆盖活跃面板的可见范围；
+   // 激活时由 isActive 翻转 effect 补报（见组件底部）。
+   const scheduleVisibleRangeReport = useCallback(() => {
+     if (isActiveRef.current === false) return
+     setTimeout(notifyVisibleRange, 0)
+   }, [notifyVisibleRange])
+ 
++  /**
++   * 合并标底行为整行表头：`mergeCells(0, row, colCount-1, row)`（vtable 行号 0=表头，记录索引 +1）。
++   * 在 setRecords 之后调用（vtable 场景图由 setRecords 同步构建，直接合并即可）：
++   * - 先撤销已合并但不再是标底的行（setRecords 重建数据后行号可能漂移，旧合并会残留在错误行）；
++   * - 再合并当前标底行，已合并行跳过（避免重复 push customMergeCell → 渲染错乱）；
++   * - 合并失败（渲染异步未就绪）的行不入集合，由 rAF 兜底重试（见 contracts effect）。
++   */
++  const applyRowMerges = useCallback(() => {
++    const table = tableRef.current
++    if (!table || typeof table.mergeCells !== 'function') return
++    const lastCol = spec.columns.length - 1
++    const underlyingRows = new Set<number>()
++    recordsRef.current.forEach((record, i) => {
++      if (record.kind === 'underlying') underlyingRows.add(i + 1)
++    })
++    // 撤销不再标底的行（unmergeCells 不存在则跳过，兼容无合并语义的表）
++    for (const row of mergedRowsRef.current) {
++      if (!underlyingRows.has(row)) {
++        try {
++          table.unmergeCells?.(0, row, lastCol, row)
++        } catch {
++          // vtable 尚未就绪，忽略
++        }
++      }
++    }
++    const next = new Set<number>()
++    for (const row of underlyingRows) {
++      if (mergedRowsRef.current.has(row)) {
++        next.add(row)
++        continue
++      }
++      try {
++        table.mergeCells(0, row, lastCol, row)
++        next.add(row)
++      } catch {
++        // 本轮未就绪，留待下一轮 setRecords/rAF 重试
++      }
++    }
++    mergedRowsRef.current = next
++  }, [spec])
++
+   useEffect(() => {
+     if (!containerRef.current) return
+ 
+     const records = contracts.map((c) => spec.buildRecord(c, snapshots.get(c.instrumentID), favoritedIds?.has(c.instrumentID) ?? false))
+     recordsRef.current = records
+ 
+     const table = new ListTable(containerRef.current, {
+-      columns: spec.columns,
++      columns: withUnderlyingHeaderStyle(spec.columns),
+       records,
+       frozenColCount: 1, // 冻结「合约」列：横向拖动时固定最左侧
+       widthMode: 'standard',
+       columnResizeMode: 'all', // 保留每列拖拽缩放：可单独放大/缩小任意列宽
+       select: {
+         // 禁用 vtable 原生拖选扩展：拖选批量选中由下方 window 监听实现（蓝区），
+         // 金色活动锚点由 shouldRenderAnchor 守卫 + selectRow/clearSelected 唯一控制。
+         // 若不关掉，二次拖选时原生金色矩形会与 RAF selectRow 竞态，定格滞留无法清除。
+         disableDragSelect: true,
+       },
+@@ -239,21 +306,21 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
+             }
+             onSelectionChangeRef.current(currentSelected)
+           } else {
+             // 普通点击：单选
+             onSelectionChangeRef.current(new Set([record.instrumentID]))
+           }
+         }
+       }
+ 
+       // 触发回调：双击优先，否则单击
+-      const price = record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
++      const price = record.lastPrice == null || record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
+       if (isDoubleClick && onDblClickRef.current) {
+         onDblClickRef.current(record.instrumentID, price)
+       } else if (onClickRef.current) {
+         onClickRef.current(record.instrumentID, price)
+       }
+     })
+ 
+     // Ctrl+A 全选
+     const handleKeyDown = (e: KeyboardEvent) => {
+       if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+@@ -280,21 +347,21 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
+       const selected = selectedContractsRef.current
+ 
+       // 如果右键点击的行在多选范围内，且有多选回调，显示多选菜单
+       if (selected && selected.size > 1 && selected.has(record.instrumentID) && onMultiSelectContextMenuRef.current) {
+         onMultiSelectContextMenuRef.current(Array.from(selected), event)
+       } else {
+         // 右键落在集合外 → 先同步蓝区（单选该合约），再显示单选菜单
+         if (onSelectionChangeRef.current) {
+           onSelectionChangeRef.current(new Set([record.instrumentID]))
+         }
+-        const price = record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
++        const price = record.lastPrice == null || record.lastPrice === PLACEHOLDER ? 0 : (record.lastPrice as number)
+         onContextMenuRef.current?.(record.instrumentID, price, event)
+       }
+     })
+ 
+     // 鼠标拖动选择
+     let isDragging = false
+     let dragStartRow = -1
+     let dragSelected = new Set<string>()
+     /** 本次按下是否为普通拖选（无 Ctrl/Shift）：首次 mousemove 时清掉金色锚点 */
+     let plainDragStart = false
+@@ -406,20 +473,25 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
+       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+       notifyVisibleRange()
+       useMarketStore.getState().markScrollEnd()
+     }
+     window.addEventListener('mouseup', handleScrollEnd)
+     window.addEventListener('keyup', handleScrollEnd)
+ 
+     tableRef.current = table
+ 
+     return () => {
++      // 清除排队中的合并兜底帧（表已 release，避免对已释放实例补合并）
++      if (mergeRafRef.current != null && typeof cancelAnimationFrame === 'function') {
++        cancelAnimationFrame(mergeRafRef.current)
++        mergeRafRef.current = null
++      }
+       window.removeEventListener('keydown', handleKeyDown)
+       if (container) {
+         container.removeEventListener('mousedown', handleMouseDown)
+       }
+       window.removeEventListener('mousemove', handleMouseMove)
+       window.removeEventListener('mouseup', handleMouseUp)
+       window.removeEventListener('mouseup', handleScrollEnd)
+       window.removeEventListener('keyup', handleScrollEnd)
+       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+       table.release()
+@@ -428,20 +500,31 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
+ 
+   // 合约列表或收藏变化 → 全量 setRecords（低频）
+   useEffect(() => {
+     if (!tableRef.current) return
+     const records = contracts.map((contract) => spec.buildRecord(contract, snapshots.get(contract.instrumentID), favoritedIds?.has(contract.instrumentID) ?? false))
+     recordsRef.current = records
+     // 重置每行 snapshot 跟踪：全量重建后所有行都视为已同步
+     rowSnapshotRef.current = contracts.map((c) => snapshots.get(c.instrumentID))
+     tableRef.current.setRecords(records)
+     lastClickedIndexRef.current = null
++    // 标底行合并：setRecords 场景图同步构建，直接合并；rAF 兜底重试渲染异步未就绪的行
++    applyRowMerges()
++    if (mergeRafRef.current != null && typeof cancelAnimationFrame === 'function') {
++      cancelAnimationFrame(mergeRafRef.current)
++    }
++    if (typeof requestAnimationFrame === 'function') {
++      mergeRafRef.current = requestAnimationFrame(() => {
++        mergeRafRef.current = null
++        applyRowMerges()
++      })
++    }
+     // 合约重建后延迟补报可见区（隐藏面板不参与上报）
+     scheduleVisibleRangeReport()
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [contracts, favoritedIds])
+ 
+   // snapshots 变化 或 可见区变化 → 仅对可见行局部 updateRecords。
+   // 高频 tick 下逐行按 snapshot 引用比较（rowSnapshotRef），避免对几百个订阅合约全量 buildRecord；
+   // 滚动到新区域时 visibleRangeVersion 递增，触发本 effect 对滚入的行立即重算。
+   useEffect(() => {
+     if (!tableRef.current) return
+diff --git a/frontend/src/modules/market/optionsSpec.test.ts b/frontend/src/modules/market/optionsSpec.test.ts
+index 25f92f7..57622ee 100644
+--- a/frontend/src/modules/market/optionsSpec.test.ts
++++ b/frontend/src/modules/market/optionsSpec.test.ts
+@@ -17,11 +17,22 @@ describe('optionsSpec', () => {
+     expect(r.kind).toBe('underlying')
+     expect(r.contractType).toBe('标')
+   })
+ 
+   it('期权行 kind=option 且类型列 C/P、行权价填充', () => {
+     const r = optionsSpec.buildRecord(opt, undefined, false)
+     expect(r.kind).toBe('option')
+     expect(r.contractType).toBe('C')
+     expect(r.strikePrice).toBe(1300)
+   })
++
++  it('标底行记录只含名称与 kind，行情字段置空', () => {
++    const r = optionsSpec.buildRecord(fut /* productClass '1' FG609 */, undefined, false)
++    expect(r.kind).toBe('underlying')
++    expect(r.instrumentID).toBe('FG609')
++    expect(r.contractType).toBe('标')
++    // 不再填充行情数据字段（整行合并后只显示名称）
++    expect(r.lastPrice).toBeUndefined()
++    expect(r.change).toBeUndefined()
++    expect(r.bidPrice1).toBeUndefined()
++  })
+ })
+diff --git a/frontend/src/modules/market/optionsSpec.ts b/frontend/src/modules/market/optionsSpec.ts
+index 02df64f..eb10727 100644
+--- a/frontend/src/modules/market/optionsSpec.ts
++++ b/frontend/src/modules/market/optionsSpec.ts
+@@ -14,27 +14,31 @@ const columns = [
+   { field: 'changePercent', title: '涨跌%', width: 115, style: coloredStyle },
+   { field: 'bidPrice1', title: '买一', width: 120, style: coloredStyle },
+   { field: 'askPrice1', title: '卖一', width: 120, style: coloredStyle },
+   { field: 'volume', title: '成交量', width: 90 },
+   { field: 'openInterest', title: '持仓量', width: 90 },
+   { field: 'favorite', title: '⭐', width: 60 },
+ ]
+ 
+ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, isFavorited: boolean): QuoteRecord {
+   const kind: QuoteRowKind = contract.productClass === '1' ? 'underlying' : 'option'
++  // 标底行：整行合并为表头（只显示合约名，标红加粗大字），不再填充任何行情/静态字段
++  if (kind === 'underlying') {
++    return { instrumentID: contract.instrumentID, kind, contractType: '标' }
++  }
+   const status = getContractStatus(contract)
+-  const contractType = kind === 'underlying' ? '标' : (contract.optionsType === '1' ? 'C' : 'P')
++  const contractType = contract.optionsType === '1' ? 'C' : 'P'
+   const base = {
+     instrumentID: contract.instrumentID,
+     kind,
+     contractType,
+-    strikePrice: kind === 'option' ? contract.strikePrice : PLACEHOLDER,
++    strikePrice: contract.strikePrice,
+     expireDate: contract.expireDate || PLACEHOLDER,
+     exchangeID: contract.exchangeID || PLACEHOLDER,
+     status,
+     favorite: isFavorited ? '⭐' : '☆',
+   }
+   if (!snap) {
+     return { ...base, lastPrice: PLACEHOLDER, change: PLACEHOLDER, changePercent: PLACEHOLDER, bidPrice1: PLACEHOLDER, askPrice1: PLACEHOLDER, volume: PLACEHOLDER, openInterest: PLACEHOLDER }
+   }
+   const preSettlement = (snap.preSettlementPrice && snap.preSettlementPrice > 0) ? snap.preSettlementPrice : (snap.preClosePrice || snap.lastPrice)
+   const change = snap.lastPrice - preSettlement
+diff --git a/frontend/src/setupTests.ts b/frontend/src/setupTests.ts
+index fecf0ab..bbfa0b8 100644
+--- a/frontend/src/setupTests.ts
++++ b/frontend/src/setupTests.ts
+@@ -1,19 +1,21 @@
+ import '@testing-library/jest-dom'
+ import { vi } from 'vitest'
+ 
+ // Global mock for @visactor/vtable (canvas-based, can't run in jsdom)
+ vi.mock('@visactor/vtable', () => {
+   const mockInstance = {
+     setRecords: vi.fn(),
+     updateRecords: vi.fn(),
+     updateCellContentRange: vi.fn(),
++    mergeCells: vi.fn(),
++    unmergeCells: vi.fn(),
+     on: vi.fn(),
+     release: vi.fn(),
+     getBodyVisibleCellRange: vi.fn().mockReturnValue({ rowStart: 1, rowEnd: 30, colStart: 0, colEnd: 10 }),
+     selectRow: vi.fn(),
+     clearSelected: vi.fn(),
+     scrollToCell: vi.fn(),
+   }
+   return {
+     ListTable: vi.fn().mockImplementation(() => mockInstance),
+   }

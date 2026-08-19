@@ -1,0 +1,432 @@
+# Review package: 96e2d7f..10e9bb7
+
+## Commits
+10e9bb7 feat(collections): 数据层——userPrefs collections 迁移 + collections store CRUD
+
+## Files changed
+ frontend/src/stores/collections.test.ts |  95 ++++++++++++++++++++++++
+ frontend/src/stores/collections.ts      | 127 ++++++++++++++++++++++++++++++++
+ frontend/src/stores/userPrefs.test.ts   |  40 ++++++++++
+ frontend/src/stores/userPrefs.ts        |  33 +++++----
+ 4 files changed, 280 insertions(+), 15 deletions(-)
+
+## Diff
+diff --git a/frontend/src/stores/collections.test.ts b/frontend/src/stores/collections.test.ts
+new file mode 100644
+index 0000000..fc0139e
+--- /dev/null
++++ b/frontend/src/stores/collections.test.ts
+@@ -0,0 +1,95 @@
++import { describe, it, expect, beforeEach, vi } from 'vitest'
++import { useCollectionsStore, unionFavoritedIds, collectionFavoritedIds } from './collections'
++import { useUserPrefsStore } from './userPrefs'
++
++vi.mock('@/services/api', () => ({
++  getInstrumentsByIds: vi.fn(),
++  getInstruments: vi.fn(),
++  subscribeMarket: vi.fn(),
++  unsubscribeMarket: vi.fn(),
++}))
++
++const mockContract = {
++  instrumentID: 'au2406',
++  instrumentName: '黄金2406',
++  exchangeID: 'SHFE',
++  productID: 'au',
++  volumeMultiple: 1000,
++  priceTick: 0.02,
++  expireDate: '2024-06-15',
++  isTrading: 1,
++  productClass: '1',
++}
++
++describe('useCollectionsStore', () => {
++  beforeEach(() => {
++    useCollectionsStore.setState({ collections: [], loaded: false })
++    useUserPrefsStore.setState({
++      collections: [],
++      hotKeys: { buy: 'b', sell: 's', cancel: 'c', reverse: '', lock: '', batchCancel: 'Escape', openOrder: '', openKline: '', openSettings: '' },
++      quickTradeConfig: { lock: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, reverse: { close: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, open: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, executionMode: 'serial' }, confirmBeforeExecute: true },
++    })
++    localStorage.clear()
++    vi.clearAllMocks()
++  })
++
++  it('createCollection 创建收藏夹并持久化，返回 id', () => {
++    const id = useCollectionsStore.getState().createCollection('农产品')
++    expect(useCollectionsStore.getState().collections).toEqual([{ id, name: '农产品', instrumentIDs: [] }])
++    const stored = JSON.parse(localStorage.getItem('simnow-user-prefs') || '{}')
++    expect(stored.collections).toEqual([{ id, name: '农产品', instrumentIDs: [] }])
++  })
++
++  it('addToCollections 去重追加；removeFromCollection 移除单个；removeFromAllCollections 全夹移除', () => {
++    const store = useCollectionsStore.getState()
++    const a = store.createCollection('A')
++    const b = store.createCollection('B')
++    store.addToCollections(['au2406', 'rb2406'], [a, b])
++    store.addToCollections(['au2406'], [a]) // 重复
++    expect(useCollectionsStore.getState().collections.find((c) => c.id === a)?.instrumentIDs).toEqual(['au2406', 'rb2406'])
++    store.removeFromCollection('au2406', a)
++    expect(useCollectionsStore.getState().collections.find((c) => c.id === a)?.instrumentIDs).toEqual(['rb2406'])
++    expect(useCollectionsStore.getState().collections.find((c) => c.id === b)?.instrumentIDs).toEqual(['au2406', 'rb2406'])
++    store.removeFromAllCollections(['au2406'])
++    expect(useCollectionsStore.getState().collections.find((c) => c.id === b)?.instrumentIDs).toEqual(['rb2406'])
++  })
++
++  it('renameCollection / deleteCollection', () => {
++    const store = useCollectionsStore.getState()
++    const id = store.createCollection('旧名')
++    store.renameCollection(id, '新名')
++    expect(useCollectionsStore.getState().collections[0].name).toBe('新名')
++    store.deleteCollection(id)
++    expect(useCollectionsStore.getState().collections).toEqual([])
++  })
++
++  it('loadCollections：无收藏夹时置空并 loaded', async () => {
++    await useCollectionsStore.getState().loadCollections()
++    expect(useCollectionsStore.getState().loaded).toBe(true)
++    expect(useCollectionsStore.getState().collections).toEqual([])
++  })
++
++  it('loadCollections：union 一次拉取解析，无效 ID 清理并回写', async () => {
++    const { getInstrumentsByIds } = await import('@/services/api')
++    // 经 userPrefs 播种（loadCollections 从 userPrefs 读取，直接 set collections store 会被覆盖）
++    useUserPrefsStore.getState().setCollections([{ id: 'a', name: 'A', instrumentIDs: ['au2406', 'delisted1'] }])
++    vi.mocked(getInstrumentsByIds).mockResolvedValue({ instruments: [mockContract], count: 1 })
++    await useCollectionsStore.getState().loadCollections()
++    const coll = useCollectionsStore.getState().collections[0]
++    expect(coll.instrumentIDs).toEqual(['au2406']) // delisted1 被清理
++    expect(getInstrumentsByIds).toHaveBeenCalledWith(['au2406', 'delisted1'])
++    const stored = JSON.parse(localStorage.getItem('simnow-user-prefs') || '{}')
++    expect(stored.collections[0].instrumentIDs).toEqual(['au2406'])
++    expect(useCollectionsStore.getState().loaded).toBe(true)
++  })
++
++  it('纯派生函数', () => {
++    const cols = [
++      { id: 'a', name: 'A', instrumentIDs: ['au2406', 'rb2406'] },
++      { id: 'b', name: 'B', instrumentIDs: ['rb2406'] },
++    ]
++    expect(Array.from(unionFavoritedIds(cols)).sort()).toEqual(['au2406', 'rb2406'])
++    expect(Array.from(collectionFavoritedIds(cols, 'a')).sort()).toEqual(['au2406', 'rb2406'])
++    expect(collectionFavoritedIds(cols, 'zz').size).toBe(0)
++  })
++})
+diff --git a/frontend/src/stores/collections.ts b/frontend/src/stores/collections.ts
+new file mode 100644
+index 0000000..95a0a91
+--- /dev/null
++++ b/frontend/src/stores/collections.ts
+@@ -0,0 +1,127 @@
++import { create } from 'zustand'
++import { getInstrumentsByIds } from '@/services/api'
++import { useUserPrefsStore } from './userPrefs'
++
++export interface Collection {
++  id: string
++  name: string
++  instrumentIDs: string[]
++}
++
++let idCounter = 0
++export function nextCollectionId(): string {
++  idCounter += 1
++  return `coll-${Date.now().toString(36)}-${idCounter.toString(36)}`
++}
++
++/** 持久化元数据 → userPrefs + localStorage */
++function persist(collections: Collection[]): void {
++  useUserPrefsStore.getState().setCollections(collections)
++  useUserPrefsStore.getState().saveToLocalStorage()
++}
++
++/** 所有收藏夹合约 ID 并集（行情页 ⭐ 填充态） */
++export function unionFavoritedIds(collections: Collection[]): Set<string> {
++  const set = new Set<string>()
++  for (const c of collections) for (const id of c.instrumentIDs) set.add(id)
++  return set
++}
++
++/** 指定收藏夹内合约 ID 集合（夹页 ⭐ 填充态） */
++export function collectionFavoritedIds(collections: Collection[], collectionId: string): Set<string> {
++  return new Set(collections.find((c) => c.id === collectionId)?.instrumentIDs ?? [])
++}
++
++interface CollectionsStore {
++  collections: Collection[]
++  loaded: boolean
++  loadCollections: () => Promise<void>
++  createCollection: (name: string) => string
++  renameCollection: (id: string, name: string) => void
++  deleteCollection: (id: string) => void
++  addToCollections: (instrumentIDs: string[], collectionIds: string[]) => void
++  removeFromCollection: (instrumentID: string, collectionId: string) => void
++  removeFromAllCollections: (instrumentIDs: string[]) => void
++}
++
++export const useCollectionsStore = create<CollectionsStore>((set, get) => ({
++  collections: [],
++  loaded: false,
++
++  loadCollections: async () => {
++    useUserPrefsStore.getState().loadFromLocalStorage()
++    const collections = useUserPrefsStore.getState().collections
++    if (collections.length === 0) {
++      set({ collections: [], loaded: true })
++      return
++    }
++    const allIds = Array.from(new Set(collections.flatMap((c) => c.instrumentIDs)))
++    try {
++      const result = await getInstrumentsByIds(allIds)
++      const byId = new Set((result.instruments ?? []).map((c) => c.instrumentID))
++      let changed = false
++      const next = collections.map((c) => {
++        const valid = c.instrumentIDs.filter((id) => {
++          if (byId.has(id)) return true
++          changed = true
++          return false
++        })
++        return { ...c, instrumentIDs: valid }
++      })
++      if (changed) persist(next)
++      set({ collections: next, loaded: true })
++    } catch (err) {
++      console.error('[collections] Failed to load collection contracts:', err)
++      set({ loaded: true })
++    }
++  },
++
++  createCollection: (name) => {
++    const id = nextCollectionId()
++    const collections = [...get().collections, { id, name, instrumentIDs: [] }]
++    persist(collections)
++    set({ collections })
++    return id
++  },
++
++  renameCollection: (id, name) => {
++    const collections = get().collections.map((c) => (c.id === id ? { ...c, name } : c))
++    persist(collections)
++    set({ collections })
++  },
++
++  deleteCollection: (id) => {
++    const collections = get().collections.filter((c) => c.id !== id)
++    persist(collections)
++    set({ collections })
++  },
++
++  addToCollections: (instrumentIDs, collectionIds) => {
++    const collections = get().collections.map((c) => {
++      if (!collectionIds.includes(c.id)) return c
++      const added = instrumentIDs.filter((id) => !c.instrumentIDs.includes(id))
++      if (added.length === 0) return c
++      return { ...c, instrumentIDs: [...c.instrumentIDs, ...added] }
++    })
++    persist(collections)
++    set({ collections })
++  },
++
++  removeFromCollection: (instrumentID, collectionId) => {
++    const collections = get().collections.map((c) =>
++      c.id === collectionId ? { ...c, instrumentIDs: c.instrumentIDs.filter((id) => id !== instrumentID) } : c,
++    )
++    persist(collections)
++    set({ collections })
++  },
++
++  removeFromAllCollections: (instrumentIDs) => {
++    const ids = new Set(instrumentIDs)
++    const collections = get().collections.map((c) => ({
++      ...c,
++      instrumentIDs: c.instrumentIDs.filter((id) => !ids.has(id)),
++    }))
++    persist(collections)
++    set({ collections })
++  },
++}))
+diff --git a/frontend/src/stores/userPrefs.test.ts b/frontend/src/stores/userPrefs.test.ts
+index 5bd9134..5867c1f 100644
+--- a/frontend/src/stores/userPrefs.test.ts
++++ b/frontend/src/stores/userPrefs.test.ts
+@@ -2,20 +2,21 @@ import { describe, it, expect, beforeEach } from 'vitest'
+ import { useUserPrefsStore, DEFAULT_HOT_KEYS } from './userPrefs'
+ 
+ const STORAGE_KEY = 'simnow-user-prefs'
+ 
+ describe('useUserPrefsStore', () => {
+   beforeEach(() => {
+     localStorage.clear()
+     // 重置 store 为默认值
+     useUserPrefsStore.setState({
+       selectedContracts: [],
++      collections: [],
+       hotKeys: { ...DEFAULT_HOT_KEYS },
+     })
+   })
+ 
+   it('初始状态：默认快捷键配置', () => {
+     const { hotKeys } = useUserPrefsStore.getState()
+     expect(hotKeys.buy).toBe('b')
+     expect(hotKeys.sell).toBe('s')
+     expect(hotKeys.cancel).toBe('c')
+   })
+@@ -70,10 +71,49 @@ describe('useUserPrefsStore', () => {
+   })
+ 
+   it('loadFromLocalStorage localStorage 为空时保持默认值', () => {
+     useUserPrefsStore.getState().loadFromLocalStorage()
+ 
+     const state = useUserPrefsStore.getState()
+     expect(state.selectedContracts).toEqual([])
+     expect(state.hotKeys).toEqual(DEFAULT_HOT_KEYS)
+   })
+ })
++
++describe('useUserPrefsStore collections', () => {
++  beforeEach(() => {
++    localStorage.clear()
++    useUserPrefsStore.setState({
++      collections: [],
++      hotKeys: { ...DEFAULT_HOT_KEYS },
++      quickTradeConfig: { lock: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, reverse: { close: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, open: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, executionMode: 'serial' }, confirmBeforeExecute: true },
++    })
++  })
++
++  it('setCollections + saveToLocalStorage 持久化', () => {
++    const coll = [{ id: 'coll-x', name: 'A', instrumentIDs: ['au2406'] }]
++    useUserPrefsStore.getState().setCollections(coll)
++    useUserPrefsStore.getState().saveToLocalStorage()
++    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
++    expect(stored.collections).toEqual(coll)
++  })
++
++  it('loadFromLocalStorage 迁移：旧 selectedContracts → 默认收藏夹', () => {
++    localStorage.setItem(
++      STORAGE_KEY,
++      JSON.stringify({ selectedContracts: ['au2406', 'rb2406'], hotKeys: { buy: 'F2' } })
++    )
++    useUserPrefsStore.getState().loadFromLocalStorage()
++    expect(useUserPrefsStore.getState().collections).toEqual([
++      { id: 'coll-default', name: '默认收藏夹', instrumentIDs: ['au2406', 'rb2406'] },
++    ])
++  })
++
++  it('已有 collections 时不覆盖（无迁移）', () => {
++    localStorage.setItem(
++      STORAGE_KEY,
++      JSON.stringify({ selectedContracts: ['au2406'], collections: [{ id: 'a', name: 'A', instrumentIDs: ['rb2406'] }] })
++    )
++    useUserPrefsStore.getState().loadFromLocalStorage()
++    expect(useUserPrefsStore.getState().collections).toEqual([{ id: 'a', name: 'A', instrumentIDs: ['rb2406'] }])
++  })
++})
+diff --git a/frontend/src/stores/userPrefs.ts b/frontend/src/stores/userPrefs.ts
+index b4ddc59..ce0a260 100644
+--- a/frontend/src/stores/userPrefs.ts
++++ b/frontend/src/stores/userPrefs.ts
+@@ -1,12 +1,13 @@
+ import { create } from 'zustand'
+ import type { HotKeyConfig, QuickTradeConfig } from '@/services/types'
++import type { Collection } from './collections'
+ 
+ const STORAGE_KEY = 'simnow-user-prefs'
+ 
+ export const DEFAULT_HOT_KEYS: HotKeyConfig = {
+   // 交易快捷键
+   buy: 'b',
+   sell: 's',
+   cancel: 'c',
+   reverse: '',
+   lock: '',
+@@ -33,73 +34,75 @@ export const DEFAULT_QUICK_TRADE_CONFIG: QuickTradeConfig = {
+       priceMode: 'counterparty',
+       offsetTicks: 1,
+       timeCondition: 'gfd',
+     },
+     executionMode: 'serial',
+   },
+   confirmBeforeExecute: true,
+ }
+ 
+ interface UserPrefsStore {
++  collections: Collection[]
++  /** 已废弃：保留至 Task 7 与 contracts.ts 收藏 action 一并移除（Task 1 移除会破坏 contracts.test.ts 运行） */
+   selectedContracts: string[]
+   hotKeys: HotKeyConfig
+   quickTradeConfig: QuickTradeConfig
+   setHotKey: (action: string, key: string) => void
+   setHotKeys: (hotKeys: HotKeyConfig) => void
+   setQuickTradeConfig: (config: Partial<QuickTradeConfig>) => void
++  setCollections: (collections: Collection[]) => void
+   addSelectedContract: (instrumentId: string) => void
+   removeSelectedContract: (instrumentId: string) => void
+   saveToLocalStorage: () => void
+   loadFromLocalStorage: () => void
+ }
+ 
+ export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
++  collections: [],
+   selectedContracts: [],
+   hotKeys: { ...DEFAULT_HOT_KEYS },
+   quickTradeConfig: { ...DEFAULT_QUICK_TRADE_CONFIG },
+ 
+   setHotKey: (action, key) =>
+-    set((state) => ({
+-      hotKeys: { ...state.hotKeys, [action]: key },
+-    })),
+-
++    set((state) => ({ hotKeys: { ...state.hotKeys, [action]: key } })),
+   setHotKeys: (hotKeys) => set({ hotKeys: { ...hotKeys } }),
+-
+   setQuickTradeConfig: (config) =>
+-    set((state) => ({
+-      quickTradeConfig: { ...state.quickTradeConfig, ...config },
+-    })),
++    set((state) => ({ quickTradeConfig: { ...state.quickTradeConfig, ...config } })),
++  setCollections: (collections) => set({ collections }),
+ 
+   addSelectedContract: (instrumentId) =>
+     set((state) => {
+       if (state.selectedContracts.includes(instrumentId)) return state
+       return { selectedContracts: [...state.selectedContracts, instrumentId] }
+     }),
+-
+   removeSelectedContract: (instrumentId) =>
+     set((state) => ({
+       selectedContracts: state.selectedContracts.filter((id) => id !== instrumentId),
+     })),
+ 
+   saveToLocalStorage: () => {
+-    const { selectedContracts, hotKeys, quickTradeConfig } = get()
+-    localStorage.setItem(
+-      STORAGE_KEY,
+-      JSON.stringify({ selectedContracts, hotKeys, quickTradeConfig })
+-    )
++    const { collections, selectedContracts, hotKeys, quickTradeConfig } = get()
++    localStorage.setItem(STORAGE_KEY, JSON.stringify({ collections, selectedContracts, hotKeys, quickTradeConfig }))
+   },
+ 
+   loadFromLocalStorage: () => {
+     try {
+       const raw = localStorage.getItem(STORAGE_KEY)
+       if (!raw) return
+       const data = JSON.parse(raw)
++      let collections: Collection[] = Array.isArray(data.collections) ? data.collections : []
++      // 迁移：旧版 selectedContracts（扁平收藏） → 默认收藏夹（仅当无 collections 时）
++      const legacy = Array.isArray(data.selectedContracts) ? data.selectedContracts : []
++      if (collections.length === 0 && legacy.length > 0) {
++        collections = [{ id: 'coll-default', name: '默认收藏夹', instrumentIDs: legacy }]
++      }
+       set({
+-        selectedContracts: data.selectedContracts ?? [],
++        collections,
++        selectedContracts: Array.isArray(data.selectedContracts) ? data.selectedContracts : [],
+         hotKeys: data.hotKeys ?? { ...DEFAULT_HOT_KEYS },
+         quickTradeConfig: data.quickTradeConfig ?? { ...DEFAULT_QUICK_TRADE_CONFIG },
+       })
+     } catch {
+       // localStorage 数据损坏时忽略
+     }
+   },
+ }))

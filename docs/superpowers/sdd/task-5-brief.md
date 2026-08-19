@@ -1,0 +1,360 @@
+### Task 5: Frontend — InstrumentSearchModal 组件
+
+**Files:**
+- Create: `frontend/src/components/InstrumentSearchModal/index.tsx`
+- Create: `frontend/src/components/InstrumentSearchModal/index.css`
+
+**Interfaces:**
+- Consumes: `getExchanges()`, `getProducts()`, `searchInstruments()`, `subscribeMarket()`
+- Produces: `InstrumentSearchModal` React component
+
+- [ ] **Step 1: Create the modal component**
+
+```tsx
+// frontend/src/components/InstrumentSearchModal/index.tsx
+import { useState, useEffect, useCallback } from 'react'
+import type { ContractInfo } from '@/services/types'
+import { getExchanges, getProducts, searchInstruments, subscribeMarket } from '@/services/api'
+import './index.css'
+
+interface Props {
+  isOpen: boolean
+  onClose: () => void
+  onSubscribe: (instrument: ContractInfo) => void
+  subscribedIds: Set<string>
+}
+
+export function InstrumentSearchModal({ isOpen, onClose, onSubscribe, subscribedIds }: Props) {
+  const [exchanges, setExchanges] = useState<string[]>([])
+  const [products, setProducts] = useState<string[]>([])
+  const [instruments, setInstruments] = useState<ContractInfo[]>([])
+  const [selectedExchange, setSelectedExchange] = useState('')
+  const [selectedProduct, setSelectedProduct] = useState('')
+  const [keyword, setKeyword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  // Load exchanges on open
+  useEffect(() => {
+    if (!isOpen) return
+    getExchanges()
+      .then((res) => setExchanges(res.exchanges))
+      .catch(() => setError('加载交易所列表失败'))
+  }, [isOpen])
+
+  // Load products when exchange changes
+  useEffect(() => {
+    if (!selectedExchange) {
+      setProducts([])
+      setSelectedProduct('')
+      setInstruments([])
+      return
+    }
+    getProducts(selectedExchange)
+      .then((res) => {
+        setProducts(res.products)
+        setSelectedProduct('')
+        setInstruments([])
+      })
+      .catch(() => setError('加载品种列表失败'))
+  }, [selectedExchange])
+
+  // Load instruments when product changes
+  const loadInstruments = useCallback(() => {
+    if (!selectedExchange || !selectedProduct) return
+    setLoading(true)
+    setError('')
+    searchInstruments(selectedExchange, selectedProduct, keyword || undefined)
+      .then((res) => setInstruments(res.instruments))
+      .catch(() => setError('加载合约列表失败'))
+      .finally(() => setLoading(false))
+  }, [selectedExchange, selectedProduct, keyword])
+
+  useEffect(() => {
+    loadInstruments()
+  }, [selectedExchange, selectedProduct])
+
+  // Search on Enter key
+  const handleKeywordKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      loadInstruments()
+    }
+  }
+
+  const handleSubscribe = async (inst: ContractInfo) => {
+    try {
+      const result = await subscribeMarket([inst.instrumentID])
+      if (result.success) {
+        onSubscribe(inst)
+      } else {
+        setError('订阅失败')
+      }
+    } catch {
+      setError('订阅请求失败')
+    }
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>合约搜索</h3>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+
+        <div className="modal-filters">
+          <select
+            value={selectedExchange}
+            onChange={(e) => setSelectedExchange(e.target.value)}
+          >
+            <option value="">选择交易所</option>
+            {exchanges.map((ex) => (
+              <option key={ex} value={ex}>{ex}</option>
+            ))}
+          </select>
+
+          <select
+            value={selectedProduct}
+            onChange={(e) => setSelectedProduct(e.target.value)}
+            disabled={!selectedExchange}
+          >
+            <option value="">选择品种</option>
+            {products.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+
+          <input
+            type="text"
+            placeholder="搜索关键词..."
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onKeyDown={handleKeywordKeyDown}
+            disabled={!selectedProduct}
+          />
+
+          <button onClick={loadInstruments} disabled={!selectedProduct || loading}>
+            搜索
+          </button>
+        </div>
+
+        {error && <div className="modal-error">{error}</div>}
+
+        <div className="modal-table-container">
+          {loading ? (
+            <div className="modal-loading">加载中...</div>
+          ) : instruments.length === 0 ? (
+            <div className="modal-empty">
+              {selectedProduct ? '无匹配合约' : '请选择交易所和品种'}
+            </div>
+          ) : (
+            <table className="modal-table">
+              <thead>
+                <tr>
+                  <th>合约</th>
+                  <th>名称</th>
+                  <th>到期日</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {instruments.map((inst) => (
+                  <tr key={inst.instrumentID}>
+                    <td>{inst.instrumentID}</td>
+                    <td>{inst.instrumentName}</td>
+                    <td>{inst.expireDate}</td>
+                    <td>{inst.isTrading ? '交易中' : '已停牌'}</td>
+                    <td>
+                      {subscribedIds.has(inst.instrumentID) ? (
+                        <span className="subscribed-badge">已订阅</span>
+                      ) : (
+                        <button
+                          className="btn-subscribe"
+                          onClick={() => handleSubscribe(inst)}
+                        >
+                          订阅
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="modal-footer">
+          <span>共 {instruments.length} 个合约</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 2: Create the CSS file**
+
+```css
+/* frontend/src/components/InstrumentSearchModal/index.css */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: var(--bg-primary, #1e1e1e);
+  border: 1px solid var(--border-color, #333);
+  border-radius: 8px;
+  width: 700px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color, #333);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-secondary, #999);
+}
+
+.modal-filters {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color, #333);
+}
+
+.modal-filters select,
+.modal-filters input {
+  padding: 6px 10px;
+  background: var(--bg-secondary, #2a2a2a);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 4px;
+  color: var(--text-primary, #fff);
+  font-size: 13px;
+}
+
+.modal-filters select { min-width: 100px; }
+.modal-filters input { flex: 1; min-width: 120px; }
+
+.modal-filters button {
+  padding: 6px 16px;
+  background: var(--accent-color, #4a9eff);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.modal-filters button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modal-error {
+  padding: 8px 16px;
+  background: #ff444422;
+  color: #ff4444;
+  font-size: 13px;
+}
+
+.modal-table-container {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 200px;
+}
+
+.modal-loading,
+.modal-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--text-secondary, #999);
+}
+
+.modal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.modal-table th,
+.modal-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color, #333);
+}
+
+.modal-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary, #2a2a2a);
+}
+
+.modal-table tr:hover {
+  background: var(--bg-hover, #2a2a2a);
+}
+
+.btn-subscribe {
+  padding: 4px 12px;
+  background: var(--accent-color, #4a9eff);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.subscribed-badge {
+  color: var(--text-secondary, #999);
+  font-size: 12px;
+}
+
+.modal-footer {
+  padding: 8px 16px;
+  border-top: 1px solid var(--border-color, #333);
+  font-size: 12px;
+  color: var(--text-secondary, #999);
+}
+```
+
+- [ ] **Step 3: Verify TypeScript compiles**
+
+Run: `cd frontend && npx tsc --noEmit`
+Expected: No errors
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add frontend/src/components/InstrumentSearchModal/
+git commit -m "feat(task-14): InstrumentSearchModal 组件 — 交易所+品种二级筛选"
+```
+
+---
+

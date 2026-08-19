@@ -1,0 +1,520 @@
+# Review package: e35811c..HEAD
+
+## Commits
+d75d85f fix(options): 标底行合并重捕获文本 + T型报价标题随动 + 订阅批次上限
+
+## Files changed
+ frontend/src/components/TabContent/index.test.tsx | 11 +++++----
+ frontend/src/components/TabContent/index.tsx      |  2 +-
+ frontend/src/hooks/useSubscriptionManager.test.ts | 18 +++++++++++++++
+ frontend/src/hooks/useSubscriptionManager.ts      | 22 ++++++++++++++----
+ frontend/src/modules/market/QuoteTable.test.tsx   | 19 ++++++++++++++++
+ frontend/src/modules/market/QuoteTable.tsx        | 27 ++++++++++-------------
+ frontend/src/modules/options/TQuoteView.test.tsx  | 27 +++++++++++++++++++++++
+ frontend/src/modules/options/TQuoteView.tsx       | 15 +++++++++++--
+ 8 files changed, 115 insertions(+), 26 deletions(-)
+
+## Diff
+diff --git a/frontend/src/components/TabContent/index.test.tsx b/frontend/src/components/TabContent/index.test.tsx
+index 0242803..263bc8b 100644
+--- a/frontend/src/components/TabContent/index.test.tsx
++++ b/frontend/src/components/TabContent/index.test.tsx
+@@ -27,26 +27,27 @@ vi.mock('@/pages/OrderPage', () => ({
+ // Mock KLinePage 组件（避免依赖 stores）
+ vi.mock('@/pages/KLinePage', () => ({
+   KLinePage: ({ instrumentID }: { instrumentID?: string }) => (
+     <div data-testid="kline-page">
+       K线页面 Mock
+       {instrumentID && <span>合约: {instrumentID}</span>}
+     </div>
+   ),
+ }))
+ 
+-// Mock TQuoteView 组件（T型报价独立悬浮标签；断言收到 instrumentID prop）
++// Mock TQuoteView 组件（T型报价独立悬浮标签；断言收到 instrumentID + tabId prop）
+ vi.mock('@/modules/options/TQuoteView', () => ({
+-  TQuoteView: ({ instrumentID }: { instrumentID?: string }) => (
++  TQuoteView: ({ instrumentID, tabId }: { instrumentID?: string; tabId?: string }) => (
+     <div data-testid="tquote-view">
+       T型报价 Mock
+       {instrumentID && <span>标的: {instrumentID}</span>}
++      {tabId && <span data-testid="tquote-tabid">{tabId}</span>}
+     </div>
+   ),
+ }))
+ 
+ // Mock detachDrag 工具（Task 5 拖拽脱离）
+ const detachMock = vi.hoisted(() => ({ startDetachDrag: vi.fn(), detachTabAt: vi.fn() }))
+ vi.mock('@/utils/detachDrag', () => detachMock)
+ 
+ // --- 辅助函数 ---
+ 
+@@ -170,30 +171,32 @@ describe('TabContent', () => {
+     ])('应为 %s 类型渲染对应内容', (type, expectedText) => {
+       const tab = makeTab({ type })
+       useTabStore.setState({
+         tabs: [tab],
+         activeTabId: tab.id,
+       })
+       render(<TabContent />)
+       expect(screen.getByText(new RegExp(expectedText))).toBeInTheDocument()
+     })
+ 
+-    // tquote：独立悬浮标签页渲染 TQuoteView，且 props.instrumentID 透传为 instrumentID prop
+-    it('应为 tquote 类型渲染 TQuoteView，并透传 props.instrumentID', () => {
++    // tquote：独立悬浮标签页渲染 TQuoteView，且 props.instrumentID + tab.id 透传
++    it('应为 tquote 类型渲染 TQuoteView，并透传 props.instrumentID 与 tabId', () => {
+       const tab = makeTab({ type: 'tquote', id: 'tab-tquote-IF2608', props: { instrumentID: 'IF2608' } })
+       useTabStore.setState({
+         tabs: [tab],
+         activeTabId: tab.id,
+       })
+       render(<TabContent />)
+       expect(screen.getByTestId('tquote-view')).toBeInTheDocument()
+       expect(screen.getByText(/标的: IF2608/)).toBeInTheDocument()
++      // tabId 透传 → TQuoteView 窗内切标底可同步该标签的标题/props
++      expect(screen.getByTestId('tquote-tabid').textContent).toBe('tab-tquote-IF2608')
+     })
+ 
+     it('tquote 空白标签（无 instrumentID）渲染 TQuoteView 不带预选', () => {
+       const tab = makeTab({ type: 'tquote', id: 'tab-tquote' })
+       useTabStore.setState({
+         tabs: [tab],
+         activeTabId: tab.id,
+       })
+       render(<TabContent />)
+       expect(screen.getByTestId('tquote-view')).toBeInTheDocument()
+diff --git a/frontend/src/components/TabContent/index.tsx b/frontend/src/components/TabContent/index.tsx
+index 914ab5d..e7aae55 100644
+--- a/frontend/src/components/TabContent/index.tsx
++++ b/frontend/src/components/TabContent/index.tsx
+@@ -46,21 +46,21 @@ function renderTabContent(tab: Tab, floating: boolean): React.ReactNode {
+       return <KLinePage instrumentID={getInstrumentID(tab.props)} tabId={tab.id} />
+     case 'favorites':
+       return <FavoritesPage />
+     case 'query':
+       return <QueryPanel />
+     case 'settings':
+       return <SettingsPage />
+     case 'options':
+       return <OptionsPanel />
+     case 'tquote':
+-      return <TQuoteView instrumentID={getInstrumentID(tab.props)} />
++      return <TQuoteView instrumentID={getInstrumentID(tab.props)} tabId={tab.id} />
+     case 'ipc-monitor':
+       return <IPCMonitorPage />
+     default:
+       return <div className="tab-placeholder">未知标签</div>
+   }
+ }
+ 
+ /**
+  * TabContent — 标签内容容器
+  *
+diff --git a/frontend/src/hooks/useSubscriptionManager.test.ts b/frontend/src/hooks/useSubscriptionManager.test.ts
+index 0891dad..9f28e32 100644
+--- a/frontend/src/hooks/useSubscriptionManager.test.ts
++++ b/frontend/src/hooks/useSubscriptionManager.test.ts
+@@ -158,20 +158,38 @@ describe('useSubscriptionManager 拖动与 LRU', () => {
+     await act(async () => { vi.advanceTimersByTime(500) })
+ 
+     // 退订先行：unsubscribeMarket 先于 subscribeMarket 调用
+     expect(vi.mocked(unsubscribeMarket)).toHaveBeenCalled()
+     expect(vi.mocked(subscribeMarket)).toHaveBeenCalled()
+     const unsubFirst = vi.mocked(unsubscribeMarket).mock.invocationCallOrder[0]
+     const subFirst = vi.mocked(subscribeMarket).mock.invocationCallOrder[0]
+     expect(subFirst).toBeGreaterThan(unsubFirst)
+   })
+ 
++  it('should 集超 SOFT_LIMIT 时本批最多订阅 SOFT_LIMIT，超出部分留待下次 diff 并告警', async () => {
++    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
++    renderHook(() => useSubscriptionManager())
++
++    // 可见区 554 个合约（> 后端 500 上限，直接整批提交会被原子拒绝）→ 本批只能提交前 SOFT_LIMIT 个
++    const big = Array.from({ length: 554 }, (_, i) => `VIS${i}`)
++    act(() => useMarketStore.getState().setVisibleInstrumentIDs(big))
++    await act(async () => { vi.advanceTimersByTime(110) })
++
++    // 只提交一个 ≤ SOFT_LIMIT 的批次（而非 554），超出的留待下次 diff
++    expect(vi.mocked(subscribeMarket)).toHaveBeenCalledTimes(1)
++    const batch = vi.mocked(subscribeMarket).mock.calls[0][0] as string[]
++    expect(batch).toHaveLength(480)
++    // 告警记录了丢弃数（留待下次 diff 重试）
++    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('留待下次 diff'))
++    warnSpy.mockRestore()
++  })
++
+   it('停止后完整 diff 退订超期合约', async () => {
+     renderHook(() => useSubscriptionManager())
+ 
+     act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608']))
+     await act(async () => { vi.advanceTimersByTime(110) })
+ 
+     // 滑出并推进超过宽限期
+     act(() => useMarketStore.getState().setVisibleInstrumentIDs([]))
+     await act(async () => { vi.advanceTimersByTime(31_000) })
+ 
+diff --git a/frontend/src/hooks/useSubscriptionManager.ts b/frontend/src/hooks/useSubscriptionManager.ts
+index 73ea419..3e0babd 100644
+--- a/frontend/src/hooks/useSubscriptionManager.ts
++++ b/frontend/src/hooks/useSubscriptionManager.ts
+@@ -109,54 +109,68 @@ export function useSubscriptionManager() {
+     const now = Date.now()
+     recentChangesRef.current = recentChangesRef.current.filter((t) => now - t < DRAG_WINDOW_MS)
+     return recentChangesRef.current.length >= DRAG_THRESHOLD
+   }, [])
+ 
+   /**
+    * 完整 diff：subscribe + 宽限期退订 + LRU 淘汰。
+    * 静止态直接调用，拖动停止后 500ms 调用。
+    * 仍在宽限期内的合约记录 nextCheckIn，到期后再检查一次（保留到期重排链）。
+    * 新批次超 SOFT_LIMIT 时「退订先行」串行化（await 退订后再订阅），规避后端 500 上限原子整批拒绝。
++   * 防御性批次上限：待订阅数超过「剩余容量 + 本批即将退订腾出的名额」时，超出的合约
++   * 本批不订阅（留待下次 diff），避免一次性提交 554 等超限批次被后端 500 上限整批拒绝。
+    */
+   const runFullDiff = useCallback(() => {
+     const should = calculateShouldSubscribe()
+     const now = Date.now()
+ 
+-    // 1. 需要订阅的缺失合约
+-    const toSubscribe: string[] = []
++    // 1. 需要订阅的缺失合约（全量候选；容量上限见 3.5，超出的留待下次 diff 重试）
++    const toSubscribeAll: string[] = []
+     for (const id of should) {
+-      if (!subscribedRef.current.has(id)) toSubscribe.push(id)
++      if (!subscribedRef.current.has(id)) toSubscribeAll.push(id)
+     }
+ 
+     // 2. 宽限期退订候选 + 记录最早到期时间（到期重排）
+     const graceCandidates: { id: string; lastVisible: number }[] = []
+     let nextCheckIn: number | null = null
+     for (const [id, lastVisible] of subscribedRef.current) {
+       if (should.has(id)) continue
+       const elapsed = now - lastVisible
+       graceCandidates.push({ id, lastVisible })
+       if (elapsed <= GRACE_MS) {
+         const remaining = GRACE_MS - elapsed + 1
+         if (nextCheckIn === null || remaining < nextCheckIn) nextCheckIn = remaining
+       }
+     }
+ 
+     // 3. 合并退订集：宽限期过期 + LRU 上限淘汰
+     const toUnsubscribe = new Set<string>()
+     for (const c of graceCandidates) {
+       if (now - c.lastVisible > GRACE_MS) toUnsubscribe.add(c.id)
+     }
+-    for (const id of computeLruEvictions(should, toSubscribe.length)) {
++    for (const id of computeLruEvictions(should, toSubscribeAll.length)) {
+       toUnsubscribe.add(id)
+     }
+     const unsubscribeIds = Array.from(toUnsubscribe)
+ 
++    // 3.5 防御性批次上限：后端 500 上限原子整批拒绝。本批容量 = SOFT_LIMIT - 已订阅 +
++    //     本批即将退订腾出的名额（退订先行会先释放这些名额）；超出的合约本批不订阅，
++    //     留待下次 diff（可见区收敛后重试）。否则 554 个可见合约会整批提交被后端拒绝。
++    const capacity = Math.max(0, SOFT_LIMIT - subscribedRef.current.size + unsubscribeIds.length)
++    const toSubscribe = toSubscribeAll.slice(0, capacity)
++    const dropped = toSubscribeAll.length - toSubscribe.length
++    if (dropped > 0) {
++      console.warn(
++        `[行情订阅上限] 可见区合约超前端软上限：本批 ${toSubscribeAll.length} 个，仅订阅前 ${toSubscribe.length} 个，${dropped} 个留待下次 diff`,
++      )
++    }
++
+     // 4. 订阅动作（success 门控 + 快照回填），供串行化/并行共用
+     const subscribeNow = (ids: string[]) => {
+       if (ids.length === 0) return
+       subscribeMarket(ids)
+         .then((resp) => {
+           if (resp?.success) {
+             for (const id of ids) subscribedRef.current.set(id, Date.now())
+             prefetchSnapshots(ids)
+           } else {
+             // 后端拒绝（通常是达到后端 500 订阅上限，原子整批拒绝）
+diff --git a/frontend/src/modules/market/QuoteTable.test.tsx b/frontend/src/modules/market/QuoteTable.test.tsx
+index 5021018..e1a6b99 100644
+--- a/frontend/src/modules/market/QuoteTable.test.tsx
++++ b/frontend/src/modules/market/QuoteTable.test.tsx
+@@ -852,20 +852,39 @@ describe('QuoteTable', () => {
+       instance.mergeCells.mockClear()
+       instance.unmergeCells.mockClear()
+ 
+       // 重建：物理行 1 变为期权行（opt），标底漂移到物理行 2（fut）
+       // → 旧合并必须撤销（unmergeCells），新标底行必须合并（mergeCells）
+       rerender(<QuoteTable spec={optionsSpec} contracts={[opt, fut]} snapshots={new Map()} />)
+       expect(instance.unmergeCells).toHaveBeenCalledWith(0, 1, 13, 1)
+       expect(instance.mergeCells).toHaveBeenCalledWith(0, 2, 13, 2)
+     })
+ 
++    it('筛选/搜索重建后同一物理行仍是标底但合约变化 → 重新 mergeCells 重捕获文本（不再跳过）', async () => {
++      // vtable mergeCells 在合并时捕获 text（this.getCellValue(startCol,startRow)）；
++      // 若跳过已合并行，物理行 1 仍是标底但 setRecords 换合约后会残留 AD2609 旧文本。
++      const ad: ContractInfo = { instrumentID: 'AD2609', instrumentName: 'AD2609', exchangeID: 'CZCE', productID: 'AD', volumeMultiple: 10, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' }
++      const ma: ContractInfo = { instrumentID: 'MA609', instrumentName: 'MA609', exchangeID: 'CZCE', productID: 'MA', volumeMultiple: 10, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' }
++      const { rerender } = render(<QuoteTable spec={optionsSpec} contracts={[ad, opt]} snapshots={new Map()} />)
++      const { ListTable } = await import('@visactor/vtable')
++      const instance = (ListTable as any).mock.results[0].value
++      // 首轮：物理行 1 = AD2609（标底），已合并
++      expect(instance.mergeCells).toHaveBeenCalledWith(0, 1, 13, 1)
++      instance.mergeCells.mockClear()
++      instance.unmergeCells.mockClear()
++
++      // 重建：物理行 1 仍是标底，但合约变为 MA609 → 旧合并必须撤销，且必须重新 mergeCells
++      rerender(<QuoteTable spec={optionsSpec} contracts={[ma, opt]} snapshots={new Map()} />)
++      expect(instance.unmergeCells).toHaveBeenCalledWith(0, 1, 13, 1)
++      expect(instance.mergeCells).toHaveBeenCalledWith(0, 1, 13, 1)
++    })
++
+     it('合约列样式：标底行返回红/粗/大字，期权行保持原样式', async () => {
+       render(<QuoteTable spec={optionsSpec} contracts={[fut, opt]} snapshots={new Map()} />)
+       const { ListTable } = await import('@visactor/vtable')
+       const options = (ListTable as any).mock.calls[0][1]
+       const instrumentCol = options.columns.find((c: { field: string }) => c.field === 'instrumentID')
+       expect(typeof instrumentCol.style).toBe('function')
+       const records = [
+         optionsSpec.buildRecord(fut, undefined, false),
+         optionsSpec.buildRecord(opt, undefined, false),
+       ]
+diff --git a/frontend/src/modules/market/QuoteTable.tsx b/frontend/src/modules/market/QuoteTable.tsx
+index d0e7e32..f6fa3c8 100644
+--- a/frontend/src/modules/market/QuoteTable.tsx
++++ b/frontend/src/modules/market/QuoteTable.tsx
+@@ -81,21 +81,21 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
+   const lastClickTimeRef = useRef<number>(0)
+   const lastClickRowRef = useRef<number>(-1)
+   const recordsRef = useRef<QuoteRecord[]>([])
+   /** 每行最近一次 buildRecord 所用的 snapshot 引用（按行跟踪，仅对可见行生效） */
+   const rowSnapshotRef = useRef<(MarketSnapshot | undefined)[]>([])
+   /** 可见区版本号：滚动导致可见范围变化时递增，驱动局部更新 effect 重算（滚入新区域的行立即刷新） */
+   const [visibleRangeVersion, setVisibleRangeVersion] = useState(0)
+   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+   /** 最近一次滚动发生的时间戳（松手检测窗口依据） */
+   const lastScrollAtRef = useRef(0)
+-  /** 已合并的标底行 vtable 物理行号集合（0=表头）：跟踪合并状态 → 撤销漂移行 + 跳过重复合并 */
++  /** 已合并的标底行 vtable 物理行号集合（0=表头）：记录上次合并范围，下次全量撤销重合并（重捕获 text） */
+   const mergedRowsRef = useRef<Set<number>>(new Set())
+   /** 合并兜底 rAF 句柄（渲染异步未就绪时重试；卸载/重建时清除在排队帧） */
+   const mergeRafRef = useRef<number | null>(null)
+ 
+   useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
+   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
+   useEffect(() => { onContextMenuRef.current = onContextMenu }, [onContextMenu])
+   useEffect(() => { onMultiSelectContextMenuRef.current = onMultiSelectContextMenu }, [onMultiSelectContextMenu])
+   useEffect(() => { onVisibleRangeChangeRef.current = onVisibleRangeChange }, [onVisibleRangeChange])
+   useEffect(() => { onFavoriteChangeRef.current = onFavoriteChange }, [onFavoriteChange])
+@@ -137,49 +137,46 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
+ 
+   // 挂载/重建后延迟上报可见区。隐藏面板（isActive=false）跳过，避免覆盖活跃面板的可见范围；
+   // 激活时由 isActive 翻转 effect 补报（见组件底部）。
+   const scheduleVisibleRangeReport = useCallback(() => {
+     if (isActiveRef.current === false) return
+     setTimeout(notifyVisibleRange, 0)
+   }, [notifyVisibleRange])
+ 
+   /**
+    * 合并标底行为整行表头：`mergeCells(0, row, colCount-1, row)`（vtable 行号 0=表头，记录索引 +1）。
+-   * 在 setRecords 之后调用（vtable 场景图由 setRecords 同步构建，直接合并即可）：
+-   * - 先撤销已合并但不再是标底的行（setRecords 重建数据后行号可能漂移，旧合并会残留在错误行）；
+-   * - 再合并当前标底行，已合并行跳过（避免重复 push customMergeCell → 渲染错乱）；
++   * 在 setRecords 之后调用（vtable 场景图由 setRecords 同步构建，直接合并即可）。
++   * vtable 的 mergeCells 在合并时捕获 `text: this.getCellValue(startCol, startRow)`；
++   * setRecords 重建数据后（筛选/搜索）旧合并的 text 陈旧——同一物理行仍是标底但合约已变时，
++   * 会残留旧合约文本，且陈旧合并范围破坏行高/可见区计算。故 ALWAYS 先撤销 ALL 旧合并
++   * （含仍为标底的行），再对当前标底行重新 mergeCells，让 vtable 重捕获当前记录文本。
+    * - 合并失败（渲染异步未就绪）的行不入集合，由 rAF 兜底重试（见 contracts effect）。
+    */
+   const applyRowMerges = useCallback(() => {
+     const table = tableRef.current
+     if (!table || typeof table.mergeCells !== 'function') return
+     const lastCol = spec.columns.length - 1
+     const underlyingRows = new Set<number>()
+     recordsRef.current.forEach((record, i) => {
+       if (record.kind === 'underlying') underlyingRows.add(i + 1)
+     })
+-    // 撤销不再标底的行（unmergeCells 不存在则跳过，兼容无合并语义的表）
++    // mergeCells 合并时捕获 text；setRecords 重建后旧合并的 text 陈旧（筛选后标底行显示旧合约）。
++    // 因此撤销 ALL 旧合并（含仍为标底的行），再对当前标底行重新合并以重捕获文本。
+     for (const row of mergedRowsRef.current) {
+-      if (!underlyingRows.has(row)) {
+-        try {
+-          table.unmergeCells?.(0, row, lastCol, row)
+-        } catch {
+-          // vtable 尚未就绪，忽略
+-        }
++      try {
++        table.unmergeCells?.(0, row, lastCol, row)
++      } catch {
++        // vtable 尚未就绪，忽略
+       }
+     }
+     const next = new Set<number>()
+     for (const row of underlyingRows) {
+-      if (mergedRowsRef.current.has(row)) {
+-        next.add(row)
+-        continue
+-      }
+       try {
+         table.mergeCells(0, row, lastCol, row)
+         next.add(row)
+       } catch {
+         // 本轮未就绪，留待下一轮 setRecords/rAF 重试
+       }
+     }
+     mergedRowsRef.current = next
+   }, [spec])
+ 
+diff --git a/frontend/src/modules/options/TQuoteView.test.tsx b/frontend/src/modules/options/TQuoteView.test.tsx
+index 61d10fe..64f9a5e 100644
+--- a/frontend/src/modules/options/TQuoteView.test.tsx
++++ b/frontend/src/modules/options/TQuoteView.test.tsx
+@@ -1,15 +1,16 @@
+ import { describe, it, expect, vi, beforeEach } from 'vitest'
+ import { render, screen, act, waitFor } from '@testing-library/react'
+ import userEvent from '@testing-library/user-event'
+ import { TQuoteView } from './TQuoteView'
+ import { useMarketStore } from '@/modules/market/store'
++import { useTabStore } from '@/stores/tabs'
+ 
+ // TQuoteView 已自包含：不再依赖 useOptionsStore，直接调用 @/services/api。
+ // 以下 mock 覆盖 TQuoteView 用到的所有 API 函数（subscribeMarket 保留：@/modules/market/store 仍引入）。
+ const mockGetOptionUnderlyings = vi.fn().mockResolvedValue({ underlyings: ['IF2608', 'IF2609'] })
+ const mockGetOptionChains = vi.fn().mockResolvedValue({ chains: [] })
+ const mockSubscribeMarket = vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] })
+ const mockGetSnapshots = vi.fn().mockResolvedValue({ snapshots: {} })
+ 
+ vi.mock('@/services/api', () => ({
+   getOptionUnderlyings: (...args: any[]) => mockGetOptionUnderlyings(...args),
+@@ -127,20 +128,46 @@ describe('TQuoteView (自包含)', () => {
+   it('instrumentID prop 预选标底：自动加载该标底期权链并选中', async () => {
+     mockGetOptionChains.mockResolvedValue({
+       chains: [{ underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '' }],
+     })
+     render(<TQuoteView instrumentID="IF2608" />)
+     expect(await screen.findByTestId('tquote-table')).toBeInTheDocument()
+     expect(mockGetOptionChains).toHaveBeenCalledWith('IF2608')
+     expect(screen.getByTestId('tquote-table').textContent).toBe('IF2608-20260815')
+   })
+ 
++  it('窗内切换标底 → updateTab 同步悬浮标签标题与 props（tabId + 新合约）', async () => {
++    mockGetOptionUnderlyings.mockResolvedValue({ underlyings: ['IF2608', 'IF2609', 'MA609'] })
++    mockGetOptionChains.mockResolvedValue({
++      chains: [{ underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '' }],
++    })
++    const updateTabSpy = vi.spyOn(useTabStore.getState(), 'updateTab')
++    try {
++      const user = userEvent.setup()
++      render(<TQuoteView instrumentID="IF2608" tabId="tab-tquote-IF2608" />)
++      await screen.findByTestId('tquote-table')
++      // 挂载预选已同步一次标题（IF2608），清掉后只验证「窗内切标底」
++      updateTabSpy.mockClear()
++
++      const input = await screen.findByPlaceholderText('输入关键字搜索...')
++      await user.click(input)
++      await user.click(screen.getByText('MA609'))
++
++      expect(updateTabSpy).toHaveBeenCalledWith('tab-tquote-IF2608', {
++        title: '📉 T型报价-MA609',
++        props: { instrumentID: 'MA609' },
++      })
++    } finally {
++      updateTabSpy.mockRestore()
++    }
++  })
++
+   it('shows underlying selector label', async () => {
+     render(<TQuoteView />)
+     const labels = await screen.findAllByText(/标的/)
+     expect(labels.length).toBeGreaterThan(0)
+   })
+ 
+   it('按不区分大小写自然序排序标底下拉（cu2609 在 FG609 前）', async () => {
+     mockGetOptionUnderlyings.mockResolvedValue({ underlyings: ['MA609', 'cu2609', 'FG609'] })
+     const user = userEvent.setup()
+     render(<TQuoteView />)
+diff --git a/frontend/src/modules/options/TQuoteView.tsx b/frontend/src/modules/options/TQuoteView.tsx
+index 7578002..8ac97d2 100644
+--- a/frontend/src/modules/options/TQuoteView.tsx
++++ b/frontend/src/modules/options/TQuoteView.tsx
+@@ -1,31 +1,34 @@
+ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+ import { useMarketStore } from '@/modules/market/store'
++import { useTabStore } from '@/stores/tabs'
+ import { getOptionUnderlyings, getOptionChains, getSnapshots } from '@/services/api'
+ import type { OptionChain } from '@/services/types'
+ import { naturalCompare } from '@/modules/market/sort'
+ import { TQuoteTable } from './TQuoteTable'
+ import './styles.css'
+ 
+ /** Max retry attempts for loading underlyings. */
+ const MAX_RETRIES = 3
+ /** Delay between retries (ms). */
+ const RETRY_DELAY_MS = 1500
+ 
+ /**
+  * TQuoteView — 独立悬浮标签页的 T型报价（多实例自包含）
+  *
+  * 自包含：所有数据状态（optionChains / selectedUnderlying / loading / error）均为本地
+  * useState，直接调用 @/services/api，多个悬浮实例互不干扰。
+  * 可选 prop `instrumentID`：挂载时自动预选该标底并加载期权链（T型报价-<标底> 标签页）。
++ * 可选 prop `tabId`：窗内切换标底时同步悬浮标签的标题与 props（updateTab 去重：若该
++ * 标底已有标签则关闭本标签并激活它，保持一标底一窗）。
+  */
+-export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
++export function TQuoteView({ instrumentID, tabId }: { instrumentID?: string; tabId?: string }) {
+   // T型报价数据（本地状态，实例隔离）
+   const [optionChains, setOptionChains] = useState<OptionChain[]>([])
+   const [selectedUnderlying, setSelectedUnderlying] = useState<string | null>(null)
+   const [loading, setLoading] = useState(false)
+   const [error, setError] = useState<string | null>(null)
+ 
+   // Available underlyings — loaded via lightweight API on mount
+   const [availableUnderlyings, setAvailableUnderlyings] = useState<string[]>([])
+   const [underlyingsLoading, setUnderlyingsLoading] = useState(true)
+ 
+@@ -96,37 +99,45 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
+   const selectedChain = useMemo(
+     () => optionChains.find((c) => c.underlying === selectedUnderlying) ?? null,
+     [optionChains, selectedUnderlying]
+   )
+ 
+   // 选择标底：加载期权链（默认展示首个到期日，无到期日选择器）
+   const selectUnderlying = useCallback((value: string) => {
+     setSelectedUnderlying(value)
+     setUnderlyingSearch('')
+     setShowUnderlyingDropdown(false)
++    // 悬浮标签页：窗内切标底 → 同步标签标题/props（标题随动）。updateTab 按 type+instrumentID
++    // 去重——若该标底已有其他标签，则关闭本标签并激活它（一标底一窗的期望行为）。
++    if (tabId) {
++      useTabStore.getState().updateTab(tabId, {
++        title: value ? `📉 T型报价-${value}` : '📉 T型报价',
++        props: value ? { instrumentID: value } : {},
++      })
++    }
+     if (value) {
+       setLoading(true)
+       setError(null)
+       getOptionChains(value)
+         .then((res) => {
+           const chains = res.chains ?? []
+           setOptionChains(chains)
+           setLoading(false)
+         })
+         .catch(() => {
+           setError('Failed to load option chains')
+           setLoading(false)
+         })
+     } else {
+       setOptionChains([])
+     }
+-  }, [])
++  }, [tabId])
+ 
+   // 预选：挂载时若带 instrumentID prop → 自动 selectUnderlying（依赖 props.instrumentID）
+   useEffect(() => {
+     if (instrumentID) {
+       selectUnderlying(instrumentID)
+     }
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [instrumentID])
+ 
+   // 将当前链的期权合约标记为「锁定」，使共享订阅管理器（useSubscriptionManager）

@@ -1,0 +1,216 @@
+# Review package: a211f1a..HEAD
+
+## Commits
+51a426b fix(task-3): review反馈 — 修复测试污染preset文件+API测试验证不足
+
+## Files changed
+ server/data/preset_instruments.json |  8 +++----
+ server/tests/test_market_api.py     | 47 +++++++++++++++++++++++++++++++++++++
+ server/tests/test_market_service.py | 24 +++++++++++++------
+ 3 files changed, 67 insertions(+), 12 deletions(-)
+
+## Diff
+diff --git a/server/data/preset_instruments.json b/server/data/preset_instruments.json
+index 91a3156..a75586e 100644
+--- a/server/data/preset_instruments.json
++++ b/server/data/preset_instruments.json
+@@ -1,6 +1,4 @@
+ {
+-  "instruments": [
+-    "IF2609"
+-  ],
+-  "updatedAt": "2026-07-21T16:55:07.581845"
+-}
+\ No newline at end of file
++  "instruments": [],
++  "updatedAt": null
++}
+diff --git a/server/tests/test_market_api.py b/server/tests/test_market_api.py
+index 4117351..3137678 100644
+--- a/server/tests/test_market_api.py
++++ b/server/tests/test_market_api.py
+@@ -1,52 +1,59 @@
+ """Integration tests for api/market.py — market data REST API."""
+ 
++import tempfile
++import os
++from unittest.mock import patch
++
+ import pytest
+ from httpx import AsyncClient, ASGITransport
+ from fastapi import FastAPI
+ 
+ from api.market import router as market_router
+ from services.market_service import MarketService
+ 
+ 
+ # ── Test fixtures ───────────────────────────────────────────────────────
+ 
+ SAMPLE_INSTRUMENTS = [
+     {
+         "instrumentID": "IF2608",
+         "instrumentName": "沪深300指数期货2608",
+         "exchangeID": "CFFEX",
+         "productID": "IF",
+         "productClass": "1",
+         "volumeMultiple": 300,
+         "priceTick": 0.2,
+         "expireDate": "20260821",
++        "isTrading": 1,
+     },
+     {
+         "instrumentID": "IF2609",
+         "instrumentName": "沪深300指数期货2609",
+         "exchangeID": "CFFEX",
+         "productID": "IF",
+         "productClass": "1",
+         "volumeMultiple": 300,
+         "priceTick": 0.2,
+         "expireDate": "20260918",
++        "isTrading": 1,
+     },
+     {
+         "instrumentID": "au2608",
+         "instrumentName": "黄金2608",
+         "exchangeID": "SHFE",
+         "productID": "au",
+         "productClass": "1",
+         "volumeMultiple": 1000,
+         "priceTick": 0.02,
+         "expireDate": "20260815",
++        "isTrading": 1,
+     },
+ ]
+ 
+ 
+ def _make_test_app() -> FastAPI:
+     """Build a test FastAPI app with market router and MarketService state."""
+     app = FastAPI()
+     app.include_router(market_router, prefix="/api/market")
+     market_service = MarketService()
+     market_service.load_instruments(SAMPLE_INSTRUMENTS)
+@@ -526,28 +533,68 @@ class TestGetInstrumentsByIds:
+         assert resp.status_code == 200
+         data = resp.json()
+         assert data["count"] == 3
+ 
+ 
+ # ── Preset endpoints ─────────────────────────────────────────────────
+ 
+ class TestPreset:
+     """GET /api/market/preset and POST /api/market/preset/refresh"""
+ 
++    @pytest.fixture(autouse=True)
++    def _isolate_preset_file(self):
++        """Redirect preset_instruments.json writes to a temp directory."""
++        from pathlib import Path as RealPath
++
++        tmp_dir = tempfile.mkdtemp()
++        tmp_data = os.path.join(tmp_dir, "server", "data")
++        os.makedirs(tmp_data, exist_ok=True)
++
++        _PathType = type(RealPath("."))
++
++        class _FakePath(_PathType):
++            """Path subclass that redirects preset_instruments.json to temp dir."""
++
++            def __new__(cls, *args, **kwargs):
++                return _PathType.__new__(cls, *args, **kwargs)
++
++            def __init__(self, *args, **kwargs):
++                pass  # skip Path.__init__ signature check
++
++            @property
++            def parent(self):
++                return self  # no-op; all .parent chains return self
++
++            def __truediv__(self, key):
++                if key == "preset_instruments.json":
++                    return RealPath(tmp_data) / key
++                return super().__truediv__(key)
++
++        def _make_path(*args, **kwargs):
++            return _FakePath(*args, **kwargs)
++
++        p = patch("services.market_service.Path", side_effect=_make_path)
++        p.start()
++        yield
++        p.stop()
++
+     @pytest.mark.asyncio
+     async def test_get_preset_returns_empty_initially(self, app):
+         transport = ASGITransport(app=app)
+         async with AsyncClient(transport=transport, base_url="http://test") as client:
+             resp = await client.get("/api/market/preset")
+         assert resp.status_code == 200
+         data = resp.json()
+         assert "instruments" in data
+ 
+     @pytest.mark.asyncio
+     async def test_refresh_preset(self, app):
+         transport = ASGITransport(app=app)
+         async with AsyncClient(transport=transport, base_url="http://test") as client:
+             resp = await client.post("/api/market/preset/refresh")
+         assert resp.status_code == 200
+         data = resp.json()
+         assert data["success"] is True
+         assert isinstance(data["instruments"], list)
++        assert len(data["instruments"]) == 2
++        # IF2608 (front-month for IF, nearest expireDate) and au2608 (only au)
++        assert set(data["instruments"]) == {"IF2608", "au2608"}
+diff --git a/server/tests/test_market_service.py b/server/tests/test_market_service.py
+index 43162fe..169f3b6 100644
+--- a/server/tests/test_market_service.py
++++ b/server/tests/test_market_service.py
+@@ -778,34 +778,44 @@ class TestPresetInstruments:
+         result = svc.get_preset_instruments()
+         assert result["instruments"] == []
+ 
+     def test_refresh_preset_detects_front_month(self):
+         svc = MarketService()
+         svc.load_instruments([
+             {"instrumentID": "IF2608", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260821", "isTrading": 1},
+             {"instrumentID": "IF2609", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260918", "isTrading": 1},
+             {"instrumentID": "au2608", "exchangeID": "SHFE", "productID": "au", "expireDate": "20260815", "isTrading": 1},
+         ])
+-        result = svc.refresh_preset_instruments()
+-        assert result["success"] is True
+-        # IF2608 expires sooner, au2608 is the only au
+-        assert set(result["instruments"]) == {"IF2608", "au2608"}
++        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
++            tmp_path = f.name
++        try:
++            result = svc.refresh_preset_instruments(file_path=tmp_path)
++            assert result["success"] is True
++            # IF2608 expires sooner, au2608 is the only au
++            assert set(result["instruments"]) == {"IF2608", "au2608"}
++        finally:
++            os.unlink(tmp_path)
+ 
+     def test_refresh_preset_skips_non_trading(self):
+         svc = MarketService()
+         svc.load_instruments([
+             {"instrumentID": "IF2608", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260821", "isTrading": 0},
+             {"instrumentID": "IF2609", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260918", "isTrading": 1},
+         ])
+-        result = svc.refresh_preset_instruments()
+-        assert "IF2608" not in result["instruments"]
+-        assert "IF2609" in result["instruments"]
++        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
++            tmp_path = f.name
++        try:
++            result = svc.refresh_preset_instruments(file_path=tmp_path)
++            assert "IF2608" not in result["instruments"]
++            assert "IF2609" in result["instruments"]
++        finally:
++            os.unlink(tmp_path)
+ 
+     def test_refresh_preset_saves_to_file(self):
+         import tempfile, os
+         svc = MarketService()
+         svc.load_instruments([
+             {"instrumentID": "IF2608", "exchangeID": "CFFEX", "productID": "IF", "expireDate": "20260821", "isTrading": 1},
+         ])
+         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+             tmp_path = f.name
+         try:

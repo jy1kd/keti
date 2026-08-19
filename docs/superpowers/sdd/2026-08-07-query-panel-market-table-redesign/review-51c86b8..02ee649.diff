@@ -1,0 +1,1246 @@
+# Review package: 51c86b8fc5b66f8bdccebd7f52702e6aa4b93fe2..02ee6497031695efa785b14da11af64baeb6ef52
+
+## Commits
+02ee649 feat(market): 行情表格新增合约乘数/最小变动价位列，固定列宽 + 原生横向滚动
+b097c2f refactor(query): 移除查询面板「合约」「K线」Tab，删除 ContractQuery
+2d049bb docs(market): 查询面板精简 + 行情表格增强实现计划（writing-plans）
+7336dd4 docs(market): 查询面板精简 + 行情表格增强设计（Task 设计文档）
+
+## Files changed
+ ...2026-08-07-query-panel-market-table-redesign.md | 283 +++++++++++++++++++++
+ ...-07-query-panel-market-table-redesign-design.md | 125 +++++++++
+ frontend/src/modules/market/MarketTable.test.tsx   |  33 +++
+ frontend/src/modules/market/MarketTable.tsx        |  28 +-
+ frontend/src/modules/query/ContractQuery.test.tsx  |  75 ------
+ frontend/src/modules/query/ContractQuery.tsx       | 115 ---------
+ frontend/src/modules/query/QueryPanel.test.tsx     |  11 +-
+ frontend/src/modules/query/QueryPanel.tsx          |  84 ++----
+ frontend/src/modules/query/popupStore.ts           |   5 +-
+ frontend/src/modules/query/store.test.ts           |   4 +-
+ frontend/src/modules/query/store.ts                |   2 +-
+ frontend/src/modules/query/styles.css              |  52 +---
+ 12 files changed, 487 insertions(+), 330 deletions(-)
+
+## Diff
+diff --git a/docs/superpowers/plans/2026-08-07-query-panel-market-table-redesign.md b/docs/superpowers/plans/2026-08-07-query-panel-market-table-redesign.md
+new file mode 100644
+index 0000000..a774d71
+--- /dev/null
++++ b/docs/superpowers/plans/2026-08-07-query-panel-market-table-redesign.md
+@@ -0,0 +1,283 @@
++# 查询面板精简 + 行情表格增强 Implementation Plan
++
++> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
++
++**Goal:** 从查询面板移除「合约」「K线」Tab，并在行情表格中补齐 合约乘数 / 最小变动价位 两列、改为固定列宽 + 原生横向滚动。
++
++**Architecture:** 纯前端改动。查询面板删两个 Tab（QueryPanel.tsx + QueryTab 类型收窄 + 删除 ContractQuery 组件及其死 CSS）；行情表格在已有 `contracts`/`snapshots` props 基础上扩展 `columns` 与 `buildRecord`，`widthMode` 从 `adaptive` 改为 `standard` 使固定列宽溢出时出现原生横向滚动条。零后端/API 改动（新增字段已存在于 `ContractInfo`）。
++
++**Tech Stack:** React 18 + TypeScript 5 + Vite, @visactor/vtable ^1.26.4, vitest。
++
++## Global Constraints
++
++- 分支：`feature/table-refactor`（基线 `main` @ 51c86b8）。
++- 不引入任何新 API 调用；新增列数据全部来自 `ContractInfo`（`volumeMultiple` / `priceTick`）。
++- 删除 ContractQuery 后 `getContracts`（services/api.ts）保留，不在本次范围。
++- K 线功能整体保留：`KLineChart`、KLinePage 弹窗、useMarketWs 的 K 线 gate、store 的 `klineData` 均不动。
++- 列宽为固定初始值，不持久化（切 T型期权 再切回会重置）。
++- 前端命令：`cd frontend && npx vitest run <file>`（定向）、`npx tsc --noEmit`、`npm test`、`npm run build`。
++- 提交信息遵循仓库既有中文 + conventional-prefix 风格。
++
++---
++
++## 文件结构
++
++| 文件 | 责任 | 变更 |
++|---|---|---|
++| `frontend/src/modules/query/QueryPanel.tsx` | 查询面板容器 + Tab 渲染 | 删「合约」「K线」Tab 及相关代码 |
++| `frontend/src/modules/query/store.ts` | 查询 store，`QueryTab` 类型 | 收窄类型 |
++| `frontend/src/modules/query/store.test.ts` | store 单测 | 更新 tab 枚举 |
++| `frontend/src/modules/query/QueryPanel.test.tsx` | QueryPanel 单测 | 更新/新增 tab 断言 |
++| `frontend/src/modules/query/ContractQuery.tsx` | 合约详情组件 | **删除** |
++| `frontend/src/modules/query/ContractQuery.test.tsx` | 合约详情单测 | **删除** |
++| `frontend/src/modules/query/styles.css` | 查询面板样式 | 删死 CSS |
++| `frontend/src/modules/query/popupStore.ts` | 查询弹窗状态 | 更新失效注释 |
++| `frontend/src/modules/market/MarketTable.tsx` | 行情表格 | 加 2 列 + 固定列宽 |
++| `frontend/src/modules/market/MarketTable.test.tsx` | 行情表格单测 | 新增/更新断言 |
++
++---
++
++### Task 1: 查询面板移除「合约」「K线」Tab
++
++**Files:**
++- Modify: `frontend/src/modules/query/QueryPanel.tsx`
++- Modify: `frontend/src/modules/query/store.ts:58`
++- Modify: `frontend/src/modules/query/store.test.ts:56-62`
++- Modify: `frontend/src/modules/query/QueryPanel.test.tsx`
++- Modify: `frontend/src/modules/query/styles.css`
++- Modify: `frontend/src/modules/query/popupStore.ts:5-10,20`
++- Delete: `frontend/src/modules/query/ContractQuery.tsx`
++- Delete: `frontend/src/modules/query/ContractQuery.test.tsx`
++- Test: `frontend/src/modules/query/QueryPanel.test.tsx`, `frontend/src/modules/query/store.test.ts`
++
++**Interfaces:**
++- Produces: `QueryTab = 'orders' | 'trades' | 'positions' | 'account' | 'stop_orders'`（store.ts 导出）；QueryPanel 渲染 5 个 Tab，不再有 合约/K线。
++
++- [ ] **Step 1: 写失败测试 — QueryPanel 不再渲染 合约/K线 Tab**
++
++在 `QueryPanel.test.tsx` 的 `describe('QueryPanel')` 块末尾追加：
++
++```tsx
++it('不再显示 合约/K线 Tab', () => {
++  render(<QueryPanel />)
++  expect(screen.queryByText('合约')).not.toBeInTheDocument()
++  expect(screen.queryByText('K线')).not.toBeInTheDocument()
++})
++```
++
++- [ ] **Step 2: 运行验证失败**
++
++Run: `cd frontend && npx vitest run src/modules/query/QueryPanel.test.tsx -t "不再显示"`
++Expected: FAIL（旧代码仍渲染 合约/K线 Tab，`queryByText('合约')` 命中）
++
++- [ ] **Step 3: 实现 — 删除 QueryPanel 中「合约」「K线」相关代码**
++
++`QueryPanel.tsx`：
++
++1. 删除 imports（第 8-13 行这些行）：`ContractQuery`、`KLineChart`、`useMarketStore`、`PERIOD_MS`、`getKlineData`、`ErrorBoundary`。imports 块最终为：
++
++```tsx
++import { useEffect, useCallback } from 'react'
++import { useQueryStore } from './store'
++import { OrderFlow } from './OrderFlow'
++import { TradeFlow } from './TradeFlow'
++import { Position } from './Position'
++import { AccountQuery } from './AccountQuery'
++import { StopOrderList } from './StopOrderList'
++import './styles.css'
++```
++
++2. `TABS` 数组（第 16-24 行）删两行：
++
++```tsx
++const TABS = [
++  { key: 'orders' as const, label: '报单' },
++  { key: 'trades' as const, label: '成交' },
++  { key: 'positions' as const, label: '持仓' },
++  { key: 'account' as const, label: '资金' },
++  { key: 'stop_orders' as const, label: '止损单' },
++]
++```
++
++3. 删除 store 绑定（原第 34-38 行的 `selectedInstrument` / `klineData` / `setKlineData` / `period` / `setPeriod`）。
++
++4. 删除「获取K线数据」`useEffect`（原第 61-77 行整段，即 `getKlineData(selectedInstrument, period, 200)` 那段）。
++
++5. `renderContent` 的 switch 中删除 `case 'contracts'` 与 `case 'kline'`（含 kline 里的 `<ErrorBoundary>`），只保留 5 个 case + `default`。
++
++6. 顶栏 `panel-controls` 的 `{activeTab !== 'kline' && (...)}` 条件去掉，直接恒渲染控件（删 `{activeTab !== 'kline' && (` 与闭合 `)}`，保留内层 `<div className="panel-controls">...</div>`）。
++
++`store.ts:58` 收窄：
++
++```ts
++export type QueryTab = 'orders' | 'trades' | 'positions' | 'account' | 'stop_orders'
++```
++
++`styles.css`：
++- 第 93-105 行组合选择器中删除 `.contract-query`（保留 `.order-flow,.trade-flow,.position-table-wrap,.account-query,.stop-order-list,.quote-query`）。
++- 删除 `.contract-grid` / `.contract-item` / `.contract-label` / `.contract-value`（第 107-135 行）。
++- 删除 `/* ── K线样式 ── */` 整段 `.kline-query` / `.kline-placeholder`（第 288-305 行）。
++
++`popupStore.ts` 更新失效注释（第 5-10 行 open 的 JSDoc、第 20 行块注释）——去掉对「合约/K线子页」的引用，例如 open 的注释改为「传入合约时同步设置全局选中合约（在行情表格中高亮）」：
++
++```ts
++  /**
++   * 打开查询弹窗；传入合约时同步设置全局选中合约（在行情表格中高亮）。
++   */
++```
++
++- [ ] **Step 4: 修复受影响的既有测试**
++
++`QueryPanel.test.tsx`：
++- 测试 `renders all 6 tab buttons` 改标题为 `renders all 5 tab buttons`，删除其中的 `expect(screen.getByText('合约')).toBeInTheDocument()` 一行。
++- 第 36-42 行测试 `删除冗余「查询面板」标题，工具栏直接承载 7 个子 Tab` 注释中 `7 个子 Tab` 改为 `5 个子 Tab`（断言本身只查 报单/成交，无需改）。
++
++`store.test.ts:56-62`：
++
++```ts
++  it('supports all remaining tab values', () => {
++    const tabs = ['orders', 'trades', 'positions', 'account', 'stop_orders'] as const
++    for (const tab of tabs) {
++      useQueryStore.getState().setActiveTab(tab)
++      expect(useQueryStore.getState().activeTab).toBe(tab)
++    }
++  })
++```
++
++- [ ] **Step 5: 删除 ContractQuery 文件**
++
++```bash
++cd frontend && git rm src/modules/query/ContractQuery.tsx src/modules/query/ContractQuery.test.tsx
++```
++
++- [ ] **Step 6: 运行测试 + 类型检查验证通过**
++
++Run: `cd frontend && npx vitest run src/modules/query/ && npx tsc --noEmit`
++Expected: 全部 PASS，tsc exit 0（无 ContractQuery 引用残留）
++
++- [ ] **Step 7: 提交**
++
++```bash
++git add -A src/modules/query/
++git commit -m "refactor(query): 移除查询面板「合约」「K线」Tab，删除 ContractQuery"
++```
++
++---
++
++### Task 2: 行情表格新增 合约乘数/最小变动价位 列 + 固定列宽
++
++**Files:**
++- Modify: `frontend/src/modules/market/MarketTable.tsx:63-77,82-123,190`
++- Test: `frontend/src/modules/market/MarketTable.test.tsx`
++
++**Interfaces:**
++- Consumes: `MarketTable` props 不变（`contracts: ContractInfo[]` 已含 `volumeMultiple` / `priceTick`）。
++- Produces: 15 列固定宽度表格，`widthMode: 'standard'`；`buildRecord` 输出含 `volumeMultiple` / `priceTick`（number）。
++
++- [ ] **Step 1: 写失败测试**
++
++在 `MarketTable.test.tsx` 的 `describe('MarketTable')` 块内（状态列 tests 之后）追加：
++
++```tsx
++  it('columns 包含合约乘数与最小变动价位，且采用固定列宽 standard', async () => {
++    const { ListTable } = await import('@visactor/vtable')
++    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    const options = (ListTable as any).mock.calls[0][1]
++    expect(options.widthMode).toBe('standard')
++    const titles = options.columns.map((c: { title: string }) => c.title)
++    expect(titles).toContain('合约乘数')
++    expect(titles).toContain('最小变动价位')
++    for (const col of options.columns) {
++      expect(typeof col.width).toBe('number')
++      expect(col.width as number).toBeGreaterThan(0)
++    }
++  })
++
++  it('buildRecord 从 contract 填充合约乘数与最小变动价位（有快照）', async () => {
++    const { ListTable } = await import('@visactor/vtable')
++    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    const options = (ListTable as any).mock.calls[0][1]
++    const record = options.records[0] // au2508
++    expect(record.volumeMultiple).toBe(1000)
++    expect(record.priceTick).toBe(0.02)
++  })
++
++  it('无快照时合约乘数/最小变动价位仍从 contract 显示（静态列）', async () => {
++    const { ListTable } = await import('@visactor/vtable')
++    render(<MarketTable contracts={mockContracts} snapshots={new Map()} />)
++    const options = (ListTable as any).mock.calls[0][1]
++    const record = options.records[0]
++    expect(record.volumeMultiple).toBe(1000)
++    expect(record.priceTick).toBe(0.02)
++    expect(record.lastPrice).toBe('--')
++  })
++```
++
++（`mockContracts` 第一条 `au2508` 的 `volumeMultiple: 1000, priceTick: 0.02` 已在文件第 9 行定义，无需改 fixture。）
++
++- [ ] **Step 2: 运行验证失败**
++
++Run: `cd frontend && npx vitest run src/modules/market/MarketTable.test.tsx -t "合约乘数"`
++Expected: FAIL（columns 无这两列、`widthMode` 为 `'adaptive'`、record 无这两个字段）
++
++- [ ] **Step 3: 实现 — columns + buildRecord + widthMode**
++
++`MarketTable.tsx`：
++
++1. 替换 `columns`（第 63-77 行）为固定列宽 15 列，新增 `volumeMultiple` / `priceTick` 列，插入 到期日 之前：
++
++```ts
++const columns = [
++  { field: 'instrumentID', title: '合约', width: 70 },
++  { field: 'productName', title: '合约品种', width: 80 },
++  { field: 'exchangeID', title: '交易所', width: 60 },
++  { field: 'volumeMultiple', title: '合约乘数', width: 70 },
++  { field: 'priceTick', title: '最小变动价位', width: 90 },
++  { field: 'expireDate', title: '到期日', width: 85 },
++  { field: 'status', title: '状态', width: 60, style: statusStyle },
++  { field: 'lastPrice', title: '最新价', width: 90, style: coloredStyle },
++  { field: 'change', title: '涨跌', width: 80, style: coloredStyle },
++  { field: 'changePercent', title: '涨跌%', width: 80, style: coloredStyle },
++  { field: 'bidPrice1', title: '买一', width: 90, style: coloredStyle },
++  { field: 'askPrice1', title: '卖一', width: 90, style: coloredStyle },
++  { field: 'volume', title: '成交量', width: 90 },
++  { field: 'openInterest', title: '持仓量', width: 90 },
++  { field: 'favorite', title: '⭐', width: 50 },
++]
++```
++
++2. `buildRecord` 两个分支各加两行（静态列，与 `expireDate` 同源 `contract`）：
++
++- 无快照分支（第 85-101 行 return 对象）内加：
++```ts
++      volumeMultiple: contract.volumeMultiple,
++      priceTick: contract.priceTick,
++```
++- 有快照分支（第 108-122 行 return 对象）内加同样的两行。
++
++3. 第 190 行 `widthMode: 'adaptive',` → `widthMode: 'standard',`。
++
++- [ ] **Step 4: 运行测试验证通过**
++
++Run: `cd frontend && npx vitest run src/modules/market/MarketTable.test.tsx`
++Expected: 全部 PASS（含既有 `状态列为到期日右侧的列` —— 新列序 到期日→状态 紧邻关系不变；局部更新/行索引用例不受影响）
++
++- [ ] **Step 5: 全量测试 + 构建**
++
++Run: `cd frontend && npm test && npm run build`
++Expected: 全绿，build 成功
++
++- [ ] **Step 6: 提交**
++
++```bash
++git add src/modules/market/MarketTable.tsx src/modules/market/MarketTable.test.tsx
++git commit -m "feat(market): 行情表格新增合约乘数/最小变动价位列，固定列宽 + 原生横向滚动"
++```
++
++---
++
++## 自检记录（writing-plans Self-Review）
++
++- **Spec 覆盖**：§1 查询面板删 Tab → Task 1；§2 补 2 列 → Task 2；§3 固定列宽 + 横向滚动 → Task 2（`widthMode:'standard'` + 每列显式 width）；§4 测试 → 两个 Task 各含 TDD 步骤。无缺项。
++- **占位符扫描**：所有 code 步骤含具体内容。
++- **类型一致性**：`volumeMultiple` / `priceTick` 在 columns、buildRecord、测试中一致；`QueryTab` 收窄在 store.ts 与两个测试文件中一致。
+diff --git a/docs/superpowers/specs/2026-08-07-query-panel-market-table-redesign-design.md b/docs/superpowers/specs/2026-08-07-query-panel-market-table-redesign-design.md
+new file mode 100644
+index 0000000..989d2c4
+--- /dev/null
++++ b/docs/superpowers/specs/2026-08-07-query-panel-market-table-redesign-design.md
+@@ -0,0 +1,125 @@
++# 查询面板精简 + 行情表格增强 — 设计文档
++
++日期：2026-08-07
++分支：`fix/vtable_enc`
++
++## 背景
++
++当前查询面板（QueryPanel）有 7 个子 Tab：报单 / 成交 / 持仓 / 资金 / 止损单 / 合约 / K线。
++
++- 「合约」Tab 展示选中合约的 8 个静态字段（ContractQuery，每次按 instrumentID 调 `getContracts`）。
++- 「K线」Tab 展示选中合约的 K 线图（与右键「打开K线」弹窗功能重复）。
++
++需求：
++1. 从查询面板移除「合约」「K线」两个 Tab。
++2. 合约面板的静态字段，有一部分已在行情表格展示，有一部分没有；将缺失字段补进行情表格。
++3. 行情表格改为固定列宽 + 底部原生横向滚动条，用户可向右滑动查看全部列；每列仍可手动调整宽度，但设有按内容确定的初始大小。
++
++## 范围
++
++- 前端 `frontend/src`（无后端改动，新增字段数据已存在于 `ContractInfo`）。
++- 涉及模块：`modules/query/`、`modules/market/MarketTable.tsx`、`modules/market/styles.css`、`modules/query/store.ts`。
++
++## 1. 查询面板：移除「合约」「K线」Tab
++
++### QueryPanel.tsx
++
++- `TABS` 数组删除 `{ key: 'contracts', label: '合约' }` 与 `{ key: 'kline', label: 'K线' }`，剩 5 个：报单 / 成交 / 持仓 / 资金 / 止损单。
++- `renderContent` 删除 `case 'contracts'` 与 `case 'kline'`。
++- 删除不再使用的 imports 与绑定：
++  - `import { ContractQuery } from './ContractQuery'`
++  - `import { KLineChart } from '../market/KLineChart'`
++  - `import { PERIOD_MS } from '@/hooks/useMarketWs'`
++  - `import { getKlineData } from '@/services/api'`
++  - `useMarketStore` 的 `selectedInstrument` / `klineData` / `setKlineData` / `period` / `setPeriod` 绑定（经核对，`selectedInstrument` 在 QueryPanel 仅被 K线 effect / ContractQuery / K线渲染使用，全部删除后无其他用途）
++  - 整个 `import { useMarketStore } from '../market/store'`（删除后不再使用）
++  - 用于拉取 K 线历史数据的 `useEffect`（`getKlineData(selectedInstrument, period, 200)` 那段）
++- 顶部 `panel-controls`（暂停/刷新）原先 `activeTab !== 'kline'` 才显示；移除 Tab 后条件恒真，直接去掉条件，所有 Tab 均显示控件。
++
++### query/store.ts
++
++- `QueryTab` 类型由 `'orders' | 'trades' | 'positions' | 'account' | 'stop_orders' | 'contracts' | 'kline'` 收窄为 `'orders' | 'trades' | 'positions' | 'account' | 'stop_orders'`。
++
++### 删除文件
++
++- `frontend/src/modules/query/ContractQuery.tsx`
++- `frontend/src/modules/query/ContractQuery.test.tsx`
++
++二者仅被 QueryPanel 引用，无其他使用者。
++
++### 保留（K 线功能不删）
++
++- `KLineChart` 组件本身（`modules/market/KLineChart.tsx`）。
++- `pages/KLinePage.tsx` 及右键「打开K线」弹窗 Tab（`openKlineTab` / `openKlineTabs`）。
++- `useMarketWs` 的 K 线 gate（`selectedInstrument ∪ lockedContracts`）与 store 的 `klineData` / `currentPeriod` —— 仍服务于 K 线弹窗功能。
++
++## 2. 行情表格：补齐缺失字段
++
++ContractQuery 的 8 个字段中，5 个已在行情表格展示：
++
++| ContractQuery 字段 | 行情表格列 | 结论 |
++|---|---|---|
++| 合约代码 instrumentID | 合约 | 已展示 |
++| 交易所 exchangeID | 交易所 | 已展示 |
++| 合约名称 instrumentName | — | **需求确认不加列** |
++| 品种 productID | 合约品种 | 已展示 |
++| 到期日 expireDate | 到期日 | 已展示 |
++| 是否可交易 isTrading | 状态（交易中/已停牌/已到期） | 已展示，不冗余加列 |
++| 合约乘数 volumeMultiple | — | **新增列** |
++| 最小变动价位 priceTick | — | **新增列** |
++
++新增 2 列，数据直接读取 `contracts[i]`（`ContractInfo` 已含 `volumeMultiple` / `priceTick`），无需新增 API 调用：
++
++| 新列 | field | 数据来源 |
++|---|---|---|
++| 合约乘数 | volumeMultiple | `contracts[i].volumeMultiple` |
++| 最小变动价位 | priceTick | `contracts[i].priceTick` |
++
++`buildRecord` 中从 `contract` 读取这两个字段；无快照时与其他静态列一致回退 `--`（当前 `volume` / `openInterest` 等已有 PLACEHOLDER 回退逻辑，静态字段沿用）。
++
++## 3. 列宽与横向滚动
++
++- `MarketTable` 配置 `widthMode: 'adaptive'` → `'standard'`（固定列宽）。
++- 15 列各设固定初始宽度（按内容决定），合计 ≈1175px：
++
++| 列 | 宽度 | 依据 |
++|---|---|---|
++| 合约 | 70 | IF2608（8 字符等宽，12px） |
++| 合约品种 | 80 | 沪深300（3 汉字） |
++| 交易所 | 60 | SHFE |
++| 合约乘数 | 70 | 300 / 1000 |
++| 最小变动价位 | 90 | 0.0002（期权小数位长） |
++| 到期日 | 85 | 20260820（8 位数字） |
++| 状态 | 60 | 交易中 |
++| 最新价 | 90 | 4585.60 |
++| 涨跌 | 80 | +123.45 |
++| 涨跌% | 80 | +2.34% |
++| 买一 | 90 | 4585.20 |
++| 卖一 | 90 | 4585.80 |
++| 成交量 | 90 | 1,234,567 |
++| 持仓量 | 90 | 88,888 |
++| ⭐ | 50 | 单字符 |
++
++- 总宽超过容器宽度时，VTable 底部自动出现原生横向滚动条（`scrollStyle.visible: 'always'` 已配置，常显），用户可向右拖动查看。
++- 列仍可拖动表头边框手动调整：vtable `columnResizeMode` 默认 `all`，无需改配置。固定宽度下拖拽改的是该列显式宽度（区别于 adaptive 模式下的重分配）。
++- 手动调整的宽度不持久化：MarketTable 在「行情 ↔ T型期权」切换时会卸载重建，宽度重置为默认初始值。符合「固定的初始大小」语义。
++- 宽屏（总宽 < 容器）下列靠左排布、右侧留空 —— 方案 A（纯固定列宽）的预期行为。
++
++## 4. 测试
++
++- **MarketTable.test.tsx**
++  - 新增：columns 含「合约乘数」「最小变动价位」；buildRecord 从 contract 正确填充（有/无快照两态）。
++  - 既有用例核对：`状态列为到期日右侧` 用例在新列序下仍成立（到期日 → 状态 的紧邻关系不变）；局部更新/行索引用例不受列变化影响。
++- **QueryPanel.test.tsx**
++  - `renders all 6 tab buttons` 改为 5 个 Tab 断言；删除「合约」Tab 断言；无 K线 Tab 断言（原测试未覆盖，可补一条「无 合约/K线 Tab」）。
++- **query/store.test.ts**：更新 tab 枚举断言。
++- **删除** `ContractQuery.test.tsx`。
++- 前端全量测试 + `npm run build` 通过。
++
++## 不做（Out of scope）
++
++- 不删除 K 线功能整体（弹窗 Tab 保留）。
++- 不添加「合约名称」「是否可交易」列。
++- 不改动 useMarketWs 的 K 线 gate 逻辑。
++- 不做列宽持久化（localStorage）。
++- 不做宽屏自动撑满（方案 B）。
+diff --git a/frontend/src/modules/market/MarketTable.test.tsx b/frontend/src/modules/market/MarketTable.test.tsx
+index 14ee6eb..e1ef72d 100644
+--- a/frontend/src/modules/market/MarketTable.test.tsx
++++ b/frontend/src/modules/market/MarketTable.test.tsx
+@@ -154,20 +154,53 @@ describe('MarketTable', () => {
+     ]
+     render(<MarketTable contracts={contracts} snapshots={new Map()} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     const statusCol = options.columns.find((c: { title: string }) => c.title === '状态')
+     const records = options.records
+     // 第二条数据（row=2）→ records[1] 已停牌 → 橙色
+     expect(statusCol.style({ table: { records }, row: 2, col: 4 })).toEqual({ color: '#d29922' })
+   })
+ 
++  it('columns 包含合约乘数与最小变动价位，且采用固定列宽 standard', async () => {
++    const { ListTable } = await import('@visactor/vtable')
++    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    const options = (ListTable as any).mock.calls[0][1]
++    expect(options.widthMode).toBe('standard')
++    const titles = options.columns.map((c: { title: string }) => c.title)
++    expect(titles).toContain('合约乘数')
++    expect(titles).toContain('最小变动价位')
++    for (const col of options.columns) {
++      expect(typeof col.width).toBe('number')
++      expect(col.width as number).toBeGreaterThan(0)
++    }
++  })
++
++  it('buildRecord 从 contract 填充合约乘数与最小变动价位（有快照）', async () => {
++    const { ListTable } = await import('@visactor/vtable')
++    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    const options = (ListTable as any).mock.calls[0][1]
++    const record = options.records[0] // au2508
++    expect(record.volumeMultiple).toBe(1000)
++    expect(record.priceTick).toBe(0.02)
++  })
++
++  it('无快照时合约乘数/最小变动价位仍从 contract 显示（静态列）', async () => {
++    const { ListTable } = await import('@visactor/vtable')
++    render(<MarketTable contracts={mockContracts} snapshots={new Map()} />)
++    const options = (ListTable as any).mock.calls[0][1]
++    const record = options.records[0]
++    expect(record.volumeMultiple).toBe(1000)
++    expect(record.priceTick).toBe(0.02)
++    expect(record.lastPrice).toBe('--')
++  })
++
+   // --- onVisibleRangeChange tests ---
+ 
+   it('接受 onVisibleRangeChange 回调', () => {
+     const onVisibleRangeChange = vi.fn()
+     render(
+       <MarketTable
+         contracts={mockContracts}
+         snapshots={mockSnapshots}
+         onVisibleRangeChange={onVisibleRangeChange}
+       />
+diff --git a/frontend/src/modules/market/MarketTable.tsx b/frontend/src/modules/market/MarketTable.tsx
+index 7bea4f1..df9a9dc 100644
+--- a/frontend/src/modules/market/MarketTable.tsx
++++ b/frontend/src/modules/market/MarketTable.tsx
+@@ -54,46 +54,50 @@ function coloredStyle(args: any) {
+ /** 状态列着色：交易中绿色 / 已停牌橙色 / 已到期灰色（row 需 -1，理由同上） */
+ function statusStyle(args: any) {
+   const record = args.table?.records?.[args.row - 1]
+   const status = record?.status as ContractStatus | undefined
+   if (status === '交易中') return { color: '#3fb950' }
+   if (status === '已停牌') return { color: '#d29922' }
+   return { color: '#8b949e' }
+ }
+ 
+ const columns = [
+-  { field: 'instrumentID', title: '合约', width: 90 },
+-  { field: 'productName', title: '合约品种', width: 100 },
+-  { field: 'exchangeID', title: '交易所', width: 70 },
+-  { field: 'expireDate', title: '到期日', width: 90 },
+-  { field: 'status', title: '状态', width: 70, style: statusStyle },
+-  { field: 'lastPrice', title: '最新价', width: 100, style: coloredStyle },
++  { field: 'instrumentID', title: '合约', width: 70 },
++  { field: 'productName', title: '合约品种', width: 80 },
++  { field: 'exchangeID', title: '交易所', width: 60 },
++  { field: 'volumeMultiple', title: '合约乘数', width: 70 },
++  { field: 'priceTick', title: '最小变动价位', width: 90 },
++  { field: 'expireDate', title: '到期日', width: 85 },
++  { field: 'status', title: '状态', width: 60, style: statusStyle },
++  { field: 'lastPrice', title: '最新价', width: 90, style: coloredStyle },
+   { field: 'change', title: '涨跌', width: 80, style: coloredStyle },
+   { field: 'changePercent', title: '涨跌%', width: 80, style: coloredStyle },
+-  { field: 'bidPrice1', title: '买一', width: 100, style: coloredStyle },
+-  { field: 'askPrice1', title: '卖一', width: 100, style: coloredStyle },
+-  { field: 'volume', title: '成交量', width: 100 },
+-  { field: 'openInterest', title: '持仓量', width: 100 },
++  { field: 'bidPrice1', title: '买一', width: 90, style: coloredStyle },
++  { field: 'askPrice1', title: '卖一', width: 90, style: coloredStyle },
++  { field: 'volume', title: '成交量', width: 90 },
++  { field: 'openInterest', title: '持仓量', width: 90 },
+   { field: 'favorite', title: '⭐', width: 50 },
+ ]
+ 
+ const CTP_INVALID_PRICE = 1.7976931348623157e+308
+ const isValidPrice = (p: number) => p > 0 && p < CTP_INVALID_PRICE
+ 
+ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, isFavorited: boolean) {
+   const productName = getProductName(contract.productID)
+   const status = getContractStatus(contract)
+   if (!snap) {
+     return {
+       instrumentID: contract.instrumentID,
+       productName,
+       exchangeID: contract.exchangeID || PLACEHOLDER,
++      volumeMultiple: contract.volumeMultiple,
++      priceTick: contract.priceTick,
+       expireDate: contract.expireDate || PLACEHOLDER,
+       status,
+       lastPrice: PLACEHOLDER,
+       change: PLACEHOLDER,
+       changePercent: PLACEHOLDER,
+       bidPrice1: PLACEHOLDER,
+       askPrice1: PLACEHOLDER,
+       volume: PLACEHOLDER,
+       openInterest: PLACEHOLDER,
+       favorite: isFavorited ? '⭐' : '☆',
+@@ -102,20 +106,22 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, i
+   // preSettlementPrice 可能为 0（CTP DBL_MAX 被 sanitize 后），此时 fallback 到昨收
+   const preSettlement = (snap.preSettlementPrice && snap.preSettlementPrice > 0)
+     ? snap.preSettlementPrice
+     : (snap.preClosePrice || snap.lastPrice)
+   const change = snap.lastPrice - preSettlement
+   const changePercent = preSettlement ? (change / preSettlement) * 100 : 0
+   return {
+     instrumentID: snap.instrumentID,
+     productName,
+     exchangeID: contract.exchangeID || PLACEHOLDER,
++    volumeMultiple: contract.volumeMultiple,
++    priceTick: contract.priceTick,
+     expireDate: contract.expireDate || PLACEHOLDER,
+     status,
+     lastPrice: isValidPrice(snap.lastPrice) ? snap.lastPrice : PLACEHOLDER,
+     change: isValidPrice(snap.lastPrice) && isValidPrice(preSettlement) ? change : PLACEHOLDER,
+     changePercent: isValidPrice(snap.lastPrice) && isValidPrice(preSettlement) ? changePercent : PLACEHOLDER,
+     bidPrice1: isValidPrice(snap.bidPrice1) ? snap.bidPrice1 : PLACEHOLDER,
+     askPrice1: isValidPrice(snap.askPrice1) ? snap.askPrice1 : PLACEHOLDER,
+     volume: snap.volume,
+     openInterest: snap.openInterest,
+     favorite: isFavorited ? '⭐' : '☆',
+@@ -180,21 +186,21 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
+ 
+   useEffect(() => {
+     if (!containerRef.current) return
+ 
+     const records = contracts.map((c) => buildRecord(c, snapshots.get(c.instrumentID), favoritedIds?.has(c.instrumentID) ?? false))
+     recordsRef.current = records
+ 
+     const table = new ListTable(containerRef.current, {
+       columns,
+       records,
+-      widthMode: 'adaptive',
++      widthMode: 'standard',
+       theme: {
+         underlayBackgroundColor: '#0d1117',
+         defaultStyle: {
+           fontSize: 12,
+           fontFamily: "'JetBrains Mono', Consolas, Monaco, monospace",
+           color: '#e6edf3',
+           bgColor: '#0d1117',
+           borderColor: '#21262d',
+           hover: {
+             cellBgColor: '#1c2333',
+diff --git a/frontend/src/modules/query/ContractQuery.test.tsx b/frontend/src/modules/query/ContractQuery.test.tsx
+deleted file mode 100644
+index 850ba55..0000000
+--- a/frontend/src/modules/query/ContractQuery.test.tsx
++++ /dev/null
+@@ -1,75 +0,0 @@
+-import { describe, it, expect, vi, beforeEach } from 'vitest'
+-import { render, screen } from '@testing-library/react'
+-import { ContractQuery } from './ContractQuery'
+-
+-vi.mock('../../services/api', () => ({
+-  getContracts: vi.fn(),
+-}))
+-
+-import { getContracts } from '../../services/api'
+-const mockGetContracts = vi.mocked(getContracts)
+-
+-describe('ContractQuery', () => {
+-  beforeEach(() => {
+-    vi.clearAllMocks()
+-  })
+-
+-  it('renders loading state initially', () => {
+-    mockGetContracts.mockReturnValue(new Promise(() => {})) // never resolves
+-    render(<ContractQuery instrumentID="IF2608" />)
+-    expect(screen.getByText('加载中…')).toBeInTheDocument()
+-  })
+-
+-  it('renders empty state when no instrumentID', () => {
+-    render(<ContractQuery instrumentID="" />)
+-    expect(screen.getByText('请在行情面板选择合约查看详情')).toBeInTheDocument()
+-  })
+-
+-  it('renders contract info after load', async () => {
+-    mockGetContracts.mockResolvedValue({
+-      contracts: [
+-        { instrumentID: 'IF2608', instrumentName: '沪深300股指期货2608', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260821', isTrading: 1, productClass: "1" },
+-      ],
+-      count: 1,
+-    })
+-
+-    render(<ContractQuery instrumentID="IF2608" />)
+-
+-    expect(await screen.findByText('IF2608')).toBeInTheDocument()
+-    expect(screen.getByText('沪深300股指期货2608')).toBeInTheDocument()
+-    expect(screen.getByText('CFFEX')).toBeInTheDocument()
+-    expect(screen.getByText('300')).toBeInTheDocument()
+-    expect(screen.getByText('0.2')).toBeInTheDocument()
+-  })
+-
+-  it('renders error state on API failure', async () => {
+-    mockGetContracts.mockRejectedValue(new Error('network'))
+-
+-    render(<ContractQuery instrumentID="IF2608" />)
+-
+-    expect(await screen.findByText('加载失败')).toBeInTheDocument()
+-  })
+-
+-  it('renders not found when contract does not exist', async () => {
+-    mockGetContracts.mockResolvedValue({ contracts: [], count: 0 })
+-
+-    render(<ContractQuery instrumentID="INVALID" />)
+-
+-    expect(await screen.findByText('未找到合约 INVALID')).toBeInTheDocument()
+-  })
+-
+-  it('renders with contract-query class', async () => {
+-    mockGetContracts.mockResolvedValue({
+-      contracts: [
+-        { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260821', isTrading: 1, productClass: "1" },
+-      ],
+-      count: 1,
+-    })
+-
+-    const { container } = render(<ContractQuery instrumentID="IF2608" />)
+-    expect(container.firstChild).toHaveClass('contract-query')
+-    // Wait for data to load
+-    await screen.findByText('沪深300')
+-    expect(container.firstChild).toHaveClass('contract-query')
+-  })
+-})
+diff --git a/frontend/src/modules/query/ContractQuery.tsx b/frontend/src/modules/query/ContractQuery.tsx
+deleted file mode 100644
+index 2eb9063..0000000
+--- a/frontend/src/modules/query/ContractQuery.tsx
++++ /dev/null
+@@ -1,115 +0,0 @@
+-import { useState, useEffect } from 'react'
+-import { getContracts } from '../../services/api'
+-import { getProductName } from '../../utils/productNames'
+-import type { ContractInfo } from '../../services/types'
+-
+-interface ContractQueryProps {
+-  instrumentID: string
+-}
+-
+-export function ContractQuery({ instrumentID }: ContractQueryProps) {
+-  const [contract, setContract] = useState<ContractInfo | null>(null)
+-  const [loading, setLoading] = useState(false)
+-  const [error, setError] = useState(false)
+-
+-  useEffect(() => {
+-    if (!instrumentID) {
+-      setContract(null)
+-      setError(false)
+-      return
+-    }
+-
+-    let cancelled = false
+-    setLoading(true)
+-    setError(false)
+-
+-    getContracts(instrumentID)
+-      .then((res) => {
+-        if (cancelled) return
+-        setContract(res.contracts?.[0] ?? null)
+-      })
+-      .catch(() => {
+-        if (cancelled) return
+-        setError(true)
+-      })
+-      .finally(() => {
+-        if (cancelled) return
+-        setLoading(false)
+-      })
+-
+-    return () => { cancelled = true }
+-  }, [instrumentID])
+-
+-  if (!instrumentID) {
+-    return (
+-      <div className="contract-query">
+-        <div className="flow-empty">请在行情面板选择合约查看详情</div>
+-      </div>
+-    )
+-  }
+-
+-  if (loading) {
+-    return (
+-      <div className="contract-query">
+-        <div className="flow-empty">加载中…</div>
+-      </div>
+-    )
+-  }
+-
+-  if (error) {
+-    return (
+-      <div className="contract-query">
+-        <div className="flow-empty">加载失败</div>
+-      </div>
+-    )
+-  }
+-
+-  if (!contract) {
+-    return (
+-      <div className="contract-query">
+-        <div className="flow-empty">未找到合约 {instrumentID}</div>
+-      </div>
+-    )
+-  }
+-
+-  return (
+-    <div className="contract-query">
+-      <div className="contract-grid">
+-        <div className="contract-item">
+-          <span className="contract-label">合约代码</span>
+-          <span className="contract-value">{contract.instrumentID}</span>
+-        </div>
+-        <div className="contract-item">
+-          <span className="contract-label">交易所</span>
+-          <span className="contract-value">{contract.exchangeID}</span>
+-        </div>
+-        <div className="contract-item">
+-          <span className="contract-label">合约名称</span>
+-          <span className="contract-value">{contract.instrumentName}</span>
+-        </div>
+-        <div className="contract-item">
+-          <span className="contract-label">品种</span>
+-          <span className="contract-value">{getProductName(contract.productID)}（{contract.productID}）</span>
+-        </div>
+-        <div className="contract-item">
+-          <span className="contract-label">合约乘数</span>
+-          <span className="contract-value">{contract.volumeMultiple}</span>
+-        </div>
+-        <div className="contract-item">
+-          <span className="contract-label">最小变动价位</span>
+-          <span className="contract-value">{contract.priceTick}</span>
+-        </div>
+-        <div className="contract-item">
+-          <span className="contract-label">到期日</span>
+-          <span className="contract-value">{contract.expireDate}</span>
+-        </div>
+-        <div className="contract-item">
+-          <span className="contract-label">是否可交易</span>
+-          <span className={`contract-value ${contract.isTrading ? 'profit-positive' : 'profit-negative'}`}>
+-            {contract.isTrading ? '是' : '否'}
+-          </span>
+-        </div>
+-      </div>
+-    </div>
+-  )
+-}
+diff --git a/frontend/src/modules/query/QueryPanel.test.tsx b/frontend/src/modules/query/QueryPanel.test.tsx
+index 9e914da..4007a03 100644
+--- a/frontend/src/modules/query/QueryPanel.test.tsx
++++ b/frontend/src/modules/query/QueryPanel.test.tsx
+@@ -26,36 +26,35 @@ describe('QueryPanel', () => {
+       orders: [],
+       trades: [],
+       positions: [],
+       account: null,
+       stopOrders: [],
+       isPaused: false,
+       isLoading: false,
+     })
+   })
+ 
+-  it('删除冗余「查询面板」标题，工具栏直接承载 7 个子 Tab', () => {
++  it('删除冗余「查询面板」标题，工具栏直接承载 5 个子 Tab', () => {
+     render(<QueryPanel />)
+     expect(screen.queryByText('查询面板')).not.toBeInTheDocument()
+     // 子 Tab 仍在工具栏内
+     expect(screen.getByText('报单')).toBeInTheDocument()
+     expect(screen.getByText('成交')).toBeInTheDocument()
+   })
+ 
+-  it('renders all 6 tab buttons', () => {
++  it('renders all 5 tab buttons', () => {
+     render(<QueryPanel />)
+     expect(screen.getByText('报单')).toBeInTheDocument()
+     expect(screen.getByText('成交')).toBeInTheDocument()
+     expect(screen.getByText('持仓')).toBeInTheDocument()
+     expect(screen.getByText('资金')).toBeInTheDocument()
+     expect(screen.getByText('止损单')).toBeInTheDocument()
+-    expect(screen.getByText('合约')).toBeInTheDocument()
+   })
+ 
+   it('defaults to orders tab', () => {
+     render(<QueryPanel />)
+     expect(screen.getByText('报单')).toHaveClass('active')
+   })
+ 
+   it('switches tab on click', () => {
+     render(<QueryPanel />)
+     fireEvent.click(screen.getByText('成交'))
+@@ -107,11 +106,17 @@ describe('QueryPanel', () => {
+     useQueryStore.setState({ activeTab: 'account' })
+     render(<QueryPanel />)
+     expect(screen.getByText('暂无资金数据')).toBeInTheDocument()
+   })
+ 
+   it('renders StopOrderList when stop_orders tab active', () => {
+     useQueryStore.setState({ activeTab: 'stop_orders' })
+     render(<QueryPanel />)
+     expect(screen.getByText('暂无止损单')).toBeInTheDocument()
+   })
++
++  it('不再显示 合约/K线 Tab', () => {
++    render(<QueryPanel />)
++    expect(screen.queryByText('合约')).not.toBeInTheDocument()
++    expect(screen.queryByText('K线')).not.toBeInTheDocument()
++  })
+ })
+diff --git a/frontend/src/modules/query/QueryPanel.tsx b/frontend/src/modules/query/QueryPanel.tsx
+index d8c4ca6..affbc79 100644
+--- a/frontend/src/modules/query/QueryPanel.tsx
++++ b/frontend/src/modules/query/QueryPanel.tsx
+@@ -1,48 +1,35 @@
+ import { useEffect, useCallback } from 'react'
+ import { useQueryStore } from './store'
+ import { OrderFlow } from './OrderFlow'
+ import { TradeFlow } from './TradeFlow'
+ import { Position } from './Position'
+ import { AccountQuery } from './AccountQuery'
+ import { StopOrderList } from './StopOrderList'
+-import { ContractQuery } from './ContractQuery'
+-import { KLineChart } from '../market/KLineChart'
+-import { useMarketStore } from '../market/store'
+-import { PERIOD_MS } from '@/hooks/useMarketWs'
+-import { getKlineData } from '@/services/api'
+-import { ErrorBoundary } from '@/components/ErrorBoundary'
+ import './styles.css'
+ 
+ const TABS = [
+   { key: 'orders' as const, label: '报单' },
+   { key: 'trades' as const, label: '成交' },
+   { key: 'positions' as const, label: '持仓' },
+   { key: 'account' as const, label: '资金' },
+   { key: 'stop_orders' as const, label: '止损单' },
+-  { key: 'contracts' as const, label: '合约' },
+-  { key: 'kline' as const, label: 'K线' },
+ ]
+ 
+ export function QueryPanel() {
+   const activeTab = useQueryStore((s) => s.activeTab)
+   const setActiveTab = useQueryStore((s) => s.setActiveTab)
+   const isPaused = useQueryStore((s) => s.isPaused)
+   const isLoading = useQueryStore((s) => s.isLoading)
+   const togglePause = useQueryStore((s) => s.togglePause)
+   const refreshAll = useQueryStore((s) => s.refreshAll)
+   const handleCancelAll = useQueryStore((s) => s.handleCancelAll)
+-  const selectedInstrument = useMarketStore((s) => s.selectedInstrument)
+-  const klineData = useMarketStore((s) => s.klineData)
+-  const setKlineData = useMarketStore((s) => s.setKlineData)
+-  const period = useMarketStore((s) => s.currentPeriod)
+-  const setPeriod = useMarketStore((s) => s.setPeriod)
+ 
+   // Initial data load
+   useEffect(() => {
+     refreshAll()
+   }, [refreshAll])
+ 
+   // Auto-refresh: 完成后再调度下一次，避免重入
+   useEffect(() => {
+     if (isPaused) return
+     let timer: ReturnType<typeof setTimeout>
+@@ -51,38 +38,20 @@ export function QueryPanel() {
+         await refreshAll()
+         schedule()
+       }, 10000)
+     }
+     schedule()
+     return () => clearTimeout(timer)
+   }, [isPaused, refreshAll])
+ 
+   // 注意：WebSocket 行情推送由 MarketPanel 中的 useMarketWs 单例管理
+ 
+-  // 获取K线数据
+-  useEffect(() => {
+-    if (!selectedInstrument) return
+-    getKlineData(selectedInstrument, period, 200)
+-      .then((res) => {
+-        if (res.bars?.length) {
+-          const periodMs = PERIOD_MS[period] ?? PERIOD_MS['5m']
+-          const aligned = res.bars.map((bar) => {
+-            // 使用完整的时间戳（包含日期），与实时数据格式一致
+-            const timestamp = Math.floor(bar.timestamp / periodMs) * periodMs
+-            return { ...bar, timestamp }
+-          })
+-          setKlineData(selectedInstrument, aligned)
+-        }
+-      })
+-      .catch(() => { /* 静默失败 */ })
+-  }, [selectedInstrument, period, setKlineData])
+-
+   // C key shortcut — cancel all active orders (when orders tab is active)
+   const onKeyDown = useCallback(
+     (e: KeyboardEvent) => {
+       if (e.key === 'c' || e.key === 'C') {
+         // Ignore if user is typing in an input
+         if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+         if (activeTab === 'orders') {
+           handleCancelAll()
+         }
+       }
+@@ -100,74 +69,51 @@ export function QueryPanel() {
+       case 'orders':
+         return <OrderFlow />
+       case 'trades':
+         return <TradeFlow />
+       case 'positions':
+         return <Position />
+       case 'account':
+         return <AccountQuery />
+       case 'stop_orders':
+         return <StopOrderList />
+-      case 'contracts':
+-        return <ContractQuery instrumentID={selectedInstrument ?? ''} />
+-      case 'kline': {
+-        const selectedKline = selectedInstrument ? klineData.get(selectedInstrument) ?? [] : []
+-        return (
+-          <div className="kline-query">
+-            {selectedInstrument ? (
+-              <ErrorBoundary>
+-                <KLineChart
+-                  instrument={selectedInstrument}
+-                  klineData={selectedKline}
+-                  period={period}
+-                  onPeriodChange={setPeriod}
+-                />
+-              </ErrorBoundary>
+-            ) : (
+-              <div className="kline-placeholder">选择合约查看K线图</div>
+-            )}
+-          </div>
+-        )
+-      }
+       default:
+         return null
+     }
+   }
+ 
+   return (
+     <section className="query-panel" data-testid="query-panel">
+       <div className="panel-header" data-drag-handle>
+         <div className="tab-bar">
+           {TABS.map((tab) => (
+             <button
+               key={tab.key}
+               className={`tab-btn ${activeTab === tab.key ? 'active' : ''}`}
+               onClick={() => setActiveTab(tab.key)}
+             >
+               {tab.label}
+             </button>
+           ))}
+         </div>
+-        {activeTab !== 'kline' && (
+-          <div className="panel-controls">
+-            <button
+-              className={`btn-pause ${isPaused ? 'paused' : ''}`}
+-              onClick={togglePause}
+-            >
+-              {isPaused ? '继续' : '暂停'}
+-            </button>
+-            <button
+-              className="btn-refresh"
+-              onClick={() => refreshAll()}
+-              disabled={isLoading || isPaused}
+-            >
+-              {isLoading ? '刷新中…' : '刷新'}
+-            </button>
+-          </div>
+-        )}
++        <div className="panel-controls">
++          <button
++            className={`btn-pause ${isPaused ? 'paused' : ''}`}
++            onClick={togglePause}
++          >
++            {isPaused ? '继续' : '暂停'}
++          </button>
++          <button
++            className="btn-refresh"
++            onClick={() => refreshAll()}
++            disabled={isLoading || isPaused}
++          >
++            {isLoading ? '刷新中…' : '刷新'}
++          </button>
++        </div>
+       </div>
+       <div className="panel-content">
+         {renderContent()}
+       </div>
+     </section>
+   )
+ }
+diff --git a/frontend/src/modules/query/popupStore.ts b/frontend/src/modules/query/popupStore.ts
+index b4077cd..0996ef5 100644
+--- a/frontend/src/modules/query/popupStore.ts
++++ b/frontend/src/modules/query/popupStore.ts
+@@ -1,30 +1,29 @@
+ import { create } from 'zustand'
+ import { useMarketStore } from '@/modules/market/store'
+ 
+ interface QueryPopupState {
+   /** 弹窗是否打开 */
+   isOpen: boolean
+   /**
+-   * 打开查询弹窗；传入合约时同步设置全局选中合约，
+-   * 使查询面板「合约/K线」子页显示该合约。
++   * 打开查询弹窗；传入合约时同步设置全局选中合约（在行情表格中高亮）。
+    */
+   open: (instrumentID?: string) => void
+   /** 关闭弹窗 */
+   close: () => void
+ }
+ 
+ /**
+  * QueryPopupStore — 悬浮查询弹窗状态
+  *
+  * 非模态悬浮弹窗的开关。
+- * 查询面板为全局账户查询（报单/成交/持仓/资金/止损单/合约/K线），
++ * 查询面板为全局账户查询（报单/成交/持仓/资金/止损单），
+  * 非按合约拆分，故仅维护 isOpen；open 可选传入合约同步到全局选中。
+  */
+ export const useQueryPopupStore = create<QueryPopupState>((set) => ({
+   isOpen: false,
+   open: (instrumentID) => {
+     if (instrumentID) {
+       useMarketStore.getState().setSelectedInstrument(instrumentID)
+     }
+     set({ isOpen: true })
+   },
+diff --git a/frontend/src/modules/query/store.test.ts b/frontend/src/modules/query/store.test.ts
+index ee4e13f..3494263 100644
+--- a/frontend/src/modules/query/store.test.ts
++++ b/frontend/src/modules/query/store.test.ts
+@@ -46,22 +46,22 @@ describe('QueryStore', () => {
+ 
+   it('defaults to orders tab', () => {
+     expect(useQueryStore.getState().activeTab).toBe('orders')
+   })
+ 
+   it('sets active tab', () => {
+     useQueryStore.getState().setActiveTab('trades')
+     expect(useQueryStore.getState().activeTab).toBe('trades')
+   })
+ 
+-  it('supports all tab values including stop_orders, contracts', () => {
+-    const tabs = ['orders', 'trades', 'positions', 'account', 'stop_orders', 'contracts'] as const
++  it('supports all remaining tab values', () => {
++    const tabs = ['orders', 'trades', 'positions', 'account', 'stop_orders'] as const
+     for (const tab of tabs) {
+       useQueryStore.getState().setActiveTab(tab)
+       expect(useQueryStore.getState().activeTab).toBe(tab)
+     }
+   })
+ 
+   // ── Pause / Resume ─────────────────────────────────────────────
+ 
+   it('defaults to not paused', () => {
+     expect(useQueryStore.getState().isPaused).toBe(false)
+diff --git a/frontend/src/modules/query/store.ts b/frontend/src/modules/query/store.ts
+index 2221f0b..c1311b5 100644
+--- a/frontend/src/modules/query/store.ts
++++ b/frontend/src/modules/query/store.ts
+@@ -48,21 +48,21 @@ interface RawPosition {
+   todayPosition: number
+   ydPosition: number
+   tradingDay: string
+ }
+ 
+ // 前端使用类型（放宽约束，允许 CTP 原始字符串）
+ type OrderEntry = RawOrder
+ type TradeEntry = RawTrade
+ type PositionEntry = RawPosition
+ 
+-export type QueryTab = 'orders' | 'trades' | 'positions' | 'account' | 'stop_orders' | 'contracts' | 'kline'
++export type QueryTab = 'orders' | 'trades' | 'positions' | 'account' | 'stop_orders'
+ 
+ interface QueryStore {
+   // Tab
+   activeTab: QueryTab
+   setActiveTab: (tab: QueryTab) => void
+ 
+   // Data
+   orders: OrderEntry[]
+   trades: TradeEntry[]
+   positions: PositionEntry[]
+diff --git a/frontend/src/modules/query/styles.css b/frontend/src/modules/query/styles.css
+index 3743e3b..2566288 100644
+--- a/frontend/src/modules/query/styles.css
++++ b/frontend/src/modules/query/styles.css
+@@ -88,59 +88,28 @@
+   flex-direction: column;
+ }
+ 
+ /* ── Flow components (OrderFlow, TradeFlow, etc.) ──── */
+ 
+ .order-flow,
+ .trade-flow,
+ .position-table-wrap,
+ .account-query,
+ .stop-order-list,
+-.quote-query,
+-.contract-query {
++.quote-query {
+   display: flex;
+   flex-direction: column;
+   height: 100%;
+   overflow: hidden;
+   padding: 8px;
+ }
+ 
+-/* 合约详情 2×4 网格 */
+-.contract-grid {
+-  display: grid;
+-  grid-template-columns: 1fr 1fr;
+-  gap: 1px;
+-  background: var(--border-color);
+-  border: 1px solid var(--border-color);
+-  border-radius: 4px;
+-  overflow: hidden;
+-}
+-
+-.contract-item {
+-  display: flex;
+-  flex-direction: column;
+-  gap: 2px;
+-  padding: 8px 12px;
+-  background: var(--bg-panel);
+-}
+-
+-.contract-label {
+-  font-size: 11px;
+-  color: var(--text-secondary);
+-}
+-
+-.contract-value {
+-  font-size: 13px;
+-  color: var(--text-primary);
+-  font-weight: 500;
+-}
+-
+ .flow-toolbar {
+   display: flex;
+   align-items: center;
+   gap: 8px;
+   padding: 6px 12px;
+   border-bottom: 1px solid var(--border-color);
+   background: var(--bg-panel);
+ }
+ 
+ .flow-count {
+@@ -277,29 +246,10 @@
+   font-size: 11px;
+   color: var(--text-secondary);
+ }
+ 
+ .account-value {
+   font-size: 14px;
+   font-weight: 500;
+   color: var(--text-primary);
+   font-variant-numeric: tabular-nums;
+ }
+-
+-/* ── K线样式 ──────────────────────────────────── */
+-
+-.kline-query {
+-  display: flex;
+-  flex-direction: column;
+-  height: 100%;
+-  overflow: hidden;
+-  padding: 8px;
+-}
+-
+-.kline-placeholder {
+-  display: flex;
+-  align-items: center;
+-  justify-content: center;
+-  flex: 1;
+-  color: var(--text-secondary);
+-  font-size: 13px;
+-}

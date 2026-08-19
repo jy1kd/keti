@@ -1,0 +1,180 @@
+# Review package: b097c2fef03ac4c24f93787f69883c4daff1705c..02ee6497031695efa785b14da11af64baeb6ef52
+
+## Commits
+02ee649 feat(market): 行情表格新增合约乘数/最小变动价位列，固定列宽 + 原生横向滚动
+
+## Files changed
+ frontend/src/modules/market/MarketTable.test.tsx | 33 ++++++++++++++++++++++++
+ frontend/src/modules/market/MarketTable.tsx      | 28 ++++++++++++--------
+ 2 files changed, 50 insertions(+), 11 deletions(-)
+
+## Diff
+diff --git a/frontend/src/modules/market/MarketTable.test.tsx b/frontend/src/modules/market/MarketTable.test.tsx
+index 14ee6eb..e1ef72d 100644
+--- a/frontend/src/modules/market/MarketTable.test.tsx
++++ b/frontend/src/modules/market/MarketTable.test.tsx
+@@ -154,20 +154,53 @@ describe('MarketTable', () => {
+     ]
+     render(<MarketTable contracts={contracts} snapshots={new Map()} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     const statusCol = options.columns.find((c: { title: string }) => c.title === '状态')
+     const records = options.records
+     // 第二条数据（row=2）→ records[1] 已停牌 → 橙色
+     expect(statusCol.style({ table: { records }, row: 2, col: 4 })).toEqual({ color: '#d29922' })
+   })
+ 
++  it('columns 包含合约乘数与最小变动价位，且采用固定列宽 standard', async () => {
++    const { ListTable } = await import('@visactor/vtable')
++    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    const options = (ListTable as any).mock.calls[0][1]
++    expect(options.widthMode).toBe('standard')
++    const titles = options.columns.map((c: { title: string }) => c.title)
++    expect(titles).toContain('合约乘数')
++    expect(titles).toContain('最小变动价位')
++    for (const col of options.columns) {
++      expect(typeof col.width).toBe('number')
++      expect(col.width as number).toBeGreaterThan(0)
++    }
++  })
++
++  it('buildRecord 从 contract 填充合约乘数与最小变动价位（有快照）', async () => {
++    const { ListTable } = await import('@visactor/vtable')
++    render(<MarketTable contracts={mockContracts} snapshots={mockSnapshots} />)
++    const options = (ListTable as any).mock.calls[0][1]
++    const record = options.records[0] // au2508
++    expect(record.volumeMultiple).toBe(1000)
++    expect(record.priceTick).toBe(0.02)
++  })
++
++  it('无快照时合约乘数/最小变动价位仍从 contract 显示（静态列）', async () => {
++    const { ListTable } = await import('@visactor/vtable')
++    render(<MarketTable contracts={mockContracts} snapshots={new Map()} />)
++    const options = (ListTable as any).mock.calls[0][1]
++    const record = options.records[0]
++    expect(record.volumeMultiple).toBe(1000)
++    expect(record.priceTick).toBe(0.02)
++    expect(record.lastPrice).toBe('--')
++  })
++
+   // --- onVisibleRangeChange tests ---
+ 
+   it('接受 onVisibleRangeChange 回调', () => {
+     const onVisibleRangeChange = vi.fn()
+     render(
+       <MarketTable
+         contracts={mockContracts}
+         snapshots={mockSnapshots}
+         onVisibleRangeChange={onVisibleRangeChange}
+       />
+diff --git a/frontend/src/modules/market/MarketTable.tsx b/frontend/src/modules/market/MarketTable.tsx
+index 7bea4f1..df9a9dc 100644
+--- a/frontend/src/modules/market/MarketTable.tsx
++++ b/frontend/src/modules/market/MarketTable.tsx
+@@ -54,46 +54,50 @@ function coloredStyle(args: any) {
+ /** 状态列着色：交易中绿色 / 已停牌橙色 / 已到期灰色（row 需 -1，理由同上） */
+ function statusStyle(args: any) {
+   const record = args.table?.records?.[args.row - 1]
+   const status = record?.status as ContractStatus | undefined
+   if (status === '交易中') return { color: '#3fb950' }
+   if (status === '已停牌') return { color: '#d29922' }
+   return { color: '#8b949e' }
+ }
+ 
+ const columns = [
+-  { field: 'instrumentID', title: '合约', width: 90 },
+-  { field: 'productName', title: '合约品种', width: 100 },
+-  { field: 'exchangeID', title: '交易所', width: 70 },
+-  { field: 'expireDate', title: '到期日', width: 90 },
+-  { field: 'status', title: '状态', width: 70, style: statusStyle },
+-  { field: 'lastPrice', title: '最新价', width: 100, style: coloredStyle },
++  { field: 'instrumentID', title: '合约', width: 70 },
++  { field: 'productName', title: '合约品种', width: 80 },
++  { field: 'exchangeID', title: '交易所', width: 60 },
++  { field: 'volumeMultiple', title: '合约乘数', width: 70 },
++  { field: 'priceTick', title: '最小变动价位', width: 90 },
++  { field: 'expireDate', title: '到期日', width: 85 },
++  { field: 'status', title: '状态', width: 60, style: statusStyle },
++  { field: 'lastPrice', title: '最新价', width: 90, style: coloredStyle },
+   { field: 'change', title: '涨跌', width: 80, style: coloredStyle },
+   { field: 'changePercent', title: '涨跌%', width: 80, style: coloredStyle },
+-  { field: 'bidPrice1', title: '买一', width: 100, style: coloredStyle },
+-  { field: 'askPrice1', title: '卖一', width: 100, style: coloredStyle },
+-  { field: 'volume', title: '成交量', width: 100 },
+-  { field: 'openInterest', title: '持仓量', width: 100 },
++  { field: 'bidPrice1', title: '买一', width: 90, style: coloredStyle },
++  { field: 'askPrice1', title: '卖一', width: 90, style: coloredStyle },
++  { field: 'volume', title: '成交量', width: 90 },
++  { field: 'openInterest', title: '持仓量', width: 90 },
+   { field: 'favorite', title: '⭐', width: 50 },
+ ]
+ 
+ const CTP_INVALID_PRICE = 1.7976931348623157e+308
+ const isValidPrice = (p: number) => p > 0 && p < CTP_INVALID_PRICE
+ 
+ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, isFavorited: boolean) {
+   const productName = getProductName(contract.productID)
+   const status = getContractStatus(contract)
+   if (!snap) {
+     return {
+       instrumentID: contract.instrumentID,
+       productName,
+       exchangeID: contract.exchangeID || PLACEHOLDER,
++      volumeMultiple: contract.volumeMultiple,
++      priceTick: contract.priceTick,
+       expireDate: contract.expireDate || PLACEHOLDER,
+       status,
+       lastPrice: PLACEHOLDER,
+       change: PLACEHOLDER,
+       changePercent: PLACEHOLDER,
+       bidPrice1: PLACEHOLDER,
+       askPrice1: PLACEHOLDER,
+       volume: PLACEHOLDER,
+       openInterest: PLACEHOLDER,
+       favorite: isFavorited ? '⭐' : '☆',
+@@ -102,20 +106,22 @@ function buildRecord(contract: ContractInfo, snap: MarketSnapshot | undefined, i
+   // preSettlementPrice 可能为 0（CTP DBL_MAX 被 sanitize 后），此时 fallback 到昨收
+   const preSettlement = (snap.preSettlementPrice && snap.preSettlementPrice > 0)
+     ? snap.preSettlementPrice
+     : (snap.preClosePrice || snap.lastPrice)
+   const change = snap.lastPrice - preSettlement
+   const changePercent = preSettlement ? (change / preSettlement) * 100 : 0
+   return {
+     instrumentID: snap.instrumentID,
+     productName,
+     exchangeID: contract.exchangeID || PLACEHOLDER,
++    volumeMultiple: contract.volumeMultiple,
++    priceTick: contract.priceTick,
+     expireDate: contract.expireDate || PLACEHOLDER,
+     status,
+     lastPrice: isValidPrice(snap.lastPrice) ? snap.lastPrice : PLACEHOLDER,
+     change: isValidPrice(snap.lastPrice) && isValidPrice(preSettlement) ? change : PLACEHOLDER,
+     changePercent: isValidPrice(snap.lastPrice) && isValidPrice(preSettlement) ? changePercent : PLACEHOLDER,
+     bidPrice1: isValidPrice(snap.bidPrice1) ? snap.bidPrice1 : PLACEHOLDER,
+     askPrice1: isValidPrice(snap.askPrice1) ? snap.askPrice1 : PLACEHOLDER,
+     volume: snap.volume,
+     openInterest: snap.openInterest,
+     favorite: isFavorited ? '⭐' : '☆',
+@@ -180,21 +186,21 @@ export function MarketTable({ contracts, snapshots, selectedInstrument, onRowCli
+ 
+   useEffect(() => {
+     if (!containerRef.current) return
+ 
+     const records = contracts.map((c) => buildRecord(c, snapshots.get(c.instrumentID), favoritedIds?.has(c.instrumentID) ?? false))
+     recordsRef.current = records
+ 
+     const table = new ListTable(containerRef.current, {
+       columns,
+       records,
+-      widthMode: 'adaptive',
++      widthMode: 'standard',
+       theme: {
+         underlayBackgroundColor: '#0d1117',
+         defaultStyle: {
+           fontSize: 12,
+           fontFamily: "'JetBrains Mono', Consolas, Monaco, monospace",
+           color: '#e6edf3',
+           bgColor: '#0d1117',
+           borderColor: '#21262d',
+           hover: {
+             cellBgColor: '#1c2333',

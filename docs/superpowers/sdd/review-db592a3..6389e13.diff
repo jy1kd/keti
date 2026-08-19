@@ -1,0 +1,368 @@
+# Review package: db592a3..HEAD
+
+## Commits
+6389e13 refactor(task-15): market store 清理 — 移除 fetchInstruments/refreshInstruments/isRefreshing
+
+## Files changed
+ frontend/src/hooks/useMarketWs.test.ts    |  3 +-
+ frontend/src/hooks/useMarketWs.ts         | 20 ++++---
+ frontend/src/modules/market/store.test.ts | 87 +------------------------------
+ frontend/src/modules/market/store.ts      | 29 +----------
+ 4 files changed, 17 insertions(+), 122 deletions(-)
+
+## Diff
+diff --git a/frontend/src/hooks/useMarketWs.test.ts b/frontend/src/hooks/useMarketWs.test.ts
+index 131da0f..c639f6b 100644
+--- a/frontend/src/hooks/useMarketWs.test.ts
++++ b/frontend/src/hooks/useMarketWs.test.ts
+@@ -11,26 +11,25 @@ const mockDisconnectAll = vi.fn()
+ 
+ vi.mock('@/services/ws', () => ({
+   WSManager: vi.fn().mockImplementation(() => ({
+     connect: mockConnect,
+     disconnect: mockDisconnect,
+     disconnectAll: mockDisconnectAll,
+     isConnected: vi.fn().mockReturnValue(false),
+   })),
+ }))
+ 
+-// Mock API to prevent real network calls from fetchInstruments
++// Mock API to prevent real network calls
+ vi.mock('@/services/api', () => ({
+   getInstruments: vi.fn().mockResolvedValue({ instruments: [], count: 0 }),
+   subscribeMarket: vi.fn(),
+   getSnapshots: vi.fn(),
+-  refreshInstruments: vi.fn(),
+ }))
+ 
+ // Mock toast
+ const mockToastSuccess = vi.fn()
+ vi.mock('@/components/Toast', () => ({
+   toast: {
+     success: (...args: unknown[]) => mockToastSuccess(...args),
+     error: vi.fn(),
+     _clearAll: vi.fn(),
+   },
+diff --git a/frontend/src/hooks/useMarketWs.ts b/frontend/src/hooks/useMarketWs.ts
+index 0f1b138..5e59d30 100644
+--- a/frontend/src/hooks/useMarketWs.ts
++++ b/frontend/src/hooks/useMarketWs.ts
+@@ -1,16 +1,18 @@
+ import { useEffect, useRef } from 'react'
+ import { WSManager } from '@/services/ws'
+ import { useMarketStore } from '@/modules/market/store'
+ import { useConnectionStore } from '@/stores/connection'
++import { useContractsStore } from '@/stores/contracts'
+ import { useReconnect } from './useReconnect'
+ import { toast } from '@/components/Toast'
++import { getInstruments } from '@/services/api'
+ import type { MarketSnapshot, KLineData, WSMessage } from '@/services/types'
+ 
+ /** 周期字符串 → 毫秒 */
+ export const PERIOD_MS: Record<string, number> = {
+   '1m': 60_000,
+   '5m': 300_000,
+   '15m': 900_000,
+   '30m': 1_800_000,
+   '1h': 3_600_000,
+   '1d': 86_400_000,
+@@ -45,46 +47,52 @@ function snapshotToKline(snap: MarketSnapshot, periodMs: number): KLineData {
+  * 连接 ws/market 端点，收到 market_data 消息时更新行情 store。
+  * 内置断线重连（指数退避，最多 5 次）。
+  *
+  * @param wsBaseUrl WebSocket 基础地址
+  * @param period K 线周期（如 '1m', '5m', '1h'），影响实时 K 线的时间对齐
+  */
+ export function useMarketWs(wsBaseUrl: string, period = '5m') {
+   const wsRef = useRef<WSManager | null>(null)
+   const updateSnapshot = useMarketStore((s) => s.updateSnapshot)
+   const appendKline = useMarketStore((s) => s.appendKline)
+-  const fetchInstruments = useMarketStore((s) => s.fetchInstruments)
+   const setMdConnected = useConnectionStore((s) => s.setMdConnected)
+ 
+   // 创建 WSManager 实例（仅创建一次）
+   if (!wsRef.current) {
+     wsRef.current = new WSManager(wsBaseUrl)
+   }
+ 
+   const ws = wsRef.current
+   const periodMs = PERIOD_MS[period] ?? PERIOD_MS['5m']
+ 
+   // 消息处理回调
+   const handleMessage = (message: WSMessage) => {
+     if (message.type === 'market_data') {
+       const snap = message.data as MarketSnapshot
+       updateSnapshot(snap)
+       appendKline(snap.instrumentID, snapshotToKline(snap, periodMs))
+       // 收到行情数据说明 MD 已连接
+       setMdConnected(true)
+     } else if (message.type === 'instruments_refreshed') {
+       const data = message.data as { count: number }
+-      fetchInstruments().then(() => {
+-        if (data.count > 0) {
+-          toast.success(`已更新 ${data.count} 个合约`)
+-        }
+-      })
++      getInstruments()
++        .then((result) => {
++          if (result?.instruments) {
++            useContractsStore.getState().setContracts(result.instruments)
++          }
++          if (data.count > 0) {
++            toast.success(`已更新 ${data.count} 个合约`)
++          }
++        })
++        .catch((err) => {
++          console.warn('[useMarketWs] refresh instruments failed:', err)
++        })
+     }
+   }
+ 
+   // 使用 useReconnect 管理连接和重连
+   const { reconnectCount, isReconnecting } = useReconnect(ws, 'market', handleMessage)
+ 
+   // 组件卸载时断开所有连接
+   useEffect(() => {
+     return () => {
+       ws.disconnectAll()
+diff --git a/frontend/src/modules/market/store.test.ts b/frontend/src/modules/market/store.test.ts
+index 3017348..5452f93 100644
+--- a/frontend/src/modules/market/store.test.ts
++++ b/frontend/src/modules/market/store.test.ts
+@@ -1,32 +1,28 @@
+ import { describe, it, expect, vi, beforeEach } from 'vitest'
+ import { useMarketStore } from './store'
+-import { useContractsStore } from '@/stores/contracts'
+ import type { MarketSnapshot, KLineData } from '@/services/types'
+ 
+ // Mock api module
+ vi.mock('@/services/api', () => ({
+-  getInstruments: vi.fn(),
+   subscribeMarket: vi.fn(),
+   getSnapshots: vi.fn(),
+-  refreshInstruments: vi.fn(),
+ }))
+ 
+-import { getInstruments, subscribeMarket, getSnapshots, refreshInstruments } from '@/services/api'
++import { subscribeMarket, getSnapshots } from '@/services/api'
+ 
+ describe('MarketStore', () => {
+   beforeEach(() => {
+     useMarketStore.setState({
+       selectedInstrument: null,
+       snapshots: new Map(),
+     })
+-    vi.mocked(getInstruments).mockReset()
+     vi.mocked(subscribeMarket).mockReset()
+     vi.mocked(getSnapshots).mockReset()
+   })
+ 
+   it('has null selectedInstrument by default', () => {
+     expect(useMarketStore.getState().selectedInstrument).toBeNull()
+   })
+ 
+   it('sets selected instrument', () => {
+     useMarketStore.getState().setSelectedInstrument('au2508')
+@@ -110,64 +106,26 @@ describe('MarketStore', () => {
+     useMarketStore.getState().batchUpdate([
+       { instrumentID: 'au2508', lastPrice: 481.0 } as MarketSnapshot,
+       { instrumentID: 'ag2508', lastPrice: 6500 } as MarketSnapshot,
+     ])
+ 
+     expect(useMarketStore.getState().snapshots.size).toBe(2)
+     expect(useMarketStore.getState().snapshots.get('au2508')?.lastPrice).toBe(481.0)
+   })
+ })
+ 
+-describe('MarketStore - fetchInstruments', () => {
+-  beforeEach(() => {
+-    useMarketStore.setState({
+-      selectedInstrument: null,
+-      snapshots: new Map(),
+-    })
+-    useContractsStore.setState({ contracts: [] })
+-    vi.mocked(getInstruments).mockReset()
+-    vi.mocked(subscribeMarket).mockReset()
+-    vi.mocked(getSnapshots).mockReset()
+-  })
+-
+-  it('fetchInstruments 调用 API 获取合约列表并同步到 contracts store', async () => {
+-    const mockInstruments = [
+-      { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260821', isTrading: true },
+-      { instrumentID: 'IF2609', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260919', isTrading: true },
+-    ]
+-    vi.mocked(getInstruments).mockResolvedValue({
+-      instruments: mockInstruments,
+-      count: 2,
+-    })
+-
+-    await useMarketStore.getState().fetchInstruments()
+-    expect(getInstruments).toHaveBeenCalled()
+-    // 验证同步到 contracts store
+-    expect(useContractsStore.getState().contracts).toEqual(mockInstruments)
+-  })
+-
+-  it('fetchInstruments 失败时不影响现有状态', async () => {
+-    vi.mocked(getInstruments).mockRejectedValue(new Error('network error'))
+-
+-    await useMarketStore.getState().fetchInstruments()
+-    // snapshots 不受影响
+-    expect(useMarketStore.getState().snapshots.size).toBe(0)
+-  })
+-})
+-
+ describe('MarketStore - subscribeInstruments', () => {
+   beforeEach(() => {
+     useMarketStore.setState({
+       selectedInstrument: null,
+       snapshots: new Map(),
+     })
+-    vi.mocked(getInstruments).mockReset()
+     vi.mocked(subscribeMarket).mockReset()
+     vi.mocked(getSnapshots).mockReset()
+   })
+ 
+   it('subscribeInstruments 调用 API 订阅行情', async () => {
+     vi.mocked(subscribeMarket).mockResolvedValue({
+       success: true,
+       added: ['IF2608'],
+       alreadySubscribed: [],
+     })
+@@ -247,53 +205,10 @@ describe('MarketStore - klineData', () => {
+   })
+ 
+   it('appendKline creates new array if no existing data', () => {
+     const candle: KLineData = { timestamp: 1000, open: 100, high: 105, low: 98, close: 103, volume: 500, openInterest: 1000 }
+     useMarketStore.getState().appendKline('IF2608', candle)
+     expect(useMarketStore.getState().klineData.get('IF2608')?.length).toBe(1)
+     expect(useMarketStore.getState().klineData.get('IF2608')?.[0]).toEqual(candle)
+   })
+ })
+ 
+-describe('MarketStore - refreshInstruments', () => {
+-  beforeEach(() => {
+-    useMarketStore.setState({
+-      isRefreshing: false,
+-    })
+-    vi.mocked(refreshInstruments).mockReset()
+-  })
+-
+-  it('isRefreshing defaults to false', () => {
+-    expect(useMarketStore.getState().isRefreshing).toBe(false)
+-  })
+-
+-  it('refreshInstruments sets isRefreshing=true while calling API', async () => {
+-    vi.mocked(refreshInstruments).mockResolvedValue({ status: 'started' })
+-
+-    const promise = useMarketStore.getState().refreshInstruments()
+-
+-    // 同步检查：API 调用期间 isRefreshing 应为 true
+-    expect(useMarketStore.getState().isRefreshing).toBe(true)
+-
+-    await promise
+-
+-    // 完成后应恢复为 false
+-    expect(useMarketStore.getState().isRefreshing).toBe(false)
+-  })
+-
+-  it('refreshInstruments calls the API and returns status', async () => {
+-    vi.mocked(refreshInstruments).mockResolvedValue({ status: 'started' })
+-
+-    const result = await useMarketStore.getState().refreshInstruments()
+-
+-    expect(refreshInstruments).toHaveBeenCalled()
+-    expect(result).toEqual({ status: 'started' })
+-  })
+-
+-  it('refreshInstruments resets isRefreshing even if API fails', async () => {
+-    vi.mocked(refreshInstruments).mockRejectedValue(new Error('network error'))
+-
+-    await useMarketStore.getState().refreshInstruments()
+-
+-    expect(useMarketStore.getState().isRefreshing).toBe(false)
+-  })
+-})
+diff --git a/frontend/src/modules/market/store.ts b/frontend/src/modules/market/store.ts
+index 7bad397..449f2ec 100644
+--- a/frontend/src/modules/market/store.ts
++++ b/frontend/src/modules/market/store.ts
+@@ -1,25 +1,21 @@
+ import { create } from 'zustand'
+ import type { MarketSnapshot, KLineData } from '@/services/types'
+-import { getInstruments, subscribeMarket, refreshInstruments as refreshApi } from '@/services/api'
+-import { useContractsStore } from '@/stores/contracts'
++import { subscribeMarket } from '@/services/api'
+ 
+ interface MarketStore {
+   selectedInstrument: string | null
+   setSelectedInstrument: (instrument: string | null) => void
+   snapshots: Map<string, MarketSnapshot>
+   updateSnapshot: (snapshot: MarketSnapshot) => void
+   batchUpdate: (snapshots: MarketSnapshot[]) => void
+-  fetchInstruments: () => Promise<void>
+   subscribeInstruments: (instruments: string[]) => Promise<void>
+-  isRefreshing: boolean
+-  refreshInstruments: () => Promise<{ status: string }>
+   klineData: Map<string, KLineData[]>
+   setKlineData: (instrument: string, data: KLineData[]) => void
+   appendKline: (instrument: string, candle: KLineData) => void
+ }
+ 
+ export const useMarketStore = create<MarketStore>((set) => ({
+   selectedInstrument: null,
+   setSelectedInstrument: (instrument) => set({ selectedInstrument: instrument }),
+   snapshots: new Map(),
+   updateSnapshot: (snapshot) =>
+@@ -29,52 +25,29 @@ export const useMarketStore = create<MarketStore>((set) => ({
+       return { snapshots: next }
+     }),
+   batchUpdate: (updates) =>
+     set((state) => {
+       const next = new Map(state.snapshots)
+       for (const snap of updates) {
+         next.set(snap.instrumentID, snap)
+       }
+       return { snapshots: next }
+     }),
+-  fetchInstruments: async () => {
+-    try {
+-      const data = await getInstruments()
+-      if (data?.instruments) {
+-        useContractsStore.getState().setContracts(data.instruments)
+-      }
+-    } catch (error) {
+-      console.warn('[MarketStore] fetchInstruments failed:', error)
+-    }
+-  },
+   subscribeInstruments: async (instruments: string[]) => {
+     try {
+       await subscribeMarket(instruments)
+       // 不立即 getSnapshots —— CTP 回调尚未推送数据，缓存为空。
+       // 数据将通过 WebSocket market_data 消息自然填充。
+     } catch (error) {
+       console.warn('[MarketStore] subscribeInstruments failed:', error)
+     }
+   },
+-  isRefreshing: false,
+-  refreshInstruments: async () => {
+-    set({ isRefreshing: true })
+-    try {
+-      const result = await refreshApi()
+-      return result
+-    } catch (error) {
+-      console.warn('[MarketStore] refreshInstruments failed:', error)
+-      return { status: 'error' }
+-    } finally {
+-      set({ isRefreshing: false })
+-    }
+-  },
+   klineData: new Map(),
+   setKlineData: (instrument, data) =>
+     set((state) => {
+       const next = new Map(state.klineData)
+       // 按时间戳排序，确保蜡烛顺序正确
+       const sorted = [...data].sort((a, b) => a.timestamp - b.timestamp)
+       next.set(instrument, sorted)
+       return { klineData: next }
+     }),
+   appendKline: (instrument, candle) =>

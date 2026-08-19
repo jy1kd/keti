@@ -1,0 +1,275 @@
+# Review package: 9212b6e..HEAD
+
+## Commits
+56fdbf7 fix(options): T型报价链订阅路由到共享订阅管理器（lockedContracts 取代直连订阅/退订）
+
+## Files changed
+ frontend/src/modules/options/TQuoteView.test.tsx | 59 ++++++++++++++----------
+ frontend/src/modules/options/TQuoteView.tsx      | 30 ++++--------
+ 2 files changed, 45 insertions(+), 44 deletions(-)
+
+## Diff
+diff --git a/frontend/src/modules/options/TQuoteView.test.tsx b/frontend/src/modules/options/TQuoteView.test.tsx
+index 1c4a733..1543138 100644
+--- a/frontend/src/modules/options/TQuoteView.test.tsx
++++ b/frontend/src/modules/options/TQuoteView.test.tsx
+@@ -1,29 +1,27 @@
+ import { describe, it, expect, vi, beforeEach } from 'vitest'
+ import { render, screen, act, waitFor } from '@testing-library/react'
+ import userEvent from '@testing-library/user-event'
+ import { TQuoteView } from './TQuoteView'
+ import { useMarketStore } from '@/modules/market/store'
+ 
+ // TQuoteView 已自包含：不再依赖 useOptionsStore，直接调用 @/services/api。
+-// 以下 mock 覆盖 TQuoteView 用到的所有 API 函数。
++// 以下 mock 覆盖 TQuoteView 用到的所有 API 函数（subscribeMarket 保留：@/modules/market/store 仍引入）。
+ const mockGetOptionUnderlyings = vi.fn().mockResolvedValue({ underlyings: ['IF2608', 'IF2609'] })
+ const mockGetOptionChains = vi.fn().mockResolvedValue({ chains: [] })
+ const mockSubscribeMarket = vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] })
+-const mockUnsubscribeMarket = vi.fn().mockResolvedValue({ success: true, removed: 0 })
+ const mockGetSnapshots = vi.fn().mockResolvedValue({ snapshots: {} })
+ 
+ vi.mock('@/services/api', () => ({
+   getOptionUnderlyings: (...args: any[]) => mockGetOptionUnderlyings(...args),
+   getOptionChains: (...args: any[]) => mockGetOptionChains(...args),
+   subscribeMarket: (...args: any[]) => mockSubscribeMarket(...args),
+-  unsubscribeMarket: (...args: any[]) => mockUnsubscribeMarket(...args),
+   getSnapshots: (...args: any[]) => mockGetSnapshots(...args),
+ }))
+ 
+ // Mock TQuoteTable：捕获 props，用于断言「不再接收 volatility（去 IV）」
+ const mockTQuoteTable = vi.fn()
+ vi.mock('./TQuoteTable', () => ({
+   TQuoteTable: (props: any) => {
+     mockTQuoteTable(props)
+     return (
+       <div data-testid="tquote-table">
+@@ -35,21 +33,21 @@ vi.mock('./TQuoteTable', () => ({
+ 
+ function renderChain(underlying = 'IF2608', expireDate = '20260815') {
+   mockGetOptionChains.mockResolvedValue({
+     chains: [{ underlying, expireDate, calls: [], puts: [], updateTime: '' }],
+   })
+ }
+ 
+ describe('TQuoteView (自包含)', () => {
+   beforeEach(() => {
+     vi.clearAllMocks()
+-    useMarketStore.setState({ snapshots: new Map() })
++    useMarketStore.setState({ snapshots: new Map(), lockedContracts: new Map() })
+     mockGetOptionUnderlyings.mockResolvedValue({ underlyings: ['IF2608', 'IF2609'] })
+     mockGetOptionChains.mockResolvedValue({ chains: [] })
+   })
+ 
+   it('renders the options panel container', () => {
+     const { container } = render(<TQuoteView />)
+     expect(container.firstChild).toBeTruthy()
+   })
+ 
+   it('无 instrumentID prop 时不自动加载期权链（需窗内自选标的）', () => {
+@@ -164,66 +162,79 @@ describe('TQuoteView (自包含)', () => {
+     const input = await screen.findByPlaceholderText('输入关键字搜索...')
+     await user.click(input)
+     await user.click(screen.getByText('IF2608'))
+     await screen.findByTestId('tquote-table')
+     const calls = mockTQuoteTable.mock.calls
+     const props = calls[calls.length - 1]?.[0]
+     expect(props.volatility).toBeUndefined()
+     expect(props.snapshots).toBeInstanceOf(Map)
+   })
+ 
+-  it('订阅后卸载组件 → 退订该链全部合约（避免订阅泄漏）', async () => {
++  it('选择期权链 → 锁定该链全部合约（进入共享订阅管理器记账）', async () => {
+     mockGetOptionChains.mockResolvedValue({
+       chains: [{
+         underlying: 'IF2608',
+         expireDate: '20260815',
+         calls: [{ instrumentID: 'IF2608-C-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
+         puts: [{ instrumentID: 'IF2608-P-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
+         updateTime: '',
+       }],
+     })
+-    const { unmount } = render(<TQuoteView instrumentID="IF2608" />)
+-    await waitFor(() => {
+-      expect(mockSubscribeMarket).toHaveBeenCalledWith(['IF2608-C-1300', 'IF2608-P-1300'])
+-    })
+-    unmount()
+-    expect(mockUnsubscribeMarket).toHaveBeenCalledWith(['IF2608-C-1300', 'IF2608-P-1300'])
++    render(<TQuoteView instrumentID="IF2608" />)
++    await screen.findByTestId('tquote-table')
++    const locked = useMarketStore.getState().lockedContracts
++    expect(locked.get('IF2608-C-1300')).toBe(1)
++    expect(locked.get('IF2608-P-1300')).toBe(1)
+   })
+ 
+-  it('切换标的链 → 先退订上一链合约，再订阅新链（无泄漏叠加）', async () => {
++  it('切换期权链 → 解锁旧链并锁定新链（无泄漏叠加）', async () => {
+     mockGetOptionChains.mockResolvedValue({
+       chains: [{
+         underlying: 'IF2608',
+         expireDate: '20260815',
+         calls: [{ instrumentID: 'IF2608-C-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
+         puts: [{ instrumentID: 'IF2608-P-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
+         updateTime: '',
+       }],
+     })
+     const { rerender } = render(<TQuoteView instrumentID="IF2608" />)
+-    await waitFor(() => {
+-      expect(mockSubscribeMarket).toHaveBeenCalledWith(['IF2608-C-1300', 'IF2608-P-1300'])
+-    })
++    await screen.findByTestId('tquote-table')
++    expect(useMarketStore.getState().lockedContracts.get('IF2608-C-1300')).toBe(1)
++
+     mockGetOptionChains.mockResolvedValue({
+       chains: [{
+         underlying: 'IF2609',
+         expireDate: '20260815',
+         calls: [{ instrumentID: 'IF2609-C-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
+         puts: [{ instrumentID: 'IF2609-P-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
+         updateTime: '',
+       }],
+     })
+     rerender(<TQuoteView instrumentID="IF2609" />)
+-    // 退订先于重新订阅（React effect cleanup 先于新 effect 运行）
++    // 新链锁定（React effect cleanup 先于新 effect 运行 → 旧链已解锁）
+     await waitFor(() => {
+-      expect(mockUnsubscribeMarket).toHaveBeenCalledWith(['IF2608-C-1300', 'IF2608-P-1300'])
++      expect(useMarketStore.getState().lockedContracts.get('IF2609-C-1300')).toBe(1)
+     })
+-    await waitFor(() => {
+-      expect(mockSubscribeMarket).toHaveBeenCalledWith(['IF2609-C-1300', 'IF2609-P-1300'])
++    const locked = useMarketStore.getState().lockedContracts
++    expect(locked.has('IF2608-C-1300')).toBe(false)
++    expect(locked.has('IF2608-P-1300')).toBe(false)
++  })
++
++  it('卸载组件 → 解锁该链全部合约（管理器按宽限期优雅退订，列表行不冻结）', async () => {
++    mockGetOptionChains.mockResolvedValue({
++      chains: [{
++        underlying: 'IF2608',
++        expireDate: '20260815',
++        calls: [{ instrumentID: 'IF2608-C-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
++        puts: [{ instrumentID: 'IF2608-P-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
++        updateTime: '',
++      }],
+     })
+-    const unsubOrder = vi.mocked(mockUnsubscribeMarket).mock.invocationCallOrder[0]
+-    const subCalls = vi.mocked(mockSubscribeMarket).mock.invocationCallOrder
+-    const resubOrder = subCalls[subCalls.length - 1]
+-    expect(resubOrder).toBeDefined()
+-    expect(unsubOrder).toBeLessThan(resubOrder!)
++    const { unmount } = render(<TQuoteView instrumentID="IF2608" />)
++    await screen.findByTestId('tquote-table')
++    expect(useMarketStore.getState().lockedContracts.get('IF2608-C-1300')).toBe(1)
++    unmount()
++    const locked = useMarketStore.getState().lockedContracts
++    expect(locked.has('IF2608-C-1300')).toBe(false)
++    expect(locked.has('IF2608-P-1300')).toBe(false)
+   })
+ })
+diff --git a/frontend/src/modules/options/TQuoteView.tsx b/frontend/src/modules/options/TQuoteView.tsx
+index fc3c62c..9078147 100644
+--- a/frontend/src/modules/options/TQuoteView.tsx
++++ b/frontend/src/modules/options/TQuoteView.tsx
+@@ -1,13 +1,13 @@
+ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+ import { useMarketStore } from '@/modules/market/store'
+-import { subscribeMarket, unsubscribeMarket, getOptionUnderlyings, getOptionChains, getSnapshots } from '@/services/api'
++import { getOptionUnderlyings, getOptionChains, getSnapshots } from '@/services/api'
+ import type { OptionChain } from '@/services/types'
+ import { TQuoteTable } from './TQuoteTable'
+ import './styles.css'
+ 
+ /** Format YYYYMMDD → YYYY-MM-DD for display. */
+ function formatExpireDate(raw: string): string {
+   if (raw.length === 8) return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
+   return raw
+ }
+ 
+@@ -37,24 +37,20 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
+ 
+   // Market snapshots — real-time price data for chain quotes
+   const snapshots = useMarketStore((s) => s.snapshots)
+   const batchUpdate = useMarketStore((s) => s.batchUpdate)
+ 
+   // Searchable underlying dropdown state
+   const [underlyingSearch, setUnderlyingSearch] = useState('')
+   const [showUnderlyingDropdown, setShowUnderlyingDropdown] = useState(false)
+   const underlyingDropdownRef = useRef<HTMLDivElement>(null)
+ 
+-  // 当前已直接订阅的期权合约 ID（不经过 useSubscriptionManager 的 subscribedRef）。
+-  // 用于链切换/卸载时主动退订，避免绕过 LRU 驱逐与 SOFT_LIMIT 记账导致订阅泄漏。
+-  const subscribedIdsRef = useRef<string[]>([])
+-
+   // 排序（字典序）：availableUnderlyings 设值前排序；filteredUnderlyings 保持有序
+   const filteredUnderlyings = useMemo(() => {
+     if (!underlyingSearch.trim()) return availableUnderlyings
+     const q = underlyingSearch.trim().toUpperCase()
+     return availableUnderlyings.filter((u) => u.toUpperCase().includes(q)).sort()
+   }, [availableUnderlyings, underlyingSearch])
+ 
+   // Close underlying dropdown on outside click
+   useEffect(() => {
+     if (!showUnderlyingDropdown) return
+@@ -141,52 +137,46 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
+   }, [])
+ 
+   // 预选：挂载时若带 instrumentID prop → 自动 selectUnderlying（依赖 props.instrumentID）
+   useEffect(() => {
+     if (instrumentID) {
+       selectUnderlying(instrumentID)
+     }
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [instrumentID])
+ 
+-  // Subscribe to selected chain's option instruments + fetch snapshots
++  // 将当前链的期权合约标记为「锁定」，使共享订阅管理器（useSubscriptionManager）
++  // 把链内合约纳入 shouldSubscribe（可见 + 自选 + 锁定）并记账，锁定期间不被 LRU 驱逐。
++  // 不再直接 subscribeMarket/unsubscribeMarket：若同一期权 ID 同时出现在期权列表
++  // 可见区与 T型报价窗，直连退订会全局移除后端订阅，而管理器误以为仍在订阅，
++  // 导致列表行冻结。改走 lockedContracts（引用计数 Map）后，链切换/卸载只解锁，
++  // 管理器按宽限期（10s）优雅退订；若该合约仍在列表可见区内，管理器保留订阅。
+   useEffect(() => {
+     if (!selectedChain) return
+     const ids = [
+       ...selectedChain.calls.map((q) => q.instrumentID),
+       ...selectedChain.puts.map((q) => q.instrumentID),
+     ]
+     if (ids.length > 0) {
+-      // 先退订上一链已订阅的合约（链切换时在订阅新链前退订）。
+-      // 这些 ID 直接订阅、不进 useSubscriptionManager 的 subscribedRef，
+-      // 若不主动退订会绕过 LRU 驱逐与 SOFT_LIMIT 记账，多 T型报价实例叠加
+-      // 会重演后端 500 订阅上限的原子拒绝。
+-      if (subscribedIdsRef.current.length > 0) {
+-        unsubscribeMarket(subscribedIdsRef.current).catch(() => {})
+-      }
+-      subscribeMarket(ids).catch(() => {})
+-      subscribedIdsRef.current = ids
++      for (const id of ids) useMarketStore.getState().addLockedContract(id)
+       // Proactively fetch current snapshots so the table shows data immediately,
+       // without waiting for WebSocket market_data push.
+       getSnapshots(ids)
+         .then((res) => {
+           const snaps = Object.values(res.snapshots)
+           if (snaps.length > 0) batchUpdate(snaps)
+         })
+         .catch(() => {})
+     }
+-    // 组件卸载 / selectedChain 变化（选标底、换到期日）时退订当前链，避免订阅泄漏
++    // 卸载 / selectedChain 变化（选标底、换到期日）时解锁当前链（引用计数归零才真正解锁）
+     return () => {
+-      if (subscribedIdsRef.current.length > 0) {
+-        unsubscribeMarket(subscribedIdsRef.current).catch(() => {})
+-        subscribedIdsRef.current = []
+-      }
++      for (const id of ids) useMarketStore.getState().removeLockedContract(id)
+     }
+   }, [selectedChain, batchUpdate])
+ 
+   const handleExpireDateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+     const value = e.target.value || null
+     setSelectedExpireDate(value)
+   }
+ 
+   // Manual refresh underlyings
+   const handleRefreshUnderlyings = () => {

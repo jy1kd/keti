@@ -1,0 +1,272 @@
+# Review package: 5c0239a..HEAD
+
+## Commits
+85856e8 feat(tabs): 标签栏双固定标签（期货+期权），固定区判断泛化为 closable=false
+
+## Files changed
+ frontend/src/components/TabBar/index.test.tsx | 26 +++++++++++++++++++++++
+ frontend/src/components/TabBar/index.tsx      | 30 +++++++++++++--------------
+ frontend/src/stores/tabs.test.ts              | 15 ++++++++++++++
+ frontend/src/stores/tabs.ts                   | 17 +++++++--------
+ 4 files changed, 63 insertions(+), 25 deletions(-)
+
+## Diff
+diff --git a/frontend/src/components/TabBar/index.test.tsx b/frontend/src/components/TabBar/index.test.tsx
+index 0784967..d001a88 100644
+--- a/frontend/src/components/TabBar/index.test.tsx
++++ b/frontend/src/components/TabBar/index.test.tsx
+@@ -770,20 +770,46 @@ describe('TabBar', () => {
+         ],
+         activeTabId: 'tab-market',
+       })
+       const { container } = render(<TabBar />)
+       const marketEl = container.querySelector('.tab-bar__market')!
+       expect(marketEl.querySelector('[aria-label="关闭标签"]')).toBeNull()
+       expect(marketEl.querySelector('.tab-bar__pin')).toBeNull()
+     })
+   })
+ 
++  // --- 双固定标签（期货 + 期权） ---
++
++  describe('双固定标签（期货 + 期权）', () => {
++    it('固定区同时渲染「📊 期货」「📈 期权」，期权标签不在可滚动区', () => {
++      useTabStore.setState({
++        tabs: [
++          { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
++          { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false },
++          { id: 'tab-kline', type: 'kline', title: '📈 K线', props: {}, closable: true },
++        ],
++        activeTabId: 'tab-market',
++      })
++      const { container } = render(<TabBar />)
++      const marketEl = container.querySelector('.tab-bar__market[data-tab-id="tab-market"]')
++      const optionsEl = container.querySelector('.tab-bar__market[data-tab-id="tab-options"]')
++      expect(marketEl).toBeInTheDocument()
++      expect(optionsEl).toBeInTheDocument()
++      expect(marketEl?.textContent).toContain('📊 期货')
++      expect(optionsEl?.textContent).toContain('📈 期权')
++      // 固定区在可滚动区之外；可滚动区只有 K线
++      const scrollEl = container.querySelector('.tab-bar__scroll')
++      expect(scrollEl?.querySelector('.tab-bar__market')).toBeNull()
++      expect(scrollEl?.querySelectorAll('[role="tab"]')).toHaveLength(1)
++    })
++  })
++
+   // --- 固定标签排序 ---
+ 
+   describe('固定标签排序', () => {
+     it('pinned 标签在可滚动区内排在最左', () => {
+       useTabStore.setState({
+         tabs: [
+           { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+           { id: 'tab-a', type: 'kline', title: '📈 A', props: {}, closable: true },
+           { id: 'tab-b', type: 'kline', title: '📈 B', props: {}, closable: true, pinned: true },
+         ],
+diff --git a/frontend/src/components/TabBar/index.tsx b/frontend/src/components/TabBar/index.tsx
+index 99bca6b..5bf499f 100644
+--- a/frontend/src/components/TabBar/index.tsx
++++ b/frontend/src/components/TabBar/index.tsx
+@@ -77,26 +77,26 @@ export function TabBar() {
+       title: inst ? `${item.title}-${inst}` : item.title,
+       ...(inst ? { props: { instrumentID: inst } } : {}),
+     })
+     setAddMenuOpen(false)
+   }, [openTab])
+ 
+   // 排除已拖入浮动窗口的标签（浮动标签从标签栏隐藏）
+   // useMemo 稳定引用：避免 measureOverflow / RO / wheel 等依赖 visibleTabs 的 effect 每次渲染空转
+   const visibleTabs = useMemo(() => tabs.filter((t) => !windows[t.id]), [tabs, windows])
+ 
+-  // 行情标签（初始页）：固定在左侧、可滚动区之外；不参与滚轮/溢出/隐藏
+-  const marketTab = visibleTabs.find((t) => t.type === 'market')
++  // 固定标签（期货/期权等 closable:false）：固定在左侧、可滚动区之外；不参与滚轮/溢出/隐藏
++  const fixedTabs = visibleTabs.filter((t) => !t.closable)
+ 
+-  // 可滚动区标签：排除行情标签；pinned 靠左排序
++  // 可滚动区标签：排除固定标签；pinned 靠左排序
+   const scrollTabs = useMemo(() => {
+-    const rest = visibleTabs.filter((t) => t.type !== 'market')
++    const rest = visibleTabs.filter((t) => t.closable)
+     return [...rest.filter((t) => t.pinned), ...rest.filter((t) => !t.pinned)]
+   }, [visibleTabs])
+ 
+   // ── 溢出（▾ 下拉 + 有界滚轮）──
+   const [hiddenTabIds, setHiddenTabIds] = useState<string[]>([])
+   const [overflowOpen, setOverflowOpen] = useState(false)
+   const scrollRef = useRef<HTMLDivElement>(null)
+   const overflowWrapRef = useRef<HTMLDivElement>(null)
+ 
+   const hiddenTabs = scrollTabs.filter((t) => hiddenTabIds.includes(t.id))
+@@ -266,47 +266,47 @@ export function TabBar() {
+     setOverflowOpen(false)
+   }, [])
+ 
+   return (
+     <div
+       className="tab-bar"
+       role="tablist"
+       aria-label="标签栏"
+       onKeyDown={handleKeyDown}
+     >
+-      {/* 行情标签（初始页）：固定左侧、不随滚轮、无右键、无图标 */}
+-      {marketTab && (
++      {/* 固定标签（期货/期权等 closable:false）：固定左侧、不随滚轮、无右键、无图标 */}
++      {fixedTabs.map((tab) => (
+         <div
+-          key={marketTab.id}
++          key={tab.id}
+           role="tab"
+-          data-tab-id={marketTab.id}
++          data-tab-id={tab.id}
+           tabIndex={0}
+-          aria-selected={marketTab.id === activeTabId}
+-          className={`tab-bar__market tab-bar__tab${marketTab.id === activeTabId ? ' tab-bar__tab--active' : ''}`}
++          aria-selected={tab.id === activeTabId}
++          className={`tab-bar__market tab-bar__tab${tab.id === activeTabId ? ' tab-bar__tab--active' : ''}`}
+           onClick={() => {
+             if (suppressClickRef.current) {
+               suppressClickRef.current = false
+               return
+             }
+-            setActiveTab(marketTab.id)
++            setActiveTab(tab.id)
+           }}
+-          onContextMenu={(e) => e.preventDefault()} // 行情标签无右键菜单
++          onContextMenu={(e) => e.preventDefault()} // 固定标签无右键菜单
+           onKeyDown={(e) => {
+             if (e.key === 'Enter' || e.key === ' ') {
+               e.preventDefault()
+-              setActiveTab(marketTab.id)
++              setActiveTab(tab.id)
+             }
+           }}
+         >
+-          <span className="tab-bar__title">{marketTab.title}</span>
++          <span className="tab-bar__title">{tab.title}</span>
+         </div>
+-      )}
++      ))}
+ 
+       {/* 可滚动标签区：有界滚轮横滚，隐藏滚动条 */}
+       <div className="tab-bar__scroll" ref={scrollRef}>
+       {scrollTabs.map((tab) => (
+         <div
+           key={tab.id}
+           role="tab"
+           data-tab-id={tab.id}
+           tabIndex={0}
+           aria-selected={tab.id === activeTabId}
+diff --git a/frontend/src/stores/tabs.test.ts b/frontend/src/stores/tabs.test.ts
+index facda0f..e07bbf0 100644
+--- a/frontend/src/stores/tabs.test.ts
++++ b/frontend/src/stores/tabs.test.ts
+@@ -381,10 +381,25 @@ describe('closeOthers / closeAll / togglePin', () => {
+     useTabStore.getState().togglePin('tab-market')
+     expect(useTabStore.getState().tabs.find((t) => t.id === 'tab-market')!.pinned).toBeUndefined()
+   })
+ 
+   it('openTab 新标签默认 pinned:false', () => {
+     useTabStore.setState({ tabs: [], activeTabId: '' })
+     useTabStore.getState().openTab({ type: 'kline', title: '📈 K线' })
+     expect(useTabStore.getState().tabs[0].pinned).toBe(false)
+   })
+ })
++
++describe('双固定标签初始化', () => {
++  beforeEach(() => useTabStore.setState({ tabs: [{ id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false }, { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false }], activeTabId: 'tab-market' }))
++
++  it('初始含期货+期权两个不可关闭标签', () => {
++    const { tabs } = useTabStore.getState()
++    expect(tabs.map((t) => t.title)).toEqual(['📊 期货', '📈 期权'])
++    expect(tabs.every((t) => !t.closable)).toBe(true)
++  })
++
++  it('closeTab 拒绝关闭固定标签', () => {
++    useTabStore.getState().closeTab('tab-market')
++    expect(useTabStore.getState().tabs.length).toBe(2)
++  })
++})
+diff --git a/frontend/src/stores/tabs.ts b/frontend/src/stores/tabs.ts
+index 5589d8c..53d46e2 100644
+--- a/frontend/src/stores/tabs.ts
++++ b/frontend/src/stores/tabs.ts
+@@ -37,27 +37,24 @@ export interface Tab {
+   type: TabType
+   title: string
+   props: Record<string, unknown>
+   closable: boolean
+   /** 固定标签：滚动区置左 + 关闭其他/关闭所有跳过。缺省 = 未固定 */
+   pinned?: boolean
+ }
+ 
+ // --- 默认状态 ---
+ 
+-const DEFAULT_TAB: Tab = {
+-  id: 'tab-market',
+-  type: 'market',
+-  title: '📊 行情',
+-  props: {},
+-  closable: false,
+-}
++const DEFAULT_TABS: Tab[] = [
++  { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
++  { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false },
++]
+ 
+ interface TabStore {
+   tabs: Tab[]
+   activeTabId: string
+ 
+   /** 打开标签页；相同 type+instrumentID 去重，超上限拒绝。返回 true 表示成功打开/激活 */
+   openTab: (options: { type: TabType; title: string; props?: Record<string, unknown>; closable?: boolean }) => boolean
+ 
+   /** 关闭标签页；固定标签不可关闭 */
+   closeTab: (tabId: string) => void
+@@ -84,22 +81,22 @@ interface TabStore {
+ 
+ /** 生成标签页 ID */
+ export function generateTabId(type: TabType, props?: Record<string, unknown>): string {
+   const suffix = props?.instrumentID ? `-${props.instrumentID}` : ''
+   return `tab-${type}${suffix}`
+ }
+ 
+ // --- Store ---
+ 
+ export const useTabStore = create<TabStore>((set, get) => ({
+-  tabs: [DEFAULT_TAB],
+-  activeTabId: DEFAULT_TAB.id,
++  tabs: DEFAULT_TABS,
++  activeTabId: DEFAULT_TABS[0].id,
+ 
+   openTab: ({ type, title, props = {}, closable = true }) => {
+     const tabId = generateTabId(type, props)
+     let result = false
+ 
+     set((state) => {
+       // 去重：优先按 id（type+instrumentID）匹配；K线页内切换合约后 tab id 保持稳定，
+       // 再按 type+instrumentID 内容匹配。命中时同步 props/title，自愈陈旧内容。
+       const existing = state.tabs.find(
+         (t) =>
+@@ -147,21 +144,21 @@ export const useTabStore = create<TabStore>((set, get) => ({
+       if (!tab || !tab.closable) return state
+ 
+       const newTabs = state.tabs.filter((t) => t.id !== tabId)
+       let newActiveId = state.activeTabId
+ 
+       // 关闭活跃标签页时激活相邻标签页
+       if (state.activeTabId === tabId) {
+         const closedIndex = state.tabs.indexOf(tab)
+         // 优先激活后一个，否则前一个
+         const nextTab = newTabs[closedIndex] ?? newTabs[closedIndex - 1]
+-        newActiveId = nextTab?.id ?? DEFAULT_TAB.id
++        newActiveId = nextTab?.id ?? DEFAULT_TABS[0].id
+       }
+ 
+       return {
+         tabs: newTabs,
+         activeTabId: newActiveId,
+       }
+     })
+   },
+ 
+   closeOthers: (tabId) => {

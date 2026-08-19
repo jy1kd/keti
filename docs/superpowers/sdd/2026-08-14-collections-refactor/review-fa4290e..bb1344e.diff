@@ -1,0 +1,258 @@
+# Review package: fa4290e..bb1344e
+
+## Commits
+bb1344e fix(collections): 最终审查整改（loadCollections 错误路径防覆盖 + 去重复 toast + 删夹关标签 + 清死类型）
+
+## Files changed
+ frontend/src/pages/CollectionPage.test.tsx  | 20 +++++++++++++++++++-
+ frontend/src/pages/CollectionPage.tsx       |  2 +-
+ frontend/src/pages/CollectionsPage.test.tsx |  8 ++++++++
+ frontend/src/pages/CollectionsPage.tsx      |  4 ++++
+ frontend/src/services/types.ts              |  1 -
+ frontend/src/stores/collections.test.ts     |  9 +++++++++
+ frontend/src/stores/collections.ts          |  3 ++-
+ 7 files changed, 43 insertions(+), 4 deletions(-)
+
+## Diff
+diff --git a/frontend/src/pages/CollectionPage.test.tsx b/frontend/src/pages/CollectionPage.test.tsx
+index a75c228..03060af 100644
+--- a/frontend/src/pages/CollectionPage.test.tsx
++++ b/frontend/src/pages/CollectionPage.test.tsx
+@@ -1,29 +1,38 @@
+ import { describe, it, expect, beforeEach, vi } from 'vitest'
+ import { render, screen, fireEvent } from '@testing-library/react'
+ import { CollectionPage } from './CollectionPage'
+ import { useCollectionsStore } from '@/stores/collections'
+ import { useContractsStore } from '@/stores/contracts'
+ import { useMarketStore } from '@/modules/market/store'
+ import { useTabStore } from '@/stores/tabs'
++import { toast } from '@/components/Toast'
+ 
+ vi.mock('@/components/Toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+ vi.mock('@/modules/market/QuoteTable', () => ({
+-  QuoteTable: ({ contracts, onFavoriteChange, onContextMenu }: any) => (
++  QuoteTable: ({ contracts, onFavoriteChange, onContextMenu, onMultiSelectContextMenu }: any) => (
+     <div data-testid="quote-table">
+       {contracts.map((c: any) => (
+         <div key={c.instrumentID} data-testid={`row-${c.instrumentID}`}>
+           <span>{c.instrumentID}</span>
+           <button data-testid={`fav-${c.instrumentID}`} onClick={() => onFavoriteChange?.(c.instrumentID, true)}>⭐</button>
+           <button data-testid={`ctx-${c.instrumentID}`} onClick={() => onContextMenu?.(c.instrumentID, 0, { preventDefault: vi.fn(), clientX: 100, clientY: 200 })}>右键</button>
+         </div>
+       ))}
++      <button
++        data-testid="multi-ctx"
++        onClick={() =>
++          onMultiSelectContextMenu?.(contracts.map((c: any) => c.instrumentID), { preventDefault: vi.fn(), clientX: 100, clientY: 200 })
++        }
++      >
++        多选右键
++      </button>
+     </div>
+   ),
+ }))
+ 
+ const futures = [
+   { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '2026-08-15', isTrading: 1, productClass: '1' },
+   { instrumentID: 'au2406', instrumentName: '黄金', exchangeID: 'SHFE', productID: 'au', volumeMultiple: 1000, priceTick: 0.02, expireDate: '2024-06-15', isTrading: 1, productClass: '1' },
+ ]
+ 
+ describe('CollectionPage', () => {
+@@ -60,20 +69,29 @@ describe('CollectionPage', () => {
+     fireEvent.click(screen.getByTestId('fav-IF2608')) // 已在夹，点击移除
+     expect(useCollectionsStore.getState().collections.find((c) => c.id === 'a')?.instrumentIDs).toEqual(['au2406'])
+   })
+ 
+   it('右键菜单含「从本夹移除」', () => {
+     render(<CollectionPage collectionId="a" tabId="tab-collection-a" />)
+     fireEvent.click(screen.getByTestId('ctx-IF2608'))
+     expect(screen.getByText('从本夹移除')).toBeDefined() // IF2608 在本夹 → folder 模式单选右键为「从本夹移除」
+   })
+ 
++  it('批量从本夹移除：仅弹一条 toast（共享 toast 在 useContractMenus，夹页不再重复弹）', () => {
++    render(<CollectionPage collectionId="a" tabId="tab-collection-a" />)
++    fireEvent.click(screen.getByTestId('multi-ctx'))
++    fireEvent.click(screen.getByText(/批量从本夹移除 \(2个\)/))
++    expect(useCollectionsStore.getState().collections.find((c) => c.id === 'a')?.instrumentIDs).toEqual([])
++    expect(toast.success).toHaveBeenCalledTimes(1)
++    expect(toast.success).toHaveBeenCalledWith('已从本夹移除 2 个合约')
++  })
++
+   it('空夹态', () => {
+     useCollectionsStore.setState({ collections: [{ id: 'a', name: '农产品', instrumentIDs: [] }] })
+     render(<CollectionPage collectionId="a" tabId="tab-collection-a" />)
+     expect(screen.getByText(/收藏夹为空/)).toBeDefined()
+   })
+ 
+   it('收藏夹不存在态', () => {
+     render(<CollectionPage collectionId="missing" tabId="tab-collection-missing" />)
+     expect(screen.getByText('收藏夹不存在')).toBeDefined()
+   })
+diff --git a/frontend/src/pages/CollectionPage.tsx b/frontend/src/pages/CollectionPage.tsx
+index 5f4edb0..3ebde07 100644
+--- a/frontend/src/pages/CollectionPage.tsx
++++ b/frontend/src/pages/CollectionPage.tsx
+@@ -71,22 +71,22 @@ export function CollectionPage({ collectionId }: { collectionId: string; tabId:
+     }
+   }
+ 
+   const { singleMenu, multiMenu } = useContractMenus({
+     contextMenu,
+     multiSelectMenu,
+     favoritedIds,
+     favoriteMode: 'folder',
+     onToggleInFolder: handleToggleFavorite,
+     onRemoveFromFolderBatch: (ids) => {
++      // 批量移除 toast 由 useContractMenus 内部统一弹出（避免此处再弹一次形成双 toast）
+       for (const id of ids) removeFromCollection(id, collectionId)
+-      toast.success(`已从本夹移除 ${ids.length} 个合约`)
+     },
+     openOrderPopup,
+     openQueryPopup,
+     openKlineTab,
+     openOrderTabs,
+     openKlineTabs,
+     closeMenus,
+   })
+ 
+   const { handleClick, handleDoubleClick } = usePointOrder({
+diff --git a/frontend/src/pages/CollectionsPage.test.tsx b/frontend/src/pages/CollectionsPage.test.tsx
+index 7458e02..c35d8ff 100644
+--- a/frontend/src/pages/CollectionsPage.test.tsx
++++ b/frontend/src/pages/CollectionsPage.test.tsx
+@@ -63,16 +63,24 @@ describe('CollectionsPage', () => {
+ 
+   it('删除需确认；确认后夹被删除，不影响合约本身', () => {
+     render(<CollectionsPage />)
+     fireEvent.click(screen.getAllByText('删除')[0]) // 行内删除按钮
+     expect(screen.getByText('删除收藏夹')).toBeDefined() // 确认弹窗出现
+     fireEvent.click(screen.getByTestId('confirm-delete')) // 弹窗内确认按钮（唯一 testid）
+     expect(useCollectionsStore.getState().collections.find((c) => c.id === 'a')).toBeUndefined()
+     expect(useCollectionsStore.getState().collections.find((c) => c.id === 'b')).toBeDefined()
+   })
+ 
++  it('删除收藏夹后关闭已打开的该夹标签页（不残留「收藏夹不存在」僵尸页）', () => {
++    useTabStore.getState().openTab({ type: 'collection', title: '📁 农产品', props: { collectionId: 'a' } })
++    render(<CollectionsPage />)
++    fireEvent.click(screen.getAllByText('删除')[0])
++    fireEvent.click(screen.getByTestId('confirm-delete'))
++    expect(useTabStore.getState().tabs.filter((t) => t.type === 'collection' && t.props.collectionId === 'a')).toHaveLength(0)
++  })
++
+   it('空态', () => {
+     useCollectionsStore.setState({ collections: [] })
+     render(<CollectionsPage />)
+     expect(screen.getByText(/还没有收藏夹/)).toBeDefined()
+   })
+ })
+diff --git a/frontend/src/pages/CollectionsPage.tsx b/frontend/src/pages/CollectionsPage.tsx
+index ea26354..fc38a32 100644
+--- a/frontend/src/pages/CollectionsPage.tsx
++++ b/frontend/src/pages/CollectionsPage.tsx
+@@ -38,20 +38,24 @@ export function CollectionsPage() {
+     useTabStore.getState().tabs
+       .filter((t) => t.type === 'collection' && t.props.collectionId === id)
+       .forEach((t) => updateTab(t.id, { title: `📁 ${name}` }))
+     setRenamingId(null)
+     toast.success('已重命名')
+   }
+ 
+   const confirmDelete = () => {
+     if (!deletingId) return
+     deleteCollection(deletingId)
++    // 关闭已打开的该夹标签页，避免残留「收藏夹不存在」僵尸页
++    useTabStore.getState().tabs
++      .filter((t) => t.type === 'collection' && t.props.collectionId === deletingId)
++      .forEach((t) => useTabStore.getState().closeTab(t.id))
+     setDeletingId(null)
+     toast.success('已删除收藏夹')
+   }
+ 
+   return (
+     <section className="collections-page" data-testid="collections-page">
+       <div className="collections-page__create">
+         <input
+           className="collections-page__input"
+           value={newName}
+diff --git a/frontend/src/services/types.ts b/frontend/src/services/types.ts
+index d75d0ed..a2bea6e 100644
+--- a/frontend/src/services/types.ts
++++ b/frontend/src/services/types.ts
+@@ -362,14 +362,13 @@ export interface QuickTradeConfig {
+       priceMode: 'counterparty' | 'market'
+       offsetTicks: number
+       timeCondition: 'gfd' | 'fak'
+     }
+     executionMode: 'serial' | 'parallel'
+   }
+   confirmBeforeExecute: boolean
+ }
+ 
+ export interface UserPreferences {
+-  selectedContracts: string[]
+   hotKeys: HotKeyConfig
+   quickTradeConfig?: QuickTradeConfig
+ }
+diff --git a/frontend/src/stores/collections.test.ts b/frontend/src/stores/collections.test.ts
+index 06d2f97..ab68836 100644
+--- a/frontend/src/stores/collections.test.ts
++++ b/frontend/src/stores/collections.test.ts
+@@ -85,20 +85,29 @@ describe('useCollectionsStore', () => {
+ 
+   it('loadCollections：存在夹但全部为空时不调 API（避免后端空 ids 回退全市场）', async () => {
+     const { getInstrumentsByIds } = await import('@/services/api')
+     useUserPrefsStore.getState().setCollections([{ id: 'a', name: 'A', instrumentIDs: [] }])
+     await useCollectionsStore.getState().loadCollections()
+     expect(getInstrumentsByIds).not.toHaveBeenCalled()
+     expect(useCollectionsStore.getState().collections).toEqual([{ id: 'a', name: 'A', instrumentIDs: [] }])
+     expect(useCollectionsStore.getState().loaded).toBe(true)
+   })
+ 
++  it('loadCollections：API 拉取失败时保留 userPrefs 元数据并 loaded（防止空数组持久化覆盖真实数据）', async () => {
++    const { getInstrumentsByIds } = await import('@/services/api')
++    useUserPrefsStore.getState().setCollections([{ id: 'a', name: 'A', instrumentIDs: ['au2406'] }])
++    vi.mocked(getInstrumentsByIds).mockRejectedValue(new Error('network down'))
++    await useCollectionsStore.getState().loadCollections()
++    expect(useCollectionsStore.getState().collections).toEqual([{ id: 'a', name: 'A', instrumentIDs: ['au2406'] }])
++    expect(useCollectionsStore.getState().loaded).toBe(true)
++  })
++
+   it('纯派生函数', () => {
+     const cols = [
+       { id: 'a', name: 'A', instrumentIDs: ['au2406', 'rb2406'] },
+       { id: 'b', name: 'B', instrumentIDs: ['rb2406'] },
+     ]
+     expect(Array.from(unionFavoritedIds(cols)).sort()).toEqual(['au2406', 'rb2406'])
+     expect(Array.from(collectionFavoritedIds(cols, 'a')).sort()).toEqual(['au2406', 'rb2406'])
+     expect(collectionFavoritedIds(cols, 'zz').size).toBe(0)
+   })
+ })
+diff --git a/frontend/src/stores/collections.ts b/frontend/src/stores/collections.ts
+index 8c60d97..77294e4 100644
+--- a/frontend/src/stores/collections.ts
++++ b/frontend/src/stores/collections.ts
+@@ -69,22 +69,23 @@ export const useCollectionsStore = create<CollectionsStore>((set, get) => ({
+         const valid = c.instrumentIDs.filter((id) => {
+           if (byId.has(id)) return true
+           changed = true
+           return false
+         })
+         return { ...c, instrumentIDs: valid }
+       })
+       if (changed) persist(next)
+       set({ collections: next, loaded: true })
+     } catch (err) {
++      // 拉取失败时保留 userPrefs 中的元数据，避免后续任一 mutation 以空数组持久化覆盖真实数据
+       console.error('[collections] Failed to load collection contracts:', err)
+-      set({ loaded: true })
++      set({ collections, loaded: true })
+     }
+   },
+ 
+   createCollection: (name) => {
+     const id = nextCollectionId()
+     const collections = [...get().collections, { id, name, instrumentIDs: [] }]
+     persist(collections)
+     set({ collections })
+     return id
+   },

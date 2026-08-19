@@ -1,0 +1,560 @@
+# Review package: b36f1eb..HEAD
+
+## Commits
+9212b6e fix(options): 全分支审查整改（TQuoteView订阅退订/标底菜单外部关闭/标底行不覆盖限价/筛选useMemo去重/去getVolatility mock）
+
+## Files changed
+ frontend/src/components/ContractFilter/index.tsx   |  7 +-
+ frontend/src/modules/options/OptionsPanel.test.tsx | 74 +++++++++++++++++++++-
+ frontend/src/modules/options/OptionsPanel.tsx      | 62 +++++++++++++-----
+ frontend/src/modules/options/TQuoteView.test.tsx   | 63 ++++++++++++++++--
+ frontend/src/modules/options/TQuoteView.tsx        | 21 +++++-
+ 5 files changed, 203 insertions(+), 24 deletions(-)
+
+## Diff
+diff --git a/frontend/src/components/ContractFilter/index.tsx b/frontend/src/components/ContractFilter/index.tsx
+index b50698e..e1264ee 100644
+--- a/frontend/src/components/ContractFilter/index.tsx
++++ b/frontend/src/components/ContractFilter/index.tsx
+@@ -23,24 +23,27 @@ interface ContractFilterProps {
+  * 列表内容由 computeFilterOptions 交叉联动（选交易所→品种列表收窄到该所品种，反之亦然）；
+  * 已选项即使被交叉过滤掉也「并回」展示列表（保持勾选，可取消）。
+  */
+ export function ContractFilter({ allContracts, getProduct, productNames, value, onChange }: ContractFilterProps) {
+   const [open, setOpen] = useState(false)
+   const [keyword, setKeyword] = useState('')
+   const rootRef = useRef<HTMLDivElement>(null)
+ 
+   const activeCount = value.exchanges.length + value.products.length
+ 
+-  // 动态可用选项：exchanges = 有合约满足已选品种的交易所；products = 有合约满足已选交易所的品种
++  // 动态可用选项：exchanges = 有合约满足已选品种的交易所；products = 有合约满足已选交易所的品种。
++  // getProduct 是纯映射函数（合约 → 品种键），结果只由 allContracts 与已选值决定，因此不列入依赖数组——
++  // 否则父组件内联箭头（每行情 tick 新建实例）会令本 useMemo 在每次渲染都重算（Critical #4）。
+   const { exchanges: availableExchanges, products: availableProducts } = useMemo(
+     () => computeFilterOptions(allContracts, value.exchanges, value.products, getProduct),
+-    [allContracts, value.exchanges, value.products, getProduct],
++    // eslint-disable-next-line react-hooks/exhaustive-deps -- getProduct 为纯函数，结果只依赖前三个参数
++    [allContracts, value.exchanges, value.products],
+   )
+   // 已选项并回可用列表：被交叉过滤掉的已选项仍显示（勾选）可取消
+   const displayExchanges = useMemo(
+     () => Array.from(new Set([...value.exchanges, ...availableExchanges])),
+     [value.exchanges, availableExchanges],
+   )
+   const displayProducts = useMemo(
+     () => Array.from(new Set([...value.products, ...availableProducts])),
+     [value.products, availableProducts],
+   )
+diff --git a/frontend/src/modules/options/OptionsPanel.test.tsx b/frontend/src/modules/options/OptionsPanel.test.tsx
+index 3f30fac..17e587e 100644
+--- a/frontend/src/modules/options/OptionsPanel.test.tsx
++++ b/frontend/src/modules/options/OptionsPanel.test.tsx
+@@ -1,16 +1,17 @@
+ import { describe, it, expect, vi, beforeEach } from 'vitest'
+-import { act, render, screen } from '@testing-library/react'
++import { act, fireEvent, render, screen } from '@testing-library/react'
+ import userEvent from '@testing-library/user-event'
+ import { OptionsPanel } from './OptionsPanel'
+ import { optionsSpec } from '@/modules/market/optionsSpec'
+ import { useMarketStore } from '@/modules/market/store'
++import { useOrderStore } from '@/modules/order/store'
+ import { useContractsStore } from '@/stores/contracts'
+ import { useMarketFilterStore } from '@/stores/marketFilter'
+ import { useTabStore } from '@/stores/tabs'
+ import { useFloatingWindowStore } from '@/stores/floatingWindows'
+ import { openTQuoteFloating } from '@/utils/openFloatingTab'
+ import type { ContractInfo } from '@/services/types'
+ 
+ // Mock openTQuoteFloating：T型报价已独立为悬浮标签页，标底行双击/右键均入口该函数
+ vi.mock('@/utils/openFloatingTab', async (importOriginal) => {
+   const actual = await importOriginal<typeof import('@/utils/openFloatingTab')>()
+@@ -354,11 +355,82 @@ describe('OptionsPanel', () => {
+         (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+ 
+       expect(tabs).toBeTruthy()
+       expect(favoriteBtn).toBeTruthy()
+       expect(searchInput).toBeTruthy()
+       expect(follows(tabs, filterBtn)).toBe(true)
+       expect(follows(filterBtn, favoriteBtn)).toBe(true)
+       expect(follows(favoriteBtn, searchInput)).toBe(true)
+     })
+   })
++
++  it('单击标底行（productClass 1，无 lastPrice）不覆盖报单表 limitPrice（Critical #3）', async () => {
++    // 预填报单价格，验证标底行单击不会把它归零
++    useOrderStore.setState((s) => ({ orderForm: { ...s.orderForm, limitPrice: 1500 } }))
++    render(<OptionsPanel />)
++    const { ListTable } = await import('@visactor/vtable')
++    const instance = (ListTable as any).mock.results[0].value
++    const clickHandler = instance.on.mock.calls.find((call: any[]) => call[0] === 'click_cell')?.[1]
++    expect(clickHandler).toBeDefined()
++    act(() => {
++      clickHandler({ row: 1, col: 1, event: {} }) // row 1 = FG609（标底行）
++    })
++    // 选中同步照常，但 limitPrice 保持用户已填值（不被 price=0 覆盖）
++    expect(useMarketStore.getState().selectedInstrument).toBe('FG609')
++    expect(useOrderStore.getState().orderForm.instrumentID).toBe('FG609')
++    expect(useOrderStore.getState().orderForm.limitPrice).toBe(1500)
++  })
++
++  it('右键标底行后点击菜单外部 → 关闭标底菜单（Critical #2 外部点击关闭）', async () => {
++    render(<OptionsPanel />)
++    const { ListTable } = await import('@visactor/vtable')
++    const instance = (ListTable as any).mock.results[0].value
++    const contextmenuHandler = instance.on.mock.calls.find(
++      (call: any[]) => call[0] === 'contextmenu_cell'
++    )?.[1]
++    act(() => {
++      contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
++    })
++    expect(screen.getByText('打开T型报价')).toBeInTheDocument()
++    fireEvent.mouseDown(document.body)
++    expect(screen.queryByText('打开T型报价')).toBeNull()
++  })
++
++  it('右键期权行打开单选菜单后，再右键标底行 → 单选菜单关闭，仅剩标底菜单（不叠加，Critical #2）', async () => {
++    render(<OptionsPanel />)
++    const { ListTable } = await import('@visactor/vtable')
++    const instance = (ListTable as any).mock.results[0].value
++    const contextmenuHandler = instance.on.mock.calls.find(
++      (call: any[]) => call[0] === 'contextmenu_cell'
++    )?.[1]
++    // 先右键期权行（row 2 = FG609-C-1300）→ 打开单选菜单（打开报单/K线/查询）
++    act(() => {
++      contextmenuHandler({ row: 2, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
++    })
++    expect(screen.getByText('打开报单')).toBeInTheDocument()
++    // 再右键标底行（row 1 = FG609）→ 单选菜单应关闭，仅剩「打开T型报价」
++    act(() => {
++      contextmenuHandler({ row: 1, col: 0, event: { clientX: 150, clientY: 250, preventDefault: vi.fn() } })
++    })
++    expect(screen.queryByText('打开报单')).toBeNull()
++    expect(screen.queryByText('打开K线')).toBeNull()
++    expect(screen.getByText('打开T型报价')).toBeInTheDocument()
++  })
++
++  it('右键标底行打开标底菜单后，再右键期权行 → 标底菜单关闭，只显示单选菜单（不叠加，Critical #2）', async () => {
++    render(<OptionsPanel />)
++    const { ListTable } = await import('@visactor/vtable')
++    const instance = (ListTable as any).mock.results[0].value
++    const contextmenuHandler = instance.on.mock.calls.find(
++      (call: any[]) => call[0] === 'contextmenu_cell'
++    )?.[1]
++    act(() => {
++      contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
++    })
++    expect(screen.getByText('打开T型报价')).toBeInTheDocument()
++    act(() => {
++      contextmenuHandler({ row: 2, col: 0, event: { clientX: 150, clientY: 250, preventDefault: vi.fn() } })
++    })
++    expect(screen.queryByText('打开T型报价')).toBeNull()
++    expect(screen.getByText('打开报单')).toBeInTheDocument()
++  })
+ })
+diff --git a/frontend/src/modules/options/OptionsPanel.tsx b/frontend/src/modules/options/OptionsPanel.tsx
+index fa62145..f6844da 100644
+--- a/frontend/src/modules/options/OptionsPanel.tsx
++++ b/frontend/src/modules/options/OptionsPanel.tsx
+@@ -1,11 +1,11 @@
+-import { useMemo, useState } from 'react'
++import { useEffect, useMemo, useRef, useState } from 'react'
+ import { ErrorBoundary } from '@/components/ErrorBoundary'
+ import { ContractFilter } from '@/components/ContractFilter'
+ import { ContractSearch } from '@/components/ContractSearch'
+ import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
+ import { ContextMenu } from '@/components/ContextMenu'
+ import { QuoteTable } from '@/modules/market/QuoteTable'
+ import { optionsSpec } from '@/modules/market/optionsSpec'
+ import { deriveUnderlyingProduct, groupOptionsByUnderlying } from '@/modules/market/sort'
+ import { filterByExchangeAndProduct } from '@/modules/market/filter'
+ import { useMarketStore } from '@/modules/market/store'
+@@ -40,20 +40,34 @@ interface UnderlyingMenuState {
+ }
+ 
+ export function OptionsPanel() {
+   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
+   // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
+   const [filterActive, setFilterActive] = useState(false)
+   const [searchQuery, setSearchQuery] = useState('')
+   const [searchModalOpen, setSearchModalOpen] = useState(false)
+   // 标底行右键菜单（仅「打开T型报价」一项）
+   const [underlyingMenu, setUnderlyingMenu] = useState<UnderlyingMenuState | null>(null)
++  // 标底右键菜单容器 ref：外部点击关闭时判断点击是否落在菜单内
++  const underlyingMenuRef = useRef<HTMLDivElement>(null)
++
++  // 点击菜单外部关闭标底右键菜单（ContextMenu 本身仅监听 Escape / 点击项，此处补外部点击关闭）
++  useEffect(() => {
++    if (!underlyingMenu) return
++    const onMouseDown = (e: MouseEvent) => {
++      if (underlyingMenuRef.current && !underlyingMenuRef.current.contains(e.target as Node)) {
++        setUnderlyingMenu(null)
++      }
++    }
++    document.addEventListener('mousedown', onMouseDown)
++    return () => document.removeEventListener('mousedown', onMouseDown)
++  }, [underlyingMenu])
+   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
+   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
+   const { contracts, favorites, addToFavorites, removeFromFavorites } = useContractsStore()
+   const { contextMenu, multiSelectMenu, openOrderPopup, openQueryPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
+   // 期权标签是否激活：激活翻转为 true 时 QuoteTable 重报可见区，订阅管理器立即补订阅
+   const isActive = useTabStore((s) => s.tabs.some((t) => t.type === 'options' && t.id === s.activeTabId))
+ 
+   // 期权页筛选态（交易所+标底品种多选，独立于期货页，localStorage 持久化）
+   const filter = useMarketFilterStore((s) => s.options)
+ 
+@@ -132,21 +146,26 @@ export function OptionsPanel() {
+   // 全系统合约 ID 集合（高级搜索弹窗「已收藏/已订阅」徽标）
+   const allContractIds = useMemo(
+     () => new Set(contracts.map((c) => c.instrumentID)),
+     [contracts],
+   )
+ 
+   const { handleClick, handleDoubleClick } = usePointOrder({
+     onOrder: ({ instrumentID, price }) => {
+       setSelectedInstrument(instrumentID)
+       setOrderInstrument(instrumentID)
+-      setOrderForm({ limitPrice: price })
++      // 标底行（productClass '1'）无 lastPrice，单击回调 price=0；
++      // 不得用它覆盖报单表已填的 limitPrice（Critical #3）。期权行照常填充快照价。
++      const inst = contracts.find((c) => c.instrumentID === instrumentID)
++      if (!(inst && inst.productClass === '1')) {
++        setOrderForm({ limitPrice: price })
++      }
+     },
+     onFill: ({ instrumentID }) => {
+       setSelectedInstrument(instrumentID)
+       openOrderPopup(instrumentID)
+     },
+   })
+ 
+   // 搜索定位：选中期权合约时定位到其标底分组首行（标底合约），复用 futures 页 handleSelectContract
+   // 语义（selectedInstrument ∈ selectedContracts，锚点守卫通过才能滚动跳转）。
+   const handleSelectContract = (instrumentID: string) => {
+@@ -170,28 +189,37 @@ export function OptionsPanel() {
+   const handleRowDoubleClick = (instrumentID: string, price: number) => {
+     if (isUnderlyingRow(instrumentID)) {
+       openTQuoteFloating(instrumentID)
+     } else {
+       handleDoubleClick(instrumentID, price)
+     }
+   }
+ 
+   // 右键标底行 → 「打开T型报价」菜单（仅此项）；期权行 → 原 handleContextMenu（单选菜单）
+   const handleRowContextMenu = (instrumentID: string, price: number, event: MouseEvent) => {
++    // 先关闭任何已打开的单选/多选菜单与标底菜单，避免两个菜单叠加（Critical #2）
++    closeMenus()
++    setUnderlyingMenu(null)
+     if (isUnderlyingRow(instrumentID)) {
+       event.preventDefault()
+       setUnderlyingMenu({ instrumentID, x: event.clientX, y: event.clientY })
+     } else {
+       handleContextMenu(instrumentID, price, event)
+     }
+   }
+ 
++  // 多选右键：先关闭标底菜单再走原多选菜单，避免两个菜单叠加（Critical #2）
++  const handleMultiSelectContextMenuWrapped = (instrumentIDs: string[], event: MouseEvent) => {
++    setUnderlyingMenu(null)
++    handleMultiSelectContextMenu(instrumentIDs, event)
++  }
++
+   return (
+     <section className="options-page">
+       {/* 列表工具行：功能靠左（全部/自选 → 筛选 → 仅交易中 → 收藏），搜索贴右。
+           T型报价已独立为悬浮标签页，此处不再有 [列表|T型] 切换。 */}
+       <div className="market-toolbar">
+         <div className="market-toolbar__tabs">
+           <button
+             className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
+             onClick={() => setActiveTab('all')}
+           >
+@@ -248,21 +276,21 @@ export function OptionsPanel() {
+         <ErrorBoundary>
+           <QuoteTable
+             spec={optionsSpec}
+             contracts={rows}
+             snapshots={snapshots}
+             selectedInstrument={selectedInstrument}
+             isActive={isActive}
+             onRowClick={handleClick}
+             onRowDoubleClick={handleRowDoubleClick}
+             onContextMenu={handleRowContextMenu}
+-            onMultiSelectContextMenu={handleMultiSelectContextMenu}
++            onMultiSelectContextMenu={handleMultiSelectContextMenuWrapped}
+             onVisibleRangeChange={setVisibleInstrumentIDs}
+             favoritedIds={favoritedIds}
+             onFavoriteChange={(instrumentID, isFavorited) => {
+               if (isFavorited) {
+                 const inst = contracts.find((c) => c.instrumentID === instrumentID)
+                 if (inst) {
+                   addToFavorites(inst)
+                   toast.success(`已收藏 ${instrumentID}`)
+                 }
+               } else {
+@@ -279,32 +307,34 @@ export function OptionsPanel() {
+       {/* 高级搜索弹窗（放大镜入口） */}
+       <InstrumentSearchModal
+         isOpen={searchModalOpen}
+         onClose={() => setSearchModalOpen(false)}
+         onAddToFavorite={addToFavorites}
+         onRemoveFromFavorite={removeFromFavorites}
+         allContractIds={allContractIds}
+         favoritedIds={favoritedIds}
+       />
+ 
+-      {/* 标底行右键菜单：仅「打开T型报价」 */}
++      {/* 标底行右键菜单：仅「打开T型报价」（ref 用于外部点击关闭判断） */}
+       {underlyingMenu && (
+-        <ContextMenu
+-          x={underlyingMenu.x}
+-          y={underlyingMenu.y}
+-          items={[
+-            {
+-              label: '打开T型报价',
+-              icon: '📉',
+-              onClick: () => openTQuoteFloating(underlyingMenu.instrumentID),
+-            },
+-          ]}
+-          onClose={() => setUnderlyingMenu(null)}
+-        />
++        <div ref={underlyingMenuRef}>
++          <ContextMenu
++            x={underlyingMenu.x}
++            y={underlyingMenu.y}
++            items={[
++              {
++                label: '打开T型报价',
++                icon: '📉',
++                onClick: () => openTQuoteFloating(underlyingMenu.instrumentID),
++              },
++            ]}
++            onClose={() => setUnderlyingMenu(null)}
++          />
++        </div>
+       )}
+ 
+       {/* 单选 + 多选右键菜单（共享 useContractMenus，与期货页一致） */}
+       {singleMenu}
+       {multiMenu}
+     </section>
+   )
+ }
+diff --git a/frontend/src/modules/options/TQuoteView.test.tsx b/frontend/src/modules/options/TQuoteView.test.tsx
+index 229d82e..1c4a733 100644
+--- a/frontend/src/modules/options/TQuoteView.test.tsx
++++ b/frontend/src/modules/options/TQuoteView.test.tsx
+@@ -1,29 +1,29 @@
+ import { describe, it, expect, vi, beforeEach } from 'vitest'
+-import { render, screen, act } from '@testing-library/react'
++import { render, screen, act, waitFor } from '@testing-library/react'
+ import userEvent from '@testing-library/user-event'
+ import { TQuoteView } from './TQuoteView'
+ import { useMarketStore } from '@/modules/market/store'
+ 
+ // TQuoteView 已自包含：不再依赖 useOptionsStore，直接调用 @/services/api。
+ // 以下 mock 覆盖 TQuoteView 用到的所有 API 函数。
+ const mockGetOptionUnderlyings = vi.fn().mockResolvedValue({ underlyings: ['IF2608', 'IF2609'] })
+ const mockGetOptionChains = vi.fn().mockResolvedValue({ chains: [] })
+-const mockGetVolatility = vi.fn().mockResolvedValue({ volatility: [] })
+ const mockSubscribeMarket = vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] })
++const mockUnsubscribeMarket = vi.fn().mockResolvedValue({ success: true, removed: 0 })
+ const mockGetSnapshots = vi.fn().mockResolvedValue({ snapshots: {} })
+ 
+ vi.mock('@/services/api', () => ({
+   getOptionUnderlyings: (...args: any[]) => mockGetOptionUnderlyings(...args),
+   getOptionChains: (...args: any[]) => mockGetOptionChains(...args),
+-  getVolatility: (...args: any[]) => mockGetVolatility(...args),
+   subscribeMarket: (...args: any[]) => mockSubscribeMarket(...args),
++  unsubscribeMarket: (...args: any[]) => mockUnsubscribeMarket(...args),
+   getSnapshots: (...args: any[]) => mockGetSnapshots(...args),
+ }))
+ 
+ // Mock TQuoteTable：捕获 props，用于断言「不再接收 volatility（去 IV）」
+ const mockTQuoteTable = vi.fn()
+ vi.mock('./TQuoteTable', () => ({
+   TQuoteTable: (props: any) => {
+     mockTQuoteTable(props)
+     return (
+       <div data-testid="tquote-table">
+@@ -38,21 +38,20 @@ function renderChain(underlying = 'IF2608', expireDate = '20260815') {
+     chains: [{ underlying, expireDate, calls: [], puts: [], updateTime: '' }],
+   })
+ }
+ 
+ describe('TQuoteView (自包含)', () => {
+   beforeEach(() => {
+     vi.clearAllMocks()
+     useMarketStore.setState({ snapshots: new Map() })
+     mockGetOptionUnderlyings.mockResolvedValue({ underlyings: ['IF2608', 'IF2609'] })
+     mockGetOptionChains.mockResolvedValue({ chains: [] })
+-    mockGetVolatility.mockResolvedValue({ volatility: [] })
+   })
+ 
+   it('renders the options panel container', () => {
+     const { container } = render(<TQuoteView />)
+     expect(container.firstChild).toBeTruthy()
+   })
+ 
+   it('无 instrumentID prop 时不自动加载期权链（需窗内自选标的）', () => {
+     render(<TQuoteView />)
+     expect(mockGetOptionChains).not.toHaveBeenCalled()
+@@ -164,11 +163,67 @@ describe('TQuoteView (自包含)', () => {
+     render(<TQuoteView />)
+     const input = await screen.findByPlaceholderText('输入关键字搜索...')
+     await user.click(input)
+     await user.click(screen.getByText('IF2608'))
+     await screen.findByTestId('tquote-table')
+     const calls = mockTQuoteTable.mock.calls
+     const props = calls[calls.length - 1]?.[0]
+     expect(props.volatility).toBeUndefined()
+     expect(props.snapshots).toBeInstanceOf(Map)
+   })
++
++  it('订阅后卸载组件 → 退订该链全部合约（避免订阅泄漏）', async () => {
++    mockGetOptionChains.mockResolvedValue({
++      chains: [{
++        underlying: 'IF2608',
++        expireDate: '20260815',
++        calls: [{ instrumentID: 'IF2608-C-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
++        puts: [{ instrumentID: 'IF2608-P-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
++        updateTime: '',
++      }],
++    })
++    const { unmount } = render(<TQuoteView instrumentID="IF2608" />)
++    await waitFor(() => {
++      expect(mockSubscribeMarket).toHaveBeenCalledWith(['IF2608-C-1300', 'IF2608-P-1300'])
++    })
++    unmount()
++    expect(mockUnsubscribeMarket).toHaveBeenCalledWith(['IF2608-C-1300', 'IF2608-P-1300'])
++  })
++
++  it('切换标的链 → 先退订上一链合约，再订阅新链（无泄漏叠加）', async () => {
++    mockGetOptionChains.mockResolvedValue({
++      chains: [{
++        underlying: 'IF2608',
++        expireDate: '20260815',
++        calls: [{ instrumentID: 'IF2608-C-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
++        puts: [{ instrumentID: 'IF2608-P-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
++        updateTime: '',
++      }],
++    })
++    const { rerender } = render(<TQuoteView instrumentID="IF2608" />)
++    await waitFor(() => {
++      expect(mockSubscribeMarket).toHaveBeenCalledWith(['IF2608-C-1300', 'IF2608-P-1300'])
++    })
++    mockGetOptionChains.mockResolvedValue({
++      chains: [{
++        underlying: 'IF2609',
++        expireDate: '20260815',
++        calls: [{ instrumentID: 'IF2609-C-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
++        puts: [{ instrumentID: 'IF2609-P-1300', strikePrice: 1300, lastPrice: 0, bidPrice: 0, askPrice: 0, volume: 0, openInterest: 0, impliedVolatility: 0 }],
++        updateTime: '',
++      }],
++    })
++    rerender(<TQuoteView instrumentID="IF2609" />)
++    // 退订先于重新订阅（React effect cleanup 先于新 effect 运行）
++    await waitFor(() => {
++      expect(mockUnsubscribeMarket).toHaveBeenCalledWith(['IF2608-C-1300', 'IF2608-P-1300'])
++    })
++    await waitFor(() => {
++      expect(mockSubscribeMarket).toHaveBeenCalledWith(['IF2609-C-1300', 'IF2609-P-1300'])
++    })
++    const unsubOrder = vi.mocked(mockUnsubscribeMarket).mock.invocationCallOrder[0]
++    const subCalls = vi.mocked(mockSubscribeMarket).mock.invocationCallOrder
++    const resubOrder = subCalls[subCalls.length - 1]
++    expect(resubOrder).toBeDefined()
++    expect(unsubOrder).toBeLessThan(resubOrder!)
++  })
+ })
+diff --git a/frontend/src/modules/options/TQuoteView.tsx b/frontend/src/modules/options/TQuoteView.tsx
+index 1278c53..fc3c62c 100644
+--- a/frontend/src/modules/options/TQuoteView.tsx
++++ b/frontend/src/modules/options/TQuoteView.tsx
+@@ -1,13 +1,13 @@
+ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+ import { useMarketStore } from '@/modules/market/store'
+-import { subscribeMarket, getOptionUnderlyings, getOptionChains, getSnapshots } from '@/services/api'
++import { subscribeMarket, unsubscribeMarket, getOptionUnderlyings, getOptionChains, getSnapshots } from '@/services/api'
+ import type { OptionChain } from '@/services/types'
+ import { TQuoteTable } from './TQuoteTable'
+ import './styles.css'
+ 
+ /** Format YYYYMMDD → YYYY-MM-DD for display. */
+ function formatExpireDate(raw: string): string {
+   if (raw.length === 8) return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
+   return raw
+ }
+ 
+@@ -37,20 +37,24 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
+ 
+   // Market snapshots — real-time price data for chain quotes
+   const snapshots = useMarketStore((s) => s.snapshots)
+   const batchUpdate = useMarketStore((s) => s.batchUpdate)
+ 
+   // Searchable underlying dropdown state
+   const [underlyingSearch, setUnderlyingSearch] = useState('')
+   const [showUnderlyingDropdown, setShowUnderlyingDropdown] = useState(false)
+   const underlyingDropdownRef = useRef<HTMLDivElement>(null)
+ 
++  // 当前已直接订阅的期权合约 ID（不经过 useSubscriptionManager 的 subscribedRef）。
++  // 用于链切换/卸载时主动退订，避免绕过 LRU 驱逐与 SOFT_LIMIT 记账导致订阅泄漏。
++  const subscribedIdsRef = useRef<string[]>([])
++
+   // 排序（字典序）：availableUnderlyings 设值前排序；filteredUnderlyings 保持有序
+   const filteredUnderlyings = useMemo(() => {
+     if (!underlyingSearch.trim()) return availableUnderlyings
+     const q = underlyingSearch.trim().toUpperCase()
+     return availableUnderlyings.filter((u) => u.toUpperCase().includes(q)).sort()
+   }, [availableUnderlyings, underlyingSearch])
+ 
+   // Close underlying dropdown on outside click
+   useEffect(() => {
+     if (!showUnderlyingDropdown) return
+@@ -145,30 +149,45 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
+   }, [instrumentID])
+ 
+   // Subscribe to selected chain's option instruments + fetch snapshots
+   useEffect(() => {
+     if (!selectedChain) return
+     const ids = [
+       ...selectedChain.calls.map((q) => q.instrumentID),
+       ...selectedChain.puts.map((q) => q.instrumentID),
+     ]
+     if (ids.length > 0) {
++      // 先退订上一链已订阅的合约（链切换时在订阅新链前退订）。
++      // 这些 ID 直接订阅、不进 useSubscriptionManager 的 subscribedRef，
++      // 若不主动退订会绕过 LRU 驱逐与 SOFT_LIMIT 记账，多 T型报价实例叠加
++      // 会重演后端 500 订阅上限的原子拒绝。
++      if (subscribedIdsRef.current.length > 0) {
++        unsubscribeMarket(subscribedIdsRef.current).catch(() => {})
++      }
+       subscribeMarket(ids).catch(() => {})
++      subscribedIdsRef.current = ids
+       // Proactively fetch current snapshots so the table shows data immediately,
+       // without waiting for WebSocket market_data push.
+       getSnapshots(ids)
+         .then((res) => {
+           const snaps = Object.values(res.snapshots)
+           if (snaps.length > 0) batchUpdate(snaps)
+         })
+         .catch(() => {})
+     }
++    // 组件卸载 / selectedChain 变化（选标底、换到期日）时退订当前链，避免订阅泄漏
++    return () => {
++      if (subscribedIdsRef.current.length > 0) {
++        unsubscribeMarket(subscribedIdsRef.current).catch(() => {})
++        subscribedIdsRef.current = []
++      }
++    }
+   }, [selectedChain, batchUpdate])
+ 
+   const handleExpireDateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+     const value = e.target.value || null
+     setSelectedExpireDate(value)
+   }
+ 
+   // Manual refresh underlyings
+   const handleRefreshUnderlyings = () => {
+     setUnderlyingsLoading(true)

@@ -1,0 +1,337 @@
+# Review package: 2206a96..HEAD
+
+## Commits
+9d142d3 feat(menu): 顶部行情菜单改名（全部行情→期货、T型期权→期权）
+
+## Files changed
+ frontend/electron/__tests__/menuActions.test.ts  |  2 +-
+ frontend/electron/__tests__/menuManager.test.ts  | 14 +++++++-------
+ frontend/electron/__tests__/menuTemplate.test.ts |  4 ++--
+ frontend/electron/__tests__/trayManager.test.ts  | 14 +++++++-------
+ frontend/electron/menuActions.ts                 |  2 +-
+ frontend/electron/menuTemplate.ts                |  4 ++--
+ frontend/electron/preload.ts                     |  4 ++--
+ frontend/src/services/electron.ts                |  2 +-
+ 8 files changed, 23 insertions(+), 23 deletions(-)
+
+## Diff
+diff --git a/frontend/electron/__tests__/menuActions.test.ts b/frontend/electron/__tests__/menuActions.test.ts
+index 406d95a..6f57449 100644
+--- a/frontend/electron/__tests__/menuActions.test.ts
++++ b/frontend/electron/__tests__/menuActions.test.ts
+@@ -32,21 +32,21 @@ describe('resolveAction', () => {
+   });
+ 
+   it('open-floating: show+focus 主窗并发送 menu:open-floating', () => {
+     resolveAction({ type: 'open-floating', tab: 'query' }, ctx);
+     expect(ctx.mainWindow.show).toHaveBeenCalled();
+     expect(ctx.mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'query');
+   });
+ 
+   it('open-market-window: 调 windowManager.openTabWindow', () => {
+     resolveAction({ type: 'open-market-window' }, ctx);
+-    expect(ctx.windowManager.openTabWindow).toHaveBeenCalledWith('market', 'tab-market', '📊 行情');
++    expect(ctx.windowManager.openTabWindow).toHaveBeenCalledWith('market', 'tab-market', '📊 期货');
+   });
+ 
+   it('toggle-perf: 发送 menu:toggle-perf 但不 show/focus', () => {
+     resolveAction({ type: 'toggle-perf' }, ctx);
+     expect(ctx.mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_TOGGLE_PERF);
+     expect(ctx.mainWindow.show).not.toHaveBeenCalled();
+     expect(ctx.mainWindow.focus).not.toHaveBeenCalled();
+   });
+ 
+   it('quit: 调用 app.quit', () => {
+diff --git a/frontend/electron/__tests__/menuManager.test.ts b/frontend/electron/__tests__/menuManager.test.ts
+index bd8722e..a692bf9 100644
+--- a/frontend/electron/__tests__/menuManager.test.ts
++++ b/frontend/electron/__tests__/menuManager.test.ts
+@@ -71,55 +71,55 @@ describe('MenuManager', () => {
+   it('should not include default File/Edit/Window/Help menus', () => {
+     const manager = new MenuManager();
+     manager.initialize(mainWindow, windowManager);
+     const roles = getTemplate()
+       .map((item) => item.role)
+       .filter(Boolean);
+     expect(roles).toEqual(['viewMenu']);
+   });
+ 
+   describe('行情', () => {
+-    it('包含 全部行情/T型期权/自选行情/在新窗口打开', () => {
++    it('包含 期货/期权/自选行情/在新窗口打开', () => {
+       const manager = new MenuManager();
+       manager.initialize(mainWindow, windowManager);
+       const labels = getMenu('行情')
+         .submenu!.map((i) => i.label)
+         .filter(Boolean);
+-      expect(labels).toEqual(['📊 全部行情', '📉 T型期权', '⭐ 自选行情', '🪟 在新窗口打开']);
++      expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '🪟 在新窗口打开']);
+     });
+ 
+-    it('点击全部行情发送 menu:market-view all', () => {
++    it('点击期货发送 menu:market-view all', () => {
+       const manager = new MenuManager();
+       manager.initialize(mainWindow, windowManager);
+-      clickItem('行情', '📊 全部行情');
++      clickItem('行情', '📊 期货');
+       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'all');
+     });
+ 
+-    it('点击T型期权发送 menu:market-view options', () => {
++    it('点击期权发送 menu:market-view options', () => {
+       const manager = new MenuManager();
+       manager.initialize(mainWindow, windowManager);
+-      clickItem('行情', '📉 T型期权');
++      clickItem('行情', '📉 期权');
+       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'options');
+     });
+ 
+     it('点击自选行情发送 menu:market-view favorites', () => {
+       const manager = new MenuManager();
+       manager.initialize(mainWindow, windowManager);
+       clickItem('行情', '⭐ 自选行情');
+       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'favorites');
+     });
+ 
+     it('点击 🪟 在新窗口打开 打开行情独立窗口', () => {
+       const manager = new MenuManager();
+       manager.initialize(mainWindow, windowManager);
+       clickItem('行情', '🪟 在新窗口打开');
+-      expect(windowManager.openTabWindow).toHaveBeenCalledWith('market', 'tab-market', '📊 行情');
++      expect(windowManager.openTabWindow).toHaveBeenCalledWith('market', 'tab-market', '📊 期货');
+     });
+   });
+ 
+   describe('功能', () => {
+     it('包含 报单窗口/K线窗口/查询窗口/退出', () => {
+       const manager = new MenuManager();
+       manager.initialize(mainWindow, windowManager);
+       const labels = getMenu('功能')
+         .submenu!.map((i) => i.label)
+         .filter(Boolean);
+diff --git a/frontend/electron/__tests__/menuTemplate.test.ts b/frontend/electron/__tests__/menuTemplate.test.ts
+index 610fa06..958aeeb 100644
+--- a/frontend/electron/__tests__/menuTemplate.test.ts
++++ b/frontend/electron/__tests__/menuTemplate.test.ts
+@@ -15,26 +15,26 @@ interface TemplateItem {
+   submenu?: TemplateItem[];
+   click?: () => void;
+ }
+ 
+ describe('getAppMenuDef', () => {
+   it('返回四组一级菜单：行情/功能/设置/性能监控', () => {
+     const def = getAppMenuDef();
+     expect(def.map((d) => d.label)).toEqual(['行情', '功能', '设置', '性能监控']);
+   });
+ 
+-  it('行情子菜单完整镜像：全部/T型/自选/分隔符/在新窗口打开', () => {
++  it('行情子菜单完整镜像：期货/期权/自选/分隔符/在新窗口打开', () => {
+     const market = getAppMenuDef().find((d) => d.id === 'market')!;
+     const labels = market.submenu!
+       .filter((i) => i.type !== 'separator')
+       .map((i) => i.label);
+-    expect(labels).toEqual(['📊 全部行情', '📉 T型期权', '⭐ 自选行情', '🪟 在新窗口打开']);
++    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '🪟 在新窗口打开']);
+   });
+ 
+   it('行情「在新窗口打开」action 为 open-market-window', () => {
+     const market = getAppMenuDef().find((d) => d.id === 'market')!;
+     const newWindow = market.submenu!.find((i) => i.id === 'market-new-window')!;
+     expect(newWindow.action).toEqual({ type: 'open-market-window' });
+   });
+ 
+   it('功能子菜单包含报单/K线/查询/分隔符/退出(app-quit)', () => {
+     const fnMenu = getAppMenuDef().find((d) => d.id === 'function')!;
+diff --git a/frontend/electron/__tests__/trayManager.test.ts b/frontend/electron/__tests__/trayManager.test.ts
+index f72a0cf..a62c12f 100644
+--- a/frontend/electron/__tests__/trayManager.test.ts
++++ b/frontend/electron/__tests__/trayManager.test.ts
+@@ -91,48 +91,48 @@ describe('TrayManager', () => {
+   });
+ 
+   it('功能子菜单不包含退出（已提到一级底部）', () => {
+     const manager = new TrayManager();
+     manager.initialize(mainWindow, windowManager);
+     const fnMenu = getTemplate().find((i) => i.label === '功能')!;
+     const labels = fnMenu.submenu!.map((i) => i.label).filter(Boolean);
+     expect(labels).toEqual(['📝 报单窗口', '📈 K线窗口', '📋 查询窗口']);
+   });
+ 
+-  it('行情子菜单完整镜像：全部/T型/自选/新窗口', () => {
++  it('行情子菜单完整镜像：期货/期权/自选/新窗口', () => {
+     const manager = new TrayManager();
+     manager.initialize(mainWindow, windowManager);
+     const market = getTemplate().find((i) => i.label === '行情')!;
+     const labels = market.submenu!.map((i) => i.label).filter(Boolean);
+-    expect(labels).toEqual(['📊 全部行情', '📉 T型期权', '⭐ 自选行情', '🪟 在新窗口打开']);
++    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '🪟 在新窗口打开']);
+   });
+ 
+-  it('点击全部行情发送 menu:market-view all 并显示主窗口', () => {
++  it('点击期货发送 menu:market-view all 并显示主窗口', () => {
+     const manager = new TrayManager();
+     manager.initialize(mainWindow, windowManager);
+-    clickItem('📊 全部行情');
++    clickItem('📊 期货');
+     expect(mainWindow.show).toHaveBeenCalled();
+     expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'all');
+   });
+ 
+-  it('点击T型期权发送 menu:market-view options', () => {
++  it('点击期权发送 menu:market-view options', () => {
+     const manager = new TrayManager();
+     manager.initialize(mainWindow, windowManager);
+-    clickItem('📉 T型期权');
++    clickItem('📉 期权');
+     expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'options');
+   });
+ 
+   it('点击在新窗口打开调用 windowManager.openTabWindow', () => {
+     const manager = new TrayManager();
+     manager.initialize(mainWindow, windowManager);
+     clickItem('🪟 在新窗口打开');
+-    expect(windowManager.openTabWindow).toHaveBeenCalledWith('market', 'tab-market', '📊 行情');
++    expect(windowManager.openTabWindow).toHaveBeenCalledWith('market', 'tab-market', '📊 期货');
+   });
+ 
+   it('点击报单窗口发送 menu:open-floating order', () => {
+     const manager = new TrayManager();
+     manager.initialize(mainWindow, windowManager);
+     clickItem('📝 报单窗口');
+     expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'order');
+   });
+ 
+   it('点击K线窗口发送 menu:open-floating kline', () => {
+diff --git a/frontend/electron/menuActions.ts b/frontend/electron/menuActions.ts
+index 3b33cc9..138894e 100644
+--- a/frontend/electron/menuActions.ts
++++ b/frontend/electron/menuActions.ts
+@@ -29,21 +29,21 @@ function showAndSend(ctx: MenuContext, channel: string, ...args: unknown[]): voi
+ }
+ 
+ export function resolveAction(action: MenuAction, ctx: MenuContext): void {
+   switch (action.type) {
+     case 'market-view':
+       return showAndSend(ctx, IPC_CHANNELS.MENU_MARKET_VIEW, action.view);
+     case 'open-floating':
+       return showAndSend(ctx, IPC_CHANNELS.MENU_OPEN_FLOATING, action.tab);
+     case 'open-market-window':
+       if (ctx.windowManager) {
+-        ctx.windowManager.openTabWindow('market', 'tab-market', '📊 行情');
++        ctx.windowManager.openTabWindow('market', 'tab-market', '📊 期货');
+       }
+       return;
+     case 'toggle-perf':
+       if (ctx.mainWindow && !ctx.mainWindow.isDestroyed()) {
+         ctx.mainWindow.webContents.send(IPC_CHANNELS.MENU_TOGGLE_PERF);
+       }
+       return;
+     case 'quit':
+       app.quit();
+       return;
+diff --git a/frontend/electron/menuTemplate.ts b/frontend/electron/menuTemplate.ts
+index 5df9549..411df86 100644
+--- a/frontend/electron/menuTemplate.ts
++++ b/frontend/electron/menuTemplate.ts
+@@ -36,22 +36,22 @@ export interface BuildOptions {
+ /**
+  * 四组原生菜单定义 —— 唯一的菜单真源。
+  * 「功能」子菜单末尾的退出（id 'app-quit'）仅顶部菜单保留；托盘 omitIds: ['app-quit'] 剔除并放到一级底部。
+  */
+ export function getAppMenuDef(): MenuItemDef[] {
+   return [
+     {
+       id: 'market',
+       label: '行情',
+       submenu: [
+-        { id: 'market-all', label: '📊 全部行情', action: { type: 'market-view', view: 'all' } },
+-        { id: 'market-options', label: '📉 T型期权', action: { type: 'market-view', view: 'options' } },
++        { id: 'market-all', label: '📊 期货', action: { type: 'market-view', view: 'all' } },
++        { id: 'market-options', label: '📉 期权', action: { type: 'market-view', view: 'options' } },
+         { id: 'market-favorites', label: '⭐ 自选行情', action: { type: 'market-view', view: 'favorites' } },
+         { id: 'market-sep1', type: 'separator' },
+         { id: 'market-new-window', label: '🪟 在新窗口打开', action: { type: 'open-market-window' } },
+       ],
+     },
+     {
+       id: 'function',
+       label: '功能',
+       submenu: [
+         { id: 'func-order', label: '📝 报单窗口', action: { type: 'open-floating', tab: 'order' } },
+diff --git a/frontend/electron/preload.ts b/frontend/electron/preload.ts
+index 89e6bd7..f579b01 100644
+--- a/frontend/electron/preload.ts
++++ b/frontend/electron/preload.ts
+@@ -27,21 +27,21 @@ export interface ElectronAPI {
+ 
+   // Navigation (main → renderer)
+   onNavigateTab: (callback: (tab: string) => void) => () => void;
+ 
+   // Menu (main → renderer): 顶部菜单打开浮动窗
+   onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor') => void) => () => void;
+ 
+   // Menu (main → renderer): 切换 FPS 监控
+   onTogglePerf: (callback: () => void) => () => void;
+ 
+-  // Menu (main → renderer): 行情主页内切换视图（全部/自选/T型期权）
++  // Menu (main → renderer): 行情主页内切换视图（期货/自选/期权）
+   onMarketView: (callback: (view: 'all' | 'favorites' | 'options') => void) => () => void;
+ 
+   // Data exchange (renderer → main)
+   onGetSelectedInstrument: (callback: () => string) => () => void;
+   sendSelectedInstrument: (instrumentID: string) => void;
+ 
+   // Event listeners (return cleanup function to prevent memory leaks)
+   onOrderUpdate: (callback: (data: any) => void) => () => void;
+   onNotification: (callback: (data: any) => void) => () => void;
+   removeAllListeners: (channel: string) => void;
+@@ -86,21 +86,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
+     return () => ipcRenderer.removeListener('menu:open-floating', handler);
+   },
+ 
+   // Menu (main → renderer): 切换 FPS 监控
+   onTogglePerf: (callback: () => void) => {
+     const handler = () => callback();
+     ipcRenderer.on('menu:toggle-perf', handler);
+     return () => ipcRenderer.removeListener('menu:toggle-perf', handler);
+   },
+ 
+-  // Menu (main → renderer): 行情主页内切换视图（全部/自选/T型期权）
++  // Menu (main → renderer): 行情主页内切换视图（期货/自选/期权）
+   onMarketView: (callback: (view: 'all' | 'favorites' | 'options') => void) => {
+     const handler = (_: any, view: 'all' | 'favorites' | 'options') => callback(view);
+     ipcRenderer.on('menu:market-view', handler);
+     return () => ipcRenderer.removeListener('menu:market-view', handler);
+   },
+ 
+   // Data exchange (renderer → main)
+   onGetSelectedInstrument: (callback: () => string) => {
+     const handler = () => callback();
+     ipcRenderer.on('data:get-selected-instrument', handler);
+diff --git a/frontend/src/services/electron.ts b/frontend/src/services/electron.ts
+index 82ef847..fde993c 100644
+--- a/frontend/src/services/electron.ts
++++ b/frontend/src/services/electron.ts
+@@ -113,21 +113,21 @@ declare global {
+ 
+       // Navigation
+       onNavigateTab: (callback: (tab: string) => void) => () => void;
+ 
+       // Menu (main → renderer): 顶部菜单打开浮动窗
+       onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor') => void) => () => void;
+ 
+       // Menu (main → renderer): 切换 FPS 监控
+       onTogglePerf: (callback: () => void) => () => void;
+ 
+-      // Menu (main → renderer): 行情主页内切换视图（全部/自选/T型期权）
++      // Menu (main → renderer): 行情主页内切换视图（期货/自选/期权）
+       onMarketView: (callback: (view: 'all' | 'favorites' | 'options') => void) => () => void;
+ 
+       // Data exchange
+       onGetSelectedInstrument: (callback: () => string) => () => void;
+       sendSelectedInstrument: (instrumentID: string) => void;
+ 
+       // Event listeners
+       onOrderUpdate: (callback: (data: any) => void) => () => void;
+       onNotification: (callback: (data: any) => void) => () => void;
+ 

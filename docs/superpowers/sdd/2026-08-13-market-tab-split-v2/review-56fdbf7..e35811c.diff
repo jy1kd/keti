@@ -1,0 +1,572 @@
+# Review package: 56fdbf7..HEAD
+
+## Commits
+e35811c fix(options): 修复行情表拆分 v2 运行时问题（T型报价崩溃/0高/去到期日/悬浮跳页/排序）
+
+## Files changed
+ frontend/src/modules/options/TQuoteTable.test.tsx  | 18 ++++--
+ frontend/src/modules/options/TQuoteTable.tsx       | 12 +++-
+ .../src/modules/options/TQuoteView.style.test.tsx  |  8 ++-
+ frontend/src/modules/options/TQuoteView.test.tsx   | 31 ++++++-----
+ frontend/src/modules/options/TQuoteView.tsx        | 65 +++++-----------------
+ frontend/src/modules/options/styles.css            |  2 +-
+ frontend/src/utils/openFloatingTab.test.ts         | 13 +++++
+ frontend/src/utils/openFloatingTab.ts              |  8 ++-
+ 8 files changed, 80 insertions(+), 77 deletions(-)
+
+## Diff
+diff --git a/frontend/src/modules/options/TQuoteTable.test.tsx b/frontend/src/modules/options/TQuoteTable.test.tsx
+index c44f764..767b895 100644
+--- a/frontend/src/modules/options/TQuoteTable.test.tsx
++++ b/frontend/src/modules/options/TQuoteTable.test.tsx
+@@ -111,26 +111,34 @@ describe('TQuoteTable', () => {
+   })
+ 
+   it('shows empty placeholder when chain has no data', async () => {
+     const emptyChain: OptionChain = { underlying: '', expireDate: '', calls: [], puts: [], updateTime: '' }
+     render(<TQuoteTable chain={emptyChain} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     expect(options.records).toHaveLength(0)
+   })
+ 
+-  it('releases vtable instance on unmount', async () => {
+-    const { unmount } = render(<TQuoteTable chain={chain} />)
++  it('卸载后延迟 250ms 释放 vtable（避让 ResizeObserver 100ms 防抖回调，防 internalProps 置 null 后 resize 崩溃）', async () => {
+     const { ListTable } = await import('@visactor/vtable')
+-    const instance = (ListTable as any).mock.results[0]?.value
+-    unmount()
+-    expect(instance?.release).toHaveBeenCalled()
++    vi.useFakeTimers()
++    try {
++      const { unmount } = render(<TQuoteTable chain={chain} />)
++      const instance = (ListTable as any).mock.results[0]?.value
++      unmount()
++      // 250ms 内尚未释放：挂起的防抖回调仍能在存活表上触发
++      expect(instance?.release).not.toHaveBeenCalled()
++      vi.advanceTimersByTime(250)
++      expect(instance?.release).toHaveBeenCalledTimes(1)
++    } finally {
++      vi.useRealTimers()
++    }
+   })
+ 
+   it('updates records incrementally when snapshots change without recreating table', async () => {
+     const { rerender } = render(<TQuoteTable chain={chain} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const instance = (ListTable as any).mock.results[0]?.value
+ 
+     const callsBeforeRerender = (ListTable as any).mock.calls.length
+ 
+     const snapshots = new Map<string, MarketSnapshot>([
+diff --git a/frontend/src/modules/options/TQuoteTable.tsx b/frontend/src/modules/options/TQuoteTable.tsx
+index 3cc3537..04335e5 100644
+--- a/frontend/src/modules/options/TQuoteTable.tsx
++++ b/frontend/src/modules/options/TQuoteTable.tsx
+@@ -136,23 +136,31 @@ export function TQuoteTable({ chain, snapshots }: TQuoteTableProps) {
+         bodyStyle: {
+           bgColor: '#0d1117',
+           borderColor: '#21262d',
+         },
+         scrollStyle: { ...SCROLL_STYLE },
+       },
+     })
+ 
+     tableRef.current = table
+ 
++    // 延迟 release：vtable 内部 ResizeObserver 对容器 100ms 防抖；若 release 先于防抖回调
++    // （internalProps 置 null），回调内 resize() 读 null 崩溃。延迟 ~250ms 释放，
++    // 让挂起回调先在存活表上触发；release 幂等（isReleased 守卫），可安全延迟。
++    // StrictMode 双挂载时，延迟释放释放的是旧脱离表，tableRef 已指向新表（仅当仍相等才置 null）。
++    const RESIZE_SETTLE_MS = 250
+     return () => {
+-      table.release()
+-      tableRef.current = null
++      const t = table
++      setTimeout(() => {
++        t.release()
++        if (tableRef.current === t) tableRef.current = null
++      }, RESIZE_SETTLE_MS)
+     }
+   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+ 
+   // Update records when data changes without rebuilding the table.
+   useEffect(() => {
+     tableRef.current?.setRecords(buildRecords(chain, snapshots))
+   }, [chain, snapshots])
+ 
+   return <div ref={containerRef} style={{ width: '100%', height: '100%', background: '#0d1117' }} />
+ }
+diff --git a/frontend/src/modules/options/TQuoteView.style.test.tsx b/frontend/src/modules/options/TQuoteView.style.test.tsx
+index 6081f12..0314dfc 100644
+--- a/frontend/src/modules/options/TQuoteView.style.test.tsx
++++ b/frontend/src/modules/options/TQuoteView.style.test.tsx
+@@ -18,16 +18,18 @@ describe('TQuoteView 自动填充', () => {
+     expect(block).toMatch(/flex:\s*1/)
+     expect(block).toMatch(/min-height:\s*0/)
+   })
+ 
+   it('.options-content 为 flex 列容器，供子表 flex 填充', () => {
+     const block = readCssBlock('.options-content')
+     expect(block).toMatch(/display:\s*flex/)
+     expect(block).toMatch(/flex-direction:\s*column/)
+   })
+ 
+-  it('.options-panel 用 flex 填充（非固定 height:100%，避免与工具栏叠加溢出）', () => {
++  it('.options-panel 用 height:100% 填充（悬浮窗父级 display:block 定高；flex:1 在 block 父级下失效致 0 高度塌陷）', () => {
+     const block = readCssBlock('.options-panel')
+-    expect(block).toMatch(/flex:\s*1\s+1\s+0/)
+-    expect(block).not.toMatch(/height:\s*100%/)
++    expect(block).toMatch(/height:\s*100%/)
++    expect(block).toMatch(/display:\s*flex/)
++    expect(block).toMatch(/flex-direction:\s*column/)
++    expect(block).toMatch(/min-height:\s*0/)
+   })
+ })
+diff --git a/frontend/src/modules/options/TQuoteView.test.tsx b/frontend/src/modules/options/TQuoteView.test.tsx
+index 1543138..61d10fe 100644
+--- a/frontend/src/modules/options/TQuoteView.test.tsx
++++ b/frontend/src/modules/options/TQuoteView.test.tsx
+@@ -88,78 +88,83 @@ describe('TQuoteView (自包含)', () => {
+     renderChain()
+     const user = userEvent.setup()
+     render(<TQuoteView />)
+     const input = await screen.findByPlaceholderText('输入关键字搜索...')
+     await user.click(input)
+     await user.click(screen.getByText('IF2608'))
+     expect(await screen.findByTestId('tquote-table')).toBeInTheDocument()
+     expect(screen.getByTestId('tquote-table').textContent).toBe('IF2608-20260815')
+   })
+ 
+-  it('renders single table when both underlying and expiry selected', async () => {
++  it('标底多到期日时默认取首条链（无到期日选择器），只渲染单表', async () => {
+     mockGetOptionChains.mockResolvedValue({
+       chains: [
+         { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '' },
+         { underlying: 'IF2608', expireDate: '20260915', calls: [], puts: [], updateTime: '' },
+       ],
+     })
+     const user = userEvent.setup()
+     render(<TQuoteView />)
+     const input = await screen.findByPlaceholderText('输入关键字搜索...')
+     await user.click(input)
+     await user.click(screen.getByText('IF2608'))
+     const tables = await screen.findAllByTestId('tquote-table')
+     expect(tables).toHaveLength(1)
+     expect(tables[0].textContent).toBe('IF2608-20260815')
+   })
+ 
+-  it('到期日 select 由 optionChains 派生（标底选中后列出该标底全部到期日）', async () => {
+-    mockGetOptionChains.mockResolvedValue({
+-      chains: [
+-        { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '' },
+-        { underlying: 'IF2608', expireDate: '20260915', calls: [], puts: [], updateTime: '' },
+-      ],
+-    })
++  it('无到期日选择器（去 到期日 select）', async () => {
++    renderChain()
+     const user = userEvent.setup()
+     render(<TQuoteView />)
+     const input = await screen.findByPlaceholderText('输入关键字搜索...')
+     await user.click(input)
+     await user.click(screen.getByText('IF2608'))
+-    const select = await screen.findByLabelText(/到期日/) as HTMLSelectElement
+-    const dates = Array.from(select.options).map((o) => o.value).filter(Boolean)
+-    expect(dates).toEqual(['20260815', '20260915'])
++    await screen.findByTestId('tquote-table')
++    expect(screen.queryByLabelText(/到期日/)).toBeNull()
++    expect(screen.queryByRole('option', { name: /请选择到期日/ })).toBeNull()
+   })
+ 
+   it('instrumentID prop 预选标底：自动加载该标底期权链并选中', async () => {
+     mockGetOptionChains.mockResolvedValue({
+       chains: [{ underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '' }],
+     })
+     render(<TQuoteView instrumentID="IF2608" />)
+     expect(await screen.findByTestId('tquote-table')).toBeInTheDocument()
+     expect(mockGetOptionChains).toHaveBeenCalledWith('IF2608')
+     expect(screen.getByTestId('tquote-table').textContent).toBe('IF2608-20260815')
+   })
+ 
+   it('shows underlying selector label', async () => {
+     render(<TQuoteView />)
+     const labels = await screen.findAllByText(/标的/)
+     expect(labels.length).toBeGreaterThan(0)
+   })
+ 
+-  it('sorts available underlyings lexicographically in dropdown', async () => {
++  it('按不区分大小写自然序排序标底下拉（cu2609 在 FG609 前）', async () => {
+     mockGetOptionUnderlyings.mockResolvedValue({ underlyings: ['MA609', 'cu2609', 'FG609'] })
+     const user = userEvent.setup()
+     render(<TQuoteView />)
+     const input = await screen.findByPlaceholderText('输入关键字搜索...')
+     await user.click(input)
+     const options = Array.from(document.querySelectorAll('.options-search-option')).map((el) => el?.textContent ?? '')
+-    expect(options).toEqual(['FG609', 'MA609', 'cu2609'])
++    expect(options).toEqual(['cu2609', 'FG609', 'MA609'])
++  })
++
++  it('标底 a 开头小写排在 FG610 等大写之前（case-insensitive 字典序）', async () => {
++    mockGetOptionUnderlyings.mockResolvedValue({ underlyings: ['FG610', 'ad2608', 'MA609'] })
++    const user = userEvent.setup()
++    render(<TQuoteView />)
++    const input = await screen.findByPlaceholderText('输入关键字搜索...')
++    await user.click(input)
++    const options = Array.from(document.querySelectorAll('.options-search-option')).map((el) => el?.textContent ?? '')
++    expect(options).toEqual(['ad2608', 'FG610', 'MA609'])
+   })
+ 
+   it('不向 TQuoteTable 传递 volatility（去 IV 后无消费方）', async () => {
+     renderChain()
+     const user = userEvent.setup()
+     render(<TQuoteView />)
+     const input = await screen.findByPlaceholderText('输入关键字搜索...')
+     await user.click(input)
+     await user.click(screen.getByText('IF2608'))
+     await screen.findByTestId('tquote-table')
+diff --git a/frontend/src/modules/options/TQuoteView.tsx b/frontend/src/modules/options/TQuoteView.tsx
+index 9078147..7578002 100644
+--- a/frontend/src/modules/options/TQuoteView.tsx
++++ b/frontend/src/modules/options/TQuoteView.tsx
+@@ -1,61 +1,55 @@
+ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+ import { useMarketStore } from '@/modules/market/store'
+ import { getOptionUnderlyings, getOptionChains, getSnapshots } from '@/services/api'
+ import type { OptionChain } from '@/services/types'
++import { naturalCompare } from '@/modules/market/sort'
+ import { TQuoteTable } from './TQuoteTable'
+ import './styles.css'
+ 
+-/** Format YYYYMMDD → YYYY-MM-DD for display. */
+-function formatExpireDate(raw: string): string {
+-  if (raw.length === 8) return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
+-  return raw
+-}
+-
+ /** Max retry attempts for loading underlyings. */
+ const MAX_RETRIES = 3
+ /** Delay between retries (ms). */
+ const RETRY_DELAY_MS = 1500
+ 
+ /**
+  * TQuoteView — 独立悬浮标签页的 T型报价（多实例自包含）
+  *
+- * 自包含：所有数据状态（optionChains / selectedUnderlying / selectedExpireDate /
+- * loading / error）均为本地 useState，直接调用 @/services/api，多个悬浮实例互不干扰。
++ * 自包含：所有数据状态（optionChains / selectedUnderlying / loading / error）均为本地
++ * useState，直接调用 @/services/api，多个悬浮实例互不干扰。
+  * 可选 prop `instrumentID`：挂载时自动预选该标底并加载期权链（T型报价-<标底> 标签页）。
+  */
+ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
+   // T型报价数据（本地状态，实例隔离）
+   const [optionChains, setOptionChains] = useState<OptionChain[]>([])
+   const [selectedUnderlying, setSelectedUnderlying] = useState<string | null>(null)
+-  const [selectedExpireDate, setSelectedExpireDate] = useState<string | null>(null)
+   const [loading, setLoading] = useState(false)
+   const [error, setError] = useState<string | null>(null)
+ 
+   // Available underlyings — loaded via lightweight API on mount
+   const [availableUnderlyings, setAvailableUnderlyings] = useState<string[]>([])
+   const [underlyingsLoading, setUnderlyingsLoading] = useState(true)
+ 
+   // Market snapshots — real-time price data for chain quotes
+   const snapshots = useMarketStore((s) => s.snapshots)
+   const batchUpdate = useMarketStore((s) => s.batchUpdate)
+ 
+   // Searchable underlying dropdown state
+   const [underlyingSearch, setUnderlyingSearch] = useState('')
+   const [showUnderlyingDropdown, setShowUnderlyingDropdown] = useState(false)
+   const underlyingDropdownRef = useRef<HTMLDivElement>(null)
+ 
+-  // 排序（字典序）：availableUnderlyings 设值前排序；filteredUnderlyings 保持有序
++  // 排序（字典序，不区分大小写）：availableUnderlyings 设值前排序；filteredUnderlyings 保持有序
+   const filteredUnderlyings = useMemo(() => {
+     if (!underlyingSearch.trim()) return availableUnderlyings
+     const q = underlyingSearch.trim().toUpperCase()
+-    return availableUnderlyings.filter((u) => u.toUpperCase().includes(q)).sort()
++    return availableUnderlyings.filter((u) => u.toUpperCase().includes(q)).sort(naturalCompare)
+   }, [availableUnderlyings, underlyingSearch])
+ 
+   // Close underlying dropdown on outside click
+   useEffect(() => {
+     if (!showUnderlyingDropdown) return
+     const handleClickOutside = (e: MouseEvent) => {
+       if (underlyingDropdownRef.current && !underlyingDropdownRef.current.contains(e.target as Node)) {
+         setShowUnderlyingDropdown(false)
+       }
+     }
+@@ -72,66 +66,57 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
+       if (cancelled) return
+ 
+       getOptionUnderlyings().then((res) => {
+         if (cancelled) return
+ 
+         const underlyings = res.underlyings ?? []
+         if (underlyings.length === 0 && retryCount < MAX_RETRIES) {
+           retryCount++
+           setTimeout(loadUnderlyings, RETRY_DELAY_MS)
+         } else {
+-          setAvailableUnderlyings([...underlyings].sort())
++          setAvailableUnderlyings([...underlyings].sort(naturalCompare))
+           setUnderlyingsLoading(false)
+         }
+       }).catch(() => {
+         if (cancelled) return
+         if (retryCount < MAX_RETRIES) {
+           retryCount++
+           setTimeout(loadUnderlyings, RETRY_DELAY_MS)
+         } else {
+           setUnderlyingsLoading(false)
+         }
+       })
+     }
+ 
+     loadUnderlyings()
+ 
+     return () => { cancelled = true }
+   }, [])
+ 
+-  // Find the selected chain (only one at a time)
++  // 选中的期权链：无到期日选择器，取该标底的首条链（首个到期日）
+   const selectedChain = useMemo(
+-    () =>
+-      optionChains.find(
+-        (c) =>
+-          (!selectedUnderlying || c.underlying === selectedUnderlying) &&
+-          (!selectedExpireDate || c.expireDate === selectedExpireDate)
+-      ) ?? null,
+-    [optionChains, selectedUnderlying, selectedExpireDate]
++    () => optionChains.find((c) => c.underlying === selectedUnderlying) ?? null,
++    [optionChains, selectedUnderlying]
+   )
+ 
+-  // 选择标底：加载期权链 + 自动选中首个到期日
++  // 选择标底：加载期权链（默认展示首个到期日，无到期日选择器）
+   const selectUnderlying = useCallback((value: string) => {
+     setSelectedUnderlying(value)
+-    setSelectedExpireDate(null)
+     setUnderlyingSearch('')
+     setShowUnderlyingDropdown(false)
+     if (value) {
+       setLoading(true)
+       setError(null)
+       getOptionChains(value)
+         .then((res) => {
+           const chains = res.chains ?? []
+           setOptionChains(chains)
+-          if (chains.length > 0) {
+-            setSelectedExpireDate(chains[0].expireDate)
+-          }
+           setLoading(false)
+         })
+         .catch(() => {
+           setError('Failed to load option chains')
+           setLoading(false)
+         })
+     } else {
+       setOptionChains([])
+     }
+   }, [])
+@@ -160,47 +145,37 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
+       for (const id of ids) useMarketStore.getState().addLockedContract(id)
+       // Proactively fetch current snapshots so the table shows data immediately,
+       // without waiting for WebSocket market_data push.
+       getSnapshots(ids)
+         .then((res) => {
+           const snaps = Object.values(res.snapshots)
+           if (snaps.length > 0) batchUpdate(snaps)
+         })
+         .catch(() => {})
+     }
+-    // 卸载 / selectedChain 变化（选标底、换到期日）时解锁当前链（引用计数归零才真正解锁）
++    // 卸载 / selectedChain 变化（选标底）时解锁当前链（引用计数归零才真正解锁）
+     return () => {
+       for (const id of ids) useMarketStore.getState().removeLockedContract(id)
+     }
+   }, [selectedChain, batchUpdate])
+ 
+-  const handleExpireDateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+-    const value = e.target.value || null
+-    setSelectedExpireDate(value)
+-  }
+-
+   // Manual refresh underlyings
+   const handleRefreshUnderlyings = () => {
+     setUnderlyingsLoading(true)
+     getOptionUnderlyings().then((res) => {
+-      setAvailableUnderlyings([...(res.underlyings ?? [])].sort())
++      setAvailableUnderlyings([...(res.underlyings ?? [])].sort(naturalCompare))
+       setUnderlyingsLoading(false)
+     }).catch(() => {
+       setUnderlyingsLoading(false)
+     })
+   }
+ 
+-  // Expiry dropdown filtered by selected underlying（由 optionChains 本地派生）
+-  const expirations = selectedUnderlying
+-    ? [...new Set(optionChains.filter((c) => c.underlying === selectedUnderlying).map((c) => c.expireDate))].sort()
+-    : []
+-
+   return (
+     <div className="options-panel">
+       {/* Toolbar */}
+       <div className="options-toolbar">
+         <label>
+           标的:
+           <div className="options-searchable-select" ref={underlyingDropdownRef}>
+             <input
+               type="text"
+               className="options-search-input"
+@@ -233,30 +208,20 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
+               </div>
+             )}
+             {showUnderlyingDropdown && filteredUnderlyings.length === 0 && (
+               <div className="options-search-dropdown">
+                 <div className="options-search-empty">无匹配标的</div>
+               </div>
+             )}
+           </div>
+         </label>
+ 
+-        <label>
+-          到期日:
+-          <select value={selectedExpireDate ?? ''} onChange={handleExpireDateChange}>
+-            <option value="">请选择到期日</option>
+-            {expirations.map((d) => (
+-              <option key={d} value={d}>{formatExpireDate(d)}</option>
+-            ))}
+-          </select>
+-        </label>
+-
+         <button
+           className="options-refresh-btn"
+           onClick={handleRefreshUnderlyings}
+           disabled={underlyingsLoading}
+           title="刷新标的列表"
+         >
+           {underlyingsLoading ? '⏳' : '🔄'}
+         </button>
+       </div>
+ 
+@@ -268,21 +233,17 @@ export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
+         {error && !loading && (
+           <div className="options-error">{error}</div>
+         )}
+         {!loading && !error && selectedChain && (
+           <div className="options-chain-table">
+             <TQuoteTable chain={selectedChain} snapshots={snapshots} />
+           </div>
+         )}
+         {!loading && !error && !selectedChain && (
+           <div className="options-empty">
+-            {!selectedUnderlying
+-              ? '请先选择标的合约'
+-              : !selectedExpireDate
+-                ? '请选择到期日'
+-                : '无匹配的期权链数据'}
++            {!selectedUnderlying ? '请先选择标的合约' : '无匹配的期权链数据'}
+           </div>
+         )}
+       </div>
+     </div>
+   )
+ }
+diff --git a/frontend/src/modules/options/styles.css b/frontend/src/modules/options/styles.css
+index 7faf8a9..60c6959 100644
+--- a/frontend/src/modules/options/styles.css
++++ b/frontend/src/modules/options/styles.css
+@@ -12,21 +12,21 @@
+   flex: 1;
+   min-height: 0;
+   overflow: hidden;
+ }
+ 
+ /* ── TQuoteView（原 OptionPanel）样式 ─────────────────────────────────── */
+ 
+ .options-panel {
+   display: flex;
+   flex-direction: column;
+-  flex: 1 1 0;
++  height: 100%;
+   min-height: 0;
+   padding: 8px;
+ }
+ 
+ .options-toolbar {
+   display: flex;
+   gap: 12px;
+   align-items: center;
+   margin-bottom: 8px;
+   flex-shrink: 0;
+diff --git a/frontend/src/utils/openFloatingTab.test.ts b/frontend/src/utils/openFloatingTab.test.ts
+index 5ba7c49..ea8e46a 100644
+--- a/frontend/src/utils/openFloatingTab.test.ts
++++ b/frontend/src/utils/openFloatingTab.test.ts
+@@ -66,11 +66,24 @@ describe('openFloatingTab helpers — 顶部菜单打开浮动窗', () => {
+     expect(useFloatingWindowStore.getState().windows['tab-settings']).toBeDefined();
+   });
+ 
+   it('openIpcMonitorFloating 打开网络监控浮动窗', () => {
+     openIpcMonitorFloating();
+     const tab = tabByType('ipc-monitor');
+     expect(tab).toBeDefined();
+     expect(tab!.title).toBe('📡 网络监控');
+     expect(useFloatingWindowStore.getState().windows['tab-ipc-monitor']).toBeDefined();
+   });
++
++  it('打开浮动窗后保持原活跃标签（openTab 激活 + detachTabAt 切回 market 后恢复 priorActive）', () => {
++    useTabStore.setState({
++      tabs: [
++        { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
++        { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false },
++      ],
++      activeTabId: 'tab-options',
++    });
++    openQueryFloating();
++    expect(useTabStore.getState().activeTabId).toBe('tab-options');
++    expect(useFloatingWindowStore.getState().windows['tab-query']).toBeDefined();
++  });
+ });
+diff --git a/frontend/src/utils/openFloatingTab.ts b/frontend/src/utils/openFloatingTab.ts
+index 39de1a0..21a99cd 100644
+--- a/frontend/src/utils/openFloatingTab.ts
++++ b/frontend/src/utils/openFloatingTab.ts
+@@ -12,31 +12,37 @@ interface OpenFloatingTabOptions {
+ }
+ 
+ /** 报单浮动窗初始尺寸（对齐原 OrderPopup 弹窗：宽 540 固定、高按内容约 620） */
+ export const ORDER_FLOATING_SIZE = { w: 620, h: 540 }
+ 
+ /**
+  * openFloatingTab — 打开标签页并立即脱离为浮动窗口（统一「弹窗」入口）
+  *
+  * 浮动窗口机制天然支持 标签页 ↔ 浮动窗口 双向转换（⇩ 停靠回标签栏 / 拖拽脱离），
+  * 所有右上角入口统一走此函数：标签不进标签栏、以浮动窗形态弹出。
++ * openTab 会把新标签设为活跃；detachTabAt 对活跃标签脱离后又会把活跃切回 market，
++ * 会拽走主窗口当前页（如从期权页双击标底 → 主窗口跳到期货页）。故脱离成功后恢复
++ * 打开前的活跃标签，打开浮动窗不再干扰主窗口内容。
+  * 返回 false 表示标签页数量达上限或脱离失败。
+  */
+ export function openFloatingTab({ type, title, props = {}, size }: OpenFloatingTabOptions): boolean {
++  const priorActive = useTabStore.getState().activeTabId
+   const opened = useTabStore.getState().openTab({ type, title, props })
+   if (!opened) return false
+ 
+   const tabId = generateTabId(type, props)
+   const { w, h } = size ?? defaultFloatingSize()
+   const x = Math.max(0, Math.round((window.innerWidth - w) / 2))
+   const y = Math.max(0, Math.round((window.innerHeight - h) / 2 - 20))
+-  return detachTabAt(tabId, { x, y }, size)
++  const ok = detachTabAt(tabId, { x, y }, size)
++  if (ok && priorActive) useTabStore.getState().setActiveTab(priorActive)
++  return ok
+ }
+ 
+ /** 打开报单浮动窗：优先定位当前选中合约，否则空白报单窗 */
+ export function openOrderFloating(): boolean {
+   const inst = useMarketStore.getState().selectedInstrument
+   return openFloatingTab({
+     type: 'order',
+     title: inst ? `📝 报单-${inst}` : '📝 报单',
+     props: inst ? { instrumentID: inst } : {},
+     size: ORDER_FLOATING_SIZE,

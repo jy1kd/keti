@@ -1,0 +1,1413 @@
+# Review package: 9fa2460..HEAD
+
+## Commits
+1a6f7bc fix(market): 全分支审查修复（订阅防覆盖/自选排序/筛选校验/共享菜单/单次setFilter/App守卫）
+
+## Files changed
+ frontend/src/App.tsx                               |   9 +-
+ frontend/src/hooks/useContractMenus.tsx            | 212 +++++++++++++++++++++
+ frontend/src/modules/market/MarketPanel.test.tsx   |  26 +++
+ frontend/src/modules/market/MarketPanel.tsx        | 164 ++++------------
+ frontend/src/modules/market/QuoteTable.test.tsx    |  28 +++
+ frontend/src/modules/market/QuoteTable.tsx         |  18 +-
+ frontend/src/modules/market/sort.test.ts           |  25 +++
+ frontend/src/modules/options/OptionsPanel.test.tsx |  30 ++-
+ frontend/src/modules/options/OptionsPanel.tsx      | 147 +++-----------
+ frontend/src/pages/FavoritesPage.tsx               |   5 +
+ frontend/src/stores/marketFilter.test.ts           |  27 +++
+ frontend/src/stores/marketFilter.ts                |  30 ++-
+ 12 files changed, 452 insertions(+), 269 deletions(-)
+
+## Diff
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index 425f901..617e7fb 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -1,11 +1,11 @@
+-import { useState, useEffect } from 'react'
++import { useState, useEffect, useRef } from 'react'
+ import { GlobalBar } from '@/components/GlobalBar'
+ import { BottomBar } from '@/components/BottomBar'
+ import { TabContent } from '@/components/TabContent'
+ import { ToastContainer } from '@/components/Toast'
+ import { useSystemWs } from '@/hooks/useSystemWs'
+ import { useConnectionPoll } from '@/hooks/useConnectionPoll'
+ import { useTabContractLocks } from '@/hooks/useTabContractLocks'
+ import { useMarketWs } from '@/hooks/useMarketWs'
+ import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
+ import { useMarketStore } from '@/modules/market/store'
+@@ -20,38 +20,43 @@ import {
+   openKlineFloating,
+   openQueryFloating,
+   openSettingsFloating,
+   openIpcMonitorFloating,
+ } from '@/utils/openFloatingTab'
+ import '@/assets/styles/global.css'
+ 
+ function App() {
+   const [perfVisible, setPerfVisible] = useState(false)
+   const openTab = useTabStore((s) => s.openTab)
++  // StrictMode 开发双挂载守卫：启动加载只执行一次（loadAllInstruments/loadFavoriteContracts/load）
++  const startupLoadedRef = useRef(false)
+ 
+   // System WebSocket — 监听 MD/TD 连接状态即时推送
+   useSystemWs(API_BASE.replace('http', 'ws'))
+ 
+   // 轮询 /api/connection/status — MD/TD 状态的权威来源
+   useConnectionPoll()
+ 
+   // 打开标签的合约锁定订阅（K线/报单标签的合约永不退订，保证数据流）
+   useTabContractLocks()
+ 
+   // 共享行情基础设施：行情 WS 单例 + 订阅管理器，挂载在 App 全局，
+   // 期货/期权双面板共享同一份订阅生命周期与 WS 单例（useSubscriptionManager 的
+   // subscribedRef 组件私有，若双份挂载会双份 diff 冲突，故必须单例）
+   useMarketWs(API_BASE.replace('http', 'ws'))
+   useSubscriptionManager()
+ 
+-  // 启动时加载全量合约 + 收藏合约（原先在 MarketPanel，现上移共享）+ 持久化筛选
++  // 启动时加载全量合约 + 收藏合约（原先在 MarketPanel，现上移共享）+ 持久化筛选。
++  // StrictMode 开发双挂载会重复执行 effect：用 useRef 守卫保证只加载一次。
+   useEffect(() => {
++    if (startupLoadedRef.current) return
++    startupLoadedRef.current = true
+     useContractsStore.getState().loadAllInstruments()
+     useContractsStore.getState().loadFavoriteContracts()
+     useMarketFilterStore.getState().load()
+   }, [])
+ 
+   // Electron IPC — 监听托盘菜单导航消息
+   useEffect(() => {
+     if (!isElectron()) return
+ 
+     const cleanup = window.electronAPI?.onNavigateTab?.((tab: string) => {
+diff --git a/frontend/src/hooks/useContractMenus.tsx b/frontend/src/hooks/useContractMenus.tsx
+new file mode 100644
+index 0000000..b552767
+--- /dev/null
++++ b/frontend/src/hooks/useContractMenus.tsx
+@@ -0,0 +1,212 @@
++import { useCallback } from 'react'
++import type { ReactNode } from 'react'
++import { ContextMenu } from '@/components/ContextMenu'
++import { toast } from '@/components/Toast'
++import type { ContractInfo } from '@/services/types'
++
++/** 单选右键菜单状态（来自 useContractContextMenu.contextMenu） */
++interface SingleMenuState {
++  instrumentID: string
++  price: number
++  x: number
++  y: number
++}
++
++/** 多选右键菜单状态（来自 useContractContextMenu.multiSelectMenu） */
++interface MultiMenuState {
++  instrumentIDs: string[]
++  x: number
++  y: number
++}
++
++interface UseContractMenusArgs {
++  contextMenu: SingleMenuState | null
++  multiSelectMenu: MultiMenuState | null
++  /** 已收藏合约 ID 集合（菜单收藏态与批量收藏判断） */
++  favoritedIds: Set<string>
++  /** 全量合约（收藏/取消收藏时查找合约对象） */
++  contracts: ContractInfo[]
++  addToFavorites: (inst: ContractInfo) => Promise<boolean> | boolean
++  removeFromFavorites: (instrumentID: string) => Promise<unknown> | void
++  openOrderPopup: (instrumentID: string) => void
++  openQueryPopup: (instrumentID: string) => void
++  openKlineTab: (instrumentID: string) => void
++  openOrderTabs: (instrumentIDs: string[]) => void
++  openKlineTabs: (instrumentIDs: string[]) => void
++  closeMenus: () => void
++}
++
++/**
++ * useContractMenus — 合约单选/多选右键菜单 + 工具栏批量收藏共享逻辑。
++ *
++ * 期货页（MarketPanel）与期权页（OptionsPanel）此前各自内联约 80 行相同的
++ * ContextMenu JSX（开报单/K线/查询/收藏/复制）与工具栏收藏按钮的批量
++ * allFavorited/count 逻辑，抽取为本 hook 复用，行为保持一致。
++ *
++ * 返回：
++ * - singleMenu / multiMenu：可直接渲染的右键菜单 JSX 块；
++ * - batchToggleFavorite(selectedInstrument, selectedContracts)：工具栏收藏按钮点击处理；
++ * - favoriteButtonLabel(selectedInstrument, selectedContracts)：工具栏收藏按钮文案。
++ */
++export function useContractMenus(args: UseContractMenusArgs) {
++  const {
++    contextMenu,
++    multiSelectMenu,
++    favoritedIds,
++    contracts,
++    addToFavorites,
++    removeFromFavorites,
++    openOrderPopup,
++    openQueryPopup,
++    openKlineTab,
++    openOrderTabs,
++    openKlineTabs,
++    closeMenus,
++  } = args
++
++  /** 工具栏收藏按钮：多选批量收藏/取消收藏；单选切换收藏 */
++  const batchToggleFavorite = useCallback(async (
++    selectedInstrument: string | null,
++    selectedContracts: Set<string>,
++  ) => {
++    // 如果有多选，批量收藏/取消收藏
++    if (selectedContracts.size > 1) {
++      const allFavorited = Array.from(selectedContracts).every((id) => favoritedIds.has(id))
++      if (allFavorited) {
++        // 全部已收藏，批量取消
++        for (const id of selectedContracts) {
++          await removeFromFavorites(id)
++        }
++        toast.success(`已移除 ${selectedContracts.size} 个合约`)
++      } else {
++        // 批量收藏
++        let count = 0
++        for (const id of selectedContracts) {
++          const inst = contracts.find((c) => c.instrumentID === id)
++          if (inst) {
++            const success = await addToFavorites(inst)
++            if (success) count++
++          }
++        }
++        toast.success(`已收藏 ${count} 个合约`)
++      }
++      return
++    }
++
++    // 单个合约收藏/取消收藏
++    if (!selectedInstrument) return
++    if (favoritedIds.has(selectedInstrument)) {
++      await removeFromFavorites(selectedInstrument)
++      toast.success(`已移除 ${selectedInstrument}`)
++    } else {
++      const inst = contracts.find((c) => c.instrumentID === selectedInstrument)
++      if (inst) {
++        await addToFavorites(inst)
++        toast.success(`已收藏 ${inst.instrumentID}`)
++      }
++    }
++  }, [favoritedIds, contracts, addToFavorites, removeFromFavorites])
++
++  /** 工具栏收藏按钮文案：多选 → 批量移除/批量收藏；单选 → 移除/收藏 */
++  const favoriteButtonLabel = useCallback((
++    selectedInstrument: string | null,
++    selectedContracts: Set<string>,
++  ): string => {
++    if (selectedContracts.size > 1) {
++      return Array.from(selectedContracts).every((id) => favoritedIds.has(id)) ? '批量移除' : '批量收藏'
++    }
++    return selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏'
++  }, [favoritedIds])
++
++  /** 单选右键菜单（开报单/K线/查询/收藏/复制合约代码） */
++  const singleMenu: ReactNode = contextMenu ? (
++    <ContextMenu
++      x={contextMenu.x}
++      y={contextMenu.y}
++      items={[
++        { label: '打开报单', icon: '📝', onClick: () => openOrderPopup(contextMenu.instrumentID) },
++        { label: '打开K线', icon: '📈', onClick: () => openKlineTab(contextMenu.instrumentID) },
++        { label: '查询', icon: '📋', onClick: () => openQueryPopup(contextMenu.instrumentID) },
++        {
++          label: favoritedIds.has(contextMenu.instrumentID) ? '取消收藏' : '收藏',
++          icon: favoritedIds.has(contextMenu.instrumentID) ? '★' : '⭐',
++          onClick: () => {
++            if (favoritedIds.has(contextMenu.instrumentID)) {
++              removeFromFavorites(contextMenu.instrumentID)
++              toast.success(`已移除 ${contextMenu.instrumentID}`)
++            } else {
++              const inst = contracts.find((c) => c.instrumentID === contextMenu.instrumentID)
++              if (inst) {
++                addToFavorites(inst)
++                toast.success(`已收藏 ${contextMenu.instrumentID}`)
++              }
++            }
++          },
++        },
++        { label: '复制合约代码', icon: '📋', onClick: () => navigator.clipboard.writeText(contextMenu.instrumentID) },
++      ]}
++      onClose={closeMenus}
++    />
++  ) : null
++
++  /** 多选右键菜单（批量开报单/K线/收藏/取消收藏/复制代码） */
++  const multiMenu: ReactNode = multiSelectMenu ? (() => {
++    // 计算已收藏和未收藏的数量
++    const unfavoritedIds = multiSelectMenu.instrumentIDs.filter((id) => !favoritedIds.has(id))
++    const favoritedIdsInSelection = multiSelectMenu.instrumentIDs.filter((id) => favoritedIds.has(id))
++
++    return (
++      <ContextMenu
++        x={multiSelectMenu.x}
++        y={multiSelectMenu.y}
++        items={[
++          {
++            label: `批量打开报单 (${multiSelectMenu.instrumentIDs.length}个)`,
++            icon: '📝',
++            onClick: () => openOrderTabs(multiSelectMenu.instrumentIDs),
++          },
++          {
++            label: `批量打开K线 (${multiSelectMenu.instrumentIDs.length}个)`,
++            icon: '📈',
++            onClick: () => openKlineTabs(multiSelectMenu.instrumentIDs),
++          },
++          {
++            label: `批量收藏 (${unfavoritedIds.length}个)`,
++            icon: '⭐',
++            disabled: unfavoritedIds.length === 0,
++            onClick: async () => {
++              let count = 0
++              for (const id of unfavoritedIds) {
++                const inst = contracts.find((c) => c.instrumentID === id)
++                if (inst) {
++                  const success = await addToFavorites(inst)
++                  if (success) count++
++                }
++              }
++              toast.success(`已收藏 ${count} 个合约`)
++            },
++          },
++          {
++            label: `批量取消收藏 (${favoritedIdsInSelection.length}个)`,
++            icon: '★',
++            disabled: favoritedIdsInSelection.length === 0,
++            onClick: async () => {
++              for (const id of favoritedIdsInSelection) {
++                await removeFromFavorites(id)
++              }
++              toast.success(`已移除 ${favoritedIdsInSelection.length} 个合约`)
++            },
++          },
++          {
++            label: `复制合约代码 (${multiSelectMenu.instrumentIDs.length}个)`,
++            icon: '📋',
++            onClick: () => navigator.clipboard.writeText(multiSelectMenu.instrumentIDs.join(',')),
++          },
++        ]}
++        onClose={closeMenus}
++      />
++    )
++  })() : null
++
++  return { singleMenu, multiMenu, batchToggleFavorite, favoriteButtonLabel }
++}
+diff --git a/frontend/src/modules/market/MarketPanel.test.tsx b/frontend/src/modules/market/MarketPanel.test.tsx
+index e7d3bc8..0a0a291 100644
+--- a/frontend/src/modules/market/MarketPanel.test.tsx
++++ b/frontend/src/modules/market/MarketPanel.test.tsx
+@@ -501,11 +501,37 @@ describe('MarketPanel', () => {
+       expect(statusBtn).toBeTruthy()
+       expect(favoriteBtn).toBeTruthy()
+       expect(searchInput).toBeTruthy()
+       expect(follows(tabs, filterBtn)).toBe(true)
+       expect(follows(filterBtn, statusBtn)).toBe(true)
+       expect(follows(statusBtn, favoriteBtn)).toBe(true)
+       expect(follows(favoriteBtn, searchBox)).toBe(true)
+       expect(follows(favoriteBtn, searchInput)).toBe(true)
+     })
+   })
++
++  describe('自选视图排序（spec 决策 3：排序同样作用于自选基础集）', () => {
++    it('自选按 交易所→品种→月份 排序（输入无序）', async () => {
++      useContractsStore.setState({
++        contracts: [
++          { instrumentID: 'FG610', instrumentName: '玻璃610', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20261031', isTrading: 1, productClass: '1' },
++          { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
++          { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
++        ],
++        favorites: [
++          { instrumentID: 'FG610', instrumentName: '玻璃610', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20261031', isTrading: 1, productClass: '1' },
++          { instrumentID: 'cu2609', instrumentName: '沪铜2609', exchangeID: 'SHFE', productID: 'cu', volumeMultiple: 5, priceTick: 10, expireDate: '20260930', isTrading: 1, productClass: '1' },
++          { instrumentID: 'FG609', instrumentName: '玻璃609', exchangeID: 'CZCE', productID: 'FG', volumeMultiple: 20, priceTick: 1, expireDate: '20260930', isTrading: 1, productClass: '1' },
++        ],
++        isLoaded: true,
++      })
++      const user = userEvent.setup()
++      render(<MarketPanel />)
++      await user.click(screen.getByRole('button', { name: '自选' }))
++      const { ListTable } = await import('@visactor/vtable')
++      const instance = (ListTable as any).mock.results[0].value
++      const last = instance.setRecords.mock.calls.at(-1)?.[0] ?? []
++      // SHFE 在 CZCE 前；CZCE 内 FG 月份数字升序：cu2609 < FG609 < FG610
++      expect(last.map((r: any) => r.instrumentID)).toEqual(['cu2609', 'FG609', 'FG610'])
++    })
++  })
+ })
+diff --git a/frontend/src/modules/market/MarketPanel.tsx b/frontend/src/modules/market/MarketPanel.tsx
+index 22380c1..3199d79 100644
+--- a/frontend/src/modules/market/MarketPanel.tsx
++++ b/frontend/src/modules/market/MarketPanel.tsx
+@@ -1,59 +1,64 @@
+ import { useEffect, useMemo, useState } from 'react'
+ import { ContractSearch } from '@/components/ContractSearch'
+ import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
+-import { ContextMenu } from '@/components/ContextMenu'
+ import { ErrorBoundary } from '@/components/ErrorBoundary'
+ import { ContractFilter } from '@/components/ContractFilter'
+ import { QuoteTable } from './QuoteTable'
+ import { futuresSpec } from './futuresSpec'
+ import { sortFutures } from './sort'
+ import { filterByExchangeAndProduct } from './filter'
+ import { useMarketStore } from './store'
+ import { useMarketFilterStore } from '@/stores/marketFilter'
+ import { useContractsStore } from '@/stores/contracts'
+ import { useTabStore } from '@/stores/tabs'
+ import { useContractContextMenu } from '@/hooks/useContractContextMenu'
++import { useContractMenus } from '@/hooks/useContractMenus'
+ import { usePointOrder } from '@/hooks/usePointOrder'
+ import { useOrderStore } from '@/modules/order/store'
+ import { getProductName } from '@/utils/productNames'
+ import { isContractActive } from '@/utils/contractStatus'
+ import { isElectron } from '@/services/electron'
+ import { toast } from '@/components/Toast'
+ import './styles.css'
+ 
+ export function MarketPanel() {
+   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
+   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
+   const { contracts, favorites, addToFavorites, removeFromFavorites } = useContractsStore()
+   const { contextMenu, multiSelectMenu, openOrderPopup, openQueryPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
+   const [searchModalOpen, setSearchModalOpen] = useState(false)
+   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
+   // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
+   const [filterActive, setFilterActive] = useState(false)
+ 
++  // 期货标签是否激活：激活翻转为 true 时 QuoteTable 重报可见区，订阅管理器立即补订阅。
++  // TabContent 同时挂载期货/期权两面板，隐藏面板（isActive=false）不得上报可见区，
++  // 否则会覆盖活跃面板的可见范围 → 活跃表失去订阅（Critical #1）。
++  const isActive = useTabStore((s) => s.tabs.some((t) => t.type === 'market' && t.id === s.activeTabId))
++
+   // 期货页筛选态（交易所+品种多选，独立于期权页，localStorage 持久化）
+   const filter = useMarketFilterStore((s) => s.futures)
+ 
+   // 期货全量（期货页只展示期货合约）+ 排序（数据管道第一步，设计 §3 决策 3）
+   const sortedFutures = useMemo(
+     () => sortFutures(contracts.filter((c) => c.productClass === '1')),
+     [contracts],
+   )
+-  // 自选视图同样只展示期货合约
+-  const favoriteFutures = useMemo(
+-    () => favorites.filter((c) => c.productClass === '1'),
++  // 自选视图同样只展示期货合约，且同样应用排序（spec 决策 3：排序作用于全部/自选两种基础集）
++  const sortedFavorites = useMemo(
++    () => sortFutures(favorites.filter((c) => c.productClass === '1')),
+     [favorites],
+   )
+ 
+   // Display contracts based on active tab
+-  const baseContracts = activeTab === 'all' ? sortedFutures : favoriteFutures
++  const baseContracts = activeTab === 'all' ? sortedFutures : sortedFavorites
+ 
+   // 筛选面板可用选项：交易所 = 期货合约去重；品种 = productID 去重（保持排序后顺序）
+   const filterExchanges = useMemo(
+     () => Array.from(new Set(sortedFutures.map((c) => c.exchangeID))),
+     [sortedFutures],
+   )
+   const filterProducts = useMemo(
+     () => Array.from(new Set(sortedFutures.map((c) => c.productID))),
+     [sortedFutures],
+   )
+@@ -84,20 +89,35 @@ export function MarketPanel() {
+         productName.includes(q)
+       )
+     })
+   }, [baseContracts, filter, searchQuery, filterActive])
+ 
+   // User-favorited IDs (for modal "已订阅" badge and button state)
+   const favoritedIds = useMemo(
+     () => new Set(favorites.map(c => c.instrumentID)),
+     [favorites]
+   )
++  // 右键菜单 JSX 与工具栏批量收藏共享逻辑（与期权页一致，见 useContractMenus）
++  const { singleMenu, multiMenu, batchToggleFavorite, favoriteButtonLabel } = useContractMenus({
++    contextMenu,
++    multiSelectMenu,
++    favoritedIds,
++    contracts,
++    addToFavorites,
++    removeFromFavorites,
++    openOrderPopup,
++    openQueryPopup,
++    openKlineTab,
++    openOrderTabs,
++    openKlineTabs,
++    closeMenus,
++  })
+   // All contract IDs in the system
+   const allContractIds = useMemo(
+     () => new Set(contracts.map(c => c.instrumentID)),
+     [contracts]
+   )
+ 
+   // 顶部菜单「行情」切换（设计 §4.1）：期货/期权为独立固定标签。
+   // options → 激活期权标签；all/favorites → 激活期货标签并切内部全部/自选。
+   useEffect(() => {
+     if (!isElectron()) return
+@@ -156,79 +176,36 @@ export function MarketPanel() {
+             onClick={() => setActiveTab('favorites')}
+           >
+             自选
+           </button>
+         </div>
+         <ContractFilter
+           exchanges={filterExchanges}
+           products={filterProducts}
+           productNames={filterProductNames}
+           value={filter}
+-          onChange={(v) => {
+-            useMarketFilterStore.getState().setExchanges('futures', v.exchanges)
+-            useMarketFilterStore.getState().setProducts('futures', v.products)
+-          }}
++          onChange={(v) => useMarketFilterStore.getState().setFilter('futures', v)}
+         />
+         <div className="market-toolbar__actions">
+           <button
+             className={`btn-filter-status${filterActive ? ' active' : ''}`}
+             onClick={() => setFilterActive((v) => !v)}
+             title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
+           >
+             {filterActive ? '仅交易中' : '显示全部'}
+           </button>
+           <button
+             className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
+             disabled={!selectedInstrument && selectedContracts.size === 0}
+-            onClick={async () => {
+-              // 如果有多选，批量收藏/取消收藏
+-              if (selectedContracts.size > 1) {
+-                const allFavorited = Array.from(selectedContracts).every(id => favoritedIds.has(id))
+-                if (allFavorited) {
+-                  // 全部已收藏，批量取消
+-                  for (const id of selectedContracts) {
+-                    await removeFromFavorites(id)
+-                  }
+-                  toast.success(`已移除 ${selectedContracts.size} 个合约`)
+-                } else {
+-                  // 批量收藏
+-                  let count = 0
+-                  for (const id of selectedContracts) {
+-                    const inst = contracts.find(c => c.instrumentID === id)
+-                    if (inst) {
+-                      const success = await addToFavorites(inst)
+-                      if (success) count++
+-                    }
+-                  }
+-                  toast.success(`已收藏 ${count} 个合约`)
+-                }
+-                return
+-              }
+-
+-              // 单个合约收藏/取消收藏
+-              if (!selectedInstrument) return
+-              if (favoritedIds.has(selectedInstrument)) {
+-                await removeFromFavorites(selectedInstrument)
+-                toast.success(`已移除 ${selectedInstrument}`)
+-              } else {
+-                const inst = contracts.find(c => c.instrumentID === selectedInstrument)
+-                if (inst) {
+-                  await addToFavorites(inst)
+-                  toast.success(`已收藏 ${inst.instrumentID}`)
+-                }
+-              }
+-            }}
++            onClick={() => batchToggleFavorite(selectedInstrument, selectedContracts)}
+           >
+-            {selectedContracts.size > 1
+-              ? (Array.from(selectedContracts).every(id => favoritedIds.has(id)) ? '批量移除' : '批量收藏')
+-              : (selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏')
+-            }
++            {favoriteButtonLabel(selectedInstrument, selectedContracts)}
+           </button>
+         </div>
+         {/* 搜索贴右：搜索框 + 🔍 + 计数（margin-left:auto 吃掉中间空间推到最右） */}
+         <div className="market-toolbar__search">
+           <ContractSearch contracts={baseContracts} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
+           <button
+             className="btn-search-advanced"
+             title="搜索合约"
+             onClick={() => setSearchModalOpen(true)}
+           >
+@@ -242,20 +219,21 @@ export function MarketPanel() {
+         </div>
+       </div>
+ 
+       <div className="panel-content">
+         <ErrorBoundary>
+           <QuoteTable
+             spec={futuresSpec}
+             contracts={displayContracts}
+             snapshots={snapshots}
+             selectedInstrument={selectedInstrument}
++            isActive={isActive}
+             onRowClick={handleClick}
+             onRowDoubleClick={handleDoubleClick}
+             onContextMenu={handleContextMenu}
+             onMultiSelectContextMenu={handleMultiSelectContextMenu}
+             onVisibleRangeChange={setVisibleInstrumentIDs}
+             favoritedIds={favoritedIds}
+             onFavoriteChange={(instrumentID, isFavorited) => {
+               if (isFavorited) {
+                 const inst = contracts.find(c => c.instrumentID === instrumentID)
+                 if (inst) {
+@@ -275,94 +253,16 @@ export function MarketPanel() {
+ 
+       <InstrumentSearchModal
+         isOpen={searchModalOpen}
+         onClose={() => setSearchModalOpen(false)}
+         onAddToFavorite={addToFavorites}
+         onRemoveFromFavorite={removeFromFavorites}
+         allContractIds={allContractIds}
+         favoritedIds={favoritedIds}
+       />
+ 
+-      {/* 单选右键菜单 */}
+-      {contextMenu && (
+-        <ContextMenu
+-          x={contextMenu.x}
+-          y={contextMenu.y}
+-          items={[
+-            { label: '打开报单', icon: '📝', onClick: () => openOrderPopup(contextMenu.instrumentID) },
+-            { label: '打开K线', icon: '📈', onClick: () => openKlineTab(contextMenu.instrumentID) },
+-            { label: '查询', icon: '📋', onClick: () => openQueryPopup(contextMenu.instrumentID) },
+-            {
+-              label: favoritedIds.has(contextMenu.instrumentID) ? '取消收藏' : '收藏',
+-              icon: favoritedIds.has(contextMenu.instrumentID) ? '★' : '⭐',
+-              onClick: () => {
+-                if (favoritedIds.has(contextMenu.instrumentID)) {
+-                  removeFromFavorites(contextMenu.instrumentID)
+-                  toast.success(`已移除 ${contextMenu.instrumentID}`)
+-                } else {
+-                  const inst = contracts.find(c => c.instrumentID === contextMenu.instrumentID)
+-                  if (inst) {
+-                    addToFavorites(inst)
+-                    toast.success(`已收藏 ${contextMenu.instrumentID}`)
+-                  }
+-                }
+-              },
+-            },
+-            { label: '复制合约代码', icon: '📋', onClick: () => navigator.clipboard.writeText(contextMenu.instrumentID) },
+-          ]}
+-          onClose={closeMenus}
+-        />
+-      )}
+-
+-      {/* 多选右键菜单 */}
+-      {multiSelectMenu && (() => {
+-        // 计算已收藏和未收藏的数量
+-        const unfavoritedIds = multiSelectMenu.instrumentIDs.filter(id => !favoritedIds.has(id))
+-        const favoritedIdsInSelection = multiSelectMenu.instrumentIDs.filter(id => favoritedIds.has(id))
+-
+-        return (
+-          <ContextMenu
+-            x={multiSelectMenu.x}
+-            y={multiSelectMenu.y}
+-            items={[
+-              { label: `批量打开报单 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📝', onClick: () => openOrderTabs(multiSelectMenu.instrumentIDs) },
+-              { label: `批量打开K线 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📈', onClick: () => openKlineTabs(multiSelectMenu.instrumentIDs) },
+-              {
+-                label: `批量收藏 (${unfavoritedIds.length}个)`,
+-                icon: '⭐',
+-                disabled: unfavoritedIds.length === 0,
+-                onClick: async () => {
+-                  let count = 0
+-                  for (const id of unfavoritedIds) {
+-                    const inst = contracts.find(c => c.instrumentID === id)
+-                    if (inst) {
+-                      const success = await addToFavorites(inst)
+-                      if (success) count++
+-                    }
+-                  }
+-                  toast.success(`已收藏 ${count} 个合约`)
+-                },
+-              },
+-              {
+-                label: `批量取消收藏 (${favoritedIdsInSelection.length}个)`,
+-                icon: '★',
+-                disabled: favoritedIdsInSelection.length === 0,
+-                onClick: async () => {
+-                  for (const id of favoritedIdsInSelection) {
+-                    await removeFromFavorites(id)
+-                  }
+-                  toast.success(`已移除 ${favoritedIdsInSelection.length} 个合约`)
+-                },
+-              },
+-              {
+-                label: `复制合约代码 (${multiSelectMenu.instrumentIDs.length}个)`,
+-                icon: '📋',
+-                onClick: () => navigator.clipboard.writeText(multiSelectMenu.instrumentIDs.join(',')),
+-              },
+-            ]}
+-            onClose={closeMenus}
+-          />
+-        )
+-      })()}
++      {/* 单选 + 多选右键菜单（共享 useContractMenus，与期权页一致） */}
++      {singleMenu}
++      {multiMenu}
+     </section>
+   )
+ }
+diff --git a/frontend/src/modules/market/QuoteTable.test.tsx b/frontend/src/modules/market/QuoteTable.test.tsx
+index bc3369e..47b92d7 100644
+--- a/frontend/src/modules/market/QuoteTable.test.tsx
++++ b/frontend/src/modules/market/QuoteTable.test.tsx
+@@ -782,11 +782,39 @@ describe('QuoteTable', () => {
+     rerender(
+       <QuoteTable spec={futuresSpec}
+         contracts={mockContracts}
+         snapshots={mockSnapshots}
+         isActive={true}
+         onVisibleRangeChange={onVisibleRangeChange}
+       />
+     )
+     expect(onVisibleRangeChange).toHaveBeenCalled()
+   })
++
++  it('Critical #1：隐藏面板（isActive=false）挂载不调用 onVisibleRangeChange，激活翻转为 true 时重报', async () => {
++    const onVisibleRangeChange = vi.fn()
++    const { rerender } = render(
++      <QuoteTable spec={futuresSpec}
++        contracts={mockContracts}
++        snapshots={mockSnapshots}
++        isActive={false}
++        onVisibleRangeChange={onVisibleRangeChange}
++      />
++    )
++    // 挂载后推进 timers：隐藏面板（display:none）的挂载 setTimeout 必须被跳过，
++    // 否则会覆盖活跃面板（期货/期权）的可见范围 → 活跃表失去订阅
++    await act(async () => { await vi.advanceTimersByTimeAsync(100) })
++    expect(onVisibleRangeChange).not.toHaveBeenCalled()
++
++    // 激活翻转为 true → isActive 翻转 effect 立即重报可见区
++    rerender(
++      <QuoteTable spec={futuresSpec}
++        contracts={mockContracts}
++        snapshots={mockSnapshots}
++        isActive={true}
++        onVisibleRangeChange={onVisibleRangeChange}
++      />
++    )
++    expect(onVisibleRangeChange).toHaveBeenCalled()
++    expect(onVisibleRangeChange.mock.calls[0][0]).toEqual(expect.arrayContaining(['au2508', 'ag2508']))
++  })
+ })
+diff --git a/frontend/src/modules/market/QuoteTable.tsx b/frontend/src/modules/market/QuoteTable.tsx
+index b4e6722..b7094cf 100644
+--- a/frontend/src/modules/market/QuoteTable.tsx
++++ b/frontend/src/modules/market/QuoteTable.tsx
+@@ -43,20 +43,23 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
+   const tableRef = useRef<ListTable | null>(null)
+   const onClickRef = useRef(onRowClick)
+   const onDblClickRef = useRef(onRowDoubleClick)
+   const onContextMenuRef = useRef(onContextMenu)
+   const onMultiSelectContextMenuRef = useRef(onMultiSelectContextMenu)
+   const onVisibleRangeChangeRef = useRef(onVisibleRangeChange)
+   const onFavoriteChangeRef = useRef(onFavoriteChange)
+   const favoritedIdsRef = useRef(favoritedIds)
+   const selectedContractsRef = useRef(selectedContracts)
+   const onSelectionChangeRef = useRef(onSelectionChange)
++  /** 最近一次 isActive：隐藏面板（isActive=false，display:none）挂载/重建时不上报可见区，
++   *  避免覆盖活跃面板的可见范围 → 活跃表失去订阅（Critical #1）。undefined=未指定→按历史行为上报。 */
++  const isActiveRef = useRef(isActive)
+   /** dev 守卫：记录最近一次 spec 引用，检测运行时 spec 身份变化（spec 必须为稳定常量） */
+   const specRef = useRef(spec)
+   const lastClickedIndexRef = useRef<number | null>(null)
+   const lastClickTimeRef = useRef<number>(0)
+   const lastClickRowRef = useRef<number>(-1)
+   const recordsRef = useRef<QuoteRecord[]>([])
+   /** 每行最近一次 buildRecord 所用的 snapshot 引用（按行跟踪，仅对可见行生效） */
+   const rowSnapshotRef = useRef<(MarketSnapshot | undefined)[]>([])
+   /** 可见区版本号：滚动导致可见范围变化时递增，驱动局部更新 effect 重算（滚入新区域的行立即刷新） */
+   const [visibleRangeVersion, setVisibleRangeVersion] = useState(0)
+@@ -66,20 +69,21 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
+ 
+   useEffect(() => { onClickRef.current = onRowClick }, [onRowClick])
+   useEffect(() => { onDblClickRef.current = onRowDoubleClick }, [onRowDoubleClick])
+   useEffect(() => { onContextMenuRef.current = onContextMenu }, [onContextMenu])
+   useEffect(() => { onMultiSelectContextMenuRef.current = onMultiSelectContextMenu }, [onMultiSelectContextMenu])
+   useEffect(() => { onVisibleRangeChangeRef.current = onVisibleRangeChange }, [onVisibleRangeChange])
+   useEffect(() => { onFavoriteChangeRef.current = onFavoriteChange }, [onFavoriteChange])
+   useEffect(() => { favoritedIdsRef.current = favoritedIds }, [favoritedIds])
+   useEffect(() => { selectedContractsRef.current = selectedContracts }, [selectedContracts])
+   useEffect(() => { onSelectionChangeRef.current = onSelectionChange }, [onSelectionChange])
++  useEffect(() => { isActiveRef.current = isActive }, [isActive])
+ 
+   // 开发期守卫：spec 必须为模块级稳定常量（futuresSpec/optionsSpec）。运行时替换 spec 会
+   // 导致表格陈旧——columns/buildRecord/rowStyle 冻结在首渲染闭包内。仅 dev 告警，不抛错。
+   useEffect(() => {
+     if (import.meta.env.DEV && specRef.current !== spec) {
+       console.warn('[QuoteTable] spec 身份变化——spec 必须为稳定常量，运行时替换不支持')
+     }
+     specRef.current = spec
+   }, [spec])
+ 
+@@ -98,20 +102,27 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
+         if (record) visibleIDs.push(record.instrumentID)
+       }
+       onVisibleRangeChangeRef.current(visibleIDs)
+       // 可见区变化 → 递增版本号，驱动局部更新 effect 对滚入的新行立即重算
+       setVisibleRangeVersion((v) => v + 1)
+     } catch {
+       // vtable 尚未就绪
+     }
+   }, [])
+ 
++  // 挂载/重建后延迟上报可见区。隐藏面板（isActive=false）跳过，避免覆盖活跃面板的可见范围；
++  // 激活时由 isActive 翻转 effect 补报（见组件底部）。
++  const scheduleVisibleRangeReport = useCallback(() => {
++    if (isActiveRef.current === false) return
++    setTimeout(notifyVisibleRange, 0)
++  }, [notifyVisibleRange])
++
+   useEffect(() => {
+     if (!containerRef.current) return
+ 
+     const records = contracts.map((c) => spec.buildRecord(c, snapshots.get(c.instrumentID), favoritedIds?.has(c.instrumentID) ?? false))
+     recordsRef.current = records
+ 
+     const table = new ListTable(containerRef.current, {
+       columns: spec.columns,
+       records,
+       frozenColCount: 1, // 冻结「合约」列：横向拖动时固定最左侧
+@@ -371,22 +382,22 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
+       plainDragStart = false
+     }
+ 
+     const container = containerRef.current
+     if (container) {
+       container.addEventListener('mousedown', handleMouseDown)
+       window.addEventListener('mousemove', handleMouseMove)
+       window.addEventListener('mouseup', handleMouseUp)
+     }
+ 
+-    // 初始渲染后触发一次（延迟确保 vtable 就绪）
+-    setTimeout(notifyVisibleRange, 0)
++    // 初始渲染后触发一次（延迟确保 vtable 就绪；隐藏面板不参与上报）
++    scheduleVisibleRangeReport()
+ 
+     // 滚动时触发（100ms 防抖）
+     table.on('scroll', () => {
+       lastScrollAtRef.current = Date.now()
+       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+       debounceTimerRef.current = setTimeout(notifyVisibleRange, 100)
+     })
+ 
+     // 滚动停止（mouseup/keyup 距上次 scroll < 200ms）→ 最终 notify + 完整 diff 信号。
+     // keyup 覆盖键盘滚动（方向键/翻页）：无 mouseup，否则要等拖停 500ms 窗口才订阅。
+@@ -417,21 +428,22 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
+ 
+   // 合约列表或收藏变化 → 全量 setRecords（低频）
+   useEffect(() => {
+     if (!tableRef.current) return
+     const records = contracts.map((contract) => spec.buildRecord(contract, snapshots.get(contract.instrumentID), favoritedIds?.has(contract.instrumentID) ?? false))
+     recordsRef.current = records
+     // 重置每行 snapshot 跟踪：全量重建后所有行都视为已同步
+     rowSnapshotRef.current = contracts.map((c) => snapshots.get(c.instrumentID))
+     tableRef.current.setRecords(records)
+     lastClickedIndexRef.current = null
+-    setTimeout(notifyVisibleRange, 0)
++    // 合约重建后延迟补报可见区（隐藏面板不参与上报）
++    scheduleVisibleRangeReport()
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [contracts, favoritedIds])
+ 
+   // snapshots 变化 或 可见区变化 → 仅对可见行局部 updateRecords。
+   // 高频 tick 下逐行按 snapshot 引用比较（rowSnapshotRef），避免对几百个订阅合约全量 buildRecord；
+   // 滚动到新区域时 visibleRangeVersion 递增，触发本 effect 对滚入的行立即重算。
+   useEffect(() => {
+     if (!tableRef.current) return
+     const range = tableRef.current.getBodyVisibleCellRange?.()
+     if (!range) return
+diff --git a/frontend/src/modules/market/sort.test.ts b/frontend/src/modules/market/sort.test.ts
+index dc52ad7..720daf7 100644
+--- a/frontend/src/modules/market/sort.test.ts
++++ b/frontend/src/modules/market/sort.test.ts
+@@ -57,11 +57,36 @@ describe('groupOptionsByUnderlying', () => {
+     expect(groups.map((g) => g.underlyingID)).toEqual(['FG609', 'FG610'])
+     expect(groups[0].underlying?.instrumentID).toBe('FG609')
+     expect(groups[0].options.map((o) => o.instrumentID)).toEqual(['FG609-C-1200', 'FG609-C-1300', 'FG609-P-1250'])
+     expect(groups[1].options.map((o) => o.instrumentID)).toEqual(['FG610-C-1300'])
+   })
+ 
+   it('标底不在期货列表时 underlying 为 undefined', () => {
+     const groups = groupOptionsByUnderlying([opt('IO2609-C-4000', 'CFFEX', 'IO', 'IO2609', '1', 4000)], [])
+     expect(groups[0].underlying).toBeUndefined()
+   })
++
++  it('组内排序首维（到期日）：同标底、同类型、同行权价，仅到期日不同 → 先到期在前', () => {
++    const futures = [fut('FG609', 'CZCE', 'FG')]
++    const options = [
++      opt('FG609-C-1300', 'CZCE', 'FGC', 'FG609', '1', 1300, '20260930'),
++      opt('FG609-C-1300', 'CZCE', 'FGC', 'FG609', '1', 1300, '20260630'),
++    ]
++    const groups = groupOptionsByUnderlying(options, futures)
++    expect(groups[0].options.map((o) => o.expireDate)).toEqual(['20260630', '20260930'])
++  })
++
++  it('组内排序次/末维（类型/行权价）：同标底、同到期日，C 前 P 后、行权价升序', () => {
++    const futures = [fut('FG609', 'CZCE', 'FG')]
++    const options = [
++      opt('FG609-P-1250', 'CZCE', 'FGP', 'FG609', '2', 1250, '20260630'),
++      opt('FG609-C-1300', 'CZCE', 'FGC', 'FG609', '1', 1300, '20260630'),
++      opt('FG609-C-1200', 'CZCE', 'FGC', 'FG609', '1', 1200, '20260630'),
++    ]
++    const groups = groupOptionsByUnderlying(options, futures)
++    expect(groups[0].options.map((o) => o.instrumentID)).toEqual([
++      'FG609-C-1200',
++      'FG609-C-1300',
++      'FG609-P-1250',
++    ])
++  })
+ })
+diff --git a/frontend/src/modules/options/OptionsPanel.test.tsx b/frontend/src/modules/options/OptionsPanel.test.tsx
+index edfa4dd..72c2be3 100644
+--- a/frontend/src/modules/options/OptionsPanel.test.tsx
++++ b/frontend/src/modules/options/OptionsPanel.test.tsx
+@@ -1,18 +1,19 @@
+ import { describe, it, expect, vi, beforeEach } from 'vitest'
+ import { act, render, screen } from '@testing-library/react'
+ import userEvent from '@testing-library/user-event'
+ import { OptionsPanel } from './OptionsPanel'
+ import { optionsSpec } from '@/modules/market/optionsSpec'
+ import { useMarketStore } from '@/modules/market/store'
+ import { useContractsStore } from '@/stores/contracts'
+ import { useMarketFilterStore } from '@/stores/marketFilter'
++import { useTabStore } from '@/stores/tabs'
+ import type { ContractInfo } from '@/services/types'
+ 
+ // Mock TQuoteView（T型报价二级视图依赖链沉重，仅测切换渲染）
+ vi.mock('./TQuoteView', () => ({
+   TQuoteView: () => <div data-testid="tquote-view">TQuoteView Mock</div>,
+ }))
+ 
+ // Mock InstrumentSearchModal（放大镜高级搜索弹窗）
+ vi.mock('@/components/InstrumentSearchModal', () => ({
+   InstrumentSearchModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+@@ -69,20 +70,28 @@ describe('OptionsPanel', () => {
+       selectedInstrument: null,
+       snapshots: new Map(),
+       selectedContracts: new Set(),
+       visibleInstrumentIDs: [],
+       scrollEndSeq: 0,
+     })
+     useMarketFilterStore.setState({
+       futures: { exchanges: [], products: [] },
+       options: { exchanges: [], products: [] },
+     })
++    // 期货/期权双固定标签，默认激活期货 → 期权面板 isActive=false（隐藏）
++    useTabStore.setState({
++      tabs: [
++        { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
++        { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false },
++      ],
++      activeTabId: 'tab-market',
++    })
+     setupContracts()
+     vi.clearAllMocks()
+   })
+ 
+   it('默认视图为 列表（列表按钮 active，列表表格渲染，T型报价不渲染）', () => {
+     const { container } = render(<OptionsPanel />)
+     expect(screen.getByRole('button', { name: '列表' }).classList.contains('active')).toBe(true)
+     expect(screen.getByRole('button', { name: 'T型报价' }).classList.contains('active')).toBe(false)
+     expect(container.querySelector('.market-table-container')).toBeTruthy()
+     expect(screen.queryByTestId('tquote-view')).toBeNull()
+@@ -152,32 +161,49 @@ describe('OptionsPanel', () => {
+     const { ListTable } = await import('@visactor/vtable')
+     const instance = (ListTable as any).mock.results[0].value
+     const clickHandler = instance.on.mock.calls.find((call: any[]) => call[0] === 'click_cell')?.[1]
+     const favoriteCol = optionsSpec.columns.length - 1
+     act(() => {
+       clickHandler({ row: 1, col: favoriteCol, event: {} })
+     })
+     expect(addSpy).toHaveBeenCalledWith(fut)
+   })
+ 
+-  it('可见区上报：挂载后经 onVisibleRangeChange 上报可见合约（驱动共享订阅管理器）', async () => {
++  it('可见区上报：期权标签激活时挂载后上报可见合约（驱动共享订阅管理器）', async () => {
++    // 期权标签激活：QuoteTable isActive=true → 挂载后 setTimeout(notifyVisibleRange,0) 上报可见区
++    useTabStore.setState({
++      tabs: [
++        { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
++        { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false },
++      ],
++      activeTabId: 'tab-options',
++    })
+     render(<OptionsPanel />)
+-    // QuoteTable 挂载后 setTimeout(notifyVisibleRange, 0) 触发一次上报
+     await act(async () => {
+       await new Promise((r) => setTimeout(r, 10))
+     })
+     const visible = useMarketStore.getState().visibleInstrumentIDs
+     expect(visible).toContain('FG609')
+     expect(visible).toContain('FG609-C-1300')
+     expect(visible).toContain('FG609-P-1300')
+   })
+ 
++  it('可见区上报：期权标签隐藏（期货激活）时挂载不上报，避免覆盖期货可见范围（Critical #1）', async () => {
++    // 默认标签态 activeTabId='tab-market' → 期权面板 isActive=false（TabContent display:none 隐藏）
++    useMarketStore.setState({ visibleInstrumentIDs: [] })
++    render(<OptionsPanel />)
++    await act(async () => {
++      await new Promise((r) => setTimeout(r, 10))
++    })
++    expect(useMarketStore.getState().visibleInstrumentIDs).toEqual([])
++  })
++
+   // --- 交易所+品种多选筛选（Task 7） ---
+ 
+   /** 读取最近一次 setRecords 的合约 ID 序列 */
+   function latestRecordIDs(instance: any): string[] {
+     const last = instance.setRecords.mock.calls.at(-1)?.[0] ?? []
+     return last.map((r: any) => r.instrumentID)
+   }
+ 
+   it('渲染「筛选」按钮，空筛选无徽标', () => {
+     render(<OptionsPanel />)
+diff --git a/frontend/src/modules/options/OptionsPanel.tsx b/frontend/src/modules/options/OptionsPanel.tsx
+index 9568c50..9ecb3b9 100644
+--- a/frontend/src/modules/options/OptionsPanel.tsx
++++ b/frontend/src/modules/options/OptionsPanel.tsx
+@@ -1,26 +1,26 @@
+ import { useMemo, useState } from 'react'
+-import { ContextMenu } from '@/components/ContextMenu'
+ import { ErrorBoundary } from '@/components/ErrorBoundary'
+ import { ContractFilter } from '@/components/ContractFilter'
+ import { ContractSearch } from '@/components/ContractSearch'
+ import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
+ import { QuoteTable } from '@/modules/market/QuoteTable'
+ import { optionsSpec } from '@/modules/market/optionsSpec'
+ import { deriveUnderlyingProduct, groupOptionsByUnderlying } from '@/modules/market/sort'
+ import { filterByExchangeAndProduct } from '@/modules/market/filter'
+ import { useMarketStore } from '@/modules/market/store'
+ import { useOrderStore } from '@/modules/order/store'
+ import { useContractsStore } from '@/stores/contracts'
+ import { useMarketFilterStore } from '@/stores/marketFilter'
+ import { useTabStore } from '@/stores/tabs'
+ import { useContractContextMenu } from '@/hooks/useContractContextMenu'
++import { useContractMenus } from '@/hooks/useContractMenus'
+ import { usePointOrder } from '@/hooks/usePointOrder'
+ import { getProductName } from '@/utils/productNames'
+ import { isContractActive } from '@/utils/contractStatus'
+ import { toast } from '@/components/Toast'
+ import { TQuoteView } from './TQuoteView'
+ import type { ContractInfo } from '@/services/types'
+ import './styles.css'
+ 
+ /**
+  * OptionsPanel — 期权标签页（二级视图 shell）
+@@ -102,20 +102,35 @@ export function OptionsPanel() {
+       const productName = getProductName(c.productID).toLowerCase()
+       return instrumentID.includes(q) || instrumentName.includes(q) || productName.includes(q)
+     })
+   }, [listRows, searchQuery])
+ 
+   // 用户收藏 ID 集合（用于 ⭐ 列与右键菜单收藏态）
+   const favoritedIds = useMemo(
+     () => new Set(favorites.map((c) => c.instrumentID)),
+     [favorites],
+   )
++  // 右键菜单 JSX 与工具栏批量收藏共享逻辑（与期货页一致，见 useContractMenus）
++  const { singleMenu, multiMenu, batchToggleFavorite, favoriteButtonLabel } = useContractMenus({
++    contextMenu,
++    multiSelectMenu,
++    favoritedIds,
++    contracts,
++    addToFavorites,
++    removeFromFavorites,
++    openOrderPopup,
++    openQueryPopup,
++    openKlineTab,
++    openOrderTabs,
++    openKlineTabs,
++    closeMenus,
++  })
+   // 全系统合约 ID 集合（高级搜索弹窗「已收藏/已订阅」徽标）
+   const allContractIds = useMemo(
+     () => new Set(contracts.map((c) => c.instrumentID)),
+     [contracts],
+   )
+ 
+   const { handleClick, handleDoubleClick } = usePointOrder({
+     onOrder: ({ instrumentID, price }) => {
+       setSelectedInstrument(instrumentID)
+       setOrderInstrument(instrumentID)
+@@ -182,76 +197,36 @@ export function OptionsPanel() {
+                 onClick={() => setActiveTab('favorites')}
+               >
+                 自选
+               </button>
+             </div>
+             <ContractFilter
+               exchanges={filterExchanges}
+               products={filterProducts}
+               productNames={filterProductNames}
+               value={filter}
+-              onChange={(v) => {
+-                useMarketFilterStore.getState().setExchanges('options', v.exchanges)
+-                useMarketFilterStore.getState().setProducts('options', v.products)
+-              }}
++              onChange={(v) => useMarketFilterStore.getState().setFilter('options', v)}
+             />
+             <div className="market-toolbar__actions">
+               <button
+                 className={`btn-filter-status${filterActive ? ' active' : ''}`}
+                 onClick={() => setFilterActive((v) => !v)}
+                 title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
+               >
+                 {filterActive ? '仅交易中' : '显示全部'}
+               </button>
+               <button
+                 className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
+                 disabled={!selectedInstrument && selectedContracts.size === 0}
+-                onClick={async () => {
+-                  // 如果有多选，批量收藏/取消收藏
+-                  if (selectedContracts.size > 1) {
+-                    const allFavorited = Array.from(selectedContracts).every(id => favoritedIds.has(id))
+-                    if (allFavorited) {
+-                      for (const id of selectedContracts) {
+-                        await removeFromFavorites(id)
+-                      }
+-                      toast.success(`已移除 ${selectedContracts.size} 个合约`)
+-                    } else {
+-                      let count = 0
+-                      for (const id of selectedContracts) {
+-                        const inst = contracts.find(c => c.instrumentID === id)
+-                        if (inst) {
+-                          const success = await addToFavorites(inst)
+-                          if (success) count++
+-                        }
+-                      }
+-                      toast.success(`已收藏 ${count} 个合约`)
+-                    }
+-                    return
+-                  }
+-
+-                  if (!selectedInstrument) return
+-                  if (favoritedIds.has(selectedInstrument)) {
+-                    await removeFromFavorites(selectedInstrument)
+-                    toast.success(`已移除 ${selectedInstrument}`)
+-                  } else {
+-                    const inst = contracts.find(c => c.instrumentID === selectedInstrument)
+-                    if (inst) {
+-                      await addToFavorites(inst)
+-                      toast.success(`已收藏 ${inst.instrumentID}`)
+-                    }
+-                  }
+-                }}
++                onClick={() => batchToggleFavorite(selectedInstrument, selectedContracts)}
+               >
+-                {selectedContracts.size > 1
+-                  ? (Array.from(selectedContracts).every(id => favoritedIds.has(id)) ? '批量移除' : '批量收藏')
+-                  : (selectedInstrument && favoritedIds.has(selectedInstrument) ? '移除' : '收藏')
+-                }
++                {favoriteButtonLabel(selectedInstrument, selectedContracts)}
+               </button>
+             </div>
+             <div className="market-toolbar__search">
+               <ContractSearch contracts={listRows} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
+               <button
+                 className="btn-search-advanced"
+                 title="搜索合约"
+                 onClick={() => setSearchModalOpen(true)}
+               >
+                 🔍
+@@ -305,94 +280,16 @@ export function OptionsPanel() {
+       {/* 高级搜索弹窗（放大镜入口） */}
+       <InstrumentSearchModal
+         isOpen={searchModalOpen}
+         onClose={() => setSearchModalOpen(false)}
+         onAddToFavorite={addToFavorites}
+         onRemoveFromFavorite={removeFromFavorites}
+         allContractIds={allContractIds}
+         favoritedIds={favoritedIds}
+       />
+ 
+-      {/* 单选右键菜单 */}
+-      {contextMenu && (
+-        <ContextMenu
+-          x={contextMenu.x}
+-          y={contextMenu.y}
+-          items={[
+-            { label: '打开报单', icon: '📝', onClick: () => openOrderPopup(contextMenu.instrumentID) },
+-            { label: '打开K线', icon: '📈', onClick: () => openKlineTab(contextMenu.instrumentID) },
+-            { label: '查询', icon: '📋', onClick: () => openQueryPopup(contextMenu.instrumentID) },
+-            {
+-              label: favoritedIds.has(contextMenu.instrumentID) ? '取消收藏' : '收藏',
+-              icon: favoritedIds.has(contextMenu.instrumentID) ? '★' : '⭐',
+-              onClick: () => {
+-                if (favoritedIds.has(contextMenu.instrumentID)) {
+-                  removeFromFavorites(contextMenu.instrumentID)
+-                  toast.success(`已移除 ${contextMenu.instrumentID}`)
+-                } else {
+-                  const inst = contracts.find((c) => c.instrumentID === contextMenu.instrumentID)
+-                  if (inst) {
+-                    addToFavorites(inst)
+-                    toast.success(`已收藏 ${contextMenu.instrumentID}`)
+-                  }
+-                }
+-              },
+-            },
+-            { label: '复制合约代码', icon: '📋', onClick: () => navigator.clipboard.writeText(contextMenu.instrumentID) },
+-          ]}
+-          onClose={closeMenus}
+-        />
+-      )}
+-
+-      {/* 多选右键菜单 */}
+-      {multiSelectMenu && (() => {
+-        // 计算已收藏和未收藏的数量
+-        const unfavoritedIds = multiSelectMenu.instrumentIDs.filter((id) => !favoritedIds.has(id))
+-        const favoritedIdsInSelection = multiSelectMenu.instrumentIDs.filter((id) => favoritedIds.has(id))
+-
+-        return (
+-          <ContextMenu
+-            x={multiSelectMenu.x}
+-            y={multiSelectMenu.y}
+-            items={[
+-              { label: `批量打开报单 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📝', onClick: () => openOrderTabs(multiSelectMenu.instrumentIDs) },
+-              { label: `批量打开K线 (${multiSelectMenu.instrumentIDs.length}个)`, icon: '📈', onClick: () => openKlineTabs(multiSelectMenu.instrumentIDs) },
+-              {
+-                label: `批量收藏 (${unfavoritedIds.length}个)`,
+-                icon: '⭐',
+-                disabled: unfavoritedIds.length === 0,
+-                onClick: async () => {
+-                  let count = 0
+-                  for (const id of unfavoritedIds) {
+-                    const inst = contracts.find((c) => c.instrumentID === id)
+-                    if (inst) {
+-                      const success = await addToFavorites(inst)
+-                      if (success) count++
+-                    }
+-                  }
+-                  toast.success(`已收藏 ${count} 个合约`)
+-                },
+-              },
+-              {
+-                label: `批量取消收藏 (${favoritedIdsInSelection.length}个)`,
+-                icon: '★',
+-                disabled: favoritedIdsInSelection.length === 0,
+-                onClick: async () => {
+-                  for (const id of favoritedIdsInSelection) {
+-                    await removeFromFavorites(id)
+-                  }
+-                  toast.success(`已移除 ${favoritedIdsInSelection.length} 个合约`)
+-                },
+-              },
+-              {
+-                label: `复制合约代码 (${multiSelectMenu.instrumentIDs.length}个)`,
+-                icon: '📋',
+-                onClick: () => navigator.clipboard.writeText(multiSelectMenu.instrumentIDs.join(',')),
+-              },
+-            ]}
+-            onClose={closeMenus}
+-          />
+-        )
+-      })()}
++      {/* 单选 + 多选右键菜单（共享 useContractMenus，与期货页一致） */}
++      {singleMenu}
++      {multiMenu}
+     </section>
+   )
+ }
+diff --git a/frontend/src/pages/FavoritesPage.tsx b/frontend/src/pages/FavoritesPage.tsx
+index c1ee9a9..237f5f0 100644
+--- a/frontend/src/pages/FavoritesPage.tsx
++++ b/frontend/src/pages/FavoritesPage.tsx
+@@ -1,35 +1,39 @@
+ import { useMemo } from 'react'
+ import { QuoteTable } from '@/modules/market/QuoteTable'
+ import { futuresSpec } from '@/modules/market/futuresSpec'
+ import { useMarketStore } from '@/modules/market/store'
+ import { useContractsStore } from '@/stores/contracts'
++import { useTabStore } from '@/stores/tabs'
+ import { useContractContextMenu } from '@/hooks/useContractContextMenu'
+ import { toast } from '@/components/Toast'
+ import './FavoritesPage.css'
+ 
+ /**
+  * FavoritesPage — 自选标签页
+  *
+  * 只显示收藏的合约，全部订阅（数量少，通常 < 50）。
+  * 支持取消收藏操作。
+  */
+ export function FavoritesPage() {
+   const favorites = useContractsStore((s) => s.favorites)
+   const contracts = useContractsStore((s) => s.contracts)
+   const addToFavorites = useContractsStore((s) => s.addToFavorites)
+   const removeFromFavorites = useContractsStore((s) => s.removeFromFavorites)
+   const snapshots = useMarketStore((s) => s.snapshots)
+   const selectedInstrument = useMarketStore((s) => s.selectedInstrument)
+   const setSelectedInstrument = useMarketStore((s) => s.setSelectedInstrument)
+   const { contextMenu, openOrderPopup, openQueryPopup, openKlineTab, handleContextMenu } = useContractContextMenu()
+ 
++  // 自选标签是否激活：隐藏面板（display:none）不参与可见区上报，避免覆盖活跃面板可见范围
++  const isActive = useTabStore((s) => s.tabs.some((t) => t.type === 'favorites' && t.id === s.activeTabId))
++
+   const favoritedIds = useMemo(
+     () => new Set(favorites.map((c) => c.instrumentID)),
+     [favorites],
+   )
+ 
+   const handleFavoriteChange = (instrumentID: string, isFavorited: boolean) => {
+     if (isFavorited) {
+       // 从全量合约中查找并收藏（防御性处理，FavoritesPage 中通常不会触发）
+       const inst = contracts.find((c) => c.instrumentID === instrumentID)
+       if (inst) {
+@@ -64,20 +68,21 @@ export function FavoritesPage() {
+   }
+ 
+   return (
+     <div className="favorites-page" data-testid="favorites-page">
+       <div className="favorites-page__table">
+         <QuoteTable
+           spec={futuresSpec}
+           contracts={favorites}
+           snapshots={snapshots}
+           selectedInstrument={selectedInstrument}
++          isActive={isActive}
+           onRowClick={handleRowClick}
+           onRowDoubleClick={handleRowDoubleClick}
+           onContextMenu={handleContextMenu}
+           favoritedIds={favoritedIds}
+           onFavoriteChange={handleFavoriteChange}
+         />
+       </div>
+ 
+       {/* 右键菜单 */}
+       {contextMenu && (
+diff --git a/frontend/src/stores/marketFilter.test.ts b/frontend/src/stores/marketFilter.test.ts
+index a268449..f9d1f48 100644
+--- a/frontend/src/stores/marketFilter.test.ts
++++ b/frontend/src/stores/marketFilter.test.ts
+@@ -74,11 +74,38 @@ describe('useMarketFilterStore', () => {
+ 
+   it('load 缺失某页时补默认值', () => {
+     localStorage.setItem(
+       STORAGE_KEY,
+       JSON.stringify({ futures: { exchanges: ['SHFE'], products: [] } }),
+     )
+     useMarketFilterStore.getState().load()
+     expect(useMarketFilterStore.getState().futures.exchanges).toEqual(['SHFE'])
+     expect(useMarketFilterStore.getState().options).toEqual(EMPTY_FILTER)
+   })
++
++  it('setFilter 一次更新指定页交易所+品种（单一 localStorage 写）', () => {
++    useMarketFilterStore.getState().setFilter('futures', { exchanges: ['SHFE'], products: ['cu'] })
++    const { futures, options } = useMarketFilterStore.getState()
++    expect(futures).toEqual({ exchanges: ['SHFE'], products: ['cu'] })
++    expect(options).toEqual(EMPTY_FILTER)
++  })
++
++  it('load 遇「合法 JSON 但形状损坏」时回退默认，不抛错', () => {
++    // {futures: 5} 解析成功但非对象 → 回退空筛选
++    localStorage.setItem(STORAGE_KEY, JSON.stringify({ futures: 5, options: null }))
++    useMarketFilterStore.getState().load()
++    expect(useMarketFilterStore.getState().futures).toEqual(EMPTY_FILTER)
++    expect(useMarketFilterStore.getState().options).toEqual(EMPTY_FILTER)
++
++    // {futures: {exchanges: 'x'}} 字段非数组 → futures 回退，options 正常恢复
++    localStorage.setItem(
++      STORAGE_KEY,
++      JSON.stringify({
++        futures: { exchanges: 'x', products: [] },
++        options: { exchanges: ['CZCE'], products: ['FG'] },
++      }),
++    )
++    useMarketFilterStore.getState().load()
++    expect(useMarketFilterStore.getState().futures).toEqual(EMPTY_FILTER)
++    expect(useMarketFilterStore.getState().options).toEqual({ exchanges: ['CZCE'], products: ['FG'] })
++  })
+ })
+diff --git a/frontend/src/stores/marketFilter.ts b/frontend/src/stores/marketFilter.ts
+index 16fbb52..96c263c 100644
+--- a/frontend/src/stores/marketFilter.ts
++++ b/frontend/src/stores/marketFilter.ts
+@@ -1,55 +1,75 @@
+ import { create } from 'zustand'
+ import type { MarketFilter } from '@/modules/market/filter'
++import { EMPTY_FILTER } from '@/modules/market/filter'
+ 
+ const STORAGE_KEY = 'simnow-market-filter'
+ 
+ type Page = 'futures' | 'options'
+ 
+ interface MarketFilterStore {
+   futures: MarketFilter
+   options: MarketFilter
+   setExchanges: (page: Page, exchanges: string[]) => void
+   setProducts: (page: Page, products: string[]) => void
++  /** 一次 set 同时写入交易所+品种（单一 localStorage 写），ContractFilter onChange 用 */
++  setFilter: (page: Page, filter: MarketFilter) => void
+   reset: (page: Page) => void
+   load: () => void
+ }
+ 
++/** 形状校验：合法筛选态必须为对象且 exchanges/products 均为数组；任一不满足 → 空筛选 */
++function isValidFilter(v: unknown): v is MarketFilter {
++  return (
++    !!v &&
++    typeof v === 'object' &&
++    Array.isArray((v as MarketFilter).exchanges) &&
++    Array.isArray((v as MarketFilter).products)
++  )
++}
++
+ export const useMarketFilterStore = create<MarketFilterStore>((set) => ({
+-  futures: { exchanges: [], products: [] },
+-  options: { exchanges: [], products: [] },
++  futures: EMPTY_FILTER,
++  options: EMPTY_FILTER,
+   setExchanges: (page, exchanges) =>
+     set((s) => {
+       const next = { futures: s.futures, options: s.options }
+       next[page] = { ...s[page], exchanges }
+       return next
+     }),
+   setProducts: (page, products) =>
+     set((s) => {
+       const next = { futures: s.futures, options: s.options }
+       next[page] = { ...s[page], products }
+       return next
+     }),
++  setFilter: (page, filter) =>
++    set((s) => {
++      const next = { futures: s.futures, options: s.options }
++      next[page] = { exchanges: [...filter.exchanges], products: [...filter.products] }
++      return next
++    }),
+   reset: (page) =>
+     set((s) => {
+       const next = { futures: s.futures, options: s.options }
+-      next[page] = { exchanges: [], products: [] }
++      next[page] = EMPTY_FILTER
+       return next
+     }),
+   load: () => {
+     try {
+       const raw = localStorage.getItem(STORAGE_KEY)
+       if (!raw) return
+       const data = JSON.parse(raw)
++      const dataObj = data && typeof data === 'object' ? (data as Record<string, unknown>) : {}
+       set({
+-        futures: data.futures ?? { exchanges: [], products: [] },
+-        options: data.options ?? { exchanges: [], products: [] },
++        futures: isValidFilter(dataObj.futures) ? dataObj.futures : EMPTY_FILTER,
++        options: isValidFilter(dataObj.options) ? dataObj.options : EMPTY_FILTER,
+       })
+     } catch {
+       /* 忽略损坏数据 */
+     }
+   },
+ }))
+ 
+ // 每次变更持久化（订阅式）
+ useMarketFilterStore.subscribe((state) => {
+   const { futures, options } = state

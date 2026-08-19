@@ -1,0 +1,1046 @@
+# Review package: f3df73d..b3a4c20
+
+## Commits
+b3a4c20 refactor(collections): 订阅去 favorites + contracts/userPrefs 清理废弃收藏字段 + 启动 loadCollections
+
+## Files changed
+ frontend/src/App.test.tsx                          |  7 ++-
+ frontend/src/App.tsx                               |  7 ++-
+ frontend/src/hooks/useSubscriptionManager.test.ts  | 30 +++++++++
+ frontend/src/hooks/useSubscriptionManager.ts       | 13 ++--
+ frontend/src/modules/market/MarketPanel.test.tsx   |  5 +-
+ .../src/modules/order/OrderQuotePanel.test.tsx     |  1 -
+ frontend/src/modules/order/QuoteStatsBar.test.tsx  |  3 +-
+ frontend/src/modules/order/TradeParams.test.tsx    |  5 --
+ frontend/src/pages/__tests__/KLinePage.test.tsx    |  1 -
+ frontend/src/pages/__tests__/OrderPage.test.tsx    |  1 -
+ frontend/src/stores/contracts.test.ts              | 70 +--------------------
+ frontend/src/stores/contracts.ts                   | 72 +---------------------
+ frontend/src/stores/userPrefs.test.ts              | 24 --------
+ frontend/src/stores/userPrefs.ts                   | 20 +-----
+ 14 files changed, 50 insertions(+), 209 deletions(-)
+
+## Diff
+diff --git a/frontend/src/App.test.tsx b/frontend/src/App.test.tsx
+index 56dadb8..4760a8b 100644
+--- a/frontend/src/App.test.tsx
++++ b/frontend/src/App.test.tsx
+@@ -1,19 +1,20 @@
+ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+ import { render, screen, fireEvent, act } from '@testing-library/react'
+ import App from './App'
+ import { useConnectionStore } from '@/stores/connection'
+ import { useTabStore } from '@/stores/tabs'
+ import { useFloatingWindowStore } from '@/stores/floatingWindows'
+ import { useMarketWs } from '@/hooks/useMarketWs'
+ import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
+ import { useContractsStore } from '@/stores/contracts'
++import { useCollectionsStore } from '@/stores/collections'
+ import { useMarketFilterStore } from '@/stores/marketFilter'
+ 
+ // Mock TabBar 组件
+ vi.mock('@/components/TabBar', () => ({
+   TabBar: ({ onAddTab }: { onAddTab?: () => void }) => (
+     <div data-testid="tab-bar">
+       <span>TabBar Mock</span>
+       <button onClick={onAddTab}>+</button>
+     </div>
+   ),
+@@ -202,34 +203,34 @@ describe('App Layout — 标签页系统', () => {
+       const callback = onTogglePerf.mock.calls[0][0]
+       act(() => {
+         callback()
+       })
+       expect(screen.getByTestId('bottom-bar-fps')).toBeInTheDocument()
+       delete (window as any).electronAPI
+     })
+   })
+ 
+   describe('共享行情基础设施（上移 App，期货/期权双面板单例）', () => {
+-    it('挂载 useMarketWs 与 useSubscriptionManager 各一次，并启动时加载合约/收藏', () => {
++    it('挂载 useMarketWs 与 useSubscriptionManager 各一次，并启动时加载合约/收藏夹', () => {
+       vi.clearAllMocks()
+       const loadAllSpy = vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
+-      const loadFavSpy = vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
++      const loadFavSpy = vi.spyOn(useCollectionsStore.getState(), 'loadCollections').mockResolvedValue(undefined)
+ 
+       render(<App />)
+ 
+       expect(useMarketWs).toHaveBeenCalledTimes(1)
+       expect(useMarketWs).toHaveBeenCalledWith('ws://localhost:8000')
+       expect(useSubscriptionManager).toHaveBeenCalledTimes(1)
+       expect(loadAllSpy).toHaveBeenCalledTimes(1)
+       expect(loadFavSpy).toHaveBeenCalledTimes(1)
+     })
+ 
+     it('启动时加载持久化筛选（useMarketFilterStore.load）', () => {
+       vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
+-      vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
++      vi.spyOn(useCollectionsStore.getState(), 'loadCollections').mockResolvedValue(undefined)
+       const loadSpy = vi.spyOn(useMarketFilterStore.getState(), 'load').mockImplementation(() => {})
+       render(<App />)
+       expect(loadSpy).toHaveBeenCalledTimes(1)
+       loadSpy.mockRestore()
+     })
+   })
+ })
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index 33c6225..8d0ea91 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -3,65 +3,66 @@ import { GlobalBar } from '@/components/GlobalBar'
+ import { BottomBar } from '@/components/BottomBar'
+ import { TabContent } from '@/components/TabContent'
+ import { ToastContainer } from '@/components/Toast'
+ import { useSystemWs } from '@/hooks/useSystemWs'
+ import { useConnectionPoll } from '@/hooks/useConnectionPoll'
+ import { useTabContractLocks } from '@/hooks/useTabContractLocks'
+ import { useMarketWs } from '@/hooks/useMarketWs'
+ import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
+ import { useMarketStore } from '@/modules/market/store'
+ import { useContractsStore } from '@/stores/contracts'
++import { useCollectionsStore } from '@/stores/collections'
+ import { useMarketFilterStore } from '@/stores/marketFilter'
+ import { FloatingWindows } from '@/components/FloatingWindow'
+ import { useTabStore } from '@/stores/tabs'
+ import { API_BASE } from '@/services/api'
+ import { isElectron } from '@/services/electron'
+ import {
+   openOrderFloating,
+   openKlineFloating,
+   openQueryFloating,
+   openSettingsFloating,
+   openIpcMonitorFloating,
+   openOrdersQueryFloating,
+   openPositionsQueryFloating,
+   openTQuoteFloating,
+ } from '@/utils/openFloatingTab'
+ import '@/assets/styles/global.css'
+ 
+ function App() {
+   const [perfVisible, setPerfVisible] = useState(false)
+   const openTab = useTabStore((s) => s.openTab)
+-  // StrictMode 开发双挂载守卫：启动加载只执行一次（loadAllInstruments/loadFavoriteContracts/load）
++  // StrictMode 开发双挂载守卫：启动加载只执行一次（loadAllInstruments/loadCollections/load）
+   const startupLoadedRef = useRef(false)
+ 
+   // System WebSocket — 监听 MD/TD 连接状态即时推送
+   useSystemWs(API_BASE.replace('http', 'ws'))
+ 
+   // 轮询 /api/connection/status — MD/TD 状态的权威来源
+   useConnectionPoll()
+ 
+   // 打开标签的合约锁定订阅（K线/报单标签的合约永不退订，保证数据流）
+   useTabContractLocks()
+ 
+   // 共享行情基础设施：行情 WS 单例 + 订阅管理器，挂载在 App 全局，
+   // 期货/期权双面板共享同一份订阅生命周期与 WS 单例（useSubscriptionManager 的
+   // subscribedRef 组件私有，若双份挂载会双份 diff 冲突，故必须单例）
+   useMarketWs(API_BASE.replace('http', 'ws'))
+   useSubscriptionManager()
+ 
+-  // 启动时加载全量合约 + 收藏合约（原先在 MarketPanel，现上移共享）+ 持久化筛选。
++  // 启动时加载全量合约 + 收藏夹（原先在 MarketPanel，现上移共享）+ 持久化筛选。
+   // StrictMode 开发双挂载会重复执行 effect：用 useRef 守卫保证只加载一次。
+   useEffect(() => {
+     if (startupLoadedRef.current) return
+     startupLoadedRef.current = true
+     useContractsStore.getState().loadAllInstruments()
+-    useContractsStore.getState().loadFavoriteContracts()
++    useCollectionsStore.getState().loadCollections()
+     useMarketFilterStore.getState().load()
+   }, [])
+ 
+   // Electron IPC — 监听托盘菜单导航消息
+   useEffect(() => {
+     if (!isElectron()) return
+ 
+     const cleanup = window.electronAPI?.onNavigateTab?.((tab: string) => {
+       switch (tab) {
+         case 'market':
+diff --git a/frontend/src/hooks/useSubscriptionManager.test.ts b/frontend/src/hooks/useSubscriptionManager.test.ts
+index 19b88da..a7c5887 100644
+--- a/frontend/src/hooks/useSubscriptionManager.test.ts
++++ b/frontend/src/hooks/useSubscriptionManager.test.ts
+@@ -1,14 +1,15 @@
+ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+ import { renderHook, act } from '@testing-library/react'
+ import { useSubscriptionManager } from './useSubscriptionManager'
+ import { useMarketStore } from '@/modules/market/store'
++import { useCollectionsStore } from '@/stores/collections'
+ import { subscribeMarket, unsubscribeMarket, getSnapshots } from '@/services/api'
+ 
+ vi.mock('@/services/api', () => ({
+   subscribeMarket: vi.fn().mockResolvedValue({ success: true }),
+   unsubscribeMarket: vi.fn().mockResolvedValue({ success: true }),
+   getSnapshots: vi.fn().mockResolvedValue({ snapshots: {} }),
+ }))
+ 
+ describe('useSubscriptionManager 延迟退订', () => {
+   beforeEach(() => {
+@@ -373,10 +374,39 @@ describe('useSubscriptionManager 快照回填（方案 A）', () => {
+     getSnapshotsMock.mockRejectedValue(new Error('network'))
+     renderHook(() => useSubscriptionManager())
+ 
+     act(() => useMarketStore.getState().setVisibleInstrumentIDs(['IF2608']))
+     await act(async () => { vi.advanceTimersByTime(110) })
+ 
+     expect(getSnapshotsMock).toHaveBeenCalled()
+     // 不抛错（测试通过即证明静默）
+   })
+ })
++
++describe('useSubscriptionManager 收藏不再自动订阅', () => {
++  beforeEach(() => {
++    vi.useFakeTimers()
++    vi.clearAllMocks()
++    useMarketStore.setState({
++      visibleInstrumentIDs: [],
++      lockedContracts: new Map(),
++      selectedContracts: new Set(),
++      scrollEndSeq: 0,
++      forceResubscribeSeq: 0,
++    })
++  })
++  afterEach(() => { vi.useRealTimers() })
++
++  it('收藏夹合约不自动订阅：shouldSubscribe 仅可见区 ∪ 锁定（自选扁平收藏已删除）', async () => {
++    renderHook(() => useSubscriptionManager())
++
++    // 播种一个收藏夹（旧扁平收藏 favorites 已删除，订阅管理器不再读取收藏）
++    useCollectionsStore.setState({
++      collections: [{ id: 'coll-1', name: '默认收藏夹', instrumentIDs: ['au2508'] }],
++      loaded: true,
++    })
++    await act(async () => { vi.advanceTimersByTime(110) })
++
++    // 收藏夹合约不应被自动订阅（仅当进入可见区/锁定才订阅）
++    expect(vi.mocked(subscribeMarket)).not.toHaveBeenCalled()
++  })
++})
+diff --git a/frontend/src/hooks/useSubscriptionManager.ts b/frontend/src/hooks/useSubscriptionManager.ts
+index f2ebfc5..170a307 100644
+--- a/frontend/src/hooks/useSubscriptionManager.ts
++++ b/frontend/src/hooks/useSubscriptionManager.ts
+@@ -1,13 +1,12 @@
+ import { useEffect, useRef, useCallback } from 'react'
+ import { useMarketStore } from '@/modules/market/store'
+-import { useContractsStore } from '@/stores/contracts'
+ import { subscribeMarket, unsubscribeMarket, getSnapshots } from '@/services/api'
+ 
+ /**
+  * 延迟退订宽限期（毫秒）。
+  * 从 30s 收紧到 10s：订阅集随滚动膨胀，拖多次后可能顶到 SOFT_LIMIT，
+  * 更短的宽限期能更快释放滑出视野的合约，减缓膨胀。
+  * 注意：宽限期长短不影响「拖动到底不刷新」——那由机制 7（滚动松手立即 diff）
+  * + 拖动中零 HTTP 保证；滑回时重新订阅 + 快照回填仍秒出数据。
+  */
+ const GRACE_MS = 10_000
+@@ -25,66 +24,64 @@ function sameVisibleSet(a: string[] | null, b: string[]): boolean {
+   const set = new Set(b)
+   for (const id of a) {
+     if (!set.has(id)) return false
+   }
+   return true
+ }
+ 
+ export function useSubscriptionManager() {
+   const visibleInstrumentIDs = useMarketStore((s) => s.visibleInstrumentIDs)
+   const lockedContracts = useMarketStore((s) => s.lockedContracts)
+-  const favorites = useContractsStore((s) => s.favorites)
+   const scrollEndSeq = useMarketStore((s) => s.scrollEndSeq)
+   const forceResubscribeSeq = useMarketStore((s) => s.forceResubscribeSeq)
+ 
+   /** 已订阅合约 → 最近可见时间戳（ms） */
+   const subscribedRef = useRef<Map<string, number>>(new Map())
+   /** 宽限期到期重排定时器（由 runFullDiff 调度，到期再检查一次） */
+   const unsubTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+   /** 最近可见区变化时间戳（用于拖动检测） */
+   const recentChangesRef = useRef<number[]>([])
+   /** 是否已完成首次挂载（挂载本身不计入拖动变化，避免把首个可见窗口误判为拖动） */
+   const didMountRef = useRef(false)
+-  /** 上一次可见合约集（拖动检测去重：锁定/自选等非可见变化不喂入拖动判定） */
++  /** 上一次可见合约集（拖动检测去重：锁定等非可见变化不喂入拖动判定） */
+   const prevVisibleRef = useRef<string[] | null>(null)
+   /** 最近一次完整 diff 的定时器（拖动停止后执行） */
+   const fullDiffTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+   /** 已消费的滚动松手信号序号（判重，避免重复处理） */
+   const lastHandledScrollEndRef = useRef(0)
+   /** 已消费的强制重订阅信号序号（判重，避免重复处理） */
+   const lastHandledForceResubscribeRef = useRef(0)
+   /** 始终指向最新 runFullDiff，避免重排定时器闭包捕获旧版本 */
+   const runFullDiffRef = useRef<() => void>(() => {})
+ 
+   const calculateShouldSubscribe = useCallback((): Set<string> => {
+     const shouldSubscribe = new Set<string>()
+     for (const id of visibleInstrumentIDs) shouldSubscribe.add(id)
+-    for (const fav of favorites) shouldSubscribe.add(fav.instrumentID)
+     for (const id of lockedContracts.keys()) shouldSubscribe.add(id)
+     return shouldSubscribe
+-  }, [visibleInstrumentIDs, favorites, lockedContracts])
++  }, [visibleInstrumentIDs, lockedContracts])
+ 
+   /**
+    * LRU 上限保护（共享）：当 subscribedRef 超过 SOFT_LIMIT 时，返回最久未见且
+-   * 已不在 should（可见/自选/锁定）中的合约 ID，按 lastVisible 从旧到新淘汰。
++   * 已不在 should（可见/锁定）中的合约 ID，按 lastVisible 从旧到新淘汰。
+    * extra 为「即将加入但尚未写入 subscribedRef」的订阅数（runFullDiff 用）；
+    * 拖动路径订阅成功后 extra=0（新合约已写入）。
+    * 语义：不减掉刚滑入/可见的合约；淘汰的是早已滑出且最久未见的低优先级合约，
+    * 是拖动持续期间的必要的上限保护。仅计算候选，退订统一走 doUnsubscribe。
+    */
+   const computeLruEvictions = useCallback((should: Set<string>, extra = 0): string[] => {
+     const over = subscribedRef.current.size + extra - SOFT_LIMIT
+     if (over <= 0) return []
+ 
+     const candidates: { id: string; lastVisible: number }[] = []
+     for (const [id, lastVisible] of subscribedRef.current) {
+-      if (should.has(id)) continue // 跳过当前应订阅（可见/自选/锁定）
++      if (should.has(id)) continue // 跳过当前应订阅（可见/锁定）
+       candidates.push({ id, lastVisible })
+     }
+     candidates.sort((a, b) => a.lastVisible - b.lastVisible)
+     const evicted = candidates.slice(0, over).map((c) => c.id)
+     if (evicted.length > 0) {
+       console.warn(
+         `[行情订阅上限] 前端软上限 ${SOFT_LIMIT} 触发：已订阅 ${subscribedRef.current.size}，本次将达 ${subscribedRef.current.size + extra}，超限 ${over}，LRU 淘汰 ${evicted.length} 个最久未见合约：${evicted.slice(0, 8).join(', ')}${evicted.length > 8 ? ' …' : ''}`,
+       )
+     }
+     return evicted
+@@ -243,21 +240,21 @@ export function useSubscriptionManager() {
+       return () => {
+         if (unsubTimerRef.current) clearTimeout(unsubTimerRef.current)
+         if (fullDiffTimerRef.current) clearTimeout(fullDiffTimerRef.current)
+       }
+     }
+ 
+     const now = Date.now()
+     const prevVisible = prevVisibleRef.current
+     prevVisibleRef.current = visibleInstrumentIDs
+     if (didMountRef.current) {
+-      // 仅当可见集真实变化才记录拖动变化：锁定/自选等应订阅集变化（runFullDiff 变化触发本
++      // 仅当可见集真实变化才记录拖动变化：锁定等应订阅集变化（runFullDiff 变化触发本
+       // effect）不参与拖动态判定，否则 T型报价 锁定/解锁合约（可见集不变）会被误判为拖动，
+       // 把该次完整 diff 拖到 500ms 后。
+       if (!sameVisibleSet(prevVisible, visibleInstrumentIDs)) {
+         recentChangesRef.current = [...recentChangesRef.current.filter((t) => now - t < DRAG_WINDOW_MS), now]
+       }
+     } else {
+       // 首次挂载：不计入拖动变化（避免把首个可见窗口误判为拖动，导致首次订阅被拖到停止后）
+       didMountRef.current = true
+     }
+     for (const id of visibleInstrumentIDs) {
+diff --git a/frontend/src/modules/market/MarketPanel.test.tsx b/frontend/src/modules/market/MarketPanel.test.tsx
+index e77856d..a8b4593 100644
+--- a/frontend/src/modules/market/MarketPanel.test.tsx
++++ b/frontend/src/modules/market/MarketPanel.test.tsx
+@@ -129,21 +129,20 @@ describe('MarketPanel', () => {
+     expect(screen.getByText('自选')).toBeInTheDocument()
+   })
+ 
+   it('renders 高级搜索按钮（合并搜索入口）', () => {
+     render(<MarketPanel />)
+     expect(screen.getByTitle('搜索合约')).toBeInTheDocument()
+   })
+ 
+   it('搜索下拉选择合约后：selectedContracts 同步为单选集（锚点守卫通过才能滚动跳转）', async () => {
+     vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
+-    vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
+     useContractsStore.setState({
+       contracts: [
+         { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 1, productClass: '1' },
+         { instrumentID: 'IF2609', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 1, productClass: '1' },
+       ],
+       isLoaded: true,
+     })
+     useMarketStore.setState({
+       snapshots: new Map(),
+       selectedInstrument: null,
+@@ -167,21 +166,20 @@ describe('MarketPanel', () => {
+     expect(useMarketStore.getState().selectedInstrument).toBe('IF2608')
+     expect(useMarketStore.getState().selectedContracts.has('IF2608')).toBe(true)
+     expect(useMarketStore.getState().selectedContracts.size).toBe(1)
+   })
+ 
+   // --- 状态过滤开关 tests ---
+ 
+   /** 设置混合合约（交易中 + 已停牌），返回 vtable options 以检查过滤结果 */
+   function setupMixedContracts() {
+     vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
+-    vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
+     useContractsStore.setState({
+       contracts: [
+         { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 1, productClass: '1' },
+         { instrumentID: 'IF9999', instrumentName: '停牌合约', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '99991231', isTrading: 0, productClass: '1' },
+       ],
+       isLoaded: true,
+     })
+     useMarketStore.setState({
+       snapshots: new Map(),
+       selectedInstrument: null,
+@@ -220,24 +218,23 @@ describe('MarketPanel', () => {
+   it('点击 高级 按钮打开搜索弹窗', async () => {
+     const user = userEvent.setup()
+     render(<MarketPanel />)
+     expect(screen.queryByTestId('instrument-search-modal')).not.toBeInTheDocument()
+     await user.click(screen.getByTitle('搜索合约'))
+     expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
+   })
+ 
+   // --- 标签页打开方式测试 (PR-R13) ---
+ 
+-  /** 设置测试合约数据并阻止 loadAllInstruments/loadFavoriteContracts 覆盖 */
++  /** 设置测试合约数据并阻止 loadAllInstruments 覆盖 */
+   function setupContracts() {
+     vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
+-    vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
+     useContractsStore.setState({
+       contracts: [
+         { instrumentID: 'IF2608', instrumentName: '沪深300', exchangeID: 'CFFEX', productID: 'IF', volumeMultiple: 300, priceTick: 0.2, expireDate: '20260821', isTrading: 1, productClass: '1' },
+       ],
+       isLoaded: true,
+     })
+     useMarketStore.setState({
+       snapshots: new Map([['IF2608', makeSnapshot()]]),
+       selectedInstrument: null,
+     })
+diff --git a/frontend/src/modules/order/OrderQuotePanel.test.tsx b/frontend/src/modules/order/OrderQuotePanel.test.tsx
+index 6411bef..64ec0bd 100644
+--- a/frontend/src/modules/order/OrderQuotePanel.test.tsx
++++ b/frontend/src/modules/order/OrderQuotePanel.test.tsx
+@@ -42,21 +42,20 @@ const IF2608_CONTRACT = {
+   isTrading: 1,
+   productClass: '1',
+ }
+ 
+ describe('OrderQuotePanel', () => {
+   beforeEach(() => {
+     vi.clearAllMocks()
+     useOrderStore.getState().resetOrderForm()
+     useContractsStore.setState({
+       contracts: [IF2608_CONTRACT],
+-      favorites: [],
+       isLoaded: true,
+     })
+   })
+ 
+   it('渲染合约代码与名称', () => {
+     render(<OrderQuotePanel instrumentID="IF2608" snapshot={makeSnapshot()} priceTick={0.2} />)
+     // IF2608 出现在合约头与盘口头两处
+     expect(screen.getAllByText('IF2608').length).toBeGreaterThanOrEqual(1)
+     expect(screen.getByText('沪深300')).toBeInTheDocument()
+   })
+diff --git a/frontend/src/modules/order/QuoteStatsBar.test.tsx b/frontend/src/modules/order/QuoteStatsBar.test.tsx
+index 64580cd..20d1fe5 100644
+--- a/frontend/src/modules/order/QuoteStatsBar.test.tsx
++++ b/frontend/src/modules/order/QuoteStatsBar.test.tsx
+@@ -41,21 +41,20 @@ const IF2608_CONTRACT = {
+   expireDate: '2026-08-15',
+   isTrading: 1,
+   productClass: '1',
+ }
+ 
+ describe('QuoteStatsBar', () => {
+   beforeEach(() => {
+     useMarketStore.setState({ snapshots: new Map() })
+     useContractsStore.setState({
+       contracts: [IF2608_CONTRACT],
+-      favorites: [],
+       isLoaded: true,
+     })
+   })
+ 
+   it('渲染 今开/昨结/最高/最低/成交量/持仓量 六项', () => {
+     useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) })
+     render(<QuoteStatsBar instrumentID="IF2608" />)
+     const bar = screen.getByTestId('quote-stats-bar')
+     expect(bar).toBeInTheDocument()
+     ;['今开', '昨结', '最高', '最低', '成交量', '持仓量'].forEach((label) => {
+@@ -83,16 +82,16 @@ describe('QuoteStatsBar', () => {
+ 
+   it('无快照时全部显示 — 占位', () => {
+     render(<QuoteStatsBar instrumentID="IF2608" />)
+     ;['今开', '昨结', '最高', '最低', '成交量', '持仓量'].forEach((label) => {
+       expect(screen.getByTestId(`qs-${label}`).textContent).toBe('--')
+     })
+   })
+ 
+   it('快照无 priceTick 时按默认 0.2 精度（期权等取合约价）', () => {
+     // 无合约匹配 → priceTick 默认 0.2
+-    useContractsStore.setState({ contracts: [], favorites: [], isLoaded: true })
++    useContractsStore.setState({ contracts: [], isLoaded: true })
+     useMarketStore.setState({ snapshots: new Map([['IF2608', makeSnapshot()]]) })
+     render(<QuoteStatsBar instrumentID="IF2608" />)
+     expect(screen.getByTestId('qs-今开').textContent).toBe('4680.0')
+   })
+ })
+diff --git a/frontend/src/modules/order/TradeParams.test.tsx b/frontend/src/modules/order/TradeParams.test.tsx
+index 175d4d5..323ca7a 100644
+--- a/frontend/src/modules/order/TradeParams.test.tsx
++++ b/frontend/src/modules/order/TradeParams.test.tsx
+@@ -28,21 +28,20 @@ const IF2608_CONTRACT = {
+ function setForm(partial: Partial<ReturnType<typeof useOrderStore.getState>['orderForm']>) {
+   useOrderStore.setState({ orderForm: { ...useOrderStore.getState().orderForm, ...partial } })
+ }
+ 
+ describe('TradeParams（任务#4）', () => {
+   beforeEach(() => {
+     setForm({ instrumentID: 'IF2608', volumeTotalOriginal: 1, orderPriceType: 'limit' })
+     useOrderStore.setState({ volumeStep: 1 })
+     useContractsStore.setState({
+       contracts: [IF2608_CONTRACT],
+-      favorites: [],
+       isLoaded: true,
+     })
+   })
+ 
+   it('渲染 开平/投保/有效期 三个下拉与手数步进', () => {
+     render(<TradeParams instrumentID="IF2608" />)
+     expect(screen.getByLabelText('开平')).toBeInTheDocument()
+     expect(screen.getByLabelText('投保')).toBeInTheDocument()
+     expect(screen.getByLabelText('有效期')).toBeInTheDocument()
+     expect(screen.getByTestId('tp-volume')).toBeInTheDocument()
+@@ -89,21 +88,20 @@ describe('TradeParams（任务#4）', () => {
+ 
+   it('市价单上限 60 手提示', () => {
+     setForm({ orderPriceType: 'market' })
+     render(<TradeParams instrumentID="IF2608" />)
+     expect(screen.getByText('最大 60 手')).toBeInTheDocument()
+   })
+ 
+   it('期权限价单上限 100 手提示', () => {
+     useContractsStore.setState({
+       contracts: [{ ...IF2608_CONTRACT, productClass: '2' }],
+-      favorites: [],
+       isLoaded: true,
+     })
+     render(<TradeParams instrumentID="IF2608" />)
+     expect(screen.getByText('最大 100 手')).toBeInTheDocument()
+   })
+ 
+   it('手数超限 → 显示错误提示', () => {
+     setForm({ volumeTotalOriginal: 600 })
+     render(<TradeParams instrumentID="IF2608" />)
+     expect(screen.getByText('数量不能超过500手')).toBeInTheDocument()
+@@ -246,58 +244,55 @@ describe('TradeParams（任务#4）', () => {
+       const input = screen.getByPlaceholderText('搜索合约...') as HTMLInputElement
+       expect(input.value).toBe('IF2608')
+     })
+ 
+     it('搜索并选择合约 → setOrderForm({ instrumentID }) 切换', () => {
+       useContractsStore.setState({
+         contracts: [
+           IF2608_CONTRACT,
+           { ...IF2608_CONTRACT, instrumentID: 'IF2609' },
+         ],
+-        favorites: [],
+         isLoaded: true,
+       })
+       render(<TradeParams instrumentID="IF2608" />)
+       const input = screen.getByPlaceholderText('搜索合约...')
+       fireEvent.change(input, { target: { value: 'IF2609' } })
+       fireEvent.mouseDown(screen.getByText('IF2609'))
+       expect(useOrderStore.getState().orderForm.instrumentID).toBe('IF2609')
+     })
+ 
+     it('选择新合约后输入框回显新合约（key 随 activeInstrument 重挂载）', () => {
+       useContractsStore.setState({
+         contracts: [
+           IF2608_CONTRACT,
+           { ...IF2608_CONTRACT, instrumentID: 'IF2609' },
+         ],
+-        favorites: [],
+         isLoaded: true,
+       })
+       const { rerender } = render(<TradeParams instrumentID="IF2608" />)
+       const input = screen.getByPlaceholderText('搜索合约...') as HTMLInputElement
+       fireEvent.change(input, { target: { value: 'IF2609' } })
+       fireEvent.mouseDown(screen.getByText('IF2609'))
+       // orderForm.instrumentID 已切换 → key 变化强制重挂载 → 输入框回显新合约
+       expect(useOrderStore.getState().orderForm.instrumentID).toBe('IF2609')
+       rerender(<TradeParams instrumentID="IF2609" />)
+       const input2 = screen.getByPlaceholderText('搜索合约...') as HTMLInputElement
+       expect(input2.value).toBe('IF2609')
+     })
+ 
+     it('浮动窗模式选择新合约 → 触发 onSwitch 联动切换所属标签页合约', () => {
+       const onSwitch = vi.fn()
+       useContractsStore.setState({
+         contracts: [
+           IF2608_CONTRACT,
+           { ...IF2608_CONTRACT, instrumentID: 'IF2609' },
+         ],
+-        favorites: [],
+         isLoaded: true,
+       })
+       render(<TradeParams instrumentID="IF2608" onSwitch={onSwitch} />)
+       const input = screen.getByPlaceholderText('搜索合约...')
+       fireEvent.change(input, { target: { value: 'IF2609' } })
+       fireEvent.mouseDown(screen.getByText('IF2609'))
+       expect(onSwitch).toHaveBeenCalledWith('IF2609')
+     })
+   })
+ 
+diff --git a/frontend/src/pages/__tests__/KLinePage.test.tsx b/frontend/src/pages/__tests__/KLinePage.test.tsx
+index b257de7..cfee9c6 100644
+--- a/frontend/src/pages/__tests__/KLinePage.test.tsx
++++ b/frontend/src/pages/__tests__/KLinePage.test.tsx
+@@ -52,21 +52,20 @@ describe('KLinePage', () => {
+           instrumentName: 'rb2610',
+           exchangeID: 'SHFE',
+           productID: 'rb',
+           volumeMultiple: 10,
+           priceTick: 1,
+           expireDate: '2026-10-15',
+           isTrading: 1,
+           productClass: '1',
+         },
+       ],
+-      favorites: [],
+       isLoaded: true,
+     });
+     // Set up tab store：K线标签页
+     useTabStore.setState({
+       tabs: [
+         { id: 'tab-market', type: 'market', title: '📊 行情', props: {}, closable: false },
+         { id: 'tab-kline-IF2608', type: 'kline', title: '📈 K线-IF2608', props: { instrumentID: 'IF2608' }, closable: true },
+       ],
+       activeTabId: 'tab-kline-IF2608',
+     });
+diff --git a/frontend/src/pages/__tests__/OrderPage.test.tsx b/frontend/src/pages/__tests__/OrderPage.test.tsx
+index ea87aab..bb17d71 100644
+--- a/frontend/src/pages/__tests__/OrderPage.test.tsx
++++ b/frontend/src/pages/__tests__/OrderPage.test.tsx
+@@ -53,21 +53,20 @@ function makeSnapshot(overrides?: Partial<MarketSnapshot>): MarketSnapshot {
+     ...overrides,
+   } as MarketSnapshot;
+ }
+ 
+ describe('OrderPage', () => {
+   beforeEach(() => {
+     vi.clearAllMocks();
+     useOrderStore.getState().resetOrderForm();
+     useContractsStore.setState({
+       contracts: [IF2608_CONTRACT],
+-      favorites: [],
+       isLoaded: true,
+     });
+     useMarketStore.setState({ snapshots: new Map() });
+   });
+ 
+   // ── 正常路径 ──
+ 
+   it('should render title bar', () => {
+     render(<OrderPage />);
+     expect(screen.getByText('📝 报单')).toBeDefined();
+diff --git a/frontend/src/stores/contracts.test.ts b/frontend/src/stores/contracts.test.ts
+index 0f84ccf..a5448f1 100644
+--- a/frontend/src/stores/contracts.test.ts
++++ b/frontend/src/stores/contracts.test.ts
+@@ -1,21 +1,17 @@
+ import { describe, it, expect, beforeEach, vi } from 'vitest'
+ import { useContractsStore } from './contracts'
+-import { useUserPrefsStore } from './userPrefs'
+ import type { ContractInfo } from '@/services/types'
+ 
+ // Mock API modules
+ vi.mock('@/services/api', () => ({
+   getInstruments: vi.fn(),
+-  getInstrumentsByIds: vi.fn(),
+-  subscribeMarket: vi.fn(),
+-  unsubscribeMarket: vi.fn(),
+ }))
+ 
+ const mockContract: ContractInfo = {
+   instrumentID: 'au2406',
+   instrumentName: '黄金2406',
+   exchangeID: 'SHFE',
+   productID: 'au',
+   volumeMultiple: 1000,
+   priceTick: 0.02,
+   expireDate: '2024-06-15',
+@@ -30,30 +26,28 @@ const mockContract2: ContractInfo = {
+   productID: 'rb',
+   volumeMultiple: 10,
+   priceTick: 1,
+   expireDate: '2024-06-15',
+   isTrading: 1,
+   productClass: "1",
+ }
+ 
+ describe('useContractsStore', () => {
+   beforeEach(() => {
+-    useContractsStore.setState({ contracts: [], favorites: [], isLoaded: false })
+-    useUserPrefsStore.setState({ selectedContracts: [], hotKeys: { buy: 'b', sell: 's', cancel: 'c', reverse: '', lock: '', batchCancel: 'Escape', openOrder: '', openKline: '', openSettings: '' } })
++    useContractsStore.setState({ contracts: [], isLoaded: false })
+     localStorage.clear()
+     vi.clearAllMocks()
+   })
+ 
+   it('初始状态：合约列表为空', () => {
+     const state = useContractsStore.getState()
+     expect(state.contracts).toEqual([])
+-    expect(state.favorites).toEqual([])
+     expect(state.isLoaded).toBe(false)
+   })
+ 
+   it('setContracts 批量设置合约列表', () => {
+     useContractsStore.getState().setContracts([mockContract])
+     expect(useContractsStore.getState().contracts).toEqual([mockContract])
+   })
+ 
+   // --- loadAllInstruments tests ---
+ 
+@@ -69,73 +63,11 @@ describe('useContractsStore', () => {
+   })
+ 
+   it('loadAllInstruments API 失败时不设置 isLoaded', async () => {
+     const { getInstruments } = await import('@/services/api')
+     vi.mocked(getInstruments).mockRejectedValue(new Error('network error'))
+ 
+     await useContractsStore.getState().loadAllInstruments()
+ 
+     expect(useContractsStore.getState().isLoaded).toBe(false)
+   })
+-
+-  // --- loadFavoriteContracts tests ---
+-
+-  it('loadFavoriteContracts 从 localStorage 加载收藏合约（订阅由订阅管理器负责）', async () => {
+-    const { getInstrumentsByIds, subscribeMarket } = await import('@/services/api')
+-    vi.mocked(getInstrumentsByIds).mockResolvedValue({ instruments: [mockContract], count: 1 })
+-
+-    useUserPrefsStore.getState().addSelectedContract('au2406')
+-    useUserPrefsStore.getState().saveToLocalStorage()
+-
+-    await useContractsStore.getState().loadFavoriteContracts()
+-
+-    expect(getInstrumentsByIds).toHaveBeenCalledWith(['au2406'])
+-    expect(subscribeMarket).not.toHaveBeenCalled()
+-    expect(useContractsStore.getState().favorites).toEqual([mockContract])
+-  })
+-
+-  it('loadFavoriteContracts 无收藏时不调用 API', async () => {
+-    const { getInstrumentsByIds } = await import('@/services/api')
+-
+-    await useContractsStore.getState().loadFavoriteContracts()
+-
+-    expect(getInstrumentsByIds).not.toHaveBeenCalled()
+-    expect(useContractsStore.getState().favorites).toEqual([])
+-  })
+-
+-  // --- addToFavorites tests ---
+-
+-  it('addToFavorites 添加到收藏（订阅由订阅管理器负责）', async () => {
+-    const { subscribeMarket } = await import('@/services/api')
+-
+-    await useContractsStore.getState().addToFavorites(mockContract)
+-
+-    expect(useContractsStore.getState().favorites).toEqual([mockContract])
+-    expect(useUserPrefsStore.getState().selectedContracts).toContain('au2406')
+-    expect(subscribeMarket).not.toHaveBeenCalled()
+-  })
+-
+-  it('addToFavorites 重复添加不产生重复', async () => {
+-    const { subscribeMarket } = await import('@/services/api')
+-    vi.mocked(subscribeMarket).mockResolvedValue({ success: true, added: ['au2406'], alreadySubscribed: [] })
+-
+-    await useContractsStore.getState().addToFavorites(mockContract)
+-    await useContractsStore.getState().addToFavorites(mockContract)
+-
+-    expect(useContractsStore.getState().favorites).toHaveLength(1)
+-  })
+-
+-  // --- removeFromFavorites tests ---
+-
+-  it('removeFromFavorites 从收藏移除（退订由订阅管理器负责）', async () => {
+-    const { unsubscribeMarket } = await import('@/services/api')
+-
+-    useContractsStore.setState({ favorites: [mockContract] })
+-    useUserPrefsStore.getState().addSelectedContract('au2406')
+-
+-    await useContractsStore.getState().removeFromFavorites('au2406')
+-
+-    expect(useContractsStore.getState().favorites).toEqual([])
+-    expect(useUserPrefsStore.getState().selectedContracts).not.toContain('au2406')
+-    expect(unsubscribeMarket).not.toHaveBeenCalled()
+-  })
+ })
+diff --git a/frontend/src/stores/contracts.ts b/frontend/src/stores/contracts.ts
+index 25f8db9..803c07e 100644
+--- a/frontend/src/stores/contracts.ts
++++ b/frontend/src/stores/contracts.ts
+@@ -1,99 +1,31 @@
+ import { create } from 'zustand'
+ import type { ContractInfo } from '@/services/types'
+-import { useUserPrefsStore } from './userPrefs'
+-import {
+-  getInstruments,
+-  getInstrumentsByIds,
+-} from '@/services/api'
++import { getInstruments } from '@/services/api'
+ 
+ interface ContractsStore {
+   /** 全量合约列表（从 API 加载） */
+   contracts: ContractInfo[]
+-  /** 收藏合约列表（用户管理，自动订阅） */
+-  favorites: ContractInfo[]
+   /** 是否已加载全量合约 */
+   isLoaded: boolean
+   /** 批量设置合约列表 */
+   setContracts: (contracts: ContractInfo[]) => void
+   /** 加载全量合约 */
+   loadAllInstruments: () => Promise<void>
+-  /** 加载收藏合约并订阅 */
+-  loadFavoriteContracts: () => Promise<void>
+-  /** 添加收藏并订阅 */
+-  addToFavorites: (contract: ContractInfo) => Promise<boolean>
+-  /** 移除收藏并取消订阅 */
+-  removeFromFavorites: (instrumentId: string) => Promise<void>
+ }
+ 
+-export const useContractsStore = create<ContractsStore>((set, get) => ({
++export const useContractsStore = create<ContractsStore>((set) => ({
+   contracts: [],
+-  favorites: [],
+   isLoaded: false,
+ 
+   setContracts: (contracts) => set({ contracts }),
+ 
+   /** 从 API 加载全量合约 */
+   loadAllInstruments: async () => {
+     try {
+       const result = await getInstruments()
+       set({ contracts: result.instruments, isLoaded: true })
+     } catch (err) {
+       console.error('[contracts] Failed to load all instruments:', err)
+     }
+   },
+-
+-  /** 从 localStorage 加载收藏合约并订阅 */
+-  loadFavoriteContracts: async () => {
+-    const prefs = useUserPrefsStore.getState()
+-    prefs.loadFromLocalStorage()
+-    const selectedIds = useUserPrefsStore.getState().selectedContracts
+-
+-    if (selectedIds.length === 0) {
+-      set({ favorites: [] })
+-      return
+-    }
+-
+-    try {
+-      const result = await getInstrumentsByIds(selectedIds)
+-      if (result.instruments?.length) {
+-        // 清理无效 ID（已下架的合约）
+-        const validIds = new Set(result.instruments.map((c) => c.instrumentID))
+-        const invalidIds = selectedIds.filter((id) => !validIds.has(id))
+-        if (invalidIds.length > 0) {
+-          const prefs = useUserPrefsStore.getState()
+-          invalidIds.forEach((id) => prefs.removeSelectedContract(id))
+-          prefs.saveToLocalStorage()
+-        }
+-
+-        set({ favorites: result.instruments })
+-      }
+-    } catch (err) {
+-      console.error('[contracts] Failed to load favorite contracts:', err)
+-    }
+-  },
+-
+-  /** 添加收藏（订阅由订阅管理器 diff 负责，失败静默重试） */
+-  addToFavorites: async (contract) => {
+-    const { favorites } = get()
+-    if (favorites.some((c) => c.instrumentID === contract.instrumentID)) return true
+-
+-    // 持久化到 userPrefs
+-    const prefs = useUserPrefsStore.getState()
+-    prefs.addSelectedContract(contract.instrumentID)
+-    prefs.saveToLocalStorage()
+-
+-    set({ favorites: [...favorites, contract] })
+-    return true
+-  },
+-
+-  /** 移除收藏（退订由订阅管理器 diff 负责） */
+-  removeFromFavorites: async (instrumentId) => {
+-    // 从 userPrefs 移除
+-    const prefs = useUserPrefsStore.getState()
+-    prefs.removeSelectedContract(instrumentId)
+-    prefs.saveToLocalStorage()
+-
+-    const { favorites } = get()
+-    set({ favorites: favorites.filter((c) => c.instrumentID !== instrumentId) })
+-  },
+ }))
+diff --git a/frontend/src/stores/userPrefs.test.ts b/frontend/src/stores/userPrefs.test.ts
+index 5867c1f..cb68339 100644
+--- a/frontend/src/stores/userPrefs.test.ts
++++ b/frontend/src/stores/userPrefs.test.ts
+@@ -1,87 +1,63 @@
+ import { describe, it, expect, beforeEach } from 'vitest'
+ import { useUserPrefsStore, DEFAULT_HOT_KEYS } from './userPrefs'
+ 
+ const STORAGE_KEY = 'simnow-user-prefs'
+ 
+ describe('useUserPrefsStore', () => {
+   beforeEach(() => {
+     localStorage.clear()
+     // 重置 store 为默认值
+     useUserPrefsStore.setState({
+-      selectedContracts: [],
+       collections: [],
+       hotKeys: { ...DEFAULT_HOT_KEYS },
+     })
+   })
+ 
+   it('初始状态：默认快捷键配置', () => {
+     const { hotKeys } = useUserPrefsStore.getState()
+     expect(hotKeys.buy).toBe('b')
+     expect(hotKeys.sell).toBe('s')
+     expect(hotKeys.cancel).toBe('c')
+   })
+ 
+   it('setHotKey 更新指定动作的快捷键', () => {
+     useUserPrefsStore.getState().setHotKey('buy', 'F1')
+     expect(useUserPrefsStore.getState().hotKeys.buy).toBe('F1')
+   })
+ 
+-  it('addSelectedContract 添加自选合约', () => {
+-    useUserPrefsStore.getState().addSelectedContract('au2406')
+-    expect(useUserPrefsStore.getState().selectedContracts).toEqual(['au2406'])
+-  })
+-
+-  it('addSelectedContract 重复添加不会产生重复项', () => {
+-    useUserPrefsStore.getState().addSelectedContract('au2406')
+-    useUserPrefsStore.getState().addSelectedContract('au2406')
+-    expect(useUserPrefsStore.getState().selectedContracts).toEqual(['au2406'])
+-  })
+-
+-  it('removeSelectedContract 移除自选合约', () => {
+-    useUserPrefsStore.getState().addSelectedContract('au2406')
+-    useUserPrefsStore.getState().addSelectedContract('rb2406')
+-    useUserPrefsStore.getState().removeSelectedContract('au2406')
+-    expect(useUserPrefsStore.getState().selectedContracts).toEqual(['rb2406'])
+-  })
+-
+   it('saveToLocalStorage 持久化到 localStorage', () => {
+-    useUserPrefsStore.getState().addSelectedContract('au2406')
+     useUserPrefsStore.getState().setHotKey('buy', 'F1')
+     useUserPrefsStore.getState().saveToLocalStorage()
+ 
+     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+-    expect(stored.selectedContracts).toEqual(['au2406'])
+     expect(stored.hotKeys.buy).toBe('F1')
+   })
+ 
+   it('loadFromLocalStorage 从 localStorage 恢复状态', () => {
+     localStorage.setItem(
+       STORAGE_KEY,
+       JSON.stringify({
+-        selectedContracts: ['rb2406'],
+         hotKeys: { buy: 'F2', sell: 's', cancel: 'c' },
+       })
+     )
+ 
+     useUserPrefsStore.getState().loadFromLocalStorage()
+ 
+     const state = useUserPrefsStore.getState()
+-    expect(state.selectedContracts).toEqual(['rb2406'])
+     expect(state.hotKeys.buy).toBe('F2')
+   })
+ 
+   it('loadFromLocalStorage localStorage 为空时保持默认值', () => {
+     useUserPrefsStore.getState().loadFromLocalStorage()
+ 
+     const state = useUserPrefsStore.getState()
+-    expect(state.selectedContracts).toEqual([])
+     expect(state.hotKeys).toEqual(DEFAULT_HOT_KEYS)
+   })
+ })
+ 
+ describe('useUserPrefsStore collections', () => {
+   beforeEach(() => {
+     localStorage.clear()
+     useUserPrefsStore.setState({
+       collections: [],
+       hotKeys: { ...DEFAULT_HOT_KEYS },
+diff --git a/frontend/src/stores/userPrefs.ts b/frontend/src/stores/userPrefs.ts
+index ce0a260..b2aef3b 100644
+--- a/frontend/src/stores/userPrefs.ts
++++ b/frontend/src/stores/userPrefs.ts
+@@ -35,74 +35,58 @@ export const DEFAULT_QUICK_TRADE_CONFIG: QuickTradeConfig = {
+       offsetTicks: 1,
+       timeCondition: 'gfd',
+     },
+     executionMode: 'serial',
+   },
+   confirmBeforeExecute: true,
+ }
+ 
+ interface UserPrefsStore {
+   collections: Collection[]
+-  /** 已废弃：保留至 Task 7 与 contracts.ts 收藏 action 一并移除（Task 1 移除会破坏 contracts.test.ts 运行） */
+-  selectedContracts: string[]
+   hotKeys: HotKeyConfig
+   quickTradeConfig: QuickTradeConfig
+   setHotKey: (action: string, key: string) => void
+   setHotKeys: (hotKeys: HotKeyConfig) => void
+   setQuickTradeConfig: (config: Partial<QuickTradeConfig>) => void
+   setCollections: (collections: Collection[]) => void
+-  addSelectedContract: (instrumentId: string) => void
+-  removeSelectedContract: (instrumentId: string) => void
+   saveToLocalStorage: () => void
+   loadFromLocalStorage: () => void
+ }
+ 
+ export const useUserPrefsStore = create<UserPrefsStore>((set, get) => ({
+   collections: [],
+-  selectedContracts: [],
+   hotKeys: { ...DEFAULT_HOT_KEYS },
+   quickTradeConfig: { ...DEFAULT_QUICK_TRADE_CONFIG },
+ 
+   setHotKey: (action, key) =>
+     set((state) => ({ hotKeys: { ...state.hotKeys, [action]: key } })),
+   setHotKeys: (hotKeys) => set({ hotKeys: { ...hotKeys } }),
+   setQuickTradeConfig: (config) =>
+     set((state) => ({ quickTradeConfig: { ...state.quickTradeConfig, ...config } })),
+   setCollections: (collections) => set({ collections }),
+ 
+-  addSelectedContract: (instrumentId) =>
+-    set((state) => {
+-      if (state.selectedContracts.includes(instrumentId)) return state
+-      return { selectedContracts: [...state.selectedContracts, instrumentId] }
+-    }),
+-  removeSelectedContract: (instrumentId) =>
+-    set((state) => ({
+-      selectedContracts: state.selectedContracts.filter((id) => id !== instrumentId),
+-    })),
+-
+   saveToLocalStorage: () => {
+-    const { collections, selectedContracts, hotKeys, quickTradeConfig } = get()
+-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ collections, selectedContracts, hotKeys, quickTradeConfig }))
++    const { collections, hotKeys, quickTradeConfig } = get()
++    localStorage.setItem(STORAGE_KEY, JSON.stringify({ collections, hotKeys, quickTradeConfig }))
+   },
+ 
+   loadFromLocalStorage: () => {
+     try {
+       const raw = localStorage.getItem(STORAGE_KEY)
+       if (!raw) return
+       const data = JSON.parse(raw)
+       let collections: Collection[] = Array.isArray(data.collections) ? data.collections : []
+       // 迁移：旧版 selectedContracts（扁平收藏） → 默认收藏夹（仅当无 collections 时）
+       const legacy = Array.isArray(data.selectedContracts) ? data.selectedContracts : []
+       if (collections.length === 0 && legacy.length > 0) {
+         collections = [{ id: 'coll-default', name: '默认收藏夹', instrumentIDs: legacy }]
+       }
+       set({
+         collections,
+-        selectedContracts: Array.isArray(data.selectedContracts) ? data.selectedContracts : [],
+         hotKeys: data.hotKeys ?? { ...DEFAULT_HOT_KEYS },
+         quickTradeConfig: data.quickTradeConfig ?? { ...DEFAULT_QUICK_TRADE_CONFIG },
+       })
+     } catch {
+       // localStorage 数据损坏时忽略
+     }
+   },
+ }))

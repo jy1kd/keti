@@ -1,0 +1,2588 @@
+# Review package: 3cfb332..HEAD
+
+## Commits
+a21e8e8 feat(options): T型报价独立为悬浮标签页（多实例自包含，去IV，下拉排序，多入口）
+
+## Files changed
+ frontend/dist-electron/menuTemplate.cjs            |   1 +
+ frontend/dist-electron/menuTemplate.d.ts           |   2 +-
+ frontend/dist-electron/menuTemplate.d.ts.map       |   2 +-
+ frontend/dist-electron/menuTemplate.js.map         |   2 +-
+ frontend/dist-electron/preload.d.ts                |   2 +-
+ frontend/dist-electron/preload.d.ts.map            |   2 +-
+ frontend/dist-electron/preload.js.map              |   2 +-
+ frontend/electron/__tests__/menuManager.test.ts    |  11 +-
+ frontend/electron/__tests__/menuTemplate.test.ts   |  13 +-
+ frontend/electron/__tests__/trayManager.test.ts    |   4 +-
+ frontend/electron/menuTemplate.ts                  |   3 +-
+ frontend/electron/preload.ts                       |   6 +-
+ frontend/src/App.test.tsx                          |  13 +
+ frontend/src/App.tsx                               |   4 +
+ frontend/src/components/TabContent/index.test.tsx  |  35 ++-
+ frontend/src/components/TabContent/index.tsx       |   3 +
+ frontend/src/modules/options/OptionsPanel.test.tsx | 127 +++++---
+ frontend/src/modules/options/OptionsPanel.tsx      | 246 +++++++++-------
+ frontend/src/modules/options/TQuoteTable.test.tsx  |  52 +---
+ frontend/src/modules/options/TQuoteTable.tsx       |  21 +-
+ frontend/src/modules/options/TQuoteView.test.tsx   | 323 ++++++++-------------
+ frontend/src/modules/options/TQuoteView.tsx        | 122 ++++----
+ frontend/src/modules/options/store.test.ts         | 262 -----------------
+ frontend/src/modules/options/store.ts              |  87 ------
+ frontend/src/services/electron.ts                  |   2 +-
+ frontend/src/stores/tabs.test.ts                   |   1 +
+ frontend/src/stores/tabs.ts                        |   2 +
+ frontend/src/utils/openFloatingTab.ts              |  10 +
+ 28 files changed, 508 insertions(+), 852 deletions(-)
+
+## Diff
+diff --git a/frontend/dist-electron/menuTemplate.cjs b/frontend/dist-electron/menuTemplate.cjs
+index 315ddc4..1accee7 100644
+--- a/frontend/dist-electron/menuTemplate.cjs
++++ b/frontend/dist-electron/menuTemplate.cjs
+@@ -16,20 +16,21 @@ const menuActions_1 = require('./menuActions.cjs');
+  */
+ function getAppMenuDef() {
+     return [
+         {
+             id: 'market',
+             label: '行情',
+             submenu: [
+                 { id: 'market-all', label: '📊 期货', action: { type: 'market-view', view: 'all' } },
+                 { id: 'market-options', label: '📉 期权', action: { type: 'market-view', view: 'options' } },
+                 { id: 'market-favorites', label: '⭐ 自选行情', action: { type: 'market-view', view: 'favorites' } },
++                { id: 'market-tquote', label: '📉 T型报价', action: { type: 'open-floating', tab: 'tquote' } },
+                 { id: 'market-sep1', type: 'separator' },
+                 { id: 'market-new-window', label: '🪟 在新窗口打开', action: { type: 'open-market-window' } },
+             ],
+         },
+         {
+             id: 'function',
+             label: '功能',
+             submenu: [
+                 { id: 'func-order', label: '📝 报单窗口', action: { type: 'open-floating', tab: 'order' } },
+                 { id: 'func-kline', label: '📈 K线窗口', action: { type: 'open-floating', tab: 'kline' } },
+diff --git a/frontend/dist-electron/menuTemplate.d.ts b/frontend/dist-electron/menuTemplate.d.ts
+index 15ba5ee..5af6d55 100644
+--- a/frontend/dist-electron/menuTemplate.d.ts
++++ b/frontend/dist-electron/menuTemplate.d.ts
+@@ -1,21 +1,21 @@
+ /**
+  * Shared Menu Template
+  *
+  * Single source of truth for the application menus.
+  * The top app menu and the tray context menu both build from getAppMenuDef(),
+  * so adding/removing items in one place keeps both in sync.
+  */
+ import type { MenuItemConstructorOptions } from 'electron';
+ import type { MenuContext } from './menuActions';
+ export type MarketView = 'all' | 'options' | 'favorites';
+-export type FloatingTab = 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor';
++export type FloatingTab = 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor' | 'tquote';
+ export type MenuAction = {
+     type: 'market-view';
+     view: MarketView;
+ } | {
+     type: 'open-floating';
+     tab: FloatingTab;
+ } | {
+     type: 'open-market-window';
+ } | {
+     type: 'toggle-perf';
+diff --git a/frontend/dist-electron/menuTemplate.d.ts.map b/frontend/dist-electron/menuTemplate.d.ts.map
+index becba8d..2f640fa 100644
+--- a/frontend/dist-electron/menuTemplate.d.ts.map
++++ b/frontend/dist-electron/menuTemplate.d.ts.map
+@@ -1 +1 @@
+-{"version":3,"file":"menuTemplate.d.ts","sourceRoot":"","sources":["../electron/menuTemplate.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAEH,OAAO,KAAK,EAAE,0BAA0B,EAAE,MAAM,UAAU,CAAC;AAE3D,OAAO,KAAK,EAAE,WAAW,EAAE,MAAM,eAAe,CAAC;AAEjD,MAAM,MAAM,UAAU,GAAG,KAAK,GAAG,SAAS,GAAG,WAAW,CAAC;AACzD,MAAM,MAAM,WAAW,GAAG,OAAO,GAAG,OAAO,GAAG,OAAO,GAAG,UAAU,GAAG,aAAa,CAAC;AAEnF,MAAM,MAAM,UAAU,GAClB;IAAE,IAAI,EAAE,aAAa,CAAC;IAAC,IAAI,EAAE,UAAU,CAAA;CAAE,GACzC;IAAE,IAAI,EAAE,eAAe,CAAC;IAAC,GAAG,EAAE,WAAW,CAAA;CAAE,GAC3C;IAAE,IAAI,EAAE,oBAAoB,CAAA;CAAE,GAC9B;IAAE,IAAI,EAAE,aAAa,CAAA;CAAE,GACvB;IAAE,IAAI,EAAE,MAAM,CAAA;CAAE,CAAC;AAErB,MAAM,WAAW,WAAW;IAC1B,EAAE,EAAE,MAAM,CAAC;IACX,KAAK,CAAC,EAAE,MAAM,CAAC;IACf,IAAI,CAAC,EAAE,QAAQ,GAAG,WAAW,CAAC;IAC9B,MAAM,CAAC,EAAE,UAAU,CAAC;IACpB,OAAO,CAAC,EAAE,WAAW,EAAE,CAAC;CACzB;AAED,MAAM,WAAW,YAAY;IAC3B,qCAAqC;IACrC,OAAO,CAAC,EAAE,MAAM,EAAE,CAAC;CACpB;AAED;;;GAGG;AACH,wBAAgB,aAAa,IAAI,WAAW,EAAE,CAwC7C;AAED,qDAAqD;AACrD,wBAAgB,gBAAgB,CAC9B,GAAG,EAAE,WAAW,EAAE,EAClB,GAAG,EAAE,WAAW,EAChB,OAAO,GAAE,YAAiB,GACzB,0BAA0B,EAAE,CAgB9B"}
+\ No newline at end of file
++{"version":3,"file":"menuTemplate.d.ts","sourceRoot":"","sources":["../electron/menuTemplate.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAEH,OAAO,KAAK,EAAE,0BAA0B,EAAE,MAAM,UAAU,CAAC;AAE3D,OAAO,KAAK,EAAE,WAAW,EAAE,MAAM,eAAe,CAAC;AAEjD,MAAM,MAAM,UAAU,GAAG,KAAK,GAAG,SAAS,GAAG,WAAW,CAAC;AACzD,MAAM,MAAM,WAAW,GAAG,OAAO,GAAG,OAAO,GAAG,OAAO,GAAG,UAAU,GAAG,aAAa,GAAG,QAAQ,CAAC;AAE9F,MAAM,MAAM,UAAU,GAClB;IAAE,IAAI,EAAE,aAAa,CAAC;IAAC,IAAI,EAAE,UAAU,CAAA;CAAE,GACzC;IAAE,IAAI,EAAE,eAAe,CAAC;IAAC,GAAG,EAAE,WAAW,CAAA;CAAE,GAC3C;IAAE,IAAI,EAAE,oBAAoB,CAAA;CAAE,GAC9B;IAAE,IAAI,EAAE,aAAa,CAAA;CAAE,GACvB;IAAE,IAAI,EAAE,MAAM,CAAA;CAAE,CAAC;AAErB,MAAM,WAAW,WAAW;IAC1B,EAAE,EAAE,MAAM,CAAC;IACX,KAAK,CAAC,EAAE,MAAM,CAAC;IACf,IAAI,CAAC,EAAE,QAAQ,GAAG,WAAW,CAAC;IAC9B,MAAM,CAAC,EAAE,UAAU,CAAC;IACpB,OAAO,CAAC,EAAE,WAAW,EAAE,CAAC;CACzB;AAED,MAAM,WAAW,YAAY;IAC3B,qCAAqC;IACrC,OAAO,CAAC,EAAE,MAAM,EAAE,CAAC;CACpB;AAED;;;GAGG;AACH,wBAAgB,aAAa,IAAI,WAAW,EAAE,CAyC7C;AAED,qDAAqD;AACrD,wBAAgB,gBAAgB,CAC9B,GAAG,EAAE,WAAW,EAAE,EAClB,GAAG,EAAE,WAAW,EAChB,OAAO,GAAE,YAAiB,GACzB,0BAA0B,EAAE,CAgB9B"}
+\ No newline at end of file
+diff --git a/frontend/dist-electron/menuTemplate.js.map b/frontend/dist-electron/menuTemplate.js.map
+index a177859..f05dafe 100644
+--- a/frontend/dist-electron/menuTemplate.js.map
++++ b/frontend/dist-electron/menuTemplate.js.map
+@@ -1 +1 @@
+-{"version":3,"file":"menuTemplate.js","sourceRoot":"","sources":["../electron/menuTemplate.ts"],"names":[],"mappings":"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"}
+\ No newline at end of file
++{"version":3,"file":"menuTemplate.js","sourceRoot":"","sources":["../electron/menuTemplate.ts"],"names":[],"mappings":"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"}
+\ No newline at end of file
+diff --git a/frontend/dist-electron/preload.d.ts b/frontend/dist-electron/preload.d.ts
+index b9d5aaf..091e419 100644
+--- a/frontend/dist-electron/preload.d.ts
++++ b/frontend/dist-electron/preload.d.ts
+@@ -7,20 +7,20 @@ export interface ElectronAPI {
+     openTabWindow: (tabType: string, tabId: string, tabTitle: string, props?: Record<string, unknown>) => Promise<void>;
+     getAppVersion: () => Promise<string>;
+     getPlatform: () => Promise<string>;
+     getAppName: () => Promise<string>;
+     restartBackend: () => Promise<void>;
+     getBackendStatus: () => Promise<{
+         running: boolean;
+         pid?: number;
+     }>;
+     onNavigateTab: (callback: (tab: string) => void) => () => void;
+-    onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor') => void) => () => void;
++    onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor' | 'tquote') => void) => () => void;
+     onTogglePerf: (callback: () => void) => () => void;
+     onMarketView: (callback: (view: 'all' | 'favorites' | 'options') => void) => () => void;
+     onGetSelectedInstrument: (callback: () => string) => () => void;
+     sendSelectedInstrument: (instrumentID: string) => void;
+     onOrderUpdate: (callback: (data: any) => void) => () => void;
+     onNotification: (callback: (data: any) => void) => () => void;
+     removeAllListeners: (channel: string) => void;
+ }
+ //# sourceMappingURL=preload.d.ts.map
+\ No newline at end of file
+diff --git a/frontend/dist-electron/preload.d.ts.map b/frontend/dist-electron/preload.d.ts.map
+index f7e55e5..b35dc9e 100644
+--- a/frontend/dist-electron/preload.d.ts.map
++++ b/frontend/dist-electron/preload.d.ts.map
+@@ -1 +1 @@
+-{"version":3,"file":"preload.d.ts","sourceRoot":"","sources":["../electron/preload.ts"],"names":[],"mappings":"AAOA,MAAM,WAAW,WAAW;IAE1B,cAAc,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;IACpC,cAAc,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;IACpC,WAAW,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;IAGjC,eAAe,EAAE,CAAC,YAAY,CAAC,EAAE,MAAM,KAAK,OAAO,CAAC,IAAI,CAAC,CAAC;IAC1D,eAAe,EAAE,CAAC,YAAY,EAAE,MAAM,KAAK,OAAO,CAAC,IAAI,CAAC,CAAC;IACzD,aAAa,EAAE,CAAC,OAAO,EAAE,MAAM,EAAE,KAAK,EAAE,MAAM,EAAE,QAAQ,EAAE,MAAM,EAAE,KAAK,CAAC,EAAE,MAAM,CAAC,MAAM,EAAE,OAAO,CAAC,KAAK,OAAO,CAAC,IAAI,CAAC,CAAC;IAGpH,aAAa,EAAE,MAAM,OAAO,CAAC,MAAM,CAAC,CAAC;IACrC,WAAW,EAAE,MAAM,OAAO,CAAC,MAAM,CAAC,CAAC;IACnC,UAAU,EAAE,MAAM,OAAO,CAAC,MAAM,CAAC,CAAC;IAGlC,cAAc,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;IACpC,gBAAgB,EAAE,MAAM,OAAO,CAAC;QAAE,OAAO,EAAE,OAAO,CAAC;QAAC,GAAG,CAAC,EAAE,MAAM,CAAA;KAAE,CAAC,CAAC;IAGpE,aAAa,EAAE,CAAC,QAAQ,EAAE,CAAC,GAAG,EAAE,MAAM,KAAK,IAAI,KAAK,MAAM,IAAI,CAAC;IAG/D,iBAAiB,EAAE,CAAC,QAAQ,EAAE,CAAC,GAAG,EAAE,OAAO,GAAG,OAAO,GAAG,OAAO,GAAG,UAAU,GAAG,aAAa,KAAK,IAAI,KAAK,MAAM,IAAI,CAAC;IAGrH,YAAY,EAAE,CAAC,QAAQ,EAAE,MAAM,IAAI,KAAK,MAAM,IAAI,CAAC;IAGnD,YAAY,EAAE,CAAC,QAAQ,EAAE,CAAC,IAAI,EAAE,KAAK,GAAG,WAAW,GAAG,SAAS,KAAK,IAAI,KAAK,MAAM,IAAI,CAAC;IAGxF,uBAAuB,EAAE,CAAC,QAAQ,EAAE,MAAM,MAAM,KAAK,MAAM,IAAI,CAAC;IAChE,sBAAsB,EAAE,CAAC,YAAY,EAAE,MAAM,KAAK,IAAI,CAAC;IAGvD,aAAa,EAAE,CAAC,QAAQ,EAAE,CAAC,IAAI,EAAE,GAAG,KAAK,IAAI,KAAK,MAAM,IAAI,CAAC;IAC7D,cAAc,EAAE,CAAC,QAAQ,EAAE,CAAC,IAAI,EAAE,GAAG,KAAK,IAAI,KAAK,MAAM,IAAI,CAAC;IAC9D,kBAAkB,EAAE,CAAC,OAAO,EAAE,MAAM,KAAK,IAAI,CAAC;CAC/C"}
+\ No newline at end of file
++{"version":3,"file":"preload.d.ts","sourceRoot":"","sources":["../electron/preload.ts"],"names":[],"mappings":"AAOA,MAAM,WAAW,WAAW;IAE1B,cAAc,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;IACpC,cAAc,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;IACpC,WAAW,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;IAGjC,eAAe,EAAE,CAAC,YAAY,CAAC,EAAE,MAAM,KAAK,OAAO,CAAC,IAAI,CAAC,CAAC;IAC1D,eAAe,EAAE,CAAC,YAAY,EAAE,MAAM,KAAK,OAAO,CAAC,IAAI,CAAC,CAAC;IACzD,aAAa,EAAE,CAAC,OAAO,EAAE,MAAM,EAAE,KAAK,EAAE,MAAM,EAAE,QAAQ,EAAE,MAAM,EAAE,KAAK,CAAC,EAAE,MAAM,CAAC,MAAM,EAAE,OAAO,CAAC,KAAK,OAAO,CAAC,IAAI,CAAC,CAAC;IAGpH,aAAa,EAAE,MAAM,OAAO,CAAC,MAAM,CAAC,CAAC;IACrC,WAAW,EAAE,MAAM,OAAO,CAAC,MAAM,CAAC,CAAC;IACnC,UAAU,EAAE,MAAM,OAAO,CAAC,MAAM,CAAC,CAAC;IAGlC,cAAc,EAAE,MAAM,OAAO,CAAC,IAAI,CAAC,CAAC;IACpC,gBAAgB,EAAE,MAAM,OAAO,CAAC;QAAE,OAAO,EAAE,OAAO,CAAC;QAAC,GAAG,CAAC,EAAE,MAAM,CAAA;KAAE,CAAC,CAAC;IAGpE,aAAa,EAAE,CAAC,QAAQ,EAAE,CAAC,GAAG,EAAE,MAAM,KAAK,IAAI,KAAK,MAAM,IAAI,CAAC;IAG/D,iBAAiB,EAAE,CAAC,QAAQ,EAAE,CAAC,GAAG,EAAE,OAAO,GAAG,OAAO,GAAG,OAAO,GAAG,UAAU,GAAG,aAAa,GAAG,QAAQ,KAAK,IAAI,KAAK,MAAM,IAAI,CAAC;IAGhI,YAAY,EAAE,CAAC,QAAQ,EAAE,MAAM,IAAI,KAAK,MAAM,IAAI,CAAC;IAGnD,YAAY,EAAE,CAAC,QAAQ,EAAE,CAAC,IAAI,EAAE,KAAK,GAAG,WAAW,GAAG,SAAS,KAAK,IAAI,KAAK,MAAM,IAAI,CAAC;IAGxF,uBAAuB,EAAE,CAAC,QAAQ,EAAE,MAAM,MAAM,KAAK,MAAM,IAAI,CAAC;IAChE,sBAAsB,EAAE,CAAC,YAAY,EAAE,MAAM,KAAK,IAAI,CAAC;IAGvD,aAAa,EAAE,CAAC,QAAQ,EAAE,CAAC,IAAI,EAAE,GAAG,KAAK,IAAI,KAAK,MAAM,IAAI,CAAC;IAC7D,cAAc,EAAE,CAAC,QAAQ,EAAE,CAAC,IAAI,EAAE,GAAG,KAAK,IAAI,KAAK,MAAM,IAAI,CAAC;IAC9D,kBAAkB,EAAE,CAAC,OAAO,EAAE,MAAM,KAAK,IAAI,CAAC;CAC/C"}
+\ No newline at end of file
+diff --git a/frontend/dist-electron/preload.js.map b/frontend/dist-electron/preload.js.map
+index a331d3e..c30caca 100644
+--- a/frontend/dist-electron/preload.js.map
++++ b/frontend/dist-electron/preload.js.map
+@@ -1 +1 @@
+-{"version":3,"file":"preload.js","sourceRoot":"","sources":["../electron/preload.ts"],"names":[],"mappings":";;AAAA,uCAAsD;AAiDtD,kEAAkE;AAClE,iDAAiD;AACjD,wBAAa,CAAC,iBAAiB,CAAC,aAAa,EAAE;IAC7C,iBAAiB;IACjB,cAAc,EAAE,GAAG,EAAE,CAAC,sBAAW,CAAC,MAAM,CAAC,iBAAiB,CAAC;IAC3D,cAAc,EAAE,GAAG,EAAE,CAAC,sBAAW,CAAC,MAAM,CAAC,iBAAiB,CAAC;IAC3D,WAAW,EAAE,GAAG,EAAE,CAAC,sBAAW,CAAC,MAAM,CAAC,cAAc,CAAC;IAErD,oBAAoB;IACpB,eAAe,EAAE,CAAC,YAAqB,EAAE,EAAE,CACzC,sBAAW,CAAC,MAAM,CAAC,mBAAmB,EAAE,YAAY,CAAC;IACvD,eAAe,EAAE,CAAC,YAAoB,EAAE,EAAE,CACxC,sBAAW,CAAC,MAAM,CAAC,mBAAmB,EAAE,YAAY,CAAC;IACvD,aAAa,EAAE,CAAC,OAAe,EAAE,KAAa,EAAE,QAAgB,EAAE,KAA+B,EAAE,EAAE,CACnG,sBAAW,CAAC,MAAM,CAAC,iBAAiB,EAAE,OAAO,EAAE,KAAK,EAAE,QAAQ,EAAE,KAAK,CAAC;IAExE,WAAW;IACX,aAAa,EAAE,GAAG,EAAE,CAAC,sBAAW,CAAC,MAAM,CAAC,aAAa,CAAC;IACtD,WAAW,EAAE,GAAG,EAAE,CAAC,sBAAW,CAAC,MAAM,CAAC,cAAc,CAAC;IACrD,UAAU,EAAE,GAAG,EAAE,CAAC,sBAAW,CAAC,MAAM,CAAC,UAAU,CAAC;IAEhD,qBAAqB;IACrB,cAAc,EAAE,GAAG,EAAE,CAAC,sBAAW,CAAC,MAAM,CAAC,iBAAiB,CAAC;IAC3D,gBAAgB,EAAE,GAAG,EAAE,CAAC,sBAAW,CAAC,MAAM,CAAC,gBAAgB,CAAC;IAE5D,+BAA+B;IAC/B,aAAa,EAAE,CAAC,QAA+B,EAAE,EAAE;QACjD,MAAM,OAAO,GAAG,CAAC,CAAM,EAAE,GAAW,EAAE,EAAE,CAAC,QAAQ,CAAC,GAAG,CAAC,CAAC;QACvD,sBAAW,CAAC,EAAE,CAAC,cAAc,EAAE,OAAO,CAAC,CAAC;QACxC,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,cAAc,EAAE,OAAO,CAAC,CAAC;IACnE,CAAC;IAED,oCAAoC;IACpC,iBAAiB,EAAE,CAAC,QAAiF,EAAE,EAAE;QACvG,MAAM,OAAO,GAAG,CAAC,CAAM,EAAE,GAA6D,EAAE,EAAE,CAAC,QAAQ,CAAC,GAAG,CAAC,CAAC;QACzG,sBAAW,CAAC,EAAE,CAAC,oBAAoB,EAAE,OAAO,CAAC,CAAC;QAC9C,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,oBAAoB,EAAE,OAAO,CAAC,CAAC;IACzE,CAAC;IAED,oCAAoC;IACpC,YAAY,EAAE,CAAC,QAAoB,EAAE,EAAE;QACrC,MAAM,OAAO,GAAG,GAAG,EAAE,CAAC,QAAQ,EAAE,CAAC;QACjC,sBAAW,CAAC,EAAE,CAAC,kBAAkB,EAAE,OAAO,CAAC,CAAC;QAC5C,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,kBAAkB,EAAE,OAAO,CAAC,CAAC;IACvE,CAAC;IAED,8CAA8C;IAC9C,YAAY,EAAE,CAAC,QAAyD,EAAE,EAAE;QAC1E,MAAM,OAAO,GAAG,CAAC,CAAM,EAAE,IAAqC,EAAE,EAAE,CAAC,QAAQ,CAAC,IAAI,CAAC,CAAC;QAClF,sBAAW,CAAC,EAAE,CAAC,kBAAkB,EAAE,OAAO,CAAC,CAAC;QAC5C,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,kBAAkB,EAAE,OAAO,CAAC,CAAC;IACvE,CAAC;IAED,kCAAkC;IAClC,uBAAuB,EAAE,CAAC,QAAsB,EAAE,EAAE;QAClD,MAAM,OAAO,GAAG,GAAG,EAAE,CAAC,QAAQ,EAAE,CAAC;QACjC,sBAAW,CAAC,EAAE,CAAC,8BAA8B,EAAE,OAAO,CAAC,CAAC;QACxD,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,8BAA8B,EAAE,OAAO,CAAC,CAAC;IACnF,CAAC;IACD,sBAAsB,EAAE,CAAC,YAAoB,EAAE,EAAE;QAC/C,sBAAW,CAAC,MAAM,CAAC,mCAAmC,EAAE,YAAY,CAAC,CAAC;IACxE,CAAC;IAED,oEAAoE;IACpE,aAAa,EAAE,CAAC,QAA6B,EAAE,EAAE;QAC/C,MAAM,OAAO,GAAG,CAAC,CAAM,EAAE,IAAS,EAAE,EAAE,CAAC,QAAQ,CAAC,IAAI,CAAC,CAAC;QACtD,sBAAW,CAAC,EAAE,CAAC,cAAc,EAAE,OAAO,CAAC,CAAC;QACxC,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,cAAc,EAAE,OAAO,CAAC,CAAC;IACnE,CAAC;IACD,cAAc,EAAE,CAAC,QAA6B,EAAE,EAAE;QAChD,MAAM,OAAO,GAAG,CAAC,CAAM,EAAE,IAAS,EAAE,EAAE,CAAC,QAAQ,CAAC,IAAI,CAAC,CAAC;QACtD,sBAAW,CAAC,EAAE,CAAC,cAAc,EAAE,OAAO,CAAC,CAAC;QACxC,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,cAAc,EAAE,OAAO,CAAC,CAAC;IACnE,CAAC;IAED,wBAAwB;IACxB,oBAAoB,EAAE,CAAC,QAAmC,EAAE,EAAE;QAC5D,MAAM,OAAO,GAAG,CAAC,CAAM,EAAE,QAAe,EAAE,EAAE,CAAC,QAAQ,CAAC,QAAQ,CAAC,CAAC;QAChE,sBAAW,CAAC,EAAE,CAAC,sBAAsB,EAAE,OAAO,CAAC,CAAC;QAChD,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,sBAAsB,EAAE,OAAO,CAAC,CAAC;IAC3E,CAAC;IACD,mBAAmB,EAAE,CAAC,QAAgC,EAAE,EAAE;QACxD,MAAM,OAAO,GAAG,CAAC,CAAM,EAAE,OAAY,EAAE,EAAE,CAAC,QAAQ,CAAC,OAAO,CAAC,CAAC;QAC5D,sBAAW,CAAC,EAAE,CAAC,qBAAqB,EAAE,OAAO,CAAC,CAAC;QAC/C,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,qBAAqB,EAAE,OAAO,CAAC,CAAC;IAC1E,CAAC;IAED,kBAAkB,EAAE,CAAC,OAAe,EAAE,EAAE;QACtC,sBAAW,CAAC,kBAAkB,CAAC,OAAO,CAAC,CAAC;IAC1C,CAAC;CACa,CAAC,CAAC"}
+\ No newline at end of file
++{"version":3,"file":"preload.js","sourceRoot":"","sources":["../electron/preload.ts"],"names":[],"mappings":";;AAAA,uCAAsD;AAiDtD,kEAAkE;AAClE,iDAAiD;AACjD,wBAAa,CAAC,iBAAiB,CAAC,aAAa,EAAE;IAC7C,iBAAiB;IACjB,cAAc,EAAE,GAAG,EAAE,CAAC,sBAAW,CAAC,MAAM,CAAC,iBAAiB,CAAC;IAC3D,cAAc,EAAE,GAAG,EAAE,CAAC,sBAAW,CAAC,MAAM,CAAC,iBAAiB,CAAC;IAC3D,WAAW,EAAE,GAAG,EAAE,CAAC,sBAAW,CAAC,MAAM,CAAC,cAAc,CAAC;IAErD,oBAAoB;IACpB,eAAe,EAAE,CAAC,YAAqB,EAAE,EAAE,CACzC,sBAAW,CAAC,MAAM,CAAC,mBAAmB,EAAE,YAAY,CAAC;IACvD,eAAe,EAAE,CAAC,YAAoB,EAAE,EAAE,CACxC,sBAAW,CAAC,MAAM,CAAC,mBAAmB,EAAE,YAAY,CAAC;IACvD,aAAa,EAAE,CAAC,OAAe,EAAE,KAAa,EAAE,QAAgB,EAAE,KAA+B,EAAE,EAAE,CACnG,sBAAW,CAAC,MAAM,CAAC,iBAAiB,EAAE,OAAO,EAAE,KAAK,EAAE,QAAQ,EAAE,KAAK,CAAC;IAExE,WAAW;IACX,aAAa,EAAE,GAAG,EAAE,CAAC,sBAAW,CAAC,MAAM,CAAC,aAAa,CAAC;IACtD,WAAW,EAAE,GAAG,EAAE,CAAC,sBAAW,CAAC,MAAM,CAAC,cAAc,CAAC;IACrD,UAAU,EAAE,GAAG,EAAE,CAAC,sBAAW,CAAC,MAAM,CAAC,UAAU,CAAC;IAEhD,qBAAqB;IACrB,cAAc,EAAE,GAAG,EAAE,CAAC,sBAAW,CAAC,MAAM,CAAC,iBAAiB,CAAC;IAC3D,gBAAgB,EAAE,GAAG,EAAE,CAAC,sBAAW,CAAC,MAAM,CAAC,gBAAgB,CAAC;IAE5D,+BAA+B;IAC/B,aAAa,EAAE,CAAC,QAA+B,EAAE,EAAE;QACjD,MAAM,OAAO,GAAG,CAAC,CAAM,EAAE,GAAW,EAAE,EAAE,CAAC,QAAQ,CAAC,GAAG,CAAC,CAAC;QACvD,sBAAW,CAAC,EAAE,CAAC,cAAc,EAAE,OAAO,CAAC,CAAC;QACxC,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,cAAc,EAAE,OAAO,CAAC,CAAC;IACnE,CAAC;IAED,oCAAoC;IACpC,iBAAiB,EAAE,CAAC,QAA4F,EAAE,EAAE;QAClH,MAAM,OAAO,GAAG,CAAC,CAAM,EAAE,GAAwE,EAAE,EAAE,CAAC,QAAQ,CAAC,GAAG,CAAC,CAAC;QACpH,sBAAW,CAAC,EAAE,CAAC,oBAAoB,EAAE,OAAO,CAAC,CAAC;QAC9C,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,oBAAoB,EAAE,OAAO,CAAC,CAAC;IACzE,CAAC;IAED,oCAAoC;IACpC,YAAY,EAAE,CAAC,QAAoB,EAAE,EAAE;QACrC,MAAM,OAAO,GAAG,GAAG,EAAE,CAAC,QAAQ,EAAE,CAAC;QACjC,sBAAW,CAAC,EAAE,CAAC,kBAAkB,EAAE,OAAO,CAAC,CAAC;QAC5C,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,kBAAkB,EAAE,OAAO,CAAC,CAAC;IACvE,CAAC;IAED,8CAA8C;IAC9C,YAAY,EAAE,CAAC,QAAyD,EAAE,EAAE;QAC1E,MAAM,OAAO,GAAG,CAAC,CAAM,EAAE,IAAqC,EAAE,EAAE,CAAC,QAAQ,CAAC,IAAI,CAAC,CAAC;QAClF,sBAAW,CAAC,EAAE,CAAC,kBAAkB,EAAE,OAAO,CAAC,CAAC;QAC5C,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,kBAAkB,EAAE,OAAO,CAAC,CAAC;IACvE,CAAC;IAED,kCAAkC;IAClC,uBAAuB,EAAE,CAAC,QAAsB,EAAE,EAAE;QAClD,MAAM,OAAO,GAAG,GAAG,EAAE,CAAC,QAAQ,EAAE,CAAC;QACjC,sBAAW,CAAC,EAAE,CAAC,8BAA8B,EAAE,OAAO,CAAC,CAAC;QACxD,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,8BAA8B,EAAE,OAAO,CAAC,CAAC;IACnF,CAAC;IACD,sBAAsB,EAAE,CAAC,YAAoB,EAAE,EAAE;QAC/C,sBAAW,CAAC,MAAM,CAAC,mCAAmC,EAAE,YAAY,CAAC,CAAC;IACxE,CAAC;IAED,oEAAoE;IACpE,aAAa,EAAE,CAAC,QAA6B,EAAE,EAAE;QAC/C,MAAM,OAAO,GAAG,CAAC,CAAM,EAAE,IAAS,EAAE,EAAE,CAAC,QAAQ,CAAC,IAAI,CAAC,CAAC;QACtD,sBAAW,CAAC,EAAE,CAAC,cAAc,EAAE,OAAO,CAAC,CAAC;QACxC,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,cAAc,EAAE,OAAO,CAAC,CAAC;IACnE,CAAC;IACD,cAAc,EAAE,CAAC,QAA6B,EAAE,EAAE;QAChD,MAAM,OAAO,GAAG,CAAC,CAAM,EAAE,IAAS,EAAE,EAAE,CAAC,QAAQ,CAAC,IAAI,CAAC,CAAC;QACtD,sBAAW,CAAC,EAAE,CAAC,cAAc,EAAE,OAAO,CAAC,CAAC;QACxC,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,cAAc,EAAE,OAAO,CAAC,CAAC;IACnE,CAAC;IAED,wBAAwB;IACxB,oBAAoB,EAAE,CAAC,QAAmC,EAAE,EAAE;QAC5D,MAAM,OAAO,GAAG,CAAC,CAAM,EAAE,QAAe,EAAE,EAAE,CAAC,QAAQ,CAAC,QAAQ,CAAC,CAAC;QAChE,sBAAW,CAAC,EAAE,CAAC,sBAAsB,EAAE,OAAO,CAAC,CAAC;QAChD,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,sBAAsB,EAAE,OAAO,CAAC,CAAC;IAC3E,CAAC;IACD,mBAAmB,EAAE,CAAC,QAAgC,EAAE,EAAE;QACxD,MAAM,OAAO,GAAG,CAAC,CAAM,EAAE,OAAY,EAAE,EAAE,CAAC,QAAQ,CAAC,OAAO,CAAC,CAAC;QAC5D,sBAAW,CAAC,EAAE,CAAC,qBAAqB,EAAE,OAAO,CAAC,CAAC;QAC/C,OAAO,GAAG,EAAE,CAAC,sBAAW,CAAC,cAAc,CAAC,qBAAqB,EAAE,OAAO,CAAC,CAAC;IAC1E,CAAC;IAED,kBAAkB,EAAE,CAAC,OAAe,EAAE,EAAE;QACtC,sBAAW,CAAC,kBAAkB,CAAC,OAAO,CAAC,CAAC;IAC1C,CAAC;CACa,CAAC,CAAC"}
+\ No newline at end of file
+diff --git a/frontend/electron/__tests__/menuManager.test.ts b/frontend/electron/__tests__/menuManager.test.ts
+index a692bf9..959d928 100644
+--- a/frontend/electron/__tests__/menuManager.test.ts
++++ b/frontend/electron/__tests__/menuManager.test.ts
+@@ -71,27 +71,34 @@ describe('MenuManager', () => {
+   it('should not include default File/Edit/Window/Help menus', () => {
+     const manager = new MenuManager();
+     manager.initialize(mainWindow, windowManager);
+     const roles = getTemplate()
+       .map((item) => item.role)
+       .filter(Boolean);
+     expect(roles).toEqual(['viewMenu']);
+   });
+ 
+   describe('行情', () => {
+-    it('包含 期货/期权/自选行情/在新窗口打开', () => {
++    it('包含 期货/期权/自选行情/T型报价/在新窗口打开', () => {
+       const manager = new MenuManager();
+       manager.initialize(mainWindow, windowManager);
+       const labels = getMenu('行情')
+         .submenu!.map((i) => i.label)
+         .filter(Boolean);
+-      expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '🪟 在新窗口打开']);
++      expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📉 T型报价', '🪟 在新窗口打开']);
++    });
++
++    it('点击 T型报价 发送 menu:open-floating tquote', () => {
++      const manager = new MenuManager();
++      manager.initialize(mainWindow, windowManager);
++      clickItem('行情', '📉 T型报价');
++      expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_OPEN_FLOATING, 'tquote');
+     });
+ 
+     it('点击期货发送 menu:market-view all', () => {
+       const manager = new MenuManager();
+       manager.initialize(mainWindow, windowManager);
+       clickItem('行情', '📊 期货');
+       expect(webContentsSend).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'all');
+     });
+ 
+     it('点击期权发送 menu:market-view options', () => {
+diff --git a/frontend/electron/__tests__/menuTemplate.test.ts b/frontend/electron/__tests__/menuTemplate.test.ts
+index 958aeeb..bf8eadf 100644
+--- a/frontend/electron/__tests__/menuTemplate.test.ts
++++ b/frontend/electron/__tests__/menuTemplate.test.ts
+@@ -15,26 +15,35 @@ interface TemplateItem {
+   submenu?: TemplateItem[];
+   click?: () => void;
+ }
+ 
+ describe('getAppMenuDef', () => {
+   it('返回四组一级菜单：行情/功能/设置/性能监控', () => {
+     const def = getAppMenuDef();
+     expect(def.map((d) => d.label)).toEqual(['行情', '功能', '设置', '性能监控']);
+   });
+ 
+-  it('行情子菜单完整镜像：期货/期权/自选/分隔符/在新窗口打开', () => {
++  it('行情子菜单完整镜像：期货/期权/自选/T型报价/分隔符/在新窗口打开', () => {
+     const market = getAppMenuDef().find((d) => d.id === 'market')!;
+     const labels = market.submenu!
+       .filter((i) => i.type !== 'separator')
+       .map((i) => i.label);
+-    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '🪟 在新窗口打开']);
++    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📉 T型报价', '🪟 在新窗口打开']);
++  });
++
++  it('行情「📉 T型报价」action 为 open-floating tquote（在分隔符前）', () => {
++    const market = getAppMenuDef().find((d) => d.id === 'market')!;
++    const tquote = market.submenu!.find((i) => i.id === 'market-tquote')!;
++    expect(tquote.label).toBe('📉 T型报价');
++    expect(tquote.action).toEqual({ type: 'open-floating', tab: 'tquote' });
++    const sep = market.submenu!.find((i) => i.type === 'separator')!;
++    expect(market.submenu!.indexOf(tquote)).toBeLessThan(market.submenu!.indexOf(sep));
+   });
+ 
+   it('行情「在新窗口打开」action 为 open-market-window', () => {
+     const market = getAppMenuDef().find((d) => d.id === 'market')!;
+     const newWindow = market.submenu!.find((i) => i.id === 'market-new-window')!;
+     expect(newWindow.action).toEqual({ type: 'open-market-window' });
+   });
+ 
+   it('功能子菜单包含报单/K线/查询/分隔符/退出(app-quit)', () => {
+     const fnMenu = getAppMenuDef().find((d) => d.id === 'function')!;
+diff --git a/frontend/electron/__tests__/trayManager.test.ts b/frontend/electron/__tests__/trayManager.test.ts
+index a62c12f..87dc77a 100644
+--- a/frontend/electron/__tests__/trayManager.test.ts
++++ b/frontend/electron/__tests__/trayManager.test.ts
+@@ -91,26 +91,26 @@ describe('TrayManager', () => {
+   });
+ 
+   it('功能子菜单不包含退出（已提到一级底部）', () => {
+     const manager = new TrayManager();
+     manager.initialize(mainWindow, windowManager);
+     const fnMenu = getTemplate().find((i) => i.label === '功能')!;
+     const labels = fnMenu.submenu!.map((i) => i.label).filter(Boolean);
+     expect(labels).toEqual(['📝 报单窗口', '📈 K线窗口', '📋 查询窗口']);
+   });
+ 
+-  it('行情子菜单完整镜像：期货/期权/自选/新窗口', () => {
++  it('行情子菜单完整镜像：期货/期权/自选/T型报价/新窗口', () => {
+     const manager = new TrayManager();
+     manager.initialize(mainWindow, windowManager);
+     const market = getTemplate().find((i) => i.label === '行情')!;
+     const labels = market.submenu!.map((i) => i.label).filter(Boolean);
+-    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '🪟 在新窗口打开']);
++    expect(labels).toEqual(['📊 期货', '📉 期权', '⭐ 自选行情', '📉 T型报价', '🪟 在新窗口打开']);
+   });
+ 
+   it('点击期货发送 menu:market-view all 并显示主窗口', () => {
+     const manager = new TrayManager();
+     manager.initialize(mainWindow, windowManager);
+     clickItem('📊 期货');
+     expect(mainWindow.show).toHaveBeenCalled();
+     expect(mainWindow.webContents.send).toHaveBeenCalledWith(IPC_CHANNELS.MENU_MARKET_VIEW, 'all');
+   });
+ 
+diff --git a/frontend/electron/menuTemplate.ts b/frontend/electron/menuTemplate.ts
+index 411df86..33887fa 100644
+--- a/frontend/electron/menuTemplate.ts
++++ b/frontend/electron/menuTemplate.ts
+@@ -4,21 +4,21 @@
+  * Single source of truth for the application menus.
+  * The top app menu and the tray context menu both build from getAppMenuDef(),
+  * so adding/removing items in one place keeps both in sync.
+  */
+ 
+ import type { MenuItemConstructorOptions } from 'electron';
+ import { resolveAction } from './menuActions';
+ import type { MenuContext } from './menuActions';
+ 
+ export type MarketView = 'all' | 'options' | 'favorites';
+-export type FloatingTab = 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor';
++export type FloatingTab = 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor' | 'tquote';
+ 
+ export type MenuAction =
+   | { type: 'market-view'; view: MarketView }
+   | { type: 'open-floating'; tab: FloatingTab }
+   | { type: 'open-market-window' }
+   | { type: 'toggle-perf' }
+   | { type: 'quit' };
+ 
+ export interface MenuItemDef {
+   id: string;
+@@ -39,20 +39,21 @@ export interface BuildOptions {
+  */
+ export function getAppMenuDef(): MenuItemDef[] {
+   return [
+     {
+       id: 'market',
+       label: '行情',
+       submenu: [
+         { id: 'market-all', label: '📊 期货', action: { type: 'market-view', view: 'all' } },
+         { id: 'market-options', label: '📉 期权', action: { type: 'market-view', view: 'options' } },
+         { id: 'market-favorites', label: '⭐ 自选行情', action: { type: 'market-view', view: 'favorites' } },
++        { id: 'market-tquote', label: '📉 T型报价', action: { type: 'open-floating', tab: 'tquote' } },
+         { id: 'market-sep1', type: 'separator' },
+         { id: 'market-new-window', label: '🪟 在新窗口打开', action: { type: 'open-market-window' } },
+       ],
+     },
+     {
+       id: 'function',
+       label: '功能',
+       submenu: [
+         { id: 'func-order', label: '📝 报单窗口', action: { type: 'open-floating', tab: 'order' } },
+         { id: 'func-kline', label: '📈 K线窗口', action: { type: 'open-floating', tab: 'kline' } },
+diff --git a/frontend/electron/preload.ts b/frontend/electron/preload.ts
+index f579b01..ab91ad8 100644
+--- a/frontend/electron/preload.ts
++++ b/frontend/electron/preload.ts
+@@ -22,21 +22,21 @@ export interface ElectronAPI {
+   getAppName: () => Promise<string>;
+ 
+   // Backend management
+   restartBackend: () => Promise<void>;
+   getBackendStatus: () => Promise<{ running: boolean; pid?: number }>;
+ 
+   // Navigation (main → renderer)
+   onNavigateTab: (callback: (tab: string) => void) => () => void;
+ 
+   // Menu (main → renderer): 顶部菜单打开浮动窗
+-  onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor') => void) => () => void;
++  onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor' | 'tquote') => void) => () => void;
+ 
+   // Menu (main → renderer): 切换 FPS 监控
+   onTogglePerf: (callback: () => void) => () => void;
+ 
+   // Menu (main → renderer): 行情主页内切换视图（期货/自选/期权）
+   onMarketView: (callback: (view: 'all' | 'favorites' | 'options') => void) => () => void;
+ 
+   // Data exchange (renderer → main)
+   onGetSelectedInstrument: (callback: () => string) => () => void;
+   sendSelectedInstrument: (instrumentID: string) => void;
+@@ -73,22 +73,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
+   getBackendStatus: () => ipcRenderer.invoke('backend:status'),
+ 
+   // Navigation (main → renderer)
+   onNavigateTab: (callback: (tab: string) => void) => {
+     const handler = (_: any, tab: string) => callback(tab);
+     ipcRenderer.on('navigate:tab', handler);
+     return () => ipcRenderer.removeListener('navigate:tab', handler);
+   },
+ 
+   // Menu (main → renderer): 顶部菜单打开浮动窗
+-  onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor') => void) => {
+-    const handler = (_: any, tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor') => callback(tab);
++  onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor' | 'tquote') => void) => {
++    const handler = (_: any, tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor' | 'tquote') => callback(tab);
+     ipcRenderer.on('menu:open-floating', handler);
+     return () => ipcRenderer.removeListener('menu:open-floating', handler);
+   },
+ 
+   // Menu (main → renderer): 切换 FPS 监控
+   onTogglePerf: (callback: () => void) => {
+     const handler = () => callback();
+     ipcRenderer.on('menu:toggle-perf', handler);
+     return () => ipcRenderer.removeListener('menu:toggle-perf', handler);
+   },
+diff --git a/frontend/src/App.test.tsx b/frontend/src/App.test.tsx
+index f6ecd26..ba4efa9 100644
+--- a/frontend/src/App.test.tsx
++++ b/frontend/src/App.test.tsx
+@@ -150,20 +150,33 @@ describe('App Layout — 标签页系统', () => {
+       setElectronAPI({ onOpenFloatingTab })
+       render(<App />)
+       const callback = onOpenFloatingTab.mock.calls[0][0]
+       act(() => {
+         callback('settings')
+       })
+       expect(useFloatingWindowStore.getState().windows['tab-settings']).toBeDefined()
+       delete (window as any).electronAPI
+     })
+ 
++    it('onOpenFloatingTab tquote 打开 T型报价浮动窗（空白无预选）', () => {
++      const onOpenFloatingTab = vi.fn()
++      setElectronAPI({ onOpenFloatingTab })
++      render(<App />)
++      const callback = onOpenFloatingTab.mock.calls[0][0]
++      act(() => {
++        callback('tquote')
++      })
++      expect(useTabStore.getState().tabs.some((t) => t.type === 'tquote')).toBe(true)
++      expect(useFloatingWindowStore.getState().windows['tab-tquote']).toBeDefined()
++      delete (window as any).electronAPI
++    })
++
+     it('onTogglePerf 切换 FPS 监控', () => {
+       const onTogglePerf = vi.fn()
+       setElectronAPI({ onTogglePerf })
+       render(<App />)
+       expect(screen.queryByTestId('bottom-bar-fps')).toBeNull()
+       const callback = onTogglePerf.mock.calls[0][0]
+       act(() => {
+         callback()
+       })
+       expect(screen.getByTestId('bottom-bar-fps')).toBeInTheDocument()
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index 617e7fb..d63691f 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -14,20 +14,21 @@ import { useMarketFilterStore } from '@/stores/marketFilter'
+ import { FloatingWindows } from '@/components/FloatingWindow'
+ import { useTabStore } from '@/stores/tabs'
+ import { API_BASE } from '@/services/api'
+ import { isElectron } from '@/services/electron'
+ import {
+   openOrderFloating,
+   openKlineFloating,
+   openQueryFloating,
+   openSettingsFloating,
+   openIpcMonitorFloating,
++  openTQuoteFloating,
+ } from '@/utils/openFloatingTab'
+ import '@/assets/styles/global.css'
+ 
+ function App() {
+   const [perfVisible, setPerfVisible] = useState(false)
+   const openTab = useTabStore((s) => s.openTab)
+   // StrictMode 开发双挂载守卫：启动加载只执行一次（loadAllInstruments/loadFavoriteContracts/load）
+   const startupLoadedRef = useRef(false)
+ 
+   // System WebSocket — 监听 MD/TD 连接状态即时推送
+@@ -102,20 +103,23 @@ function App() {
+           break
+         case 'query':
+           openQueryFloating()
+           break
+         case 'settings':
+           openSettingsFloating()
+           break
+         case 'ipc-monitor':
+           openIpcMonitorFloating()
+           break
++        case 'tquote':
++          openTQuoteFloating()
++          break
+       }
+     })
+ 
+     return () => cleanup?.()
+   }, [])
+ 
+   // Electron IPC — 顶部菜单切换 FPS 监控
+   useEffect(() => {
+     if (!isElectron()) return
+ 
+diff --git a/frontend/src/components/TabContent/index.test.tsx b/frontend/src/components/TabContent/index.test.tsx
+index eb9a644..0242803 100644
+--- a/frontend/src/components/TabContent/index.test.tsx
++++ b/frontend/src/components/TabContent/index.test.tsx
+@@ -27,20 +27,30 @@ vi.mock('@/pages/OrderPage', () => ({
+ // Mock KLinePage 组件（避免依赖 stores）
+ vi.mock('@/pages/KLinePage', () => ({
+   KLinePage: ({ instrumentID }: { instrumentID?: string }) => (
+     <div data-testid="kline-page">
+       K线页面 Mock
+       {instrumentID && <span>合约: {instrumentID}</span>}
+     </div>
+   ),
+ }))
+ 
++// Mock TQuoteView 组件（T型报价独立悬浮标签；断言收到 instrumentID prop）
++vi.mock('@/modules/options/TQuoteView', () => ({
++  TQuoteView: ({ instrumentID }: { instrumentID?: string }) => (
++    <div data-testid="tquote-view">
++      T型报价 Mock
++      {instrumentID && <span>标的: {instrumentID}</span>}
++    </div>
++  ),
++}))
++
+ // Mock detachDrag 工具（Task 5 拖拽脱离）
+ const detachMock = vi.hoisted(() => ({ startDetachDrag: vi.fn(), detachTabAt: vi.fn() }))
+ vi.mock('@/utils/detachDrag', () => detachMock)
+ 
+ // --- 辅助函数 ---
+ 
+ function makeTab(overrides: Partial<Tab> & { type: TabType }): Tab {
+   return {
+     id: `tab-${overrides.type}`,
+     title: overrides.type,
+@@ -147,33 +157,56 @@ describe('TabContent', () => {
+   })
+ 
+   // --- 标签类型渲染 ---
+ 
+   describe('标签类型渲染', () => {
+     it.each<[TabType, string]>([
+       ['market', '行情面板'],
+       ['order', '报单页面'],
+       ['kline', 'K线页面'],
+       ['settings', '⚙ 设置'],
+-      ['options', '列表'],
++      ['options', '自选'],
+       ['ipc-monitor', '🔌 IPC 监控'],
+       ['query', '查询面板 Mock'],
+     ])('应为 %s 类型渲染对应内容', (type, expectedText) => {
+       const tab = makeTab({ type })
+       useTabStore.setState({
+         tabs: [tab],
+         activeTabId: tab.id,
+       })
+       render(<TabContent />)
+       expect(screen.getByText(new RegExp(expectedText))).toBeInTheDocument()
+     })
+ 
++    // tquote：独立悬浮标签页渲染 TQuoteView，且 props.instrumentID 透传为 instrumentID prop
++    it('应为 tquote 类型渲染 TQuoteView，并透传 props.instrumentID', () => {
++      const tab = makeTab({ type: 'tquote', id: 'tab-tquote-IF2608', props: { instrumentID: 'IF2608' } })
++      useTabStore.setState({
++        tabs: [tab],
++        activeTabId: tab.id,
++      })
++      render(<TabContent />)
++      expect(screen.getByTestId('tquote-view')).toBeInTheDocument()
++      expect(screen.getByText(/标的: IF2608/)).toBeInTheDocument()
++    })
++
++    it('tquote 空白标签（无 instrumentID）渲染 TQuoteView 不带预选', () => {
++      const tab = makeTab({ type: 'tquote', id: 'tab-tquote' })
++      useTabStore.setState({
++        tabs: [tab],
++        activeTabId: tab.id,
++      })
++      render(<TabContent />)
++      expect(screen.getByTestId('tquote-view')).toBeInTheDocument()
++      expect(screen.queryByText(/标的:/)).toBeNull()
++    })
++
+     // 审查 🔵-2：自选页标题已删除，改用稳定的 data-testid 断言页面渲染
+     it('应为 favorites 类型渲染自选页', () => {
+       const tab = makeTab({ type: 'favorites' })
+       useTabStore.setState({
+         tabs: [tab],
+         activeTabId: tab.id,
+       })
+       render(<TabContent />)
+       expect(screen.getByTestId('favorites-page')).toBeInTheDocument()
+     })
+diff --git a/frontend/src/components/TabContent/index.tsx b/frontend/src/components/TabContent/index.tsx
+index b614b90..914ab5d 100644
+--- a/frontend/src/components/TabContent/index.tsx
++++ b/frontend/src/components/TabContent/index.tsx
+@@ -1,17 +1,18 @@
+ import { createPortal } from 'react-dom'
+ import { useTabStore, type Tab } from '@/stores/tabs'
+ import { useFloatingWindowStore, FLOATING_CHROME_H } from '@/stores/floatingWindows'
+ import { startDetachDrag, detachTabAt } from '@/utils/detachDrag'
+ import { MarketPanel } from '@/modules/market/MarketPanel'
+ import { QueryPanel } from '@/modules/query/QueryPanel'
+ import { OptionsPanel } from '@/modules/options/OptionsPanel'
++import { TQuoteView } from '@/modules/options/TQuoteView'
+ import { FavoritesPage } from '@/pages/FavoritesPage'
+ import { OrderPage } from '@/pages/OrderPage'
+ import { KLinePage } from '@/pages/KLinePage'
+ import { SettingsPage } from '@/pages/SettingsPage'
+ import { IPCMonitorPage } from '@/pages/IPCMonitorPage'
+ import './styles.css'
+ 
+ /**
+  * 安全地从 tab.props 中提取 instrumentID 字符串。
+  * 使用运行时类型守卫，避免 `as string` 断言掩藏非字符串值传入的 bug。
+@@ -44,20 +45,22 @@ function renderTabContent(tab: Tab, floating: boolean): React.ReactNode {
+     case 'kline':
+       return <KLinePage instrumentID={getInstrumentID(tab.props)} tabId={tab.id} />
+     case 'favorites':
+       return <FavoritesPage />
+     case 'query':
+       return <QueryPanel />
+     case 'settings':
+       return <SettingsPage />
+     case 'options':
+       return <OptionsPanel />
++    case 'tquote':
++      return <TQuoteView instrumentID={getInstrumentID(tab.props)} />
+     case 'ipc-monitor':
+       return <IPCMonitorPage />
+     default:
+       return <div className="tab-placeholder">未知标签</div>
+   }
+ }
+ 
+ /**
+  * TabContent — 标签内容容器
+  *
+diff --git a/frontend/src/modules/options/OptionsPanel.test.tsx b/frontend/src/modules/options/OptionsPanel.test.tsx
+index 72c2be3..3f30fac 100644
+--- a/frontend/src/modules/options/OptionsPanel.test.tsx
++++ b/frontend/src/modules/options/OptionsPanel.test.tsx
+@@ -1,25 +1,28 @@
+ import { describe, it, expect, vi, beforeEach } from 'vitest'
+ import { act, render, screen } from '@testing-library/react'
+ import userEvent from '@testing-library/user-event'
+ import { OptionsPanel } from './OptionsPanel'
+ import { optionsSpec } from '@/modules/market/optionsSpec'
+ import { useMarketStore } from '@/modules/market/store'
+ import { useContractsStore } from '@/stores/contracts'
+ import { useMarketFilterStore } from '@/stores/marketFilter'
+ import { useTabStore } from '@/stores/tabs'
++import { useFloatingWindowStore } from '@/stores/floatingWindows'
++import { openTQuoteFloating } from '@/utils/openFloatingTab'
+ import type { ContractInfo } from '@/services/types'
+ 
+-// Mock TQuoteView（T型报价二级视图依赖链沉重，仅测切换渲染）
+-vi.mock('./TQuoteView', () => ({
+-  TQuoteView: () => <div data-testid="tquote-view">TQuoteView Mock</div>,
+-}))
++// Mock openTQuoteFloating：T型报价已独立为悬浮标签页，标底行双击/右键均入口该函数
++vi.mock('@/utils/openFloatingTab', async (importOriginal) => {
++  const actual = await importOriginal<typeof import('@/utils/openFloatingTab')>()
++  return { ...actual, openTQuoteFloating: vi.fn() }
++})
+ 
+ // Mock InstrumentSearchModal（放大镜高级搜索弹窗）
+ vi.mock('@/components/InstrumentSearchModal', () => ({
+   InstrumentSearchModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+     isOpen ? (
+       <div data-testid="instrument-search-modal">
+         <button onClick={onClose}>关闭</button>
+       </div>
+     ) : null,
+ }))
+@@ -82,40 +85,27 @@ describe('OptionsPanel', () => {
+       tabs: [
+         { id: 'tab-market', type: 'market', title: '📊 期货', props: {}, closable: false },
+         { id: 'tab-options', type: 'options', title: '📈 期权', props: {}, closable: false },
+       ],
+       activeTabId: 'tab-market',
+     })
+     setupContracts()
+     vi.clearAllMocks()
+   })
+ 
+-  it('默认视图为 列表（列表按钮 active，列表表格渲染，T型报价不渲染）', () => {
+-    const { container } = render(<OptionsPanel />)
+-    expect(screen.getByRole('button', { name: '列表' }).classList.contains('active')).toBe(true)
+-    expect(screen.getByRole('button', { name: 'T型报价' }).classList.contains('active')).toBe(false)
+-    expect(container.querySelector('.market-table-container')).toBeTruthy()
+-    expect(screen.queryByTestId('tquote-view')).toBeNull()
+-  })
+-
+-  it('点击 T型报价 切换二级视图，再切回 列表', async () => {
+-    const user = userEvent.setup()
++  it('默认视图为 列表（列表表格渲染，无 [列表|T型报价] 切换，无 TQuoteView 分支）', () => {
+     const { container } = render(<OptionsPanel />)
+-    await user.click(screen.getByRole('button', { name: 'T型报价' }))
+-    expect(screen.getByTestId('tquote-view')).toBeInTheDocument()
+-    expect(container.querySelector('.market-table-container')).toBeNull()
+-    expect(screen.getByRole('button', { name: 'T型报价' }).classList.contains('active')).toBe(true)
+-
+-    await user.click(screen.getByRole('button', { name: '列表' }))
+     expect(container.querySelector('.market-table-container')).toBeTruthy()
++    // T型报价已独立为悬浮标签页：不再有模式切换按钮
++    expect(screen.queryByRole('button', { name: 'T型报价' })).toBeNull()
++    expect(screen.queryByRole('button', { name: '列表' })).toBeNull()
+     expect(screen.queryByTestId('tquote-view')).toBeNull()
+-    expect(screen.getByRole('button', { name: '列表' }).classList.contains('active')).toBe(true)
+   })
+ 
+   it('分组展平：标底行在前（kind=underlying、类型「标」），期权行随后（C 前 P 后、行权价填充）', async () => {
+     render(<OptionsPanel />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     const ids = options.records.map((r: any) => r.instrumentID)
+     expect(ids).toEqual(['FG609', 'FG609-C-1300', 'FG609-P-1300'])
+     expect(options.records[0].kind).toBe('underlying')
+     expect(options.records[0].contractType).toBe('标')
+@@ -132,36 +122,101 @@ describe('OptionsPanel', () => {
+     const clickHandler = instance.on.mock.calls.find((call: any[]) => call[0] === 'click_cell')?.[1]
+     expect(clickHandler).toBeDefined()
+     act(() => {
+       clickHandler({ row: 1, col: 1, event: {} })
+     })
+     expect(useMarketStore.getState().selectedInstrument).toBe('FG609')
+     expect(useMarketStore.getState().selectedContracts.has('FG609')).toBe(true)
+     expect(useMarketStore.getState().selectedContracts.size).toBe(1)
+   })
+ 
+-  it('右键列表行：打开单选上下文菜单（打开报单/K线/查询）', async () => {
++  it('右键列表行（期权行）：打开单选上下文菜单（打开报单/K线/查询）', async () => {
+     render(<OptionsPanel />)
+     const { ListTable } = await import('@visactor/vtable')
+     const instance = (ListTable as any).mock.results[0].value
+     const contextmenuHandler = instance.on.mock.calls.find(
+       (call: any[]) => call[0] === 'contextmenu_cell'
+     )?.[1]
+     expect(contextmenuHandler).toBeDefined()
++    // row 2 = FG609-C-1300（期权行）→ 原单选菜单
+     act(() => {
+-      contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
++      contextmenuHandler({ row: 2, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
+     })
+     expect(screen.getByText('打开报单')).toBeInTheDocument()
+     expect(screen.getByText('打开K线')).toBeInTheDocument()
+     expect(screen.getByText('查询')).toBeInTheDocument()
+   })
+ 
++  it('双击标底行 → openTQuoteFloating(标底ID)（T型报价独立悬浮入口）', async () => {
++    render(<OptionsPanel />)
++    const { ListTable } = await import('@visactor/vtable')
++    const instance = (ListTable as any).mock.results[0].value
++    const clickHandler = instance.on.mock.calls.find((call: any[]) => call[0] === 'click_cell')?.[1]
++    expect(clickHandler).toBeDefined()
++    // 标底行 vtable row 1 = FG609；两次快速点击触发双击 → onRowDoubleClick → handleRowDoubleClick → openTQuoteFloating
++    act(() => {
++      clickHandler({ row: 1, col: 1, event: {} })
++      clickHandler({ row: 1, col: 1, event: {} })
++    })
++    expect(openTQuoteFloating).toHaveBeenCalledWith('FG609')
++  })
++
++  it('双击期权行 → 仍走原 handleDoubleClick（打开报单浮动窗，不触发 T型报价）', async () => {
++    render(<OptionsPanel />)
++    const { ListTable } = await import('@visactor/vtable')
++    const instance = (ListTable as any).mock.results[0].value
++    const clickHandler = instance.on.mock.calls.find((call: any[]) => call[0] === 'click_cell')?.[1]
++    act(() => {
++      clickHandler({ row: 2, col: 1, event: {} }) // vtable row 2 = FG609-C-1300（期权行）
++      clickHandler({ row: 2, col: 1, event: {} })
++    })
++    expect(openTQuoteFloating).not.toHaveBeenCalled()
++    // 原 handleDoubleClick → openOrderPopup → openFloatingTab(order) 打开报单浮动窗
++    expect(useFloatingWindowStore.getState().windows['tab-order-FG609-C-1300']).toBeDefined()
++  })
++
++  it('右键标底行 → 弹「打开T型报价」菜单（仅此项）', async () => {
++    render(<OptionsPanel />)
++    const { ListTable } = await import('@visactor/vtable')
++    const instance = (ListTable as any).mock.results[0].value
++    const contextmenuHandler = instance.on.mock.calls.find(
++      (call: any[]) => call[0] === 'contextmenu_cell'
++    )?.[1]
++    expect(contextmenuHandler).toBeDefined()
++    // row 1 = FG609（标底行）
++    act(() => {
++      contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
++    })
++    // 仅「打开T型报价」一项（不显示 打开报单/K线/查询）
++    expect(screen.getByText('打开T型报价')).toBeInTheDocument()
++    expect(screen.queryByText('打开报单')).toBeNull()
++    expect(screen.queryByText('打开K线')).toBeNull()
++    expect(screen.queryByText('查询')).toBeNull()
++  })
++
++  it('右键标底行菜单点击「打开T型报价」→ openTQuoteFloating(标底ID)', async () => {
++    const user = userEvent.setup()
++    render(<OptionsPanel />)
++    const { ListTable } = await import('@visactor/vtable')
++    const instance = (ListTable as any).mock.results[0].value
++    const contextmenuHandler = instance.on.mock.calls.find(
++      (call: any[]) => call[0] === 'contextmenu_cell'
++    )?.[1]
++    act(() => {
++      contextmenuHandler({ row: 1, col: 0, event: { clientX: 100, clientY: 200, preventDefault: vi.fn() } })
++    })
++    await user.click(screen.getByText('打开T型报价'))
++    expect(openTQuoteFloating).toHaveBeenCalledWith('FG609')
++    // 点击后菜单关闭
++    expect(screen.queryByText('打开T型报价')).toBeNull()
++  })
++
+   it('收藏列点击：未收藏 → addToFavorites(inst)', async () => {
+     const addSpy = vi.spyOn(useContractsStore.getState(), 'addToFavorites').mockResolvedValue(true)
+     render(<OptionsPanel />)
+     const { ListTable } = await import('@visactor/vtable')
+     const instance = (ListTable as any).mock.results[0].value
+     const clickHandler = instance.on.mock.calls.find((call: any[]) => call[0] === 'click_cell')?.[1]
+     const favoriteCol = optionsSpec.columns.length - 1
+     act(() => {
+       clickHandler({ row: 1, col: favoriteCol, event: {} })
+     })
+@@ -244,37 +299,29 @@ describe('OptionsPanel', () => {
+     const instance = (ListTable as any).mock.results[0].value
+     // 全量：cu < FG < MA 按标底自然序
+     expect(latestRecordIDs(instance)).toEqual([
+       'cu2609', 'cu2609-C-70000',
+       'FG609', 'FG609-C-1300', 'FG609-P-1300',
+       'MA609', 'MA609-C-1000',
+     ])
+   })
+ 
+   describe('工具行布局与搜索定位（Task 8）', () => {
+-    it('列表视图渲染搜索框；T型报价视图隐藏列表工具行（筛选/仅交易中/收藏/搜索框）但保留 [列表|T型] 切换', async () => {
+-      const user = userEvent.setup()
++    it('工具行始终渲染列表集群（筛选/仅交易中/收藏/搜索框），无 [列表|T型] 切换', () => {
+       render(<OptionsPanel />)
+-      // 列表视图：完整工具行存在
+       expect(screen.getByPlaceholderText('搜索合约...')).toBeInTheDocument()
+       expect(screen.getByRole('button', { name: /筛选/ })).toBeInTheDocument()
+-
+-      await user.click(screen.getByRole('button', { name: 'T型报价' }))
+-
+-      // T型报价视图：列表工具行隐藏
+-      expect(screen.queryByPlaceholderText('搜索合约...')).toBeNull()
+-      expect(screen.queryByRole('button', { name: /筛选/ })).toBeNull()
+-      expect(screen.queryByRole('button', { name: /仅交易中|显示全部/ })).toBeNull()
+-      expect(screen.queryByRole('button', { name: '收藏' })).toBeNull()
+-      // 二级切换保留
+-      expect(screen.getByRole('button', { name: 'T型报价' })).toBeInTheDocument()
+-      expect(screen.getByRole('button', { name: '列表' })).toBeInTheDocument()
++      expect(screen.getByRole('button', { name: /仅交易中|显示全部/ })).toBeInTheDocument()
++      expect(screen.getByRole('button', { name: '收藏' })).toBeInTheDocument()
++      // 无模式切换按钮
++      expect(screen.queryByRole('button', { name: 'T型报价' })).toBeNull()
++      expect(screen.queryByRole('button', { name: '列表' })).toBeNull()
+     })
+ 
+     it('搜索选中期权合约 → 定位到其标底分组（selectedInstrument/selectedContracts = 标底 FG609）', async () => {
+       // jsdom 无 scrollIntoView：ContractSearch 高亮项滚动 effect 依赖它
+       const scrollIntoViewStub = vi.fn()
+       Element.prototype.scrollIntoView = scrollIntoViewStub
+ 
+       const user = userEvent.setup()
+       render(<OptionsPanel />)
+       const input = screen.getByPlaceholderText('搜索合约...')
+@@ -287,33 +334,31 @@ describe('OptionsPanel', () => {
+     })
+ 
+     it('点击 🔍 打开高级搜索弹窗', async () => {
+       const user = userEvent.setup()
+       render(<OptionsPanel />)
+       expect(screen.queryByTestId('instrument-search-modal')).not.toBeInTheDocument()
+       await user.click(screen.getByTitle('搜索合约'))
+       expect(screen.getByTestId('instrument-search-modal')).toBeInTheDocument()
+     })
+ 
+-    it('DOM 顺序：列表/T型报价 → 全部/自选 → 筛选 → 收藏 → 搜索框', () => {
++    it('DOM 顺序：全部/自选 → 筛选 → 收藏 → 搜索框（无 [列表|T型] 切换）', () => {
+       const { container } = render(<OptionsPanel />)
+       const toolbar = container.querySelector('.market-toolbar') as HTMLElement
+-      const mode = toolbar.querySelector('.market-toolbar__mode') as Element
++      expect(toolbar.querySelector('.market-toolbar__mode')).toBeNull()
+       const tabs = toolbar.querySelector('.market-toolbar__tabs') as Element
+       const filterBtn = screen.getByRole('button', { name: /筛选/ })
+       const favoriteBtn = toolbar.querySelector('.btn-favorite') as Element
+       const searchInput = toolbar.querySelector('.market-toolbar__search .search-input') as Element
+ 
+       const follows = (a: Element, b: Element) =>
+         (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+ 
+-      expect(mode).toBeTruthy()
+       expect(tabs).toBeTruthy()
+       expect(favoriteBtn).toBeTruthy()
+       expect(searchInput).toBeTruthy()
+-      expect(follows(mode, tabs)).toBe(true)
+       expect(follows(tabs, filterBtn)).toBe(true)
+       expect(follows(filterBtn, favoriteBtn)).toBe(true)
+       expect(follows(favoriteBtn, searchInput)).toBe(true)
+     })
+   })
+ })
+diff --git a/frontend/src/modules/options/OptionsPanel.tsx b/frontend/src/modules/options/OptionsPanel.tsx
+index 9ecb3b9..495658e 100644
+--- a/frontend/src/modules/options/OptionsPanel.tsx
++++ b/frontend/src/modules/options/OptionsPanel.tsx
+@@ -1,49 +1,59 @@
+ import { useMemo, useState } from 'react'
+ import { ErrorBoundary } from '@/components/ErrorBoundary'
+ import { ContractFilter } from '@/components/ContractFilter'
+ import { ContractSearch } from '@/components/ContractSearch'
+ import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
++import { ContextMenu } from '@/components/ContextMenu'
+ import { QuoteTable } from '@/modules/market/QuoteTable'
+ import { optionsSpec } from '@/modules/market/optionsSpec'
+ import { deriveUnderlyingProduct, groupOptionsByUnderlying } from '@/modules/market/sort'
+ import { filterByExchangeAndProduct } from '@/modules/market/filter'
+ import { useMarketStore } from '@/modules/market/store'
+ import { useOrderStore } from '@/modules/order/store'
+ import { useContractsStore } from '@/stores/contracts'
+ import { useMarketFilterStore } from '@/stores/marketFilter'
+ import { useTabStore } from '@/stores/tabs'
++import { openTQuoteFloating } from '@/utils/openFloatingTab'
+ import { useContractContextMenu } from '@/hooks/useContractContextMenu'
+ import { useContractMenus } from '@/hooks/useContractMenus'
+ import { usePointOrder } from '@/hooks/usePointOrder'
+ import { getProductName } from '@/utils/productNames'
+ import { isContractActive } from '@/utils/contractStatus'
+ import { toast } from '@/components/Toast'
+-import { TQuoteView } from './TQuoteView'
+ import type { ContractInfo } from '@/services/types'
+ import './styles.css'
+ 
+ /**
+- * OptionsPanel — 期权标签页（二级视图 shell）
++ * OptionsPanel — 期权标签页（列表视图）
+  *
+- * [列表 | T型报价] 切换：
+- * - 列表（默认）：按标底分组展平的期权表（标底期货行在前 + 其后期权行），
+- *   由 spec 驱动 QuoteTable 渲染，行级交互（选中/多选/右键/收藏/可见区订阅）与期货页一致；
+- * - T型报价：迁入原 OptionPanel 内容（TQuoteView 原样保留）。
++ * 期权列表（默认）：按标底分组展平的期权表（标底期货行在前 + 其后期权行），
++ * 由 spec 驱动 QuoteTable 渲染，行级交互（选中/多选/右键/收藏/可见区订阅）与期货页一致。
++ * T型报价已独立为悬浮标签页（openTQuoteFloating）：
++ * - 双击标底行 → 打开 T型报价-<标底> 悬浮窗；
++ * - 右键标底行 → 「打开T型报价」上下文菜单（仅此项）；
++ * - 期权行双击/右键仍走原 报单弹窗 / 单选右键菜单。
+  */
++interface UnderlyingMenuState {
++  instrumentID: string
++  x: number
++  y: number
++}
++
+ export function OptionsPanel() {
+-  const [view, setView] = useState<'list' | 'tquote'>('list')
+   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
+   // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
+   const [filterActive, setFilterActive] = useState(false)
+   const [searchQuery, setSearchQuery] = useState('')
+   const [searchModalOpen, setSearchModalOpen] = useState(false)
++  // 标底行右键菜单（仅「打开T型报价」一项）
++  const [underlyingMenu, setUnderlyingMenu] = useState<UnderlyingMenuState | null>(null)
+   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
+   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
+   const { contracts, favorites, addToFavorites, removeFromFavorites } = useContractsStore()
+   const { contextMenu, multiSelectMenu, openOrderPopup, openQueryPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
+   // 期权标签是否激活：激活翻转为 true 时 QuoteTable 重报可见区，订阅管理器立即补订阅
+   const isActive = useTabStore((s) => s.tabs.some((t) => t.type === 'options' && t.id === s.activeTabId))
+ 
+   // 期权页筛选态（交易所+标底品种多选，独立于期货页，localStorage 持久化）
+   const filter = useMarketFilterStore((s) => s.options)
+ 
+@@ -150,146 +160,156 @@ export function OptionsPanel() {
+     // 命中期权合约 → 定位到标底；标底不在期货列表（指数期权）时保持选中该期权行
+     if (inst && (inst.productClass === '2' || inst.productClass === '6') && inst.underlyingInstrID) {
+       const underlying = contracts.find((c) => c.instrumentID === inst.underlyingInstrID)
+       if (underlying) target = underlying.instrumentID
+     }
+     setSelectedInstrument(target)
+     setOrderInstrument(target)
+     setSelectedContracts(new Set([target]))
+   }
+ 
++  // 标底行检测：合约 productClass === '1'（标底期货）
++  const isUnderlyingRow = (instrumentID: string) =>
++    contracts.find((c) => c.instrumentID === instrumentID)?.productClass === '1'
++
++  // 双击标底行 → 打开 T型报价-<标底> 悬浮窗；期权行 → 原 handleDoubleClick（报单弹窗）
++  const handleRowDoubleClick = (instrumentID: string, price: number) => {
++    if (isUnderlyingRow(instrumentID)) {
++      openTQuoteFloating(instrumentID)
++    } else {
++      handleDoubleClick(instrumentID, price)
++    }
++  }
++
++  // 右键标底行 → 「打开T型报价」菜单（仅此项）；期权行 → 原 handleContextMenu（单选菜单）
++  const handleRowContextMenu = (instrumentID: string, price: number, event: MouseEvent) => {
++    if (isUnderlyingRow(instrumentID)) {
++      event.preventDefault()
++      setUnderlyingMenu({ instrumentID, x: event.clientX, y: event.clientY })
++    } else {
++      handleContextMenu(instrumentID, price, event)
++    }
++  }
++
+   return (
+     <section className="options-page">
+-      {/* 二级视图切换工具栏：功能靠左（列表|T型 → 全部/自选 → 筛选 → 仅交易中 → 收藏），搜索贴右。
+-          T型报价视图隐藏列表工具行（全部/自选、筛选、仅交易中、收藏、搜索），仅保留 [列表|T型] 切换 */}
++      {/* 列表工具行：功能靠左（全部/自选 → 筛选 → 仅交易中 → 收藏），搜索贴右。
++          T型报价已独立为悬浮标签页，此处不再有 [列表|T型] 切换。 */}
+       <div className="market-toolbar">
+-        <div className="market-toolbar__mode">
++        <div className="market-toolbar__tabs">
+           <button
+-            className={`market-mode-btn${view === 'list' ? ' active' : ''}`}
+-            onClick={() => {
+-              // 搜索态随视图切换清空：ContractSearch 重挂载后 input 为空，避免残留查询继续过滤列表
+-              setSearchQuery('')
+-              setView('list')
+-            }}
++            className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
++            onClick={() => setActiveTab('all')}
+           >
+-            列表
++            全部
+           </button>
+           <button
+-            className={`market-mode-btn${view === 'tquote' ? ' active' : ''}`}
+-            onClick={() => {
+-              setSearchQuery('')
+-              setView('tquote')
+-            }}
++            className={`btn-tab${activeTab === 'favorites' ? ' active' : ''}`}
++            onClick={() => setActiveTab('favorites')}
++          >
++            自选
++          </button>
++        </div>
++        <ContractFilter
++          exchanges={filterExchanges}
++          products={filterProducts}
++          productNames={filterProductNames}
++          value={filter}
++          onChange={(v) => useMarketFilterStore.getState().setFilter('options', v)}
++        />
++        <div className="market-toolbar__actions">
++          <button
++            className={`btn-filter-status${filterActive ? ' active' : ''}`}
++            onClick={() => setFilterActive((v) => !v)}
++            title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
++          >
++            {filterActive ? '仅交易中' : '显示全部'}
++          </button>
++          <button
++            className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
++            disabled={!selectedInstrument && selectedContracts.size === 0}
++            onClick={() => batchToggleFavorite(selectedInstrument, selectedContracts)}
++          >
++            {favoriteButtonLabel(selectedInstrument, selectedContracts)}
++          </button>
++        </div>
++        <div className="market-toolbar__search">
++          <ContractSearch contracts={listRows} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
++          <button
++            className="btn-search-advanced"
++            title="搜索合约"
++            onClick={() => setSearchModalOpen(true)}
+           >
+-            T型报价
++            🔍
+           </button>
++          {searchQuery && (
++            <span className="search-count">
++              {rows.length} / {listRows.length}
++            </span>
++          )}
+         </div>
+-        {view === 'list' && (
+-          <>
+-            <div className="market-toolbar__tabs">
+-              <button
+-                className={`btn-tab${activeTab === 'all' ? ' active' : ''}`}
+-                onClick={() => setActiveTab('all')}
+-              >
+-                全部
+-              </button>
+-              <button
+-                className={`btn-tab${activeTab === 'favorites' ? ' active' : ''}`}
+-                onClick={() => setActiveTab('favorites')}
+-              >
+-                自选
+-              </button>
+-            </div>
+-            <ContractFilter
+-              exchanges={filterExchanges}
+-              products={filterProducts}
+-              productNames={filterProductNames}
+-              value={filter}
+-              onChange={(v) => useMarketFilterStore.getState().setFilter('options', v)}
+-            />
+-            <div className="market-toolbar__actions">
+-              <button
+-                className={`btn-filter-status${filterActive ? ' active' : ''}`}
+-                onClick={() => setFilterActive((v) => !v)}
+-                title={filterActive ? '仅显示交易中合约' : '显示全部合约'}
+-              >
+-                {filterActive ? '仅交易中' : '显示全部'}
+-              </button>
+-              <button
+-                className={`btn-favorite${selectedInstrument && favoritedIds.has(selectedInstrument) ? ' btn-favorite--remove' : ''}`}
+-                disabled={!selectedInstrument && selectedContracts.size === 0}
+-                onClick={() => batchToggleFavorite(selectedInstrument, selectedContracts)}
+-              >
+-                {favoriteButtonLabel(selectedInstrument, selectedContracts)}
+-              </button>
+-            </div>
+-            <div className="market-toolbar__search">
+-              <ContractSearch contracts={listRows} onSelect={handleSelectContract} onQueryChange={setSearchQuery} />
+-              <button
+-                className="btn-search-advanced"
+-                title="搜索合约"
+-                onClick={() => setSearchModalOpen(true)}
+-              >
+-                🔍
+-              </button>
+-              {searchQuery && (
+-                <span className="search-count">
+-                  {rows.length} / {listRows.length}
+-                </span>
+-              )}
+-            </div>
+-          </>
+-        )}
+       </div>
+ 
+-      {view === 'tquote' ? (
+-        <TQuoteView />
+-      ) : (
+-        <div className="panel-content">
+-          <ErrorBoundary>
+-            <QuoteTable
+-              spec={optionsSpec}
+-              contracts={rows}
+-              snapshots={snapshots}
+-              selectedInstrument={selectedInstrument}
+-              isActive={isActive}
+-              onRowClick={handleClick}
+-              onRowDoubleClick={handleDoubleClick}
+-              onContextMenu={handleContextMenu}
+-              onMultiSelectContextMenu={handleMultiSelectContextMenu}
+-              onVisibleRangeChange={setVisibleInstrumentIDs}
+-              favoritedIds={favoritedIds}
+-              onFavoriteChange={(instrumentID, isFavorited) => {
+-                if (isFavorited) {
+-                  const inst = contracts.find((c) => c.instrumentID === instrumentID)
+-                  if (inst) {
+-                    addToFavorites(inst)
+-                    toast.success(`已收藏 ${instrumentID}`)
+-                  }
+-                } else {
+-                  removeFromFavorites(instrumentID)
+-                  toast.success(`已移除 ${instrumentID}`)
++      <div className="panel-content">
++        <ErrorBoundary>
++          <QuoteTable
++            spec={optionsSpec}
++            contracts={rows}
++            snapshots={snapshots}
++            selectedInstrument={selectedInstrument}
++            isActive={isActive}
++            onRowClick={handleClick}
++            onRowDoubleClick={handleRowDoubleClick}
++            onContextMenu={handleRowContextMenu}
++            onMultiSelectContextMenu={handleMultiSelectContextMenu}
++            onVisibleRangeChange={setVisibleInstrumentIDs}
++            favoritedIds={favoritedIds}
++            onFavoriteChange={(instrumentID, isFavorited) => {
++              if (isFavorited) {
++                const inst = contracts.find((c) => c.instrumentID === instrumentID)
++                if (inst) {
++                  addToFavorites(inst)
++                  toast.success(`已收藏 ${instrumentID}`)
+                 }
+-              }}
+-              selectedContracts={selectedContracts}
+-              onSelectionChange={setSelectedContracts}
+-            />
+-          </ErrorBoundary>
+-        </div>
+-      )}
++              } else {
++                removeFromFavorites(instrumentID)
++                toast.success(`已移除 ${instrumentID}`)
++              }
++            }}
++            selectedContracts={selectedContracts}
++            onSelectionChange={setSelectedContracts}
++          />
++        </ErrorBoundary>
++      </div>
+ 
+       {/* 高级搜索弹窗（放大镜入口） */}
+       <InstrumentSearchModal
+         isOpen={searchModalOpen}
+         onClose={() => setSearchModalOpen(false)}
+         onAddToFavorite={addToFavorites}
+         onRemoveFromFavorite={removeFromFavorites}
+         allContractIds={allContractIds}
+         favoritedIds={favoritedIds}
+       />
+ 
++      {/* 标底行右键菜单：仅「打开T型报价」 */}
++      {underlyingMenu && (
++        <ContextMenu
++          x={underlyingMenu.x}
++          y={underlyingMenu.y}
++          items={[
++            {
++              label: '打开T型报价',
++              icon: '📉',
++              onClick: () => openTQuoteFloating(underlyingMenu.instrumentID),
++            },
++          ]}
++          onClose={() => setUnderlyingMenu(null)}
++        />
++      )}
++
+       {/* 单选 + 多选右键菜单（共享 useContractMenus，与期货页一致） */}
+       {singleMenu}
+       {multiMenu}
+     </section>
+   )
+ }
+diff --git a/frontend/src/modules/options/TQuoteTable.test.tsx b/frontend/src/modules/options/TQuoteTable.test.tsx
+index 7f683c7..c44f764 100644
+--- a/frontend/src/modules/options/TQuoteTable.test.tsx
++++ b/frontend/src/modules/options/TQuoteTable.test.tsx
+@@ -52,21 +52,25 @@ describe('TQuoteTable', () => {
+     const { container } = render(<TQuoteTable chain={chain} />)
+     expect(container.firstChild).toBeTruthy()
+   })
+ 
+   it('creates ListTable with correct options', async () => {
+     render(<TQuoteTable chain={chain} />)
+     const { ListTable } = await import('@visactor/vtable')
+     expect(ListTable).toHaveBeenCalledTimes(1)
+     const options = (ListTable as any).mock.calls[0][1]
+     expect(options.columns).toBeDefined()
+-    expect(options.columns.length).toBe(13) // 6 call cols + 1 strike + 6 put cols
++    expect(options.columns.length).toBe(11) // 5 call cols + 1 strike + 5 put cols（已去除 IV 列）
++    // 不再渲染 IV 列
++    const fields = options.columns.map((c: any) => c.field)
++    expect(fields).not.toContain('callIV')
++    expect(fields).not.toContain('putIV')
+   })
+ 
+   it('采用自适应宽度填满容器 + 低调滚动条（与行情表格一致）', async () => {
+     render(<TQuoteTable chain={chain} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     expect(options.widthMode).toBe('adaptive')
+     const ss = options.theme.scrollStyle
+     expect(ss).toBeDefined()
+     expect(ss.visible).toBe('focus')
+@@ -107,66 +111,20 @@ describe('TQuoteTable', () => {
+   })
+ 
+   it('shows empty placeholder when chain has no data', async () => {
+     const emptyChain: OptionChain = { underlying: '', expireDate: '', calls: [], puts: [], updateTime: '' }
+     render(<TQuoteTable chain={emptyChain} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const options = (ListTable as any).mock.calls[0][1]
+     expect(options.records).toHaveLength(0)
+   })
+ 
+-  it('formats impliedVolatility as percentage string', async () => {
+-    render(<TQuoteTable chain={chain} />)
+-    const { ListTable } = await import('@visactor/vtable')
+-    const options = (ListTable as any).mock.calls[0][1]
+-    const row = options.records[0]
+-    // IV 0.22 → "22.00%"
+-    expect(row.callIV).toBe('22.00%')
+-    expect(row.putIV).toBe('20.00%')
+-  })
+-
+-  it('shows placeholder for zero impliedVolatility', async () => {
+-    const chainZero: OptionChain = {
+-      underlying: 'IF2608',
+-      expireDate: '20260815',
+-      calls: [makeQuote({ instrumentID: 'IF2608-C-4700', strikePrice: 4700, impliedVolatility: 0 })],
+-      puts: [makeQuote({ instrumentID: 'IF2608-P-4700', strikePrice: 4700, impliedVolatility: 0 })],
+-      updateTime: '2026-07-24T10:00:00',
+-    }
+-    render(<TQuoteTable chain={chainZero} />)
+-    const { ListTable } = await import('@visactor/vtable')
+-    const options = (ListTable as any).mock.calls[0][1]
+-    expect(options.records[0].callIV).toBe('--')
+-    expect(options.records[0].putIV).toBe('--')
+-  })
+-
+-  it('prefers volatility map over quote impliedVolatility', async () => {
+-    const volMap = new Map([
+-      ['IF2608-C-4700', 0.35],
+-      ['IF2608-P-4700', 0.42],
+-    ])
+-    render(<TQuoteTable chain={chain} volatility={volMap} />)
+-    const { ListTable } = await import('@visactor/vtable')
+-    const options = (ListTable as any).mock.calls[0][1]
+-    // IV from volatility map (0.35 → "35.00%"), not from quote (0.22)
+-    expect(options.records[0].callIV).toBe('35.00%')
+-    expect(options.records[0].putIV).toBe('42.00%')
+-  })
+-
+-  it('falls back to quote impliedVolatility when instrument not in volatility map', async () => {
+-    const volMap = new Map([['OTHER-INSTRUMENT', 0.99]])
+-    render(<TQuoteTable chain={chain} volatility={volMap} />)
+-    const { ListTable } = await import('@visactor/vtable')
+-    const options = (ListTable as any).mock.calls[0][1]
+-    expect(options.records[0].callIV).toBe('22.00%')
+-  })
+-
+   it('releases vtable instance on unmount', async () => {
+     const { unmount } = render(<TQuoteTable chain={chain} />)
+     const { ListTable } = await import('@visactor/vtable')
+     const instance = (ListTable as any).mock.results[0]?.value
+     unmount()
+     expect(instance?.release).toHaveBeenCalled()
+   })
+ 
+   it('updates records incrementally when snapshots change without recreating table', async () => {
+     const { rerender } = render(<TQuoteTable chain={chain} />)
+diff --git a/frontend/src/modules/options/TQuoteTable.tsx b/frontend/src/modules/options/TQuoteTable.tsx
+index 2e1cdb8..3cc3537 100644
+--- a/frontend/src/modules/options/TQuoteTable.tsx
++++ b/frontend/src/modules/options/TQuoteTable.tsx
+@@ -4,45 +4,40 @@ import type { OptionChain, OptionQuote, MarketSnapshot } from '@/services/types'
+ import { SCROLL_STYLE } from '@/utils/vtableTheme'
+ 
+ interface TQuoteRow {
+   strikePrice: number
+   // Call columns
+   callLastPrice: number | string
+   callBidPrice: number | string
+   callAskPrice: number | string
+   callVolume: number | string
+   callOpenInterest: number | string
+-  callIV: string
+   // Put columns
+   putLastPrice: number | string
+   putBidPrice: number | string
+   putAskPrice: number | string
+   putVolume: number | string
+   putOpenInterest: number | string
+-  putIV: string
+ }
+ 
+ interface TQuoteTableProps {
+   chain: OptionChain
+   /** Market snapshots for real-time price data. */
+   snapshots?: Map<string, MarketSnapshot>
+-  /** Implied volatility from /api/market/volatility (instrumentID → IV). Takes precedence over quote.impliedVolatility. */
+-  volatility?: Map<string, number>
+ }
+ 
+ const PLACEHOLDER = '--'
+ 
+ /** Merge calls and puts by strike price into table records, enriching with snapshot data. */
+ function buildRecords(
+   chain: OptionChain,
+   snapshots?: Map<string, MarketSnapshot>,
+-  volatility?: Map<string, number>,
+ ): TQuoteRow[] {
+   const strikeMap = new Map<number, { call?: OptionQuote; put?: OptionQuote }>()
+ 
+   for (const call of chain.calls) {
+     const entry = strikeMap.get(call.strikePrice) ?? {}
+     entry.call = call
+     strikeMap.set(call.strikePrice, entry)
+   }
+   for (const put of chain.puts) {
+     const entry = strikeMap.get(put.strikePrice) ?? {}
+@@ -54,83 +49,75 @@ function buildRecords(
+ 
+   return strikes.map((strike) => {
+     const entry = strikeMap.get(strike)!
+     const c = entry.call
+     const p = entry.put
+ 
+     // Merge snapshot data if available
+     const cSnap = c ? snapshots?.get(c.instrumentID) : undefined
+     const pSnap = p ? snapshots?.get(p.instrumentID) : undefined
+ 
+-    const fmtIV = (iv: number) => (iv > 0 ? `${(iv * 100).toFixed(2)}%` : PLACEHOLDER)
+     const valOrDash = (v: number | undefined) => (v != null && v > 0 ? v : PLACEHOLDER)
+-    // IV: prefer live volatility map, fall back to chain quote value
+-    const ivOf = (q: OptionQuote | undefined) =>
+-      q ? (volatility?.get(q.instrumentID) ?? q.impliedVolatility) : 0
+ 
+     return {
+       strikePrice: strike,
+       callLastPrice: cSnap?.lastPrice ?? valOrDash(c?.lastPrice),
+       callBidPrice: cSnap?.bidPrice1 ?? valOrDash(c?.bidPrice),
+       callAskPrice: cSnap?.askPrice1 ?? valOrDash(c?.askPrice),
+       callVolume: cSnap?.volume ?? valOrDash(c?.volume),
+       callOpenInterest: cSnap?.openInterest ?? valOrDash(c?.openInterest),
+-      callIV: c ? fmtIV(ivOf(c)) : PLACEHOLDER,
+       putLastPrice: pSnap?.lastPrice ?? valOrDash(p?.lastPrice),
+       putBidPrice: pSnap?.bidPrice1 ?? valOrDash(p?.bidPrice),
+       putAskPrice: pSnap?.askPrice1 ?? valOrDash(p?.askPrice),
+       putVolume: pSnap?.volume ?? valOrDash(p?.volume),
+       putOpenInterest: pSnap?.openInterest ?? valOrDash(p?.openInterest),
+-      putIV: p ? fmtIV(ivOf(p)) : PLACEHOLDER,
+     }
+   })
+ }
+ 
+ const CALL_COLOR = '#ef4444'
+ const PUT_COLOR = '#22c55e'
+ const STRIKE_BG = 'rgba(255,255,255,0.04)'
+ 
+ const columns = [
+   // ── Call columns (left) ──
+-  { field: 'callIV', title: 'IV', width: 70, headerStyle: { color: CALL_COLOR } },
+   { field: 'callOpenInterest', title: '持仓', width: 70, headerStyle: { color: CALL_COLOR } },
+   { field: 'callVolume', title: '成交', width: 70, headerStyle: { color: CALL_COLOR } },
+   { field: 'callAskPrice', title: '卖价', width: 80, headerStyle: { color: CALL_COLOR } },
+   { field: 'callBidPrice', title: '买价', width: 80, headerStyle: { color: CALL_COLOR } },
+   { field: 'callLastPrice', title: '最新', width: 80, headerStyle: { color: CALL_COLOR } },
+   // ── Strike (middle) ──
+   {
+     field: 'strikePrice',
+     title: '行权价',
+     width: 90,
+     style: { fontWeight: 'bold', bgColor: STRIKE_BG },
+   },
+   // ── Put columns (right) ──
+   { field: 'putLastPrice', title: '最新', width: 80, headerStyle: { color: PUT_COLOR } },
+   { field: 'putBidPrice', title: '买价', width: 80, headerStyle: { color: PUT_COLOR } },
+   { field: 'putAskPrice', title: '卖价', width: 80, headerStyle: { color: PUT_COLOR } },
+   { field: 'putVolume', title: '成交', width: 70, headerStyle: { color: PUT_COLOR } },
+   { field: 'putOpenInterest', title: '持仓', width: 70, headerStyle: { color: PUT_COLOR } },
+-  { field: 'putIV', title: 'IV', width: 70, headerStyle: { color: PUT_COLOR } },
+ ]
+ 
+-export function TQuoteTable({ chain, snapshots, volatility }: TQuoteTableProps) {
++export function TQuoteTable({ chain, snapshots }: TQuoteTableProps) {
+   const containerRef = useRef<HTMLDivElement>(null)
+   const tableRef = useRef<ListTable | null>(null)
+ 
+   // Mount/unmount: create and release the vtable instance exactly once.
+   useEffect(() => {
+     if (!containerRef.current) return
+ 
+     const table = new ListTable(containerRef.current, {
+       columns,
+-      records: buildRecords(chain, snapshots, volatility),
++      records: buildRecords(chain, snapshots),
+       defaultRowHeight: 28,
+       widthMode: 'adaptive' as const,
+       hover: { highlightMode: 'row' as const },
+       theme: {
+         underlayBackgroundColor: '#0d1117',
+         defaultStyle: {
+           color: '#e6edf3',
+           fontSize: 13,
+           fontFamily: "'JetBrains Mono', Consolas, Monaco, monospace",
+           bgColor: '#0d1117',
+@@ -157,15 +144,15 @@ export function TQuoteTable({ chain, snapshots, volatility }: TQuoteTableProps)
+     tableRef.current = table
+ 
+     return () => {
+       table.release()
+       tableRef.current = null
+     }
+   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+ 
+   // Update records when data changes without rebuilding the table.
+   useEffect(() => {
+-    tableRef.current?.setRecords(buildRecords(chain, snapshots, volatility))
+-  }, [chain, snapshots, volatility])
++    tableRef.current?.setRecords(buildRecords(chain, snapshots))
++  }, [chain, snapshots])
+ 
+   return <div ref={containerRef} style={{ width: '100%', height: '100%', background: '#0d1117' }} />
+ }
+diff --git a/frontend/src/modules/options/TQuoteView.test.tsx b/frontend/src/modules/options/TQuoteView.test.tsx
+index ab756c1..229d82e 100644
+--- a/frontend/src/modules/options/TQuoteView.test.tsx
++++ b/frontend/src/modules/options/TQuoteView.test.tsx
+@@ -1,261 +1,174 @@
+-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
++import { describe, it, expect, vi, beforeEach } from 'vitest'
+ import { render, screen, act } from '@testing-library/react'
++import userEvent from '@testing-library/user-event'
+ import { TQuoteView } from './TQuoteView'
+ import { useMarketStore } from '@/modules/market/store'
+-import type { MarketSnapshot } from '@/services/types'
+ 
+-// Mock the options store
+-const mockFetchOptionChains = vi.fn().mockResolvedValue(undefined)
+-const mockFetchVolatility = vi.fn().mockResolvedValue(undefined)
+-const mockSetSelectedUnderlying = vi.fn()
+-const mockSetSelectedExpireDate = vi.fn()
+-const mockAvailableUnderlyings = vi.fn(() => ['IF2608', 'IF2609'])
+-const mockAvailableExpirations = vi.fn(() => ['20260815', '20260915'])
+-const mockAllStrikes = vi.fn(() => [4700, 4800])
+-
+-let storeState = {
+-  optionChains: [] as any[],
+-  volatility: new Map<string, number>(),
+-  selectedUnderlying: null as string | null,
+-  selectedExpireDate: null as string | null,
+-  loading: false,
+-  error: null as string | null,
+-}
+-
+-function getMockState() {
+-  return {
+-    ...storeState,
+-    fetchOptionChains: mockFetchOptionChains,
+-    fetchVolatility: mockFetchVolatility,
+-    setSelectedUnderlying: mockSetSelectedUnderlying,
+-    setSelectedExpireDate: mockSetSelectedExpireDate,
+-    availableUnderlyings: mockAvailableUnderlyings,
+-    availableExpirations: mockAvailableExpirations,
+-    allStrikes: mockAllStrikes,
+-  }
+-}
+-
+-vi.mock('./store', () => ({
+-  useOptionsStore: Object.assign(
+-    (selector: any) => {
+-      if (typeof selector === 'function') {
+-        return selector(getMockState())
+-      }
+-      return getMockState()
+-    },
+-    { getState: () => getMockState() }
+-  ),
+-}))
+-
+-// Use real useMarketStore — no mock, so setState triggers re-renders via zustand
+-
+-// Mock subscribeMarket and getOptionUnderlyings
+-const mockSubscribeMarket = vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] })
++// TQuoteView 已自包含：不再依赖 useOptionsStore，直接调用 @/services/api。
++// 以下 mock 覆盖 TQuoteView 用到的所有 API 函数。
+ const mockGetOptionUnderlyings = vi.fn().mockResolvedValue({ underlyings: ['IF2608', 'IF2609'] })
++const mockGetOptionChains = vi.fn().mockResolvedValue({ chains: [] })
++const mockGetVolatility = vi.fn().mockResolvedValue({ volatility: [] })
++const mockSubscribeMarket = vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] })
++const mockGetSnapshots = vi.fn().mockResolvedValue({ snapshots: {} })
++
+ vi.mock('@/services/api', () => ({
+-  subscribeMarket: (...args: any[]) => mockSubscribeMarket(...args),
+   getOptionUnderlyings: (...args: any[]) => mockGetOptionUnderlyings(...args),
++  getOptionChains: (...args: any[]) => mockGetOptionChains(...args),
++  getVolatility: (...args: any[]) => mockGetVolatility(...args),
++  subscribeMarket: (...args: any[]) => mockSubscribeMarket(...args),
++  getSnapshots: (...args: any[]) => mockGetSnapshots(...args),
+ }))
+ 
+-// Mock TQuoteTable (renders simple div)
++// Mock TQuoteTable：捕获 props，用于断言「不再接收 volatility（去 IV）」
++const mockTQuoteTable = vi.fn()
+ vi.mock('./TQuoteTable', () => ({
+-  TQuoteTable: ({ chain }: { chain: any }) => (
+-    <div data-testid="tquote-table">{chain.underlying}-{chain.expireDate}</div>
+-  ),
++  TQuoteTable: (props: any) => {
++    mockTQuoteTable(props)
++    return (
++      <div data-testid="tquote-table">
++        {props.chain.underlying}-{props.chain.expireDate}
++      </div>
++    )
++  },
+ }))
+ 
+-describe('TQuoteView', () => {
++function renderChain(underlying = 'IF2608', expireDate = '20260815') {
++  mockGetOptionChains.mockResolvedValue({
++    chains: [{ underlying, expireDate, calls: [], puts: [], updateTime: '' }],
++  })
++}
++
++describe('TQuoteView (自包含)', () => {
+   beforeEach(() => {
+     vi.clearAllMocks()
+-    storeState = {
+-      optionChains: [],
+-      volatility: new Map(),
+-      selectedUnderlying: null,
+-      selectedExpireDate: null,
+-      loading: false,
+-      error: null,
+-    }
++    useMarketStore.setState({ snapshots: new Map() })
++    mockGetOptionUnderlyings.mockResolvedValue({ underlyings: ['IF2608', 'IF2609'] })
++    mockGetOptionChains.mockResolvedValue({ chains: [] })
++    mockGetVolatility.mockResolvedValue({ volatility: [] })
+   })
+ 
+   it('renders the options panel container', () => {
+     const { container } = render(<TQuoteView />)
+     expect(container.firstChild).toBeTruthy()
+   })
+ 
+-  it('does not auto-fetch option chains on mount', () => {
+-    render(<TQuoteView />)
+-    expect(mockFetchOptionChains).not.toHaveBeenCalled()
+-  })
+-
+-  it('shows placeholder text when no underlying selected', () => {
++  it('无 instrumentID prop 时不自动加载期权链（需窗内自选标的）', () => {
+     render(<TQuoteView />)
+-    expect(screen.getByText(/请先选择标的合约/)).toBeTruthy()
++    expect(mockGetOptionChains).not.toHaveBeenCalled()
+   })
+ 
+-  it('shows placeholder text when underlying selected but no expiry', () => {
+-    storeState.selectedUnderlying = 'IF2608'
++  it('shows placeholder text when no underlying selected', async () => {
+     render(<TQuoteView />)
+-    // There are two elements with this text: the <option> in dropdown and the <div> placeholder
+-    const elements = screen.getAllByText(/请选择到期日/)
+-    expect(elements.length).toBeGreaterThanOrEqual(1)
++    expect(await screen.findByText(/请先选择标的合约/)).toBeTruthy()
+   })
+ 
+-  it('shows loading text when loading=true', () => {
+-    storeState.loading = true
++  it('shows loading text when loading=true', async () => {
++    let resolveChains: (v: { chains: any[] }) => void
++    mockGetOptionChains.mockReturnValue(new Promise((resolve) => { resolveChains = resolve }))
++    const user = userEvent.setup()
+     render(<TQuoteView />)
+-    // There are two elements with this text: the <option> in dropdown and the <div> content
+-    const elements = screen.getAllByText(/加载中/)
+-    expect(elements.length).toBeGreaterThanOrEqual(1)
++    const input = await screen.findByPlaceholderText('输入关键字搜索...')
++    await user.click(input)
++    await user.click(screen.getByText('IF2608'))
++    expect(screen.getAllByText(/加载中/).length).toBeGreaterThanOrEqual(1)
++    act(() => {
++      resolveChains!({ chains: [] })
++    })
+   })
+ 
+-  it('shows error message when error is set', () => {
+-    storeState.error = 'Failed to load'
++  it('shows error message when chain fetch fails', async () => {
++    mockGetOptionChains.mockRejectedValue(new Error('Failed to load option chains'))
++    const user = userEvent.setup()
+     render(<TQuoteView />)
+-    expect(screen.getByText(/Failed to load/)).toBeTruthy()
++    const input = await screen.findByPlaceholderText('输入关键字搜索...')
++    await user.click(input)
++    await user.click(screen.getByText('IF2608'))
++    expect(await screen.findByText(/Failed to load option chains/)).toBeTruthy()
+   })
+ 
+-  it('renders TQuoteTable when chain data is available', () => {
+-    storeState.optionChains = [
+-      {
+-        underlying: 'IF2608',
+-        expireDate: '20260815',
+-        calls: [],
+-        puts: [],
+-      },
+-    ]
+-    storeState.selectedUnderlying = 'IF2608'
+-    storeState.selectedExpireDate = '20260815'
++  it('renders TQuoteTable when chain data is available', async () => {
++    renderChain()
++    const user = userEvent.setup()
+     render(<TQuoteView />)
+-    expect(screen.getByTestId('tquote-table')).toBeTruthy()
++    const input = await screen.findByPlaceholderText('输入关键字搜索...')
++    await user.click(input)
++    await user.click(screen.getByText('IF2608'))
++    expect(await screen.findByTestId('tquote-table')).toBeInTheDocument()
+     expect(screen.getByTestId('tquote-table').textContent).toBe('IF2608-20260815')
+   })
+ 
+-  it('shows underlying selector label', () => {
+-    render(<TQuoteView />)
+-    const labels = screen.getAllByText(/标的/)
+-    expect(labels.length).toBeGreaterThan(0)
+-  })
+-
+-  it('shows no match message when selection has no matching chain', () => {
+-    storeState.selectedUnderlying = 'IF2609'
+-    storeState.selectedExpireDate = '20261215'
+-    render(<TQuoteView />)
+-    expect(screen.getByText(/无匹配/)).toBeTruthy()
+-  })
+-
+-  it('renders single table when both underlying and expiry selected', () => {
+-    storeState.optionChains = [
+-      { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [] },
+-      { underlying: 'IF2608', expireDate: '20260915', calls: [], puts: [] },
+-    ]
+-    storeState.selectedUnderlying = 'IF2608'
+-    storeState.selectedExpireDate = '20260815'
++  it('renders single table when both underlying and expiry selected', async () => {
++    mockGetOptionChains.mockResolvedValue({
++      chains: [
++        { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '' },
++        { underlying: 'IF2608', expireDate: '20260915', calls: [], puts: [], updateTime: '' },
++      ],
++    })
++    const user = userEvent.setup()
+     render(<TQuoteView />)
+-    const tables = screen.getAllByTestId('tquote-table')
++    const input = await screen.findByPlaceholderText('输入关键字搜索...')
++    await user.click(input)
++    await user.click(screen.getByText('IF2608'))
++    const tables = await screen.findAllByTestId('tquote-table')
+     expect(tables).toHaveLength(1)
+     expect(tables[0].textContent).toBe('IF2608-20260815')
+   })
+-})
+ 
+-describe('TQuoteView - volatility real-time refresh', () => {
+-  beforeEach(() => {
+-    vi.clearAllMocks()
+-    vi.useFakeTimers()
+-    storeState = {
+-      optionChains: [
+-        { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [] },
++  it('到期日 select 由 optionChains 派生（标底选中后列出该标底全部到期日）', async () => {
++    mockGetOptionChains.mockResolvedValue({
++      chains: [
++        { underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '' },
++        { underlying: 'IF2608', expireDate: '20260915', calls: [], puts: [], updateTime: '' },
+       ],
+-      volatility: new Map(),
+-      selectedUnderlying: 'IF2608',
+-      selectedExpireDate: '20260815',
+-      loading: false,
+-      error: null,
+-    }
+-    useMarketStore.setState({ snapshots: new Map() })
++    })
++    const user = userEvent.setup()
++    render(<TQuoteView />)
++    const input = await screen.findByPlaceholderText('输入关键字搜索...')
++    await user.click(input)
++    await user.click(screen.getByText('IF2608'))
++    const select = await screen.findByLabelText(/到期日/) as HTMLSelectElement
++    const dates = Array.from(select.options).map((o) => o.value).filter(Boolean)
++    expect(dates).toEqual(['20260815', '20260915'])
+   })
+ 
+-  afterEach(() => {
+-    vi.useRealTimers()
++  it('instrumentID prop 预选标底：自动加载该标底期权链并选中', async () => {
++    mockGetOptionChains.mockResolvedValue({
++      chains: [{ underlying: 'IF2608', expireDate: '20260815', calls: [], puts: [], updateTime: '' }],
++    })
++    render(<TQuoteView instrumentID="IF2608" />)
++    expect(await screen.findByTestId('tquote-table')).toBeInTheDocument()
++    expect(mockGetOptionChains).toHaveBeenCalledWith('IF2608')
++    expect(screen.getByTestId('tquote-table').textContent).toBe('IF2608-20260815')
+   })
+ 
+-  it('refetches volatility when underlying snapshot changes', () => {
++  it('shows underlying selector label', async () => {
+     render(<TQuoteView />)
+-    // Mount: subscribe effect fetchVolatility ×1
+-    expect(mockFetchVolatility).toHaveBeenCalledTimes(1)
+-
+-    // Simulate underlying snapshot update via real zustand store
+-    act(() => {
+-      useMarketStore.setState({
+-        snapshots: new Map([
+-          ['IF2608', { instrumentID: 'IF2608', lastPrice: 4800 } as MarketSnapshot],
+-        ]),
+-      })
+-    })
+-
+-    // Advance timers to trigger debounce
+-    act(() => {
+-      vi.advanceTimersByTime(1000)
+-    })
+-
+-    expect(mockFetchVolatility).toHaveBeenCalledTimes(2)
+-    expect(mockFetchVolatility).toHaveBeenLastCalledWith('IF2608')
++    const labels = await screen.findAllByText(/标的/)
++    expect(labels.length).toBeGreaterThan(0)
+   })
+ 
+-  it('debounces rapid snapshot updates (only fetches once)', () => {
++  it('sorts available underlyings lexicographically in dropdown', async () => {
++    mockGetOptionUnderlyings.mockResolvedValue({ underlyings: ['MA609', 'cu2609', 'FG609'] })
++    const user = userEvent.setup()
+     render(<TQuoteView />)
+-    expect(mockFetchVolatility).toHaveBeenCalledTimes(1)
+-
+-    // Simulate rapid snapshot updates
+-    act(() => {
+-      useMarketStore.setState({
+-        snapshots: new Map([
+-          ['IF2608', { instrumentID: 'IF2608', lastPrice: 4800 } as MarketSnapshot],
+-        ]),
+-      })
+-    })
+-    act(() => {
+-      useMarketStore.setState({
+-        snapshots: new Map([
+-          ['IF2608', { instrumentID: 'IF2608', lastPrice: 4801 } as MarketSnapshot],
+-        ]),
+-      })
+-    })
+-    act(() => {
+-      useMarketStore.setState({
+-        snapshots: new Map([
+-          ['IF2608', { instrumentID: 'IF2608', lastPrice: 4802 } as MarketSnapshot],
+-        ]),
+-      })
+-    })
+-
+-    // Only advance past debounce window once
+-    act(() => {
+-      vi.advanceTimersByTime(1000)
+-    })
+-
+-    // Should only have fetched once more (debounced), not 3 times
+-    expect(mockFetchVolatility).toHaveBeenCalledTimes(2)
++    const input = await screen.findByPlaceholderText('输入关键字搜索...')
++    await user.click(input)
++    const options = Array.from(document.querySelectorAll('.options-search-option')).map((el) => el?.textContent ?? '')
++    expect(options).toEqual(['FG609', 'MA609', 'cu2609'])
+   })
+ 
+-  it('does not refresh when no underlying is selected', () => {
+-    storeState.selectedUnderlying = null
+-    storeState.optionChains = []
++  it('不向 TQuoteTable 传递 volatility（去 IV 后无消费方）', async () => {
++    renderChain()
++    const user = userEvent.setup()
+     render(<TQuoteView />)
+-    // No subscribe effect (no chain)
+-    expect(mockFetchVolatility).not.toHaveBeenCalled()
+-
+-    act(() => {
+-      useMarketStore.setState({
+-        snapshots: new Map([
+-          ['IF2608', { instrumentID: 'IF2608', lastPrice: 4800 } as MarketSnapshot],
+-        ]),
+-      })
+-    })
+-    act(() => {
+-      vi.advanceTimersByTime(1000)
+-    })
+-
+-    // Still no fetch
+-    expect(mockFetchVolatility).not.toHaveBeenCalled()
++    const input = await screen.findByPlaceholderText('输入关键字搜索...')
++    await user.click(input)
++    await user.click(screen.getByText('IF2608'))
++    await screen.findByTestId('tquote-table')
++    const calls = mockTQuoteTable.mock.calls
++    const props = calls[calls.length - 1]?.[0]
++    expect(props.volatility).toBeUndefined()
++    expect(props.snapshots).toBeInstanceOf(Map)
+   })
+ })
+diff --git a/frontend/src/modules/options/TQuoteView.tsx b/frontend/src/modules/options/TQuoteView.tsx
+index 9d208fa..1278c53 100644
+--- a/frontend/src/modules/options/TQuoteView.tsx
++++ b/frontend/src/modules/options/TQuoteView.tsx
+@@ -1,63 +1,61 @@
+-import { useEffect, useMemo, useRef, useState } from 'react'
+-import { useOptionsStore } from './store'
++import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+ import { useMarketStore } from '@/modules/market/store'
+-import { subscribeMarket, getOptionUnderlyings, getSnapshots } from '@/services/api'
++import { subscribeMarket, getOptionUnderlyings, getOptionChains, getSnapshots } from '@/services/api'
++import type { OptionChain } from '@/services/types'
+ import { TQuoteTable } from './TQuoteTable'
+ import './styles.css'
+ 
+-/** Debounce delay (ms) — avoids rapid re-fetches during high-frequency ticks. */
+-const REFRESH_DEBOUNCE_MS = 800
+-
+ /** Format YYYYMMDD → YYYY-MM-DD for display. */
+ function formatExpireDate(raw: string): string {
+   if (raw.length === 8) return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
+   return raw
+ }
+ 
+ /** Max retry attempts for loading underlyings. */
+ const MAX_RETRIES = 3
+ /** Delay between retries (ms). */
+ const RETRY_DELAY_MS = 1500
+ 
+-export function TQuoteView() {
+-  const optionChains = useOptionsStore((s) => s.optionChains)
+-  const volatility = useOptionsStore((s) => s.volatility)
+-  const selectedUnderlying = useOptionsStore((s) => s.selectedUnderlying)
+-  const selectedExpireDate = useOptionsStore((s) => s.selectedExpireDate)
+-  const loading = useOptionsStore((s) => s.loading)
+-  const error = useOptionsStore((s) => s.error)
+-  const fetchOptionChains = useOptionsStore((s) => s.fetchOptionChains)
+-  const fetchVolatility = useOptionsStore((s) => s.fetchVolatility)
+-  const setSelectedUnderlying = useOptionsStore((s) => s.setSelectedUnderlying)
+-  const setSelectedExpireDate = useOptionsStore((s) => s.setSelectedExpireDate)
+-  const availableExpirations = useOptionsStore((s) => s.availableExpirations)
++/**
++ * TQuoteView — 独立悬浮标签页的 T型报价（多实例自包含）
++ *
++ * 自包含：所有数据状态（optionChains / selectedUnderlying / selectedExpireDate /
++ * loading / error）均为本地 useState，直接调用 @/services/api，多个悬浮实例互不干扰。
++ * 可选 prop `instrumentID`：挂载时自动预选该标底并加载期权链（T型报价-<标底> 标签页）。
++ */
++export function TQuoteView({ instrumentID }: { instrumentID?: string }) {
++  // T型报价数据（本地状态，实例隔离）
++  const [optionChains, setOptionChains] = useState<OptionChain[]>([])
++  const [selectedUnderlying, setSelectedUnderlying] = useState<string | null>(null)
++  const [selectedExpireDate, setSelectedExpireDate] = useState<string | null>(null)
++  const [loading, setLoading] = useState(false)
++  const [error, setError] = useState<string | null>(null)
+ 
+   // Available underlyings — loaded via lightweight API on mount
+   const [availableUnderlyings, setAvailableUnderlyings] = useState<string[]>([])
+   const [underlyingsLoading, setUnderlyingsLoading] = useState(true)
+ 
+   // Market snapshots — real-time price data for chain quotes
+   const snapshots = useMarketStore((s) => s.snapshots)
+   const batchUpdate = useMarketStore((s) => s.batchUpdate)
+-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+-  const prevPriceRef = useRef<number | null>(null)
+ 
+   // Searchable underlying dropdown state
+   const [underlyingSearch, setUnderlyingSearch] = useState('')
+   const [showUnderlyingDropdown, setShowUnderlyingDropdown] = useState(false)
+   const underlyingDropdownRef = useRef<HTMLDivElement>(null)
+ 
++  // 排序（字典序）：availableUnderlyings 设值前排序；filteredUnderlyings 保持有序
+   const filteredUnderlyings = useMemo(() => {
+     if (!underlyingSearch.trim()) return availableUnderlyings
+     const q = underlyingSearch.trim().toUpperCase()
+-    return availableUnderlyings.filter((u) => u.toUpperCase().includes(q))
++    return availableUnderlyings.filter((u) => u.toUpperCase().includes(q)).sort()
+   }, [availableUnderlyings, underlyingSearch])
+ 
+   // Close underlying dropdown on outside click
+   useEffect(() => {
+     if (!showUnderlyingDropdown) return
+     const handleClickOutside = (e: MouseEvent) => {
+       if (underlyingDropdownRef.current && !underlyingDropdownRef.current.contains(e.target as Node)) {
+         setShowUnderlyingDropdown(false)
+       }
+     }
+@@ -74,21 +72,21 @@ export function TQuoteView() {
+       if (cancelled) return
+ 
+       getOptionUnderlyings().then((res) => {
+         if (cancelled) return
+ 
+         const underlyings = res.underlyings ?? []
+         if (underlyings.length === 0 && retryCount < MAX_RETRIES) {
+           retryCount++
+           setTimeout(loadUnderlyings, RETRY_DELAY_MS)
+         } else {
+-          setAvailableUnderlyings(underlyings)
++          setAvailableUnderlyings([...underlyings].sort())
+           setUnderlyingsLoading(false)
+         }
+       }).catch(() => {
+         if (cancelled) return
+         if (retryCount < MAX_RETRIES) {
+           retryCount++
+           setTimeout(loadUnderlyings, RETRY_DELAY_MS)
+         } else {
+           setUnderlyingsLoading(false)
+         }
+@@ -104,95 +102,95 @@ export function TQuoteView() {
+   const selectedChain = useMemo(
+     () =>
+       optionChains.find(
+         (c) =>
+           (!selectedUnderlying || c.underlying === selectedUnderlying) &&
+           (!selectedExpireDate || c.expireDate === selectedExpireDate)
+       ) ?? null,
+     [optionChains, selectedUnderlying, selectedExpireDate]
+   )
+ 
+-  // No auto-load on mount: user must select underlying + expiry manually.
++  // 选择标底：加载期权链 + 自动选中首个到期日
++  const selectUnderlying = useCallback((value: string) => {
++    setSelectedUnderlying(value)
++    setSelectedExpireDate(null)
++    setUnderlyingSearch('')
++    setShowUnderlyingDropdown(false)
++    if (value) {
++      setLoading(true)
++      setError(null)
++      getOptionChains(value)
++        .then((res) => {
++          const chains = res.chains ?? []
++          setOptionChains(chains)
++          if (chains.length > 0) {
++            setSelectedExpireDate(chains[0].expireDate)
++          }
++          setLoading(false)
++        })
++        .catch(() => {
++          setError('Failed to load option chains')
++          setLoading(false)
++        })
++    } else {
++      setOptionChains([])
++    }
++  }, [])
++
++  // 预选：挂载时若带 instrumentID prop → 自动 selectUnderlying（依赖 props.instrumentID）
++  useEffect(() => {
++    if (instrumentID) {
++      selectUnderlying(instrumentID)
++    }
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [instrumentID])
+ 
+-  // Subscribe to selected chain's option instruments + fetch snapshots + IVs
++  // Subscribe to selected chain's option instruments + fetch snapshots
+   useEffect(() => {
+     if (!selectedChain) return
+     const ids = [
+       ...selectedChain.calls.map((q) => q.instrumentID),
+       ...selectedChain.puts.map((q) => q.instrumentID),
+     ]
+     if (ids.length > 0) {
+       subscribeMarket(ids).catch(() => {})
+       // Proactively fetch current snapshots so the table shows data immediately,
+       // without waiting for WebSocket market_data push.
+       getSnapshots(ids)
+         .then((res) => {
+           const snaps = Object.values(res.snapshots)
+           if (snaps.length > 0) batchUpdate(snaps)
+         })
+         .catch(() => {})
+     }
+-    fetchVolatility(selectedUnderlying ?? undefined)
+-  }, [selectedChain, selectedUnderlying, fetchVolatility, batchUpdate])
+-
+-  // Real-time IV refresh: when underlying's lastPrice changes, debounce re-fetch volatility
+-  useEffect(() => {
+-    if (!selectedUnderlying) return
+-    const snap = snapshots.get(selectedUnderlying)
+-    if (!snap) return
+-
+-    const currentPrice = snap.lastPrice
+-    if (prevPriceRef.current === currentPrice) return
+-    prevPriceRef.current = currentPrice
+-
+-    if (timerRef.current) clearTimeout(timerRef.current)
+-    timerRef.current = setTimeout(() => {
+-      fetchVolatility(selectedUnderlying)
+-      timerRef.current = null
+-    }, REFRESH_DEBOUNCE_MS)
+-  }, [snapshots, selectedUnderlying, fetchVolatility])
+-
+-  const selectUnderlying = (value: string) => {
+-    setSelectedUnderlying(value)
+-    setSelectedExpireDate(null)
+-    setUnderlyingSearch('')
+-    setShowUnderlyingDropdown(false)
+-    if (value) {
+-      fetchOptionChains(value).then(() => {
+-        const { optionChains: chains, setSelectedExpireDate: setED } = useOptionsStore.getState()
+-        if (chains.length > 0) {
+-          setED(chains[0].expireDate)
+-        }
+-      })
+-    }
+-  }
++  }, [selectedChain, batchUpdate])
+ 
+   const handleExpireDateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+     const value = e.target.value || null
+     setSelectedExpireDate(value)
+   }
+ 
+   // Manual refresh underlyings
+   const handleRefreshUnderlyings = () => {
+     setUnderlyingsLoading(true)
+     getOptionUnderlyings().then((res) => {
+-      setAvailableUnderlyings(res.underlyings ?? [])
++      setAvailableUnderlyings([...(res.underlyings ?? [])].sort())
+       setUnderlyingsLoading(false)
+     }).catch(() => {
+       setUnderlyingsLoading(false)
+     })
+   }
+ 
+-  // Expiry dropdown filtered by selected underlying
++  // Expiry dropdown filtered by selected underlying（由 optionChains 本地派生）
+   const expirations = selectedUnderlying
+     ? [...new Set(optionChains.filter((c) => c.underlying === selectedUnderlying).map((c) => c.expireDate))].sort()
+-    : availableExpirations()
++    : []
+ 
+   return (
+     <div className="options-panel">
+       {/* Toolbar */}
+       <div className="options-toolbar">
+         <label>
+           标的:
+           <div className="options-searchable-select" ref={underlyingDropdownRef}>
+             <input
+               type="text"
+@@ -256,21 +254,21 @@ export function TQuoteView() {
+       {/* Content */}
+       <div className="options-content">
+         {loading && (
+           <div className="options-empty">加载中...</div>
+         )}
+         {error && !loading && (
+           <div className="options-error">{error}</div>
+         )}
+         {!loading && !error && selectedChain && (
+           <div className="options-chain-table">
+-            <TQuoteTable chain={selectedChain} snapshots={snapshots} volatility={volatility} />
++            <TQuoteTable chain={selectedChain} snapshots={snapshots} />
+           </div>
+         )}
+         {!loading && !error && !selectedChain && (
+           <div className="options-empty">
+             {!selectedUnderlying
+               ? '请先选择标的合约'
+               : !selectedExpireDate
+                 ? '请选择到期日'
+                 : '无匹配的期权链数据'}
+           </div>
+diff --git a/frontend/src/modules/options/store.test.ts b/frontend/src/modules/options/store.test.ts
+deleted file mode 100644
+index a0f4b3a..0000000
+--- a/frontend/src/modules/options/store.test.ts
++++ /dev/null
+@@ -1,262 +0,0 @@
+-import { describe, it, expect, vi, beforeEach } from 'vitest'
+-import { useOptionsStore } from './store'
+-import type { OptionChain, OptionQuote } from '@/services/types'
+-
+-// Mock API module — getOptionChains 和 getVolatility 是独立函数
+-vi.mock('@/services/api', () => ({
+-  getOptionChains: vi.fn(),
+-  getVolatility: vi.fn(),
+-}))
+-
+-import { getOptionChains, getVolatility } from '@/services/api'
+-
+-function makeQuote(overrides: Partial<OptionQuote> = {}): OptionQuote {
+-  return {
+-    instrumentID: 'IF2608-C-4800',
+-    strikePrice: 4800,
+-    lastPrice: 120.5,
+-    bidPrice: 120.0,
+-    askPrice: 121.0,
+-    volume: 500,
+-    openInterest: 3000,
+-    impliedVolatility: 0.25,
+-    ...overrides,
+-  }
+-}
+-
+-function makeChain(overrides: Partial<OptionChain> = {}): OptionChain {
+-  return {
+-    underlying: 'IF2608',
+-    expireDate: '20260815',
+-    calls: [
+-      makeQuote({ instrumentID: 'IF2608-C-4700', strikePrice: 4700, lastPrice: 180.0 }),
+-      makeQuote({ instrumentID: 'IF2608-C-4800', strikePrice: 4800, lastPrice: 120.5 }),
+-    ],
+-    puts: [
+-      makeQuote({ instrumentID: 'IF2608-P-4700', strikePrice: 4700, lastPrice: 80.0 }),
+-      makeQuote({ instrumentID: 'IF2608-P-4800', strikePrice: 4800, lastPrice: 130.0 }),
+-    ],
+-    updateTime: '2026-07-24T10:00:00',
+-    ...overrides,
+-  }
+-}
+-
+-describe('OptionsStore', () => {
+-  beforeEach(() => {
+-    useOptionsStore.setState({
+-      optionChains: [],
+-      selectedUnderlying: null,
+-      selectedExpireDate: null,
+-      loading: false,
+-      error: null,
+-      volatility: new Map(),
+-    })
+-    vi.mocked(getOptionChains).mockReset()
+-    vi.mocked(getVolatility).mockReset()
+-  })
+-
+-  // --- initial state ---
+-
+-  it('has empty optionChains by default', () => {
+-    expect(useOptionsStore.getState().optionChains).toEqual([])
+-  })
+-
+-  it('has null selectedUnderlying by default', () => {
+-    expect(useOptionsStore.getState().selectedUnderlying).toBeNull()
+-  })
+-
+-  it('has null selectedExpireDate by default', () => {
+-    expect(useOptionsStore.getState().selectedExpireDate).toBeNull()
+-  })
+-
+-  it('has loading=false by default', () => {
+-    expect(useOptionsStore.getState().loading).toBe(false)
+-  })
+-
+-  it('has null error by default', () => {
+-    expect(useOptionsStore.getState().error).toBeNull()
+-  })
+-
+-  // --- selectors ---
+-
+-  it('setSelectedUnderlying updates underlying', () => {
+-    useOptionsStore.getState().setSelectedUnderlying('IF2608')
+-    expect(useOptionsStore.getState().selectedUnderlying).toBe('IF2608')
+-  })
+-
+-  it('setSelectedUnderlying clears underlying with null', () => {
+-    useOptionsStore.getState().setSelectedUnderlying('IF2608')
+-    useOptionsStore.getState().setSelectedUnderlying(null)
+-    expect(useOptionsStore.getState().selectedUnderlying).toBeNull()
+-  })
+-
+-  it('setSelectedExpireDate updates expireDate', () => {
+-    useOptionsStore.getState().setSelectedExpireDate('20260815')
+-    expect(useOptionsStore.getState().selectedExpireDate).toBe('20260815')
+-  })
+-
+-  it('clearError resets error to null', () => {
+-    useOptionsStore.setState({ error: 'some error' })
+-    useOptionsStore.getState().clearError()
+-    expect(useOptionsStore.getState().error).toBeNull()
+-  })
+-
+-  // --- fetchOptionChains ---
+-
+-  it('fetchOptionChains calls API and stores chains', async () => {
+-    const chains = [makeChain()]
+-    vi.mocked(getOptionChains).mockResolvedValue({ chains })
+-
+-    await useOptionsStore.getState().fetchOptionChains('IF2608')
+-
+-    expect(getOptionChains).toHaveBeenCalledWith('IF2608', undefined)
+-    expect(useOptionsStore.getState().optionChains).toEqual(chains)
+-    expect(useOptionsStore.getState().loading).toBe(false)
+-  })
+-
+-  it('fetchOptionChains passes expire_date when provided', async () => {
+-    vi.mocked(getOptionChains).mockResolvedValue({ chains: [] })
+-
+-    await useOptionsStore.getState().fetchOptionChains('IF2608', '20260815')
+-
+-    expect(getOptionChains).toHaveBeenCalledWith('IF2608', '20260815')
+-  })
+-
+-  it('fetchOptionChains fetches all chains when no underlying provided', async () => {
+-    vi.mocked(getOptionChains).mockResolvedValue({ chains: [] })
+-
+-    await useOptionsStore.getState().fetchOptionChains()
+-
+-    expect(getOptionChains).toHaveBeenCalledWith(undefined, undefined)
+-  })
+-
+-  it('fetchOptionChains sets loading=true during fetch', async () => {
+-    let resolvePromise: (value: unknown) => void
+-    const promise = new Promise((resolve) => { resolvePromise = resolve })
+-    vi.mocked(getOptionChains).mockReturnValue(promise as Promise<{ chains: OptionChain[] }>)
+-
+-    const fetchPromise = useOptionsStore.getState().fetchOptionChains('IF2608')
+-    expect(useOptionsStore.getState().loading).toBe(true)
+-
+-    resolvePromise!({ chains: [makeChain()] })
+-    await fetchPromise
+-    expect(useOptionsStore.getState().loading).toBe(false)
+-  })
+-
+-  it('fetchOptionChains sets error on API failure', async () => {
+-    vi.mocked(getOptionChains).mockRejectedValue(new Error('Network error'))
+-
+-    await useOptionsStore.getState().fetchOptionChains('IF2608')
+-
+-    expect(useOptionsStore.getState().error).toBe('Failed to load option chains')
+-    expect(useOptionsStore.getState().loading).toBe(false)
+-  })
+-
+-  it('fetchOptionChains preserves existing chains on error', async () => {
+-    const existingChain = makeChain()
+-    useOptionsStore.setState({ optionChains: [existingChain] })
+-    vi.mocked(getOptionChains).mockRejectedValue(new Error('fail'))
+-
+-    await useOptionsStore.getState().fetchOptionChains('IF2608')
+-
+-    expect(useOptionsStore.getState().optionChains).toEqual([existingChain])
+-  })
+-
+-  // --- available expirations ---
+-
+-  it('availableExpirations returns unique sorted dates from all chains', () => {
+-    const chain1 = makeChain({ expireDate: '20260915' })
+-    const chain2 = makeChain({ underlying: 'IF2609', expireDate: '20260815' })
+-    useOptionsStore.setState({ optionChains: [chain1, chain2] })
+-
+-    const dates = useOptionsStore.getState().availableExpirations()
+-    expect(dates).toEqual(['20260815', '20260915'])
+-  })
+-
+-  it('availableExpirations returns empty when no chains', () => {
+-    expect(useOptionsStore.getState().availableExpirations()).toEqual([])
+-  })
+-
+-  // --- available underlyings ---
+-
+-  it('availableUnderlyings returns unique underlyings sorted', () => {
+-    useOptionsStore.setState({
+-      optionChains: [
+-        makeChain({ underlying: 'IF2609' }),
+-        makeChain({ underlying: 'IF2608' }),
+-      ],
+-    })
+-
+-    const underlyings = useOptionsStore.getState().availableUnderlyings()
+-    expect(underlyings).toEqual(['IF2608', 'IF2609'])
+-  })
+-
+-  it('availableUnderlyings returns empty when no chains', () => {
+-    expect(useOptionsStore.getState().availableUnderlyings()).toEqual([])
+-  })
+-
+-  // --- strikes ---
+-
+-  it('allStrikes returns unique sorted strike prices from calls and puts', () => {
+-    useOptionsStore.setState({
+-      optionChains: [makeChain()],
+-    })
+-
+-    const strikes = useOptionsStore.getState().allStrikes()
+-    expect(strikes).toEqual([4700, 4800])
+-  })
+-
+-  it('allStrikes returns empty when no chains', () => {
+-    expect(useOptionsStore.getState().allStrikes()).toEqual([])
+-  })
+-})
+-
+-describe('OptionsStore - fetchVolatility', () => {
+-  beforeEach(() => {
+-    useOptionsStore.setState({
+-      optionChains: [],
+-      selectedUnderlying: null,
+-      selectedExpireDate: null,
+-      loading: false,
+-      error: null,
+-      volatility: new Map(),
+-    })
+-    vi.mocked(getVolatility).mockReset()
+-  })
+-
+-  it('has empty volatility map by default', () => {
+-    expect(useOptionsStore.getState().volatility.size).toBe(0)
+-  })
+-
+-  it('fetchVolatility populates volatility map from API', async () => {
+-    vi.mocked(getVolatility).mockResolvedValue({
+-      volatility: [
+-        { instrumentID: 'IF2608-C-4800', impliedVolatility: 0.25, underlyingPrice: 4800, strikePrice: 4800, timeToExpiry: 0.06, riskFreeRate: 0.03, optionType: '1' },
+-        { instrumentID: 'IF2608-P-4800', impliedVolatility: 0.28, underlyingPrice: 4800, strikePrice: 4800, timeToExpiry: 0.06, riskFreeRate: 0.03, optionType: '2' },
+-      ],
+-    })
+-
+-    await useOptionsStore.getState().fetchVolatility('IF2608')
+-
+-    expect(getVolatility).toHaveBeenCalledWith('IF2608')
+-    expect(useOptionsStore.getState().volatility.get('IF2608-C-4800')).toBe(0.25)
+-    expect(useOptionsStore.getState().volatility.get('IF2608-P-4800')).toBe(0.28)
+-  })
+-
+-  it('fetchVolatility without underlying fetches all', async () => {
+-    vi.mocked(getVolatility).mockResolvedValue({ volatility: [] })
+-
+-    await useOptionsStore.getState().fetchVolatility()
+-
+-    expect(getVolatility).toHaveBeenCalledWith(undefined)
+-  })
+-
+-  it('fetchVolatility keeps existing map on API failure', async () => {
+-    useOptionsStore.setState({ volatility: new Map([['X', 0.1]]) })
+-    vi.mocked(getVolatility).mockRejectedValue(new Error('fail'))
+-
+-    await useOptionsStore.getState().fetchVolatility('IF2608')
+-
+-    expect(useOptionsStore.getState().volatility.get('X')).toBe(0.1)
+-  })
+-})
+diff --git a/frontend/src/modules/options/store.ts b/frontend/src/modules/options/store.ts
+deleted file mode 100644
+index 3dee1bb..0000000
+--- a/frontend/src/modules/options/store.ts
++++ /dev/null
+@@ -1,87 +0,0 @@
+-import { create } from 'zustand'
+-import type { OptionChain } from '@/services/types'
+-import { getOptionChains, getVolatility } from '@/services/api'
+-
+-interface OptionsStore {
+-  // T型报价数据
+-  optionChains: OptionChain[]
+-  // 隐含波动率（instrumentID → IV），来自 /api/market/volatility
+-  volatility: Map<string, number>
+-  // UI 状态
+-  selectedUnderlying: string | null
+-  selectedExpireDate: string | null
+-  loading: boolean
+-  error: string | null
+-  // Actions
+-  setSelectedUnderlying: (underlying: string | null) => void
+-  setSelectedExpireDate: (expireDate: string | null) => void
+-  fetchOptionChains: (underlying?: string, expireDate?: string) => Promise<void>
+-  fetchVolatility: (underlying?: string) => Promise<void>
+-  clearError: () => void
+-  // Computed helpers
+-  availableUnderlyings: () => string[]
+-  availableExpirations: () => string[]
+-  allStrikes: () => number[]
+-}
+-
+-export const useOptionsStore = create<OptionsStore>((set, getState) => ({
+-  optionChains: [],
+-  volatility: new Map(),
+-  selectedUnderlying: null,
+-  selectedExpireDate: null,
+-  loading: false,
+-  error: null,
+-
+-  setSelectedUnderlying: (underlying) => set({ selectedUnderlying: underlying }),
+-
+-  setSelectedExpireDate: (expireDate) => set({ selectedExpireDate: expireDate }),
+-
+-  clearError: () => set({ error: null }),
+-
+-  fetchOptionChains: async (underlying?, expireDate?) => {
+-    set({ loading: true, error: null })
+-    try {
+-      const res = await getOptionChains(underlying, expireDate)
+-      set({ optionChains: res.chains ?? [], loading: false })
+-    } catch (err) {
+-      console.error('[OptionsStore] fetchOptionChains failed:', err)
+-      set({ loading: false, error: 'Failed to load option chains' })
+-    }
+-  },
+-
+-  fetchVolatility: async (underlying?) => {
+-    try {
+-      const res = await getVolatility(underlying)
+-      const map = new Map<string, number>()
+-      for (const v of res.volatility ?? []) {
+-        map.set(v.instrumentID, v.impliedVolatility)
+-      }
+-      set({ volatility: map })
+-    } catch (err) {
+-      console.error('[OptionsStore] fetchVolatility failed:', err)
+-    }
+-  },
+-
+-  availableUnderlyings: () => {
+-    const chains = getState().optionChains
+-    const underlyings = [...new Set(chains.map((c) => c.underlying))]
+-    return underlyings.sort()
+-  },
+-
+-  availableExpirations: () => {
+-    const chains = getState().optionChains
+-    const dates = [...new Set(chains.map((c) => c.expireDate))]
+-    return dates.sort()
+-  },
+-
+-  allStrikes: () => {
+-    const chains = getState().optionChains
+-    if (chains.length === 0) return []
+-    const strikes = new Set<number>()
+-    for (const chain of chains) {
+-      for (const call of chain.calls) strikes.add(call.strikePrice)
+-      for (const put of chain.puts) strikes.add(put.strikePrice)
+-    }
+-    return [...strikes].sort((a, b) => a - b)
+-  },
+-}))
+diff --git a/frontend/src/services/electron.ts b/frontend/src/services/electron.ts
+index fde993c..047169e 100644
+--- a/frontend/src/services/electron.ts
++++ b/frontend/src/services/electron.ts
+@@ -108,21 +108,21 @@ declare global {
+       getAppName: () => Promise<string>;
+ 
+       // Backend management
+       restartBackend: () => Promise<void>;
+       getBackendStatus: () => Promise<{ running: boolean; pid?: number }>;
+ 
+       // Navigation
+       onNavigateTab: (callback: (tab: string) => void) => () => void;
+ 
+       // Menu (main → renderer): 顶部菜单打开浮动窗
+-      onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor') => void) => () => void;
++      onOpenFloatingTab: (callback: (tab: 'order' | 'kline' | 'query' | 'settings' | 'ipc-monitor' | 'tquote') => void) => () => void;
+ 
+       // Menu (main → renderer): 切换 FPS 监控
+       onTogglePerf: (callback: () => void) => () => void;
+ 
+       // Menu (main → renderer): 行情主页内切换视图（期货/自选/期权）
+       onMarketView: (callback: (view: 'all' | 'favorites' | 'options') => void) => () => void;
+ 
+       // Data exchange
+       onGetSelectedInstrument: (callback: () => string) => () => void;
+       sendSelectedInstrument: (instrumentID: string) => void;
+diff --git a/frontend/src/stores/tabs.test.ts b/frontend/src/stores/tabs.test.ts
+index 7e50211..3b848af 100644
+--- a/frontend/src/stores/tabs.test.ts
++++ b/frontend/src/stores/tabs.test.ts
+@@ -41,20 +41,21 @@ describe('useTabStore', () => {
+   // --- TabType 定义 ---
+ 
+   describe('TabType', () => {
+     it('应定义所有标签页类型', () => {
+       expect(TAB_TYPES).toEqual([
+         'market',
+         'favorites',
+         'order',
+         'kline',
+         'options',
++        'tquote',
+         'ipc-monitor',
+         'settings',
+         'query',
+       ])
+     })
+ 
+     it('PINNED_TAB_TYPE 应为 market', () => {
+       expect(PINNED_TAB_TYPE).toBe('market')
+     })
+   })
+diff --git a/frontend/src/stores/tabs.ts b/frontend/src/stores/tabs.ts
+index 53d46e2..d9cd8dd 100644
+--- a/frontend/src/stores/tabs.ts
++++ b/frontend/src/stores/tabs.ts
+@@ -2,31 +2,33 @@ import { create } from 'zustand'
+ 
+ // --- 类型定义 ---
+ 
+ /** 标签页类型 */
+ export type TabType =
+   | 'market'
+   | 'favorites'
+   | 'order'
+   | 'kline'
+   | 'options'
++  | 'tquote'
+   | 'ipc-monitor'
+   | 'settings'
+   | 'query' // 查询（全局账户查询）
+ 
+ /** 所有标签页类型 */
+ export const TAB_TYPES: TabType[] = [
+   'market',
+   'favorites',
+   'order',
+   'kline',
+   'options',
++  'tquote',
+   'ipc-monitor',
+   'settings',
+   'query',
+ ]
+ 
+ /** 固定标签页类型（始终存在，不可关闭） */
+ export const PINNED_TAB_TYPE: TabType = 'market'
+ 
+ /** 标签页数量上限 */
+ export const MAX_TABS = 15
+diff --git a/frontend/src/utils/openFloatingTab.ts b/frontend/src/utils/openFloatingTab.ts
+index 96b0537..39de1a0 100644
+--- a/frontend/src/utils/openFloatingTab.ts
++++ b/frontend/src/utils/openFloatingTab.ts
+@@ -46,20 +46,30 @@ export function openOrderFloating(): boolean {
+ /** 打开K线浮动窗：有选中合约则直接定位到该合约 */
+ export function openKlineFloating(): boolean {
+   const inst = useMarketStore.getState().selectedInstrument
+   return openFloatingTab({
+     type: 'kline',
+     title: inst ? `📈 K线-${inst}` : '📈 K线',
+     props: inst ? { instrumentID: inst } : {},
+   })
+ }
+ 
++/** 打开 T型报价悬浮窗：传 underlyingID 则预选该标底，否则空白（窗内自选） */
++export function openTQuoteFloating(underlyingID?: string): boolean {
++  return openFloatingTab({
++    type: 'tquote',
++    title: underlyingID ? `📉 T型报价-${underlyingID}` : '📉 T型报价',
++    props: underlyingID ? { instrumentID: underlyingID } : {},
++    size: { w: 900, h: 600 },
++  })
++}
++
+ /** 打开查询浮动窗 */
+ export function openQueryFloating(): boolean {
+   return openFloatingTab({ type: 'query', title: '📋 查询' })
+ }
+ 
+ /** 打开设置浮动窗 */
+ export function openSettingsFloating(): boolean {
+   return openFloatingTab({ type: 'settings', title: '⚙ 设置' })
+ }
+ 

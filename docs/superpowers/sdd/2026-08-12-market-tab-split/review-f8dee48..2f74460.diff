@@ -1,0 +1,300 @@
+# Review package: f8dee48..HEAD
+
+## Commits
+2f74460 refactor(market): 共享行情 WS/订阅管理器/合约加载上移到 App，支持双面板单例
+
+## Files changed
+ frontend/src/App.test.tsx                        | 24 ++++++++++++++++++++++++
+ frontend/src/App.tsx                             | 15 +++++++++++++++
+ frontend/src/modules/market/MarketPanel.test.tsx | 22 ----------------------
+ frontend/src/modules/market/MarketPanel.tsx      | 23 ++---------------------
+ 4 files changed, 41 insertions(+), 43 deletions(-)
+
+## Diff
+diff --git a/frontend/src/App.test.tsx b/frontend/src/App.test.tsx
+index fa8b98d..a7e8d5d 100644
+--- a/frontend/src/App.test.tsx
++++ b/frontend/src/App.test.tsx
+@@ -1,32 +1,40 @@
+ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+ import { render, screen, fireEvent, act } from '@testing-library/react'
+ import App from './App'
+ import { useConnectionStore } from '@/stores/connection'
+ import { useTabStore } from '@/stores/tabs'
+ import { useFloatingWindowStore } from '@/stores/floatingWindows'
++import { useMarketWs } from '@/hooks/useMarketWs'
++import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
++import { useContractsStore } from '@/stores/contracts'
+ 
+ // Mock TabBar 组件
+ vi.mock('@/components/TabBar', () => ({
+   TabBar: ({ onAddTab }: { onAddTab?: () => void }) => (
+     <div data-testid="tab-bar">
+       <span>TabBar Mock</span>
+       <button onClick={onAddTab}>+</button>
+     </div>
+   ),
+ }))
+ 
+ // Mock TabContent 组件
+ vi.mock('@/components/TabContent', () => ({
+   TabContent: () => <div data-testid="tab-content">TabContent Mock</div>,
+ }))
+ 
++// Mock 共享行情基础设施（App 挂载的全局单例）— 避免测试环境建立真实 WS 连接与订阅。
++// TabContent 已 mock，MarketPanel 不会渲染，但 App 直接挂载这两个 hook。
++vi.mock('@/hooks/useMarketWs', () => ({ useMarketWs: vi.fn() }))
++vi.mock('@/hooks/useSubscriptionManager', () => ({ useSubscriptionManager: vi.fn() }))
++
+ // rAF stub（BottomBar FPS 徽标内 PerfMonitor visible=true 时使用）
+ let rafCallbacks: FrameRequestCallback[] = []
+ let rafId = 0
+ 
+ describe('App Layout — 标签页系统', () => {
+   beforeEach(() => {
+     rafCallbacks = []
+     rafId = 0
+     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+       rafCallbacks.push(cb)
+@@ -154,11 +162,27 @@ describe('App Layout — 标签页系统', () => {
+       render(<App />)
+       expect(screen.queryByTestId('bottom-bar-fps')).toBeNull()
+       const callback = onTogglePerf.mock.calls[0][0]
+       act(() => {
+         callback()
+       })
+       expect(screen.getByTestId('bottom-bar-fps')).toBeInTheDocument()
+       delete (window as any).electronAPI
+     })
+   })
++
++  describe('共享行情基础设施（上移 App，期货/期权双面板单例）', () => {
++    it('挂载 useMarketWs 与 useSubscriptionManager 各一次，并启动时加载合约/收藏', () => {
++      vi.clearAllMocks()
++      const loadAllSpy = vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
++      const loadFavSpy = vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
++
++      render(<App />)
++
++      expect(useMarketWs).toHaveBeenCalledTimes(1)
++      expect(useMarketWs).toHaveBeenCalledWith('ws://localhost:8000')
++      expect(useSubscriptionManager).toHaveBeenCalledTimes(1)
++      expect(loadAllSpy).toHaveBeenCalledTimes(1)
++      expect(loadFavSpy).toHaveBeenCalledTimes(1)
++    })
++  })
+ })
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+index e6c3c2c..9874c96 100644
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -1,19 +1,22 @@
+ import { useState, useEffect } from 'react'
+ import { GlobalBar } from '@/components/GlobalBar'
+ import { BottomBar } from '@/components/BottomBar'
+ import { TabContent } from '@/components/TabContent'
+ import { ToastContainer } from '@/components/Toast'
+ import { useSystemWs } from '@/hooks/useSystemWs'
+ import { useConnectionPoll } from '@/hooks/useConnectionPoll'
+ import { useTabContractLocks } from '@/hooks/useTabContractLocks'
++import { useMarketWs } from '@/hooks/useMarketWs'
++import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
+ import { useMarketStore } from '@/modules/market/store'
++import { useContractsStore } from '@/stores/contracts'
+ import { FloatingWindows } from '@/components/FloatingWindow'
+ import { useTabStore } from '@/stores/tabs'
+ import { API_BASE } from '@/services/api'
+ import { isElectron } from '@/services/electron'
+ import {
+   openOrderFloating,
+   openKlineFloating,
+   openQueryFloating,
+   openSettingsFloating,
+   openIpcMonitorFloating,
+@@ -26,20 +29,32 @@ function App() {
+ 
+   // System WebSocket — 监听 MD/TD 连接状态即时推送
+   useSystemWs(API_BASE.replace('http', 'ws'))
+ 
+   // 轮询 /api/connection/status — MD/TD 状态的权威来源
+   useConnectionPoll()
+ 
+   // 打开标签的合约锁定订阅（K线/报单标签的合约永不退订，保证数据流）
+   useTabContractLocks()
+ 
++  // 共享行情基础设施：行情 WS 单例 + 订阅管理器，挂载在 App 全局，
++  // 期货/期权双面板共享同一份订阅生命周期与 WS 单例（useSubscriptionManager 的
++  // subscribedRef 组件私有，若双份挂载会双份 diff 冲突，故必须单例）
++  useMarketWs(API_BASE.replace('http', 'ws'))
++  useSubscriptionManager()
++
++  // 启动时加载全量合约 + 收藏合约（原先在 MarketPanel，现上移共享）
++  useEffect(() => {
++    useContractsStore.getState().loadAllInstruments()
++    useContractsStore.getState().loadFavoriteContracts()
++  }, [])
++
+   // Electron IPC — 监听托盘菜单导航消息
+   useEffect(() => {
+     if (!isElectron()) return
+ 
+     const cleanup = window.electronAPI?.onNavigateTab?.((tab: string) => {
+       switch (tab) {
+         case 'market':
+           openTab({ type: 'market', title: '📊 行情' })
+           break
+         case 'favorites':
+diff --git a/frontend/src/modules/market/MarketPanel.test.tsx b/frontend/src/modules/market/MarketPanel.test.tsx
+index 8384ea5..d77eb64 100644
+--- a/frontend/src/modules/market/MarketPanel.test.tsx
++++ b/frontend/src/modules/market/MarketPanel.test.tsx
+@@ -25,27 +25,20 @@ globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
+ // Mock api module
+ const mockSubscribeMarket = vi.fn().mockResolvedValue({ success: true, added: [], alreadySubscribed: [] })
+ vi.mock('@/services/api', () => ({
+   getInstruments: vi.fn().mockResolvedValue({ instruments: [], count: 0 }),
+   subscribeMarket: (...args: unknown[]) => mockSubscribeMarket(...args),
+   getSnapshots: vi.fn().mockResolvedValue({ snapshots: {} }),
+   getKlineData: vi.fn().mockResolvedValue({ instrumentID: '', period: '', bars: [] }),
+   API_BASE: 'http://localhost:8000',
+ }))
+ 
+-// Mock useMarketWs
+-const mockUseMarketWs = vi.fn()
+-vi.mock('@/hooks/useMarketWs', () => ({
+-  useMarketWs: (...args: unknown[]) => mockUseMarketWs(...args),
+-  PERIOD_MS: { '5m': 300000 },
+-}))
+-
+ // Mock usePointOrder — capture callbacks for PR-R13 tests
+ let capturedPointOrderOpts: any = null
+ vi.mock('@/hooks/usePointOrder', () => ({
+   usePointOrder: (opts?: any) => {
+     capturedPointOrderOpts = opts
+     return {
+       handleClick: vi.fn(),
+       handleDoubleClick: vi.fn(),
+     }
+   },
+@@ -120,35 +113,20 @@ describe('MarketPanel', () => {
+     // 行情/期权模式切换保留在工具栏内
+     expect(screen.getByText('行情')).toBeInTheDocument()
+     expect(screen.getByText('T型期权')).toBeInTheDocument()
+   })
+ 
+   it('renders with market-panel class', () => {
+     const { container } = render(<MarketPanel />)
+     expect(container.firstChild).toHaveClass('market-panel')
+   })
+ 
+-  it('启动时调用 loadAllInstruments 和 loadFavoriteContracts 加载合约', () => {
+-    const loadAllSpy = vi.spyOn(useContractsStore.getState(), 'loadAllInstruments').mockResolvedValue(undefined)
+-    const loadFavSpy = vi.spyOn(useContractsStore.getState(), 'loadFavoriteContracts').mockResolvedValue(undefined)
+-    render(<MarketPanel />)
+-    expect(loadAllSpy).toHaveBeenCalled()
+-    expect(loadFavSpy).toHaveBeenCalled()
+-    loadAllSpy.mockRestore()
+-    loadFavSpy.mockRestore()
+-  })
+-
+-  it('启动时调用 useMarketWs 连接 WebSocket 行情推送', () => {
+-    render(<MarketPanel />)
+-    expect(mockUseMarketWs).toHaveBeenCalledWith('ws://localhost:8000')
+-  })
+-
+   it('renders 全部 and 自选 tabs', () => {
+     render(<MarketPanel />)
+     expect(screen.getByText('全部')).toBeInTheDocument()
+     expect(screen.getByText('自选')).toBeInTheDocument()
+   })
+ 
+   it('renders 高级搜索按钮（合并搜索入口）', () => {
+     render(<MarketPanel />)
+     expect(screen.getByTitle('搜索合约')).toBeInTheDocument()
+   })
+diff --git a/frontend/src/modules/market/MarketPanel.tsx b/frontend/src/modules/market/MarketPanel.tsx
+index d2bb1b7..6b35294 100644
+--- a/frontend/src/modules/market/MarketPanel.tsx
++++ b/frontend/src/modules/market/MarketPanel.tsx
+@@ -1,46 +1,39 @@
+-import { useEffect, useMemo, useRef, useState } from 'react'
++import { useEffect, useMemo, useState } from 'react'
+ import { ContractSearch } from '@/components/ContractSearch'
+ import { InstrumentSearchModal } from '@/components/InstrumentSearchModal'
+ import { ContextMenu } from '@/components/ContextMenu'
+ import { ErrorBoundary } from '@/components/ErrorBoundary'
+ import { OptionPanel } from '@/modules/options/OptionPanel'
+ import { MarketTable } from './MarketTable'
+ import { useMarketStore } from './store'
+ import { useContractsStore } from '@/stores/contracts'
+ import { useTabStore } from '@/stores/tabs'
+ import { useContractContextMenu } from '@/hooks/useContractContextMenu'
+ import { usePointOrder } from '@/hooks/usePointOrder'
+ import { useOrderStore } from '@/modules/order/store'
+-import { useMarketWs } from '@/hooks/useMarketWs'
+-import { useSubscriptionManager } from '@/hooks/useSubscriptionManager'
+ import { getProductName } from '@/utils/productNames'
+ import { isContractActive } from '@/utils/contractStatus'
+-import { API_BASE } from '@/services/api'
+ import { isElectron } from '@/services/electron'
+ import { toast } from '@/components/Toast'
+ import './styles.css'
+ 
+ export function MarketPanel() {
+   const { snapshots, selectedInstrument, setSelectedInstrument, setVisibleInstrumentIDs, selectedContracts, setSelectedContracts } = useMarketStore()
+   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
+-  const { contracts, favorites, addToFavorites, removeFromFavorites, loadAllInstruments, loadFavoriteContracts } = useContractsStore()
++  const { contracts, favorites, addToFavorites, removeFromFavorites } = useContractsStore()
+   const { contextMenu, multiSelectMenu, openOrderPopup, openQueryPopup, openKlineTab, openOrderTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
+   const [searchModalOpen, setSearchModalOpen] = useState(false)
+   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
+   const [viewMode, setViewMode] = useState<'market' | 'options'>('market')
+   // 过滤开关：仅显示交易中合约（隐藏已停牌/已到期），默认关（显示全部）
+   const [filterActive, setFilterActive] = useState(false)
+-  const loadedRef = useRef(false)
+-
+-  // 订阅管理器
+-  useSubscriptionManager()
+ 
+   // Display contracts based on active tab
+   const baseContracts = activeTab === 'all' ? contracts : favorites
+ 
+   // 搜索过滤
+   const [searchQuery, setSearchQuery] = useState('')
+   const displayContracts = useMemo(() => {
+     // 过滤开关：默认仅显示交易中合约
+     let base = filterActive ? baseContracts.filter(isContractActive) : baseContracts
+     if (!searchQuery.trim()) return base
+@@ -63,32 +56,20 @@ export function MarketPanel() {
+   const favoritedIds = useMemo(
+     () => new Set(favorites.map(c => c.instrumentID)),
+     [favorites]
+   )
+   // All contract IDs in the system
+   const allContractIds = useMemo(
+     () => new Set(contracts.map(c => c.instrumentID)),
+     [contracts]
+   )
+ 
+-  // WebSocket 行情推送（单例模式）
+-  useMarketWs(API_BASE.replace('http', 'ws'))
+-
+-  // 启动时加载全量合约 + 收藏合约
+-  useEffect(() => {
+-    if (!loadedRef.current) {
+-      loadedRef.current = true
+-      loadAllInstruments()
+-      loadFavoriteContracts()
+-    }
+-  }, [])
+-
+   // 顶部菜单「行情」切换：直接在行情主页内切 全部/自选/T型期权，不新建标签页
+   useEffect(() => {
+     if (!isElectron()) return
+ 
+     const cleanup = window.electronAPI?.onMarketView?.((view) => {
+       if (view === 'options') {
+         setViewMode('options')
+       } else {
+         setViewMode('market')
+         setActiveTab(view === 'favorites' ? 'favorites' : 'all')

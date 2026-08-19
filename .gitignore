@@ -49,14 +49,12 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Superpowers process files
+# Superpowers 过程文件（.superpowers/ 工作目录不提交；归档文档在 docs/superpowers/）
 .superpowers/
 
 # Claude config
 # CLAUDE.md is now tracked (needed for AI guidance)
-# 团队共享 skills（开发流程）— 全部提交
-# 个人 skills（不提交）
-.claude/skills/**
+# .claude/ 整目录忽略（含个人 skills 与插件配置）
 
 # Understand Anything — 只保留知识图谱核心文件
 !.ua/config.json
@@ -75,3 +73,4 @@ server/data/instruments.json
 server/data/preset_instruments.json
 server/data/stop_orders.json
 img.png
+/.claude/
