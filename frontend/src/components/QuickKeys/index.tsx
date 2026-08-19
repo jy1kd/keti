@@ -12,16 +12,17 @@ interface QuickKeysProps {
 const MODIFIER_KEYS = new Set(['Control', 'Shift', 'Alt', 'Meta', 'Tab', 'Escape'])
 
 const LABELS: Record<string, string> = {
-  buy: '买入',
-  sell: '卖出',
-  cancel: '撤单',
+  openOrder: '打开报单',
+  openKline: '打开K线',
+  openSettings: '打开设置',
+  batchCancel: '批量撤单',
 }
 
 export function QuickKeys({ hotKeys, onSave, onClose }: QuickKeysProps) {
   const [localHotKeys, setLocalHotKeys] = useState<HotKeyConfig>({ ...hotKeys })
-  const [editing, setEditing] = useState<string | null>(null)
+  const [editing, setEditing] = useState<keyof HotKeyConfig | null>(null)
 
-  function handleFocus(action: string) {
+  function handleFocus(action: keyof HotKeyConfig) {
     setEditing(action)
   }
 
@@ -29,7 +30,7 @@ export function QuickKeys({ hotKeys, onSave, onClose }: QuickKeysProps) {
     setEditing(null)
   }
 
-  function handleKeyDown(action: string) {
+  function handleKeyDown(action: keyof HotKeyConfig) {
     return (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (MODIFIER_KEYS.has(e.key)) return
 
@@ -87,20 +88,23 @@ export function QuickKeys({ hotKeys, onSave, onClose }: QuickKeysProps) {
       )}
 
       <div className="quick-keys-list">
-        {Object.entries(LABELS).map(([action, label]) => (
-          <div key={action} className="qk-row">
-            <label className="qk-label">{label}</label>
-            <input
-              type="text"
-              className={`qk-input ${editing === action ? 'recording' : ''}`}
-              value={localHotKeys[action] ?? ''}
-              readOnly
-              onFocus={() => handleFocus(action)}
-              onBlur={handleBlur}
-              onKeyDown={handleKeyDown(action)}
-            />
-          </div>
-        ))}
+        {Object.entries(LABELS).map(([rawAction, label]) => {
+          const action = rawAction as keyof HotKeyConfig
+          return (
+            <div key={action} className="qk-row">
+              <label className="qk-label">{label}</label>
+              <input
+                type="text"
+                className={`qk-input ${editing === action ? 'recording' : ''}`}
+                value={localHotKeys[action] ?? ''}
+                readOnly
+                onFocus={() => handleFocus(action)}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown(action)}
+              />
+            </div>
+          )
+        })}
       </div>
     </div>
   )

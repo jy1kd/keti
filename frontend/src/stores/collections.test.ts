@@ -27,8 +27,7 @@ describe('useCollectionsStore', () => {
     useCollectionsStore.setState({ collections: [], loaded: false })
     useUserPrefsStore.setState({
       collections: [],
-      hotKeys: { buy: 'b', sell: 's', cancel: 'c', reverse: '', lock: '', batchCancel: 'Escape', openOrder: '', openKline: '', openSettings: '' },
-      quickTradeConfig: { lock: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, reverse: { close: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, open: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, executionMode: 'serial' }, confirmBeforeExecute: true },
+      hotKeys: { openOrder: 'o', openKline: 'k', openSettings: ',', batchCancel: 'Escape' },
     })
     localStorage.clear()
     vi.clearAllMocks()
@@ -118,8 +117,7 @@ describe('系列收藏', () => {
     useCollectionsStore.setState({ collections: [], loaded: false })
     useUserPrefsStore.setState({
       collections: [],
-      hotKeys: { buy: 'b', sell: 's', cancel: 'c', reverse: '', lock: '', batchCancel: 'Escape', openOrder: '', openKline: '', openSettings: '' },
-      quickTradeConfig: { lock: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, reverse: { close: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, open: { priceMode: 'counterparty', offsetTicks: 1, timeCondition: 'gfd' }, executionMode: 'serial' }, confirmBeforeExecute: true },
+      hotKeys: { openOrder: 'o', openKline: 'k', openSettings: ',', batchCancel: 'Escape' },
     })
     localStorage.clear()
     vi.clearAllMocks()
