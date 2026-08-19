@@ -57,9 +57,16 @@ export function OptionChainGroup({ group, onSelectContract, isFavorited = false,
 
   return (
     <div className="option-chain-group">
-      <div className="option-chain-group__header" style={RED_BOLD} onClick={() => setExpanded((v) => !v)}>
-        <span className="option-chain-group__arrow">{expanded ? '▼' : '▶'}</span>
+      <div className={`option-chain-group__header${expanded ? ' option-chain-group__header--expanded' : ' option-chain-group__header--collapsed'}`} style={RED_BOLD} onClick={() => setExpanded((v) => !v)}>
         <span className="option-chain-group__name">{underlyingLabel}</span>
+        <span
+          className="option-chain-group__toggle"
+          title={expanded ? '折叠期权链' : '展开期权链'}
+          aria-label={expanded ? '折叠期权链' : '展开期权链'}
+          aria-hidden="true"
+        >
+          {expanded ? '▲' : '▼'}
+        </span>
         <button
           className="option-chain-group__new-window"
           onClick={(e) => { e.stopPropagation(); openTQuoteFloating(group.underlyingID) }}

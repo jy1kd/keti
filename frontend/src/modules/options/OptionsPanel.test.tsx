@@ -187,7 +187,7 @@ describe('OptionsPanel 平铺 T 型', () => {
     expect(records[0].underlyingID).toBe('FG609')
     // 标底行第0列（callOpenInterest）必须承载标底名：vtable mergeCells 整行合并后
     // 显示 startCol 的值，若该列无值则标底行整行空白（「空行」+「不显示标底合约」的根因）
-    expect(records[0].callOpenInterest).toBe('FG609')
+    expect(records[0].callOpenInterest).toBe('FG609  ▲')
   })
 
   it('underlyingInstrID 缺失的异常期权不产生空标底行', async () => {

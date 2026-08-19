@@ -46,7 +46,8 @@ vi.mock('@visactor/vtable', () => {
       mergeCells: vi.fn((startCol: number, startRow: number, endCol: number, endRow: number) => {
         // 真实 vtable mergeCells 会捕获 startCell 的值作为合并文本（此处取 records 的 callOpenInterest）
         const rec = instance.records[startRow - 1] as { callOpenInterest?: unknown; underlyingID?: unknown } | undefined
-        const text = rec?.callOpenInterest ?? rec?.underlyingID ?? String(startRow)
+        const textValue = rec?.callOpenInterest ?? rec?.underlyingID ?? String(startRow)
+        const text = typeof textValue === 'string' ? textValue : String(textValue)
         instance.options.customMergeCell.push({ text, range: { start: { col: startCol, row: startRow }, end: { col: endCol, row: endRow } } })
       }),
       unmergeCells: vi.fn((startCol: number, startRow: number, endCol: number, endRow: number) => {
@@ -613,10 +614,26 @@ describe('OptionsTable 点击记录解析优先 originData', () => {
     )
     await vi.runAllTimersAsync()
     const handler = await getClickHandler()
-    const instance = vtableInstances[0]
     // row 2 的合并标签为 ad2610；即使 originData 错位为 ad2609，也应按用户看到的标签 ad2610 折叠
     handler({ row: 2, col: 0, originData: { kind: 'underlying', underlyingID: 'ad2609', callOpenInterest: 'ad2609' }, event: {} })
     expect(onToggleGroup).toHaveBeenCalledWith('ad2610')
+  })
+
+  it('点击带展开/折叠三角的标底标签时，回调使用纯合约 ID', async () => {
+    const onToggleGroup = vi.fn()
+    render(
+      <OptionsTable
+        records={[makeUnderlyingRow('FG609')]}
+        onToggleGroup={onToggleGroup}
+        isActive={true}
+      />,
+    )
+    await vi.runAllTimersAsync()
+    const handler = await getClickHandler()
+    const instance = vtableInstances[0]
+    instance.options.customMergeCell = [{ text: 'FG609  ▲', range: { start: { col: 0, row: 1 }, end: { col: 10, row: 1 } } }]
+    handler({ row: 1, col: 0, originData: { kind: 'underlying', underlyingID: 'FG609' }, event: {} })
+    expect(onToggleGroup).toHaveBeenCalledWith('FG609')
   })
 
   it('点击标底层：originData 缺失时回退 recordsRef 行索引（row-1）', async () => {

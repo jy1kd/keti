@@ -195,6 +195,51 @@
   display: none;
 }
 
+/* 标底组头：折叠/展开使用不同底色和边框，右侧上下箭头提示当前动作 */
+.option-chain-group__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.option-chain-group__header--collapsed {
+  background: rgba(248, 113, 113, 0.06);
+}
+
+.option-chain-group__header--expanded {
+  background: rgba(248, 113, 113, 0.14);
+  border-left-color: #f87171;
+}
+
+.option-chain-group__header:hover {
+  background: rgba(248, 113, 113, 0.2);
+}
+
+.option-chain-group__name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.option-chain-group__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: #fca5a5;
+  font-size: 18px;
+  line-height: 1;
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.16);
+  flex: 0 0 auto;
+}
+
 .options-filter-select {
   padding: 3px 10px;
   font-size: 12px;
@@ -299,6 +344,13 @@
   border-radius: 6px;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
   padding: 4px;
+}
+
+/* 系列多选保持原来的纵向清单；鼠标滚轮在清单内滚动查看后面的系列 */
+.options-filter-panel--series {
+  max-height: 260px;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .options-filter-panel--combo {

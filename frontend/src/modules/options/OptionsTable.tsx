@@ -7,6 +7,8 @@ import { SCROLL_STYLE } from '@/utils/vtableTheme'
 export interface OptionsRecord {
   kind: 'underlying' | 'option'
   underlyingID: string
+  /** 仅用于标底行的视觉状态（VTable 不是 DOM，不能依赖 CSS class）。 */
+  isExpanded?: boolean
   // Call columns
   callInstrumentID?: string
   callLastPrice?: number | string
@@ -57,7 +59,15 @@ const CALL_COLOR = '#ef4444'
 const PUT_COLOR = '#22c55e'
 const STRIKE_BG = 'rgba(255,255,255,0.04)'
 const UNDERLYING_BG = '#1a2230'
+const UNDERLYING_COLLAPSED_BG = '#202938'
 const UNDERLYING_STYLE = { color: '#f87171', fontWeight: 'bold', fontSize: 14 }
+const UNDERLYING_EXPANDED_STYLE = { ...UNDERLYING_STYLE, color: '#f0b429' }
+
+/** 合并行显示文本包含状态图标，但折叠状态只使用纯标底 ID。 */
+function underlyingIDFromLabel(label: string, fallback: string): string {
+  const id = label.replace(/\s+[▲▼]$/, '').trim()
+  return id || fallback
+}
 
 interface ColDef {
   field: string
@@ -94,7 +104,7 @@ function withUnderlyingStyle(columns: ColDef[]): ColDef[] {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- vtable style callback 类型无法精确化
       style: (args: any) => {
         const record = args.table?.records?.[args.row - 1]
-        if (record?.kind === 'underlying') return UNDERLYING_STYLE
+        if (record?.kind === 'underlying') return record.isExpanded ? UNDERLYING_EXPANDED_STYLE : UNDERLYING_STYLE
         return typeof col.style === 'function' ? col.style(args) : col.style
       },
     }
@@ -327,7 +337,7 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- vtable style callback 类型无法精确化
           bgColor: (args: any) => {
             const record = args.table?.records?.[args.row - 1]
-            if (record?.kind === 'underlying') return UNDERLYING_BG
+            if (record?.kind === 'underlying') return record.isExpanded ? UNDERLYING_BG : UNDERLYING_COLLAPSED_BG
             return '#0d1117'
           },
           borderColor: '#21262d',
@@ -354,7 +364,7 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
         // 行号或 dataSource 可能与渲染标签错位（标签显示 ad2609 但点下去折的是 ad2610），
         // 而合并文本始终等于该行标签 → 点击「所见即所得」。getCustomMergeValue 缺失时回退记录。
         const label = tableRef.current?.getCustomMergeValue?.(0, rowIndex) as string | undefined
-        onToggleGroupRef.current?.(label ?? record.underlyingID)
+        onToggleGroupRef.current?.(underlyingIDFromLabel(label ?? '', record.underlyingID))
         return
       }
 
