@@ -1,21 +1,21 @@
 import { useState } from 'react'
 import { HotKeyTab } from './HotKeyTab'
-import { QuickTradeTab } from './QuickTradeTab'
+import { OrderTriggerTab } from './OrderTriggerTab'
 import { useUserPrefsStore } from '../../stores/userPrefs'
 import { toast } from '../Toast'
-import type { HotKeyConfig, QuickTradeConfig } from '../../services/types'
+import type { HotKeyConfig, OrderTriggerConfig } from '../../services/types'
 import './styles.css'
 
-type SettingsTab = 'hotkey' | 'quicktrade'
+type SettingsTab = 'hotkey' | 'ordertrigger'
 
 interface SettingsPanelProps {
   onClose: () => void
 }
 
 export function SettingsPanel({ onClose }: SettingsPanelProps) {
-  const [tab, setTab] = useState<SettingsTab>('quicktrade')
+  const [tab, setTab] = useState<SettingsTab>('hotkey')
   const hotKeys = useUserPrefsStore((s) => s.hotKeys)
-  const quickTradeConfig = useUserPrefsStore((s) => s.quickTradeConfig)
+  const orderTrigger = useUserPrefsStore((s) => s.orderTrigger)
 
   function handleSaveHotKeys(newHotKeys: HotKeyConfig) {
     const prefs = useUserPrefsStore.getState()
@@ -24,11 +24,11 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
     toast.success('快捷键已保存')
   }
 
-  function handleSaveQuickTrade(config: QuickTradeConfig) {
+  function handleSaveOrderTrigger(config: OrderTriggerConfig) {
     const prefs = useUserPrefsStore.getState()
-    prefs.setQuickTradeConfig(config)
+    prefs.setOrderTrigger(config)
     prefs.saveToLocalStorage()
-    toast.success('快捷交易设置已保存')
+    toast.success('下单触发设置已保存')
   }
 
   return (
@@ -44,10 +44,10 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
           </button>
           <button
             type="button"
-            className={`settings-tab-btn ${tab === 'quicktrade' ? 'active' : ''}`}
-            onClick={() => setTab('quicktrade')}
+            className={`settings-tab-btn ${tab === 'ordertrigger' ? 'active' : ''}`}
+            onClick={() => setTab('ordertrigger')}
           >
-            快捷交易
+            下单触发
           </button>
         </div>
         <button type="button" className="settings-close-btn" onClick={onClose}>
@@ -59,7 +59,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
         {tab === 'hotkey' ? (
           <HotKeyTab hotKeys={hotKeys} onSave={handleSaveHotKeys} />
         ) : (
-          <QuickTradeTab config={quickTradeConfig} onSave={handleSaveQuickTrade} />
+          <OrderTriggerTab config={orderTrigger} onSave={handleSaveOrderTrigger} />
         )}
       </div>
     </div>
