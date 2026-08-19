@@ -163,6 +163,8 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
   const onToggleGroupRef = useRef(onToggleGroup)
   const mergedRowsRef = useRef<Set<number>>(new Set())
   const mergeRafRef = useRef<number | null>(null)
+  /** updateRecords 后调度标底行合并校准的延时器（scheduleMergeReconcile） */
+  const mergeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const releaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** 镜像 QuoteTable.isActiveRef：当前面板激活态，避免回调闭包冻结过期值 */
@@ -237,6 +239,61 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
     return next.size === underlyingRows.size
   }, [])
 
+  /** updateRecords 会破坏 vtable mergeCells 状态：某行残留「旧合并文本」（如折叠后该行实际是 ad2610 却仍显示 ad2609），
+   *  导致标签与点击目标错位（点 ad2609 却折叠 ad2610）。仅重合并可见区不够——被破坏的合并可能在非可见行。
+   *  这里对 vtable 实际存在的 customMergeCell 做按需校准：只撤销「文本≠当前记录」或「该行已非标底」的合并，
+   *  再补合并缺失的标底行，避免每次快照全表 200+ 组无谓重建。用 setTimeout(0) 延迟到 React 提交后执行。 */
+  const reconcileMerges = useCallback((): void => {
+    const table = tableRef.current
+    if (!table || typeof table.mergeCells !== 'function') return
+    const lastCol = BASE_COLUMNS.length - 1
+    // 期望的标底行（vtable row）→ 标底名
+    const expected = new Map<number, string>()
+    recordsRef.current.forEach((record, i) => {
+      if (record.kind === 'underlying') expected.set(i + 1, record.underlyingID)
+    })
+    // 扫描 vtable 实际合并：撤销「不再期望」或「文本陈旧」的残留合并。用合并自身存储的范围精确撤销，
+    // 覆盖多行异常合并（避免 unmergeCells 按单行范围匹配不到而残留旧文本）。
+    const existing = (table.options?.customMergeCell ?? []) as Array<{
+      text?: string
+      range: { start: { col: number; row: number }; end: { col: number; row: number } }
+    }>
+    for (const m of existing) {
+      const want = expected.get(m.range.start.row)
+      if (want == null || m.text !== want) {
+        try {
+          table.unmergeCells?.(m.range.start.col, m.range.start.row, m.range.end.col, m.range.end.row)
+          mergedRowsRef.current.delete(m.range.start.row)
+        } catch { /* vtable 未就绪 */ }
+      }
+    }
+    // 对「缺失」或「刚被撤销」的标底行重新合并——此时旧合并已清空，mergeCells 会捕获当前记录的标底名
+    const remain = new Set(
+      ((table.options?.customMergeCell ?? []) as Array<{ range: { start: { row: number } } }>)
+        .map(m => m.range.start.row),
+    )
+    for (const row of expected.keys()) {
+      if (remain.has(row)) continue
+      try {
+        table.mergeCells(0, row, lastCol, row)
+        mergedRowsRef.current.add(row)
+      } catch { /* 留待下一轮 */ }
+    }
+    // 兜底清理 mergedRowsRef 中已非标底的行
+    for (const row of [...mergedRowsRef.current]) {
+      if (!expected.has(row)) mergedRowsRef.current.delete(row)
+    }
+  }, [])
+
+  /** updateRecords 后调度标底行合并校准（setTimeout(0) → React 提交后、下一帧渲染前） */
+  const scheduleMergeReconcile = useCallback(() => {
+    if (mergeTimerRef.current != null) clearTimeout(mergeTimerRef.current)
+    mergeTimerRef.current = setTimeout(() => {
+      mergeTimerRef.current = null
+      reconcileMerges()
+    }, 0)
+  }, [reconcileMerges])
+
   // 初次挂载：创建 vtable
   useEffect(() => {
     if (!containerRef.current) return
@@ -283,14 +340,21 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
     // 点击标底层 → 折叠/展开
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- vtable event callback 类型无法精确化
     table.on('click_cell', (args: any) => {
-      const rowIndex = (args.row ?? args.rowIndex) - 1
       const colIndex = args.col ?? args.colIndex
-      if (rowIndex == null || colIndex == null) return
-      const record = recordsRef.current[rowIndex]
+      if (colIndex == null) return
+      const rowIndex = args.row ?? args.rowIndex
+      // 优先用 vtable 自身解析的 originData（与渲染行严格一致，免疫折叠/快照后 recordsRef 漂移导致
+      // 「点 ad2609 折叠 ad2610」的错位）；originData 缺失（旧版/异常）时回退 recordsRef 按行索引。
+      const record = (args.originData as OptionsRecord | undefined)
+        ?? recordsRef.current[rowIndex - 1]
       if (!record) return
 
       if (record.kind === 'underlying') {
-        onToggleGroupRef.current?.(record.underlyingID)
+        // 以「合并单元格文本 = 用户看到的标底标签」为准折叠对应系列：折叠/快照后 vtable 内部
+        // 行号或 dataSource 可能与渲染标签错位（标签显示 ad2609 但点下去折的是 ad2610），
+        // 而合并文本始终等于该行标签 → 点击「所见即所得」。getCustomMergeValue 缺失时回退记录。
+        const label = tableRef.current?.getCustomMergeValue?.(0, rowIndex) as string | undefined
+        onToggleGroupRef.current?.(label ?? record.underlyingID)
         return
       }
 
@@ -310,10 +374,10 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- vtable event callback 类型无法精确化
     table.on('contextmenu_cell', (args: any) => {
       args.event?.preventDefault?.()
-      const rowIndex = (args.row ?? args.rowIndex) - 1
       const colIndex = args.col ?? args.colIndex
-      if (rowIndex == null || colIndex == null) return
-      const record = recordsRef.current[rowIndex]
+      if (colIndex == null) return
+      const record = (args.originData as OptionsRecord | undefined)
+        ?? recordsRef.current[(args.row ?? args.rowIndex) - 1]
       if (!record || record.kind === 'underlying') return
 
       let instrumentID: string | undefined
@@ -345,6 +409,10 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
       if (mergeRafRef.current != null) {
         cancelAnimationFrame(mergeRafRef.current)
         mergeRafRef.current = null
+      }
+      if (mergeTimerRef.current != null) {
+        clearTimeout(mergeTimerRef.current)
+        mergeTimerRef.current = null
       }
       if (scheduleRafRef.current != null) {
         clearTimeout(scheduleRafRef.current)
@@ -428,6 +496,8 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
     }
     if (updatedRecords.length > 0) {
       tableRef.current.updateRecords(updatedRecords, rowIndexes)
+      // updateRecords 可能破坏标底行合并 → 下一帧前全量重建合并，防止折叠/滚动后残留旧标底文本（重复 ad2609）
+      scheduleMergeReconcile()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshots, visibleRangeVersion])
