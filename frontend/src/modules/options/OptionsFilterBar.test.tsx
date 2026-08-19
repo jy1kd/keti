@@ -101,6 +101,22 @@ describe('OptionsFilterBar 合并的交易所→品种下拉 → Tab → 系列'
     expect(screen.getByTestId('options-series-select')).toBeInTheDocument()
   })
 
+  it('筛选条内容溢出时，鼠标滚轮横向移动到后面的品种', () => {
+    render(<Harness initial={{ exchange: 'CZCE', tabs: [
+      { product: 'FG', series: [] },
+      { product: 'MA', series: [] },
+      { product: 'cu', series: [] },
+    ], activeIndex: 2 }} />)
+    const tabs = screen.getByTestId('options-filter-tabs')
+    Object.defineProperty(tabs, 'clientWidth', { configurable: true, value: 80 })
+    Object.defineProperty(tabs, 'scrollWidth', { configurable: true, value: 240 })
+    Object.defineProperty(tabs, 'scrollLeft', { configurable: true, writable: true, value: 0 })
+
+    fireEvent.wheel(tabs, { deltaY: 60 })
+
+    expect(tabs.scrollLeft).toBe(60)
+  })
+
   it('tab 点击切换激活（aria-selected）；✕ 关闭品种', () => {
     render(<Harness />)
     openAndPickExchange('SHFE')
@@ -139,6 +155,19 @@ describe('OptionsFilterBar 合并的交易所→品种下拉 → Tab → 系列'
     // 「全部」清空系列
     fireEvent.click(screen.getByTestId('options-series-all'))
     expect(screen.getByTestId('options-series-dropdown')).toHaveTextContent('FG 系列·多选')
+  })
+
+  it('系列选项较多时，保持纵向清单并支持鼠标滚轮继续查看后面的系列', () => {
+    render(<Harness initial={{ exchange: 'CZCE', tabs: [{ product: 'FG', series: [] }], activeIndex: 0 }} />)
+    fireEvent.click(screen.getByTestId('options-series-dropdown'))
+    const panel = document.querySelector('.options-filter-panel--series') as HTMLElement
+    Object.defineProperty(panel, 'clientHeight', { configurable: true, value: 80 })
+    Object.defineProperty(panel, 'scrollHeight', { configurable: true, value: 240 })
+    Object.defineProperty(panel, 'scrollTop', { configurable: true, writable: true, value: 0 })
+
+    fireEvent.wheel(panel, { deltaY: 60 })
+
+    expect(panel.scrollTop).toBe(60)
   })
 
   it('系列下拉随激活 tab 变化（切到 MA 显示其系列）', () => {

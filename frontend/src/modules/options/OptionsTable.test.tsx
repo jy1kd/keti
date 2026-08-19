@@ -9,11 +9,18 @@ import type { OptionsRecord } from './OptionsTable'
 interface VTableMockInstance {
   on: ReturnType<typeof vi.fn>
   records: unknown[]
+  options: {
+    customMergeCell: Array<{
+      text?: string
+      range: { start: { col: number; row: number }; end: { col: number; row: number } }
+    }>
+  }
   setRecords: ReturnType<typeof vi.fn>
   updateRecords: ReturnType<typeof vi.fn>
   getBodyVisibleCellRange: ReturnType<typeof vi.fn>
   mergeCells: ReturnType<typeof vi.fn>
   unmergeCells: ReturnType<typeof vi.fn>
+  getCustomMergeValue: ReturnType<typeof vi.fn>
   release: ReturnType<typeof vi.fn>
   resize: ReturnType<typeof vi.fn>
   setOption: ReturnType<typeof vi.fn>
@@ -25,15 +32,35 @@ vi.mock('@visactor/vtable', () => {
     const instance = {
       on: vi.fn(),
       records: [] as unknown[],
+      options: { customMergeCell: [] as Array<{ text?: string; range: { start: { col: number; row: number }; end: { col: number; row: number } } }> },
       setRecords: vi.fn((recs: unknown[]) => { instance.records = recs }),
-      updateRecords: vi.fn((recs: unknown[]) => {
-        // 模拟 vtable 真实 updateRecords：把传入的记录更新到内部 records 的对应位置
-        for (const r of recs) instance.records.push(r)
+      updateRecords: vi.fn((recs: unknown[], rowIndexes: number[]) => {
+        // 模拟 vtable 真实 updateRecords：按记录索引更新内部 records
+        for (let k = 0; k < recs.length; k++) {
+          const idx = rowIndexes?.[k]
+          if (typeof idx === 'number' && idx >= 0 && idx < instance.records.length) instance.records[idx] = recs[k]
+        }
       }),
       // 默认返回非空可见区（与现有 OptionsPanel.test.tsx 一致），让测试聚焦于 isActive 守卫
       getBodyVisibleCellRange: vi.fn(() => ({ rowStart: 1, rowEnd: 10 })),
-      mergeCells: vi.fn(),
-      unmergeCells: vi.fn(),
+      mergeCells: vi.fn((startCol: number, startRow: number, endCol: number, endRow: number) => {
+        // 真实 vtable mergeCells 会捕获 startCell 的值作为合并文本（此处取 records 的 callOpenInterest）
+        const rec = instance.records[startRow - 1] as { callOpenInterest?: unknown; underlyingID?: unknown } | undefined
+        const textValue = rec?.callOpenInterest ?? rec?.underlyingID ?? String(startRow)
+        const text = typeof textValue === 'string' ? textValue : String(textValue)
+        instance.options.customMergeCell.push({ text, range: { start: { col: startCol, row: startRow }, end: { col: endCol, row: endRow } } })
+      }),
+      unmergeCells: vi.fn((startCol: number, startRow: number, endCol: number, endRow: number) => {
+        instance.options.customMergeCell = instance.options.customMergeCell.filter(
+          (m) => !(m.range.start.col === startCol && m.range.start.row === startRow && m.range.end.col === endCol && m.range.end.row === endRow),
+        )
+      }),
+      getCustomMergeValue: vi.fn((col: number, row: number) => {
+        const m = instance.options.customMergeCell.find(
+          (m) => col >= m.range.start.col && col <= m.range.end.col && row >= m.range.start.row && row <= m.range.end.row,
+        )
+        return m?.text
+      }),
       release: vi.fn(),
       resize: vi.fn(),
       setOption: vi.fn(),
@@ -315,6 +342,49 @@ describe('OptionsTable snapshot 增量更新 + 严格可见订阅', () => {
 
     expect(instance.updateRecords).not.toHaveBeenCalled()
   })
+
+  it('snapshot updateRecords 后校准标底行合并：修正文本陈旧的残留合并（防「点 ad2609 折 ad2610」标签错位）', async () => {
+    const fixedRecords: OptionsRecord[] = [
+      { kind: 'underlying', underlyingID: 'ad2609', callOpenInterest: 'ad2609' },
+      makeOptionRow('ad2609', 'ad2609-C-1000', 'ad2609-P-1000'),
+    ]
+    const TestHarness = () => {
+      const snaps = useMarketStore((s) => s.snapshots)
+      return (
+        <OptionsTable
+          records={fixedRecords}
+          snapshots={snaps}
+          onToggleGroup={vi.fn()}
+          isActive={true}
+        />
+      )
+    }
+    render(<TestHarness />)
+    await vi.runAllTimersAsync()
+    const instance = vtableInstances[0]
+    instance.mergeCells.mockClear()
+    instance.unmergeCells.mockClear()
+
+    // 模拟 updateRecords 破坏合并后的残留：标底行（row 1）合并文本陈旧为 ad2612（与当前记录 ad2609 不符）
+    instance.options.customMergeCell = [{
+      text: 'ad2612',
+      range: { start: { col: 0, row: 1 }, end: { col: 10, row: 1 } },
+    }]
+
+    useMarketStore.getState().batchUpdate([{
+      instrumentID: 'ad2609-C-1000',
+      lastPrice: 100, bidPrice1: 99, askPrice1: 101, volume: 200, openInterest: 300,
+    } as never])
+    await vi.runAllTimersAsync()
+
+    expect(instance.updateRecords).toHaveBeenCalled()
+    // 陈旧合并必须被撤销（row 1）并以当前标底名重新合并
+    expect(instance.unmergeCells).toHaveBeenCalledWith(0, 1, 10, 1)
+    expect(instance.mergeCells).toHaveBeenCalledWith(0, 1, 10, 1)
+    // 校准后合并文本等于当前记录的标底名（不再显示旧 ad2612）
+    expect(instance.options.customMergeCell.some((m) => m.text === 'ad2609' && m.range.start.row === 1)).toBe(true)
+    expect(instance.options.customMergeCell.some((m) => m.text === 'ad2612')).toBe(false)
+  })
 })
 
 // ── 标底行合并残留：筛选/结构变化后必须撤销旧合并，否则旧标底文本残留 ───────
@@ -500,5 +570,120 @@ describe('OptionsTable contextmenu_cell（右键菜单）', () => {
     const handler = await getContextMenuHandler()
     handler({ row: 2, col: 0, event: makeContextEvent() })
     expect(onContextMenu).toHaveBeenCalledWith('FG609-C-1000', 0, expect.any(Object))
+  })
+})
+
+// ── 点击/右键记录解析：优先 vtable originData（与渲染行一致），回退 recordsRef 行索引 ──
+// 折叠/展开 + 快照 updateRecords 后，recordsRef 可能与 vtable 实际渲染行漂移，
+// 若按 recordsRef[args.row-1] 解析会把点击错位到相邻系列（点 ad2609 折叠 ad2610）。
+// 用 args.originData（vtable dataSource 直读）保证解析到用户实际看到的行。
+describe('OptionsTable 点击记录解析优先 originData', () => {
+  beforeEach(() => {
+    vtableInstances.length = 0
+    useMarketStore.setState({
+      visibleInstrumentIDs: [],
+      snapshots: new Map(),
+    })
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.useRealTimers()
+  })
+
+  async function getClickHandler() {
+    const { ListTable } = await import('@visactor/vtable')
+    const tableInstance = (ListTable as any).mock.results[0].value
+    const handler = tableInstance.on.mock.calls.find(
+      (call: any[]) => call[0] === 'click_cell',
+    )?.[1]
+    expect(handler).toBeDefined()
+    return handler as (args: any) => void
+  }
+
+  it('点击标底层：以「该行合并文本=显示标签」为准折叠（点 ad2609 折 ad2609），originData 仅用于判断行类型', async () => {
+    const onToggleGroup = vi.fn()
+    render(
+      <OptionsTable
+        records={[makeUnderlyingRow('ad2609'), makeUnderlyingRow('ad2610'), makeOptionRow('ad2610', 'ad2610-C-1000', 'ad2610-P-1000')]}
+        onToggleGroup={onToggleGroup}
+        isActive={true}
+      />,
+    )
+    await vi.runAllTimersAsync()
+    const handler = await getClickHandler()
+    // row 2 的合并标签为 ad2610；即使 originData 错位为 ad2609，也应按用户看到的标签 ad2610 折叠
+    handler({ row: 2, col: 0, originData: { kind: 'underlying', underlyingID: 'ad2609', callOpenInterest: 'ad2609' }, event: {} })
+    expect(onToggleGroup).toHaveBeenCalledWith('ad2610')
+  })
+
+  it('点击带展开/折叠三角的标底标签时，回调使用纯合约 ID', async () => {
+    const onToggleGroup = vi.fn()
+    render(
+      <OptionsTable
+        records={[makeUnderlyingRow('FG609')]}
+        onToggleGroup={onToggleGroup}
+        isActive={true}
+      />,
+    )
+    await vi.runAllTimersAsync()
+    const handler = await getClickHandler()
+    const instance = vtableInstances[0]
+    instance.options.customMergeCell = [{ text: 'FG609  ▲', range: { start: { col: 0, row: 1 }, end: { col: 10, row: 1 } } }]
+    handler({ row: 1, col: 0, originData: { kind: 'underlying', underlyingID: 'FG609' }, event: {} })
+    expect(onToggleGroup).toHaveBeenCalledWith('FG609')
+  })
+
+  it('点击标底层：originData 缺失时回退 recordsRef 行索引（row-1）', async () => {
+    const onToggleGroup = vi.fn()
+    render(
+      <OptionsTable
+        records={[makeUnderlyingRow('ad2609'), makeUnderlyingRow('ad2610'), makeOptionRow('ad2610', 'ad2610-C-1000', 'ad2610-P-1000')]}
+        onToggleGroup={onToggleGroup}
+        isActive={true}
+      />,
+    )
+    await vi.runAllTimersAsync()
+    const handler = await getClickHandler()
+    // 无 originData：按 recordsRef[row-1] 解析，row 2 = records[1] = ad2610
+    handler({ row: 2, col: 0, event: {} })
+    expect(onToggleGroup).toHaveBeenCalledWith('ad2610')
+  })
+
+  it('点击期权行：用 originData 的 C/P 合约回填（而非行索引错位的记录）', async () => {
+    const onRowClick = vi.fn()
+    render(
+      <OptionsTable
+        records={[makeUnderlyingRow('ad2609'), makeOptionRow('ad2609', 'ad2609-C-1000', 'ad2609-P-1000')]}
+        onToggleGroup={vi.fn()}
+        onRowClick={onRowClick}
+        isActive={true}
+      />,
+    )
+    await vi.runAllTimersAsync()
+    const handler = await getClickHandler()
+    handler({ row: 5, col: 0, originData: makeOptionRow('ad2609', 'ad2609-C-1000', 'ad2609-P-1000'), event: {} })
+    expect(onRowClick).toHaveBeenCalledWith('ad2609-C-1000', 10)
+  })
+
+  it('点击标底层：即使 originData/记录错位，也以「合并文本 = 显示标签」折叠对应系列（点 ad2609 折 ad2609）', async () => {
+    const onToggleGroup = vi.fn()
+    render(
+      <OptionsTable
+        records={[makeUnderlyingRow('ad2609'), makeUnderlyingRow('ad2610'), makeOptionRow('ad2610', 'ad2610-C-1000', 'ad2610-P-1000')]}
+        onToggleGroup={onToggleGroup}
+        isActive={true}
+      />,
+    )
+    await vi.runAllTimersAsync()
+    const handler = await getClickHandler()
+    const instance = vtableInstances[0]
+    // 模拟「标签/数据错位」：该行合并文本（标签）显示 ad2609，但 originData 错位为 ad2610
+    instance.options.customMergeCell = [{ text: 'ad2609', range: { start: { col: 0, row: 1 }, end: { col: 10, row: 1 } } }]
+    handler({ row: 1, col: 0, originData: { kind: 'underlying', underlyingID: 'ad2610', callOpenInterest: 'ad2610' }, event: {} })
+    // 应以标签 ad2609 为准折叠，而非 originData 的 ad2610
+    expect(onToggleGroup).toHaveBeenCalledWith('ad2609')
   })
 })

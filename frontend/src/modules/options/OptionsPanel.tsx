@@ -131,11 +131,16 @@ export function OptionsPanel() {
       // 防御：underlyingInstrID 缺失的异常期权会归到 '' 组，跳过以免产生空标底行
       if (!g.underlyingID) continue
       const isExpanded = !collapsedGroups.has(g.underlyingID)
-      // 标底行：callOpenInterest（第0列）承载标底名。
+      // 标底行：callOpenInterest（第0列）承载标底名和展开/折叠箭头。
       // vtable mergeCells(0,row,lastCol,row) 整行合并后显示 startCol（第0列）的 cellValue，
       // 若该列无值则整行空白（看起来是「空行」且不显示标底合约）。给第0列赋值标底名，
       // 合并后显示为红粗大字标题。该字段仅用于显示，不影响订阅/快照逻辑（标底行无 C/P ID）。
-      result.push({ kind: 'underlying', underlyingID: g.underlyingID, callOpenInterest: g.underlyingID })
+      result.push({
+        kind: 'underlying',
+        underlyingID: g.underlyingID,
+        isExpanded,
+        callOpenInterest: `${g.underlyingID}  ${isExpanded ? '▲' : '▼'}`,
+      })
       if (isExpanded) {
         const chains = chainsByUnderlying.get(g.underlyingID)
         if (chains && chains.length > 0) {

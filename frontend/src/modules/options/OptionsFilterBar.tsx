@@ -46,6 +46,33 @@ export function OptionsFilterBar({ allContracts, getProduct, productNames, value
   const [showExchanges, setShowExchanges] = useState(false)
   const [seriesOpen, setSeriesOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const tabsRef = useRef<HTMLDivElement>(null)
+  const seriesPanelRef = useRef<HTMLDivElement>(null)
+
+  // 鼠标滚轮在横向筛选栏中左右移动，行为与期货收藏夹 Tab 条一致。
+  useEffect(() => {
+    const el = tabsRef.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      if (el.scrollWidth <= el.clientWidth) return
+      el.scrollLeft += e.deltaX + e.deltaY
+      e.preventDefault()
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [value.tabs.length])
+
+  useEffect(() => {
+    const el = seriesPanelRef.current
+    if (!el || !seriesOpen) return
+    const onWheel = (e: WheelEvent) => {
+      if (el.scrollHeight <= el.clientHeight) return
+      el.scrollTop += e.deltaY
+      e.preventDefault()
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [seriesOpen])
 
   const active = activeOptionsTab(value)
   // 激活 tab 的下标（activeIndex 越界时按 activeOptionsTab 兜底后的实际 tab 定位）
@@ -150,7 +177,7 @@ export function OptionsFilterBar({ allContracts, getProduct, productNames, value
     <div ref={rootRef} className="options-filter-block">
       {/* 左侧：品种 Tab 条（可横滚的容器只放 tab 本身，系列下拉在其外避免被裁剪） */}
       {value.tabs.length > 0 && (
-        <div className="options-filter-tabs" data-testid="options-filter-tabs" role="tablist" aria-label="已选品种">
+        <div ref={tabsRef} className="options-filter-tabs" data-testid="options-filter-tabs" role="tablist" aria-label="已选品种（可滚轮横向移动）">
           {value.tabs.map((t, i) => (
             <span key={t.product} className={`options-filter-tab${i === value.activeIndex ? ' options-filter-tab--active' : ''}`}>
               <button
@@ -189,7 +216,7 @@ export function OptionsFilterBar({ allContracts, getProduct, productNames, value
             {active.product} 系列{activeSeries.length > 0 ? `·已选${activeSeries.length}` : '·多选'} ▾
           </button>
           {seriesOpen && (
-            <div className="options-filter-panel">
+            <div ref={seriesPanelRef} className="options-filter-panel options-filter-panel--series">
               <label className="options-filter-item" data-testid="options-series-all">
                 <input type="checkbox" checked={activeSeries.length === 0} onChange={selectAllSeries} />
                 <span className="options-filter-item__label">全部</span>

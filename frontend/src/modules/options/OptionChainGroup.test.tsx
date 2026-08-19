@@ -49,6 +49,8 @@ describe('OptionChainGroup', () => {
   it('默认折叠：组头可见、无到期切换条', () => {
     render(<OptionChainGroup group={group} onSelectContract={vi.fn()} />)
     expect(screen.getByText('FG609')).toBeDefined()
+    expect(screen.getByLabelText('展开期权链')).toBeDefined()
+    expect(screen.getByText('FG609').parentElement).toHaveClass('option-chain-group__header--collapsed')
     expect(screen.queryByText(/到期/)).toBeNull()
   })
 
@@ -56,6 +58,8 @@ describe('OptionChainGroup', () => {
     render(<OptionChainGroup group={group} onSelectContract={vi.fn()} />)
     fireEvent.click(screen.getByText('FG609'))
     await screen.findByText('20260930')
+    expect(screen.getByLabelText('折叠期权链')).toBeDefined()
+    expect(screen.getByText('FG609').parentElement).toHaveClass('option-chain-group__header--expanded')
     expect(screen.getByText('20260930')).toBeDefined()
     expect(screen.queryByText('20261230')).toBeDefined()
   })
