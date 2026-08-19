@@ -14,6 +14,9 @@ import type { MarketSnapshot } from '@/services/types'
 // Mock 统一浮动窗入口（双击/右键「打开报单」现为打开浮动窗口）
 vi.mock('@/utils/openFloatingTab', () => ({
   openFloatingTab: vi.fn(),
+  openCollectionsFloating: vi.fn(() =>
+    openFloatingTab({ type: 'collections', title: '📁 收藏夹', size: { w: 900, h: 600 } }),
+  ),
   ORDER_FLOATING_SIZE: { w: 620, h: 540 },
 }))
 
@@ -134,6 +137,18 @@ describe('MarketPanel', () => {
   it('renders 高级搜索按钮（合并搜索入口）', () => {
     render(<MarketPanel />)
     expect(screen.getByTitle('搜索合约')).toBeInTheDocument()
+  })
+
+  it('点击 收藏夹管理 按钮 → 打开收藏夹管理浮窗（type=collections）', async () => {
+    const user = userEvent.setup()
+    render(<MarketPanel />)
+    const btn = screen.getByTestId('btn-collections-manage')
+    await user.click(btn)
+    expect(mockOpenFloatingTab).toHaveBeenCalledWith({
+      type: 'collections',
+      title: '📁 收藏夹',
+      size: { w: 900, h: 600 },
+    })
   })
 
   it('搜索下拉选择合约后：selectedContracts 同步为单选集（锚点守卫通过才能滚动跳转）', async () => {
