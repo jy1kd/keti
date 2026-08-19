@@ -9,6 +9,13 @@ import type { MarketSnapshot } from '@/services/types'
 // （auto-mock 同时覆盖 contracts/market 等对 services/api 的传递导入）
 vi.mock('../../services/api')
 
+// Mock useOrderTrigger：新 describe 块按需 mockReturnValue，现有用例走 store 默认值（single + confirm）
+vi.mock('../../hooks/useOrderTrigger', () => ({
+  useOrderTrigger: vi.fn(() => ({ triggerMode: 'single', confirmBeforeOrder: true })),
+}))
+
+import { useOrderTrigger } from '../../hooks/useOrderTrigger'
+
 import {
   submitOrder as apiSubmitOrder,
   cancelOrder as apiCancelOrder,
@@ -882,5 +889,79 @@ describe('审查修复（🔴-1 / 🟡-1~4）', () => {
     fireEvent.change(input, { target: { value: '4696.55' } })
     fireEvent.click(screen.getByTestId('qtb-sell'))
     expect(onSell).toHaveBeenCalledWith(4696.6) // tick 0.2 对齐
+  })
+})
+
+describe('盘口下单触发设置（单击/双击 + 二次确认）', () => {
+  const UOT = useOrderTrigger as ReturnType<typeof vi.fn>
+  const setOrderTrigger = (v: { triggerMode: 'single' | 'double'; confirmBeforeOrder: boolean }) =>
+    UOT.mockReturnValue(v)
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useOrderStore.setState({ submitOrder: realSubmitOrder })
+    useOrderStore.setState({
+      orderForm: {
+        ...DEFAULT_ORDER_FORM,
+        instrumentID: 'IF2608',
+        exchangeID: 'CFFEX',
+        volumeTotalOriginal: 3,
+        combOffsetFlag: 'open',
+        timeCondition: 'gfd',
+      },
+    })
+    useQueryStore.setState({ orders: [] })
+    setOrderTrigger({ triggerMode: 'single', confirmBeforeOrder: true })
+  })
+
+  it('single + 确认：单击档位 → 弹确认框（默认行为，回归保护）', () => {
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('bid-1').querySelector('.depth-row__buy')!)
+    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+  })
+
+  it('single + 免确认：单击档位 → 直接提交，不弹确认框', async () => {
+    const submitSpy = vi.fn().mockResolvedValue(true)
+    useOrderStore.setState({ submitOrder: submitSpy as () => Promise<boolean> })
+    setOrderTrigger({ triggerMode: 'single', confirmBeforeOrder: false })
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    fireEvent.click(screen.getByTestId('bid-1').querySelector('.depth-row__buy')!)
+    await act(async () => {})
+    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
+    expect(submitSpy).toHaveBeenCalledTimes(1)
+    expect(useOrderStore.getState().orderForm.direction).toBe('buy')
+    expect(useOrderStore.getState().orderForm.limitPrice).toBe(4694)
+  })
+
+  it('double + 确认：单击档位仅预览（不弹框、不提交），快速双击弹确认框', () => {
+    const submitSpy = vi.fn().mockResolvedValue(true)
+    useOrderStore.setState({ submitOrder: submitSpy as () => Promise<boolean> })
+    setOrderTrigger({ triggerMode: 'double', confirmBeforeOrder: true })
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    const bid1Buy = screen.getByTestId('bid-1').querySelector('.depth-row__buy')!
+    // 第一次点击：仅预览，无确认框
+    fireEvent.click(bid1Buy)
+    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
+    expect(submitSpy).not.toHaveBeenCalled()
+    // 快速第二次点击（双击窗口内）：弹确认框，仍未提交
+    fireEvent.click(bid1Buy)
+    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+    expect(submitSpy).not.toHaveBeenCalled()
+  })
+
+  it('double + 免确认：快速双击直接提交，单击不提交', async () => {
+    const submitSpy = vi.fn().mockResolvedValue(true)
+    useOrderStore.setState({ submitOrder: submitSpy as () => Promise<boolean> })
+    setOrderTrigger({ triggerMode: 'double', confirmBeforeOrder: false })
+    render(<MarketDepth snapshot={makeSnapshot()} priceTick={0.2} />)
+    const bid1Buy = screen.getByTestId('bid-1').querySelector('.depth-row__buy')!
+    // 单击不提交
+    fireEvent.click(bid1Buy)
+    expect(submitSpy).not.toHaveBeenCalled()
+    // 双击 → 直接提交
+    fireEvent.click(bid1Buy)
+    await act(async () => {})
+    expect(submitSpy).toHaveBeenCalledTimes(1)
+    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
   })
 })

@@ -5,6 +5,8 @@ import { useOrderStore } from './store'
 import { useQueryStore } from '../query/store'
 import { aggregateMyOrders, type MyOrderLevel } from './myOrders'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { useOrderTrigger } from '../../hooks/useOrderTrigger'
+import { useDoubleClick } from '../../hooks/useDoubleClick'
 import type { OrderRequestForm } from '@/utils/orderMapping'
 import './MarketDepth.css'
 
@@ -109,6 +111,11 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
   const submitOrder = useOrderStore((s) => s.submitOrder)
   const [quickPrice, setQuickPrice] = useState(0)
   const [intent, setIntent] = useState<OrderIntent | null>(null)
+
+  // ── 盘口下单触发设置（Task 9）：读取用户偏好，决定单击/双击 + 二次确认 ──
+  const { triggerMode, confirmBeforeOrder } = useOrderTrigger()
+  const [preview, setPreview] = useState<{ direction: 'buy' | 'sell'; price: number } | null>(null)
+  const { register } = useDoubleClick(300)
 
   // ── 我方挂单量（P3）：拉取报单流水并定期刷新，按 合约+限价+方向 聚合匹配档位 ──
   const orders = useQueryStore((s) => s.orders)
@@ -256,25 +263,62 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
     useQueryStore.getState().fetchOrders()
   }
 
-  const handleBuyClick = (price: number) => {
-    const level = myOrders.byPrice.get(price)
-    if (level && level.buyVolume > 0) {
-      cancelLevel('buy', price)
+  // 盘口档位点击 → 按触发设置执行（双击模式：单击预览/双击下单；免确认直接下单）
+  const executeRowClick = (direction: 'buy' | 'sell', price: number) => {
+    const level = direction === 'buy'
+      ? myOrders.byPrice.get(price)?.buyVolume ?? 0
+      : myOrders.byPrice.get(price)?.sellVolume ?? 0
+    if (level > 0) {
+      // 本档有我方挂单 → 撤单（行为不变，不受触发设置影响）
+      cancelLevel(direction, price)
       return
     }
-    // 报单进行中（pending 未转实态）该档禁止叠加点击，防重复报单（🟡-1）
-    if (pendingByPrice.get(price)?.buy) return
-    openIntent('buy', price)
+    if (pendingByPrice.get(price)?.[direction]) return // 报单进行中防叠加
+
+    // 免确认：直接下单（不走确认框）
+    if (triggerMode === 'single' && !confirmBeforeOrder) {
+      submitIntent(direction, price)
+      return
+    }
+    if (triggerMode === 'single') {
+      openIntent(direction, price)
+      return
+    }
+    // double 模式
+    if (!confirmBeforeOrder) {
+      // 免确认：单击预览、双击直接下单
+      setPreview({ direction, price })
+      register(() => {}, () => { setPreview(null); submitIntent(direction, price) })()
+      return
+    }
+    // double + 确认：单击预览、双击弹确认框
+    setPreview({ direction, price })
+    register(() => {}, () => { setPreview(null); openIntent(direction, price) })()
   }
 
-  const handleSellClick = (price: number) => {
-    const level = myOrders.byPrice.get(price)
-    if (level && level.sellVolume > 0) {
-      cancelLevel('sell', price)
-      return
+  // 直接下单（免确认路径，不走确认框）
+  const submitIntent = async (direction: 'buy' | 'sell', price: number) => {
+    const id = ++pendingIdRef.current
+    const pre = myOrders.byPrice.get(price)
+    const baseline = direction === 'buy' ? (pre?.buyVolume ?? 0) : (pre?.sellVolume ?? 0)
+    const pe: PendingOrder = { id, direction, price, volume: orderForm.volumeTotalOriginal, status: 'pending', baseline }
+    setPending((prev) => [...prev, pe])
+    setOrderForm({
+      direction: direction as 'buy' | 'sell',
+      limitPrice: price,
+      volumeTotalOriginal: orderForm.volumeTotalOriginal,
+      combOffsetFlag: orderForm.combOffsetFlag,
+      timeCondition: orderForm.timeCondition,
+    })
+    const ok = await submitOrder()
+    if (ok) {
+      useQueryStore.getState().fetchOrders()
+      window.setTimeout(() => setPending((prev) => prev.filter((p) => p.id !== id)), 10_000)
+    } else {
+      setPending((prev) => prev.filter((p) => p.id !== id))
+      setBanner(useOrderStore.getState().lastSubmitError ?? '报单失败')
+      window.setTimeout(() => setBanner(null), 4000)
     }
-    if (pendingByPrice.get(price)?.sell) return
-    openIntent('sell', price)
   }
 
   const handleConfirm = async () => {
@@ -349,9 +393,10 @@ export function MarketDepth({ snapshot, priceTick }: MarketDepthProps) {
         maxVol={maxVol}
         myLevels={myOrders.byPrice}
         pendingByPrice={pendingByPrice}
-        onBuyClick={handleBuyClick}
-        onSellClick={handleSellClick}
+        onBuyClick={(price) => executeRowClick('buy', price)}
+        onSellClick={(price) => executeRowClick('sell', price)}
         onPriceClick={setQuickPrice}
+        preview={preview}
       />
       <QuickTradeBar
         snapshot={snapshot}
@@ -452,6 +497,7 @@ function DepthLadder({
   onBuyClick,
   onSellClick,
   onPriceClick,
+  preview,
 }: {
   asks: ResolvedLevel[]
   bids: ResolvedLevel[]
@@ -464,6 +510,8 @@ function DepthLadder({
   onBuyClick?: (price: number) => void
   onSellClick?: (price: number) => void
   onPriceClick?: (price: number) => void
+  /** 双击预览状态（Task 9）：当前预览的档位方向与价格 */
+  preview?: { direction: 'buy' | 'sell'; price: number } | null
 }) {
   return (
     <div className="depth-ladder" data-testid="depth-ladder">
@@ -483,6 +531,7 @@ function DepthLadder({
           onBuyClick={onBuyClick}
           onSellClick={onSellClick}
           onPriceClick={onPriceClick}
+          preview={preview?.price === level.price}
         />
       ))}
       <LastPriceDivider />
@@ -502,6 +551,7 @@ function DepthLadder({
           onBuyClick={onBuyClick}
           onSellClick={onSellClick}
           onPriceClick={onPriceClick}
+          preview={preview?.price === level.price}
         />
       ))}
     </div>
@@ -539,6 +589,7 @@ export function DepthRow({
   onBuyClick,
   onSellClick,
   onPriceClick,
+  preview = false,
 }: {
   kind: 'ask' | 'bid'
   index: number
@@ -556,6 +607,8 @@ export function DepthRow({
   onBuyClick?: (price: number) => void
   onSellClick?: (price: number) => void
   onPriceClick?: (price: number) => void
+  /** 双击预览状态（Task 9）：当前档位是否处于预览中 */
+  preview?: boolean
 }) {
   // 真实档与合成档统一按 tickSize 还原展示精度（设计 §6），避免 4696 与 4696.6 列不对齐
   const hasPrice = level.valid || level.fallback !== null
@@ -580,7 +633,7 @@ export function DepthRow({
   const clickable = level.valid || level.fallback !== null
 
   return (
-    <div className={`depth-row depth-row--${kind}`} data-testid={`${kind}-${index}`}>
+    <div className={`depth-row depth-row--${kind}${preview ? ' depth-row--preview' : ''}`} data-testid={`${kind}-${index}`}>
       <span
         className={`depth-row__buy${buyText === '--' ? ' depth-row__muted' : ''}`}
         style={buyStyle}
