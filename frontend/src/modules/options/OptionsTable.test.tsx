@@ -17,6 +17,7 @@ interface VTableMockInstance {
   }
   setRecords: ReturnType<typeof vi.fn>
   updateRecords: ReturnType<typeof vi.fn>
+  scrollToCell: ReturnType<typeof vi.fn>
   getBodyVisibleCellRange: ReturnType<typeof vi.fn>
   mergeCells: ReturnType<typeof vi.fn>
   unmergeCells: ReturnType<typeof vi.fn>
@@ -41,6 +42,7 @@ vi.mock('@visactor/vtable', () => {
           if (typeof idx === 'number' && idx >= 0 && idx < instance.records.length) instance.records[idx] = recs[k]
         }
       }),
+      scrollToCell: vi.fn(),
       // 默认返回非空可见区（与现有 OptionsPanel.test.tsx 一致），让测试聚焦于 isActive 守卫
       getBodyVisibleCellRange: vi.fn(() => ({ rowStart: 1, rowEnd: 10 })),
       mergeCells: vi.fn((startCol: number, startRow: number, endCol: number, endRow: number) => {
@@ -341,6 +343,24 @@ describe('OptionsTable snapshot 增量更新 + 严格可见订阅', () => {
     await vi.runAllTimersAsync()
 
     expect(instance.updateRecords).not.toHaveBeenCalled()
+  })
+
+  it('搜索选中 C/P 合约时定位到对应行和半区', async () => {
+    const records = [
+      makeUnderlyingRow('FG609'),
+      makeOptionRow('FG609', 'FG609-C-1000', 'FG609-P-1000'),
+      makeOptionRow('FG609', 'FG609-C-1100', 'FG609-P-1100'),
+    ]
+    render(
+      <OptionsTable
+        records={records}
+        onToggleGroup={vi.fn()}
+        selectedInstrument="FG609-P-1100"
+      />,
+    )
+
+    await vi.runAllTimersAsync()
+    expect(vtableInstances[0].scrollToCell).toHaveBeenCalledWith({ row: 3, col: 6 })
   })
 
   it('snapshot updateRecords 后校准标底行合并：修正文本陈旧的残留合并（防「点 ad2609 折 ad2610」标签错位）', async () => {

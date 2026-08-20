@@ -166,7 +166,9 @@ export function OptionsFilterBar({ allContracts, getProduct, productNames, value
 
   const toggleSeries = (series: string) => {
     if (activeIndex < 0) return
-    const current = activeSeriesMode === 'all' ? seriesOfProduct : activeSeries
+    // 「全部」状态下点击具体系列应切换为“仅选中该系列”，
+    // 而不是把点击项从全集中排除（否则首次点击 FG609 会只剩 FG610）。
+    const current = activeSeriesMode === 'all' ? [] : activeSeries
     const next = current.includes(series)
       ? current.filter((s) => s !== series)
       : [...current, series]

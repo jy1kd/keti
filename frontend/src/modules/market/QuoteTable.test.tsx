@@ -740,6 +740,25 @@ describe('QuoteTable', () => {
       expect(instance.clearSelected).toHaveBeenCalled()
       restore()
     })
+
+    it('搜索定位时跳过原生 selectRow，避免滚动后的底部选区残影', async () => {
+      const restore = stubRaf()
+      render(
+        <QuoteTable spec={futuresSpec}
+          contracts={mockContracts}
+          snapshots={mockSnapshots}
+          selectedInstrument="au2508"
+          selectedContracts={new Set(['au2508'])}
+          suppressNativeSelection
+        />
+      )
+      const { ListTable } = await import('@visactor/vtable')
+      const instance = (ListTable as any).mock.results[0].value
+      expect(instance.selectRow).not.toHaveBeenCalled()
+      expect(instance.clearSelected).toHaveBeenCalled()
+      expect(instance.scrollToCell).toHaveBeenCalledWith({ row: 1, col: 0 })
+      restore()
+    })
   })
 
   // --- spec 驱动新增行为 tests ---

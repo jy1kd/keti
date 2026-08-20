@@ -31,6 +31,7 @@ export function MarketPanel() {
   const collections = useCollectionsStore((s) => s.collections)
   const { contextMenu, multiSelectMenu, openOrderPopup, openKlineTab, openInfinitePopup, openOrderTabs, openInfiniteTabs, openKlineTabs, handleContextMenu, handleMultiSelectContextMenu, closeMenus } = useContractContextMenu()
   const [searchModalOpen, setSearchModalOpen] = useState(false)
+  const [suppressNativeSelection, setSuppressNativeSelection] = useState(false)
   // 收藏选夹面板（⭐ / 右键 / 工具栏 / 搜索弹窗统一入口）
   const [picker, setPicker] = useState<{ instrumentIDs: string[] } | null>(null)
 
@@ -163,6 +164,7 @@ export function MarketPanel() {
   })
 
   const handleSelectContract = (instrumentID: string) => {
+    setSuppressNativeSelection(true)
     setSelectedInstrument(instrumentID)
     setOrderInstrument(instrumentID)
     // 同步蓝区为单选集：MarketTable 锚点守卫 shouldRenderAnchor 要求
@@ -223,8 +225,14 @@ export function MarketPanel() {
             snapshots={snapshots}
             selectedInstrument={selectedInstrument}
             isActive={isActive}
-            onRowClick={handleClick}
-            onRowDoubleClick={handleDoubleClick}
+            onRowClick={(instrumentID, price) => {
+              setSuppressNativeSelection(false)
+              handleClick(instrumentID, price)
+            }}
+            onRowDoubleClick={(instrumentID, price) => {
+              setSuppressNativeSelection(false)
+              handleDoubleClick(instrumentID, price)
+            }}
             onContextMenu={handleContextMenu}
             onMultiSelectContextMenu={handleMultiSelectContextMenu}
             onVisibleRangeChange={setVisibleInstrumentIDs}
@@ -245,6 +253,7 @@ export function MarketPanel() {
             }}
             selectedContracts={selectedContracts}
             onSelectionChange={setSelectedContracts}
+            suppressNativeSelection={suppressNativeSelection}
           />
         </ErrorBoundary>
       </div>

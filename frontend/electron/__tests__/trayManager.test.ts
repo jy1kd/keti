@@ -98,12 +98,12 @@ describe('TrayManager', () => {
     expect(labels).toEqual(['⚙ 设置', '🔌 网络监控']);
   });
 
-  it('行情子菜单完整镜像：期货/期权/K线/T型报价/新窗口', () => {
+  it('行情子菜单完整镜像：期货/期权/K线/新窗口', () => {
     const manager = new TrayManager();
     manager.initialize(mainWindow, windowManager);
     const market = getTemplate().find((i) => i.label === '行情')!;
     const labels = market.submenu!.map((i) => i.label).filter(Boolean);
-    expect(labels).toEqual(['📊 期货', '📉 期权', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']);
+    expect(labels).toEqual(['📊 期货', '📉 期权', '📈 K线', '🪟 在新窗口打开']);
   });
 
   it('交易子菜单包含 五档下单/无限下单', () => {
