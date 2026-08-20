@@ -1,22 +1,198 @@
 # 上期所 SimNow 模拟交易终端
 
-基于 CTP 协议的期货期权模拟交易终端，支持**浏览器 Web 应用**和 **Electron 桌面应用**两种运行模式，对接 SimNow 7×24 测试环境，实现行情接入、交易接入、手动报单等完整功能。
+> 基于 CTP 协议的浏览器与 Electron 双模式期货期权模拟交易终端。
 
-## 技术栈
+---
 
-| 层级 | 技术 | 用途 |
+## 项目简介
+
+本项目面向需要接入上期所 SimNow 测试环境的交易研发、量化学习和交易系统测试场景，提供一套可直接运行的行情与交易终端。它将 CTP 原生行情/交易接口封装为 FastAPI REST API 与 WebSocket 数据流，再由 React 前端统一呈现；同一套前端代码既可以运行在浏览器中，也可以打包为 Electron 桌面应用。
+
+项目重点解决三个问题：CTP 回调接口难以直接被浏览器消费、实时行情与报单状态需要稳定地双向同步、交易指令需要在前后端同时进行合规校验。业务数据默认只保存在运行时内存中，适合作为模拟交易、接口联调和终端原型的基础，不应直接用于真实资金交易。
+
+## 核心能力
+
+### 实时行情与合约浏览
+
+- **功能**：接入 CTP 行情，提供合约搜索、行情表格、五档深度、快照、按需订阅和预置合约刷新。
+- **解决的问题**：避免在浏览器中直接处理 CTP 原生回调和连接生命周期。
+- **价值**：通过 WebSocket 推送实时数据，并使用 VTable 虚拟滚动承载大量合约。
+
+### K 线与技术指标
+
+- **功能**：后端根据 tick 聚合 1m、5m、15m、30m、1h 和日线 OHLCV 数据，前端支持 MA、BOLL、成交量、MACD、KDJ、RSI。
+- **解决的问题**：SimNow 测试环境没有为本项目提供历史 K 线接口。
+- **价值**：在无历史数据服务的前提下提供实时分析能力，并对数据不足场景进行降级处理。
+
+### 手动报单与止损管理
+
+- **功能**：支持限价、市价、止损、套利、点价、一键反向和锁仓等操作，并提供撤单、批量撤单和止损单管理。
+- **解决的问题**：将交易规则校验前移，降低非法数量、保护价和价格跳动导致的报单错误。
+- **价值**：前端提供交互反馈，后端通过 Pydantic 和业务服务进行最终校验。
+
+### 账户与交易查询
+
+- **功能**：查询持仓、资金、报单、成交、合约、期权链和波动率信息。
+- **解决的问题**：将 CTP 查询回调转换为前端可消费的统一数据模型。
+- **价值**：行情、交易、查询和连接状态在同一个终端中闭环。
+
+### 浏览器与桌面双模式
+
+- **功能**：浏览器开发模式与 Electron 桌面模式共享 React 页面；桌面端提供多窗口、系统托盘、全局快捷键、原生通知、后端进程管理和自动更新能力。
+- **解决的问题**：同时覆盖快速联调和接近传统交易软件的桌面使用体验。
+- **价值**：减少两套 UI 的维护成本，并支持 Windows、macOS、Linux 打包。
+
+## 效果展示
+
+当前仓库未提供可公开访问的在线 Demo 或截图。
+
+<!-- TODO: 添加行情表格、K 线图、报单面板和 Electron 桌面端截图或 GIF。 -->
+
+## 应用场景
+
+- **CTP 接口学习**：使用 SimNow 测试账号观察行情、报单和回报链路。
+- **交易终端原型**：验证行情表格、K 线、报单面板和多窗口交互设计。
+- **前后端联调**：通过 REST API 与 WebSocket 检查 CTP 字段映射和业务状态同步。
+- **交易规则测试**：验证数量上限、保护价、价格跳动和止损流程等前后端校验。
+- **桌面应用开发**：验证 Electron 窗口管理、托盘、快捷键、通知和自动更新能力。
+
+## 安装部署
+
+### 环境要求
+
+- Python 3.10+，建议使用虚拟环境。
+- Node.js 18+ 与 npm。
+- 可访问 SimNow 测试环境的网络。
+- SimNow 测试账号；账号可在 [SimNow 官网](https://www.simnow.com.cn/) 注册。
+- `ctp-python` 及其本地 CTP 运行依赖。首次安装或跨平台部署时，请先确认当前平台与 CTP 二进制包兼容。
+
+### 方式一：让 AI 协助安装
+
+将下面的提示词粘贴给你的 AI 编码工具，并在项目根目录执行：
+
+```text
+请帮我安装并启动当前 SimNow 模拟交易终端：
+1. 检查 Python、Node.js、CTP 原生依赖和 SimNow 配置；
+2. 在 server/ 安装 requirements.txt，在 frontend/ 安装 npm 依赖；
+3. 将 server/.env.sample 复制为 server/.env，并提示我填写 SimNow 账号密码；
+4. 分别启动后端和前端，确认 http://localhost:5173 可以访问；
+5. 运行后端与前端测试，报告失败项及原因。
+```
+
+### 方式二：命令行安装
+
+```bash
+git clone <repository-url>
+cd keti
+
+# 后端
+python -m venv .venv
+# macOS/Linux: source .venv/bin/activate
+# Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install -r server/requirements.txt
+cp server/.env.sample server/.env       # Windows 可手动复制
+
+# 前端
+cd frontend
+npm install
+```
+
+编辑 `server/.env`，至少填写：
+
+```dotenv
+CTP_USER_ID=你的SimNow账号
+CTP_PASSWORD=你的SimNow密码
+```
+
+### 方式三：手动安装
+
+1. 安装 Python、Node.js，并确认 `python --version`、`node --version` 可用。
+2. 在 `server/` 执行 `python -m pip install -r requirements.txt`。
+3. 在 `frontend/` 执行 `npm install`。
+4. 复制 `server/.env.sample` 为 `server/.env`，填写账号密码和需要覆盖的 CTP 前置地址。
+5. 按“快速开始”分别启动后端和前端。
+
+### 安装验证
+
+```bash
+cd server
+python -m pytest tests/ -v
+
+cd ../frontend
+npm test
+npm run build
+```
+
+测试命令用于验证项目代码；真正连接 SimNow 还需要有效账号、可用网络和处于可连接的测试环境。
+
+## 快速开始
+
+### 浏览器模式
+
+打开两个终端：
+
+```bash
+# 终端一
+cd server
+python start.py
+
+# 终端二
+cd frontend
+npm run dev
+```
+
+然后访问 <http://localhost:5173>，在连接面板中登录或等待后端启动连接。
+
+### Electron 模式
+
+```bash
+cd frontend
+npm run electron:dev
+```
+
+Electron 开发模式会启动 Vite，编译主进程，并通过 `BackendManager` 管理后端进程。
+
+## 使用说明
+
+### 后端命令
+
+```bash
+cd server
+python start.py              # 自动选择 CTP 前置地址并监听 8000 端口
+python start.py --reload     # 开发模式
+python start.py --port 8001  # 自定义端口
+```
+
+`start.py` 会根据当前时间在标准仿真环境和 7×24 环境之间选择前置地址。非交易时段连接成功但没有行情推送，可能是 SimNow 环境的正常行为。
+
+### API 与 WebSocket
+
+| 类型 | 路径 | 用途 |
 |------|------|------|
-| 前端 | React 18 + TypeScript 5 + Vite 5 | UI 框架、构建 |
-| 桌面端 | Electron 43 | 桌面应用、系统托盘、全局快捷键 |
-| 表格 | @visactor/vtable | 高性能虚拟滚动，支持 1000+ 合约 |
-| 图表 | ECharts 5 | K 线图、技术指标 |
-| 状态管理 | Zustand | 轻量级状态管理，localStorage 持久化 |
-| 后端 | Python FastAPI 0.100+ + websockets 11.x | REST API、WebSocket |
-| CTP 绑定 | ctp-python 6.7.7.post1 | Python CTP 封装 |
+| REST | `/api/connection` | 登录、登出、连接状态 |
+| REST | `/api/market` | 合约、订阅、快照、深度、K 线、期权和波动率 |
+| REST | `/api/order` | 报单、撤单、反向、锁仓和止损 |
+| REST | `/api/query` | 持仓、资金、报单、成交和合约查询 |
+| WebSocket | `/ws/market` | 实时行情与订阅状态 |
+| WebSocket | `/ws/order` | 报单回报与成交回报 |
+| WebSocket | `/ws/position` | 持仓变化 |
+| WebSocket | `/ws/stop` | 止损单状态与触发事件 |
+| WebSocket | `/ws/system` | 连接状态、心跳和系统事件 |
 
-## 架构
+启动后可访问 FastAPI 自动文档：<http://127.0.0.1:8000/docs>。
 
-### 运行模式
+### Electron 快捷键
+
+| 快捷键 | 功能 |
+|--------|------|
+| `Ctrl+B` | 快速打开报单 |
+| `Ctrl+K` | 打开 K 线图 |
+| `Ctrl+Q` | 退出应用 |
+| `Ctrl+Shift+M` | 切换性能监控 |
+
+## 系统架构
+
+### 原始运行模式架构
 
 项目支持两种运行模式，共享同一套前端代码和后端服务：
 
@@ -68,7 +244,7 @@
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 数据流
+### 原始数据流
 
 ```
 行情数据流：CTP → Python → WebSocket → React → 表格/图表
@@ -76,245 +252,194 @@
 查询数据流：React → REST API → Python → CTP → 缓存 → React
 ```
 
-## 核心功能
-
-- **行情模块**：实时行情表格、五档深度、K 线图（含技术指标）、期权 T 型报价
-- **技术指标**：MA、BOLL、成交量、MACD、KDJ、RSI（主图/副图切换）
-- **报单模块**：限价/市价/止损单、套利指令、点价报单、一键反向/锁仓
-- **查询模块**：报单流水、成交、持仓、资金、合约信息
-- **弹窗/浮窗系统**：报单/查询标签可拖出为独立浮动弹窗，支持 8 方向自由缩放、顶层渲染与停靠回标签栏
-- **系统连接**：SimNow 登录、连接状态监控、断线重连
-- **桌面应用**：Electron 桌面端、系统托盘、全局快捷键、原生通知、自动更新
-
-## 技术亮点
-
-### 1. 高性能行情渲染
-
-- **vtable 虚拟滚动**：仅渲染可见行，支持 1000+ 合约无卡顿
-- **WebSocket 实时推送**：行情数据通过 `/ws/market` 端点推送，延迟 ≤100ms
-- **Zustand 状态管理**：轻量级 store + Map 结构，O(1) 快照更新
-
-### 2. K 线图与技术指标
-
-- **K 线聚合**：后端实时聚合 tick 数据为 OHLCV K 线，支持 1m/5m/15m/30m/1h/日线
-- **技术指标**：主图（MA5/10/20、BOLL 布林带）、副图（成交量、MACD、KDJ、RSI）
-- **指标切换**：下拉菜单切换主图/副图指标，不堆砌按钮，保持界面简洁
-- **动态计算**：前端实时计算指标值，支持空数据和数据不足时的优雅降级（显示null）
-
-### 3. 浮动弹窗系统
-
-- **拖出为弹窗**：报单/查询等标签可拖出标签栏，成为独立浮动弹窗，主窗口自动切回行情不空白
-- **8 方向自由缩放**：浮动弹窗支持四边四角 8 个方向的缩放手柄，最小尺寸约束
-- **顶层渲染**：弹窗内容通过 portal 渲染到顶层 overlay，脱离主内容区的 flex/overflow 层叠上下文，避免错位/裁剪
-- **统一置顶**：捕获阶段指针事件保证弹窗聚焦置顶，内部组件 stopPropagation 不影响弹窗层级
-- **停靠回收**：弹窗可一键停靠回标签栏，关闭标签后自动清理浮动登记
-
-### 4. CTP 协议封装
-
-- **ctp-python SWIG 绑定**：封装 CTP 行情/交易 API，处理回调 SPI 设计
-- **字段映射层**：CTP PascalCase → 前端 camelCase 自动转换（50+ 字段）
-- **回调穿透**：组合模式 SPI 基类，支持事件日志 + 自定义 handler 注册
-
-### 5. 交易指令合规性
-
-对齐上期所交易规则，前后端双重校验：
-
-| 指令类型 | 数量上限（期货） | 数量上限（期权） | 特殊规则 |
-|----------|------------------|------------------|----------|
-| 限价指令 | ≤500 手 | ≤100 手 | GFD/FOK/FAK 三种有效期 |
-| 市价指令 | ≤60 手 | ≤30 手 | 必须填写保护价 |
-| 止损单 | ≤500 手 | ≤100 手 | 支持限价/市价触发 |
-| 套利指令 | ≤500 手 | — | CTP 原生套利合约（SP 格式） |
-
-- **保护价校验**：市价指令必须填写保护价，在涨跌停板范围内，priceTick 整数倍对齐
-- **后端权威校验**：Pydantic field_validator 兜底，防止前端绕过
-
-### 6. Electron 桌面应用
-
-基于 Electron 构建桌面应用，提供原生桌面体验：
-
-- **多窗口管理**：主窗口、报单窗口、K 线窗口独立显示，支持拖拽和调整大小
-- **系统托盘**：最小化到托盘，托盘菜单快速切换面板
-- **全局快捷键**：`Ctrl+B` 快速报单、`Ctrl+K` 打开 K 线图、`Ctrl+Q` 退出
-- **原生通知**：报单成交、止损触发、连接断开等事件通知
-- **自动更新**：集成 electron-updater，支持检查更新、下载、安装
-- **多平台打包**：支持 Windows（NSIS）、macOS（DMG）、Linux（AppImage）
-
-### 7. 双窗口协作开发
-
-项目采用角色 A（后端）/ 角色 B（前端）双窗口协作模式：
-
-- **开发模式**：写代码、TDD 测试、提交
-- **审查模式**：只读 diff、写审查反馈
-- **TDD 驱动**：红（写测试）→ 绿（写实现）→ 重构 → 提交
-- **9 步流程**：启动诊断 → 创建分支 → TDD 开发 → 自验证 → 代码审查 → 处理反馈 → 二次审查 → 人工验证 → 收尾合并
-
-详细流程见 [开发流程指南](docs/tasks/task-dev-flow.md)。
-
-## 快速开始
-
-### 1. 后端配置
-
-```bash
-cd server
-cp .env.sample .env          # 复制配置模板
-# 编辑 .env，填入 SimNow 账号密码：
-#   CTP_USER_ID=你的账号
-#   CTP_PASSWORD=你的密码
+```mermaid
+flowchart TD
+    User[交易用户] --> Web[浏览器 React 应用]
+    User --> Desktop[Electron 渲染进程]
+    Desktop --> IPC[IPC 桥接与主进程]
+    Web --> REST[FastAPI REST API]
+    Web --> WS[WebSocket 通道]
+    IPC --> REST
+    IPC --> WS
+    REST --> Services[业务服务层]
+    WS --> Services
+    Services --> CTP[CTP 封装层]
+    CTP --> SimNow[SimNow 测试柜台]
+    Services --> Memory[内存状态与本地文件缓存]
 ```
 
-`.env` 配置说明：
+| 模块 | 职责 |
+|------|------|
+| React 前端 | 行情、K 线、报单、查询、期权和标签页交互 |
+| Electron 主进程 | 窗口、托盘、快捷键、通知、后端进程和自动更新 |
+| FastAPI | REST 路由、生命周期、CORS 和统一异常处理 |
+| WebSocket 管理器 | 客户端连接、心跳、频道广播和实时事件推送 |
+| 业务服务层 | 行情聚合、订单管理、止损、查询、期权和重连 |
+| CTP 封装层 | SWIG API、SPI 回调、字段转换与连接状态 |
+| SimNow | 提供模拟行情、交易和查询服务 |
 
-| 配置项 | 说明 | 默认值 |
-|--------|------|--------|
-| `CTP_BROKER_ID` | 经纪商代码（SimNow 固定） | `9999` |
-| `CTP_USER_ID` | SimNow 账号 | 需填写 |
-| `CTP_PASSWORD` | SimNow 密码 | 需填写 |
-| `CTP_MD_FRONT` | 行情前置地址 | 7×24 测试环境 |
-| `CTP_TD_FRONT` | 交易前置地址 | 7×24 测试环境 |
+## 核心工作流程
 
-> 账号注册：https://www.simnow.com.cn
-
-### 2. 安装依赖
-
-```bash
-# 后端（Python 依赖，在 server/ 目录下）
-cd server
-pip install -r requirements.txt
-
-# 前端（Node.js 依赖，在 frontend/ 目录下）
-cd frontend
-npm install
+```mermaid
+flowchart LR
+    Tick[CTP Tick] --> Callback[行情回调]
+    Callback --> Mapping[字段映射]
+    Mapping --> Kline[K线聚合与服务缓存]
+    Mapping --> Broadcast[WebSocket 广播]
+    Kline --> Frontend[React 表格与图表]
+    Broadcast --> Frontend
+    Frontend --> Order[REST 报单请求]
+    Order --> Validate[前后端合规校验]
+    Validate --> Trader[CTP Trader API]
+    Trader --> Report[报单/成交回报]
+    Report --> Broadcast
 ```
 
-### 3. 启动服务
+1. CTP 行情 SPI 接收 tick，并通过字段映射转换为前端统一的 camelCase 数据。
+2. 行情服务更新快照、深度和实时 K 线，同时由 WebSocket 管理器广播给客户端。
+3. 前端提交报单或查询请求，服务端进行数量、价格、保护价和业务状态校验。
+4. CTP Trader API 发出请求并接收回报，订单、成交、持仓和止损事件通过对应频道返回前端。
 
-#### 方式一：Web 浏览器模式
+## 交易合规校验
 
-```bash
-# 启动后端（在 server/ 目录下）
-cd server
-python start.py              # 自动选择 CTP 地址（交易时段/7×24）
-python start.py --reload     # 开发模式（代码变更自动重启）
-python start.py --port 8000  # 指定端口（默认即 8000）
+项目按上期所交易指令约束实现前后端双重校验：
 
-# 启动前端（在 frontend/ 目录下，另开一个终端）
-cd frontend
-npm run dev                  # 开发服务器 → http://localhost:5173
-```
+| 指令类型 | 期货上限 | 期权上限 | 规则 |
+|----------|----------|----------|------|
+| 限价指令 | 500 手 | 100 手 | 支持 GFD、FOK、FAK |
+| 市价指令 | 60 手 | 30 手 | 必须填写保护价 |
+| 止损单 | 500 手 | 100 手 | 支持限价/市价触发 |
+| 套利指令 | 500 手 | — | 使用 CTP 原生 SP 合约 |
 
-#### 方式二：Electron 桌面应用模式
+市价指令的保护价必须在涨跌停范围内，并按 `priceTick` 整数倍对齐；后端 Pydantic 校验是最终防线，不能只依赖前端校验。
 
-```bash
-# 启动 Electron 应用（自动启动后端）
-cd frontend
-npm run electron:dev         # 开发模式（支持热重载）
+## 技术栈
 
-# 打包生产版本
-npm run electron:build       # 打包当前平台
-npm run electron:build -- --win    # 打包 Windows
-npm run electron:build -- --mac    # 打包 macOS
-npm run electron:build -- --linux  # 打包 Linux
-```
-
-`start.py` 会根据当前时间自动选择 CTP 地址：
-- 工作日 09:00-16:00 → 真实交易时段地址（`tcp://182.254.243.31:30011/30001`）
-- 其他时间 → 7×24 测试环境地址（`tcp://182.254.243.31:40011/40001`）
-
-### 4. 运行测试
-
-```bash
-# 后端测试（711 个单元测试）
-cd server && python -m pytest tests/ -v
-
-# 前端测试（809 个单元测试）
-cd frontend && npm test
-```
+| 层级 | 技术 | 用途 |
+|------|------|------|
+| 前端 | React 18 + TypeScript 5 + Vite 5 | UI 框架、构建 |
+| 桌面端 | Electron 43 | 桌面应用、系统托盘、全局快捷键 |
+| 表格 | @visactor/vtable | 高性能虚拟滚动，支持 1000+ 合约 |
+| 图表 | ECharts 5 | K 线图、技术指标 |
+| 状态管理 | Zustand | 轻量级状态管理，localStorage 持久化 |
+| 后端 | Python FastAPI 0.100+ + websockets 11.x | REST API、WebSocket |
+| CTP 绑定 | ctp-python 6.7.7.post1 | Python CTP 封装 |
+| 测试 | Pytest、Pytest-Asyncio、Vitest、Testing Library | 后端和前端测试 |
 
 ## 项目结构
 
-```
+```text
 keti/
-├── docs/                     # 项目文档
-│   ├── specs/                # 需求与设计（prd/design/dev/trading-instructions/ctp-*/）
-│   ├── tasks/                # 任务与流程（task/task-dev-flow/修复记录）
-│   ├── reviews/              # 审查报告（compliance-review/testing-guide/check*）
-│   ├── dev-records/          # 开发记录（role-a/role-b 双窗口协作快照）
-│   ├── snapshots/            # 双窗口协作快照（review-feedback/review-reply/verify-discussion）
-│   └── superpowers/          # 规划与设计文档（plans/specs）
-├── examples/                 # CTP 示例脚本
-│   ├── ctp_connection_demo.py    # CTP 连接验证
-│   ├── field_structure_demo.py   # CTP 字段结构探测
-│   └── realtime_market_demo.py   # 实时行情显示
-├── frontend/                 # 前端代码
+├── frontend/                 # React + TypeScript + Electron 前端
 │   ├── src/
-│   │   ├── modules/          # 业务模块（market/order/query/options）
-│   │   │   └── market/       # 行情模块（KLineChart/indicators/MarketTable）
-│   │   ├── components/       # 通用组件（ContractSearch/Toast/FloatingWindow/...）
-│   │   ├── services/         # API 层 + 类型定义
-│   │   ├── stores/           # Zustand 状态管理（connection/contracts/tabs/floatingWindows）
-│   │   ├── hooks/            # 自定义 Hooks（useMarketWs/useReconnect/useTabContractLocks/...）
-│   │   ├── pages/            # 独立页面（OrderPage/KLinePage，用于 Electron 窗口）
-│   │   └── utils/            # 工具函数（validators/orderMapping/detachDrag/resizeDrag）
-│   ├── electron/             # Electron 主进程代码
-│   │   ├── main.ts           # 主进程入口
-│   │   ├── preload.ts        # 预加载脚本（IPC 桥接）
-│   │   ├── windowManager.ts  # 窗口管理器
-│   │   ├── trayManager.ts    # 系统托盘管理器
-│   │   ├── shortcuts.ts      # 全局快捷键管理器
-│   │   ├── notificationManager.ts  # 通知管理器
-│   │   ├── backendManager.ts # 后端进程管理器
-│   │   ├── autoUpdater.ts    # 自动更新管理器
-│   │   ├── ipcMonitor.ts     # IPC 通道监控
-│   │   ├── ipcWrapper.ts     # IPC 调用包装
-│   │   └── ipc/              # IPC 通道定义和处理器（app/index/window）
-│   ├── scripts/              # 构建脚本
-│   │   ├── compile-electron.cjs  # Electron 编译脚本
-│   │   ├── build-electron.cjs    # 多平台打包脚本
-│   │   └── generate-icons.cjs    # 图标生成脚本
-│   ├── build/                # 打包资源（图标文件）
-│   ├── electron-builder.json # Electron 打包配置
-│   └── package.json
-├── server/                   # 后端代码
-│   ├── api/                  # REST API 路由（connection/market/order/query）
-│   ├── services/             # 业务服务（order_manager/stop_order/market_service/kline_service/reconnect）
-│   ├── ctp_wrapper/          # CTP API 封装层（md_user_api/trader_api/callback/types）
-│   ├── models/               # 数据模型（market/order/account/contract）
-│   ├── ws/                   # WebSocket 管理（manager/handlers）
-│   ├── config.py             # 配置管理（环境变量读取）
-│   ├── main.py               # FastAPI 应用入口
-│   ├── start.py              # 智能启动脚本（自动选择 CTP 地址）
-│   ├── pyinstaller.spec      # PyInstaller 打包配置
-│   └── tests/                # 711 个单元测试（pytest）
-├── scripts/                  # 项目脚本
-│   ├── prepare-electron.sh   # Electron 环境检查脚本
-│   └── build-backend.py      # 后端打包脚本
-├── .claude/                  # Claude Code 配置
-│   └── skills/               # 自定义技能（双窗口协作开发流程）
-│       ├── role-a-dev-flow/  # 角色A（后端）开发流程
-│       ├── role-b-dev-flow/  # 角色B（前端）开发流程
-│       ├── simnow-bug-fix/   # Bug 修复流程
-│       └── simnow-consistency-check/  # 一致性检查流程
-└── .ua/                      # Understand Anything 知识图谱
-    ├── knowledge-graph.json  # 代码实体关系图谱
-    ├── domain-graph.json     # 业务领域知识图谱
-    └── config.json           # UA 配置
+│   │   ├── modules/          # 行情、报单、查询、期权业务模块
+│   │   ├── components/       # ContractSearch、Toast、FloatingWindow 等通用组件
+│   │   ├── services/         # REST、WebSocket、Electron API 和类型定义
+│   │   ├── stores/           # Zustand 状态管理
+│   │   ├── hooks/            # 行情、重连、快捷键和订阅 Hooks
+│   │   ├── pages/            # 报单、K 线、设置、监控等页面
+│   │   └── utils/            # 校验、映射、拖拽、格式化和价格计算
+│   ├── electron/             # Electron 主进程、IPC、托盘和窗口管理
+│   ├── scripts/              # Electron 编译、打包和图标生成脚本
+│   └── package.json          # 前端依赖和运行命令
+├── server/                   # FastAPI + CTP 后端
+│   ├── api/                  # connection、market、order、query 路由
+│   ├── services/             # 行情、K 线、订单、止损、查询和重连服务
+│   ├── ctp_wrapper/          # CTP 行情/交易 API、SPI 回调和类型
+│   ├── models/               # 行情、订单、账户和合约模型
+│   ├── ws/                   # WebSocket 管理器和事件处理器
+│   ├── tests/                # 后端单元测试和集成测试
+│   ├── config.py             # 环境变量配置
+│   └── start.py              # 按交易时段选择前置地址的启动脚本
+├── docs/                     # 需求、设计、任务、审查和开发记录
+├── examples/                 # CTP 连接、字段探测和实时行情示例
+└── scripts/                  # 后端打包和环境辅助脚本
 ```
 
-## Claude Code 技能链
+## 配置说明
 
-项目使用 Claude Code 自定义技能实现标准化开发流程：
+配置文件为 `server/.env`，模板见 `server/.env.sample`。不要将真实账号密码提交到 Git。
 
-| 技能 | 用途 | 触发方式 |
-|------|------|----------|
-| `role-a-dev-flow` | 角色A（后端）完整开发流程 | 9 步：诊断→TDD→自验证→审查→合并 |
-| `role-b-dev-flow` | 角色B（前端）完整开发流程 | 同上，针对 frontend/ 目录 |
-| `simnow-bug-fix` | Bug 修复流程 | 根因分析→TDD 修复→验证 |
-| `simnow-consistency-check` | 前后端一致性检查 | 自动扫描类型/字段/API 不一致 |
-| `simnow-resume` | 简历内容生成 | 根据项目代码和提交记录生成简历 |
-| `simnow-weekly` | 周报生成 | 根据 git 提交记录生成周报 |
+| 配置项 | 必需 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `CTP_BROKER_ID` | 否 | `9999` | SimNow 经纪商代码 |
+| `CTP_USER_ID` | 是 | 空 | SimNow 用户名 |
+| `CTP_PASSWORD` | 是 | 空 | SimNow 密码 |
+| `CTP_MD_FRONT` | 否 | `tcp://182.254.243.31:30011` | 当前行情前置 |
+| `CTP_TD_FRONT` | 否 | `tcp://182.254.243.31:30001` | 当前交易前置 |
+| `CTP_TEST_INSTRUMENT` | 否 | — | 连接验证使用的测试合约 |
+| `CTP_APP_ID` | 否 | `simnow_client` | CTP 应用 ID |
+| `CTP_AUTH_CODE` | 否 | `0000000000000000` | CTP 认证码 |
+| `CTP_MD_FRONT_PRIMARY` | 否 | 标准仿真行情地址 | `start.py` 交易时段使用 |
+| `CTP_TD_FRONT_PRIMARY` | 否 | 标准仿真交易地址 | `start.py` 交易时段使用 |
+| `CTP_MD_FRONT_SECONDARY` | 否 | 7×24 行情地址 | `start.py` 非交易时段使用 |
+| `CTP_TD_FRONT_SECONDARY` | 否 | 7×24 交易地址 | `start.py` 非交易时段使用 |
 
-技能文件位于 `.claude/skills/`，通过 Claude Code 的 `/skill-name` 命令触发。
+## 性能与扩展性
+
+- **行情渲染**：VTable 虚拟滚动限制可见行渲染，Zustand 使用 Map 结构进行快照更新。
+- **实时通信**：行情、订单、持仓、止损和系统状态使用独立 WebSocket 频道，管理器统一处理连接与心跳。
+- **K 线计算**：后端按 tick 实时聚合，前端计算技术指标；当前没有历史行情数据接口。
+- **状态存储**：业务数据默认在内存中，部分止损数据写入本地文件；如需生产化，应接入持久化数据库和消息队列。
+- **扩展方向**：可将行情广播拆分为独立服务，增加 Redis/NATS 等消息中间件，并为历史 K 线接入专用存储。
+
+## 安全设计与边界
+
+- 服务默认只监听 `127.0.0.1`，CORS 仅允许本地前端地址。
+- SimNow 账号从 `.env` 读取，不在前端持久化；请勿把 `.env`、日志或截图提交到仓库。
+- 当前项目面向本地模拟交易和开发联调，没有完整的多用户身份认证、权限系统和生产级审计能力。
+- 后端对报单参数进行权威校验，但交易者仍需确认合约、方向、数量和价格。
+- CTP 的 `SubscribeMarketData`/`UnsubscribeMarketData` 必须传入字符串列表，不能传 `bytes`，否则可能触发 SWIG 内存问题。
+
+## 项目亮点
+
+1. **技术创新**：将 CTP 回调、字段映射、K 线实时聚合和 WebSocket 广播组合为浏览器可消费的数据链路。
+2. **工程创新**：浏览器与 Electron 共享前端业务代码，并通过统一的业务服务和 IPC 管理桌面能力。
+3. **交易安全**：数量上限、保护价、价格跳动和套利合约等规则在前后端双重校验。
+4. **可维护性**：前后端分层、WebSocket 频道隔离，并配套 TDD、代码审查和双窗口协作流程文档。
+
+## Roadmap
+
+- [x] SimNow 行情和交易接入
+- [x] 浏览器 Web 终端
+- [x] Electron 多窗口、托盘、快捷键和通知
+- [x] K 线聚合与 MA/BOLL/MACD/KDJ/RSI 指标
+- [x] 报单、撤单、止损、反向和锁仓
+- [x] 前后端交易指令合规校验
+- [ ] 历史 K 线数据接口与持久化存储
+- [ ] 更完整的多账户、权限和审计能力
+- [ ] 生产部署方案与容器化配置
+
+## 贡献指南
+
+1. Fork 仓库并创建分支：`git checkout -b feature/your-feature`。
+2. 修改前先阅读 `AGENTS.md`、`docs/specs/` 和相关任务文档。
+3. 遵循“先写测试、再写实现、最后重构”的 TDD 流程。
+4. 提交前运行后端测试、前端测试、构建和必要的人工验证。
+5. 提交信息建议使用 Conventional Commits，例如 `feat: add option chain filter`。
+6. Pull Request 中说明变更范围、测试结果、接口影响和配置变化。
+
+## FAQ
+
+### 为什么连接成功但没有行情？
+
+SimNow 的不同前置在交易时段和非交易时段的行情行为不同。`start.py` 会按时间选择前置；非交易时段使用 7×24 前置时，连接成功但没有行情可能是正常现象。
+
+### 为什么前端能打开但无法登录？
+
+检查 `server/.env` 是否由 `.env.sample` 复制而来，并确认 `CTP_USER_ID`、`CTP_PASSWORD`、前置地址和网络可达性。后端日志和 `/api/connection/status` 可用于定位连接状态。
+
+### 项目是否提供历史 K 线？
+
+目前不提供历史行情接口。K 线由后端根据运行期间收到的 tick 实时聚合，因此刚启动时数据量不足是正常的。
+
+### 可以直接用于真实交易吗？
+
+不建议。项目定位是 SimNow 模拟交易和开发联调，尚未提供生产级身份认证、权限隔离、审计、容灾和风险控制体系。
+
+### Electron 打包后端是否需要单独启动？
+
+开发模式由 Electron 的 `BackendManager` 管理后端进程；部署前仍需确认 Python/CTP 运行依赖、配置文件和目标平台的打包产物均完整。
 
 ## Understand Anything 知识图谱
 
@@ -354,7 +479,6 @@ UA 提供以下指令：
 | `/understand-explain` | 深度讲解指定文件/函数/模块 |
 | `/understand-onboard` | 新人引导，生成项目概览和上手指南 |
 
-
 ### 克隆项目后快速上手
 
 ```bash
@@ -370,108 +494,25 @@ git clone <repo-url> && cd keti
 # 4. 提取业务领域知识（领域、流程、步骤）
 /understand-domain
 
-# 5. 打开UA仪表盘
+# 5. 打开 UA 仪表盘
 /understand-dashboard
 
 # 6. 询问任意代码库的问题
 /understand-chat How does the payment flow work?
 ```
 
-## Electron 桌面应用
+## License
 
-### 功能特性
+仓库当前未包含 `LICENSE` 文件，默认不应视为已授予开源再分发权。若计划公开发布，请补充明确的许可证文件，并同步说明 CTP 依赖和第三方组件的许可要求。
 
-| 功能 | 说明 |
-|------|------|
-| **多窗口** | 主窗口、报单窗口、K 线窗口独立显示 |
-| **系统托盘** | 最小化到托盘，托盘菜单快速切换 |
-| **全局快捷键** | `Ctrl+B` 报单、`Ctrl+K` K 线、`Ctrl+Q` 退出 |
-| **原生通知** | 报单成交、止损触发、连接断开通知 |
-| **自动更新** | electron-updater 检查更新、下载、安装 |
-| **多平台** | Windows/macOS/Linux 三平台打包 |
+## 相关文档
 
-### 快捷键
-
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl+B` | 快速报单 |
-| `Ctrl+K` | 打开 K 线图 |
-| `Ctrl+Q` | 退出应用 |
-| `Ctrl+Shift+M` | 切换性能监控 |
-
-### 系统托盘
-
-- **点击托盘图标**：显示/隐藏主窗口
-- **右键菜单**：行情面板、报单面板、查询面板、设置、退出
-- **关闭窗口**：最小化到托盘（不退出应用）
-
-### 打包命令
-
-```bash
-cd frontend
-
-# 生成占位图标（首次运行）
-npm run generate-icons
-
-# 打包当前平台
-npm run electron:build
-
-# 打包指定平台
-npm run electron:build -- --win     # Windows (NSIS)
-npm run electron:build -- --mac     # macOS (DMG)
-npm run electron:build -- --linux   # Linux (AppImage)
-```
-
-打包产物在 `frontend/release/` 目录。
-
-## 文档
-
-- [产品需求文档](docs/specs/prd.md) — 功能需求、非目标、用户画像
-- [技术架构设计](docs/specs/design.md) — 接口设计、数据模型、WebSocket 端点
-- [项目设计稿](docs/specs/dev.md) — 代码结构、技术规范、CTP 连接流程
-- [重构方案](docs/specs/redesign-plan.md) — 标签页系统 + 虚拟滚动按需订阅重构方案
-- [任务拆分](docs/tasks/task.md) — 21 个 PR，5 个阶段
-- [Electron 迁移任务](docs/tasks/task-electron-migration.md) — 10 个 PR，桌面应用迁移
-- [标签页重构任务](docs/tasks/task-redesign.md) — 多页面架构 + 虚拟滚动按需订阅 PR 拆分
-- [一致性检查修复](docs/tasks/consistency-check-records.md) — 13 个 PR，前后端类型对齐
-- [交易指令合规性修复](docs/tasks/compliance-fix-records.md) — 保护价/数量上限/套利指令
-- [交易指令合规审查](docs/reviews/compliance-review.md) — 11 个合规性问题清单
-- [测试说明报告](docs/reviews/testing-guide.md) — 零基础使用测试说明
-
-## 技术指标说明
-
-项目实现了常用的技术分析指标，用于 K 线图分析：
-
-### 主图指标
-
-| 指标 | 说明 | 参数 |
-|------|------|------|
-| MA | 移动平均线 | MA5（黄）、MA10（蓝）、MA20（粉） |
-| BOLL | 布林带 | 20日均线 ± 2倍标准差（上轨/中轨/下轨） |
-
-### 副图指标
-
-| 指标 | 说明 | 参数 |
-|------|------|------|
-| 成交量 | 柱状图 + VOL-MA5 均线 | 红涨绿跌 |
-| MACD | 指数平滑异同移动平均线 | DIF/DEA 线 + MACD 柱 |
-| KDJ | 随机指标 | 9日RSV，K/D/J 三线 |
-| RSI | 相对强弱指数 | 14日 Wilder 指数平滑 |
-
-### 实现细节
-
-- **计算位置**：前端 `frontend/src/modules/market/indicators.ts`
-- **数据要求**：MA5 需 5 个点，KDJ 需 9 个点，RSI 需 15 个点，BOLL/MACD 需 20/26 个点
-- **数据来源**：后端 `kline_service.py` 实时聚合 CTP tick 数据，无历史数据接口
-- **测试覆盖**：`indicators.test.ts` 包含 12 个单元测试，覆盖空数据/不足/正常场景
-
-## 注意事项
-
-- 用户偏好使用 localStorage 持久化；业务数据不落库，仅内存展示
-- 止损单由后端监控服务实现，复用行情订阅数据流，持久化到本地文件
-- GFD 报单依赖 SimNow 柜台收盘自动撤销
-- 项目依赖 `docs/specs/ctp-api-structure.txt` 做前后端类型对齐
-- K 线数据由后端 `kline_service` 实时聚合 tick 数据生成，无历史数据接口
-- CTP 的 `highestPrice`/`lowestPrice` 是当日最高最低价，非周期内值，前端需动态计算
-- Electron 桌面应用会自动检测并连接已有后端，避免重复启动
-- 托盘图标文件（`build/icon.png`、`icon.ico`、`icon.icns`）需替换为实际图标
+- [产品需求文档](docs/specs/prd.md)
+- [技术架构设计](docs/specs/design.md)
+- [项目设计稿](docs/specs/dev.md)
+- [交易指令规范](docs/specs/trading-instructions.md)
+- [任务拆分](docs/tasks/task.md)
+- [开发流程指南](docs/tasks/task-dev-flow.md)
+- [一致性检查修复记录](docs/tasks/consistency-check-records.md)
+- [交易合规修复记录](docs/tasks/compliance-fix-records.md)
+- [测试说明](docs/reviews/testing-guide.md)
