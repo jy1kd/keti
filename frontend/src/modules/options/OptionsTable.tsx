@@ -35,6 +35,8 @@ export interface OptionsTableProps {
   onToggleGroup: (underlyingID: string) => void
   /** 点击 C/P 侧单元格回调；中列（行权价）与缺失侧不回调 */
   onRowClick?: (instrumentID: string, price: number) => void
+  /** 搜索选中的合约；用于定位到具体行及 C/P 半区 */
+  selectedInstrument?: string | null
   /** 双击 C/P 侧单元格回调（与期货表格一致，300ms 同行判定） */
   onRowDoubleClick?: (instrumentID: string, price: number) => void
   /**
@@ -160,7 +162,7 @@ function buildOptionRecords(chain: OptionChain): OptionsRecord[] {
   })
 }
 
-export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, onRowDoubleClick, onContextMenu, onVisibleRangeChange, isActive }: OptionsTableProps) {
+export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, onRowDoubleClick, onContextMenu, onVisibleRangeChange, isActive, selectedInstrument }: OptionsTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
   const recordsRef = useRef<OptionsRecord[]>([])
@@ -485,6 +487,19 @@ export function OptionsTable({ records, snapshots, onToggleGroup, onRowClick, on
     setVisibleRangeVersion((v) => v + 1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [records])
+
+  // 搜索选择后定位到具体 C/P 半区。vtable 行 0 是表头，C/P 列分别从 0/6 开始。
+  // 直接使用合约 ID 查找记录，避免把同一行的另一侧误当成目标。
+  useEffect(() => {
+    if (!selectedInstrument || !tableRef.current) return
+    const rowIndex = records.findIndex(
+      (record) => record.callInstrumentID === selectedInstrument || record.putInstrumentID === selectedInstrument,
+    )
+    if (rowIndex < 0) return
+    const record = records[rowIndex]
+    const col = record.callInstrumentID === selectedInstrument ? 0 : 6
+    tableRef.current.scrollToCell?.({ row: rowIndex + 1, col })
+  }, [records, selectedInstrument])
 
   // snapshot 增量更新：仅对当前可见区行按引用对比，找出快照引用变化的行调用 updateRecords。
   // 仿照 QuoteTable.tsx:548-575 的 snapshot 增量路径；PRELOAD=0 → 仅屏幕上可见的行被更新。

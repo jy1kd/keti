@@ -168,6 +168,6 @@ export async function initializeApp(): Promise<void> {
 }
 
 // Only auto-initialize when not in test environment
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' && process.env.VITEST !== 'true') {
   initializeApp().catch(console.error);
 }

@@ -33,6 +33,8 @@ interface QuoteTableProps {
   selectedContracts?: Set<string>
   /** 多选变化回调 */
   onSelectionChange?: (selectedIDs: Set<string>) => void
+  /** 搜索定位时跳过 vtable 原生整行选区，避免虚拟滚动后的选区残影 */
+  suppressNativeSelection?: boolean
 }
 
 /** mouseup 距上次 scroll 在此窗口内视为滚动条释放（松手） */
@@ -62,7 +64,7 @@ function withUnderlyingHeaderStyle(columns: QuoteTableSpec['columns']): QuoteTab
   })
 }
 
-export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isActive, onRowClick, onRowDoubleClick, onContextMenu, onMultiSelectContextMenu, onVisibleRangeChange, favoritedIds, onFavoriteChange, selectedContracts, onSelectionChange }: QuoteTableProps) {
+export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isActive, onRowClick, onRowDoubleClick, onContextMenu, onMultiSelectContextMenu, onVisibleRangeChange, favoritedIds, onFavoriteChange, selectedContracts, onSelectionChange, suppressNativeSelection }: QuoteTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<ListTable | null>(null)
   const onClickRef = useRef(onRowClick)
@@ -591,6 +593,20 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
   // 高亮选中合约行（rAF 等 vtable setRecords 渲染完成）；金色活动锚点仅在选区内渲染
   useEffect(() => {
     if (!tableRef.current) return
+    const rowIndex = contracts.findIndex((c) => c.instrumentID === selectedInstrument)
+    if (rowIndex < 0) return
+    const vtableRow = rowIndex + 1
+
+    // 搜索定位仍需滚动；仅跳过会在虚拟滚动后留下残影的原生整行选区。
+    if (suppressNativeSelection) {
+      try {
+        tableRef.current.clearSelected()
+        tableRef.current.scrollToCell({ row: vtableRow, col: 0 })
+      } catch {
+        // vtable 尚未就绪
+      }
+      return
+    }
     if (!shouldRenderAnchor(selectedInstrument, selectedContracts)) {
       // 锚点不在选区内 → 清除 vtable 原生金色选中，避免独立高亮区
       try {
@@ -600,9 +616,6 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
       }
       return
     }
-    const rowIndex = contracts.findIndex((c) => c.instrumentID === selectedInstrument)
-    if (rowIndex < 0) return
-    const vtableRow = rowIndex + 1
     const raf = requestAnimationFrame(() => {
       try {
         tableRef.current?.selectRow(vtableRow)
@@ -616,7 +629,7 @@ export function QuoteTable({ spec, contracts, snapshots, selectedInstrument, isA
       }
     })
     return () => cancelAnimationFrame(raf)
-  }, [selectedInstrument, selectedContracts, contracts])
+  }, [selectedInstrument, selectedContracts, contracts, suppressNativeSelection, spec.columns.length])
 
   // 标签激活（isActive 翻转为 true）时重报可见区：期权表切回期货标签等场景下
   // 订阅管理器以可见区为准，激活后立即补订阅（依赖空数组保证 notifyVisibleRange 引用稳定）

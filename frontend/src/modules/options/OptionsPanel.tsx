@@ -45,6 +45,7 @@ export function OptionsPanel() {
 
   const groupRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
+  const selectedInstrument = useMarketStore((s) => s.selectedInstrument)
   const setSelectedInstrument = useMarketStore((s) => s.setSelectedInstrument)
   const setVisibleInstrumentIDs = useMarketStore((s) => s.setVisibleInstrumentIDs)
   const { setSelectedInstrument: setOrderInstrument, setOrderForm } = useOrderStore()
@@ -171,16 +172,14 @@ export function OptionsPanel() {
 
   // ── 搜索选中合约 → 定位到标底组并展开 ─────────────────────────────────
   const handleSelectContract = useCallback((instrumentID: string) => {
-    const inst = contracts.find((c) => c.instrumentID === instrumentID)
-    let targetGroupID = instrumentID
-    if (inst && (inst.productClass === '2' || inst.productClass === '6') && inst.underlyingInstrID) {
-      const underlying = contracts.find((c) => c.instrumentID === inst.underlyingInstrID)
-      if (underlying) targetGroupID = underlying.instrumentID
-    }
-    setSearchQuery(targetGroupID)
+    // 必须使用已规范化的 options：部分 CZCE/GFEX 合约的
+    // underlyingInstrID 只有品种代码，原始 contracts 无法找到对应标底。
+    const inst = options.find((c) => c.instrumentID === instrumentID)
+    const targetGroupID = inst?.underlyingInstrID ?? instrumentID
+    setSelectedInstrument(instrumentID)
+    setOrderInstrument(instrumentID)
     setCollapsedGroups((prev) => { const next = new Set(prev); next.delete(targetGroupID); return next })
-    requestAnimationFrame(() => { groupRefs.current[targetGroupID]?.scrollIntoView({ block: 'center', behavior: 'smooth' }) })
-  }, [contracts])
+  }, [options, setSelectedInstrument, setOrderInstrument])
 
   const handleAdvancedSelect = useCallback((instrumentID: string) => {
     setSearchModalOpen(false)
@@ -259,6 +258,7 @@ export function OptionsPanel() {
               records={records}
               snapshots={snapshots}
               isActive={isActive}
+              selectedInstrument={selectedInstrument}
               onToggleGroup={toggleGroup}
               onRowClick={handleClick}
               onRowDoubleClick={handleDoubleClick}
