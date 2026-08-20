@@ -22,12 +22,12 @@ describe('getAppMenuDef', () => {
     expect(def.map((d) => d.label)).toEqual(['行情', '交易', '查询', '设置']);
   });
 
-  it('行情子菜单：期货/期权/K线/T型报价/新窗口', () => {
+  it('行情子菜单：期货/期权/K线/新窗口', () => {
     const market = getAppMenuDef().find((d) => d.id === 'market')!;
     const labels = market.submenu!
       .filter((i) => i.type !== 'separator')
       .map((i) => i.label);
-    expect(labels).toEqual(['📊 期货', '📉 期权', '📈 K线', '📉 T型报价', '🪟 在新窗口打开']);
+    expect(labels).toEqual(['📊 期货', '📉 期权', '📈 K线', '🪟 在新窗口打开']);
   });
 
   it('行情「📈 K线」action 为 open-floating kline（在首个分隔符后）', () => {
@@ -37,15 +37,6 @@ describe('getAppMenuDef', () => {
     expect(kline.action).toEqual({ type: 'open-floating', tab: 'kline' });
     const sep = market.submenu!.find((i) => i.type === 'separator')!;
     expect(market.submenu!.indexOf(kline)).toBeGreaterThan(market.submenu!.indexOf(sep));
-  });
-
-  it('行情「📉 T型报价」action 为 open-floating tquote（在首个分隔符后）', () => {
-    const market = getAppMenuDef().find((d) => d.id === 'market')!;
-    const tquote = market.submenu!.find((i) => i.id === 'market-tquote')!;
-    expect(tquote.label).toBe('📉 T型报价');
-    expect(tquote.action).toEqual({ type: 'open-floating', tab: 'tquote' });
-    const sep = market.submenu!.find((i) => i.type === 'separator')!;
-    expect(market.submenu!.indexOf(tquote)).toBeGreaterThan(market.submenu!.indexOf(sep));
   });
 
   it('行情「在新窗口打开」action 为 open-market-window', () => {

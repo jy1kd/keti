@@ -25,7 +25,6 @@ function getAppMenuDef() {
                 { id: 'market-options', label: '📉 期权', action: { type: 'market-view', view: 'options' } },
                 { id: 'market-sep1', type: 'separator' },
                 { id: 'market-kline', label: '📈 K线', action: { type: 'open-floating', tab: 'kline' } },
-                { id: 'market-tquote', label: '📉 T型报价', action: { type: 'open-floating', tab: 'tquote' } },
                 { id: 'market-sep2', type: 'separator' },
                 { id: 'market-new-window', label: '🪟 在新窗口打开', action: { type: 'open-market-window' } },
             ],
